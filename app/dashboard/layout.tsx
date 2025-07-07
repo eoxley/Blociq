@@ -1,33 +1,38 @@
-// File: /app/dashboard/layout.tsx
+// app/components/DashboardLayout.tsx
 
-import { Inter } from "next/font/google"
-import Link from "next/link"
-import { Toaster } from "sonner"
+import React from 'react';
+import { ReactNode } from 'react';
 
-const inter = Inter({ subsets: ["latin"] })
-
-export const metadata = {
-  title: "BlocIQ Dashboard",
-  description: "AI-powered inbox for property managers"
+// Define the props for DashboardLayout to accept children (other components or page content)
+interface DashboardLayoutProps {
+  children: ReactNode;
 }
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   return (
-    <div className="min-h-screen bg-soft text-charcoal font-brand">
-      <header className="bg-primary text-white px-6 py-4 shadow-soft flex justify-between items-center">
-        <div className="text-xl font-semibold">BlocIQ</div>
-        <nav className="space-x-4">
-          <Link href="/dashboard/inbox" className="hover:underline">Inbox</Link>
-          <Link href="/dashboard/drafts" className="hover:underline">Drafts</Link>
-          <Link href="/dashboard/compliance" className="hover:underline">Compliance</Link>
+    <div className="dashboard-layout">
+      {/* Header Section */}
+      <header className="dashboard-header">
+        <nav>
+          <ul>
+            <li><a href="#">Home</a></li>
+            <li><a href="#">Settings</a></li>
+            <li><a href="#">Profile</a></li>
+          </ul>
         </nav>
       </header>
 
-      <main className="p-6 max-w-6xl mx-auto w-full">
+      {/* Main Content Section (renders the children passed to this layout) */}
+      <main className="dashboard-main-content">
         {children}
       </main>
 
-      <Toaster position="top-right" richColors />
+      {/* Footer Section */}
+      <footer className="dashboard-footer">
+        <p>&copy; 2025 Blociq. All rights reserved.</p>
+      </footer>
     </div>
-  )
-}
+  );
+};
+
+export default DashboardLayout;

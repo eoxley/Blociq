@@ -1,80 +1,63 @@
-"use client"
+"use client";
 
-import { useEffect, useRef, useState } from "react"
-import { toast } from "sonner"
+import { useEffect, useRef, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
 
-interface Email {
-  message_id: string
-  subject: string
-  from_email: string
-  received_at: string
-  flag?: string
-  read_at?: string | null
-  unit?: string
-  building_id?: number
-  body_preview?: string
-}
+// Set up your Supabase client (or import it from a shared utility)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export function useEmailSync(intervalMs = 60000) {
-  const [emails, setEmails] = useState<Email[]>([])
-  const [newCount, setNewCount] = useState(0)
-  const latestMessageId = useRef<string | null>(null)
-  const lastSyncTime = useRef<Date | null>(null)
+// Type for the email objects
+type Email = {
+  id: string;
+  subject: string;
+  from: string;
+  received_at: string;
+  body: string;
+  [key: string]: any;
+};
+
+export function useEmailSync(): [Email[], number] {
+  const [emails, setEmails] = useState<Email[]>([]);
+  const [newCount, setNewCount] = useState(0);
+  const lastSyncTime = useRef<Date | null>(null);
 
   useEffect(() => {
-    async function syncEmails() {
-      try {
-        const res = await fetch("/api/sync-emails?preview=true")
-        const data = await res.json()
+    const fetchEmails = async () => {
+      const { data, error } = await supabase
+        .from("emails")
+        .select("*")
+        .order("received_at", { ascending: false });
 
-        if (data.success && Array.isArray(data.results)) {
-          const newEmails = data.results.map((r: any) => {
-            const email = r.email as Email
-
-            // Auto-tag
-            if (!email.flag) {
-              if (/leak|fire|emergency/i.test(email.subject)) email.flag = "🔥 Urgent"
-              else if (/insurance|invoice|quote/i.test(email.subject)) email.flag = "💰 Finance"
-              else if (/complaint|unhappy|frustrated/i.test(email.subject)) email.flag = "⚠️ Complaint"
-            }
-
-            return email
-          })
-
-          const now = new Date()
-          const recent = newEmails.filter(e => {
-            const received = new Date(e.received_at)
-            return lastSyncTime.current && received > lastSyncTime.current
-          })
-
-          setNewCount(recent.length)
-          lastSyncTime.current = now
-          setEmails(newEmails)
-
-          if (latestMessageId.current && newEmails.length > 0) {
-            const latestFetched = newEmails[0].message_id
-            if (latestFetched !== latestMessageId.current) {
-              const { subject, from_email } = newEmails[0]
-              toast({
-                title: `📩 New email from ${from_email}`,
-                description: `Subject: ${subject || "(no subject)"}`
-              })
-            }
-          }
-
-          if (newEmails.length > 0) {
-            latestMessageId.current = newEmails[0].message_id
-          }
-        }
-      } catch (err) {
-        console.error("Email sync failed:", err)
+      if (error) {
+        console.error("Error fetching emails:", error.message);
+        return;
       }
-    }
 
-    syncEmails()
-    const interval = setInterval(syncEmails, intervalMs)
-    return () => clearInterval(interval)
-  }, [intervalMs])
+      if (data) {
+        const newEmails = data as Email[];
+        setEmails(newEmails);
 
-  return [emails.map(e => ({ ...e, isUnread: !e.read_at })), newCount] as const
+        const now = new Date();
+
+        const recent = newEmails.filter((e: Email) => {
+          const received = new Date(e.received_at);
+          return (
+            lastSyncTime.current && received > lastSyncTime.current
+          );
+        });
+
+        setNewCount(recent.length);
+        lastSyncTime.current = now;
+      }
+    };
+
+    fetchEmails();
+
+    const interval = setInterval(fetchEmails, 60_000); // every minute
+    return () => clearInterval(interval);
+  }, []);
+
+  return [emails, newCount];
 }
