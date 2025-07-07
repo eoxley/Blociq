@@ -1,40 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
-import { ChatCompletionMessageParam } from "openai/resources/chat"; // ✅ Import the correct type
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
 
 export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const prompt: string = body.prompt;
+  const OpenAI = (await import("openai")).default;
 
-    // ✅ Type the messages correctly for OpenAI
-    const messages: ChatCompletionMessageParam[] = [
-      {
-        role: "system",
-        content: "You are a helpful assistant for property managers."
-      },
-      {
-        role: "user",
-        content: prompt
-      }
-    ];
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json(
+      { error: "OPENAI_API_KEY environment variable is missing." },
+      { status: 500 }
+    );
+  }
+
+  const openai = new OpenAI({ apiKey });
+
+  try {
+    const { prompt } = await req.json();
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4-turbo",
-      messages,
-      temperature: 0.6
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.7,
     });
 
-    const responseText = completion.choices[0].message.content;
-    return NextResponse.json({ text: responseText });
-  } catch (error) {
-    console.error("Error generating draft:", error);
+    return NextResponse.json({
+      result: completion.choices?.[0]?.message?.content ?? "(No response)",
+    });
+  } catch (error: any) {
     return NextResponse.json(
-      { error: "Failed to generate draft from AI." },
+      {
+        error: "Failed to generate draft",
+        details: error.message,
+      },
       { status: 500 }
     );
   }
