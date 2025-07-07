@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  // ✅ Dynamically import to avoid breaking at build time
+  // ✅ Dynamically import MSAL to avoid breaking during Vercel build
   const { ConfidentialClientApplication } = await import("@azure/msal-node");
 
-  // ✅ Check that required env vars exist
   const {
     AZURE_CLIENT_ID,
     AZURE_CLIENT_SECRET,
@@ -29,11 +28,18 @@ export async function GET() {
     },
   });
 
-  // ⚠️ Example: acquire token (replace with your actual scopes & logic)
   try {
     const result = await clientApp.acquireTokenByClientCredential({
       scopes: ["https://graph.microsoft.com/.default"],
     });
+
+    // ✅ Add null check before accessing result
+    if (!result) {
+      return NextResponse.json(
+        { error: "No token result received from Microsoft Graph" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       message: "Successfully authenticated with Microsoft Graph",
