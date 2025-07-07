@@ -1,7 +1,14 @@
-"use client"
+"use client";
 
-import { PropertyInbox } from "@/components/property-inbox"
+export const dynamic = "force-dynamic";
+
+import { Suspense } from "react";
+import InboxInner from "./InboxInner";
 
 export default function InboxPage() {
-  return <PropertyInbox />
+  return (
+    <Suspense fallback={<p className="p-6">Loading inbox...</p>}>
+      <InboxInner />
+    </Suspense>
+  );
 }

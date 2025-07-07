@@ -1,6 +1,6 @@
 // lib/extractTextFromPdf.ts
 export async function extractTextFromPdf(file: File): Promise<string> {
-  const { getDocument } = await import("pdfjs-dist/es5/build/pdf"); // modern ES fallback
+const { getDocument } = await import("pdfjs-dist/legacy/build/pdf");
   const arrayBuffer = await file.arrayBuffer();
   const loadingTask = getDocument({ data: arrayBuffer });
   const pdf = await loadingTask.promise;

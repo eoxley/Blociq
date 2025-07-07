@@ -1,41 +1,40 @@
-// app/api/extract-pdf/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import PDFParser from "pdf2json";
+import PDFParser from "pdf2json"; // ✅ Correct import
 
 export async function POST(req: NextRequest) {
-  const { fileUrl } = await req.json();
-
-  if (!fileUrl) {
-    return NextResponse.json({ error: "Missing file URL" }, { status: 400 });
-  }
-
   try {
-    const response = await fetch(fileUrl);
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`);
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    const parser = new PDFParser();
-
-    const text = await new Promise<string>((resolve, reject) => {
-      parser.on("pdfParser_dataError", err => reject(err.parserError));
-      parser.on("pdfParser_dataReady", pdfData => {
-        const pages = pdfData?.formImage?.Pages || [];
-        const allText = pages
-          .flatMap(page => page.Texts.map(t => decodeURIComponent(t.R[0].T)))
-          .join(" ");
-        resolve(allText);
-      });
-      parser.parseBuffer(buffer);
-    });
+    const buffer = await req.arrayBuffer();
+    const text = await extractTextFromPDF(Buffer.from(buffer));
 
     return NextResponse.json({ text });
-  } catch (err: any) {
-    console.error("❌ PDF2JSON parse error:", err);
-    return NextResponse.json({ error: err?.message || "Failed to extract PDF text" }, { status: 500 });
+  } catch (error) {
+    console.error("Error extracting text:", error);
+    return NextResponse.json(
+      { error: "Failed to extract text from PDF." },
+      { status: 500 }
+    );
   }
+}
+
+// 🔍 Extract text using pdf2json
+function extractTextFromPDF(buffer: Buffer): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const parser = new PDFParser();
+
+    parser.on("pdfParser_dataError", err => reject(err.parserError));
+
+    parser.on("pdfParser_dataReady", pdfData => {
+      const pages = (pdfData as any)?.formImage?.Pages || [];
+
+      const allText = pages
+        .flatMap((page: any) =>
+          page.Texts.map((t: any) => decodeURIComponent(t.R[0].T))
+        )
+        .join(" ");
+
+      resolve(allText);
+    });
+
+    parser.parseBuffer(buffer);
+  });
 }
