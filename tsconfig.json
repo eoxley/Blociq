@@ -36,7 +36,7 @@
     "**/*.tsx",
     "next-env.d.ts",
     ".next/types/**/*.ts"
-  ],
+, "lib/lib/pdfText-old.bak"  ],
   "exclude": [
     "node_modules"
   ]

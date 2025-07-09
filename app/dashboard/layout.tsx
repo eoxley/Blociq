@@ -14,11 +14,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       {/* Header Section */}
       <header className="dashboard-header">
         <nav>
-          <ul>
-            <li><a href="#">Home</a></li>
-            <li><a href="#">Settings</a></li>
-            <li><a href="#">Profile</a></li>
-          </ul>
+
         </nav>
       </header>
 

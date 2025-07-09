@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-export const dynamic = "force-dynamic";
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
-import { Suspense } from "react";
-import DashboardInner from "./DashboardInner";
+export default function DashboardRedirect() {
+  const router = useRouter();
 
-export default function DashboardPage() {
-  return (
-    <Suspense fallback={<p className="p-6">Loading dashboard...</p>}>
-      <DashboardInner />
-    </Suspense>
-  );
+  useEffect(() => {
+    router.replace('/dashboard/inbox');
+  }, [router]);
+
+  return null;
 }
