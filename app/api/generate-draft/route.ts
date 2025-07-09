@@ -1,6 +1,6 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import { Database } from '@/lib/database.types'; // ✅ fixed path using tsconfig alias
+import { Database } from '../../../lib/database.types'; // ✅ Using relative path
 import OpenAI from 'openai';
 
 const openai = new OpenAI({
