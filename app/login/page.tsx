@@ -12,6 +12,10 @@ export default function LoginPage() {
   const handleLogin = async () => {
     setError(null);
 
+    // 🔥 Step 1: kill any stale session
+    await supabase.auth.signOut();
+
+    // ✅ Step 2: clean login attempt
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -20,7 +24,13 @@ export default function LoginPage() {
     if (error) {
       setError(error.message);
     } else {
-      // ✅ Manual, controlled redirect
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      console.log('✅ Logged-in user ID:', session?.user?.id);
+
+      // ✅ Step 3: manual redirect to dashboard
       window.location.href = '/dashboard';
     }
   };
