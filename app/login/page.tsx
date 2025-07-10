@@ -20,19 +20,8 @@ export default function LoginPage() {
     if (error) {
       setError(error.message);
     } else {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      const userId = session?.user?.id;
-      console.log('✅ Logged-in user ID:', userId);
-
-      // ⛔️ Force log what the app thinks it’s redirecting to
-      const next = '/dashboard';
-      console.log('👉 Redirecting to:', next);
-
-      // ✅ Override all past redirects — force clean redirect
-      window.location.replace(next);
+      // ✅ Manual, controlled redirect
+      window.location.href = '/dashboard';
     }
   };
 
