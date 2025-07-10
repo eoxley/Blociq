@@ -1,20 +1,23 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export async function middleware(request: NextRequest) {
-  // ✅ This is the correct Supabase auth cookie name for your project
-  const token = (await request.cookies.get('sb-xqxaatvykmaaynqeoemy-auth-token'))?.value;
+export function middleware(request: NextRequest) {
+  const token = request.cookies.get('sb-xqxaatvykmaaynqeoemy-auth-token')?.value;
+  const { pathname } = request.nextUrl;
 
-  // ✅ Define which paths you want to protect
-  const protectedPaths = ['/dashboard', '/dashboard/inbox'];
-  const isProtected = protectedPaths.some((path) =>
-    request.nextUrl.pathname.startsWith(path)
-  );
+  // 🔐 Protect /dashboard and all its subpaths
+  const isProtected = pathname.startsWith('/dashboard');
 
-  // 🔒 If not logged in and accessing protected route, redirect to /login
+  // 🔒 Redirect unauthenticated users to /login
   if (!token && isProtected) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
+  // 🚪 Redirect logged-in users who hit "/" to "/dashboard"
+  if (token && pathname === '/') {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
+  // ✅ Otherwise allow request through
   return NextResponse.next();
 }
