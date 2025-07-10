@@ -6,17 +6,28 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 export default function LoginPage() {
   const supabase = createClientComponentClient();
   const [email, setEmail] = useState('');
-  const [sent, setSent] = useState(false);
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const handleLogin = async () => {
     setError(null);
-    const { error } = await supabase.auth.signInWithOtp({ email });
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
     if (error) {
       setError(error.message);
     } else {
-      setSent(true);
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      console.log('👉 Logged-in user ID:', session?.user?.id);
+
+      // ✅ Redirect to homepage, not inbox
+      window.location.href = '/dashboard';
     }
   };
 
@@ -24,26 +35,30 @@ export default function LoginPage() {
     <main className="flex flex-col items-center justify-center p-10 space-y-4 text-center">
       <h1 className="text-2xl font-semibold">Login to BlocIQ</h1>
 
-      {sent ? (
-        <p className="text-green-600">✅ Magic link sent! Check your email.</p>
-      ) : (
-        <>
-          <input
-            type="email"
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="px-4 py-2 border rounded w-64"
-          />
-          <button
-            onClick={handleLogin}
-            className="bg-[#0F5D5D] text-white px-6 py-2 rounded hover:opacity-90"
-          >
-            Send Magic Link
-          </button>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-        </>
-      )}
+      <input
+        type="email"
+        placeholder="Email"
+        className="border p-2 rounded w-full max-w-sm"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+
+      <input
+        type="password"
+        placeholder="Password"
+        className="border p-2 rounded w-full max-w-sm"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+      />
+
+      <button
+        onClick={handleLogin}
+        className="bg-teal-600 text-white px-4 py-2 rounded hover:bg-teal-700"
+      >
+        Sign In
+      </button>
+
+      {error && <p className="text-red-500">{error}</p>}
     </main>
   );
 }
