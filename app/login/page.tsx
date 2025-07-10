@@ -24,10 +24,15 @@ export default function LoginPage() {
         data: { session },
       } = await supabase.auth.getSession();
 
-      console.log('👉 Logged-in user ID:', session?.user?.id);
+      const userId = session?.user?.id;
+      console.log('✅ Logged-in user ID:', userId);
 
-      // ✅ Redirect to homepage, not inbox
-      window.location.href = '/dashboard';
+      // ⛔️ Force log what the app thinks it’s redirecting to
+      const next = '/dashboard';
+      console.log('👉 Redirecting to:', next);
+
+      // ✅ Override all past redirects — force clean redirect
+      window.location.replace(next);
     }
   };
 
