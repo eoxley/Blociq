@@ -1,17 +1,14 @@
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { Database } from '@/lib/database.types';
 
 export default async function HomePage() {
-  const supabase = createServerComponentClient<Database>({ cookies });
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const supabase = createServerComponentClient({ cookies });
+  const { data: { session } } = await supabase.auth.getSession();
 
   if (!session?.user) {
-    return redirect('/login');
+    redirect('/login'); // not logged in
   }
 
-  return redirect('/dashboard');
+  redirect('/dashboard'); // logged in
 }
