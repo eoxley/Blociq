@@ -5,14 +5,13 @@ import { Database } from '@/lib/database.types';
 
 export default async function HomePage() {
   const supabase = createServerComponentClient<Database>({ cookies });
-
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
   if (!session?.user) {
-    return redirect('/login');
+    return redirect('/login'); // not logged in
   }
 
-  return redirect('/dashboard'); // only send logged-in users to dashboard
+  return redirect('/dashboard'); // logged in
 }
