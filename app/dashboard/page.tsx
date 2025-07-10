@@ -8,39 +8,23 @@ import DebugUserId from '@/components/DebugUserId';
 
 export default function DashboardPage() {
   const supabase = createClientComponentClient<Database>();
-  const [userName, setUserName] = useState('');
+  const [userName, setUserName] = useState('User');
 
   useEffect(() => {
     const fetchProfile = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const userId = session?.user?.id;
-
-      if (!userId) return;
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', userId)
-        .single();
-
-      if (profile?.full_name) {
-        setUserName(profile.full_name);
-      } else {
-        setUserName(session.user.email?.split('@')[0] ?? 'User');
-      }
+      const { data: { session } } = await supabase.auth.getSession();
+      const email = session?.user?.email;
+      setUserName(email?.split('@')[0] || 'User');
     };
 
     fetchProfile();
-  }, [supabase]);
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen">
       <DashboardNavbar />
       <main className="flex-grow p-6 space-y-6">
         <DebugUserId />
-
         <h1 className="text-3xl font-semibold">Hello, {userName}</h1>
 
         <div className="bg-white border rounded-xl p-4 shadow-md">
