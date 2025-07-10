@@ -5,7 +5,9 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get('sb-xqxaatvykmaaynqeoemy-auth-token')?.value;
   const { pathname } = request.nextUrl;
 
-  if (!token && pathname.startsWith('/dashboard')) {
+  const isProtected = pathname === '/' || pathname.startsWith('/dashboard');
+
+  if (!token && isProtected) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
