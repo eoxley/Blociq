@@ -1,9 +1,8 @@
 'use client'
-
 import Sidebar from './sidebar'
 import { ReactNode } from 'react'
 
-export default function LayoutWithSidebar({ children }: { children: ReactNode }) {
+import Sidebar from './sidebar'
   return (
     <div className="flex min-h-screen">
       <Sidebar />

@@ -1,43 +1,24 @@
 {
   "compilerOptions": {
-    "target": "es2015",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "target": "ESNext",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
-    "incremental": true,
     "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
+    "module": "ESNext",
+    "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
-    "downlevelIteration": true,
+    "types": ["node"],
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./*"
-      ]
-    },
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ]
+      "@/*": ["./*"]
+    }
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    "next-env.d.ts",
-    ".next/types/**/*.ts"
-, "lib/lib/pdfText-old.bak"  ],
-  "exclude": [
-    "node_modules"
-  ]
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules"]
 }
