@@ -6,6 +6,7 @@ import { MessageCircle, Calendar, ExternalLink, Send, Loader2 } from 'lucide-rea
 
 export default function HomePageClient() {
   const [inputValue, setInputValue] = useState('')
+  const [unitId, setUnitId] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
   const [response, setResponse] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -24,7 +25,10 @@ export default function HomePageClient() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt: inputValue }),
+        body: JSON.stringify({ 
+          prompt: inputValue,
+          unitId: unitId || undefined // Only send if unitId is provided
+        }),
       })
 
       if (!res.ok) {
@@ -93,6 +97,25 @@ export default function HomePageClient() {
             </div>
             
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Unit Selector */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Unit (optional - for contextual responses)
+                </label>
+                <select
+                  value={unitId}
+                  onChange={(e) => setUnitId(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                >
+                  <option value="">Select a unit (optional)</option>
+                  <option value="1">Unit 101</option>
+                  <option value="2">Unit 102</option>
+                  <option value="3">Unit 103</option>
+                  <option value="4">Unit 201</option>
+                  <option value="5">Unit 202</option>
+                </select>
+              </div>
+
               <div className="flex gap-3">
                 <input
                   type="text"
