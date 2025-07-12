@@ -58,7 +58,7 @@ export function PropertyInbox() {
             </p>
 
             <Link
-              href={`/dashboard/ai-reply?from=${encodeURIComponent(
+              href={`/ai-reply?from=${encodeURIComponent(
                 email.from_email
               )}&subject=${encodeURIComponent(email.subject)}&body=${encodeURIComponent(
                 email.body_preview || ""
