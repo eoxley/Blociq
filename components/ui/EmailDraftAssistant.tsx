@@ -24,9 +24,24 @@ export default function EmailDraftAssistant(props: Props) {
   const [loading, setLoading] = useState(false)
   const [latestReply, setLatestReply] = useState("")
 
+  // Early return if Supabase is not configured
+  if (!supabase) {
+    return (
+      <Card className="p-4 mt-4">
+        <CardContent>
+          <div className="p-4 border rounded-lg bg-yellow-50">
+            <p className="text-yellow-800">
+              Supabase is not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   useEffect(() => {
     async function fetchPreviousReply() {
-      if (!props.defaultSubject) return
+      if (!props.defaultSubject || !supabase) return
 
       const { data, error } = await supabase
         .from("email_drafts")
@@ -43,6 +58,7 @@ export default function EmailDraftAssistant(props: Props) {
   }, [props.defaultSubject])
 
   async function handleGenerate() {
+    if (!supabase) return
     setLoading(true)
 
     const { data: leaseData } = await supabase
@@ -160,6 +176,10 @@ export default function EmailDraftAssistant(props: Props) {
 
               <Button
                 onClick={async () => {
+                  if (!supabase) {
+                    alert("❌ Supabase not configured.")
+                    return
+                  }
                   const { error } = await supabase.from("email_drafts").insert({
                     draft,
                     subject: props.defaultSubject || "No subject",

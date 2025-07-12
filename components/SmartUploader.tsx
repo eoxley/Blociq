@@ -29,8 +29,19 @@ const SmartUploader: React.FC<Props> = ({
   const [metadata, setMetadata] = useState<any>(null);
   const [saved, setSaved] = useState(false);
 
+  // Early return if Supabase is not configured
+  if (!supabase) {
+    return (
+      <div className="p-4 border rounded-lg bg-yellow-50">
+        <p className="text-yellow-800">
+          Supabase is not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.
+        </p>
+      </div>
+    );
+  }
+
   const handleExtract = async () => {
-    if (!file) return;
+    if (!file || !supabase) return;
     setLoading(true);
 
     try {
@@ -120,7 +131,7 @@ const SmartUploader: React.FC<Props> = ({
   };
 
   const handleSave = async () => {
-    if (!metadata) return;
+    if (!metadata || !supabase) return;
     setLoading(true);
 
     const insertPayload = {

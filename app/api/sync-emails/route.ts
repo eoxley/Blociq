@@ -6,12 +6,19 @@ import { Client } from "@microsoft/microsoft-graph-client"
 import { createClient } from "@supabase/supabase-js"
 import "isomorphic-fetch"
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+// Check if Supabase environment variables are available
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+const supabase = (supabaseUrl && supabaseServiceKey) ? 
+  createClient(supabaseUrl, supabaseServiceKey) : 
+  null
 
 export async function GET(req: NextRequest) {
+  if (!supabase) {
+    return NextResponse.json({ error: "Supabase not configured. Please set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables." }, { status: 500 })
+  }
+
   try {
     const accessToken = await getAccessToken()
     const client = Client.init({

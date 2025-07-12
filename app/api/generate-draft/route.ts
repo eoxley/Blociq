@@ -2,11 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { ChatCompletionMessageParam } from "openai/resources/chat"; // ✅ Import the correct type
 
-const openai = new OpenAI({
+// Check if OpenAI API key is available
+const openai = process.env.OPENAI_API_KEY ? new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
-});
+}) : null;
 
 export async function POST(req: NextRequest) {
+  if (!openai) {
+    return NextResponse.json({ error: "OpenAI API key not configured. Please set OPENAI_API_KEY environment variable." }, { status: 500 });
+  }
+
   try {
     const body = await req.json();
     const prompt: string = body.prompt;

@@ -11,6 +11,17 @@ export default function UploadClean() {
   const [uploading, setUploading] = useState(false)
   const [file, setFile] = useState<File | null>(null)
 
+  // Early return if Supabase is not configured
+  if (!supabase) {
+    return (
+      <div className="p-4 border rounded-lg bg-yellow-50">
+        <p className="text-yellow-800">
+          Supabase is not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.
+        </p>
+      </div>
+    );
+  }
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setFile(e.target.files[0])
@@ -20,7 +31,7 @@ export default function UploadClean() {
   const handleUpload = async () => {
     console.log("🚀 Upload triggered")
 
-    if (!file || !TEST_BUILDING_ID) {
+    if (!file || !TEST_BUILDING_ID || !supabase) {
       alert("Please select a file and building.")
       return
     }
