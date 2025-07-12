@@ -290,87 +290,40 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
           {/* Add Property Event Form */}
           <div className="mt-6 pt-6 border-t border-gray-200">
-            <div className="flex items-center gap-2 mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <Plus className="h-5 w-5 text-teal-600" />
-                Add Property Event
-              </h3>
-              <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">Coming Soon</span>
-            </div>
-            
-            <div className="text-gray-400 italic text-sm mb-4">
-              Event management and calendar integration will be available in the next update.
-            </div>
-            
-            <form onSubmit={handleAddEvent} className="space-y-4 opacity-50 pointer-events-none">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Event Title
-                  </label>
-                  <input
-                    type="text"
-                    name="title"
-                    required
-                    className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    placeholder="Enter event title"
-                    disabled
-                  />
+            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex items-center justify-center w-10 h-10 bg-yellow-500 rounded-lg">
+                  <span className="text-white text-lg">⚙️</span>
                 </div>
-                
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Category
-                  </label>
-                  <input
-                    type="text"
-                    name="category"
-                    required
-                    className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    placeholder="e.g., 🏢 Building Maintenance"
-                    disabled
-                  />
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    Add Property Event
+                  </h3>
+                  <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">Coming Soon</span>
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date & Time
-                  </label>
-                  <input
-                    type="datetime-local"
-                    name="date"
-                    required
-                    className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    disabled
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Building
-                  </label>
-                  <input
-                    type="text"
-                    name="building"
-                    required
-                    className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    placeholder="Enter building name"
-                    disabled
-                  />
-                </div>
+              <div className="text-gray-600 text-sm mb-4">
+                <p className="mb-2">🎯 <strong>What's coming:</strong></p>
+                <ul className="space-y-1 text-sm">
+                  <li>• Calendar integration with Outlook</li>
+                  <li>• Automated event reminders</li>
+                  <li>• Building-specific event management</li>
+                  <li>• Team collaboration features</li>
+                </ul>
               </div>
               
-              <button
-                type="submit"
-                disabled
-                className="w-full bg-gray-400 text-white px-4 py-2 rounded-lg font-medium cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Add Event (Coming Soon)
-              </button>
-            </form>
+              <div className="bg-white rounded-lg p-4 border border-yellow-200">
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-3">🚧</div>
+                  <h4 className="font-medium text-gray-900 mb-2">Event Management System</h4>
+                  <p className="text-gray-600 text-sm">
+                    This feature is currently under development. 
+                    You'll be able to create, schedule, and manage property events with full calendar integration.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
