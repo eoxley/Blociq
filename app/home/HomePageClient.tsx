@@ -2,7 +2,14 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { MessageCircle, Calendar, ExternalLink, Send, Loader2 } from 'lucide-react'
+import { MessageCircle, Calendar, ExternalLink, Send, Loader2, Plus } from 'lucide-react'
+
+type PropertyEvent = {
+  building: string
+  date: string
+  title: string
+  category: string
+}
 
 export default function HomePageClient() {
   const [inputValue, setInputValue] = useState('')
@@ -10,6 +17,41 @@ export default function HomePageClient() {
   const [isLoading, setIsLoading] = useState(false)
   const [response, setResponse] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [isAddingEvent, setIsAddingEvent] = useState(false)
+
+  // Hardcoded property events
+  const upcomingEvents: PropertyEvent[] = [
+    {
+      building: "Tower A",
+      date: "2025-01-15T09:00:00Z",
+      title: "Annual Building Inspection",
+      category: "🏢 Building Maintenance"
+    },
+    {
+      building: "Tower B",
+      date: "2025-01-20T14:00:00Z",
+      title: "Insurance Renewal Meeting",
+      category: "📄 Insurance Renewal"
+    },
+    {
+      building: "Tower A",
+      date: "2025-01-25T10:00:00Z",
+      title: "Fire Safety System Test",
+      category: "🔥 Safety Compliance"
+    },
+    {
+      building: "Tower C",
+      date: "2025-02-01T16:00:00Z",
+      title: "Lease Renewal Deadline",
+      category: "📋 Legal & Compliance"
+    },
+    {
+      building: "Tower B",
+      date: "2025-02-05T11:00:00Z",
+      title: "HVAC Maintenance",
+      category: "🔧 Equipment Maintenance"
+    }
+  ]
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,27 +86,57 @@ export default function HomePageClient() {
     }
   }
 
-  // Dummy upcoming events data
-  const upcomingEvents = [
-    {
-      id: 1,
-      title: "Building Inspection - Tower A",
-      date: "Tomorrow, 10:00 AM",
-      type: "Maintenance"
-    },
-    {
-      id: 2,
-      title: "Lease Renewal Meeting",
-      date: "Thursday, 2:00 PM",
-      type: "Legal"
-    },
-    {
-      id: 3,
-      title: "Monthly Property Review",
-      date: "Friday, 9:00 AM",
-      type: "Administrative"
+  const handleAddEvent = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const formData = new FormData(e.target as HTMLFormElement)
+    const eventData = {
+      title: formData.get('title') as string,
+      category: formData.get('category') as string,
+      date: formData.get('date') as string,
+      building: formData.get('building') as string,
     }
-  ]
+
+    setIsAddingEvent(true)
+
+    try {
+      const response = await fetch('/api/add-event', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(eventData),
+      })
+
+      if (response.ok) {
+        // Reset form
+        ;(e.target as HTMLFormElement).reset()
+        alert('Event added successfully!')
+      } else {
+        throw new Error('Failed to add event')
+      }
+    } catch (error) {
+      console.error('Error adding event:', error)
+      alert('Failed to add event. Please try again.')
+    } finally {
+      setIsAddingEvent(false)
+    }
+  }
+
+  const formatEventDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return {
+      date: date.toLocaleDateString('en-US', { 
+        weekday: 'short', 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      }),
+      time: date.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      })
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -164,39 +236,126 @@ export default function HomePageClient() {
           </div>
         </div>
 
-        {/* Upcoming Events Section */}
+        {/* Upcoming Property Events Section */}
         <div className="bg-white rounded-xl shadow-lg p-6 border">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <Calendar className="h-6 w-6 text-teal-600" />
-              <h2 className="text-2xl font-semibold text-gray-900">Upcoming Events</h2>
+              <h2 className="text-2xl font-semibold text-gray-900">Upcoming Property Events</h2>
             </div>
+            <a
+              href="https://outlook.office.com/calendar/view/month"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-teal-600 hover:text-teal-700 font-medium transition-colors"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Open Outlook
+            </a>
           </div>
           
           <div className="space-y-4">
-            {upcomingEvents.map((event) => (
-              <div key={event.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
-                <div>
-                  <h3 className="font-medium text-gray-900">{event.title}</h3>
-                  <p className="text-sm text-gray-600">{event.date}</p>
+            {upcomingEvents.map((event, index) => {
+              const { date, time } = formatEventDate(event.date)
+              return (
+                <div key={index} className="bg-white shadow rounded-xl p-4 hover:shadow-lg text-sm">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="font-bold text-gray-900 mb-1">
+                        {event.category}
+                      </div>
+                      <div className="text-gray-800 mb-1">
+                        {event.title}
+                      </div>
+                      <div className="text-gray-600 mb-1">
+                        {event.building}
+                      </div>
+                      <div className="text-gray-500">
+                        {date} at {time}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <span className="px-3 py-1 text-xs font-medium bg-teal-100 text-teal-800 rounded-full">
-                  {event.type}
-                </span>
-              </div>
-            ))}
+              )
+            })}
+          </div>
+
+          {/* Add Property Event Form */}
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Plus className="h-5 w-5 text-teal-600" />
+              Add Property Event
+            </h3>
             
-            <div className="pt-4 border-t">
-              <a
-                href="https://outlook.office.com/calendar/view/month"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-teal-600 hover:text-teal-700 font-medium transition-colors"
+            <form onSubmit={handleAddEvent} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Event Title
+                  </label>
+                  <input
+                    type="text"
+                    name="title"
+                    required
+                    className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    placeholder="Enter event title"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Category
+                  </label>
+                  <input
+                    type="text"
+                    name="category"
+                    required
+                    className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    placeholder="e.g., 🏢 Building Maintenance"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Date & Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    name="date"
+                    required
+                    className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Building
+                  </label>
+                  <input
+                    type="text"
+                    name="building"
+                    required
+                    className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    placeholder="Enter building name"
+                  />
+                </div>
+              </div>
+              
+              <button
+                type="submit"
+                disabled={isAddingEvent}
+                className="w-full bg-[#2BBEB4] text-white px-4 py-2 rounded-lg hover:bg-[#25a8a0] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                <ExternalLink className="h-4 w-4" />
-                Open Outlook Calendar
-              </a>
-            </div>
+                {isAddingEvent ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
+                {isAddingEvent ? 'Adding Event...' : 'Add Event'}
+              </button>
+            </form>
           </div>
         </div>
       </div>
