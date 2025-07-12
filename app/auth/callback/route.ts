@@ -7,13 +7,13 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   console.log('[Callback] Received redirect:', requestUrl.href);
 
-  const cookieStore = await cookies();
+  const cookieStore = cookies();
   const supabase = createRouteHandlerClient<Database>({
     cookies: () => cookieStore,
   });
 
   console.log('[Callback] Attempting session exchange...');
-  const { data, error } = await supabase.auth.exchangeCodeForSession(requestUrl);
+  const { data, error } = await supabase.auth.exchangeCodeForSession(requestUrl.searchParams.toString());
 
   if (error) {
     console.error('[Callback] Session exchange failed:', error.message);

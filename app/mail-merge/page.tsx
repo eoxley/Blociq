@@ -5,7 +5,7 @@ import { Database } from '@/lib/database.types';
 import LayoutWithSidebar from '@/components/LayoutWithSidebar';
 
 export default async function MailMergePage() {
-  const cookieStore = await cookies();
+  const cookieStore = cookies();
   const supabase = createServerComponentClient<Database>({
     cookies: () => cookieStore,
   });
