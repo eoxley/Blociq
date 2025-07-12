@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import React, { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
@@ -113,74 +113,44 @@ export default function EmailDraftAssistant(props: Props) {
   return (
     <Card className="p-4 mt-4">
       <CardContent>
-        <Label>🏢 Building Name</Label>
-        <Input
-          placeholder="e.g. Jubilee House"
-          value={building}
-          onChange={e => setBuilding(e.target.value)}
-        />
+        <div className="flex items-center gap-2 mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">Email Draft Assistant</h3>
+          <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">Coming Soon</span>
+        </div>
+        
+        <div className="text-gray-400 italic text-sm mb-4">
+          Advanced email drafting with AI context and lease integration will be available in the next update.
+        </div>
+        
+        <div className="opacity-50 pointer-events-none">
+          <Label>🏢 Building Name</Label>
+          <Input
+            placeholder="e.g. Jubilee House"
+            value={building}
+            onChange={e => setBuilding(e.target.value)}
+            disabled
+          />
 
-        <Label className="mt-2">🏠 Unit</Label>
-        <Input
-          placeholder="e.g. Flat 7"
-          value={unit}
-          onChange={e => setUnit(e.target.value)}
-        />
+          <Label className="mt-2">🏠 Unit</Label>
+          <Input
+            placeholder="e.g. Flat 7"
+            value={unit}
+            onChange={e => setUnit(e.target.value)}
+            disabled
+          />
 
-        <Label className="mt-2">🧵 Email Thread or Summary</Label>
-        <Textarea
-          placeholder="Paste the thread or describe the issue..."
-          value={issue}
-          onChange={e => setIssue(e.target.value)}
-        />
+          <Label className="mt-2">🧵 Email Thread or Summary</Label>
+          <Textarea
+            placeholder="Paste the thread or describe the issue..."
+            value={issue}
+            onChange={e => setIssue(e.target.value)}
+            disabled
+          />
 
-        <Button onClick={handleGenerate} disabled={loading} className="mt-4">
-          {loading ? "Generating..." : "Generate Email with AI"}
-        </Button>
-
-        {draft && (
-          <div className="mt-6">
-            <Label>📬 Draft Email</Label>
-            <Textarea
-              rows={12}
-              value={draft}
-              onChange={e => setDraft(e.target.value)}
-            />
-
-            <div className="mt-4 flex gap-4">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  navigator.clipboard.writeText(draft)
-                  alert("Draft copied to clipboard!")
-                }}
-              >
-                Copy Draft
-              </Button>
-
-              <Button
-                onClick={async () => {
-                  const { error } = await supabase.from("email_drafts").insert({
-                    draft,
-                    subject: props.defaultSubject || "No subject",
-                    from_email: props.defaultFrom || "Unknown",
-                    unit: unit,
-                    building_id: building,
-                    created_at: new Date().toISOString()
-                  })
-                  if (error) {
-                    alert("❌ Failed to save draft.")
-                    console.error(error)
-                  } else {
-                    alert("✅ Draft saved to Supabase.")
-                  }
-                }}
-              >
-                Save Draft
-              </Button>
-            </div>
-          </div>
-        )}
+          <Button onClick={handleGenerate} disabled className="mt-4">
+            Generate Email with AI (Coming Soon)
+          </Button>
+        </div>
       </CardContent>
     </Card>
   )

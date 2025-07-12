@@ -212,13 +212,9 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
                     {building.ews1_status || 'Pass'}
                   </span>
                 </div>
-                <a 
-                  href="#" 
-                  className="text-teal-600 hover:text-teal-700 text-sm flex items-center gap-1"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  View EWS1 Certificate
-                </a>
+                <div className="text-gray-400 italic text-sm">
+                  Document upload and viewing will be available soon
+                </div>
               </div>
 
               <div className="border border-gray-200 rounded-lg p-4">
@@ -228,13 +224,9 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
                     {building.fire_door_survey || 'Pending'}
                   </span>
                 </div>
-                <a 
-                  href="#" 
-                  className="text-teal-600 hover:text-teal-700 text-sm flex items-center gap-1"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  View Fire Door Report
-                </a>
+                <div className="text-gray-400 italic text-sm">
+                  Document upload and viewing will be available soon
+                </div>
               </div>
 
               <div className="border border-gray-200 rounded-lg p-4">
@@ -244,13 +236,9 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
                     {building.gas_eicr_status || 'Valid'}
                   </span>
                 </div>
-                <a 
-                  href="#" 
-                  className="text-teal-600 hover:text-teal-700 text-sm flex items-center gap-1"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  View Inspection Certificates
-                </a>
+                <div className="text-gray-400 italic text-sm">
+                  Document upload and viewing will be available soon
+                </div>
               </div>
             </div>
           )}
