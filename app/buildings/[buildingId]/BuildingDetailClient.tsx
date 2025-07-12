@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Calendar, DollarSign, Shield, FileText, Mail, ChevronDown, ChevronUp, ExternalLink, Brain, AlertTriangle, Clock } from 'lucide-react'
+import { ArrowLeft, Calendar, DollarSign, Shield, FileText, Mail, ChevronDown, ChevronUp, ExternalLink, Brain, AlertTriangle, Clock, Wrench, Plus } from 'lucide-react'
 
 type Building = {
   id: string
@@ -306,6 +306,38 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
               <p className="text-gray-500">No recent emails for this building</p>
             </div>
           )}
+        </div>
+
+        {/* Major Works Section */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Wrench className="h-5 w-5 text-teal-600" />
+              <h2 className="text-xl font-semibold text-[#0F5D5D]">Major Works</h2>
+            </div>
+            <Link
+              href={`/buildings/${building.id}/major-works`}
+              className="inline-flex items-center gap-2 text-teal-600 hover:text-teal-700 font-medium transition-colors text-sm"
+            >
+              View All
+              <ArrowLeft className="h-4 w-4 rotate-180" />
+            </Link>
+          </div>
+
+          <div className="text-center py-8">
+            <Wrench className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+            <h3 className="font-medium text-gray-900 mb-2">Major Works Management</h3>
+            <p className="text-gray-500 text-sm mb-4">
+              Track major works projects, Section 20 notices, and generate leaseholder communications.
+            </p>
+            <Link
+              href={`/buildings/${building.id}/major-works`}
+              className="inline-flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors text-sm font-medium"
+            >
+              <Plus className="h-4 w-4" />
+              Manage Major Works
+            </Link>
+          </div>
         </div>
       </div>
     </div>
