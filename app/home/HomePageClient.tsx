@@ -290,12 +290,19 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
           {/* Add Property Event Form */}
           <div className="mt-6 pt-6 border-t border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Plus className="h-5 w-5 text-teal-600" />
-              Add Property Event
-            </h3>
+            <div className="flex items-center gap-2 mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Plus className="h-5 w-5 text-teal-600" />
+                Add Property Event
+              </h3>
+              <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">Coming Soon</span>
+            </div>
             
-            <form onSubmit={handleAddEvent} className="space-y-4">
+            <div className="text-gray-400 italic text-sm mb-4">
+              Event management and calendar integration will be available in the next update.
+            </div>
+            
+            <form onSubmit={handleAddEvent} className="space-y-4 opacity-50 pointer-events-none">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -307,6 +314,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                     required
                     className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     placeholder="Enter event title"
+                    disabled
                   />
                 </div>
                 
@@ -320,6 +328,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                     required
                     className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     placeholder="e.g., 🏢 Building Maintenance"
+                    disabled
                   />
                 </div>
               </div>
@@ -334,6 +343,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                     name="date"
                     required
                     className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    disabled
                   />
                 </div>
                 
@@ -347,21 +357,18 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                     required
                     className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     placeholder="Enter building name"
+                    disabled
                   />
                 </div>
               </div>
               
               <button
                 type="submit"
-                disabled={isAddingEvent}
-                className="w-full bg-[#2BBEB4] text-white px-4 py-2 rounded-lg hover:bg-[#25a8a0] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                disabled
+                className="w-full bg-gray-400 text-white px-4 py-2 rounded-lg font-medium cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {isAddingEvent ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Plus className="h-4 w-4" />
-                )}
-                {isAddingEvent ? 'Adding Event...' : 'Add Event'}
+                <Plus className="h-4 w-4" />
+                Add Event (Coming Soon)
               </button>
             </form>
           </div>
