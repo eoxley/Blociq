@@ -11,9 +11,21 @@ export default async function HomePage() {
 
   if (!session) redirect('/login')
 
+  // Get user profile data
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name, email')
+    .eq('id', session.user.id)
+    .single()
+
+  const userData = {
+    name: profile?.full_name || session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Property Manager',
+    email: session.user.email || ''
+  }
+
   return (
     <LayoutWithSidebar>
-      <HomePageClient />
+      <HomePageClient userData={userData} />
     </LayoutWithSidebar>
   )
 }
