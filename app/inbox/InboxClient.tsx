@@ -30,6 +30,7 @@ export default function InboxClient({ emails }: InboxClientProps) {
   const [editingReplies, setEditingReplies] = useState<Set<string>>(new Set())
   const [editedReplies, setEditedReplies] = useState<Record<string, string>>({})
   const [sendingEmails, setSendingEmails] = useState<Set<string>>(new Set())
+  const [sendResults, setSendResults] = useState<Record<string, { success: boolean; message: string }>>({})
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
@@ -170,32 +171,78 @@ export default function InboxClient({ emails }: InboxClientProps) {
     }))
   }
 
-  const handleSendEmail = async (emailId: string, toEmail: string | null) => {
+  const handleSendEmail = async (emailId: string, toEmail: string | null, subject: string | null) => {
     if (!toEmail) {
-      console.error('No recipient email available')
+      setSendResults(prev => ({
+        ...prev,
+        [emailId]: { success: false, message: 'No recipient email available' }
+      }))
+      return
+    }
+
+    const replyContent = replyResponses[emailId] || editedReplies[emailId] || ''
+    if (!replyContent.trim()) {
+      setSendResults(prev => ({
+        ...prev,
+        [emailId]: { success: false, message: 'No reply content to send' }
+      }))
       return
     }
 
     setSendingEmails(prev => new Set(prev).add(emailId))
+    setSendResults(prev => {
+      const newResults = { ...prev }
+      delete newResults[emailId]
+      return newResults
+    })
 
     try {
-      // Placeholder logic for sending email
-      // In a real implementation, this would call an email sending service
-      console.log('Sending email to:', toEmail)
-      console.log('Email content:', replyResponses[emailId] || editedReplies[emailId])
+      const response = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          emailId: emailId,
+          draft: replyContent,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to send email')
+      }
+
+      const data = await response.json()
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // For now, just show success in console
-      console.log('Email sent successfully!')
-      
-      // You could add a success message here
-      alert('Email sent successfully! (This is a placeholder)')
-      
+      setSendResults(prev => ({
+        ...prev,
+        [emailId]: { success: true, message: 'Email sent successfully!' }
+      }))
+
+      // Clear the reply after successful send
+      setTimeout(() => {
+        setReplyResponses(prev => {
+          const newResponses = { ...prev }
+          delete newResponses[emailId]
+          return newResponses
+        })
+        setSendResults(prev => {
+          const newResults = { ...prev }
+          delete newResults[emailId]
+          return newResults
+        })
+      }, 3000)
+
     } catch (error) {
       console.error('Error sending email:', error)
-      alert('Failed to send email. Please try again.')
+      setSendResults(prev => ({
+        ...prev,
+        [emailId]: { 
+          success: false, 
+          message: error instanceof Error ? error.message : 'Failed to send email. Please try again.' 
+        }
+      }))
     } finally {
       setSendingEmails(prev => {
         const newSet = new Set(prev)
@@ -273,6 +320,7 @@ export default function InboxClient({ emails }: InboxClientProps) {
           const isEditingReply = editingReplies.has(email.id)
           const editedReply = editedReplies[email.id]
           const isSendingEmail = sendingEmails.has(email.id)
+          const sendResult = sendResults[email.id]
 
           return (
             <div
@@ -403,7 +451,7 @@ export default function InboxClient({ emails }: InboxClientProps) {
                   {/* Send Email Button */}
                   <div className="mt-3 flex justify-end">
                     <button
-                      onClick={() => handleSendEmail(email.id, email.from_email)}
+                      onClick={() => handleSendEmail(email.id, email.from_email, email.subject)}
                       disabled={isSendingEmail}
                       className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
                     >
@@ -412,9 +460,20 @@ export default function InboxClient({ emails }: InboxClientProps) {
                       ) : (
                         <Send className="h-4 w-4" />
                       )}
-                      {isSendingEmail ? 'Sending...' : 'Send this email'}
+                      {isSendingEmail ? 'Sending...' : 'Send'}
                     </button>
                   </div>
+
+                  {/* Send Result Message */}
+                  {sendResult && (
+                    <div className={`mt-3 p-3 rounded-lg text-sm ${
+                      sendResult.success 
+                        ? 'bg-green-50 border border-green-200 text-green-800' 
+                        : 'bg-red-50 border border-red-200 text-red-800'
+                    }`}>
+                      {sendResult.message}
+                    </div>
+                  )}
                 </div>
               )}
 
