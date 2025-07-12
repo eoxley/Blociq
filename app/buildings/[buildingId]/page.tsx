@@ -7,8 +7,9 @@ import { redirect } from 'next/navigation'
 export default async function BuildingDetailPage({ 
   params 
 }: { 
-  params: { buildingId: string } 
+  params: Promise<{ buildingId: string }> 
 }) {
+  const { buildingId } = await params
   const supabase = createServerComponentClient({ cookies })
   
   // Check if user is authenticated
@@ -22,7 +23,7 @@ export default async function BuildingDetailPage({
   const { data: building, error: buildingError } = await supabase
     .from('buildings')
     .select('*')
-    .eq('id', params.buildingId)
+    .eq('id', buildingId)
     .single()
 
   if (buildingError || !building) {
@@ -33,7 +34,7 @@ export default async function BuildingDetailPage({
   const { data: recentEmails, error: emailsError } = await supabase
     .from('incoming_emails')
     .select('*')
-    .eq('building_id', params.buildingId)
+    .eq('building_id', buildingId)
     .order('created_at', { ascending: false })
     .limit(5)
 
