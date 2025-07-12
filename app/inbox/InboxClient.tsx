@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Mail, Clock, User, RefreshCw, ExternalLink, ChevronDown, ChevronUp, History } from 'lucide-react'
+import { Mail, Clock, User, RefreshCw, ExternalLink, ChevronDown, ChevronUp, History, MessageSquare, Loader2 } from 'lucide-react'
 
 // Define the Email type based on the database schema
 type Email = {
@@ -24,6 +24,9 @@ export default function InboxClient({ emails }: InboxClientProps) {
   const [expandedEmails, setExpandedEmails] = useState<Set<string>>(new Set())
   const [emailHistory, setEmailHistory] = useState<Record<string, Email[]>>({})
   const [loadingHistory, setLoadingHistory] = useState<Set<string>>(new Set())
+  const [generatingReplies, setGeneratingReplies] = useState<Set<string>>(new Set())
+  const [replyResponses, setReplyResponses] = useState<Record<string, string>>({})
+  const [replyErrors, setReplyErrors] = useState<Record<string, string>>({})
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
@@ -79,6 +82,64 @@ export default function InboxClient({ emails }: InboxClientProps) {
           return newSet
         })
       }
+    }
+  }
+
+  const handleGenerateReply = async (emailId: string, subject: string | null, bodyPreview: string | null) => {
+    if (!subject && !bodyPreview) {
+      setReplyErrors(prev => ({
+        ...prev,
+        [emailId]: 'No content available to generate reply from'
+      }))
+      return
+    }
+
+    setGeneratingReplies(prev => new Set(prev).add(emailId))
+    setReplyErrors(prev => {
+      const newErrors = { ...prev }
+      delete newErrors[emailId]
+      return newErrors
+    })
+    setReplyResponses(prev => {
+      const newResponses = { ...prev }
+      delete newResponses[emailId]
+      return newResponses
+    })
+
+    try {
+      const response = await fetch('/api/generate-draft', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: `Generate a professional reply to this email:\n\nSubject: ${subject || 'No subject'}\n\nContent: ${bodyPreview || 'No content available'}\n\nPlease provide a courteous and professional response.`,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate reply')
+      }
+
+      const data = await response.json()
+      const replyText = data.response || data.content || 'No response received'
+      
+      setReplyResponses(prev => ({
+        ...prev,
+        [emailId]: replyText
+      }))
+    } catch (error) {
+      console.error('Error generating reply:', error)
+      setReplyErrors(prev => ({
+        ...prev,
+        [emailId]: 'Failed to generate reply. Please try again.'
+      }))
+    } finally {
+      setGeneratingReplies(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(emailId)
+        return newSet
+      })
     }
   }
 
@@ -144,6 +205,9 @@ export default function InboxClient({ emails }: InboxClientProps) {
           const isExpanded = expandedEmails.has(email.id)
           const history = emailHistory[email.id] || []
           const isLoadingHistory = loadingHistory.has(email.id)
+          const isGeneratingReply = generatingReplies.has(email.id)
+          const replyResponse = replyResponses[email.id]
+          const replyError = replyErrors[email.id]
 
           return (
             <div
@@ -207,11 +271,49 @@ export default function InboxClient({ emails }: InboxClientProps) {
                   >
                     <History className="h-4 w-4" />
                   </button>
+                  <button 
+                    onClick={() => handleGenerateReply(email.id, email.subject, email.body_preview)}
+                    disabled={isGeneratingReply}
+                    className="p-2 text-gray-400 hover:text-teal-600 transition-colors disabled:opacity-50"
+                    title="Generate Reply"
+                  >
+                    {isGeneratingReply ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <MessageSquare className="h-4 w-4" />
+                    )}
+                  </button>
                   <button className="p-2 text-gray-400 hover:text-teal-600 transition-colors">
                     <ExternalLink className="h-4 w-4" />
                   </button>
                 </div>
               </div>
+
+              {/* Generate Reply Response */}
+              {replyResponse && (
+                <div className="mt-4 p-4 bg-teal-50 border border-teal-200 rounded-lg">
+                  <div className="flex items-center gap-2 text-sm text-teal-700 mb-2">
+                    <MessageSquare className="h-4 w-4" />
+                    AI Generated Reply
+                  </div>
+                  <div className="text-gray-800 whitespace-pre-wrap text-sm">
+                    {replyResponse}
+                  </div>
+                </div>
+              )}
+
+              {/* Generate Reply Error */}
+              {replyError && (
+                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-center gap-2 text-sm text-red-700 mb-2">
+                    <MessageSquare className="h-4 w-4" />
+                    Error Generating Reply
+                  </div>
+                  <div className="text-red-800 text-sm">
+                    {replyError}
+                  </div>
+                </div>
+              )}
 
               {/* Collapsible History Section */}
               {isExpanded && (
