@@ -65,9 +65,15 @@ Run `npm audit fix` to resolve security issues before deployment.
    - Microsoft Graph API credentials for email fetching
    - Any other API keys your app uses
 
-Based on the build errors, you need these environment variables:
-- `OPENAI_API_KEY`
-- Microsoft client credentials (likely `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID`)
+**ALL Required Environment Variables:**
+- `OPENAI_API_KEY` ✅ (already set)
+- `OUTLOOK_CLIENT_ID` ❌ (missing - for email fetching)
+- `OUTLOOK_CLIENT_SECRET` ❌ (missing - for email fetching)
+- `OUTLOOK_TENANT_ID` ❌ (missing - for email fetching)
+- `NEXT_PUBLIC_SUPABASE_URL` ❌ (missing - for database)
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` ❌ (missing - for database)
+- `SUPABASE_SERVICE_ROLE_KEY` ❌ (missing - for server operations)
+- `GOOGLE_APPLICATION_CREDENTIALS` ❌ (missing - for OCR/document processing)
 
 ### Step 2: Fix Large File Issue
 1. Add `bfg.jar` to `.gitignore`
