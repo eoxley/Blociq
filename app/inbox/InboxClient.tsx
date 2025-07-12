@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Mail, Clock, User, RefreshCw, ExternalLink, ChevronDown, ChevronUp, History, MessageSquare, Loader2 } from 'lucide-react'
+import { Mail, Clock, User, RefreshCw, ExternalLink, ChevronDown, ChevronUp, History, MessageSquare, Loader2, Send, Edit3, Check } from 'lucide-react'
 
 // Define the Email type based on the database schema
 type Email = {
@@ -27,6 +27,9 @@ export default function InboxClient({ emails }: InboxClientProps) {
   const [generatingReplies, setGeneratingReplies] = useState<Set<string>>(new Set())
   const [replyResponses, setReplyResponses] = useState<Record<string, string>>({})
   const [replyErrors, setReplyErrors] = useState<Record<string, string>>({})
+  const [editingReplies, setEditingReplies] = useState<Set<string>>(new Set())
+  const [editedReplies, setEditedReplies] = useState<Record<string, string>>({})
+  const [sendingEmails, setSendingEmails] = useState<Set<string>>(new Set())
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
@@ -143,6 +146,65 @@ export default function InboxClient({ emails }: InboxClientProps) {
     }
   }
 
+  const handleEditReply = (emailId: string) => {
+    setEditingReplies(prev => new Set(prev).add(emailId))
+    // Initialize edited reply with current response
+    const currentReply = replyResponses[emailId] || ''
+    setEditedReplies(prev => ({
+      ...prev,
+      [emailId]: currentReply
+    }))
+  }
+
+  const handleSaveEdit = (emailId: string) => {
+    setEditingReplies(prev => {
+      const newSet = new Set(prev)
+      newSet.delete(emailId)
+      return newSet
+    })
+    // Update the reply response with edited content
+    const editedContent = editedReplies[emailId] || ''
+    setReplyResponses(prev => ({
+      ...prev,
+      [emailId]: editedContent
+    }))
+  }
+
+  const handleSendEmail = async (emailId: string, toEmail: string | null) => {
+    if (!toEmail) {
+      console.error('No recipient email available')
+      return
+    }
+
+    setSendingEmails(prev => new Set(prev).add(emailId))
+
+    try {
+      // Placeholder logic for sending email
+      // In a real implementation, this would call an email sending service
+      console.log('Sending email to:', toEmail)
+      console.log('Email content:', replyResponses[emailId] || editedReplies[emailId])
+      
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      
+      // For now, just show success in console
+      console.log('Email sent successfully!')
+      
+      // You could add a success message here
+      alert('Email sent successfully! (This is a placeholder)')
+      
+    } catch (error) {
+      console.error('Error sending email:', error)
+      alert('Failed to send email. Please try again.')
+    } finally {
+      setSendingEmails(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(emailId)
+        return newSet
+      })
+    }
+  }
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Unknown date'
     
@@ -208,6 +270,9 @@ export default function InboxClient({ emails }: InboxClientProps) {
           const isGeneratingReply = generatingReplies.has(email.id)
           const replyResponse = replyResponses[email.id]
           const replyError = replyErrors[email.id]
+          const isEditingReply = editingReplies.has(email.id)
+          const editedReply = editedReplies[email.id]
+          const isSendingEmail = sendingEmails.has(email.id)
 
           return (
             <div
@@ -292,12 +357,63 @@ export default function InboxClient({ emails }: InboxClientProps) {
               {/* Generate Reply Response */}
               {replyResponse && (
                 <div className="mt-4 p-4 bg-teal-50 border border-teal-200 rounded-lg">
-                  <div className="flex items-center gap-2 text-sm text-teal-700 mb-2">
-                    <MessageSquare className="h-4 w-4" />
-                    AI Generated Reply
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2 text-sm text-teal-700">
+                      <MessageSquare className="h-4 w-4" />
+                      AI Generated Reply
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {!isEditingReply ? (
+                        <button
+                          onClick={() => handleEditReply(email.id)}
+                          className="p-1 text-teal-600 hover:text-teal-700 transition-colors"
+                          title="Edit Reply"
+                        >
+                          <Edit3 className="h-4 w-4" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleSaveEdit(email.id)}
+                          className="p-1 text-teal-600 hover:text-teal-700 transition-colors"
+                          title="Save Changes"
+                        >
+                          <Check className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-gray-800 whitespace-pre-wrap text-sm">
-                    {replyResponse}
+                  
+                  {isEditingReply ? (
+                    <textarea
+                      value={editedReply || replyResponse}
+                      onChange={(e) => setEditedReplies(prev => ({
+                        ...prev,
+                        [email.id]: e.target.value
+                      }))}
+                      className="w-full p-3 border border-teal-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
+                      rows={6}
+                      placeholder="Edit your reply here..."
+                    />
+                  ) : (
+                    <div className="text-gray-800 whitespace-pre-wrap text-sm">
+                      {replyResponse}
+                    </div>
+                  )}
+
+                  {/* Send Email Button */}
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      onClick={() => handleSendEmail(email.id, email.from_email)}
+                      disabled={isSendingEmail}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
+                    >
+                      {isSendingEmail ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
+                      {isSendingEmail ? 'Sending...' : 'Send this email'}
+                    </button>
                   </div>
                 </div>
               )}
