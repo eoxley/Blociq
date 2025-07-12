@@ -12,7 +12,9 @@ import {
   Calendar,
   FileText,
   Mail,
-  Settings
+  Settings,
+  DollarSign,
+  Clock
 } from 'lucide-react'
 
 export default function Sidebar() {
@@ -35,6 +37,10 @@ export default function Sidebar() {
     { href: '/ai-draft', icon: Sparkles, label: 'AI Draft' },
     { href: '/ai-reply', icon: Sparkles, label: 'AI Reply' },
     { href: '/account', icon: Settings, label: 'Account' },
+  ]
+
+  const comingSoonItems = [
+    { href: '#', icon: DollarSign, label: 'Finance', comingSoon: true },
   ]
 
   return (
@@ -67,6 +73,26 @@ export default function Sidebar() {
             </a>
           )
         })}
+        
+        {/* Coming Soon Section */}
+        <div className="pt-4 border-t border-teal-600 mt-4">
+          <div className="px-4 py-2">
+            <p className="text-xs text-teal-200 opacity-75 mb-2">Coming Soon</p>
+          </div>
+          {comingSoonItems.map((item) => {
+            const Icon = item.icon
+            return (
+              <div
+                key={item.href}
+                className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium opacity-60 cursor-not-allowed"
+              >
+                <Icon className="h-5 w-5" />
+                <span>{item.label}</span>
+                <Clock className="h-3 w-3 ml-auto" />
+              </div>
+            )
+          })}
+        </div>
       </nav>
 
       {/* Logout Section */}
