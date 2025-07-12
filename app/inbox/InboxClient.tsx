@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Mail, Clock, User, RefreshCw, ExternalLink } from 'lucide-react'
+import { Mail, Clock, User, RefreshCw, ExternalLink, ChevronDown, ChevronUp, History } from 'lucide-react'
 
 // Define the Email type based on the database schema
 type Email = {
@@ -21,6 +21,9 @@ interface InboxClientProps {
 
 export default function InboxClient({ emails }: InboxClientProps) {
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [expandedEmails, setExpandedEmails] = useState<Set<string>>(new Set())
+  const [emailHistory, setEmailHistory] = useState<Record<string, Email[]>>({})
+  const [loadingHistory, setLoadingHistory] = useState<Set<string>>(new Set())
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
@@ -36,6 +39,46 @@ export default function InboxClient({ emails }: InboxClientProps) {
       console.error('Error syncing emails:', error)
     } finally {
       setIsRefreshing(false)
+    }
+  }
+
+  const toggleEmailExpansion = async (emailId: string, fromEmail: string | null) => {
+    if (!fromEmail) return
+
+    const isExpanded = expandedEmails.has(emailId)
+    
+    if (isExpanded) {
+      // Collapse
+      setExpandedEmails(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(emailId)
+        return newSet
+      })
+    } else {
+      // Expand and fetch history
+      setExpandedEmails(prev => new Set(prev).add(emailId))
+      setLoadingHistory(prev => new Set(prev).add(emailId))
+
+      try {
+        const response = await fetch(`/api/email-history?from_email=${encodeURIComponent(fromEmail)}`)
+        if (response.ok) {
+          const history = await response.json()
+          setEmailHistory(prev => ({
+            ...prev,
+            [emailId]: history.emails || []
+          }))
+        } else {
+          console.error('Failed to fetch email history')
+        }
+      } catch (error) {
+        console.error('Error fetching email history:', error)
+      } finally {
+        setLoadingHistory(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(emailId)
+          return newSet
+        })
+      }
     }
   }
 
@@ -97,66 +140,131 @@ export default function InboxClient({ emails }: InboxClientProps) {
 
       {/* Email List */}
       <div className="space-y-3">
-        {emails.map((email) => (
-          <div
-            key={email.id}
-            className={`bg-white rounded-lg border p-4 hover:shadow-md transition-shadow cursor-pointer ${
-              email.unread ? 'border-l-4 border-l-teal-500' : 'border-gray-200'
-            } ${email.pinned ? 'bg-yellow-50 border-yellow-200' : ''}`}
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex-1 min-w-0">
-                {/* Email Header */}
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm font-medium text-gray-900 truncate">
-                      {email.from_email || 'Unknown sender'}
-                    </span>
+        {emails.map((email) => {
+          const isExpanded = expandedEmails.has(email.id)
+          const history = emailHistory[email.id] || []
+          const isLoadingHistory = loadingHistory.has(email.id)
+
+          return (
+            <div
+              key={email.id}
+              className={`bg-white rounded-lg border p-4 hover:shadow-md transition-shadow ${
+                email.unread ? 'border-l-4 border-l-teal-500' : 'border-gray-200'
+              } ${email.pinned ? 'bg-yellow-50 border-yellow-200' : ''}`}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  {/* Email Header */}
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm font-medium text-gray-900 truncate">
+                        {email.from_email || 'Unknown sender'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-gray-500">
+                      <Clock className="h-3 w-3" />
+                      <span>{formatDate(email.received_at)}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-gray-500">
-                    <Clock className="h-3 w-3" />
-                    <span>{formatDate(email.received_at)}</span>
+
+                  {/* Subject */}
+                  <h3 className={`font-medium mb-1 ${email.unread ? 'text-gray-900' : 'text-gray-700'}`}>
+                    {email.subject || 'No subject'}
+                  </h3>
+
+                  {/* Preview */}
+                  <p className="text-sm text-gray-600 line-clamp-2">
+                    {email.body_preview || 'No preview available'}
+                  </p>
+
+                  {/* Status indicators */}
+                  <div className="flex items-center gap-2 mt-2">
+                    {email.unread && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
+                        Unread
+                      </span>
+                    )}
+                    {email.handled && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        Handled
+                      </span>
+                    )}
+                    {email.pinned && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        Pinned
+                      </span>
+                    )}
                   </div>
                 </div>
 
-                {/* Subject */}
-                <h3 className={`font-medium mb-1 ${email.unread ? 'text-gray-900' : 'text-gray-700'}`}>
-                  {email.subject || 'No subject'}
-                </h3>
-
-                {/* Preview */}
-                <p className="text-sm text-gray-600 line-clamp-2">
-                  {email.body_preview || 'No preview available'}
-                </p>
-
-                {/* Status indicators */}
-                <div className="flex items-center gap-2 mt-2">
-                  {email.unread && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
-                      Unread
-                    </span>
-                  )}
-                  {email.handled && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      Handled
-                    </span>
-                  )}
-                  {email.pinned && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                      Pinned
-                    </span>
-                  )}
+                {/* Action buttons */}
+                <div className="ml-4 flex items-center gap-2">
+                  <button 
+                    onClick={() => toggleEmailExpansion(email.id, email.from_email)}
+                    className="p-2 text-gray-400 hover:text-teal-600 transition-colors"
+                    title="View History"
+                  >
+                    <History className="h-4 w-4" />
+                  </button>
+                  <button className="p-2 text-gray-400 hover:text-teal-600 transition-colors">
+                    <ExternalLink className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
 
-              {/* Action button */}
-              <button className="ml-4 p-2 text-gray-400 hover:text-teal-600 transition-colors">
-                <ExternalLink className="h-4 w-4" />
-              </button>
+              {/* Collapsible History Section */}
+              {isExpanded && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                      <History className="h-4 w-4 text-teal-600" />
+                      Correspondence History
+                    </h4>
+                    <button
+                      onClick={() => toggleEmailExpansion(email.id, email.from_email)}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <ChevronUp className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {isLoadingHistory ? (
+                    <div className="flex items-center justify-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-teal-600"></div>
+                      <span className="ml-2 text-sm text-gray-600">Loading history...</span>
+                    </div>
+                  ) : history.length > 0 ? (
+                    <div className="max-h-64 overflow-y-auto space-y-3">
+                      {history.map((historicalEmail) => (
+                        <div
+                          key={historicalEmail.id}
+                          className="bg-gray-50 rounded-lg p-3 border-l-2 border-gray-300"
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium text-gray-700">
+                              {historicalEmail.subject || 'No subject'}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {formatDate(historicalEmail.received_at)}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-600 line-clamp-2">
+                            {historicalEmail.body_preview || 'No preview available'}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-sm text-gray-500">No previous messages from this sender</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
