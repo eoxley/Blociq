@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox"; // Adjust if different
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import LayoutWithSidebar from '@/components/LayoutWithSidebar';
 
 export default function LeaseUploadPage() {
   const [isHeadlease, setIsHeadlease] = useState(false);
@@ -30,32 +31,34 @@ export default function LeaseUploadPage() {
   };
 
   return (
-    <div className="p-6 max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Upload Lease</h1>
+    <LayoutWithSidebar>
+      <div className="max-w-xl mx-auto">
+        <h1 className="text-2xl font-bold mb-6 text-[#0F5D5D]">Upload Lease</h1>
 
-      <div className="mb-4">
-        <Label htmlFor="leaseFile">Select Lease File (PDF)</Label>
-        <input
-          id="leaseFile"
-          type="file"
-          accept="application/pdf"
-          onChange={handleFileChange}
-          className="mt-2 block"
-        />
+        <div className="mb-4">
+          <Label htmlFor="leaseFile">Select Lease File (PDF)</Label>
+          <input
+            id="leaseFile"
+            type="file"
+            accept="application/pdf"
+            onChange={handleFileChange}
+            className="mt-2 block"
+          />
+        </div>
+
+        <div className="flex items-center space-x-2 mb-6">
+          <Checkbox
+            id="headlease"
+            checked={isHeadlease}
+            onCheckedChange={(v: boolean | undefined) => setIsHeadlease(!!v)}
+          />
+          <Label htmlFor="headlease">This is the headlease</Label>
+        </div>
+
+        <Button onClick={handleUpload} disabled={!file}>
+          Upload Lease
+        </Button>
       </div>
-
-      <div className="flex items-center space-x-2 mb-6">
-        <Checkbox
-          id="headlease"
-          checked={isHeadlease}
-          onCheckedChange={(v: boolean | undefined) => setIsHeadlease(!!v)}
-        />
-        <Label htmlFor="headlease">This is the headlease</Label>
-      </div>
-
-      <Button onClick={handleUpload} disabled={!file}>
-        Upload Lease
-      </Button>
-    </div>
+    </LayoutWithSidebar>
   );
 }
