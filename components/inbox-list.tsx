@@ -70,7 +70,9 @@ export default function InboxList({ emails }: { emails: Email[] }) {
                   {email.pinned && <Pin className="h-4 w-4 text-gray-500" />}
                 </div>
                 {email.handled && (
-                  <CheckCircle className="h-4 w-4 text-green-500" title="Handled" />
+                  <span title="Handled">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  </span>
                 )}
               </div>
 
