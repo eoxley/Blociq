@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import { MessageCircle, Calendar, ExternalLink, Send, Loader2, Plus } from 'lucide-react'
 
@@ -13,7 +13,6 @@ type PropertyEvent = {
 
 export default function HomePageClient() {
   const [inputValue, setInputValue] = useState('')
-  const [unitId, setUnitId] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
   const [response, setResponse] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -68,8 +67,7 @@ export default function HomePageClient() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          prompt: inputValue,
-          unitId: unitId || undefined // Only send if unitId is provided
+          prompt: inputValue
         }),
       })
 
@@ -154,47 +152,23 @@ export default function HomePageClient() {
         <div className="bg-white rounded-xl shadow-lg p-6 border">
           <div className="flex items-center gap-3 mb-6">
             <MessageCircle className="h-6 w-6 text-teal-600" />
-            <h2 className="text-2xl font-semibold text-gray-900">Ask BlocAI</h2>
+            <h2 className="text-2xl font-semibold text-gray-900">How can I help you with your property management today?</h2>
           </div>
           
           <div className="space-y-4">
-            <div className="bg-gray-50 rounded-lg p-4 border">
-              <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
-                BlocAI is ready to help
-              </div>
-              <p className="text-gray-700">
-                "How can I help you with your property management today?"
-              </p>
+            {/* BlocAI Tag */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-600">🧠 BlocAI</span>
             </div>
             
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Unit Selector */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Unit (optional - for contextual responses)
-                </label>
-                <select
-                  value={unitId}
-                  onChange={(e) => setUnitId(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                >
-                  <option value="">Select a unit (optional)</option>
-                  <option value="1">Unit 101</option>
-                  <option value="2">Unit 102</option>
-                  <option value="3">Unit 103</option>
-                  <option value="4">Unit 201</option>
-                  <option value="5">Unit 202</option>
-                </select>
-              </div>
-
               <div className="flex gap-3">
                 <input
                   type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   placeholder="Ask me anything about your properties..."
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
                   disabled={isLoading}
                 />
                 <button 
@@ -212,10 +186,20 @@ export default function HomePageClient() {
               </div>
             </form>
 
+            {/* Loading State */}
+            {isLoading && (
+              <div className="bg-gray-50 rounded-lg p-4 border">
+                <div className="flex items-center gap-3">
+                  <Loader2 className="h-5 w-5 animate-spin text-teal-600" />
+                  <span className="text-gray-700">BlocAI is thinking...</span>
+                </div>
+              </div>
+            )}
+
             {/* Response Card */}
             {response && (
-              <div className="bg-teal-50 border border-teal-200 rounded-lg p-4">
-                <div className="flex items-center gap-2 text-sm text-teal-700 mb-2">
+              <div className="bg-gray-50 rounded-lg p-4 border">
+                <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
                   <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
                   BlocAI Response
                 </div>
