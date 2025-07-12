@@ -1,4 +1,10 @@
 import { NextResponse } from "next/server";
+import { createClient } from '@supabase/supabase-js'
+
+// Initialize Supabase client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabase = createClient(supabaseUrl, supabaseKey)
 
 export async function GET() {
   // ✅ Lazy load MSAL to avoid triggering it during build
@@ -29,26 +35,123 @@ export async function GET() {
   });
 
   try {
+    // Get access token
     const result = await clientApp.acquireTokenByClientCredential({
       scopes: ["https://graph.microsoft.com/.default"],
     });
 
-    if (!result) {
+    if (!result?.accessToken) {
       return NextResponse.json(
         { error: "No token result received from Microsoft Graph" },
         { status: 500 }
       );
     }
 
-    // ✨ Insert your sync logic here (fetch + save emails, etc.)
+    // Fetch emails from Microsoft Graph
+    const response = await fetch(
+      `https://graph.microsoft.com/v1.0/users/testbloc@blociq.co.uk/messages?$top=50&$orderby=receivedDateTime desc`,
+      {
+        headers: {
+          Authorization: `Bearer ${result.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Graph API error: ${response.status} ${response.statusText}`);
+    }
+
+    const emailsData = await response.json();
+    const emails = emailsData.value || [];
+
+    // If no emails found, insert dummy data
+    if (emails.length === 0) {
+      const dummyEmails = [
+        {
+          from_email: "tenant@example.com",
+          subject: "Maintenance Request - Unit 101",
+          body_preview: "Hi, there's a leak in the bathroom. Can someone please check it out?",
+          received_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+        },
+        {
+          from_email: "property@example.com",
+          subject: "Lease Renewal Notice",
+          body_preview: "Your lease is due for renewal. Please contact us to discuss terms.",
+          received_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+        },
+        {
+          from_email: "maintenance@example.com",
+          subject: "Scheduled Building Inspection",
+          body_preview: "We will be conducting our monthly building inspection tomorrow.",
+          received_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
+        }
+      ];
+
+      // Insert dummy emails into Supabase
+      const { data: insertedEmails, error: insertError } = await supabase
+        .from('incoming_emails')
+        .upsert(dummyEmails, { 
+          onConflict: 'id',
+          ignoreDuplicates: false 
+        })
+        .select();
+
+      if (insertError) {
+        console.error('Error inserting dummy emails:', insertError);
+        return NextResponse.json(
+          { error: "Failed to insert dummy emails", details: insertError.message },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        message: "No emails found in inbox, inserted dummy data",
+        emailsInserted: insertedEmails?.length || 0,
+        dummyEmails: true
+      });
+    }
+
+    // Process real emails and insert into Supabase
+    const processedEmails = emails.map((email: any) => ({
+      from_email: email.from?.emailAddress?.address || email.from?.emailAddress?.name || 'unknown@example.com',
+      subject: email.subject || 'No Subject',
+      body_preview: email.bodyPreview || email.body?.content || 'No preview available',
+      received_at: email.receivedDateTime || new Date().toISOString(),
+      message_id: email.id,
+      unread: !email.isRead,
+      thread_id: email.conversationId,
+    }));
+
+    // Upsert emails into Supabase
+    const { data: insertedEmails, error: insertError } = await supabase
+      .from('incoming_emails')
+      .upsert(processedEmails, { 
+        onConflict: 'message_id',
+        ignoreDuplicates: false 
+      })
+      .select();
+
+    if (insertError) {
+      console.error('Error inserting emails:', insertError);
+      return NextResponse.json(
+        { error: "Failed to insert emails", details: insertError.message },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
-      message: "Successfully authenticated and ready to sync emails",
-      tokenExpires: result.expiresOn?.toISOString(),
+      message: "Successfully synced emails from Microsoft Graph",
+      emailsSynced: insertedEmails?.length || 0,
+      totalEmails: emails.length,
+      dummyEmails: false
     });
+
   } catch (error: any) {
+    console.error('Sync emails error:', error);
     return NextResponse.json(
       {
-        error: "Failed to authenticate with Microsoft Graph",
+        error: "Failed to sync emails",
         details: error.message,
       },
       { status: 500 }

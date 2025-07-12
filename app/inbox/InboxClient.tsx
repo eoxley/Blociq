@@ -1,0 +1,163 @@
+'use client'
+
+import { useState } from 'react'
+import { Mail, Clock, User, RefreshCw, ExternalLink } from 'lucide-react'
+
+// Define the Email type based on the database schema
+type Email = {
+  id: string
+  from_email: string | null
+  subject: string | null
+  body_preview: string | null
+  received_at: string | null
+  unread: boolean | null
+  handled: boolean | null
+  pinned: boolean | null
+}
+
+interface InboxClientProps {
+  emails: Email[]
+}
+
+export default function InboxClient({ emails }: InboxClientProps) {
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    try {
+      const response = await fetch('/api/sync-emails')
+      if (response.ok) {
+        // Reload the page to show updated emails
+        window.location.reload()
+      } else {
+        console.error('Failed to sync emails')
+      }
+    } catch (error) {
+      console.error('Error syncing emails:', error)
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'Unknown date'
+    
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60)
+    
+    if (diffInHours < 1) {
+      return 'Just now'
+    } else if (diffInHours < 24) {
+      return `${Math.floor(diffInHours)} hours ago`
+    } else if (diffInHours < 48) {
+      return 'Yesterday'
+    } else {
+      return date.toLocaleDateString()
+    }
+  }
+
+  if (emails.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <Mail className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">No emails found</h3>
+        <p className="text-gray-500 mb-4">Your inbox is empty. Try syncing emails from Outlook.</p>
+        <button
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          {isRefreshing ? 'Syncing...' : 'Sync Emails'}
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Header with refresh button */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Mail className="h-5 w-5 text-teal-600" />
+          <span className="text-sm text-gray-600">
+            {emails.length} email{emails.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          {isRefreshing ? 'Syncing...' : 'Sync'}
+        </button>
+      </div>
+
+      {/* Email List */}
+      <div className="space-y-3">
+        {emails.map((email) => (
+          <div
+            key={email.id}
+            className={`bg-white rounded-lg border p-4 hover:shadow-md transition-shadow cursor-pointer ${
+              email.unread ? 'border-l-4 border-l-teal-500' : 'border-gray-200'
+            } ${email.pinned ? 'bg-yellow-50 border-yellow-200' : ''}`}
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex-1 min-w-0">
+                {/* Email Header */}
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm font-medium text-gray-900 truncate">
+                      {email.from_email || 'Unknown sender'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                    <Clock className="h-3 w-3" />
+                    <span>{formatDate(email.received_at)}</span>
+                  </div>
+                </div>
+
+                {/* Subject */}
+                <h3 className={`font-medium mb-1 ${email.unread ? 'text-gray-900' : 'text-gray-700'}`}>
+                  {email.subject || 'No subject'}
+                </h3>
+
+                {/* Preview */}
+                <p className="text-sm text-gray-600 line-clamp-2">
+                  {email.body_preview || 'No preview available'}
+                </p>
+
+                {/* Status indicators */}
+                <div className="flex items-center gap-2 mt-2">
+                  {email.unread && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
+                      Unread
+                    </span>
+                  )}
+                  {email.handled && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Handled
+                    </span>
+                  )}
+                  {email.pinned && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                      Pinned
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Action button */}
+              <button className="ml-4 p-2 text-gray-400 hover:text-teal-600 transition-colors">
+                <ExternalLink className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+} 
