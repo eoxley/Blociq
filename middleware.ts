@@ -1,15 +1,30 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 
-export function middleware(request: NextRequest) {
-  const token = request.cookies.get('sb-xqxaatvykmaaynqeoemy-auth-token')?.value;
-  const { pathname } = request.nextUrl;
+export async function middleware(req: NextRequest) {
+  const res = NextResponse.next()
+  const supabase = createMiddlewareClient({ req, res })
 
-  const isProtected = pathname === '/' || pathname.startsWith('/dashboard');
+  const {
+    data: { session }
+  } = await supabase.auth.getSession()
 
-  if (!token && isProtected) {
-    return NextResponse.redirect(new URL('/login', request.url));
+  const protectedRoutes = ['/home', '/inbox', '/buildings', '/compliance', '/email']
+
+  const path = req.nextUrl.pathname
+
+  // Redirect unauthenticated users trying to access protected pages
+  if (protectedRoutes.some((route) => path.startsWith(route))) {
+    if (!session) {
+      return NextResponse.redirect(new URL('/login', req.url))
+    }
   }
 
-  return NextResponse.next();
+  // Optional: Redirect logged-in users away from /login
+  if (path === '/login' && session) {
+    return NextResponse.redirect(new URL('/home', req.url))
+  }
+
+  return res
 }

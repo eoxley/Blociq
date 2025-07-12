@@ -21,5 +21,5 @@ export async function GET(request: Request) {
   }
 
   console.log('[Callback] Session exchange succeeded:', data.session?.user?.email || 'no email');
-  return NextResponse.redirect('http://localhost:3000/dashboard');
+  return NextResponse.redirect('http://localhost:3000/');
 }

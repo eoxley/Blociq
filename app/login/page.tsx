@@ -30,8 +30,8 @@ export default function LoginPage() {
 
       console.log('✅ Logged-in user ID:', session?.user?.id);
 
-      // ✅ Step 3: manual redirect to dashboard
-      window.location.href = '/dashboard';
+      // ✅ Step 3: manual redirect to home
+      window.location.href = '/home';
     }
   };
 
