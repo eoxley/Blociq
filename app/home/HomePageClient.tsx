@@ -11,12 +11,37 @@ type PropertyEvent = {
   category: string
 }
 
-export default function HomePageClient() {
+type UserData = {
+  name: string
+  email: string
+}
+
+interface HomePageClientProps {
+  userData: UserData
+}
+
+export default function HomePageClient({ userData }: HomePageClientProps) {
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [response, setResponse] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isAddingEvent, setIsAddingEvent] = useState(false)
+
+  // Dynamic welcome messages
+  const welcomeMessages = [
+    'Let\'s chase some contractors and close some budgets 💼',
+    'The lifts are stuck again — but not your motivation 🚀',
+    'Time to inspect fire doors like legends 🚪🔥',
+    'Let\'s make leaseholders smile (or at least not shout) 😅',
+    'Your property empire awaits 👑'
+  ]
+
+  // Get random welcome message based on day
+  const getWelcomeMessage = () => {
+    const today = new Date().getDate()
+    const messageIndex = today % welcomeMessages.length
+    return welcomeMessages[messageIndex]
+  }
 
   // Hardcoded property events
   const upcomingEvents: PropertyEvent[] = [
@@ -140,10 +165,9 @@ export default function HomePageClient() {
     <div className="space-y-8">
       {/* Welcome Banner */}
       <div className="bg-gradient-to-r from-teal-600 to-teal-700 rounded-xl p-8 text-white">
-        <h1 className="text-4xl font-bold mb-4">Welcome to BlocIQ</h1>
+        <h1 className="text-4xl font-bold mb-4">Welcome back, {userData.name}!</h1>
         <p className="text-xl opacity-90">
-          Your intelligent property management assistant. Streamline operations, 
-          automate communications, and stay on top of everything.
+          {getWelcomeMessage()}
         </p>
       </div>
 
