@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Calendar, DollarSign, Shield, FileText, Mail, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Calendar, DollarSign, Shield, FileText, Mail, ChevronDown, ChevronUp, ExternalLink, Brain, AlertTriangle, Clock } from 'lucide-react'
 
 type Building = {
   id: string
@@ -69,6 +69,76 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
           <p className="text-lg text-gray-600">
             {building.address}
           </p>
+        </div>
+      </div>
+
+      {/* BlocAI Summary Box */}
+      <div className="bg-gradient-to-r from-teal-50 to-blue-50 border border-teal-200 rounded-xl shadow-lg p-6 mb-8">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center justify-center w-10 h-10 bg-teal-600 rounded-lg">
+            <Brain className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h2 className="text-xl font-semibold text-[#0F5D5D]">BlocAI Summary</h2>
+            <p className="text-sm text-gray-600">Key insights and recommendations</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Upcoming Events */}
+          <div className="bg-white rounded-lg p-4 border border-teal-100">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="h-4 w-4 text-teal-600" />
+              <h3 className="font-medium text-gray-900">Upcoming Events</h3>
+            </div>
+            <p className="text-sm text-gray-700">
+              <span className="font-semibold text-orange-600">3 urgent items</span> require attention this month. 
+              Insurance renewal due in 23 days, and fire safety inspection scheduled for next week.
+            </p>
+          </div>
+
+          {/* Compliance Status */}
+          <div className="bg-white rounded-lg p-4 border border-teal-100">
+            <div className="flex items-center gap-2 mb-2">
+              <Shield className="h-4 w-4 text-teal-600" />
+              <h3 className="font-medium text-gray-900">Compliance Status</h3>
+            </div>
+            <p className="text-sm text-gray-700">
+              <span className="font-semibold text-red-600">1 overdue item:</span> Fire door survey is 15 days past due. 
+              EWS1 certificate and gas inspection are current.
+            </p>
+          </div>
+
+          {/* Email Sentiment */}
+          <div className="bg-white rounded-lg p-4 border border-teal-100">
+            <div className="flex items-center gap-2 mb-2">
+              <Mail className="h-4 w-4 text-teal-600" />
+              <h3 className="font-medium text-gray-900">Email Sentiment</h3>
+            </div>
+            <p className="text-sm text-gray-700">
+              <span className="font-semibold text-yellow-600">2 urgent emails</span> from residents this week. 
+              One complaint about heating system, one inquiry about service charges.
+            </p>
+          </div>
+        </div>
+
+        {/* Action Items */}
+        <div className="mt-4 pt-4 border-t border-teal-200">
+          <h4 className="font-medium text-[#0F5D5D] mb-2">Recommended Actions:</h4>
+          <ul className="text-sm text-gray-700 space-y-1">
+            <li className="flex items-center gap-2">
+              <AlertTriangle className="h-3 w-3 text-red-500" />
+              Schedule fire door survey immediately (overdue)
+            </li>
+            <li className="flex items-center gap-2">
+              <Clock className="h-3 w-3 text-orange-500" />
+              Contact insurance provider for renewal quotes
+            </li>
+            <li className="flex items-center gap-2">
+              <Mail className="h-3 w-3 text-blue-500" />
+              Respond to urgent resident emails within 24 hours
+            </li>
+          </ul>
         </div>
       </div>
 
