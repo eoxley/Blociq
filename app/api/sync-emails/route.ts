@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from '@supabase/supabase-js'
+import { Client } from '@microsoft/microsoft-graph-client'
 
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -47,25 +48,23 @@ export async function GET() {
       );
     }
 
-    // Fetch emails from Microsoft Graph
-    const response = await fetch(
-      `https://graph.microsoft.com/v1.0/users/testbloc@blociq.co.uk/messages?$top=50&$orderby=receivedDateTime desc`,
-      {
-        headers: {
-          Authorization: `Bearer ${result.accessToken}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    // Create Graph client
+    const graphClient = Client.init({
+      authProvider: (done) => {
+        done(null, result.accessToken);
+      },
+    });
 
-    if (!response.ok) {
-      throw new Error(`Graph API error: ${response.status} ${response.statusText}`);
-    }
+    // Query emails using graphClient.messages.list()
+    const messages = await graphClient
+      .api('/users/testbloc@blociq.co.uk/messages')
+      .top(50)
+      .orderby('receivedDateTime DESC')
+      .get();
 
-    const emailsData = await response.json();
-    const emails = emailsData.value || [];
+    const emails = messages.value || [];
 
-    // If no emails found, insert dummy data
+    // If no messages are returned, insert static dummy messages
     if (emails.length === 0) {
       const dummyEmails = [
         {
@@ -73,22 +72,25 @@ export async function GET() {
           subject: "Maintenance Request - Unit 101",
           body_preview: "Hi, there's a leak in the bathroom. Can someone please check it out?",
           received_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+          handled: false,
         },
         {
           from_email: "property@example.com",
           subject: "Lease Renewal Notice",
           body_preview: "Your lease is due for renewal. Please contact us to discuss terms.",
           received_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+          handled: false,
         },
         {
           from_email: "maintenance@example.com",
           subject: "Scheduled Building Inspection",
           body_preview: "We will be conducting our monthly building inspection tomorrow.",
           received_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
+          handled: false,
         }
       ];
 
-      // Insert dummy emails into Supabase
+      // Insert dummy emails into Supabase with handled = false
       const { data: insertedEmails, error: insertError } = await supabase
         .from('incoming_emails')
         .upsert(dummyEmails, { 
@@ -112,7 +114,7 @@ export async function GET() {
       });
     }
 
-    // Process real emails and insert into Supabase
+    // Process real emails and insert into Supabase with handled = false
     const processedEmails = emails.map((email: any) => ({
       from_email: email.from?.emailAddress?.address || email.from?.emailAddress?.name || 'unknown@example.com',
       subject: email.subject || 'No Subject',
@@ -121,6 +123,7 @@ export async function GET() {
       message_id: email.id,
       unread: !email.isRead,
       thread_id: email.conversationId,
+      handled: false, // Ensure all emails are saved with handled = false
     }));
 
     // Upsert emails into Supabase
