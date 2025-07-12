@@ -6,7 +6,10 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "deploy": "vercel --prod",
+    "deploy-preview": "vercel",
+    "deploy-check": "node scripts/deploy-check.js"
   },
   "dependencies": {
     "@azure/msal-node": "^3.6.2",

@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 export async function POST(req: NextRequest) {
+  // Check if OpenAI API key is available
+  if (!process.env.OPENAI_API_KEY) {
+    return NextResponse.json(
+      { error: "OpenAI API key is not configured" },
+      { status: 500 }
+    );
+  }
+
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  
   const { text } = await req.json();
 
   const prompt = `
@@ -79,19 +87,27 @@ Now, here is the lease content (you can truncate after 3000 words if needed):
 ${text.slice(0, 3000)}
   `;
 
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [{ role: "user", content: prompt }],
-    temperature: 0,
-  });
-
-  const response = completion.choices[0]?.message?.content;
-
   try {
-    const data = JSON.parse(response || "{}");
-    return NextResponse.json(data);
-  } catch (err) {
-    console.error("Failed to parse response", response);
-    return NextResponse.json({ error: "Invalid JSON from OpenAI", raw: response }, { status: 500 });
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0,
+    });
+
+    const response = completion.choices[0]?.message?.content;
+
+    try {
+      const data = JSON.parse(response || "{}");
+      return NextResponse.json(data);
+    } catch (err) {
+      console.error("Failed to parse response", response);
+      return NextResponse.json({ error: "Invalid JSON from OpenAI", raw: response }, { status: 500 });
+    }
+  } catch (error) {
+    console.error("OpenAI API error:", error);
+    return NextResponse.json(
+      { error: "Failed to process request with OpenAI" },
+      { status: 500 }
+    );
   }
 }
