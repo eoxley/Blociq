@@ -1,14 +1,10 @@
-"use client";
+import LayoutWithSidebar from '@/components/LayoutWithSidebar'
 
-export const dynamic = "force-dynamic";
-
-import { Suspense } from "react";
-import DashboardInner from "./DashboardInner";
-
-export default function DashboardPage() {
+export default function EmailPage() {
   return (
-    <Suspense fallback={<p className="p-6">Loading dashboard...</p>}>
-      <DashboardInner />
-    </Suspense>
-  );
+    <LayoutWithSidebar>
+      <h1 className="text-3xl font-bold text-[#0F5D5D] mb-4">Email</h1>
+      <p>This will eventually show the email threads or AI-generated messages.</p>
+    </LayoutWithSidebar>
+  )
 }

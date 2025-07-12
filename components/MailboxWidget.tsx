@@ -14,7 +14,8 @@ export default function MailboxWidget() {
         .from('incoming_emails')
         .select('id, subject, from_email, body_preview, received_at, handled')
         .order('received_at', { ascending: false })
-        .limit(5); // dashboard = preview
+
+      
 
       if (!error) setEmails(data || []);
       setLoading(false);

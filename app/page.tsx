@@ -1,4 +1,5 @@
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { Home } from 'lucide-react';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
@@ -10,5 +11,5 @@ export default async function HomePage() {
     redirect('/login'); // not logged in
   }
 
-  redirect('/dashboard'); // logged in
+  redirect('/');Home// logged in
 }

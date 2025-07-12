@@ -4,8 +4,10 @@ import { cookies } from 'next/headers'
 import Link from 'next/link'
 
 export default async function HomePage() {
-  const supabase = createServerComponentClient({ cookies })
+  const cookieStore = cookies() // 👈 This is now fine — it's already async in 15
+  const supabase = createServerComponentClient({ cookies: () => cookieStore })
   const { data: { session } } = await supabase.auth.getSession()
+
   if (!session) redirect('/login')
 
   return (
