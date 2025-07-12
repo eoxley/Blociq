@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
+import Link from 'next/link'
 import { Building2, MapPin, Users, ArrowRight, Search } from 'lucide-react'
 
 // Define the Building type based on the database schema
@@ -68,9 +69,10 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
       {/* Buildings Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {filteredBuildings.map((building) => (
-          <div
+          <Link
             key={building.id}
-            className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 border border-gray-100 overflow-hidden group"
+            href={`/buildings/${building.id}`}
+            className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 border border-gray-100 overflow-hidden group block"
           >
             <div className="p-6">
               {/* Building Icon */}
@@ -102,12 +104,12 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
               </div>
               
               {/* View More Button */}
-              <button className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white px-4 py-2 rounded-md transition-all duration-200 transform hover:scale-105 group-hover:shadow-md">
+              <div className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white px-4 py-2 rounded-md transition-all duration-200 transform hover:scale-105 group-hover:shadow-md">
                 <span className="text-sm font-medium">View Details</span>
                 <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
-              </button>
+              </div>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
 
