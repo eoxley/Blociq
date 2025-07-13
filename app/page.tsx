@@ -298,10 +298,19 @@ export default function LandingPage() {
             </div>
           </div>
           
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center">
-            <p className="text-gray-400 text-sm">
-              © BlocIQ 2025. All rights reserved.
-            </p>
+          <div className="border-t border-gray-800 mt-8 pt-8">
+            <div className="text-center mb-4">
+              <p className="text-gray-400 text-sm">
+                © BlocIQ 2025. All rights reserved.
+              </p>
+            </div>
+            <div className="text-left">
+              <p className="text-xs text-gray-500">
+                BlocIQ Ltd<br />
+                Registered in England & Wales: Company No. 16533839<br />
+                Registered Office: 3 Cliveden Court, The Broadway, TN3 8DA
+              </p>
+            </div>
           </div>
         </div>
       </footer>
