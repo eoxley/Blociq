@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import Link from 'next/link'
 import { MessageCircle, Calendar, ExternalLink, Send, Loader2, Plus } from 'lucide-react'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 type PropertyEvent = {
   building: string
@@ -26,6 +27,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const [response, setResponse] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isAddingEvent, setIsAddingEvent] = useState(false)
+  const [context, setContext] = useState<any>(null)
+  const [showEmailButton, setShowEmailButton] = useState(false)
+  const supabase = createClientComponentClient()
 
   // Dynamic welcome messages
   const welcomeMessages = [
@@ -77,6 +81,17 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     }
   ]
 
+  // Fetch user context (buildings, docs, emails)
+  const fetchUserContext = async () => {
+    // You may want to scope these queries to the current user in a real app
+    const [{ data: buildings }, { data: documents }, { data: emails }] = await Promise.all([
+      supabase.from('buildings').select('*'),
+      supabase.from('compliance_docs').select('*'),
+      supabase.from('incoming_emails').select('*').order('created_at', { ascending: false }).limit(5),
+    ])
+    return { buildings, documents, emails }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!inputValue.trim()) return
@@ -84,24 +99,30 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     setIsLoading(true)
     setError(null)
     setResponse(null)
+    setShowEmailButton(false)
 
     try {
-      const res = await fetch('/api/generate-draft', {
+      const userContext = await fetchUserContext()
+      setContext(userContext)
+      const res = await fetch('/api/ask-question', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          prompt: inputValue
+          prompt: inputValue,
+          context: userContext
         }),
       })
 
       if (!res.ok) {
-        throw new Error('Failed to generate response')
+        throw new Error('Failed to get AI answer')
       }
 
       const data = await res.json()
-      setResponse(data.response || data.content || 'No response received')
+      setResponse(data.answer || data.content || 'No answer received')
+      // Only show email button if user asks for it
+      setShowEmailButton(/(email|turn this into an email|write.*email)/i.test(inputValue))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
@@ -172,75 +193,57 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Ask BlocAI Section */}
-        <div className="bg-white rounded-xl shadow-lg p-6 border">
+        {/* BlocIQ Knowledge Assistant Section */}
+        <div className="bg-white rounded-xl shadow-lg p-6 border flex flex-col h-full">
           <div className="flex items-center gap-3 mb-6">
             <MessageCircle className="h-6 w-6 text-teal-600" />
-            <h2 className="text-2xl font-semibold text-gray-900">How can I help you with your property management today?</h2>
+            <h2 className="text-2xl font-semibold text-gray-900">BlocIQ Knowledge Assistant</h2>
           </div>
-          
-          <div className="space-y-4">
-            {/* BlocAI Tag */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-600">🧠 BlocAI</span>
-            </div>
-            
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="flex gap-3">
-                <input
-                  type="text"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="Ask me anything about your properties..."
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                  disabled={isLoading}
-                />
-                <button 
-                  type="submit"
-                  disabled={isLoading || !inputValue.trim()}
-                  className="px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          <div className="flex-1 flex flex-col justify-end">
+            <div className="space-y-4 mb-4">
+              {/* BlocAI Tag */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-600">🧠 BlocAI</span>
+              </div>
+              {/* Chat UI */}
+              <div className="bg-gray-50 rounded-lg p-4 min-h-[80px] text-gray-800 text-base whitespace-pre-line">
+                {isLoading ? (
+                  <div className="flex items-center gap-2 text-teal-600"><Loader2 className="animate-spin h-5 w-5" /> Thinking...</div>
+                ) : response ? (
+                  <div>{response}</div>
+                ) : (
+                  <span className="text-gray-400">Ask a property management question…</span>
+                )}
+              </div>
+              {showEmailButton && (
+                <button
+                  className="mt-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm font-medium"
+                  onClick={() => alert('Email generation coming soon!')}
                 >
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                  {isLoading ? 'Generating...' : 'Send'}
+                  Generate Email from Answer
                 </button>
-              </div>
+              )}
+              {error && <div className="text-red-500 text-sm">{error}</div>}
+            </div>
+            <form onSubmit={handleSubmit} className="flex gap-3 mt-2">
+              <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder="Ask about your buildings, compliance, or recent emails…"
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                disabled={isLoading}
+                autoFocus
+              />
+              <button 
+                type="submit"
+                disabled={isLoading || !inputValue.trim()}
+                className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Send className="h-5 w-5" />
+                Ask
+              </button>
             </form>
-
-            {/* Loading State */}
-            {isLoading && (
-              <div className="bg-gray-50 rounded-lg p-4 border">
-                <div className="flex items-center gap-3">
-                  <Loader2 className="h-5 w-5 animate-spin text-teal-600" />
-                  <span className="text-gray-700">BlocAI is thinking...</span>
-                </div>
-              </div>
-            )}
-
-            {/* Response Card */}
-            {response && (
-              <div className="bg-gray-50 rounded-lg p-4 border">
-                <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                  <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
-                  BlocAI Response
-                </div>
-                <div className="text-gray-800 whitespace-pre-wrap">{response}</div>
-              </div>
-            )}
-
-            {/* Error Card */}
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <div className="flex items-center gap-2 text-sm text-red-700 mb-2">
-                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                  Error
-                </div>
-                <div className="text-red-800">{error}</div>
-              </div>
-            )}
           </div>
         </div>
 
