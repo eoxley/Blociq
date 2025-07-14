@@ -40,7 +40,7 @@ export default async function DashboardBuildingPage({
   // Get building data
   const { data: building } = await supabase
     .from('buildings')
-    .select('id, name, address, unit_count')
+    .select('id, name, address, unit_count, created_at')
     .eq('id', building_id)
     .single()
 
