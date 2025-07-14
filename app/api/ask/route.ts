@@ -4,6 +4,7 @@ import OpenAI from 'openai';
 import { getSystemPrompt } from '../../../lib/ai/systemPrompt';
 import { fetchUserContext, formatContextMessages } from '../../../lib/ai/userContext';
 import { logAIInteraction } from '../../../lib/ai/logInteraction';
+import { searchFounderKnowledge } from '../../../lib/ai/embed';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -40,10 +41,29 @@ export async function POST(req: NextRequest) {
     // 2. Inject Supabase Context
     const contextMessages = formatContextMessages(userContext);
     
-    // 3. Build the complete message array as specified
+    // 3. Search Founder Knowledge and inject into context
+    let founderKnowledgeMessages: Array<{ role: 'system'; content: string }> = [];
+    try {
+      const knowledgeChunks = await searchFounderKnowledge(prompt);
+      if (knowledgeChunks.length > 0) {
+        founderKnowledgeMessages = knowledgeChunks.map(chunk => ({
+          role: 'system' as const,
+          content: `Reference: ${chunk}`
+        }));
+        console.log(`Found ${knowledgeChunks.length} relevant founder knowledge chunks`);
+      } else {
+        console.log('No relevant founder knowledge found for query');
+      }
+    } catch (error) {
+      console.error('Error searching founder knowledge:', error);
+      // Continue without founder knowledge if search fails
+    }
+    
+    // 4. Build the complete message array with founder knowledge
     const messages = [
       { role: 'system' as const, content: systemPrompt },
       ...contextMessages,
+      ...founderKnowledgeMessages,
       { role: 'user' as const, content: prompt }
     ];
 
@@ -61,7 +81,7 @@ export async function POST(req: NextRequest) {
       throw new Error('No response from OpenAI');
     }
     
-    // 3. Log the Interaction (suppress errors)
+    // 5. Log the Interaction (suppress errors)
     try {
       await logAIInteraction({
         user_id: userId,
