@@ -19,9 +19,11 @@ export default async function BuildingsPage() {
   const supabase = createServerComponentClient({ cookies })
   
   // Check if user is authenticated
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { session }
+  } = await supabase.auth.getSession()
   
-  if (!user) {
+  if (!session) {
     redirect('/login')
   }
 
@@ -158,7 +160,7 @@ export default async function BuildingsPage() {
                     </div>
                   )}
                   
-                  {building.upcoming_events_count > 0 && (
+                  {building.upcoming_events_count && building.upcoming_events_count > 0 && (
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <Calendar className="h-4 w-4" />
                       <span>{building.upcoming_events_count} upcoming events</span>
