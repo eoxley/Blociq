@@ -15,11 +15,9 @@ interface Building {
 export default async function BuildingsPage() {
   const supabase = createServerComponentClient({ cookies })
   
-  // Check if user is authenticated
-  const {
-    data: { session }
-  } = await supabase.auth.getSession()
-  
+  // Protect this route with Supabase Auth
+  const { data: { session } } = await supabase.auth.getSession()
+
   if (!session) {
     redirect('/login')
   }
