@@ -248,7 +248,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Request Demo Section (Placeholder) */}
+      {/* Request Demo Section */}
       <section className="py-16 bg-white">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8">
@@ -260,16 +260,16 @@ export default function LandingPage() {
             </p>
           </div>
           
-          <div className="bg-gray-50 rounded-xl p-8 border border-gray-200">
-            <div className="text-center py-8">
-              <div className="text-4xl mb-4">🚧</div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                Demo Request Form
-              </h3>
-              <p className="text-gray-600 text-sm">
-                This feature is coming soon. For now, please contact us directly to schedule a demo.
-              </p>
-            </div>
+          <div className="text-center">
+            <a 
+              href="/auth/sign-in"
+              className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-teal-600 to-teal-700 text-white font-semibold rounded-lg hover:from-teal-700 hover:to-teal-800 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
+            >
+              Get Started with BlocIQ
+            </a>
+            <p className="text-sm text-gray-500 mt-4">
+              Sign in to access your personalized demo
+            </p>
           </div>
         </div>
       </section>
@@ -292,7 +292,7 @@ export default function LandingPage() {
               <a href="#" className="text-gray-300 hover:text-white transition-colors">
                 Terms
               </a>
-              <a href="#" className="text-gray-300 hover:text-white transition-colors">
+              <a href="mailto:eleanor.oxley@blociq.co.uk" className="text-gray-300 hover:text-white transition-colors">
                 Contact
               </a>
             </div>
