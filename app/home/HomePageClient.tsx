@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { MessageCircle, Calendar, ExternalLink, Send, Loader2, Plus } from 'lucide-react'
+import { MessageCircle, Calendar, ExternalLink, Send, Loader2, Plus, Mail, FileText, Pin } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 type PropertyEvent = {
@@ -17,6 +17,13 @@ type UserData = {
   email: string
 }
 
+type ChatMessage = {
+  id: string
+  content: string
+  isUser: boolean
+  timestamp: Date
+}
+
 interface HomePageClientProps {
   userData: UserData
 }
@@ -24,11 +31,17 @@ interface HomePageClientProps {
 export default function HomePageClient({ userData }: HomePageClientProps) {
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [response, setResponse] = useState<string | null>(null)
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: '1',
+      content: "Hello! I'm your BlocIQ assistant. I can help you with property management questions, compliance guidance, and more. What would you like to know?",
+      isUser: false,
+      timestamp: new Date()
+    }
+  ])
   const [error, setError] = useState<string | null>(null)
   const [isAddingEvent, setIsAddingEvent] = useState(false)
   const [context, setContext] = useState<any>(null)
-  const [showEmailButton, setShowEmailButton] = useState(false)
   const supabase = createClientComponentClient()
 
   // Dynamic welcome messages
@@ -81,16 +94,21 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     }
   ]
 
-
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!inputValue.trim()) return
 
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      content: inputValue,
+      isUser: true,
+      timestamp: new Date()
+    }
+
+    setMessages(prev => [...prev, userMessage])
+    setInputValue('')
     setIsLoading(true)
     setError(null)
-    setResponse(null)
-    setShowEmailButton(false)
 
     try {
       // Get current user ID
@@ -115,11 +133,23 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       }
 
       const data = await res.json()
-      setResponse(data.answer || data.content || 'No answer received')
-      // Only show email button if user asks for it
-      setShowEmailButton(/(email|turn this into an email|write.*email)/i.test(inputValue))
+      const aiMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        content: data.answer || data.content || 'No answer received',
+        isUser: false,
+        timestamp: new Date()
+      }
+
+      setMessages(prev => [...prev, aiMessage])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
+      const errorMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        content: 'Sorry, I encountered an error. Please try again.',
+        isUser: false,
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, errorMessage])
     } finally {
       setIsLoading(false)
     }
@@ -177,6 +207,13 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     }
   }
 
+  const formatMessageTime = (timestamp: Date) => {
+    return timestamp.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    })
+  }
+
   return (
     <div className="space-y-8">
       {/* Welcome Banner */}
@@ -188,58 +225,82 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* BlocIQ Knowledge Assistant Section */}
-        <div className="bg-white rounded-xl shadow-lg p-6 border flex flex-col h-full">
+        {/* BlocIQ Chat Assistant Section */}
+        <div className="bg-white rounded-xl shadow-lg p-6 border flex flex-col h-[600px]">
           <div className="flex items-center gap-3 mb-6">
             <MessageCircle className="h-6 w-6 text-teal-600" />
-            <h2 className="text-2xl font-semibold text-gray-900">BlocIQ Knowledge Assistant</h2>
+            <h2 className="text-2xl font-semibold text-gray-900">BlocIQ Assistant</h2>
           </div>
-          <div className="flex-1 flex flex-col justify-end">
-            <div className="space-y-4 mb-4">
-              {/* BlocAI Tag */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-600">🧠 BlocAI</span>
+          
+          {/* Chat Messages */}
+          <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2">
+            {messages.map((message) => (
+              <div key={message.id} className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                  message.isUser 
+                    ? 'bg-teal-600 text-white' 
+                    : 'bg-gray-100 text-gray-900'
+                }`}>
+                  <div className="text-sm whitespace-pre-line">{message.content}</div>
+                  <div className={`text-xs mt-1 ${
+                    message.isUser ? 'text-teal-100' : 'text-gray-500'
+                  }`}>
+                    {formatMessageTime(message.timestamp)}
+                  </div>
+                </div>
               </div>
-              {/* Chat UI */}
-              <div className="bg-gray-50 rounded-lg p-4 min-h-[80px] text-gray-800 text-base whitespace-pre-line">
-                {isLoading ? (
-                  <div className="flex items-center gap-2 text-teal-600"><Loader2 className="animate-spin h-5 w-5" /> Thinking...</div>
-                ) : response ? (
-                  <div>{response}</div>
-                ) : (
-                  <span className="text-gray-400">Ask a property management question…</span>
-                )}
+            ))}
+            
+            {/* Loading indicator */}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-gray-100 rounded-2xl px-4 py-3">
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <Loader2 className="animate-spin h-4 w-4" />
+                    <span className="text-sm">Thinking...</span>
+                  </div>
+                </div>
               </div>
-              {showEmailButton && (
-                <button
-                  className="mt-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm font-medium"
-                  onClick={() => alert('Email generation coming soon!')}
-                >
-                  Generate Email from Answer
-                </button>
-              )}
-              {error && <div className="text-red-500 text-sm">{error}</div>}
-            </div>
-            <form onSubmit={handleSubmit} className="flex gap-3 mt-2">
-              <input
-                type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Ask about your buildings, compliance, or recent emails…"
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                disabled={isLoading}
-                autoFocus
-              />
-              <button 
-                type="submit"
-                disabled={isLoading || !inputValue.trim()}
-                className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Send className="h-5 w-5" />
-                Ask
+            )}
+          </div>
+
+          {/* Action buttons for last AI message */}
+          {messages.length > 1 && !messages[messages.length - 1].isUser && !isLoading && (
+            <div className="flex gap-2 mb-4">
+              <button className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm">
+                <Mail className="h-4 w-4" />
+                📧 Turn into email
               </button>
-            </form>
-          </div>
+              <button className="flex items-center gap-2 px-3 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm">
+                <FileText className="h-4 w-4" />
+                📝 Save as advice note
+              </button>
+              <button className="flex items-center gap-2 px-3 py-2 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors text-sm">
+                <Pin className="h-4 w-4" />
+                📌 Attach to building diary
+              </button>
+            </div>
+          )}
+
+          {/* Input form */}
+          <form onSubmit={handleSubmit} className="flex gap-3">
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder="Ask about your buildings, compliance, or recent emails…"
+              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+              disabled={isLoading}
+            />
+            <button 
+              type="submit"
+              disabled={isLoading || !inputValue.trim()}
+              className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Send className="h-5 w-5" />
+              Send
+            </button>
+          </form>
         </div>
 
         {/* Upcoming Property Events Section */}
