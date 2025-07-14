@@ -262,7 +262,7 @@ export default function LandingPage() {
           
           <div className="text-center">
             <a 
-              href="/auth/sign-in"
+              href="/login"
               className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-teal-600 to-teal-700 text-white font-semibold rounded-lg hover:from-teal-700 hover:to-teal-800 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
             >
               Get Started with BlocIQ
