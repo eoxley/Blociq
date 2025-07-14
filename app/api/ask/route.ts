@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
+import { getSystemPrompt } from '../../../lib/ai/systemPrompt';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,18 +40,21 @@ ${leases?.slice(0, 5).map(l => `- ${l.leaseholder_name} (unit ID ${l.unit_id}, $
 ${compliance?.slice(0, 5).map(c => `- ${c.document_type} for building ID ${c.building_id} on ${c.uploaded_at}`).join('\n') || 'No documents found.'}
 `;
 
+    const systemPrompt = getSystemPrompt();
+    const contextMessages = [
+      {
+        role: 'system' as const,
+        content: `${systemPrompt}\n\nDatabase Context:\n${context}`
+      }
+    ];
+
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [
-        {
-          role: 'system',
-          content: `You are BlocIQ, a helpful AI assistant for property managers. You are connected to a Supabase database with the following information:\n\n${context}`,
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
+        ...contextMessages,
+        { role: 'user' as const, content: prompt }
       ],
+      temperature: 0.3
     });
 
     const answer = completion.choices[0].message.content;
