@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Calendar, DollarSign, Shield, FileText, Mail, ChevronDown, ChevronUp, ExternalLink, Brain, AlertTriangle, Clock, Wrench, Plus } from 'lucide-react'
+import { ArrowLeft, Calendar, DollarSign, Shield, FileText, Mail, ChevronDown, ChevronUp, ExternalLink, Brain, AlertTriangle, Clock, Wrench, Plus, Users } from 'lucide-react'
 
 type Building = {
   id: string
@@ -69,6 +69,24 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
           <p className="text-lg text-gray-600">
             {building.address}
           </p>
+          
+          {/* Navigation Links */}
+          <div className="flex items-center gap-4 mt-4">
+            <Link 
+              href={`/buildings/${building.id}/units`}
+              className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+            >
+              <Users className="h-4 w-4" />
+              View Units
+            </Link>
+            <Link 
+              href={`/buildings/${building.id}/major-works`}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              <Wrench className="h-4 w-4" />
+              Major Works
+            </Link>
+          </div>
         </div>
       </div>
 

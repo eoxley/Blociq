@@ -5,8 +5,9 @@ import { getSystemPrompt } from '../../../lib/ai/systemPrompt';
 import { fetchUserContext, formatContextMessages } from '../../../lib/ai/userContext';
 import { logAIInteraction } from '../../../lib/ai/logInteraction';
 import { searchFounderKnowledge } from '../../../lib/ai/embed';
+import { Database } from '../../../lib/database.types';
 
-const supabase = createClient(
+const supabase = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
@@ -14,6 +15,119 @@ const supabase = createClient(
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
+
+// Function to extract building names from user query
+function extractBuildingNames(query: string): string[] {
+  // Common building name patterns
+  const buildingPatterns = [
+    /\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+(?:House|Building|Court|Gardens|Mews|Place|Square|Terrace|Lodge|Manor|Hall|Residence|Apartments?)\b/gi,
+    /\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/gi, // General capitalized words
+  ];
+
+  const foundBuildings = new Set<string>();
+  
+  buildingPatterns.forEach(pattern => {
+    const matches = query.match(pattern);
+    if (matches) {
+      matches.forEach(match => {
+        // Filter out common words that aren't building names
+        const commonWords = ['the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'with', 'by', 'from', 'about', 'this', 'that', 'these', 'those'];
+        if (!commonWords.includes(match.toLowerCase()) && match.length > 2) {
+          foundBuildings.add(match);
+        }
+      });
+    }
+  });
+
+  return Array.from(foundBuildings);
+}
+
+// Function to fetch building context from Supabase
+async function fetchBuildingContext(buildingNames: string[]): Promise<Array<{ role: 'system'; content: string }>> {
+  if (buildingNames.length === 0) return [];
+
+  const buildingContextMessages: Array<{ role: 'system'; content: string }> = [];
+
+  for (const buildingName of buildingNames) {
+    try {
+      // Search for building by name using ILIKE
+      const { data: buildings, error: buildingError } = await supabase
+        .from('buildings')
+        .select(`
+          id,
+          name,
+          address,
+          unit_count,
+          units (
+            id,
+            unit_number,
+            floor,
+            type,
+            leaseholder_email,
+            leaseholders (
+              id,
+              name,
+              email,
+              phone
+            )
+          )
+        `)
+        .ilike('name', `%${buildingName}%`)
+        .limit(1);
+
+      if (buildingError) {
+        console.error('Error fetching building:', buildingError);
+        continue;
+      }
+
+      if (buildings && buildings.length > 0) {
+        const building = buildings[0];
+        const units = building.units || [];
+        
+        // Count units
+        const unitCount = units.length;
+        
+        // Get recent units with leaseholders (limit to 5 for context)
+        const recentUnits = units.slice(0, 5);
+        
+        // Build context message
+        let contextMessage = `${building.name} has ${unitCount} units.`;
+        
+        if (building.address) {
+          contextMessage += ` Address: ${building.address}.`;
+        }
+        
+        // Add unit and leaseholder information
+        if (recentUnits.length > 0) {
+          contextMessage += ' Recent units: ';
+          const unitDetails = recentUnits.map(unit => {
+            const leaseholder = unit.leaseholders?.[0]; // Get first leaseholder
+            if (leaseholder) {
+              return `${unit.unit_number} is leased to ${leaseholder.name || 'Unknown'}${leaseholder.email ? ` (${leaseholder.email})` : ''}`;
+            } else {
+              return `${unit.unit_number}${unit.leaseholder_email ? ` (${unit.leaseholder_email})` : ''}`;
+            }
+          });
+          contextMessage += unitDetails.join(', ') + '.';
+        }
+
+        buildingContextMessages.push({
+          role: 'system',
+          content: contextMessage
+        });
+
+        console.log(`Found building context for: ${building.name}`);
+      } else {
+        console.log(`No building found for: ${buildingName}`);
+      }
+    } catch (error) {
+      console.error(`Error processing building ${buildingName}:`, error);
+      // Continue with other buildings even if one fails
+    }
+  }
+
+  return buildingContextMessages;
+}
 
 export async function POST(req: NextRequest) {
   const { prompt, userId } = await req.json();
@@ -27,7 +141,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // 1. Per-Agency Prompt Logic
+    // 1. Extract building context from user query
+    const buildingNames = extractBuildingNames(prompt);
+    const buildingContextMessages = await fetchBuildingContext(buildingNames);
+
+    // 2. Per-Agency Prompt Logic
     const userContext = await fetchUserContext(userId, supabase);
     
     // Build agency-specific context
@@ -38,10 +156,10 @@ export async function POST(req: NextRequest) {
     // Get system prompt with agency context
     const systemPrompt = getSystemPrompt(agencyContext);
     
-    // 2. Inject Supabase Context
+    // 3. Inject Supabase Context
     const contextMessages = formatContextMessages(userContext);
     
-    // 3. Search Founder Knowledge and inject into context
+    // 4. Search Founder Knowledge and inject into context
     let founderKnowledgeMessages: Array<{ role: 'system'; content: string }> = [];
     try {
       const knowledgeChunks = await searchFounderKnowledge(prompt);
@@ -59,10 +177,11 @@ export async function POST(req: NextRequest) {
       // Continue without founder knowledge if search fails
     }
     
-    // 4. Build the complete message array with founder knowledge
+    // 5. Build the complete message array with building context
     const messages = [
       { role: 'system' as const, content: systemPrompt },
       ...contextMessages,
+      ...buildingContextMessages,
       ...founderKnowledgeMessages,
       { role: 'user' as const, content: prompt }
     ];
@@ -81,7 +200,7 @@ export async function POST(req: NextRequest) {
       throw new Error('No response from OpenAI');
     }
     
-    // 5. Log the Interaction (suppress errors)
+    // 6. Log the Interaction (suppress errors)
     try {
       await logAIInteraction({
         user_id: userId,
