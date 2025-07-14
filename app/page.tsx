@@ -344,7 +344,7 @@ export default function LandingPage() {
               <a href="#" className="text-gray-300 hover:text-white transition-colors">
                 Privacy
               </a>
-              <a href="#" className="text-gray-300 hover:text-white transition-colors">
+              <a href="/terms" className="text-gray-300 hover:text-white transition-colors">
                 Terms
               </a>
               <a href="mailto:eleanor.oxley@blociq.co.uk" className="text-gray-300 hover:text-white transition-colors">
