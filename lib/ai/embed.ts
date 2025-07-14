@@ -92,9 +92,11 @@ export async function embedMarkdownFile(
 }
 
 // --- SEARCH FUNCTION ---
-export async function searchFounderKnowledge(query: string): Promise<string[]> {
+export async function searchFounderKnowledge(
+  query: string
+): Promise<{ success: boolean; results: string[]; error?: string }> {
   try {
-    // 1. Embed the query using OpenAI
+    // 1. Embed the query
     const embeddingResp = await openai.embeddings.create({
       model: 'text-embedding-ada-002',
       input: query,
@@ -115,13 +117,20 @@ export async function searchFounderKnowledge(query: string): Promise<string[]> {
       return await searchFounderKnowledgeFallback(query, queryEmbedding);
     }
 
-    // 3. Extract content from results and return top 3-5 matches
+    // 3. Extract content from results
     const results = data?.map((row: any) => row.content) || [];
-    return results.slice(0, 5); // Return up to 5 results
+    
+    return {
+      success: true,
+      results: results.slice(0, 5)
+    };
 
-  } catch (error) {
-    console.error('Error searching founder knowledge:', error);
-    return []; // Return empty array on error
+  } catch (e) {
+    return {
+      success: false,
+      results: [],
+      error: `Search error: ${e}`
+    };
   }
 }
 
@@ -129,7 +138,7 @@ export async function searchFounderKnowledge(query: string): Promise<string[]> {
 async function searchFounderKnowledgeFallback(
   query: string,
   queryEmbedding: number[]
-): Promise<string[]> {
+): Promise<{ success: boolean; results: string[]; error?: string }> {
   try {
     // Get all embeddings from the database
     const { data, error } = await supabase
@@ -137,8 +146,11 @@ async function searchFounderKnowledgeFallback(
       .select('content, embedding');
 
     if (error) {
-      console.error('Database error in fallback search:', error);
-      return [];
+      return {
+        success: false,
+        results: [],
+        error: `Database error: ${error.message}`
+      };
     }
 
     // Calculate cosine similarity for each embedding
@@ -153,11 +165,17 @@ async function searchFounderKnowledgeFallback(
       .slice(0, 5)
       .map(item => item.content);
 
-    return topResults;
+    return {
+      success: true,
+      results: topResults
+    };
 
-  } catch (error) {
-    console.error('Fallback search error:', error);
-    return [];
+  } catch (e) {
+    return {
+      success: false,
+      results: [],
+      error: `Fallback search error: ${e}`
+    };
   }
 }
 
