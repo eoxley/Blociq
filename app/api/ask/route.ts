@@ -56,21 +56,7 @@ async function fetchBuildingContext(buildingNames: string[]): Promise<Array<{ ro
         .select(`
           id,
           name,
-          address,
-          unit_count,
-          units (
-            id,
-            unit_number,
-            floor,
-            type,
-            leaseholder_email,
-            leaseholders (
-              id,
-              name,
-              email,
-              phone
-            )
-          )
+          address
         `)
         .ilike('name', `%${buildingName}%`)
         .limit(1);
@@ -82,33 +68,129 @@ async function fetchBuildingContext(buildingNames: string[]): Promise<Array<{ ro
 
       if (buildings && buildings.length > 0) {
         const building = buildings[0];
-        const units = building.units || [];
         
-        // Count units
-        const unitCount = units.length;
+        // Fetch units count for this building
+        const { data: units, error: unitsError } = await supabase
+          .from('units')
+          .select('id')
+          .eq('building_id', building.id);
+
+        if (unitsError) {
+          console.error('Error fetching units:', unitsError);
+          continue;
+        }
+
+        const unitCount = units?.length || 0;
         
-        // Get recent units with leaseholders (limit to 5 for context)
-        const recentUnits = units.slice(0, 5);
-        
+        // Fetch units with their details
+        const { data: unitsWithDetails, error: unitsDetailsError } = await supabase
+          .from('units')
+          .select(`
+            id,
+            unit_number,
+            type,
+            floor
+          `)
+          .eq('building_id', building.id)
+          .order('unit_number');
+
+        if (unitsDetailsError) {
+          console.error('Error fetching units with details:', unitsDetailsError);
+          continue;
+        }
+
+        // Fetch leaseholders for this building's units
+        const { data: leaseholders, error: leaseholdersError } = await supabase
+          .from('leaseholders')
+          .select(`
+            id,
+            name,
+            email,
+            unit_id
+          `)
+          .in('unit_id', units?.map(u => u.id) || []);
+
+        if (leaseholdersError) {
+          console.error('Error fetching leaseholders:', leaseholdersError);
+          continue;
+        }
+
+        // Create a map of unit_id to leaseholder
+        const leaseholderMap = new Map();
+        leaseholders?.forEach(leaseholder => {
+          leaseholderMap.set(leaseholder.unit_id, leaseholder);
+        });
+
+        // Fetch leases for this building
+        const { data: leases, error: leasesError } = await supabase
+          .from('leases')
+          .select(`
+            id,
+            unit_id,
+            expiry_date
+          `)
+          .eq('building_id', building.id);
+
+        if (leasesError) {
+          console.error('Error fetching leases:', leasesError);
+          continue;
+        }
+
+        // Create a map of unit_id to lease data
+        const leaseMap = new Map();
+        leases?.forEach(lease => {
+          leaseMap.set(lease.unit_id, lease);
+        });
+
+        // Fetch 2 most recent emails for this building
+        const { data: recentEmails, error: emailsError } = await supabase
+          .from('incoming_emails')
+          .select(`
+            id,
+            subject,
+            from_email,
+            body_preview,
+            received_at
+          `)
+          .eq('building_id', building.id)
+          .order('received_at', { ascending: false })
+          .limit(2);
+
+        if (emailsError) {
+          console.error('Error fetching recent emails:', emailsError);
+          // Continue without emails if there's an error
+        }
+
         // Build context message
         let contextMessage = `${building.name} has ${unitCount} units.`;
         
-        if (building.address) {
-          contextMessage += ` Address: ${building.address}.`;
-        }
-        
-        // Add unit and leaseholder information
-        if (recentUnits.length > 0) {
-          contextMessage += ' Recent units: ';
-          const unitDetails = recentUnits.map(unit => {
-            const leaseholder = unit.leaseholders?.[0]; // Get first leaseholder
-            if (leaseholder) {
-              return `${unit.unit_number} is leased to ${leaseholder.name || 'Unknown'}${leaseholder.email ? ` (${leaseholder.email})` : ''}`;
+        // Add unit and leaseholder information with lease end dates
+        if (unitsWithDetails && unitsWithDetails.length > 0) {
+          const unitDetails = unitsWithDetails.map(unit => {
+            const leaseholder = leaseholderMap.get(unit.id);
+            const lease = leaseMap.get(unit.id);
+            
+            if (leaseholder && lease?.expiry_date) {
+              const endDate = new Date(lease.expiry_date).toLocaleDateString();
+              return `${unit.unit_number} is leased to ${leaseholder.name} until ${endDate}`;
+            } else if (leaseholder) {
+              return `${unit.unit_number} is leased to ${leaseholder.name}`;
             } else {
-              return `${unit.unit_number}${unit.leaseholder_email ? ` (${unit.leaseholder_email})` : ''}`;
+              return `${unit.unit_number}`;
             }
           });
-          contextMessage += unitDetails.join(', ') + '.';
+          contextMessage += ' ' + unitDetails.join(', ') + '.';
+        }
+
+        // Add recent emails information
+        if (recentEmails && recentEmails.length > 0) {
+          contextMessage += ' Recent messages: ';
+          const emailDetails = recentEmails.map(email => {
+            const sender = email.from_email || 'Unknown';
+            const subject = email.subject || 'No subject';
+            return `from ${sender}: "${subject}"`;
+          });
+          contextMessage += emailDetails.join(', ') + '.';
         }
 
         buildingContextMessages.push({
@@ -162,13 +244,13 @@ export async function POST(req: NextRequest) {
     // 4. Search Founder Knowledge and inject into context
     let founderKnowledgeMessages: Array<{ role: 'system'; content: string }> = [];
     try {
-      const knowledgeChunks = await searchFounderKnowledge(prompt);
-      if (knowledgeChunks.length > 0) {
-        founderKnowledgeMessages = knowledgeChunks.map(chunk => ({
+      const knowledgeResult = await searchFounderKnowledge(prompt);
+      if (knowledgeResult.success && knowledgeResult.results.length > 0) {
+        founderKnowledgeMessages = knowledgeResult.results.map(chunk => ({
           role: 'system' as const,
           content: `Reference: ${chunk}`
         }));
-        console.log(`Found ${knowledgeChunks.length} relevant founder knowledge chunks`);
+        console.log(`Found ${knowledgeResult.results.length} relevant founder knowledge chunks`);
       } else {
         console.log('No relevant founder knowledge found for query');
       }
@@ -223,3 +305,4 @@ export async function POST(req: NextRequest) {
     }, { status: 500 });
   }
 }
+
