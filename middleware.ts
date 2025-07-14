@@ -14,12 +14,13 @@ export async function middleware(req: NextRequest) {
 
   const path = req.nextUrl.pathname
 
+  // TEMPORARILY DISABLED FOR DEBUGGING
   // Redirect unauthenticated users trying to access protected pages
-  if (protectedRoutes.some((route) => path.startsWith(route))) {
-    if (!session) {
-      return NextResponse.redirect(new URL('/login', req.url))
-    }
-  }
+  // if (protectedRoutes.some((route) => path.startsWith(route))) {
+  //   if (!session) {
+  //     return NextResponse.redirect(new URL('/login', req.url))
+  //   }
+  // }
 
   // Optional: Redirect logged-in users away from /login
   if (path === '/login' && session) {
