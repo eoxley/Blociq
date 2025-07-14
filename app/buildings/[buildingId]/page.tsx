@@ -40,17 +40,16 @@ export default async function BuildingDetailPage({
   
   const supabase = createServerComponentClient({ cookies })
   
-  // Check if user is authenticated
+  // Secure the route using Supabase Auth
   const {
-    data: { session }
+    data: { session },
   } = await supabase.auth.getSession()
-  
-  console.log('🔍 BuildingDetailPage: session =', session ? 'authenticated' : 'not authenticated')
-  
+
   if (!session) {
-    console.log('🔍 BuildingDetailPage: redirecting to login - no session')
     redirect('/login')
   }
+  
+  console.log('🔍 BuildingDetailPage: session =', session ? 'authenticated' : 'not authenticated')
 
   // Fetch building data
   const { data: building, error: buildingError } = await supabase
