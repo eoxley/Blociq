@@ -73,6 +73,61 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Why BlocIQ */}
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-6">
+              Why BlocIQ?
+            </h2>
+            <p className="text-lg text-gray-600 leading-relaxed">
+              BlocIQ is one of the UK's first AI-powered proptech platforms built specifically for leasehold compliance.
+            </p>
+          </div>
+          
+          <div className="bg-white rounded-xl p-8 shadow-lg border border-gray-100 mb-8">
+            <p className="text-lg text-gray-600 leading-relaxed mb-6">
+              While AI is being rapidly adopted across industries, most property firms are using generic tools like ChatGPT without oversight, data safeguards, or regulatory alignment. That's a risk — for firms, for clients, and for residents.
+            </p>
+            <p className="text-lg text-gray-600 leading-relaxed mb-6">
+              At BlocIQ, we do things differently:
+            </p>
+            
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">🔐</span>
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-1">GDPR by design</h3>
+                  <p className="text-gray-600">UK data stays secure, with every interaction traceable and compliant</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">🏢</span>
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-1">Built for UK property law</h3>
+                  <p className="text-gray-600">From the Building Safety Act to leaseholder rights</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">⚖️</span>
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-1">AI with governance</h3>
+                  <p className="text-gray-600">No black-box answers, only transparent and legally-aligned outputs</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <p className="text-lg text-gray-600 leading-relaxed font-medium">
+                BlocIQ isn't just another AI tool — it's a purpose-built assistant for professional property managers.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* What BlocIQ Does */}
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
