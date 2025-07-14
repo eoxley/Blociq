@@ -36,12 +36,19 @@ export default async function BuildingDetailPage({
   params: Promise<{ buildingId: string }> 
 }) {
   const { buildingId } = await params
+  console.log('🔍 BuildingDetailPage: buildingId =', buildingId)
+  
   const supabase = createServerComponentClient({ cookies })
   
   // Check if user is authenticated
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { session }
+  } = await supabase.auth.getSession()
   
-  if (!user) {
+  console.log('🔍 BuildingDetailPage: session =', session ? 'authenticated' : 'not authenticated')
+  
+  if (!session) {
+    console.log('🔍 BuildingDetailPage: redirecting to login - no session')
     redirect('/login')
   }
 
@@ -52,7 +59,13 @@ export default async function BuildingDetailPage({
     .eq('id', buildingId)
     .single()
 
+  console.log('🔍 BuildingDetailPage: building query result =', { 
+    building: building ? { id: building.id, name: building.name } : null, 
+    error: buildingError 
+  })
+
   if (buildingError || !building) {
+    console.log('🔍 BuildingDetailPage: redirecting to buildings list - building not found')
     redirect('/buildings')
   }
 
@@ -69,6 +82,11 @@ export default async function BuildingDetailPage({
     .eq('building_id', buildingId)
     .order('unit_number')
 
+  console.log('🔍 BuildingDetailPage: units query result =', { 
+    unitsCount: units?.length || 0, 
+    error: unitsError 
+  })
+
   if (unitsError) {
     console.error('Error fetching units:', unitsError)
   }
@@ -81,9 +99,16 @@ export default async function BuildingDetailPage({
     .order('created_at', { ascending: false })
     .limit(5)
 
+  console.log('🔍 BuildingDetailPage: emails query result =', { 
+    emailsCount: recentEmails?.length || 0, 
+    error: emailsError 
+  })
+
   if (emailsError) {
     console.error('Error fetching emails:', emailsError)
   }
+
+  console.log('🔍 BuildingDetailPage: rendering page with data')
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-GB', {
@@ -102,6 +127,14 @@ export default async function BuildingDetailPage({
 
   return (
     <div className="max-w-6xl mx-auto p-6">
+      {/* Debug Info */}
+      <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-2 rounded mb-4">
+        <p><strong>Debug:</strong> Building ID: {buildingId}</p>
+        <p><strong>Debug:</strong> Building Name: {building.name}</p>
+        <p><strong>Debug:</strong> Units found: {units?.length || 0}</p>
+        <p><strong>Debug:</strong> Emails found: {recentEmails?.length || 0}</p>
+      </div>
+
       {/* Building Overview Header */}
       <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
         <div className="flex items-center gap-4 mb-4">
