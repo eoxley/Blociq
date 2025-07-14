@@ -81,16 +81,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     }
   ]
 
-  // Fetch user context (buildings, docs, emails)
-  const fetchUserContext = async () => {
-    // You may want to scope these queries to the current user in a real app
-    const [{ data: buildings }, { data: documents }, { data: emails }] = await Promise.all([
-      supabase.from('buildings').select('*'),
-      supabase.from('compliance_docs').select('*'),
-      supabase.from('incoming_emails').select('*').order('created_at', { ascending: false }).limit(5),
-    ])
-    return { buildings, documents, emails }
-  }
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -102,16 +93,20 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     setShowEmailButton(false)
 
     try {
-      const userContext = await fetchUserContext()
-      setContext(userContext)
-      const res = await fetch('/api/ask-question', {
+      // Get current user ID
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        throw new Error('User not authenticated')
+      }
+
+      const res = await fetch('/api/ask', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
           prompt: inputValue,
-          context: userContext
+          userId: user.id
         }),
       })
 

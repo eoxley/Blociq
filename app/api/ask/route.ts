@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 import { getSystemPrompt } from '../../../lib/ai/systemPrompt';
+import { fetchUserContext, formatContextMessages } from '../../../lib/ai/userContext';
+import { logAIInteraction } from '../../../lib/ai/logInteraction';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,54 +15,72 @@ const openai = new OpenAI({
 });
 
 export async function POST(req: NextRequest) {
-  const { prompt } = await req.json();
+  const { prompt, userId } = await req.json();
+
+  if (!userId) {
+    return NextResponse.json({ error: 'User ID required' }, { status: 400 });
+  }
+
+  if (!prompt) {
+    return NextResponse.json({ error: 'Prompt required' }, { status: 400 });
+  }
 
   try {
-    // Fetch relevant tables
-    const [{ data: buildings }, { data: units }, { data: leases }, { data: compliance }] = await Promise.all([
-      supabase.from('buildings').select('id, name, address'),
-      supabase.from('units').select('id, building_id, unit_number, floor'),
-      supabase.from('leases').select('id, unit_id, leaseholder_name, lease_term_start, lease_term_end'),
-      supabase.from('compliance_docs').select('id, building_id, document_type, uploaded_at'),
-    ]);
-
-    const context = `
-BlocIQ Database Summary:
-
-🏢 Buildings (${buildings?.length || 0} total):
-${buildings?.map(b => `- ${b.name} (${b.address})`).join('\n') || 'No buildings found.'}
-
-🏘️ Units (${units?.length || 0} total):
-${units?.slice(0, 10).map(u => `- Unit ${u.unit_number} in building ID ${u.building_id}`).join('\n') || 'No units found.'}
-
-📄 Leases (${leases?.length || 0} total):
-${leases?.slice(0, 5).map(l => `- ${l.leaseholder_name} (unit ID ${l.unit_id}, ${l.lease_term_start}–${l.lease_term_end})`).join('\n') || 'No leases found.'}
-
-✅ Compliance Docs (${compliance?.length || 0} total):
-${compliance?.slice(0, 5).map(c => `- ${c.document_type} for building ID ${c.building_id} on ${c.uploaded_at}`).join('\n') || 'No documents found.'}
-`;
-
-    const systemPrompt = getSystemPrompt();
-    const contextMessages = [
-      {
-        role: 'system' as const,
-        content: `${systemPrompt}\n\nDatabase Context:\n${context}`
-      }
+    // 1. Per-Agency Prompt Logic
+    const userContext = await fetchUserContext(userId, supabase);
+    
+    // Build agency-specific context
+    const agencyContext = userContext.agency 
+      ? `This user works for ${userContext.agency.name}. ${userContext.agency.tone ? `Use their internal tone: ${userContext.agency.tone}.` : ''} ${userContext.agency.policies ? `Follow their internal policies: ${userContext.agency.policies}.` : ''}`
+      : '';
+    
+    // Get system prompt with agency context
+    const systemPrompt = getSystemPrompt(agencyContext);
+    
+    // 2. Inject Supabase Context
+    const contextMessages = formatContextMessages(userContext);
+    
+    // 3. Build the complete message array as specified
+    const messages = [
+      { role: 'system' as const, content: systemPrompt },
+      ...contextMessages,
+      { role: 'user' as const, content: prompt }
     ];
 
+    // Call OpenAI
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
-      messages: [
-        ...contextMessages,
-        { role: 'user' as const, content: prompt }
-      ],
-      temperature: 0.3
+      messages,
+      temperature: 0.3,
+      max_tokens: 1000
     });
 
     const answer = completion.choices[0].message.content;
+    
+    if (!answer) {
+      throw new Error('No response from OpenAI');
+    }
+    
+    // 3. Log the Interaction (suppress errors)
+    try {
+      await logAIInteraction({
+        user_id: userId,
+        agency_id: userContext.agency?.id,
+        question: prompt,
+        response: answer,
+        timestamp: new Date().toISOString(),
+      }, supabase);
+    } catch (logError) {
+      // Suppress logging errors so they don't break the main flow
+      console.error('Failed to log AI interaction:', logError);
+    }
+
     return NextResponse.json({ answer });
   } catch (err) {
     console.error('BlocIQ AI error:', err);
-    return NextResponse.json({ error: 'AI failed to respond' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'AI failed to respond',
+      details: process.env.NODE_ENV === 'development' ? err instanceof Error ? err.message : 'Unknown error' : undefined
+    }, { status: 500 });
   }
 }

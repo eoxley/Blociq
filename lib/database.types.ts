@@ -14,18 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_logs: {
+        Row: {
+          id: string
+          user_id: string
+          agency_id: string | null
+          question: string
+          response: string
+          timestamp: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          agency_id?: string | null
+          question: string
+          response: string
+          timestamp?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          agency_id?: string | null
+          question?: string
+          response?: string
+          timestamp?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_logs_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       agencies: {
         Row: {
           id: string
           name: string
+          tone: string | null
+          policies: string | null
         }
         Insert: {
           id?: string
           name: string
+          tone?: string | null
+          policies?: string | null
         }
         Update: {
           id?: string
           name?: string
+          tone?: string | null
+          policies?: string | null
         }
         Relationships: []
       }
@@ -597,20 +648,92 @@ export type Database = {
           full_name: string | null
           id: string
           role: string | null
+          agency_id: string | null
+          building_id: number | null
         }
         Insert: {
           created_at?: string | null
           full_name?: string | null
           id: string
           role?: string | null
+          agency_id?: string | null
+          building_id?: number | null
         }
         Update: {
           created_at?: string | null
           full_name?: string | null
           id?: string
           role?: string | null
+          agency_id?: string | null
+          building_id?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      property_events: {
+        Row: {
+          id: string
+          building_id: number | null
+          title: string
+          description: string | null
+          date: string
+          category: string | null
+          created_by: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          building_id?: number | null
+          title: string
+          description?: string | null
+          date: string
+          category?: string | null
+          created_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          building_id?: number | null
+          title?: string
+          description?: string | null
+          date?: string
+          category?: string | null
+          created_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_events_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       units: {
         Row: {
