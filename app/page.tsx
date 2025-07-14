@@ -329,6 +329,41 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* About the Founder */}
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-6">
+              About the Founder
+            </h2>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-lg p-8 md:p-12">
+            <div className="max-w-3xl mx-auto">
+              <p className="text-lg text-gray-700 leading-relaxed mb-6">
+                BlocIQ was founded by Eleanor Oxley, a UK-based property manager with years of experience managing complex leasehold blocks, navigating compliance, and wrestling with inefficient systems.
+              </p>
+              
+              <p className="text-lg text-gray-700 leading-relaxed mb-6">
+                Born and bred in London, now based in Kent and working across the capital, Eleanor brings not only deep industry knowledge — but the lived reality of juggling it all.
+              </p>
+              
+              <p className="text-lg text-gray-700 leading-relaxed mb-6">
+                She's a mum to two brilliant little girls, kept firmly on her toes by a high-energy (and slightly unhinged) cocker spaniel.
+              </p>
+              
+              <p className="text-lg text-gray-700 leading-relaxed mb-6">
+                After seeing firsthand how outdated processes and unmanaged AI use were putting buildings — and people — at risk, Eleanor built BlocIQ to raise the standard.
+              </p>
+              
+              <p className="text-lg text-gray-700 leading-relaxed font-medium">
+                Her mission: Bring AI into the property world the right way — with full governance, UK regulation at its core, and tools that actually help property professionals do their jobs better.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
