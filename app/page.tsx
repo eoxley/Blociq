@@ -376,7 +376,7 @@ export default function LandingPage() {
             </div>
             
             <div className="flex space-x-6 text-sm">
-              <a href="#" className="text-gray-300 hover:text-white transition-colors">
+              <a href="/privacy" className="text-gray-300 hover:text-white transition-colors">
                 Privacy
               </a>
               <a href="/terms" className="text-gray-300 hover:text-white transition-colors">
