@@ -17,6 +17,13 @@ interface Unit {
   id: string
   unit_number: string
   leaseholder_id: string | null
+  leases?: Array<{
+    id: string
+    leaseholder?: Array<{
+      full_name: string
+      email: string
+    }>
+  }>
 }
 
 export default async function DashboardBuildingPage({ 
@@ -48,10 +55,21 @@ export default async function DashboardBuildingPage({
     redirect('/dashboard')
   }
 
-  // Get units for this building
+  // Get units for this building with lease and leaseholder info
   const { data: units } = await supabase
     .from('units')
-    .select('id, unit_number, leaseholder_id')
+    .select(`
+      id,
+      unit_number,
+      leaseholder_id,
+      leases (
+        id,
+        leaseholder:leaseholders (
+          full_name,
+          email
+        )
+      )
+    `)
     .eq('building_id', building_id)
     .order('unit_number')
 
@@ -163,10 +181,15 @@ export default async function DashboardBuildingPage({
                   <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
                 </div>
                 <div className="text-sm text-gray-600">
-                  {unit.leaseholder_id ? (
-                    <span className="text-green-600 font-medium">Occupied</span>
+                  {unit.leases?.length > 0 && unit.leases[0].leaseholder && unit.leases[0].leaseholder.length > 0 ? (
+                    <div>
+                      <p className="font-semibold text-gray-900">
+                        {unit.leases[0].leaseholder[0].full_name}
+                      </p>
+                      <p className="text-xs text-green-600 font-medium">Occupied</p>
+                    </div>
                   ) : (
-                    <span className="text-gray-500 italic">Available</span>
+                    <p className="text-gray-500 italic">Leaseholder info missing</p>
                   )}
                 </div>
                 <div className="mt-3 text-xs text-gray-500">
