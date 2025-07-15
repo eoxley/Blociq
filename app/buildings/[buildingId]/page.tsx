@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Building, Users, Mail, Calendar, Shield, Brain } from 'lucide-react'
 import AIInput from '../../../components/AIInput'
+import BuildingNotes from './BuildingNotes'
 
 interface Building {
   id: string
@@ -22,6 +23,7 @@ interface Building {
   parking?: string
   service_charge_start?: string
   service_charge_end?: string
+  notes?: string
 }
 
 interface Unit {
@@ -240,6 +242,9 @@ export default async function BuildingDetailPage({
           <h2 className="text-lg font-semibold mb-2">BlocIQ Summary</h2>
           <AIInput buildingId={buildingId} context={`Summarise this building: ${building.name}`} />
         </div>
+
+        {/* 📝 Additional Notes */}
+        <BuildingNotes buildingId={buildingId} initialNotes={building.notes || ''} />
       </section>
 
       {/* Units Section */}
