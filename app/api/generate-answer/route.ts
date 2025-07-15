@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { buildAIContext } from '../../../lib/buildAIContext';
 import OpenAI from 'openai';
 
+// Force deployment update - latest debugging changes
 export async function POST(req: Request) {
   try {
     console.log("🧠 Incoming assistant request to /api/generate-answer");
