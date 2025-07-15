@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
+// Force deployment - timestamp: 2025-01-15 15:30
 export async function GET() {
   try {
     console.log("🧪 Test AI endpoint called");
