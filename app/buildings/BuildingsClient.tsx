@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { Building2, MapPin, Users, ArrowRight, Search, Plus } from 'lucide-react'
+import { Building2, MapPin, Users, ArrowRight, Search } from 'lucide-react'
 
 // Define the Building type based on the database schema
 type Building = {
@@ -21,11 +21,6 @@ interface BuildingsClientProps {
 
 export default function BuildingsClient({ buildings }: BuildingsClientProps) {
   const [searchTerm, setSearchTerm] = useState('')
-  const [isAdding, setIsAdding] = useState(false)
-
-  // Debug: Log the buildings prop
-  console.log('BuildingsClient received buildings:', buildings)
-  console.log('Number of buildings:', buildings?.length || 0)
 
   // Filter buildings based on search term
   const filteredBuildings = buildings.filter(building => {
@@ -36,79 +31,18 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
     )
   })
 
-  console.log('Filtered buildings:', filteredBuildings)
-
-  const addAshwoodHouse = async () => {
-    setIsAdding(true)
-    try {
-      const response = await fetch('/api/buildings/add', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: 'Ashwood House',
-          address: 'Ashwood Lane, City Center',
-          unit_count: 12
-        })
-      })
-
-      const result = await response.json()
-      
-      if (result.success) {
-        console.log('Successfully added Ashwood House:', result.building)
-        // Refresh the page to show the new building
-        window.location.reload()
-      } else {
-        console.error('Failed to add building:', result.error)
-        alert('Failed to add building: ' + result.error)
-      }
-    } catch (error) {
-      console.error('Error adding building:', error)
-      alert('Error adding building')
-    } finally {
-      setIsAdding(false)
-    }
-  }
-
-  if (!buildings || buildings.length === 0) {
+  if (buildings.length === 0) {
     return (
       <div className="text-center py-12">
         <Building2 className="mx-auto h-12 w-12 text-gray-400 mb-4" />
         <h3 className="text-lg font-medium text-gray-900 mb-2">No buildings found</h3>
-        <p className="text-gray-500 mb-6">Get started by adding your first building.</p>
-        
-        {/* Add Building Button */}
-        <button
-          onClick={addAshwoodHouse}
-          disabled={isAdding}
-          className="flex items-center justify-center mx-auto px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          {isAdding ? 'Adding...' : 'Add Ashwood House'}
-        </button>
-        
-        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-yellow-800 text-sm">
-            <strong>Debug Info:</strong> Buildings array is empty or undefined
-          </p>
-        </div>
+        <p className="text-gray-500">Get started by adding your first building.</p>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      {/* Debug Info */}
-      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <p className="text-blue-800 text-sm">
-          <strong>Debug:</strong> Found {buildings.length} buildings in database
-        </p>
-        <p className="text-blue-800 text-sm">
-          Buildings: {buildings.map(b => b.name).join(', ')}
-        </p>
-      </div>
-
       {/* Search Bar */}
       <div className="relative">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -136,109 +70,49 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
 
       {/* Buildings Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredBuildings.map((building) => {
-          // Show all buildings as active by default
-          // Only show "Coming Soon" for buildings that are explicitly marked as under construction
-          const isUnderConstruction = building.name.toLowerCase().includes('construction') || 
-                                    building.name.toLowerCase().includes('coming soon') ||
-                                    building.name.toLowerCase().includes('development');
-
-          console.log(`Building ${building.name}: isUnderConstruction = ${isUnderConstruction}`)
-
-          return (
-            <div
-              key={building.id}
-              className={`relative p-4 rounded-xl shadow border ${
-                isUnderConstruction ? 'opacity-75' : 'bg-white'
-              }`}
-            >
-              {isUnderConstruction ? (
-                <div className="cursor-not-allowed" title="This building is under construction – stay tuned!">
-                  <div className="p-6">
-                    {/* Coming Soon Badge */}
-                    <span className="absolute top-2 right-2 bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-semibold shadow-sm">
-                      🚧 Under Construction
-                    </span>
-
-                    {/* Building Icon */}
-                    <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg mb-4">
-                      <Building2 className="h-6 w-6 text-white" />
-                    </div>
-                    
-                    {/* Building Name */}
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                      {building.name}
-                    </h3>
-                    
-                    {/* Address */}
-                    {building.address && (
-                      <div className="flex items-start space-x-2 mb-3">
-                        <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                        <p className="text-sm text-gray-600 leading-relaxed">
-                          {building.address}
-                        </p>
-                      </div>
-                    )}
-                    
-                    {/* Unit Count */}
-                    <div className="flex items-center space-x-2 mb-4">
-                      <Users className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-500">
-                        {building.unit_count || 0} {building.unit_count === 1 ? 'unit' : 'units'}
-                      </span>
-                    </div>
-                    
-                    {/* Disabled Button */}
-                    <div className="w-full flex items-center justify-center space-x-2 bg-gray-400 text-white px-4 py-2 rounded-md">
-                      <span className="text-sm font-medium">Under Construction</span>
-                    </div>
-                  </div>
+        {filteredBuildings.map((building) => (
+          <Link
+            key={building.id}
+            href={`/buildings/${building.id}`}
+            className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 border border-gray-100 overflow-hidden group block"
+          >
+            <div className="p-6">
+              {/* Building Icon */}
+              <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg mb-4">
+                <Building2 className="h-6 w-6 text-white" />
+              </div>
+              
+              {/* Building Name */}
+              <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-teal-600 transition-colors duration-200">
+                {building.name}
+              </h3>
+              
+              {/* Address */}
+              {building.address && (
+                <div className="flex items-start space-x-2 mb-3">
+                  <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    {building.address}
+                  </p>
                 </div>
-              ) : (
-                <Link
-                  href={`/buildings/${building.id}`}
-                  className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 border border-gray-100 overflow-hidden group block relative"
-                >
-                  <div className="p-6">
-                    {/* Building Icon */}
-                    <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg mb-4">
-                      <Building2 className="h-6 w-6 text-white" />
-                    </div>
-                    
-                    {/* Building Name */}
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-teal-600 transition-colors duration-200">
-                      {building.name}
-                    </h3>
-                    
-                    {/* Address */}
-                    {building.address && (
-                      <div className="flex items-start space-x-2 mb-3">
-                        <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                        <p className="text-sm text-gray-600 leading-relaxed">
-                          {building.address}
-                        </p>
-                      </div>
-                    )}
-                    
-                    {/* Unit Count */}
-                    <div className="flex items-center space-x-2 mb-4">
-                      <Users className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-500">
-                        {building.unit_count || 0} {building.unit_count === 1 ? 'unit' : 'units'}
-                      </span>
-                    </div>
-                    
-                    {/* View More Button */}
-                    <div className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white px-4 py-2 rounded-md transition-all duration-200 transform hover:scale-105 group-hover:shadow-md">
-                      <span className="text-sm font-medium">View Details</span>
-                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
-                    </div>
-                  </div>
-                </Link>
               )}
+              
+              {/* Unit Count */}
+              <div className="flex items-center space-x-2 mb-4">
+                <Users className="h-4 w-4 text-gray-400" />
+                <span className="text-sm text-gray-500">
+                  {building.unit_count || 0} {building.unit_count === 1 ? 'unit' : 'units'}
+                </span>
+              </div>
+              
+              {/* View More Button */}
+              <div className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white px-4 py-2 rounded-md transition-all duration-200 transform hover:scale-105 group-hover:shadow-md">
+                <span className="text-sm font-medium">View Details</span>
+                <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
+              </div>
             </div>
-          );
-        })}
+          </Link>
+        ))}
       </div>
 
       {/* No Results Message */}
