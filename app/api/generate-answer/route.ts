@@ -1,49 +1,57 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { NextResponse } from 'next/server';
+import { buildAIContext } from '@/lib/buildAIContext';
 import OpenAI from 'openai';
-import { cookies } from 'next/headers';
-import { getStructuredBuildingData } from '../../../lib/getStructuredBuildingData';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req: Request) {
-  // Use cookies from the request for Supabase auth
-  const supabase = createRouteHandlerClient({ cookies });
-  const { question, buildingId } = await req.json();
+  try {
+    const { question, buildingId } = await req.json();
 
-  if (!buildingId) {
-    return NextResponse.json({ error: 'Building ID required' }, { status: 400 });
-  }
+    if (!question || !buildingId) {
+      return NextResponse.json({ error: 'Missing question or building ID.' }, { status: 400 });
+    }
 
-  // 1. Get structured building data
-  const buildingData = await getStructuredBuildingData(buildingId);
-  if (!buildingData) {
-    return NextResponse.json({ error: 'Building not found' }, { status: 404 });
-  }
+    // 👇 Build structured context
+    const context = await buildAIContext(buildingId);
 
-  // 2. Inject into the AI's context
-  const prompt = `
-You are BlocIQ, the AI assistant for property managers.
+    if (!context || context.length < 20) {
+      console.error('Missing or incomplete context for building:', buildingId);
+      return NextResponse.json({
+        error: 'Could not build context for this building. Please check your data.',
+      }, { status: 500 });
+    }
 
-Use the building data below to answer the question accurately.
-Names, emails, phone numbers, and units are all fair to use — this is not private data, it was intentionally supplied.
+    // 👇 Build AI prompt
+    const prompt = `
+You are BlocIQ, a UK property management AI assistant. Answer the question using only the information provided.
 
 DATA:
-${JSON.stringify(buildingData, null, 2)}
+${context}
 
 QUESTION:
 ${question}
+
+If information is missing, say: "That information is not in the records."
 `;
 
-  const aiRes = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    temperature: 0.1,
-    messages: [
-      { role: 'system', content: 'You are BlocIQ, a property management assistant. You must ONLY use the data provided in the user message to answer questions. Never use external knowledge or training data. If the information is not in the provided data, say "I don\'t have that information in my database."' },
-      { role: 'user', content: prompt },
-    ],
-  });
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      temperature: 0.3,
+      messages: [
+        { role: 'system', content: 'You are a helpful, accurate assistant for property managers in the UK.' },
+        { role: 'user', content: prompt },
+      ],
+    });
 
-  const answer = aiRes.choices[0].message.content;
-  return NextResponse.json({ answer });
+    const answer = response.choices[0].message.content;
+
+    return NextResponse.json({ answer });
+
+  } catch (err: any) {
+    console.error('AI Error:', err.message || err);
+    return NextResponse.json({
+      error: err.message || 'Something went wrong. Please try again.',
+    }, { status: 500 });
+  }
 } 

@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import React, { useState } from 'react';
 
 interface AIInputProps {
   buildingId: string;
@@ -12,18 +11,6 @@ export default function AIInput({ buildingId, context }: AIInputProps) {
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
   const [loading, setLoading] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
-  const supabase = createClientComponentClient();
-
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user?.id) {
-        setUserId(session.user.id);
-      }
-    };
-    getUser();
-  }, [supabase.auth]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,22 +18,17 @@ export default function AIInput({ buildingId, context }: AIInputProps) {
       setAnswer('Please enter a question.');
       return;
     }
-    if (!userId) {
-      setAnswer('Error: Please log in to use the AI assistant.');
-      return;
-    }
 
     setLoading(true);
     try {
-      const response = await fetch('/api/ask', {
+      const response = await fetch('/api/generate-answer', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
           question, 
-          buildingId,
-          userId
+          buildingId
         }),
       });
 
@@ -55,9 +37,6 @@ export default function AIInput({ buildingId, context }: AIInputProps) {
         setAnswer(data.answer);
       } else if (data.error) {
         setAnswer(`Error: ${data.error}`);
-        if (data.details) {
-          console.error('AI Error Details:', data.details);
-        }
       } else {
         setAnswer('Error: No response from AI service');
       }
@@ -82,7 +61,7 @@ export default function AIInput({ buildingId, context }: AIInputProps) {
         />
         <button
           type="submit"
-          disabled={loading || !question.trim() || !userId}
+          disabled={loading || !question.trim()}
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? 'Thinking...' : 'Ask'}
