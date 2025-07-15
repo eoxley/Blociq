@@ -71,21 +71,25 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
       {/* Buildings Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {filteredBuildings.map((building) => {
-          const isEmpty = !building.units?.length && !building.leases?.length;
+          // Show all buildings as active by default
+          // Only show "Coming Soon" for buildings that are explicitly marked as under construction
+          const isUnderConstruction = building.name.toLowerCase().includes('construction') || 
+                                    building.name.toLowerCase().includes('coming soon') ||
+                                    building.name.toLowerCase().includes('development');
 
           return (
             <div
               key={building.id}
               className={`relative p-4 rounded-xl shadow border ${
-                isEmpty ? 'opacity-50 grayscale' : 'bg-white'
+                isUnderConstruction ? 'opacity-75' : 'bg-white'
               }`}
             >
-              {isEmpty ? (
-                <div className="cursor-not-allowed" title="This building is being prepared for launch – stay tuned!">
+              {isUnderConstruction ? (
+                <div className="cursor-not-allowed" title="This building is under construction – stay tuned!">
                   <div className="p-6">
                     {/* Coming Soon Badge */}
                     <span className="absolute top-2 right-2 bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-semibold shadow-sm">
-                      🚧 Coming Soon
+                      🚧 Under Construction
                     </span>
 
                     {/* Building Icon */}
@@ -118,7 +122,7 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
                     
                     {/* Disabled Button */}
                     <div className="w-full flex items-center justify-center space-x-2 bg-gray-400 text-white px-4 py-2 rounded-md">
-                      <span className="text-sm font-medium">Coming Soon</span>
+                      <span className="text-sm font-medium">Under Construction</span>
                     </div>
                   </div>
                 </div>
