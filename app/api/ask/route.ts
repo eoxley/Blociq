@@ -115,9 +115,11 @@ ${question}
       await supabase
         .from('ai_logs')
         .insert({
+          user_id: userId,
+          agency_id: userContext.agency?.id || null,
           question,
-          answer,
-          building_id: buildingId,
+          response: answer,
+          timestamp: new Date().toISOString(),
         });
     } catch (logError) {
       console.error('Failed to save AI log entry:', logError);
