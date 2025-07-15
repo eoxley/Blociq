@@ -3,7 +3,8 @@ import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Building, Users, Mail, Calendar, Shield } from 'lucide-react'
+import { ArrowLeft, Building, Users, Mail, Calendar, Shield, Brain } from 'lucide-react'
+import AIInput from '../../../components/AIInput'
 
 interface Building {
   id: string
@@ -258,6 +259,15 @@ export default async function BuildingDetailPage({
             {building.property_account_balance ? formatCurrency(building.property_account_balance) : '£23,500'}
           </p>
         </div>
+      </div>
+
+      {/* BlocIQ AI Assistant */}
+      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <div className="flex items-center gap-3 mb-4">
+          <Brain className="h-6 w-6 text-teal-600" />
+          <h2 className="text-xl font-semibold text-[#0F5D5D]">BlocIQ AI Assistant</h2>
+        </div>
+        <AIInput buildingId={buildingId} context={`You are assisting with ${building.name}.`} />
       </div>
 
       {/* Recent Emails Section */}
