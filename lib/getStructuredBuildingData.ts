@@ -13,22 +13,24 @@ export async function getStructuredBuildingData(buildingIdOrName: string) {
     .select(`
       id,
       name,
-      address,
-      access_notes,
-      service_charge_start,
-      service_charge_end,
-      upcoming_events,
-      upcoming_works,
       units (
         id,
-        unit_number,
-        type,
-        floor,
-        leaseholders (
-          name,
+        name,
+        leaseholder:leaseholder_id (
+          full_name,
           email,
           phone
         )
+      ),
+      documents (
+        title,
+        category,
+        uploaded_at
+      ),
+      correspondence (
+        subject,
+        sent_at,
+        to_email
       )
     `)
     .eq(isId ? 'id' : 'name', buildingIdOrName)
