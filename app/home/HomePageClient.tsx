@@ -111,28 +111,50 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     setError(null)
 
     try {
+      console.log("🧠 HomePageClient: Starting AI request");
+      console.log("📝 Input value:", inputValue);
+      
       // Get current user ID
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
+        console.error("❌ User not authenticated");
         throw new Error('User not authenticated')
       }
+
+      console.log("✅ User authenticated:", user.id);
+
+      // For now, use a default building ID since this is the home page
+      // In a real app, you might want to get the user's primary building or let them select one
+      const defaultBuildingId = "1"; // You can change this to a real building ID
+
+      const requestBody = { 
+        question: inputValue, // Changed from 'prompt' to 'question'
+        buildingId: defaultBuildingId, // Added buildingId
+        userId: user.id
+      };
+
+      console.log("📤 Sending request to /api/ask");
+      console.log("📦 Request body:", requestBody);
 
       const res = await fetch('/api/ask', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          prompt: inputValue,
-          userId: user.id
-        }),
+        body: JSON.stringify(requestBody),
       })
 
+      console.log("📥 Response status:", res.status);
+      console.log("📥 Response headers:", Object.fromEntries(res.headers.entries()));
+
       if (!res.ok) {
+        console.error("❌ Response not ok:", res.status, res.statusText);
         throw new Error('Failed to get AI answer')
       }
 
       const data = await res.json()
+      console.log("📦 Response data:", data);
+
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         content: data.answer || data.content || 'No answer received',
@@ -140,8 +162,10 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         timestamp: new Date()
       }
 
+      console.log("✅ AI message created:", aiMessage.content.substring(0, 100) + "...");
       setMessages(prev => [...prev, aiMessage])
     } catch (err) {
+      console.error('❌ Error in handleSubmit:', err);
       setError(err instanceof Error ? err.message : 'An error occurred')
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -152,6 +176,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       setMessages(prev => [...prev, errorMessage])
     } finally {
       setIsLoading(false)
+      console.log("🏁 AI request completed");
     }
   }
 
