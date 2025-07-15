@@ -22,6 +22,10 @@ interface BuildingsClientProps {
 export default function BuildingsClient({ buildings }: BuildingsClientProps) {
   const [searchTerm, setSearchTerm] = useState('')
 
+  // Debug: Log the buildings prop
+  console.log('BuildingsClient received buildings:', buildings)
+  console.log('Number of buildings:', buildings?.length || 0)
+
   // Filter buildings based on search term
   const filteredBuildings = buildings.filter(building => {
     const searchLower = searchTerm.toLowerCase()
@@ -31,18 +35,35 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
     )
   })
 
-  if (buildings.length === 0) {
+  console.log('Filtered buildings:', filteredBuildings)
+
+  if (!buildings || buildings.length === 0) {
     return (
       <div className="text-center py-12">
         <Building2 className="mx-auto h-12 w-12 text-gray-400 mb-4" />
         <h3 className="text-lg font-medium text-gray-900 mb-2">No buildings found</h3>
         <p className="text-gray-500">Get started by adding your first building.</p>
+        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p className="text-yellow-800 text-sm">
+            <strong>Debug Info:</strong> Buildings array is empty or undefined
+          </p>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
+      {/* Debug Info */}
+      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <p className="text-blue-800 text-sm">
+          <strong>Debug:</strong> Found {buildings.length} buildings in database
+        </p>
+        <p className="text-blue-800 text-sm">
+          Buildings: {buildings.map(b => b.name).join(', ')}
+        </p>
+      </div>
+
       {/* Search Bar */}
       <div className="relative">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -76,6 +97,8 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
           const isUnderConstruction = building.name.toLowerCase().includes('construction') || 
                                     building.name.toLowerCase().includes('coming soon') ||
                                     building.name.toLowerCase().includes('development');
+
+          console.log(`Building ${building.name}: isUnderConstruction = ${isUnderConstruction}`)
 
           return (
             <div
