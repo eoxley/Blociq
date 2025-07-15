@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useParams } from 'next/navigation';
-import AIInput from '@/components/AIInput';
+import AIInput from '../../../../components/AIInput';
 
 export default function BuildingDetailsPage() {
   const supabase = createClientComponentClient();
@@ -75,7 +75,7 @@ export default function BuildingDetailsPage() {
       {/* 🧠 BlocIQ Summary (AI Panel) */}
       <section className="bg-white p-4 border rounded shadow-sm">
         <h2 className="text-lg font-semibold mb-2">BlocIQ Summary</h2>
-        <AIInput context={`Summarise key issues and upcoming obligations for the building ${building.name}.`} />
+        <AIInput buildingId={buildingId} context={`Summarise key issues and upcoming obligations for the building ${building.name}.`} />
       </section>
     </div>
   );

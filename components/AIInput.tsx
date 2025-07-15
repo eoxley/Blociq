@@ -3,10 +3,11 @@
 import React, { useState } from 'react';
 
 interface AIInputProps {
-  context: string;
+  buildingId: string;
+  context?: string;
 }
 
-export default function AIInput({ context }: AIInputProps) {
+export default function AIInput({ buildingId, context }: AIInputProps) {
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,12 +18,16 @@ export default function AIInput({ context }: AIInputProps) {
 
     setLoading(true);
     try {
-      const response = await fetch('/api/generate-answer', {
+      const response = await fetch('/api/ask', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({ 
+          question, 
+          buildingId,
+          userId: 'current-user-id' // This should be replaced with actual user ID
+        }),
       });
 
       const data = await response.json();
