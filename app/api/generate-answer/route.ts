@@ -20,8 +20,6 @@ export async function POST(req: Request) {
       units (
         id,
         unit_number,
-        type,
-        floor,
         leaseholders (
           name,
           email,
@@ -36,9 +34,9 @@ export async function POST(req: Request) {
 
   // 2. Inject into the AI's context
   const aiPrompt = `
-You are a helpful property assistant.
-Based on the data below, answer the user's question clearly and accurately.
-Only use the provided data.
+You are BlocIQ, a property management assistant.
+
+Use only the information below to answer the user's question. Do not use any external knowledge or training data.
 
 DATA:
 ${JSON.stringify(buildingsData, null, 2)}
@@ -49,9 +47,9 @@ ${question}
 
   const aiRes = await openai.chat.completions.create({
     model: 'gpt-4o',
-    temperature: 0.3,
+    temperature: 0.1,
     messages: [
-      { role: 'system', content: 'You answer questions about leasehold buildings using Supabase data.' },
+      { role: 'system', content: 'You are BlocIQ, a property management assistant. You must ONLY use the data provided in the user message to answer questions. Never use external knowledge or training data. If the information is not in the provided data, say "I don\'t have that information in my database."' },
       { role: 'user', content: aiPrompt },
     ],
   });
