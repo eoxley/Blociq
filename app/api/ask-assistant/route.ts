@@ -42,7 +42,7 @@ export async function POST(req: Request) {
 
     console.log("📩 User message:", message);
 
-    // 🏢 Fetch all building names
+    // 🏢 Fetch all buildings
     const { data: allBuildings, error: buildingListError } = await supabase
       .from('buildings')
       .select('id, name, unit_count');
@@ -67,24 +67,27 @@ export async function POST(req: Request) {
       }
     }
 
-    // 🧠 Pull leaseholders if a building was matched
+    // 🔍 Pull leaseholders by building_name (if available)
     if (matchedBuilding) {
       const { data: leases, error: leaseError } = await supabase
         .from('leases')
         .select('unit, leaseholder_name')
-        .eq('building_id', matchedBuilding.id);
+        .ilike('building_name', `%${matchedBuilding.name}%`);
 
       if (leaseError) {
         console.warn("⚠️ Lease fetch error:", leaseError.message);
-      } else if (leases?.length > 0) {
-        leaseContext = leases.map(l => `${l.unit}: ${l.leaseholder_name}`).join('\n');
+      } else {
+        console.log("📄 Lease rows fetched:", leases?.length || 0);
+        if (leases?.length > 0) {
+          leaseContext = leases.map(l => `${l.unit}: ${l.leaseholder_name}`).join('\n');
+        }
       }
     }
 
-    // 🔐 Authorised assistant prompt
-    const systemPrompt = `You are BlocIQ, an AI assistant for UK property managers. You are authorised to use internal building and leaseholder data provided below to answer user questions. Do not repeat disclaimers or privacy warnings — the user is a verified internal staff member with access to this data.\n\n${buildingContext ? `🏢 Building Info:\n${buildingContext}\n` : ''}${leaseContext ? `📄 Leaseholders:\n${leaseContext}\n` : ''}`;
+    // 🧠 Build system prompt with context
+    const systemPrompt = `You are BlocIQ, an AI assistant for UK property managers. You are authorised to use internal building and leaseholder data provided below to answer user questions. Do not include privacy disclaimers — the user is a verified internal team member.\n\n${buildingContext ? `🏢 Building Info:\n${buildingContext}\n` : ''}${leaseContext ? `📄 Leaseholders:\n${leaseContext}\n` : ''}`;
 
-    console.log("📦 Final prompt:\n", systemPrompt);
+    console.log("📦 Final prompt sent to OpenAI:\n", systemPrompt);
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
