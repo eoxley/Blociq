@@ -13,26 +13,19 @@ export default function BuildingNotes({ buildingId, initialNotes = '' }: Buildin
   const [isSaving, setIsSaving] = useState(false);
   const supabase = createClientComponentClient();
 
-  const handleUpdateNotes = async (value: string) => {
-    setNotes(value);
-    
-    // Debounce the save operation
+  const handleUpdateNotes = async (newNotes: string) => {
+    setNotes(newNotes);
     setIsSaving(true);
     
-    try {
-      const { error } = await supabase
-        .from('buildings')
-        .update({ notes: value })
-        .eq('id', buildingId);
+    const { error } = await supabase
+      .from('buildings')
+      .update({ notes: newNotes })
+      .eq('id', buildingId);
 
-      if (error) {
-        console.error('Error updating building notes:', error);
-      }
-    } catch (error) {
-      console.error('Error updating building notes:', error);
-    } finally {
-      setIsSaving(false);
-    }
+    if (error) console.error('Failed to update notes:', error.message);
+    else setNotes(newNotes);
+    
+    setIsSaving(false);
   };
 
   return (
