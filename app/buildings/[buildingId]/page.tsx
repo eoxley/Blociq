@@ -156,11 +156,11 @@ export default async function BuildingDetailPage({
       <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
         <div className="flex items-center gap-4 mb-4">
           <Link 
-            href="/buildings" 
+            href="/home" 
             className="flex items-center gap-2 text-[#0F5D5D] hover:text-teal-700 transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
-            Back to Buildings
+            Back to Dashboard
           </Link>
         </div>
         

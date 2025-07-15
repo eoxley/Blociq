@@ -96,6 +96,20 @@ export async function searchFounderKnowledge(
   query: string
 ): Promise<{ success: boolean; results: string[]; error?: string }> {
   try {
+    // Check if founder knowledge table exists by trying to query it
+    const { data: tableCheck, error: tableError } = await supabase
+      .from(FOUNDER_KNOWLEDGE_TABLE)
+      .select('id')
+      .limit(1);
+
+    if (tableError) {
+      console.warn('Founder knowledge table not found:', tableError.message);
+      return {
+        success: true,
+        results: []
+      };
+    }
+
     // 1. Embed the query
     const embeddingResp = await openai.embeddings.create({
       model: 'text-embedding-ada-002',
@@ -115,6 +129,15 @@ export async function searchFounderKnowledge(
       // If the RPC function doesn't exist, fall back to client-side search
       console.warn('Vector search RPC not found, falling back to client-side search');
       return await searchFounderKnowledgeFallback(query, queryEmbedding);
+    }
+
+    // Check if data exists and has content
+    if (!data || data.length === 0) {
+      console.log('No founder knowledge found for query');
+      return {
+        success: true,
+        results: []
+      };
     }
 
     // 3. Extract content from results

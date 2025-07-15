@@ -22,21 +22,27 @@ const openai = new OpenAI({
 
 
 export async function POST(req: NextRequest) {
-  const { question, buildingId, userId } = await req.json();
-
-  if (!userId) {
-    return NextResponse.json({ error: 'User ID required' }, { status: 400 });
-  }
-
-  if (!question) {
-    return NextResponse.json({ error: 'Question required' }, { status: 400 });
-  }
-
-  if (!buildingId) {
-    return NextResponse.json({ error: 'Building ID required' }, { status: 400 });
-  }
-
   try {
+    const { question, buildingId, userId } = await req.json();
+
+    if (!userId) {
+      return NextResponse.json({ error: 'User ID required' }, { status: 400 });
+    }
+
+    if (!question) {
+      return NextResponse.json({ error: 'Question required' }, { status: 400 });
+    }
+
+    if (!buildingId) {
+      return NextResponse.json({ error: 'Building ID required' }, { status: 400 });
+    }
+
+    // Check if OpenAI API key is available
+    if (!process.env.OPENAI_API_KEY) {
+      console.error('OPENAI_API_KEY environment variable is missing');
+      return NextResponse.json({ error: 'AI service not configured' }, { status: 500 });
+    }
+
     // 1. Get structured building data
     const buildingData = await getStructuredBuildingData(buildingId);
 
@@ -77,10 +83,12 @@ export async function POST(req: NextRequest) {
     }
     
     // 5. Build AI prompt with structured building data
+    const buildingDataString = buildingData ? JSON.stringify(buildingData, null, 2) : 'No building data available';
+    
     const aiPrompt = `
 You are BlocIQ, a property management AI assistant. You have access to the following data:
 
-${JSON.stringify(buildingData, null, 2)}
+${buildingDataString}
 
 Use only this data to answer the question:
 
@@ -112,7 +120,7 @@ ${question}
     
     // Save AI log entry
     try {
-      await supabase
+      const { error: logError } = await supabase
         .from('ai_logs')
         .insert({
           user_id: userId,
@@ -121,6 +129,10 @@ ${question}
           response: answer,
           timestamp: new Date().toISOString(),
         });
+      
+      if (logError) {
+        console.error('Failed to save AI log entry:', logError);
+      }
     } catch (logError) {
       console.error('Failed to save AI log entry:', logError);
     }
