@@ -67,7 +67,7 @@ export default async function BuildingsPage() {
                 </div>
                 
                 <Link 
-                  href={`/dashboard/building/${building.id}`}
+                  href={`/buildings/${building.id}`}
                   className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm font-medium"
                 >
                   View Details

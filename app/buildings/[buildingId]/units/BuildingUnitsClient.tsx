@@ -68,7 +68,7 @@ export default function BuildingUnitsClient({ building, units }: BuildingUnitsCl
           return (
             <Link 
               key={unit.id} 
-              href={`/dashboard/unit/${unit.id}`}
+                              href={`/buildings/${building.id}/units/${unit.id}`}
               className="block transition-transform hover:scale-105"
             >
               <Card className="h-full cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-teal-200">
