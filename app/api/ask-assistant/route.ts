@@ -44,6 +44,18 @@ export async function POST(req: Request) {
       console.log("👤 Session user:", session?.user?.email);
     }
 
+    // ADD this before the OpenAI call:
+    const { data: buildings, error: buildingError } = await supabase
+      .from('buildings')
+      .select('id, name, unit_count') // adjust fields as needed
+      .eq('name', 'Ashwood House'); // simple filter to limit data
+
+    if (buildingError) {
+      console.warn("⚠️ Supabase building fetch error:", buildingError.message);
+    }
+
+    console.log("🏢 Fetched building data:", buildings);
+
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
