@@ -71,15 +71,29 @@ export default async function BuildingDetailPage({
   // Fetch units for this building
   const { data: units, error: unitsError } = await supabase
     .from('units')
-    .select(`
-      id,
-      unit_number,
-      type,
-      floor,
-      leaseholders(name, email, phone)
-    `)
+    .select('id, unit_number, type, floor')
     .eq('building_id', buildingId)
     .order('unit_number')
+
+  // Fetch leaseholders separately
+  let leaseholders: any[] = []
+  if (units && units.length > 0) {
+    const unitIds = units.map(u => u.id)
+    const { data: leaseholdersData, error: leaseholdersError } = await supabase
+      .from('leaseholders')
+      .select('id, unit_id, name, email, phone')
+      .in('unit_id', unitIds)
+    
+    if (!leaseholdersError && leaseholdersData) {
+      leaseholders = leaseholdersData
+    }
+  }
+
+  // Combine units with their leaseholders
+  const unitsWithLeaseholders = units?.map(unit => ({
+    ...unit,
+    leaseholders: leaseholders.filter(l => l.unit_id === unit.id)
+  })) || []
 
   console.log('🔍 BuildingDetailPage: units query result =', { 
     unitsCount: units?.length || 0, 
@@ -89,6 +103,9 @@ export default async function BuildingDetailPage({
   if (unitsError) {
     console.error('Error fetching units:', unitsError)
   }
+
+  // Use the combined data for display
+  const displayUnits = unitsWithLeaseholders
 
   // Fetch recent emails for this building
   const { data: recentEmails, error: emailsError } = await supabase
@@ -130,7 +147,7 @@ export default async function BuildingDetailPage({
       <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-2 rounded mb-4">
         <p><strong>Debug:</strong> Building ID: {buildingId}</p>
         <p><strong>Debug:</strong> Building Name: {building.name}</p>
-        <p><strong>Debug:</strong> Units found: {units?.length || 0}</p>
+        <p><strong>Debug:</strong> Units found: {displayUnits?.length || 0}</p>
         <p><strong>Debug:</strong> Emails found: {recentEmails?.length || 0}</p>
       </div>
 
@@ -161,11 +178,11 @@ export default async function BuildingDetailPage({
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-semibold text-[#0F5D5D] flex items-center gap-2">
             <Users className="h-6 w-6" />
-            Units ({units?.length || 0})
+            Units ({displayUnits?.length || 0})
           </h2>
         </div>
 
-        {!units || units.length === 0 ? (
+        {!displayUnits || displayUnits.length === 0 ? (
           <div className="text-center py-8">
             <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No Units Found</h3>
@@ -173,7 +190,7 @@ export default async function BuildingDetailPage({
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {units.map((unit) => (
+            {displayUnits.map((unit) => (
               <div key={unit.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-semibold text-gray-900">{unit.unit_number}</h3>
