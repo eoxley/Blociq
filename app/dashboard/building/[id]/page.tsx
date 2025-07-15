@@ -175,35 +175,27 @@ export default async function DashboardBuildingPage({
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {unitsWithLeaseholders.map((unit) => (
-              <Link
-                key={unit.id}
-                href={`/dashboard/building/${building_id}/unit/${unit.id}`}
-                className="block border border-gray-200 rounded-lg p-4 hover:shadow-lg hover:border-teal-300 transition-all duration-200 group"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-gray-900 group-hover:text-teal-600 transition-colors">
-                    {unit.unit_number}
-                  </h3>
-                  <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
-                </div>
-                <div className="text-sm text-gray-600">
-                  {unit.leaseholder && unit.leaseholder.length > 0 ? (
-                    <>
-                      <p className="font-semibold">{unit.leaseholder[0].full_name}</p>
-                      <p className="text-sm text-gray-500">{unit.leaseholder[0].email}</p>
-                      <p className="text-green-600 text-sm flex items-center gap-1">
-                        <span className="w-2 h-2 bg-green-500 rounded-full inline-block"></span>
-                        Occupied
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-red-500">Leaseholder not assigned</p>
-                  )}
-                </div>
-                <div className="mt-3 text-xs text-gray-500">
-                  Click to view details
-                </div>
-              </Link>
+              <div key={unit.id} className="p-4 border rounded shadow-sm hover:shadow-md transition">
+                <h3 className="font-semibold text-lg mb-1">{unit.unit_number}</h3>
+
+                {unit.leaseholder && unit.leaseholder.length > 0 ? (
+                  <>
+                    <p className="text-sm text-gray-900 font-medium">{unit.leaseholder[0].name}</p>
+                    <p className="text-sm text-gray-600">{unit.leaseholder[0].email}</p>
+                    {unit.leaseholder[0].phone && (
+                      <p className="text-sm text-gray-600">{unit.leaseholder[0].phone}</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm italic text-red-400">Leaseholder not assigned</p>
+                )}
+
+                <Link href={`/dashboard/buildings/${building_id}/units/${unit.id}`}>
+                  <button className="mt-3 text-blue-600 hover:underline text-sm">
+                    View Correspondence
+                  </button>
+                </Link>
+              </div>
             ))}
           </div>
         )}
