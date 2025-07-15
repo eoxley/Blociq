@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Calendar, DollarSign, Shield, FileText, Mail, ChevronDown, ChevronUp, ExternalLink, Brain, AlertTriangle, Clock, Wrench, Plus, Users } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import AIInput from '../../../components/AIInput'
 
 type Building = {
   id: string
@@ -275,6 +276,12 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
               Respond to urgent resident emails within 24 hours
             </li>
           </ul>
+        </div>
+
+        {/* AI Input Section */}
+        <div className="mt-6 pt-4 border-t border-teal-200">
+          <h4 className="font-medium text-[#0F5D5D] mb-3">Ask BlocIQ:</h4>
+          <AIInput buildingId={building.id} context={`You are assisting with ${building.name}.`} />
         </div>
       </div>
 
