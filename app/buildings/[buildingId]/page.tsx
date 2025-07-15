@@ -24,7 +24,7 @@ interface Unit {
   type: string
   floor: string
   leaseholders: Array<{
-    full_name: string
+    name: string
     email: string
     phone: string
   }>
@@ -76,7 +76,7 @@ export default async function BuildingDetailPage({
       unit_number,
       type,
       floor,
-      leaseholders!inner(full_name, email, phone)
+      leaseholders(name, email, phone)
     `)
     .eq('building_id', buildingId)
     .order('unit_number')
@@ -184,8 +184,12 @@ export default async function BuildingDetailPage({
                 <p className="text-sm text-gray-600 mb-2">Floor {unit.floor}</p>
                 {unit.leaseholders && unit.leaseholders.length > 0 ? (
                   <div className="text-sm text-gray-700">
-                    <p className="font-medium">{unit.leaseholders[0].full_name}</p>
+                    <p className="font-medium">{unit.leaseholders[0].name}</p>
                     <p className="text-gray-600">{unit.leaseholders[0].email}</p>
+                    <p className="text-green-600 text-sm flex items-center gap-1">
+                      <span className="w-2 h-2 bg-green-500 rounded-full inline-block"></span>
+                      Occupied
+                    </p>
                   </div>
                 ) : (
                   <p className="text-sm text-gray-500 italic">No leaseholder assigned</p>
