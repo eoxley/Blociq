@@ -42,16 +42,36 @@ export async function POST(req: Request) {
 
     console.log("📩 User message:", message);
 
-    // 🏢 Fetch all buildings
+    // Fetch all buildings with ops notes
     const { data: allBuildings, error: buildingListError } = await supabase
       .from('buildings')
-      .select('id, name, unit_count');
+      .select(`
+        id,
+        name,
+        unit_count,
+        key_access_notes,
+        parking_notes,
+        meter_location,
+        bin_location,
+        entry_code,
+        fire_panel_location
+      `);
 
     if (buildingListError) {
       console.error("❌ Failed to fetch building list:", buildingListError.message);
     }
 
-    let matchedBuilding: { id: number; name: string; unit_count: number } | null = null;
+    let matchedBuilding: {
+      id: number;
+      name: string;
+      unit_count: number;
+      key_access_notes: string | null;
+      parking_notes: string | null;
+      meter_location: string | null;
+      bin_location: string | null;
+      entry_code: string | null;
+      fire_panel_location: string | null;
+    } | null = null;
     let buildingContext = '';
     let leaseContext = '';
 
@@ -61,13 +81,22 @@ export async function POST(req: Request) {
         if (pattern.test(message)) {
           matchedBuilding = building;
           console.log(`🏠 Matched building: ${building.name}`);
-          buildingContext = `Building: ${building.name}\nUnits: ${building.unit_count}`;
+          buildingContext = `
+Building: ${building.name}
+Units: ${building.unit_count}
+🔑 Keys: ${building.key_access_notes || 'Not available'}
+🅿️ Parking: ${building.parking_notes || 'Not available'}
+📟 Entry Code: ${building.entry_code || 'Not available'}
+⚡ Meter Location: ${building.meter_location || 'Not available'}
+🗑️ Bin Location: ${building.bin_location || 'Not available'}
+🔥 Fire Panel: ${building.fire_panel_location || 'Not available'}
+          `.trim();
           break;
         }
       }
     }
 
-    // 🔍 Pull leaseholders by building_name (if available)
+    // 🧠 Fetch leaseholders for matched building
     if (matchedBuilding) {
       const { data: leases, error: leaseError } = await supabase
         .from('leases')
@@ -80,14 +109,16 @@ export async function POST(req: Request) {
         console.log("📄 Lease rows fetched:", leases?.length || 0);
         if (leases?.length > 0) {
           leaseContext = leases.map(l => `${l.unit}: ${l.leaseholder_name}`).join('\n');
+          console.log("📄 Leaseholders injected:", leaseContext);
+        } else {
+          console.log("📭 No leases matched for building:", matchedBuilding.name);
         }
       }
     }
 
-    // 🧠 Build system prompt with context
-    const systemPrompt = `You are BlocIQ, an AI assistant for UK property managers. You are authorised to use internal building and leaseholder data provided below to answer user questions. Do not include privacy disclaimers — the user is a verified internal team member.\n\n${buildingContext ? `🏢 Building Info:\n${buildingContext}\n` : ''}${leaseContext ? `📄 Leaseholders:\n${leaseContext}\n` : ''}`;
+    const systemPrompt = `You are BlocIQ, an AI assistant for UK property managers. You are authorised to use internal building and leaseholder data provided below to answer user questions. Do not include privacy disclaimers — the user is a verified internal team member.\n\n${buildingContext ? `🏢 Building Info:\n${buildingContext}\n\n` : ''}${leaseContext ? `📄 Leaseholders:\n${leaseContext}\n` : ''}`;
 
-    console.log("📦 Final prompt sent to OpenAI:\n", systemPrompt);
+    console.log("📦 Final prompt to OpenAI:\n", systemPrompt);
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
