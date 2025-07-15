@@ -7,6 +7,14 @@ const supabase = createClient(
 
 export async function buildAIContext(buildingId: string) {
   try {
+    // Convert string buildingId to number for database query
+    const buildingIdNum = parseInt(buildingId, 10);
+    
+    if (isNaN(buildingIdNum)) {
+      console.error('❌ Invalid building ID:', buildingId);
+      return null;
+    }
+
     // 🔍 Get building + units + leaseholders
     const { data: building, error: buildingError } = await supabase
       .from('buildings')
@@ -27,7 +35,7 @@ export async function buildAIContext(buildingId: string) {
           )
         )
       `)
-      .eq('id', buildingId)
+      .eq('id', buildingIdNum)
       .single();
 
     if (buildingError) {
@@ -36,29 +44,41 @@ export async function buildAIContext(buildingId: string) {
     }
 
     // 📂 Get uploaded documents + parsed text
-    const { data: documents, error: docError } = await supabase
-      .from('compliance_docs')
-      .select('title, doc_type, parsed_text')
-      .eq('building_id', buildingId);
+    let docsText = 'No documents available.';
+    
+    try {
+      const { data: documents, error: docError } = await supabase
+        .from('compliance_docs')
+        .select('title, doc_type, parsed_text')
+        .eq('building_id', buildingIdNum);
 
-    if (docError) {
-      console.warn('⚠️ No documents found or error fetching docs:', docError.message);
+      if (docError) {
+        console.warn('⚠️ No documents found or error fetching docs:', docError.message);
+      } else if (documents) {
+        docsText = documents.map(doc => (
+          `--- ${doc.title} (${doc.doc_type}) ---\n${doc.parsed_text || '[No text extracted]'}`)
+        ).join('\n\n') || 'No documents available.';
+      }
+    } catch (error) {
+      console.warn('⚠️ Documents table may not exist:', error);
     }
 
     // 🧠 Load founder knowledge
-    const { data: founderData, error: founderError } = await supabase
-      .from('founder_knowledge')
-      .select('content');
+    let founderKnowledge = '';
+    
+    try {
+      const { data: founderData, error: founderError } = await supabase
+        .from('founder_knowledge')
+        .select('content');
 
-    if (founderError) {
-      console.warn('⚠️ Founder knowledge fetch error:', founderError.message);
+      if (founderError) {
+        console.warn('⚠️ Founder knowledge fetch error:', founderError.message);
+      } else if (founderData) {
+        founderKnowledge = founderData.map(f => f.content).join('\n\n') || '';
+      }
+    } catch (error) {
+      console.warn('⚠️ Founder knowledge table may not exist:', error);
     }
-
-    const founderKnowledge = founderData?.map(f => f.content).join('\n\n') || '';
-
-    const docsText = documents?.map(doc => (
-      `--- ${doc.title} (${doc.doc_type}) ---\n${doc.parsed_text || '[No text extracted]'}`)
-    ).join('\n\n') || 'No documents available.';
 
     const context = `
 === BUILDING ===
