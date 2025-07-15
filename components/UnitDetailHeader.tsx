@@ -11,15 +11,15 @@ export default function UnitDetailHeader({ unitName, buildingName }: { unitName:
   return (
     <div className="mb-6">
       {/* 🔙 Back Link */}
-      <Link href={`/dashboard/buildings/${buildingId}`} className="text-sm text-blue-600 hover:underline block mb-2">
+      <Link href={`/buildings/${buildingId}`} className="text-sm text-blue-600 hover:underline block mb-2">
         ← Back to {buildingName}
       </Link>
 
       {/* 🧭 Breadcrumb Trail */}
       <div className="text-sm text-gray-500">
-        <Link href="/dashboard" className="hover:underline">Dashboard</Link>
+        <Link href="/home" className="hover:underline">Dashboard</Link>
         {' / '}
-        <Link href={`/dashboard/buildings/${buildingId}`} className="hover:underline">{buildingName}</Link>
+        <Link href={`/buildings/${buildingId}`} className="hover:underline">{buildingName}</Link>
         {' / '}
         <span className="text-gray-700 font-medium">{unitName}</span>
       </div>

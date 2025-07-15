@@ -74,7 +74,7 @@ export default function UnitsSection({ buildingId }: { buildingId: string }) {
                 <p className="text-sm italic text-red-400">No leaseholder assigned</p>
               )}
 
-              <Link href={`/dashboard/buildings/${buildingId}/units/${unit.id}`}>
+                              <Link href={`/buildings/${buildingId}/units/${unit.id}`}>
                 <button className="mt-3 text-blue-600 hover:underline text-sm">
                   View Correspondence
                 </button>

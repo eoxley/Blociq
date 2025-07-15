@@ -58,7 +58,7 @@ export default async function DashboardUnitPage({
     .single()
 
   if (!unit) {
-    redirect('/dashboard')
+    redirect('/home')
   }
 
   // Get leaseholder data if unit has a leaseholder
@@ -107,7 +107,7 @@ export default async function DashboardUnitPage({
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <Link 
-          href={`/dashboard/building/${building_id}`}
+          href={`/buildings/${building_id}`}
           className="flex items-center gap-2 text-teal-600 hover:text-teal-700 transition-colors"
         >
           <ArrowLeft className="h-5 w-5" />

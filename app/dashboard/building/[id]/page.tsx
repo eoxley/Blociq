@@ -49,7 +49,7 @@ export default async function DashboardBuildingPage({
     .single()
 
   if (!building) {
-    redirect('/dashboard')
+    redirect('/home')
   }
 
   // 📦 Fetch all units for this building
@@ -103,7 +103,7 @@ export default async function DashboardBuildingPage({
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <Link 
-          href="/dashboard" 
+          href="/home" 
           className="flex items-center gap-2 text-teal-600 hover:text-teal-700 transition-colors"
         >
           <ArrowLeft className="h-5 w-5" />
@@ -190,7 +190,7 @@ export default async function DashboardBuildingPage({
                   <p className="text-sm italic text-red-400">Leaseholder not assigned</p>
                 )}
 
-                <Link href={`/dashboard/buildings/${building_id}/units/${unit.id}`}>
+                <Link href={`/buildings/${building_id}/units/${unit.id}`}>
                   <button className="mt-3 text-blue-600 hover:underline text-sm">
                     View Correspondence
                   </button>
