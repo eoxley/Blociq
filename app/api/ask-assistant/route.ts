@@ -67,6 +67,7 @@ export async function POST(req: Request) {
       }
     }
 
+    // 🧠 Pull leaseholders if a building was matched
     if (matchedBuilding) {
       const { data: leases, error: leaseError } = await supabase
         .from('leases')
@@ -80,7 +81,8 @@ export async function POST(req: Request) {
       }
     }
 
-    const systemPrompt = `You are BlocIQ, an AI assistant for UK property managers. Use the following property information to help answer questions.\n\n${buildingContext ? `🏢 Building Info:\n${buildingContext}\n` : ''}${leaseContext ? `📄 Leaseholders:\n${leaseContext}\n` : ''}`;
+    // 🔐 Authorised assistant prompt
+    const systemPrompt = `You are BlocIQ, an AI assistant for UK property managers. You are authorised to use internal building and leaseholder data provided below to answer user questions. Do not repeat disclaimers or privacy warnings — the user is a verified internal staff member with access to this data.\n\n${buildingContext ? `🏢 Building Info:\n${buildingContext}\n` : ''}${leaseContext ? `📄 Leaseholders:\n${leaseContext}\n` : ''}`;
 
     console.log("📦 Final prompt:\n", systemPrompt);
 
