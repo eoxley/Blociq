@@ -110,6 +110,19 @@ ${question}
       throw new Error('No response from OpenAI');
     }
     
+    // Save AI log entry
+    try {
+      await supabase
+        .from('ai_logs')
+        .insert({
+          question,
+          answer,
+          building_id: buildingId,
+        });
+    } catch (logError) {
+      console.error('Failed to save AI log entry:', logError);
+    }
+    
     // 6. Log the Interaction (suppress errors)
     try {
       await logAIInteraction({
