@@ -17,6 +17,11 @@ interface Building {
   ews1_status?: string
   fire_door_survey?: string
   gas_eicr_status?: string
+  access_notes?: string
+  key_info?: string
+  parking?: string
+  service_charge_start?: string
+  service_charge_end?: string
 }
 
 interface Unit {
@@ -29,6 +34,13 @@ interface Unit {
     email: string
     phone: string
   }>
+}
+
+interface Event {
+  id: string
+  title: string
+  date: string
+  category?: string
 }
 
 export default async function BuildingDetailPage({ 
@@ -125,6 +137,19 @@ export default async function BuildingDetailPage({
     console.error('Error fetching emails:', emailsError)
   }
 
+  // Fetch upcoming events for this building
+  const { data: events, error: eventsError } = await supabase
+    .from('property_events')
+    .select('id, title, date, category')
+    .eq('building_id', buildingId)
+    .gte('date', new Date().toISOString())
+    .order('date', { ascending: true })
+    .limit(5)
+
+  if (eventsError) {
+    console.error('Error fetching events:', eventsError)
+  }
+
   console.log('🔍 BuildingDetailPage: rendering page with data')
 
   const formatCurrency = (amount: number) => {
@@ -173,6 +198,49 @@ export default async function BuildingDetailPage({
           </p>
         </div>
       </div>
+
+      {/* Building Overview UI Enhancements */}
+      <section className="space-y-6 mb-8">
+        {/* 🗝️ Important Info */}
+        <div className="bg-gray-100 p-4 rounded shadow-sm">
+          <h2 className="text-lg font-semibold mb-2">Important Building Info</h2>
+          <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
+            <li><strong>Access:</strong> {building.access_notes || 'No access info saved.'}</li>
+            <li><strong>Keys Held:</strong> {building.key_info || 'Not recorded.'}</li>
+            <li><strong>Parking:</strong> {building.parking || 'Not specified.'}</li>
+          </ul>
+        </div>
+
+        {/* 💸 Service Charge Period */}
+        <div className="bg-gray-100 p-4 rounded shadow-sm">
+          <h2 className="text-lg font-semibold mb-2">Service Charge Period</h2>
+          <p className="text-sm text-gray-700">
+            {building.service_charge_start
+              ? `${building.service_charge_start} to ${building.service_charge_end}`
+              : 'Not yet set'}
+          </p>
+        </div>
+
+        {/* 📅 Upcoming Events */}
+        <div className="bg-gray-100 p-4 rounded shadow-sm">
+          <h2 className="text-lg font-semibold mb-2">Upcoming Events</h2>
+          {events && events.length > 0 ? (
+            <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
+              {events.map((e) => (
+                <li key={e.id}>{e.date} – {e.title}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-gray-500">No events scheduled.</p>
+          )}
+        </div>
+
+        {/* 🤖 BlocIQ Summary */}
+        <div className="bg-white p-4 border rounded shadow-sm">
+          <h2 className="text-lg font-semibold mb-2">BlocIQ Summary</h2>
+          <AIInput buildingId={buildingId} context={`Summarise this building: ${building.name}`} />
+        </div>
+      </section>
 
       {/* Units Section */}
       <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
