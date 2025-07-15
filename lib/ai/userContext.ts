@@ -37,6 +37,17 @@ export async function fetchUserContext(userId: string, supabase: any): Promise<U
 
     if (profileError) {
       console.error('Error fetching user profile:', profileError);
+      // Return empty context instead of failing
+      return {
+        recentEmails: [],
+        complianceDocs: [],
+        recentEvents: [],
+      };
+    }
+
+    // If no profile found, return empty context
+    if (!userProfile) {
+      console.warn('No user profile found for user:', userId);
       return {
         recentEmails: [],
         complianceDocs: [],

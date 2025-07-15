@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 interface AIInputProps {
   buildingId: string;
@@ -11,10 +12,22 @@ export default function AIInput({ buildingId, context }: AIInputProps) {
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
   const [loading, setLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const supabase = createClientComponentClient();
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id) {
+        setUserId(session.user.id);
+      }
+    };
+    getUser();
+  }, [supabase.auth]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!question.trim()) return;
+    if (!question.trim() || !userId) return;
 
     setLoading(true);
     try {
@@ -26,16 +39,21 @@ export default function AIInput({ buildingId, context }: AIInputProps) {
         body: JSON.stringify({ 
           question, 
           buildingId,
-          userId: 'current-user-id' // This should be replaced with actual user ID
+          userId
         }),
       });
 
       const data = await response.json();
       if (data.answer) {
         setAnswer(data.answer);
+      } else if (data.error) {
+        setAnswer(`Error: ${data.error}`);
+      } else {
+        setAnswer('Error: No response from AI service');
       }
     } catch (error) {
       console.error('Error generating answer:', error);
+      setAnswer('Error: Failed to connect to AI service');
     } finally {
       setLoading(false);
     }
@@ -54,7 +72,7 @@ export default function AIInput({ buildingId, context }: AIInputProps) {
         />
         <button
           type="submit"
-          disabled={loading || !question.trim()}
+          disabled={loading || !question.trim() || !userId}
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? 'Thinking...' : 'Ask'}
