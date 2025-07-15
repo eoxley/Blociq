@@ -1,4 +1,4 @@
-// app/api/ask-assistant/route.ts
+// File: app/api/ask-assistant/route.ts
 
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
@@ -8,13 +8,12 @@ import { createServerClient } from '@supabase/ssr';
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 export async function POST(req: Request) {
-  console.log("✅ Assistant endpoint hit");
+  console.log("✅ BlocIQ Assistant endpoint hit");
 
   try {
     const body = await req.json();
-    console.log("📥 Request body:", body);
-
     const message = body?.message;
+
     if (!message) {
       console.error("❌ No message provided");
       return NextResponse.json({ error: 'No message provided' }, { status: 400 });
@@ -32,7 +31,6 @@ export async function POST(req: Request) {
         },
       }
     );
-
     const {
       data: { session },
       error: sessionError,
@@ -40,58 +38,66 @@ export async function POST(req: Request) {
 
     if (sessionError) {
       console.warn("⚠️ Supabase session error:", sessionError.message);
-    } else {
-      console.log("👤 Session user:", session?.user?.email);
     }
 
-    // Extract building name from the user's message
-    const buildingNameMatch = message.match(/(?:units|info).*?\b([A-Z][a-z]+(?:\s[A-Z][a-z]+)+)\b/);
-    const buildingName = buildingNameMatch?.[1] || null;
-    console.log("🔍 Detected building in query:", buildingName);
+    console.log("📩 User message:", message);
 
-    let buildings: Array<{ id: number; name: string; unit_count: number }> | null = null;
-    let buildingError: any = null;
-    if (buildingName) {
-      const result = await supabase
-        .from('buildings')
-        .select('id, name, unit_count')
-        .ilike('name', `%${buildingName}%`);
-      buildings = result.data as Array<{ id: number; name: string; unit_count: number }> | null;
-      buildingError = result.error;
-      if (buildingError) {
-        console.warn("⚠️ Supabase building fetch error:", buildingError.message);
+    // 🏢 Fetch all building names
+    const { data: allBuildings, error: buildingListError } = await supabase
+      .from('buildings')
+      .select('id, name, unit_count');
+
+    if (buildingListError) {
+      console.error("❌ Failed to fetch building list:", buildingListError.message);
+    }
+
+    let matchedBuilding: { id: number; name: string; unit_count: number } | null = null;
+    let buildingContext = '';
+    let leaseContext = '';
+
+    if (allBuildings && allBuildings.length > 0) {
+      for (const building of allBuildings) {
+        const pattern = new RegExp(`\\b${building.name}\\b`, 'i');
+        if (pattern.test(message)) {
+          matchedBuilding = building;
+          console.log(`🏠 Matched building: ${building.name}`);
+          buildingContext = `Building: ${building.name}\nUnits: ${building.unit_count}`;
+          break;
+        }
       }
-      console.log("🏢 Fetched building data:", buildings);
-    } else {
-      console.log("ℹ️ No building name detected in query.");
     }
 
-    // Optionally include building info in the AI prompt
-    const buildingInfo = buildings && buildings.length > 0
-      ? `Building info: ${JSON.stringify(buildings[0])}`
-      : '';
+    if (matchedBuilding) {
+      const { data: leases, error: leaseError } = await supabase
+        .from('leases')
+        .select('unit, leaseholder_name')
+        .eq('building_id', matchedBuilding.id);
 
-    const messages: Array<{ role: 'system' | 'user'; content: string }> = [
-      {
-        role: "system",
-        content: "You are BlocIQ, a helpful assistant for UK property managers. Answer in plain English, based on property law and best practice.",
-      },
-      ...(buildingInfo ? [{ role: "system" as const, content: buildingInfo }] : []),
-      {
-        role: "user",
-        content: message,
-      },
-    ];
+      if (leaseError) {
+        console.warn("⚠️ Lease fetch error:", leaseError.message);
+      } else if (leases?.length > 0) {
+        leaseContext = leases.map(l => `${l.unit}: ${l.leaseholder_name}`).join('\n');
+      }
+    }
+
+    const systemPrompt = `You are BlocIQ, an AI assistant for UK property managers. Use the following property information to help answer questions.\n\n${buildingContext ? `🏢 Building Info:\n${buildingContext}\n` : ''}${leaseContext ? `📄 Leaseholders:\n${leaseContext}\n` : ''}`;
+
+    console.log("📦 Final prompt:\n", systemPrompt);
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages,
+      model: 'gpt-4',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: message },
+      ],
+      temperature: 0.4,
     });
 
-    const reply = completion.choices?.[0]?.message?.content || "🤖 Sorry, no response was generated.";
-    console.log("🧠 OpenAI reply:", reply);
+    const reply = completion.choices?.[0]?.message?.content?.trim() || "🤖 Sorry, I couldn't generate a response.";
+    console.log("🧠 Assistant reply:", reply);
 
     return NextResponse.json({ answer: reply });
+
   } catch (err: any) {
     console.error("🔥 Fatal assistant error:", err.message || err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
