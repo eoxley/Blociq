@@ -7,7 +7,8 @@ import AIInput from '@/components/AIInput';
 
 export default function BuildingDetailsPage() {
   const supabase = createClientComponentClient();
-  const { buildingId } = useParams();
+  const params = useParams();
+  const buildingId = params?.buildingId as string;
   const [building, setBuilding] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
