@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { Building2, MapPin, Users, ArrowRight, Search } from 'lucide-react'
+import { Building2, MapPin, Users, ArrowRight, Search, Plus } from 'lucide-react'
 
 // Define the Building type based on the database schema
 type Building = {
@@ -21,6 +21,7 @@ interface BuildingsClientProps {
 
 export default function BuildingsClient({ buildings }: BuildingsClientProps) {
   const [searchTerm, setSearchTerm] = useState('')
+  const [isAdding, setIsAdding] = useState(false)
 
   // Debug: Log the buildings prop
   console.log('BuildingsClient received buildings:', buildings)
@@ -37,12 +38,56 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
 
   console.log('Filtered buildings:', filteredBuildings)
 
+  const addAshwoodHouse = async () => {
+    setIsAdding(true)
+    try {
+      const response = await fetch('/api/buildings/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: 'Ashwood House',
+          address: 'Ashwood Lane, City Center',
+          unit_count: 12
+        })
+      })
+
+      const result = await response.json()
+      
+      if (result.success) {
+        console.log('Successfully added Ashwood House:', result.building)
+        // Refresh the page to show the new building
+        window.location.reload()
+      } else {
+        console.error('Failed to add building:', result.error)
+        alert('Failed to add building: ' + result.error)
+      }
+    } catch (error) {
+      console.error('Error adding building:', error)
+      alert('Error adding building')
+    } finally {
+      setIsAdding(false)
+    }
+  }
+
   if (!buildings || buildings.length === 0) {
     return (
       <div className="text-center py-12">
         <Building2 className="mx-auto h-12 w-12 text-gray-400 mb-4" />
         <h3 className="text-lg font-medium text-gray-900 mb-2">No buildings found</h3>
-        <p className="text-gray-500">Get started by adding your first building.</p>
+        <p className="text-gray-500 mb-6">Get started by adding your first building.</p>
+        
+        {/* Add Building Button */}
+        <button
+          onClick={addAshwoodHouse}
+          disabled={isAdding}
+          className="flex items-center justify-center mx-auto px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
+        >
+          <Plus className="h-5 w-5 mr-2" />
+          {isAdding ? 'Adding...' : 'Add Ashwood House'}
+        </button>
+        
         <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
           <p className="text-yellow-800 text-sm">
             <strong>Debug Info:</strong> Buildings array is empty or undefined
