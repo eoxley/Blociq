@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Link from 'next/link';
 
@@ -10,7 +10,7 @@ interface Unit {
   leaseholder?: {
     full_name: string;
     email: string;
-  };
+  }[];
 }
 
 export default function UnitsSection({ buildingId }: { buildingId: string }) {
@@ -61,10 +61,10 @@ export default function UnitsSection({ buildingId }: { buildingId: string }) {
             <div key={unit.id} className="p-4 border rounded shadow-sm hover:shadow-md transition">
               <h3 className="font-semibold text-lg mb-1">{unit.name}</h3>
 
-              {unit.leaseholder ? (
+              {unit.leaseholder && unit.leaseholder.length > 0 ? (
                 <>
-                  <p className="text-sm text-gray-700">{unit.leaseholder.full_name}</p>
-                  <p className="text-sm text-gray-500">{unit.leaseholder.email}</p>
+                  <p className="text-sm text-gray-700">{unit.leaseholder[0].full_name}</p>
+                  <p className="text-sm text-gray-500">{unit.leaseholder[0].email}</p>
                   <p className="text-green-600 text-sm mt-1 flex items-center gap-1">
                     <span className="w-2 h-2 bg-green-500 rounded-full inline-block"></span>
                     Occupied
