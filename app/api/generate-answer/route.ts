@@ -2,10 +2,16 @@ import { NextResponse } from 'next/server';
 import { buildAIContext } from '../../../lib/buildAIContext';
 import OpenAI from 'openai';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 export async function POST(req: Request) {
   try {
+    // Check if OpenAI API key is available
+    if (!process.env.OPENAI_API_KEY) {
+      console.error('OPENAI_API_KEY environment variable is missing');
+      return NextResponse.json({ error: 'AI service not configured' }, { status: 500 });
+    }
+
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    
     const { question, buildingId } = await req.json();
 
     if (!question || !buildingId) {
