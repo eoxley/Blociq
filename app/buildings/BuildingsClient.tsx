@@ -74,54 +74,97 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
           const isEmpty = !building.units?.length && !building.leases?.length;
 
           return (
-            <Link
+            <div
               key={building.id}
-              href={`/buildings/${building.id}`}
-              className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 border border-gray-100 overflow-hidden group block relative"
+              className={`relative p-4 rounded-xl shadow border ${
+                isEmpty ? 'opacity-50 grayscale' : 'bg-white'
+              }`}
             >
-              <div className="p-6">
-                {/* Coming Soon Badge */}
-                {isEmpty && (
-                  <span className="absolute top-2 right-2 bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-semibold shadow-sm">
-                    🚧 Coming Soon
-                  </span>
-                )}
+              {isEmpty ? (
+                <div className="cursor-not-allowed" title="This building is being prepared for launch – stay tuned!">
+                  <div className="p-6">
+                    {/* Coming Soon Badge */}
+                    <span className="absolute top-2 right-2 bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-semibold shadow-sm">
+                      🚧 Coming Soon
+                    </span>
 
-                {/* Building Icon */}
-                <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg mb-4">
-                  <Building2 className="h-6 w-6 text-white" />
-                </div>
-                
-                {/* Building Name */}
-                <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-teal-600 transition-colors duration-200">
-                  {building.name}
-                </h3>
-                
-                {/* Address */}
-                {building.address && (
-                  <div className="flex items-start space-x-2 mb-3">
-                    <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-gray-600 leading-relaxed">
-                      {building.address}
-                    </p>
+                    {/* Building Icon */}
+                    <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg mb-4">
+                      <Building2 className="h-6 w-6 text-white" />
+                    </div>
+                    
+                    {/* Building Name */}
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                      {building.name}
+                    </h3>
+                    
+                    {/* Address */}
+                    {building.address && (
+                      <div className="flex items-start space-x-2 mb-3">
+                        <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-gray-600 leading-relaxed">
+                          {building.address}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {/* Unit Count */}
+                    <div className="flex items-center space-x-2 mb-4">
+                      <Users className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm text-gray-500">
+                        {building.unit_count || 0} {building.unit_count === 1 ? 'unit' : 'units'}
+                      </span>
+                    </div>
+                    
+                    {/* Disabled Button */}
+                    <div className="w-full flex items-center justify-center space-x-2 bg-gray-400 text-white px-4 py-2 rounded-md">
+                      <span className="text-sm font-medium">Coming Soon</span>
+                    </div>
                   </div>
-                )}
-                
-                {/* Unit Count */}
-                <div className="flex items-center space-x-2 mb-4">
-                  <Users className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm text-gray-500">
-                    {building.unit_count || 0} {building.unit_count === 1 ? 'unit' : 'units'}
-                  </span>
                 </div>
-                
-                {/* View More Button */}
-                <div className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white px-4 py-2 rounded-md transition-all duration-200 transform hover:scale-105 group-hover:shadow-md">
-                  <span className="text-sm font-medium">View Details</span>
-                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
-                </div>
-              </div>
-            </Link>
+              ) : (
+                <Link
+                  href={`/buildings/${building.id}`}
+                  className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 border border-gray-100 overflow-hidden group block relative"
+                >
+                  <div className="p-6">
+                    {/* Building Icon */}
+                    <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg mb-4">
+                      <Building2 className="h-6 w-6 text-white" />
+                    </div>
+                    
+                    {/* Building Name */}
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-teal-600 transition-colors duration-200">
+                      {building.name}
+                    </h3>
+                    
+                    {/* Address */}
+                    {building.address && (
+                      <div className="flex items-start space-x-2 mb-3">
+                        <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-gray-600 leading-relaxed">
+                          {building.address}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {/* Unit Count */}
+                    <div className="flex items-center space-x-2 mb-4">
+                      <Users className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm text-gray-500">
+                        {building.unit_count || 0} {building.unit_count === 1 ? 'unit' : 'units'}
+                      </span>
+                    </div>
+                    
+                    {/* View More Button */}
+                    <div className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white px-4 py-2 rounded-md transition-all duration-200 transform hover:scale-105 group-hover:shadow-md">
+                      <span className="text-sm font-medium">View Details</span>
+                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
+                    </div>
+                  </div>
+                </Link>
+              )}
+            </div>
           );
         })}
       </div>
