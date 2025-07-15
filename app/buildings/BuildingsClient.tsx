@@ -11,6 +11,7 @@ type Building = {
   address: string | null
   unit_count: number | null
   created_at: string | null
+  demo_ready?: boolean
   units?: any[]
   leases?: any[]
 }
@@ -71,8 +72,6 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
       {/* Buildings Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {filteredBuildings.map((building) => {
-          const isEmpty = !building.units?.length && !building.leases?.length;
-
           return (
             <Link
               key={building.id}
@@ -81,7 +80,7 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
             >
               <div className="p-6">
                 {/* Coming Soon Badge */}
-                {isEmpty && (
+                {building.demo_ready === false && (
                   <span className="absolute top-2 right-2 bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-semibold shadow-sm">
                     🚧 Coming Soon
                   </span>
