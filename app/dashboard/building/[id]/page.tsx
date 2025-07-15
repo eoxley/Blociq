@@ -17,12 +17,9 @@ interface Unit {
   id: string
   unit_number: string
   leaseholder_id: string | null
-  leases?: Array<{
-    id: string
-    leaseholder?: Array<{
-      full_name: string
-      email: string
-    }>
+  leaseholder?: Array<{
+    full_name: string
+    email: string
   }>
 }
 
@@ -55,19 +52,16 @@ export default async function DashboardBuildingPage({
     redirect('/dashboard')
   }
 
-  // Get units for this building with lease and leaseholder info
+  // 📦 Fetch all units and their leaseholders directly (no leases table needed)
   const { data: units } = await supabase
     .from('units')
     .select(`
       id,
       unit_number,
       leaseholder_id,
-      leases (
-        id,
-        leaseholder:leaseholders (
-          full_name,
-          email
-        )
+      leaseholder:leaseholder_id (
+        full_name,
+        email
       )
     `)
     .eq('building_id', building_id)
@@ -181,15 +175,17 @@ export default async function DashboardBuildingPage({
                   <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
                 </div>
                 <div className="text-sm text-gray-600">
-                  {unit.leases?.length > 0 && unit.leases[0].leaseholder && unit.leases[0].leaseholder.length > 0 ? (
-                    <div>
-                      <p className="font-semibold text-gray-900">
-                        {unit.leases[0].leaseholder[0].full_name}
+                  {unit.leaseholder && unit.leaseholder.length > 0 ? (
+                    <>
+                      <p className="font-semibold">{unit.leaseholder[0].full_name}</p>
+                      <p className="text-sm text-gray-500">{unit.leaseholder[0].email}</p>
+                      <p className="text-green-600 text-sm flex items-center gap-1">
+                        <span className="w-2 h-2 bg-green-500 rounded-full inline-block"></span>
+                        Occupied
                       </p>
-                      <p className="text-xs text-green-600 font-medium">Occupied</p>
-                    </div>
+                    </>
                   ) : (
-                    <p className="text-gray-500 italic">Leaseholder info missing</p>
+                    <p className="text-red-500">Leaseholder not assigned</p>
                   )}
                 </div>
                 <div className="mt-3 text-xs text-gray-500">
