@@ -27,7 +27,14 @@ export default function AIInput({ buildingId, context }: AIInputProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!question.trim() || !userId) return;
+    if (!question.trim()) {
+      setAnswer('Please enter a question.');
+      return;
+    }
+    if (!userId) {
+      setAnswer('Error: Please log in to use the AI assistant.');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -48,12 +55,15 @@ export default function AIInput({ buildingId, context }: AIInputProps) {
         setAnswer(data.answer);
       } else if (data.error) {
         setAnswer(`Error: ${data.error}`);
+        if (data.details) {
+          console.error('AI Error Details:', data.details);
+        }
       } else {
         setAnswer('Error: No response from AI service');
       }
     } catch (error) {
       console.error('Error generating answer:', error);
-      setAnswer('Error: Failed to connect to AI service');
+      setAnswer('Error: Failed to connect to AI service. Please check your internet connection and try again.');
     } finally {
       setLoading(false);
     }

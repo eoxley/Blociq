@@ -82,15 +82,21 @@ export async function POST(req: NextRequest) {
       // Continue without founder knowledge if search fails
     }
     
-    // 5. Build AI prompt with structured building data
-    const buildingDataString = buildingData ? JSON.stringify(buildingData, null, 2) : 'No building data available';
+    // 5. Build AI prompt with building context
+    const buildingContext = buildingData ? `
+Building Information:
+- Name: ${buildingData.name}
+- Address: ${buildingData.address || 'Not specified'}
+- Unit Count: ${buildingData.unit_count || 'Unknown'}
+- Created: ${buildingData.created_at ? new Date(buildingData.created_at).toLocaleDateString() : 'Unknown'}
+` : 'No building data available';
     
     const aiPrompt = `
-You are BlocIQ, a property management AI assistant. You have access to the following data:
+You are BlocIQ, a property management AI assistant. You have access to the following building context:
 
-${buildingDataString}
+${buildingContext}
 
-Use only this data to answer the question:
+Please answer the following question about this building:
 
 QUESTION:
 ${question}
