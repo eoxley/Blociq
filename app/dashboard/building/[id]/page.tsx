@@ -52,20 +52,32 @@ export default async function DashboardBuildingPage({
     redirect('/dashboard')
   }
 
-  // 📦 Fetch all units and their leaseholders directly (no leases table needed)
+  // 📦 Fetch all units for this building
   const { data: units } = await supabase
     .from('units')
-    .select(`
-      id,
-      unit_number,
-      leaseholder_id,
-      leaseholder:leaseholder_id (
-        full_name,
-        email
-      )
-    `)
+    .select('id, unit_number, type, floor')
     .eq('building_id', building_id)
     .order('unit_number')
+
+  // Fetch leaseholders separately
+  let leaseholders: any[] = []
+  if (units && units.length > 0) {
+    const unitIds = units.map(u => u.id)
+    const { data: leaseholdersData, error: leaseholdersError } = await supabase
+      .from('leaseholders')
+      .select('id, unit_id, name, email, phone')
+      .in('unit_id', unitIds)
+    
+    if (!leaseholdersError && leaseholdersData) {
+      leaseholders = leaseholdersData
+    }
+  }
+
+  // Combine units with their leaseholders
+  const unitsWithLeaseholders = units?.map(unit => ({
+    ...unit,
+    leaseholder: leaseholders.filter(l => l.unit_id === unit.id)
+  })) || []
 
   // Get recent documents for AI summary
   const { data: recentDocuments } = await supabase
@@ -76,7 +88,7 @@ export default async function DashboardBuildingPage({
     .limit(1)
 
   const lastDocumentDate = recentDocuments?.[0]?.created_at
-  const aiSummary = `This building has ${units?.length || 0} units. ${
+  const aiSummary = `This building has ${unitsWithLeaseholders?.length || 0} units. ${
     lastDocumentDate 
       ? `Last document was uploaded on ${new Date(lastDocumentDate).toLocaleDateString('en-GB', {
           day: 'numeric',
@@ -118,7 +130,7 @@ export default async function DashboardBuildingPage({
               <div className="flex items-center gap-2 text-gray-600">
                 <Users className="h-5 w-5" />
                 <span className="font-medium">
-                  {building.unit_count || units?.length || 0} units
+                  {building.unit_count || unitsWithLeaseholders?.length || 0} units
                 </span>
               </div>
               {building.created_at && (
@@ -150,11 +162,11 @@ export default async function DashboardBuildingPage({
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-semibold text-gray-900 flex items-center gap-2">
             <Users className="h-6 w-6" />
-            Units ({units?.length || 0})
+            Units ({unitsWithLeaseholders?.length || 0})
           </h2>
         </div>
 
-        {!units || units.length === 0 ? (
+        {!unitsWithLeaseholders || unitsWithLeaseholders.length === 0 ? (
           <div className="text-center py-12">
             <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No Units Found</h3>
@@ -162,7 +174,7 @@ export default async function DashboardBuildingPage({
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {units.map((unit) => (
+            {unitsWithLeaseholders.map((unit) => (
               <Link
                 key={unit.id}
                 href={`/dashboard/building/${building_id}/unit/${unit.id}`}
