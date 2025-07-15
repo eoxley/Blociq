@@ -5,6 +5,7 @@ import { getSystemPrompt } from '../../../lib/ai/systemPrompt';
 import { fetchUserContext, formatContextMessages } from '../../../lib/ai/userContext';
 import { logAIInteraction } from '../../../lib/ai/logInteraction';
 import { searchFounderKnowledge } from '../../../lib/ai/embed';
+import { getStructuredBuildingData } from '../../../lib/getStructuredBuildingData';
 import { Database } from '../../../lib/database.types';
 
 const supabase = createClient<Database>(
@@ -42,175 +43,6 @@ function extractBuildingNames(query: string): string[] {
   return Array.from(foundBuildings);
 }
 
-// Function to fetch building context from Supabase
-async function fetchBuildingContext(buildingNames: string[]): Promise<Array<{ role: 'system'; content: string }>> {
-  if (buildingNames.length === 0) return [];
-
-  const buildingContextMessages: Array<{ role: 'system'; content: string }> = [];
-
-  for (const buildingName of buildingNames) {
-    try {
-      // Search for building by name using ILIKE
-      const { data: buildings, error: buildingError } = await supabase
-        .from('buildings')
-        .select(`
-          id,
-          name,
-          address
-        `)
-        .ilike('name', `%${buildingName}%`)
-        .limit(1);
-
-      if (buildingError) {
-        console.error('Error fetching building:', buildingError);
-        continue;
-      }
-
-      if (buildings && buildings.length > 0) {
-        const building = buildings[0];
-        
-        // Fetch units count for this building
-        const { data: units, error: unitsError } = await supabase
-          .from('units')
-          .select('id')
-          .eq('building_id', building.id);
-
-        if (unitsError) {
-          console.error('Error fetching units:', unitsError);
-          continue;
-        }
-
-        const unitCount = units?.length || 0;
-        
-        // Fetch units with their details
-        const { data: unitsWithDetails, error: unitsDetailsError } = await supabase
-          .from('units')
-          .select(`
-            id,
-            unit_number,
-            type,
-            floor
-          `)
-          .eq('building_id', building.id)
-          .order('unit_number');
-
-        if (unitsDetailsError) {
-          console.error('Error fetching units with details:', unitsDetailsError);
-          continue;
-        }
-
-        // Fetch leaseholders for this building's units
-        const { data: leaseholders, error: leaseholdersError } = await supabase
-          .from('leaseholders')
-          .select(`
-            id,
-            name,
-            email,
-            unit_id
-          `)
-          .in('unit_id', units?.map(u => u.id) || []);
-
-        if (leaseholdersError) {
-          console.error('Error fetching leaseholders:', leaseholdersError);
-          continue;
-        }
-
-        // Create a map of unit_id to leaseholder
-        const leaseholderMap = new Map();
-        leaseholders?.forEach(leaseholder => {
-          leaseholderMap.set(leaseholder.unit_id, leaseholder);
-        });
-
-        // Fetch leases for this building
-        const { data: leases, error: leasesError } = await supabase
-          .from('leases')
-          .select(`
-            id,
-            unit_id,
-            expiry_date
-          `)
-          .eq('building_id', building.id);
-
-        if (leasesError) {
-          console.error('Error fetching leases:', leasesError);
-          continue;
-        }
-
-        // Create a map of unit_id to lease data
-        const leaseMap = new Map();
-        leases?.forEach(lease => {
-          leaseMap.set(lease.unit_id, lease);
-        });
-
-        // Fetch 2 most recent emails for this building
-        const { data: recentEmails, error: emailsError } = await supabase
-          .from('incoming_emails')
-          .select(`
-            id,
-            subject,
-            from_email,
-            body_preview,
-            received_at
-          `)
-          .eq('building_id', building.id)
-          .order('received_at', { ascending: false })
-          .limit(2);
-
-        if (emailsError) {
-          console.error('Error fetching recent emails:', emailsError);
-          // Continue without emails if there's an error
-        }
-
-        // Build context message
-        let contextMessage = `${building.name} has ${unitCount} units.`;
-        
-        // Add unit and leaseholder information with lease end dates
-        if (unitsWithDetails && unitsWithDetails.length > 0) {
-          const unitDetails = unitsWithDetails.map(unit => {
-            const leaseholder = leaseholderMap.get(unit.id);
-            const lease = leaseMap.get(unit.id);
-            
-            if (leaseholder && lease?.expiry_date) {
-              const endDate = new Date(lease.expiry_date).toLocaleDateString();
-              return `${unit.unit_number} is leased to ${leaseholder.name} until ${endDate}`;
-            } else if (leaseholder) {
-              return `${unit.unit_number} is leased to ${leaseholder.name}`;
-            } else {
-              return `${unit.unit_number}`;
-            }
-          });
-          contextMessage += ' ' + unitDetails.join(', ') + '.';
-        }
-
-        // Add recent emails information
-        if (recentEmails && recentEmails.length > 0) {
-          contextMessage += ' Recent messages: ';
-          const emailDetails = recentEmails.map(email => {
-            const sender = email.from_email || 'Unknown';
-            const subject = email.subject || 'No subject';
-            return `from ${sender}: "${subject}"`;
-          });
-          contextMessage += emailDetails.join(', ') + '.';
-        }
-
-        buildingContextMessages.push({
-          role: 'system',
-          content: contextMessage
-        });
-
-        console.log(`Found building context for: ${building.name}`);
-      } else {
-        console.log(`No building found for: ${buildingName}`);
-      }
-    } catch (error) {
-      console.error(`Error processing building ${buildingName}:`, error);
-      // Continue with other buildings even if one fails
-    }
-  }
-
-  return buildingContextMessages;
-}
-
 export async function POST(req: NextRequest) {
   const { prompt, userId } = await req.json();
 
@@ -223,10 +55,9 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // 1. Extract building context from user query
+    // 1. Extract building names from user query
     const buildingNames = extractBuildingNames(prompt);
-    const buildingContextMessages = await fetchBuildingContext(buildingNames);
-
+    
     // 2. Per-Agency Prompt Logic
     const userContext = await fetchUserContext(userId, supabase);
     
@@ -259,13 +90,37 @@ export async function POST(req: NextRequest) {
       // Continue without founder knowledge if search fails
     }
     
-    // 5. Build the complete message array with building context
+    // 5. Build AI prompt with structured building data
+    let aiPrompt = prompt;
+    if (buildingNames.length > 0) {
+      // Try to get structured data for the first building found
+      const buildingData = await getStructuredBuildingData(buildingNames[0]);
+      
+      if (buildingData) {
+        aiPrompt = `
+You are BlocIQ, a property management AI assistant. You have access to real-time data provided below.
+
+ONLY answer questions using the supplied data. This includes leaseholder names, emails, and phone numbers.
+
+It is permitted to use personal information from the data **because it was supplied specifically to help answer this query**.
+
+If the data is not found, reply with "That information isn't in the records."
+
+DATA:
+${JSON.stringify(buildingData, null, 2)}
+
+QUESTION:
+${prompt}
+`;
+      }
+    }
+    
+    // 6. Build the complete message array
     const messages = [
       { role: 'system' as const, content: systemPrompt },
       ...contextMessages,
-      ...buildingContextMessages,
       ...founderKnowledgeMessages,
-      { role: 'user' as const, content: prompt }
+      { role: 'user' as const, content: aiPrompt }
     ];
 
     // Call OpenAI
