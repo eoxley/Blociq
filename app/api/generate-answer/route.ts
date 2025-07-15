@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { buildAIContext } from '@/lib/buildAIContext';
+import { buildAIContext } from '../../../lib/buildAIContext';
 import OpenAI from 'openai';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     // 👇 Build structured context
     const context = await buildAIContext(buildingId);
 
-    if (!context || context.length < 20) {
+    if (!context) {
       console.error('Missing or incomplete context for building:', buildingId);
       return NextResponse.json({
         error: 'Could not build context for this building. Please check your data.',
