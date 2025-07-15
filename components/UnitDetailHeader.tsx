@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 
 export default function UnitDetailHeader({ unitName, buildingName }: { unitName: string, buildingName: string }) {
   const params = useParams();
-  const buildingId = params.buildingId as string;
+  const buildingId = params?.buildingId as string || '';
 
   return (
     <div className="mb-6">
