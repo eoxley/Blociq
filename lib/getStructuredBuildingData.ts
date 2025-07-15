@@ -8,7 +8,6 @@ const supabase = createClient(
 export async function getStructuredBuildingData(buildingIdOrName: string) {
   // Check if it's a numeric ID or UUID
   const isNumericId = !isNaN(Number(buildingIdOrName)) && buildingIdOrName.length < 36;
-  const isUuid = buildingIdOrName.length === 36;
 
   const { data, error } = await supabase
     .from('buildings')
@@ -17,22 +16,7 @@ export async function getStructuredBuildingData(buildingIdOrName: string) {
       name,
       address,
       unit_count,
-      units (
-        id,
-        unit_number,
-        type,
-        floor,
-        leaseholder_email
-      ),
-      compliance_docs (
-        doc_type,
-        created_at
-      ),
-      incoming_emails (
-        subject,
-        from_email,
-        received_at
-      )
+      created_at
     `)
     .eq(isNumericId ? 'id' : 'name', isNumericId ? Number(buildingIdOrName) : buildingIdOrName)
     .single();
