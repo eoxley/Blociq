@@ -1,28 +1,47 @@
-import LayoutWithSidebar from '@/components/LayoutWithSidebar'
+import React from 'react'
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import ComplianceClient from './ComplianceClient'
+import LayoutWithSidebar from '../../components/LayoutWithSidebar'
 
-export default function CompliancePage() {
+interface ComplianceAsset {
+  id: string
+  name: string
+  description: string
+  required_if: 'always' | 'if present' | 'if HRB'
+  default_frequency: string
+}
+
+export default async function CompliancePage() {
+  const supabase = createServerComponentClient({ cookies })
+  
+  // Protect this route with Supabase Auth
+  const { data: { session } } = await supabase.auth.getSession()
+
+  if (!session) {
+    redirect('/login')
+  }
+
+  // Fetch all compliance assets
+  const { data: complianceAssets, error } = await supabase
+    .from('compliance_assets')
+    .select('*')
+    .order('name')
+
+  if (error) {
+    console.error('Error fetching compliance assets:', error)
+  }
+
   return (
     <LayoutWithSidebar>
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <h2 className="text-2xl font-semibold text-gray-700 mb-4">Compliance Tracker</h2>
-        
-        {/* Example content for the compliance tracker */}
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <span className="text-lg">Compliance Item 1</span>
-            <span className="px-2 py-1 text-sm bg-green-200 text-green-800 rounded-md">Compliant</span>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <span className="text-lg">Compliance Item 2</span>
-            <span className="px-2 py-1 text-sm bg-yellow-200 text-yellow-800 rounded-md">Pending</span>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <span className="text-lg">Compliance Item 3</span>
-            <span className="px-2 py-1 text-sm bg-red-200 text-red-800 rounded-md">Non-Compliant</span>
-          </div>
+      <div className="max-w-7xl mx-auto p-6">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-[#0F5D5D] mb-2">Compliance Management</h1>
+          <p className="text-gray-600">Track and manage regulatory compliance requirements</p>
         </div>
+
+        <ComplianceClient complianceAssets={complianceAssets || []} />
       </div>
     </LayoutWithSidebar>
   )
