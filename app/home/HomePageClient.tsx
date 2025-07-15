@@ -113,30 +113,15 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     try {
       console.log("🧠 HomePageClient: Starting AI request");
       console.log("📝 Input value:", inputValue);
-      
-      // Get current user ID
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        console.error("❌ User not authenticated");
-        throw new Error('User not authenticated')
-      }
-
-      console.log("✅ User authenticated:", user.id);
-
-      // For now, use a default building ID since this is the home page
-      // In a real app, you might want to get the user's primary building or let them select one
-      const defaultBuildingId = "1"; // You can change this to a real building ID
 
       const requestBody = { 
-        question: inputValue, // Changed from 'prompt' to 'question'
-        buildingId: defaultBuildingId, // Added buildingId
-        userId: user.id
+        message: inputValue // Use 'message' for the new simplified endpoint
       };
 
-      console.log("📤 Sending request to /api/ask");
+      console.log("📤 Sending request to /api/ask-assistant");
       console.log("📦 Request body:", requestBody);
 
-      const res = await fetch('/api/ask', {
+      const res = await fetch('/api/ask-assistant', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
