@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { MessageCircle, Calendar, ExternalLink, Send, Loader2, Plus, Mail, FileText, Pin } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
@@ -60,39 +60,63 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     return welcomeMessages[messageIndex]
   }
 
-  // Hardcoded property events
-  const upcomingEvents: PropertyEvent[] = [
-    {
-      building: "Tower A",
-      date: "2025-01-15T09:00:00Z",
-      title: "Annual Building Inspection",
-      category: "🏢 Building Maintenance"
-    },
-    {
-      building: "Tower B",
-      date: "2025-01-20T14:00:00Z",
-      title: "Insurance Renewal Meeting",
-      category: "📄 Insurance Renewal"
-    },
-    {
-      building: "Tower A",
-      date: "2025-01-25T10:00:00Z",
-      title: "Fire Safety System Test",
-      category: "🔥 Safety Compliance"
-    },
-    {
-      building: "Tower C",
-      date: "2025-02-01T16:00:00Z",
-      title: "Lease Renewal Deadline",
-      category: "📋 Legal & Compliance"
-    },
-    {
-      building: "Tower B",
-      date: "2025-02-05T11:00:00Z",
-      title: "HVAC Maintenance",
-      category: "🔧 Equipment Maintenance"
-    }
-  ]
+  // Fetch real upcoming events from database
+  const [upcomingEvents, setUpcomingEvents] = useState<PropertyEvent[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const { data: events, error } = await supabase
+          .from('property_events')
+          .select(`
+            id,
+            title,
+            start_time,
+            event_type,
+            category,
+            building_id
+          `)
+          .gte('start_time', new Date().toISOString())
+          .order('start_time', { ascending: true })
+          .limit(5);
+
+        if (error) {
+          console.error('Error fetching events:', error);
+        } else {
+          // Fetch building names separately
+          const buildingIds = events?.map(e => e.building_id).filter(Boolean) || [];
+          let buildingNames: Record<number, string> = {};
+          
+          if (buildingIds.length > 0) {
+            const { data: buildings } = await supabase
+              .from('buildings')
+              .select('id, name')
+              .in('id', buildingIds);
+            
+            buildingNames = buildings?.reduce((acc, building) => {
+              acc[building.id] = building.name;
+              return acc;
+            }, {} as Record<number, string>) || {};
+          }
+
+          const formattedEvents = events?.map(event => ({
+            building: buildingNames[event.building_id] || 'Unknown Building',
+            date: event.start_time,
+            title: event.title,
+            category: event.event_type || event.category || '📅 Event'
+          })) || [];
+          setUpcomingEvents(formattedEvents);
+        }
+      } catch (error) {
+        console.error('Error fetching events:', error);
+      } finally {
+        setLoadingEvents(false);
+      }
+    };
+
+    fetchEvents();
+  }, [supabase]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -332,29 +356,42 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           </div>
           
           <div className="space-y-4">
-            {upcomingEvents.map((event, index) => {
-              const { date, time } = formatEventDate(event.date)
-              return (
-                <div key={index} className="bg-white shadow rounded-xl p-4 hover:shadow-lg text-sm">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="font-bold text-gray-900 mb-1">
-                        {event.category}
-                      </div>
-                      <div className="text-gray-800 mb-1">
-                        {event.title}
-                      </div>
-                      <div className="text-gray-600 mb-1">
-                        {event.building}
-                      </div>
-                      <div className="text-gray-500">
-                        {date} at {time}
+            {loadingEvents ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto mb-2"></div>
+                <p className="text-gray-500 text-sm">Loading events...</p>
+              </div>
+            ) : upcomingEvents.length > 0 ? (
+              upcomingEvents.map((event, index) => {
+                const { date, time } = formatEventDate(event.date)
+                return (
+                  <div key={index} className="bg-white shadow rounded-xl p-4 hover:shadow-lg text-sm">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="font-bold text-gray-900 mb-1">
+                          {event.category}
+                        </div>
+                        <div className="text-gray-800 mb-1">
+                          {event.title}
+                        </div>
+                        <div className="text-gray-600 mb-1">
+                          {event.building}
+                        </div>
+                        <div className="text-gray-500">
+                          {date} at {time}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })
+            ) : (
+              <div className="text-center py-8">
+                <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-500 text-sm">No upcoming events</p>
+                <p className="text-gray-400 text-xs mt-1">Events you create will appear here</p>
+              </div>
+            )}
           </div>
 
           {/* Add Property Event Form */}
