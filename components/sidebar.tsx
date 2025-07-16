@@ -5,8 +5,14 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
 import {
   Home,
+  Inbox,
+  Building2,
   MessageSquare,
   LogOut,
+  Wrench,
+  DollarSign,
+  Clock,
+  ChevronRight,
 } from 'lucide-react'
 
 export default function Sidebar() {
@@ -18,10 +24,12 @@ export default function Sidebar() {
     router.push('/login')
   }
 
-  // Only Home navigation (no dashboard)
+  // Navigation items pointing to correct routes (no dashboard)
   const navigationItems = [
     { href: '/home', icon: Home, label: 'Home' },
-    // Add other non-dashboard routes here if needed
+    { href: '/inbox', icon: Inbox, label: 'Inbox' },
+    { href: '/buildings', icon: Building2, label: 'Buildings' },
+    { href: '/communications', icon: MessageSquare, label: 'Communications' },
   ]
 
   return (
@@ -54,6 +62,57 @@ export default function Sidebar() {
             </a>
           )
         })}
+
+        {/* Coming Soon Section */}
+        <div className="pt-4 border-t border-white/20 mt-4">
+          <div className="px-4 py-2">
+            <p className="text-xs text-white/75 mb-2">Coming Soon</p>
+          </div>
+          {/* Major Works */}
+          <a
+            href="/major-works"
+            className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium opacity-60 cursor-not-allowed"
+            tabIndex={-1}
+            aria-disabled="true"
+          >
+            <Wrench className="h-5 w-5" />
+            <span>Major Works</span>
+            <Clock className="h-3 w-3 ml-auto" />
+          </a>
+          {/* Finances Parent */}
+          <div className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium opacity-60 cursor-not-allowed">
+            <DollarSign className="h-5 w-5" />
+            <span>Finances</span>
+            <Clock className="h-3 w-3 ml-auto" />
+          </div>
+          {/* Finances Subitems */}
+          <div className="ml-8 space-y-1">
+            <a
+              href="/finances/service-charges"
+              className="flex items-center gap-2 px-2 py-1 rounded text-xs opacity-60 cursor-not-allowed"
+              tabIndex={-1}
+              aria-disabled="true"
+            >
+              <ChevronRight className="h-3 w-3" /> Service Charges
+            </a>
+            <a
+              href="/finances/budgeting"
+              className="flex items-center gap-2 px-2 py-1 rounded text-xs opacity-60 cursor-not-allowed"
+              tabIndex={-1}
+              aria-disabled="true"
+            >
+              <ChevronRight className="h-3 w-3" /> Budgeting
+            </a>
+            <a
+              href="/finances/accounts"
+              className="flex items-center gap-2 px-2 py-1 rounded text-xs opacity-60 cursor-not-allowed"
+              tabIndex={-1}
+              aria-disabled="true"
+            >
+              <ChevronRight className="h-3 w-3" /> Accounts
+            </a>
+          </div>
+        </div>
       </nav>
 
       {/* Logout Section */}
