@@ -188,7 +188,7 @@ export default function ComplianceTrackerClient({ building, complianceAssets }: 
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-lg font-semibold text-gray-900">{asset.title}</h3>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(asset.status)}`}>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(asset.status === 'compliant' ? 'Compliant' : asset.status === 'overdue' ? 'Overdue' : asset.status === 'missing' ? 'Not Started' : asset.status === 'due_soon' ? 'Due Soon' : 'Not Started')}`}>
                           {asset.status.replace('_', ' ').toUpperCase()}
                         </span>
                         {asset.required && (

@@ -15,7 +15,11 @@ interface BuildingComplianceAsset {
 
 export default async function ComplianceTrackerPage({ params }: { params: { id: string } }) {
   const supabase = createClient(cookies())
-  const buildingId = params.id
+  const buildingId = parseInt(params.id, 10)
+
+  if (isNaN(buildingId)) {
+    return <p className="text-red-500">Invalid building ID.</p>
+  }
 
   const { data: session } = await supabase.auth.getSession()
   if (!session.session) redirect('/login')
@@ -42,13 +46,13 @@ export default async function ComplianceTrackerPage({ params }: { params: { id: 
     return <p className="text-red-500">Error loading building compliance data.</p>
   }
 
-  const statusMap = Object.fromEntries((statuses as BuildingComplianceAsset[]).map((item) => [item.asset_id, item.status]))
+  const statusMap = Object.fromEntries(statuses.map((item) => [item.asset_id, item.status]))
 
   return (
     <div className="p-6 space-y-4">
       <h1 className="text-2xl font-semibold">Compliance Tracker</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {(assets as ComplianceAsset[]).map((asset) => {
+        {assets.map((asset) => {
           const status = statusMap[asset.id] || 'Not Tracked'
           const badgeVariant =
             status === 'Compliant'
