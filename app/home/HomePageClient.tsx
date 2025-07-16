@@ -393,49 +393,11 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               </div>
             )}
           </div>
-
-          {/* Add Property Event Form */}
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex items-center justify-center w-10 h-10 bg-yellow-500 rounded-lg">
-                  <span className="text-white text-lg">⚙️</span>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                    Add Property Event
-                  </h3>
-                  <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">Coming Soon</span>
-                </div>
-              </div>
-              
-              <div className="text-gray-600 text-sm mb-4">
-                <p className="mb-2">🎯 <strong>What's coming:</strong></p>
-                <ul className="space-y-1 text-sm">
-                  <li>• Calendar integration with Outlook</li>
-                  <li>• Automated event reminders</li>
-                  <li>• Building-specific event management</li>
-                  <li>• Team collaboration features</li>
-                </ul>
-              </div>
-              
-              <div className="bg-white rounded-lg p-4 border border-yellow-200">
-                <div className="text-center py-8">
-                  <div className="text-4xl mb-3">🚧</div>
-                  <h4 className="font-medium text-gray-900 mb-2">Event Management System</h4>
-                  <p className="text-gray-600 text-sm">
-                    This feature is currently under development. 
-                    You'll be able to create, schedule, and manage property events with full calendar integration.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
       {/* Quick Actions Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Link href="/inbox" className="bg-white shadow-lg rounded-xl p-6 hover:shadow-xl transition-all border hover:border-teal-200 group">
           <div className="text-center">
             <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:bg-teal-200 transition-colors">
@@ -453,16 +415,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             </div>
             <h3 className="font-semibold text-gray-900 mb-2">Buildings</h3>
             <p className="text-sm text-gray-600">View property details</p>
-          </div>
-        </Link>
-        
-        <Link href="/compliance" className="bg-white shadow-lg rounded-xl p-6 hover:shadow-xl transition-all border hover:border-teal-200 group">
-          <div className="text-center">
-            <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:bg-teal-200 transition-colors">
-              <div className="w-6 h-6 border-2 border-teal-600 rounded-sm"></div>
-            </div>
-            <h3 className="font-semibold text-gray-900 mb-2">Compliance</h3>
-            <p className="text-sm text-gray-600">Track requirements</p>
           </div>
         </Link>
       </div>
