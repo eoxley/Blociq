@@ -112,7 +112,7 @@ export default function AskBlocIQ({
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 bg-sky-600 hover:bg-sky-700 text-white p-3 rounded-full shadow-lg z-50 transition-all duration-200 hover:scale-110"
+        className="fixed bottom-6 left-6 bg-sky-600 hover:bg-sky-700 text-white p-3 rounded-full shadow-lg z-50 transition-all duration-200 hover:scale-110"
         title="Ask BlocIQ (Ctrl + Shift + A)"
       >
         <MessageSquare className="h-6 w-6" />
@@ -121,7 +121,7 @@ export default function AskBlocIQ({
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 w-96 max-w-[90vw]">
+    <div className="fixed bottom-6 left-6 z-50 w-96 max-w-[90vw]">
       <Card className="shadow-2xl border-0 bg-white">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-sky-600 to-blue-600 text-white rounded-t-lg">
