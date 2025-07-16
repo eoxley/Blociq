@@ -5,25 +5,25 @@ export default function BuildingSetup() {
   const structure = {
     ownershipModel: "Tripartite",
     freeholder: "E&M Estates Ltd",
-    rmc: "Ashwood House RMC Ltd",
-    managingAgent: "MIH Property Management",
+    rmc: "Sample House RMC Ltd",
+    managingAgent: "Premier Property Management",
   }
 
   const directors = [
     {
-      name: "Maria Kokkinou",
+      name: "Sarah Johnson",
       role: "Chairperson",
-      contact: "maria@ashwoodrmc.co.uk",
+      contact: "sarah@samplermc.co.uk",
       notes: "Prefers email comms",
     },
     {
-      name: "Peter Weil",
+      name: "Michael Brown",
       role: "Director",
-      contact: "peter@ashwoodrmc.co.uk",
+      contact: "michael@samplermc.co.uk",
       notes: "Regular contact for budgets",
     },
     {
-      name: "John Ogilvie",
+      name: "Emma Davis",
       role: "Director",
       contact: null,
       notes: "Not involved in day-to-day",

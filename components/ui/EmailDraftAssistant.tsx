@@ -61,7 +61,7 @@ export default function EmailDraftAssistant(props: Props) {
         building_name: building,
         unit: unit,
         leaseholder_name: leaseData?.leaseholder_name || "Leaseholder",
-        property_manager: "Ellie Oxley",
+        property_manager: "Property Manager",
         email_thread: {
           original_sender: props.defaultFrom || "Unknown",
           subject: props.defaultSubject || "No subject",
@@ -95,7 +95,7 @@ export default function EmailDraftAssistant(props: Props) {
       request: {
         goal: "Write a reply to the leaseholder based on the history and context. Respond to the original email content and acknowledge prior replies if applicable.",
         tone: "Warm and professional",
-        sign_off: "Kind regards\nEllie Oxley"
+        sign_off: "Kind regards\nProperty Manager"
       }
     }
 
