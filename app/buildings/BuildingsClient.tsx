@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { Building2, MapPin, Users, ArrowRight, Search } from 'lucide-react'
+import { Building2, MapPin, Users, ArrowRight, Search, Shield } from 'lucide-react'
 
 // Define the Building type based on the database schema
 type Building = {
@@ -114,10 +114,23 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
                   </span>
                 </div>
                 
-                {/* View More Button */}
-                <div className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white px-4 py-2 rounded-md transition-all duration-200 transform hover:scale-105 group-hover:shadow-md">
-                  <span className="text-sm font-medium">View Details</span>
-                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
+                {/* Action Buttons */}
+                <div className="space-y-2">
+                  {/* View Details Button */}
+                  <div className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white px-4 py-2 rounded-md transition-all duration-200 transform hover:scale-105 group-hover:shadow-md">
+                    <span className="text-sm font-medium">View Details</span>
+                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
+                  </div>
+                  
+                  {/* Compliance Management Button */}
+                  <Link
+                    href={`/compliance/buildings/${building.id}`}
+                    className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-2 rounded-md transition-all duration-200 transform hover:scale-105 group-hover:shadow-md"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Shield className="h-4 w-4" />
+                    <span className="text-sm font-medium">Compliance</span>
+                  </Link>
                 </div>
               </div>
             </Link>

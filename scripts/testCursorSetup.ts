@@ -1,6 +1,6 @@
 // File: scripts/testCursorSetup.ts
 
-import { createClient } from '@supabase/supabase-js';
+const { createClient } = require('@supabase/supabase-js');
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -31,7 +31,7 @@ async function testCursorSetup() {
       console.warn('⚠️ Supabase connected, but no buildings returned.');
     } else {
       console.log('✅ Supabase returned building data:');
-      buildings.forEach(b =>
+      buildings.forEach((b: any) =>
         console.log(` - ${b.name} (${b.demo_ready ? 'Ready' : 'Coming Soon'})`)
       );
     }
