@@ -1,71 +1,56 @@
-import React from 'react'
+'use client'
+
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
 
 const styles = StyleSheet.create({
   page: {
-    flexDirection: 'column',
-    backgroundColor: '#ffffff',
     padding: 40,
+    fontSize: 12,
+    lineHeight: 1.6,
   },
   header: {
-    marginBottom: 30,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  date: {
-    fontSize: 12,
-    color: '#666666',
     marginBottom: 20,
   },
   recipient: {
-    fontSize: 14,
-    marginBottom: 30,
+    marginBottom: 10,
   },
-  content: {
-    fontSize: 12,
-    lineHeight: 1.5,
-    textAlign: 'justify',
-  },
-  footer: {
-    marginTop: 40,
-    fontSize: 10,
-    color: '#666666',
+  body: {
+    marginTop: 20,
   },
 })
 
-interface LetterDocumentProps {
+export function LetterDocument({
+  recipientName,
+  subject,
+  content,
+}: {
   recipientName: string
   subject: string
   content: string
-}
+}) {
+  return (
+    <Document>
+      <Page style={styles.page}>
+        <View style={styles.header}>
+          <Text>BlocIQ</Text>
+          <Text>123 Property Lane</Text>
+          <Text>London</Text>
+          <Text>{new Date().toLocaleDateString()}</Text>
+        </View>
 
-export const LetterDocument: React.FC<LetterDocumentProps> = ({ 
-  recipientName, 
-  subject, 
-  content 
-}) => (
-  <Document>
-    <Page size="A4" style={styles.page}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{subject}</Text>
-        <Text style={styles.date}>{new Date().toLocaleDateString()}</Text>
-      </View>
-      
-      <View style={styles.recipient}>
-        <Text>Dear {recipientName},</Text>
-      </View>
-      
-      <View style={styles.content}>
-        <Text>{content}</Text>
-      </View>
-      
-      <View style={styles.footer}>
-        <Text>Yours sincerely,</Text>
-        <Text>Property Management Team</Text>
-      </View>
-    </Page>
-  </Document>
-) 
+        <View style={styles.recipient}>
+          <Text>{recipientName}</Text>
+          <Text>(Address block to be added)</Text>
+        </View>
+
+        <View>
+          <Text>Subject: {subject}</Text>
+        </View>
+
+        <View style={styles.body}>
+          <Text>{content}</Text>
+        </View>
+      </Page>
+    </Document>
+  )
+} 
