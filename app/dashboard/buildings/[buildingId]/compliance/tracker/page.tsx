@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useParams } from 'next/navigation';
-import { Shield, AlertTriangle, CheckCircle, Clock, Download, Upload, Eye, Calendar } from 'lucide-react';
+import { Shield, AlertTriangle, CheckCircle, Clock, Download, Upload, Eye, Calendar, Mail, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 interface ComplianceAsset {
@@ -43,10 +43,17 @@ export default function ComplianceTrackerPage() {
   const params = useParams();
   const buildingId = params?.buildingId as string;
   
-  const [building, setBuilding] = useState<any>(null);
+  const [building, setBuilding] = useState<{
+    id: number;
+    name: string;
+    address: string | null;
+  } | null>(null);
   const [buildingAssets, setBuildingAssets] = useState<BuildingAsset[]>([]);
   const [complianceDocs, setComplianceDocs] = useState<ComplianceDocument[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sendingReminders, setSendingReminders] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -86,6 +93,7 @@ export default function ComplianceTrackerPage() {
 
         if (assetsData) {
           // Fix: compliance_item is sometimes an array, ensure it's an object
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           setBuildingAssets(
             assetsData.map((asset: any) => ({
               ...asset,
@@ -210,6 +218,77 @@ export default function ComplianceTrackerPage() {
     }
   };
 
+  const getOverdueAndMissingItems = () => {
+    const today = new Date();
+    return buildingAssets.filter(asset => {
+      const doc = complianceDocs.find(d => d.doc_type === asset.compliance_item.item_type);
+      return !doc || (doc.expiry_date && new Date(doc.expiry_date) < today);
+    });
+  };
+
+  const sendReminderEmails = async () => {
+    const overdueItems = getOverdueAndMissingItems();
+    
+    if (overdueItems.length === 0) {
+      setToastMessage('No overdue or missing items to send reminders for.');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+      return;
+    }
+
+    setSendingReminders(true);
+
+    try {
+      // Create email content
+      const subject = `Compliance Reminder: ${building?.name} - ${overdueItems.length} items require attention`;
+      
+      let body = `Dear Team,\n\n`;
+      body += `This is an automated reminder for compliance items that require attention at ${building?.name}.\n\n`;
+      body += `The following ${overdueItems.length} compliance items are overdue or missing:\n\n`;
+
+      overdueItems.forEach((asset, index) => {
+        const doc = complianceDocs.find(d => d.doc_type === asset.compliance_item.item_type);
+        const status = !doc ? 'Missing' : 'Overdue';
+        const expiryInfo = doc?.expiry_date ? ` (Expired: ${formatDate(doc.expiry_date)})` : '';
+        
+        body += `${index + 1}. ${asset.compliance_item.item_type} - ${status}${expiryInfo}\n`;
+        body += `   Category: ${asset.compliance_item.category}\n`;
+        body += `   Frequency: ${asset.compliance_item.frequency}\n`;
+        body += `   Upload Link: ${window.location.origin}/dashboard/buildings/${buildingId}/compliance/tracker\n\n`;
+      });
+
+      body += `Please review and upload the required documents as soon as possible.\n\n`;
+      body += `Best regards,\nBlocIQ Compliance System`;
+
+      // Save to email_drafts table
+      const { error: draftError } = await supabase
+        .from('email_drafts')
+        .insert({
+          subject: subject,
+          draft_text: body,
+          created_at: new Date().toISOString()
+        });
+
+      if (draftError) {
+        console.error('Error saving email draft:', draftError);
+        throw new Error('Failed to save email draft');
+      }
+
+      // Show success message
+      setToastMessage(`Reminders queued for ${overdueItems.length} overdue/missing items`);
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 5000);
+
+    } catch (error) {
+      console.error('Error sending reminder emails:', error);
+      setToastMessage('Failed to send reminder emails. Please try again.');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 5000);
+    } finally {
+      setSendingReminders(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6">
@@ -232,8 +311,13 @@ export default function ComplianceTrackerPage() {
     const doc = complianceDocs.find(d => d.doc_type === asset.compliance_item.item_type);
     if (!doc) {
       missing++;
-    } else if (doc.expiry_date && new Date(doc.expiry_date) < today) {
-      overdue++;
+    } else if (doc.expiry_date) {
+      const expiryDate = new Date(doc.expiry_date);
+      if (expiryDate < today) {
+        overdue++;
+      } else {
+        compliant++;
+      }
     } else {
       compliant++;
     }
@@ -256,13 +340,45 @@ export default function ComplianceTrackerPage() {
             {building?.name} • {building?.address}
           </p>
         </div>
-        <Link
-          href={`/dashboard/buildings/${buildingId}`}
-          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-        >
-          Back to Building
-        </Link>
+        <div className="flex items-center gap-3">
+          {getOverdueAndMissingItems().length > 0 && (
+            <button
+              onClick={sendReminderEmails}
+              disabled={sendingReminders}
+              className="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {sendingReminders ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Mail className="h-4 w-4 mr-2" />
+              )}
+              {sendingReminders ? 'Sending...' : `Send Reminder Emails (${getOverdueAndMissingItems().length})`}
+            </button>
+          )}
+          <Link
+            href={`/dashboard/buildings/${buildingId}`}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            Back to Building
+          </Link>
+        </div>
       </div>
+
+      {/* Toast Notification */}
+      {showToast && (
+        <div className="fixed top-4 right-4 z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-w-sm">
+          <div className="flex items-center gap-3">
+            <CheckCircle className="h-5 w-5 text-green-500" />
+            <p className="text-sm text-gray-700">{toastMessage}</p>
+            <button
+              onClick={() => setShowToast(false)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Compliance Status Summary Bar */}
       <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-6 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 shadow-sm relative">
