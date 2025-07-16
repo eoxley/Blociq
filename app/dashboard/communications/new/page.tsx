@@ -14,6 +14,8 @@ export default function NewCommunicationPage() {
   const router = useRouter()
 
   const [type, setType] = useState('email')
+  const [sendMethod, setSendMethod] = useState<'letter' | 'email'>('email')
+
   const [subject, setSubject] = useState('')
   const [content, setContent] = useState('')
   const [buildingId, setBuildingId] = useState<string | undefined>()
@@ -21,6 +23,7 @@ export default function NewCommunicationPage() {
 
   const [buildings, setBuildings] = useState<any[]>([])
   const [units, setUnits] = useState<any[]>([])
+  const [leaseholders, setLeaseholders] = useState<any[]>([])
   const [templates, setTemplates] = useState<any[]>([])
   const [templateId, setTemplateId] = useState<string | undefined>()
 
@@ -31,6 +34,12 @@ export default function NewCommunicationPage() {
 
       const { data: allUnits } = await supabase.from('units').select('id, unit_number, building_id')
       setUnits(allUnits || [])
+
+      const { data: lholders } = await supabase
+        .from('leaseholders')
+        .select('id, name, email, unit_id')
+
+      setLeaseholders(lholders || [])
 
       const { data: tmplts } = await supabase
         .from('communication_templates')
@@ -44,6 +53,9 @@ export default function NewCommunicationPage() {
   }, [])
 
   const filteredUnits = units.filter((u) => u.building_id === buildingId)
+  const recipients = leaseholders.filter((l) =>
+    unitId ? l.unit_id === unitId : filteredUnits.map((u) => u.id).includes(l.unit_id)
+  )
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -61,16 +73,18 @@ export default function NewCommunicationPage() {
           building_id: buildingId,
           unit_id: unitId,
           template_id: templateId,
+          send_method: sendMethod,
+          recipient_ids: recipients.map((r) => r.id),
         }),
       })
 
       if (res.ok) {
         router.push('/dashboard/communications')
       } else {
-        console.error('Failed to save communication')
+        console.error('Failed to send')
       }
     } catch (error) {
-      console.error('Error saving communication:', error)
+      console.error('Error sending communication:', error)
     }
   }
 
@@ -108,6 +122,14 @@ export default function NewCommunicationPage() {
             <option value="email">Email</option>
             <option value="letter">Letter</option>
             <option value="announcement">Announcement</option>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Send Method</Label>
+          <Select value={sendMethod} onChange={(e) => setSendMethod(e.target.value as 'email' | 'letter')}>
+            <option value="email">Email</option>
+            <option value="letter">Letter (PDF)</option>
           </Select>
         </div>
 
@@ -154,7 +176,20 @@ export default function NewCommunicationPage() {
           />
         </div>
 
-        <Button type="submit">Send / Save</Button>
+        {sendMethod === 'email' && recipients.length > 0 && (
+          <div className="text-sm text-muted-foreground">
+            Will send to {recipients.length} leaseholder{recipients.length > 1 ? 's' : ''}:{' '}
+            {recipients.map((r) => r.email).join(', ')}
+          </div>
+        )}
+
+        {sendMethod === 'letter' && recipients.length > 0 && (
+          <div className="text-sm text-muted-foreground">
+            Letter will be generated for postal addresses of: {recipients.map((r) => r.name).join(', ')}
+          </div>
+        )}
+
+        <Button type="submit">{sendMethod === 'email' ? 'Send Email' : 'Generate Letter'}</Button>
       </form>
     </div>
   )
