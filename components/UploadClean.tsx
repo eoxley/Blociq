@@ -68,10 +68,11 @@ export default function UploadClean() {
     console.log("📦 Uploading doc with user ID:", userId)
 
     const metadata = extractMetadataFromFilename(file.name)
+    const documentId = crypto.randomUUID()
 
     const { error: insertError } = await supabase.from("compliance_docs").insert([
       {
-        id: crypto.randomUUID(),
+        id: documentId,
         building_id: TEST_BUILDING_ID,
         doc_url: fileUrl,
         uploaded_by: userId,
@@ -89,7 +90,49 @@ export default function UploadClean() {
       alert("Metadata save failed. Check console.")
     } else {
       console.log("✅ File uploaded and metadata saved.")
-      alert("Upload successful!")
+      
+      // Now trigger AI analysis
+      try {
+        console.log("🤖 Starting AI document analysis...")
+        const res = await fetch('/api/extract-summary', {
+          method: 'POST',
+          body: JSON.stringify({ documentId }),
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (res.ok) {
+          const { summary, doc_type, issue_date, expiry_date, key_risks, compliance_status } = await res.json();
+          console.log("✅ AI Analysis complete:", { summary, doc_type, issue_date, expiry_date, key_risks, compliance_status });
+          
+          // Update the document with AI-extracted information
+          const updateData: any = {};
+          if (doc_type && doc_type !== 'Unknown') updateData.doc_type = doc_type;
+          if (issue_date && issue_date !== 'Not found') updateData.start_date = issue_date;
+          if (expiry_date && expiry_date !== 'Not found') updateData.expiry_date = expiry_date;
+          
+          if (Object.keys(updateData).length > 0) {
+            const { error: updateError } = await supabase
+              .from('compliance_docs')
+              .update(updateData)
+              .eq('id', documentId);
+              
+            if (updateError) {
+              console.error("⚠️ Failed to update with AI data:", updateError);
+            } else {
+              console.log("✅ Document updated with AI-extracted data");
+            }
+          }
+          
+          alert(`Upload successful! AI analysis complete.\nDocument Type: ${doc_type}\nCompliance Status: ${compliance_status}`);
+        } else {
+          const errorData = await res.json();
+          console.error("❌ AI analysis failed:", errorData);
+          alert("Upload successful, but AI analysis failed. Check console for details.");
+        }
+      } catch (aiError) {
+        console.error("❌ AI analysis error:", aiError);
+        alert("Upload successful, but AI analysis failed. Check console for details.");
+      }
     }
 
     setUploading(false)

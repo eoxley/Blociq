@@ -141,6 +141,51 @@ const SmartUploader: React.FC<Props> = ({
       console.error("❌ Save error:", error.message);
     } else {
       setSaved(true);
+      
+      // For compliance documents, trigger the new extract-summary analysis
+      if (table === "compliance_docs" && data?.[0]?.id) {
+        try {
+          console.log("🤖 Triggering compliance document analysis...");
+          const res = await fetch('/api/extract-summary', {
+            method: 'POST',
+            body: JSON.stringify({ documentId: data[0].id }),
+            headers: { 'Content-Type': 'application/json' }
+          });
+
+          if (res.ok) {
+            const analysisResult = await res.json();
+            console.log("✅ Compliance analysis complete:", analysisResult);
+            
+            // Update with AI-extracted data if it's better than what we have
+            const updateData: any = {};
+            if (analysisResult.doc_type && analysisResult.doc_type !== 'Unknown') {
+              updateData.doc_type = analysisResult.doc_type;
+            }
+            if (analysisResult.issue_date && analysisResult.issue_date !== 'Not found') {
+              updateData.start_date = analysisResult.issue_date;
+            }
+            if (analysisResult.expiry_date && analysisResult.expiry_date !== 'Not found') {
+              updateData.expiry_date = analysisResult.expiry_date;
+            }
+            
+            if (Object.keys(updateData).length > 0) {
+              const { error: updateError } = await supabase
+                .from('compliance_docs')
+                .update(updateData)
+                .eq('id', data[0].id);
+                
+              if (!updateError) {
+                console.log("✅ Document updated with AI analysis results");
+              }
+            }
+          } else {
+            console.warn("⚠️ Compliance analysis failed, but document was saved");
+          }
+        } catch (aiError) {
+          console.error("❌ Compliance analysis error:", aiError);
+        }
+      }
+      
       onSaveSuccess?.(data[0]);
     }
 
