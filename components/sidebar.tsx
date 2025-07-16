@@ -3,19 +3,18 @@
 import React from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
-import { 
-  Home, 
-  Inbox, 
-  Building2, 
-  Shield, 
-  LogOut, 
-  Sparkles,
-  Calendar,
-  FileText,
-  Mail,
-  Settings,
+import {
+  Home,
+  Inbox,
+  Building2,
+  MessageSquare,
+  LogOut,
+  Wrench,
   DollarSign,
-  Clock
+  FileText,
+  Calendar,
+  Clock,
+  ChevronRight,
 } from 'lucide-react'
 
 export default function Sidebar() {
@@ -27,22 +26,26 @@ export default function Sidebar() {
     router.push('/login')
   }
 
+  // Live navigation
   const navigationItems = [
-    { href: '/home', icon: Home, label: 'Home' },
-    { href: '/inbox', icon: Inbox, label: 'Inbox' },
-    { href: '/buildings', icon: Building2, label: 'Buildings' },
-    { href: '/compliance', icon: Shield, label: 'Compliance' },
-    { href: '/compliance/documents', icon: FileText, label: 'Compliance Docs' },
-    { href: '/documents', icon: FileText, label: 'Documents' },
-    { href: '/mail-templates', icon: Mail, label: 'Mail Templates' },
-    { href: '/mail-merge', icon: Calendar, label: 'Mail Merge' },
-    { href: '/ai-draft', icon: Sparkles, label: 'AI Draft' },
-    { href: '/ai-reply', icon: Sparkles, label: 'AI Reply' },
-    { href: '/account', icon: Settings, label: 'Account' },
+    { href: '/dashboard', icon: Home, label: 'Home' },
+    { href: '/dashboard/inbox', icon: Inbox, label: 'Inbox' },
+    { href: '/dashboard/buildings', icon: Building2, label: 'Buildings' },
+    { href: '/dashboard/communications', icon: MessageSquare, label: 'Communications' },
   ]
 
+  // Coming soon navigation
   const comingSoonItems = [
-    { href: '#', icon: DollarSign, label: 'Finance', comingSoon: true },
+    { href: '/dashboard/major-works', icon: Wrench, label: 'Major Works' },
+    {
+      label: 'Finances',
+      icon: DollarSign,
+      children: [
+        { href: '/dashboard/finances/service-charges', label: 'Service Charges' },
+        { href: '/dashboard/finances/budgeting', label: 'Budgeting' },
+        { href: '/dashboard/finances/accounts', label: 'Accounts' },
+      ],
+    },
   ]
 
   return (
@@ -51,7 +54,7 @@ export default function Sidebar() {
       <div className="mb-8 px-4">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-            <Sparkles className="h-6 w-6 text-white" />
+            <MessageSquare className="h-6 w-6 text-white" />
           </div>
           <div>
             <h1 className="text-xl font-bold font-serif">BlocIQ</h1>
@@ -75,25 +78,56 @@ export default function Sidebar() {
             </a>
           )
         })}
-        
+
         {/* Coming Soon Section */}
         <div className="pt-4 border-t border-teal-600 mt-4">
           <div className="px-4 py-2">
             <p className="text-xs text-teal-200 opacity-75 mb-2">Coming Soon</p>
           </div>
-          {comingSoonItems.map((item) => {
-            const Icon = item.icon
-            return (
-              <div
-                key={item.href}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium opacity-60 cursor-not-allowed"
-              >
-                <Icon className="h-5 w-5" />
-                <span>{item.label}</span>
-                <Clock className="h-3 w-3 ml-auto" />
-              </div>
-            )
-          })}
+          {/* Major Works */}
+          <a
+            href="/dashboard/major-works"
+            className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium opacity-60 cursor-not-allowed"
+            tabIndex={-1}
+            aria-disabled="true"
+          >
+            <Wrench className="h-5 w-5" />
+            <span>Major Works</span>
+            <Clock className="h-3 w-3 ml-auto" />
+          </a>
+          {/* Finances Parent */}
+          <div className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium opacity-60 cursor-not-allowed">
+            <DollarSign className="h-5 w-5" />
+            <span>Finances</span>
+            <Clock className="h-3 w-3 ml-auto" />
+          </div>
+          {/* Finances Subitems */}
+          <div className="ml-8 space-y-1">
+            <a
+              href="/dashboard/finances/service-charges"
+              className="flex items-center gap-2 px-2 py-1 rounded text-xs opacity-60 cursor-not-allowed"
+              tabIndex={-1}
+              aria-disabled="true"
+            >
+              <ChevronRight className="h-3 w-3" /> Service Charges
+            </a>
+            <a
+              href="/dashboard/finances/budgeting"
+              className="flex items-center gap-2 px-2 py-1 rounded text-xs opacity-60 cursor-not-allowed"
+              tabIndex={-1}
+              aria-disabled="true"
+            >
+              <ChevronRight className="h-3 w-3" /> Budgeting
+            </a>
+            <a
+              href="/dashboard/finances/accounts"
+              className="flex items-center gap-2 px-2 py-1 rounded text-xs opacity-60 cursor-not-allowed"
+              tabIndex={-1}
+              aria-disabled="true"
+            >
+              <ChevronRight className="h-3 w-3" /> Accounts
+            </a>
+          </div>
         </div>
       </nav>
 
