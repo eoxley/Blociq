@@ -206,6 +206,8 @@ export type Database = {
           building_id: string | null
           unit_id: string | null
           template_id: number | null
+          send_method: string | null
+          recipient_ids: string[] | null
           leaseholder_id: string | null
           sent: boolean | null
           sent_at: string | null
@@ -220,6 +222,8 @@ export type Database = {
           building_id?: string | null
           unit_id?: string | null
           template_id?: number | null
+          send_method?: string | null
+          recipient_ids?: string[] | null
           leaseholder_id?: string | null
           sent?: boolean | null
           sent_at?: string | null
@@ -234,6 +238,8 @@ export type Database = {
           building_id?: string | null
           unit_id?: string | null
           template_id?: number | null
+          send_method?: string | null
+          recipient_ids?: string[] | null
           leaseholder_id?: string | null
           sent?: boolean | null
           sent_at?: string | null

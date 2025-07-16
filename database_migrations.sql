@@ -495,6 +495,8 @@ CREATE TABLE IF NOT EXISTS communications (
   building_id uuid references buildings(id),
   unit_id uuid references units(id),
   template_id integer references communication_templates(id),
+  send_method text default 'email' check (send_method in ('email', 'letter')),
+  recipient_ids uuid[] default '{}',
   leaseholder_id uuid references leaseholders(id),
   sent boolean default false,
   sent_at timestamp
