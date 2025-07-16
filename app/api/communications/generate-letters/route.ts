@@ -1,5 +1,3 @@
-// /app/api/communications/generate-letters/route.ts
-
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import JSZip from 'jszip'
@@ -18,21 +16,23 @@ export async function POST(req: Request) {
 
   const { building_id, unit_id, subject, content } = body
 
-  // Fetch leaseholders
+  const unitIds = unit_id ? [unit_id] : await getUnitIdsForBuilding(building_id, supabase)
+
   const { data: leaseholders, error } = await supabase
     .from('leaseholders')
-    .select('name, unit_id')
-    .in('unit_id', unit_id ? [unit_id] : await getUnitIdsForBuilding(building_id, supabase))
+    .select('id, name, unit_id')
+    .in('unit_id', unitIds)
 
   if (error || !leaseholders || leaseholders.length === 0) {
     return NextResponse.json({ error: 'No leaseholders found' }, { status: 404 })
   }
 
-  // Generate PDFs
   const zip = new JSZip()
 
   for (const leaseholder of leaseholders) {
-    const doc = await pdf(
+    const filename = `${leaseholder.name?.replace(/\s+/g, '_') || 'Resident'}_${Date.now()}.pdf`
+
+    const docBuffer = await pdf(
       React.createElement(LetterDocument, {
         recipientName: leaseholder.name || 'Resident',
         subject: subject,
@@ -40,7 +40,31 @@ export async function POST(req: Request) {
       })
     ).toBuffer()
 
-    zip.file(`${leaseholder.name?.replace(/\s+/g, '_') || 'Resident'}.pdf`, doc)
+    // Upload to Supabase Storage
+    const uploadPath = `${building_id}/${filename}`
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('building-documents')
+      .upload(uploadPath, docBuffer, {
+        contentType: 'application/pdf',
+        upsert: true,
+      })
+
+    if (!uploadError && uploadData) {
+      const { data: urlData } = supabase.storage
+        .from('building-documents')
+        .getPublicUrl(uploadPath)
+
+      await supabase.from('building_documents').insert({
+        building_id,
+        unit_id: leaseholder.unit_id,
+        leaseholder_id: leaseholder.id,
+        file_name: filename,
+        file_url: urlData.publicUrl,
+        type: 'Letter',
+      })
+    }
+
+    zip.file(filename, docBuffer)
   }
 
   const zipBlob = await zip.generateAsync({ type: 'nodebuffer' })
@@ -48,16 +72,12 @@ export async function POST(req: Request) {
   return new NextResponse(zipBlob, {
     headers: {
       'Content-Type': 'application/zip',
-      'Content-Disposition': `attachment; filename="letters.zip"`,
+      'Content-Disposition': `attachment; filename="letters-${Date.now()}.zip"`,
     },
   })
 }
 
 async function getUnitIdsForBuilding(buildingId: string, supabase: any) {
-  const { data } = await supabase
-    .from('units')
-    .select('id')
-    .eq('building_id', buildingId)
-
+  const { data } = await supabase.from('units').select('id').eq('building_id', buildingId)
   return data?.map((u: any) => u.id) || []
 } 

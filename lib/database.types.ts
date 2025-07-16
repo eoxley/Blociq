@@ -834,6 +834,61 @@ export type Database = {
         }
         Relationships: []
       }
+      building_documents: {
+        Row: {
+          id: string
+          building_id: number | null
+          unit_id: number | null
+          leaseholder_id: string | null
+          file_name: string
+          file_url: string
+          type: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          building_id?: number | null
+          unit_id?: number | null
+          leaseholder_id?: string | null
+          file_name: string
+          file_url: string
+          type?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          building_id?: number | null
+          unit_id?: number | null
+          leaseholder_id?: string | null
+          file_name?: string
+          file_url?: string
+          type?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "building_documents_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "building_documents_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "building_documents_leaseholder_id_fkey"
+            columns: ["leaseholder_id"]
+            isOneToOne: false
+            referencedRelation: "leaseholders"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
