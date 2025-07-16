@@ -65,27 +65,39 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
   useEffect(() => {
     const fetchUnits = async () => {
       try {
-        const { data, error } = await supabase
+        // First fetch units
+        const { data: unitsData, error: unitsError } = await supabase
           .from('units')
-          .select(`
-            id,
-            unit_number,
-            type,
-            floor,
-            leaseholders (
-              name,
-              email,
-              phone
-            )
-          `)
+          .select('id, unit_number, type, floor')
           .eq('building_id', building.id)
           .order('unit_number')
 
-        if (error) {
-          console.error('Error fetching units:', error)
-        } else {
-          setUnits(data || [])
+        if (unitsError) {
+          console.error('Error fetching units:', unitsError)
+          return
         }
+
+        // Then fetch leaseholders separately
+        let leaseholders: any[] = []
+        if (unitsData && unitsData.length > 0) {
+          const unitIds = unitsData.map(u => u.id)
+          const { data: leaseholdersData, error: leaseholdersError } = await supabase
+            .from('leaseholders')
+            .select('id, unit_id, name, email, phone')
+            .in('unit_id', unitIds)
+          
+          if (!leaseholdersError && leaseholdersData) {
+            leaseholders = leaseholdersData
+          }
+        }
+
+        // Combine units with their leaseholders
+        const unitsWithLeaseholders = unitsData?.map(unit => ({
+          ...unit,
+          leaseholders: leaseholders.filter(l => l.unit_id === unit.id)
+        })) || []
+
+        setUnits(unitsWithLeaseholders)
       } catch (error) {
         console.error('Error fetching units:', error)
       } finally {
