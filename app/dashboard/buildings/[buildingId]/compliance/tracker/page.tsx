@@ -341,6 +341,13 @@ export default function ComplianceTrackerPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <Link
+            href={`/compliance/documents?building=${buildingId}`}
+            className="inline-flex items-center px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Upload Document
+          </Link>
           {getOverdueAndMissingItems().length > 0 && (
             <button
               onClick={sendReminderEmails}

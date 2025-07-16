@@ -170,7 +170,7 @@ export default function CompliancePage() {
         {/* Quick Actions */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <Link
               href="/buildings"
               className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
@@ -179,6 +179,17 @@ export default function CompliancePage() {
               <div>
                 <h4 className="font-medium text-gray-900">Configure Building Compliance</h4>
                 <p className="text-sm text-gray-500">Set up compliance requirements for individual buildings</p>
+              </div>
+            </Link>
+            
+            <Link
+              href="/compliance/documents"
+              className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Plus className="h-6 w-6 text-teal-600 mr-3" />
+              <div>
+                <h4 className="font-medium text-gray-900">Upload Compliance Documents</h4>
+                <p className="text-sm text-gray-500">Upload and analyze compliance documents with AI</p>
               </div>
             </Link>
             
