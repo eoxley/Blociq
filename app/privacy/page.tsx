@@ -217,7 +217,7 @@ export default function PrivacyPolicyPage() {
               </div>
               
               <p className="text-gray-700 leading-relaxed mt-4">
-                To exercise any of these rights, please contact us at <a href="mailto:eleanor.oxley@blociq.co.uk" className="text-teal-600 hover:text-teal-700">eleanor.oxley@blociq.co.uk</a>.
+                To exercise any of these rights, please contact us at <a href="mailto:contact@samplecompany.co.uk" className="text-teal-600 hover:text-teal-700">contact@samplecompany.co.uk</a>.
               </p>
             </section>
 
@@ -323,13 +323,13 @@ export default function PrivacyPolicyPage() {
               <div className="bg-gray-50 rounded-lg p-6">
                 <div className="space-y-2">
                   <p className="text-gray-700">
-                    <strong>Email:</strong> <a href="mailto:eleanor.oxley@blociq.co.uk" className="text-teal-600 hover:text-teal-700">eleanor.oxley@blociq.co.uk</a>
+                    <strong>Email:</strong> <a href="mailto:contact@samplecompany.co.uk" className="text-teal-600 hover:text-teal-700">contact@samplecompany.co.uk</a>
                   </p>
                   <p className="text-gray-700">
-                    <strong>Address:</strong> BlocIQ Ltd, 3 Cliveden Court, The Broadway, TN3 8DA
+                    <strong>Address:</strong> Sample Company Ltd, 123 Business Street, London SW1 1AA
                   </p>
                   <p className="text-gray-700">
-                    <strong>Company:</strong> BlocIQ Ltd (Company No. 16533839)
+                    <strong>Company:</strong> Sample Company Ltd (Company No. 12345678)
                   </p>
                 </div>
               </div>

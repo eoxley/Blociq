@@ -40,7 +40,7 @@ export default function GlobalDocumentUploader() {
 
   // TODO: Fetch buildings for dropdown
   const buildings = [
-    { id: "1", name: "Ashwood Court" },
+    { id: "1", name: "Sample Court" },
     { id: "2", name: "Maple House" },
     // ...
   ];

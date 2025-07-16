@@ -205,10 +205,10 @@ export default function TermsOfServicePage() {
               </p>
               <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                 <p className="text-gray-700">
-                  <strong>BlocIQ Ltd</strong><br />
-                  Registered in England & Wales: Company No. 16533839<br />
-                  Registered Office: 3 Cliveden Court, The Broadway, TN3 8DA<br />
-                  Email: <a href="mailto:eleanor.oxley@blociq.co.uk" className="text-teal-600 hover:text-teal-700">eleanor.oxley@blociq.co.uk</a>
+                  <strong>Sample Company Ltd</strong><br />
+                  Registered in England & Wales: Company No. 12345678<br />
+                  Registered Office: 123 Business Street, London SW1 1AA<br />
+                  Email: <a href="mailto:contact@samplecompany.co.uk" className="text-teal-600 hover:text-teal-700">contact@samplecompany.co.uk</a>
                 </p>
               </div>
             </section>
