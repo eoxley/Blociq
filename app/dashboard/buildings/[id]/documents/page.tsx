@@ -17,7 +17,7 @@ export default function BuildingDocumentsPage() {
     const fetchDocs = async () => {
       const { data, error } = await supabase
         .from('building_documents')
-        .select('id, file_name, file_url, created_at, type, unit_id, leaseholder_id, leaseholders(name), units(unit_number)')
+        .select('id, file_name, file_url, created_at, type, unit_id, leaseholder_id, leaseholders(full_name), units(unit_number)')
         .eq('building_id', buildingId)
         .order('created_at', { ascending: false })
 
@@ -53,7 +53,7 @@ export default function BuildingDocumentsPage() {
                   <div>
                     <p className="font-medium">{doc.file_name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {doc.type} • Unit {doc.units?.unit_number || '-'} • {doc.leaseholders?.name || 'N/A'}
+                      {doc.type} • Unit {doc.units?.unit_number || '-'} • {doc.leaseholders?.full_name || 'N/A'}
                     </p>
                     <p className="text-xs text-muted-foreground">{new Date(doc.created_at).toLocaleString()}</p>
                   </div>
