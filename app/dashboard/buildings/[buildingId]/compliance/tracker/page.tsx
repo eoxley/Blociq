@@ -137,7 +137,7 @@ export default function ComplianceTrackerPage() {
   const getStatusBadge = (asset: BuildingAsset, doc: ComplianceDocument | null) => {
     if (!asset.applies) {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
           <Clock className="h-3 w-3 mr-1" />
           Not Required
         </span>
@@ -146,7 +146,7 @@ export default function ComplianceTrackerPage() {
 
     if (!doc) {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-error/10 text-error border border-error/20">
           <AlertTriangle className="h-3 w-3 mr-1" />
           Missing
         </span>
@@ -159,14 +159,14 @@ export default function ComplianceTrackerPage() {
       
       if (expiryDate < today) {
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-error/10 text-error border border-error/20">
             <AlertTriangle className="h-3 w-3 mr-1" />
             Overdue
           </span>
         );
       } else if (expiryDate.getTime() - today.getTime() < 30 * 24 * 60 * 60 * 1000) {
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning/10 text-warning border border-warning/20">
             <Clock className="h-3 w-3 mr-1" />
             Due Soon
           </span>
@@ -175,7 +175,7 @@ export default function ComplianceTrackerPage() {
     }
 
     return (
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success/10 text-success border border-success/20">
         <CheckCircle className="h-3 w-3 mr-1" />
         Compliant
       </span>
@@ -184,15 +184,15 @@ export default function ComplianceTrackerPage() {
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'Safety': return 'border-red-200 bg-red-50';
-      case 'Electrical': return 'border-yellow-200 bg-yellow-50';
+      case 'Safety': return 'border-error/20 bg-error/5';
+      case 'Electrical': return 'border-warning/20 bg-warning/5';
       case 'Gas': return 'border-orange-200 bg-orange-50';
-      case 'Health': return 'border-green-200 bg-green-50';
-      case 'Insurance': return 'border-blue-200 bg-blue-50';
+      case 'Health': return 'border-success/20 bg-success/5';
+      case 'Insurance': return 'border-info/20 bg-info/5';
       case 'Structural': return 'border-purple-200 bg-purple-50';
-      case 'Equipment': return 'border-gray-200 bg-gray-50';
-      case 'Energy': return 'border-teal-200 bg-teal-50';
-      default: return 'border-gray-200 bg-gray-50';
+      case 'Equipment': return 'border-slate-200 bg-slate-50';
+      case 'Energy': return 'border-primary/20 bg-primary/5';
+      default: return 'border-slate-200 bg-slate-50';
     }
   };
 
