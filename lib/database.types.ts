@@ -205,6 +205,7 @@ export type Database = {
           content: string | null
           building_id: string | null
           unit_id: string | null
+          template_id: number | null
           leaseholder_id: string | null
           sent: boolean | null
           sent_at: string | null
@@ -218,6 +219,7 @@ export type Database = {
           content?: string | null
           building_id?: string | null
           unit_id?: string | null
+          template_id?: number | null
           leaseholder_id?: string | null
           sent?: boolean | null
           sent_at?: string | null
@@ -231,6 +233,7 @@ export type Database = {
           content?: string | null
           building_id?: string | null
           unit_id?: string | null
+          template_id?: number | null
           leaseholder_id?: string | null
           sent?: boolean | null
           sent_at?: string | null
@@ -255,6 +258,13 @@ export type Database = {
             columns: ["unit_id"]
             isOneToOne: false
             referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communications_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "communication_templates"
             referencedColumns: ["id"]
           },
           {
@@ -782,6 +792,39 @@ export type Database = {
           created_by?: string | null
           id?: number
           subject?: string | null
+        }
+        Relationships: []
+      }
+      communication_templates: {
+        Row: {
+          id: number
+          name: string
+          type: string
+          subject: string | null
+          content: string
+          created_by: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: number
+          name: string
+          type: string
+          subject?: string | null
+          content: string
+          created_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: number
+          name?: string
+          type?: string
+          subject?: string | null
+          content?: string
+          created_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }

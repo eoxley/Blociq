@@ -21,6 +21,8 @@ export default function NewCommunicationPage() {
 
   const [buildings, setBuildings] = useState<any[]>([])
   const [units, setUnits] = useState<any[]>([])
+  const [templates, setTemplates] = useState<any[]>([])
+  const [templateId, setTemplateId] = useState<string | undefined>()
 
   useEffect(() => {
     const fetchData = async () => {
@@ -29,6 +31,13 @@ export default function NewCommunicationPage() {
 
       const { data: allUnits } = await supabase.from('units').select('id, unit_number, building_id')
       setUnits(allUnits || [])
+
+      const { data: tmplts } = await supabase
+        .from('communication_templates')
+        .select('id, name, subject, content, type')
+        .order('created_at', { ascending: false })
+
+      setTemplates(tmplts || [])
     }
 
     fetchData()
@@ -51,6 +60,7 @@ export default function NewCommunicationPage() {
           content,
           building_id: buildingId,
           unit_id: unitId,
+          template_id: templateId,
         }),
       })
 
@@ -69,6 +79,29 @@ export default function NewCommunicationPage() {
       <h1 className="text-2xl font-semibold">New Communication</h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="space-y-2">
+          <Label>Load from Template</Label>
+          <Select 
+            value={templateId} 
+            onChange={(e) => {
+              const selected = templates.find((t) => t.id === e.target.value)
+              setTemplateId(e.target.value)
+              if (selected) {
+                setType(selected.type)
+                setSubject(selected.subject)
+                setContent(selected.content)
+              }
+            }}
+          >
+            <option value="">Select a template (optional)</option>
+            {templates.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+
         <div className="space-y-2">
           <Label>Type</Label>
           <Select value={type} onChange={(e) => setType(e.target.value)}>

@@ -12,7 +12,7 @@ const supabase = createClient<Database>(
 export async function POST(req: Request) {
   const body = await req.json()
 
-  const { type, subject, content, building_id, unit_id } = body
+  const { type, subject, content, building_id, unit_id, template_id } = body
 
   const { data, error } = await supabase.from('communications').insert([
     {
@@ -21,6 +21,7 @@ export async function POST(req: Request) {
       content,
       building_id: building_id || null,
       unit_id: unit_id || null,
+      template_id: template_id || null,
       sent: false,
     },
   ])
