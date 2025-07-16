@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { Shield, AlertTriangle, CheckCircle, Clock, Download, Upload, Eye, Calendar, Mail, Loader2, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import EnhancedAIInput from '@/components/EnhancedAIInput';
+import { useBlocIQContext } from '@/components/BlocIQContext';
 
 interface ComplianceAsset {
   id: number;
@@ -56,6 +57,7 @@ export default function ComplianceTrackerPage() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [showAI, setShowAI] = useState(false);
+  const { setContext } = useBlocIQContext();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -69,6 +71,11 @@ export default function ComplianceTrackerPage() {
 
         if (buildingData) {
           setBuilding(buildingData);
+          // Set building context for AskBlocIQ
+          setContext({
+            buildingId: parseInt(buildingId),
+            buildingName: buildingData.name,
+          });
         }
 
         // Fetch building assets (compliance items applied to this building)
