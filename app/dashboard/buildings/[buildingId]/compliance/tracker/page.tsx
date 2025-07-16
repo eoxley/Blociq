@@ -85,7 +85,15 @@ export default function ComplianceTrackerPage() {
           .eq('applies', true);
 
         if (assetsData) {
-          setBuildingAssets(assetsData);
+          // Fix: compliance_item is sometimes an array, ensure it's an object
+          setBuildingAssets(
+            assetsData.map((asset: any) => ({
+              ...asset,
+              compliance_item: Array.isArray(asset.compliance_item)
+                ? asset.compliance_item[0]
+                : asset.compliance_item,
+            }))
+          );
         }
 
         // Fetch compliance documents for this building
@@ -217,6 +225,24 @@ export default function ComplianceTrackerPage() {
     );
   }
 
+  // --- Compliance status summary logic ---
+  const today = new Date();
+  let compliant = 0, overdue = 0, missing = 0;
+  buildingAssets.forEach(asset => {
+    const doc = complianceDocs.find(d => d.doc_type === asset.compliance_item.item_type);
+    if (!doc) {
+      missing++;
+    } else if (doc.expiry_date && new Date(doc.expiry_date) < today) {
+      overdue++;
+    } else {
+      compliant++;
+    }
+  });
+  const total = buildingAssets.length;
+  const percentCompliant = total > 0 ? Math.round((compliant / total) * 100) : 0;
+
+  // --- End compliance status summary logic ---
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -236,6 +262,42 @@ export default function ComplianceTrackerPage() {
         >
           Back to Building
         </Link>
+      </div>
+
+      {/* Compliance Status Summary Bar */}
+      <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-6 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 shadow-sm relative">
+        <div className="flex items-center gap-4 flex-1">
+          <span className="inline-flex items-center gap-1 text-green-700 font-semibold text-sm">
+            <CheckCircle className="h-5 w-5 text-green-500" /> {compliant} Compliant
+          </span>
+          <span className="inline-flex items-center gap-1 text-yellow-700 font-semibold text-sm">
+            <AlertTriangle className="h-5 w-5 text-yellow-500" /> {overdue} Overdue
+          </span>
+          <span className="inline-flex items-center gap-1 text-red-700 font-semibold text-sm">
+            <Clock className="h-5 w-5 text-red-500" /> {missing} Missing
+          </span>
+          <span className="inline-flex items-center gap-1 text-gray-500 font-medium text-xs ml-2 cursor-pointer group">
+            <span className="underline decoration-dotted">How is this calculated?</span>
+            <div className="absolute left-1/2 md:left-auto md:right-0 top-full mt-2 z-10 hidden group-hover:block bg-white border border-gray-200 rounded shadow-lg p-4 w-72 text-xs text-gray-700">
+              Status is determined based on uploaded documents and expiry dates:
+              <ul className="list-disc ml-5 mt-2">
+                <li><b>Compliant</b>: Latest document exists and expiry date (if any) is in the future</li>
+                <li><b>Overdue</b>: Latest document exists but expiry date is past</li>
+                <li><b>Missing</b>: No document uploaded for this asset</li>
+              </ul>
+            </div>
+          </span>
+        </div>
+        {/* Progress Bar */}
+        <div className="flex-1 flex items-center gap-2 min-w-[120px]">
+          <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+            <div
+              className="bg-green-500 h-3 rounded-full transition-all"
+              style={{ width: `${percentCompliant}%` }}
+            ></div>
+          </div>
+          <span className="text-xs text-gray-700 font-semibold ml-2 min-w-[32px]">{percentCompliant}%</span>
+        </div>
       </div>
 
       {/* Summary Stats */}
@@ -331,7 +393,7 @@ export default function ComplianceTrackerPage() {
                         <h3 className="text-lg font-semibold text-gray-900">
                           {asset.compliance_item.item_type}
                         </h3>
-                        {getStatusBadge(asset, doc)}
+                        {getStatusBadge(asset, doc || null)}
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(asset.compliance_item.category)}`}>
                           {asset.compliance_item.category}
                         </span>
@@ -381,7 +443,7 @@ export default function ComplianceTrackerPage() {
                                     Download
                                   </button>
                                   <button
-                                    onClick={() => window.open(doc.doc_url, '_blank')}
+                                    onClick={() => window.open(doc.doc_url as string, '_blank')}
                                     className="inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
                                   >
                                     <Eye className="h-4 w-4 mr-1" />
