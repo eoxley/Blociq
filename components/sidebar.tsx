@@ -10,7 +10,6 @@ import {
   MessageSquare,
   LogOut,
   Wrench,
-  DollarSign,
   Clock,
   ChevronRight,
 } from 'lucide-react'
@@ -81,7 +80,7 @@ export default function Sidebar() {
           </a>
           {/* Finances Parent */}
           <div className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium opacity-60 cursor-not-allowed">
-            <DollarSign className="h-5 w-5" />
+            <span className="text-lg font-bold">£</span>
             <span>Finances</span>
             <Clock className="h-3 w-3 ml-auto" />
           </div>
