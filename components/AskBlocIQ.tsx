@@ -112,10 +112,10 @@ export default function AskBlocIQ({
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 left-6 bg-sky-600 hover:bg-sky-700 text-white p-3 rounded-full shadow-lg z-50 transition-all duration-200 hover:scale-110"
+        className="fixed bottom-6 left-6 bg-primary hover:bg-primary/90 text-white p-4 rounded-full shadow-2xl z-50 transition-all duration-200 hover:scale-110 border-2 border-white"
         title="Ask BlocIQ (Ctrl + Shift + A)"
       >
-        <MessageSquare className="h-6 w-6" />
+        <MessageSquare className="h-7 w-7" />
       </button>
     );
   }
