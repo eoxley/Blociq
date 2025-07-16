@@ -228,6 +228,57 @@ export type Database = {
           },
         ]
       }
+      building_assets: {
+        Row: {
+          id: number
+          building_id: number
+          compliance_item_id: number
+          applies: boolean
+          last_checked: string | null
+          next_due: string | null
+          notes: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: number
+          building_id: number
+          compliance_item_id: number
+          applies?: boolean
+          last_checked?: string | null
+          next_due?: string | null
+          notes?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: number
+          building_id?: number
+          compliance_item_id?: number
+          applies?: boolean
+          last_checked?: string | null
+          next_due?: string | null
+          notes?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "building_assets_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "building_assets_compliance_item_id_fkey"
+            columns: ["compliance_item_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compliance_items: {
         Row: {
           assigned_to: string | null

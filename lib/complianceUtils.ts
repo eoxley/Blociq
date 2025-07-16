@@ -7,7 +7,256 @@ export interface ComplianceAsset {
   applies: boolean
   last_checked: string
   next_due: string
+  category: string
 }
+
+export interface UKComplianceItem {
+  id: number
+  item_type: string
+  category: string
+  frequency: string
+  status: string
+  applies: boolean
+  last_checked: string | null
+  next_due: string | null
+  notes: string | null
+}
+
+export interface BuildingAsset {
+  id: number
+  building_id: number
+  compliance_item_id: number
+  applies: boolean
+  last_checked: string | null
+  next_due: string | null
+  notes: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+// UK-specific compliance items with proper terminology
+export const UK_COMPLIANCE_ITEMS = [
+  {
+    id: 1,
+    name: 'Fire Risk Assessment',
+    description: 'Legally required assessment of fire risks in communal areas',
+    required_if: 'always' as const,
+    default_frequency: '1 year',
+    category: 'Safety',
+    applies: false,
+    last_checked: '',
+    next_due: ''
+  },
+  {
+    id: 2,
+    name: 'Emergency Lighting',
+    description: 'Emergency lighting systems in communal areas and escape routes',
+    required_if: 'always' as const,
+    default_frequency: '6 months',
+    category: 'Safety',
+    applies: false,
+    last_checked: '',
+    next_due: ''
+  },
+  {
+    id: 3,
+    name: 'Fire Extinguishers',
+    description: 'Portable fire extinguishers in communal areas',
+    required_if: 'always' as const,
+    default_frequency: '1 year',
+    category: 'Safety',
+    applies: false,
+    last_checked: '',
+    next_due: ''
+  },
+  {
+    id: 4,
+    name: 'Lift Service',
+    description: 'Lift maintenance and safety inspections',
+    required_if: 'if present' as const,
+    default_frequency: '6 months',
+    category: 'Equipment',
+    applies: false,
+    last_checked: '',
+    next_due: ''
+  },
+  {
+    id: 5,
+    name: 'Ventilation Systems',
+    description: 'Mechanical ventilation and air conditioning systems',
+    required_if: 'if present' as const,
+    default_frequency: '1 year',
+    category: 'Equipment',
+    applies: false,
+    last_checked: '',
+    next_due: ''
+  },
+  {
+    id: 6,
+    name: 'Electrical Installation Condition Report (EICR)',
+    description: 'Periodic inspection of electrical installations',
+    required_if: 'always' as const,
+    default_frequency: '5 years',
+    category: 'Electrical',
+    applies: false,
+    last_checked: '',
+    next_due: ''
+  },
+  {
+    id: 7,
+    name: 'Gas Safety Certificate',
+    description: 'Gas safety inspection for communal gas systems',
+    required_if: 'if present' as const,
+    default_frequency: '1 year',
+    category: 'Gas',
+    applies: false,
+    last_checked: '',
+    next_due: ''
+  },
+  {
+    id: 8,
+    name: 'Water Risk Assessment',
+    description: 'Legionella risk assessment for water systems',
+    required_if: 'always' as const,
+    default_frequency: '2 years',
+    category: 'Health',
+    applies: false,
+    last_checked: '',
+    next_due: ''
+  },
+  {
+    id: 9,
+    name: 'Asbestos Management Survey',
+    description: 'Asbestos-containing material survey and management plan',
+    required_if: 'if HRB' as const,
+    default_frequency: '5 years',
+    category: 'Health',
+    applies: false,
+    last_checked: '',
+    next_due: ''
+  },
+  {
+    id: 10,
+    name: 'Energy Performance Certificate (EPC)',
+    description: 'Energy efficiency rating for the building',
+    required_if: 'always' as const,
+    default_frequency: '10 years',
+    category: 'Energy',
+    applies: false,
+    last_checked: '',
+    next_due: ''
+  },
+  {
+    id: 11,
+    name: 'Building Insurance',
+    description: 'Comprehensive building insurance policy',
+    required_if: 'always' as const,
+    default_frequency: '1 year',
+    category: 'Insurance',
+    applies: false,
+    last_checked: '',
+    next_due: ''
+  },
+  {
+    id: 12,
+    name: 'Public Liability Insurance',
+    description: 'Public liability insurance for communal areas',
+    required_if: 'always' as const,
+    default_frequency: '1 year',
+    category: 'Insurance',
+    applies: false,
+    last_checked: '',
+    next_due: ''
+  },
+  {
+    id: 13,
+    name: 'Employers Liability Insurance',
+    description: 'Employers liability insurance for staff',
+    required_if: 'if present' as const,
+    default_frequency: '1 year',
+    category: 'Insurance',
+    applies: false,
+    last_checked: '',
+    next_due: ''
+  },
+  {
+    id: 14,
+    name: 'Roof Inspection',
+    description: 'Structural inspection of roof and roof covering',
+    required_if: 'always' as const,
+    default_frequency: '1 year',
+    category: 'Structural',
+    applies: false,
+    last_checked: '',
+    next_due: ''
+  },
+  {
+    id: 15,
+    name: 'Drainage Survey',
+    description: 'Inspection of drainage and sewerage systems',
+    required_if: 'always' as const,
+    default_frequency: '3 years',
+    category: 'Structural',
+    applies: false,
+    last_checked: '',
+    next_due: ''
+  },
+  {
+    id: 16,
+    name: 'External Wall Survey',
+    description: 'Survey of external walls for safety and compliance',
+    required_if: 'if HRB' as const,
+    default_frequency: '5 years',
+    category: 'Structural',
+    applies: false,
+    last_checked: '',
+    next_due: ''
+  },
+  {
+    id: 17,
+    name: 'Communal Area Risk Assessment',
+    description: 'General risk assessment for communal areas',
+    required_if: 'always' as const,
+    default_frequency: '1 year',
+    category: 'Safety',
+    applies: false,
+    last_checked: '',
+    next_due: ''
+  },
+  {
+    id: 18,
+    name: 'Legionella Risk Assessment',
+    description: 'Assessment of legionella risks in water systems',
+    required_if: 'always' as const,
+    default_frequency: '2 years',
+    category: 'Health',
+    applies: false,
+    last_checked: '',
+    next_due: ''
+  },
+  {
+    id: 19,
+    name: 'PAT Testing',
+    description: 'Portable appliance testing for electrical equipment',
+    required_if: 'if present' as const,
+    default_frequency: '1 year',
+    category: 'Electrical',
+    applies: false,
+    last_checked: '',
+    next_due: ''
+  },
+  {
+    id: 20,
+    name: 'Fire Door Inspection',
+    description: 'Inspection of fire doors and door furniture',
+    required_if: 'always' as const,
+    default_frequency: '6 months',
+    category: 'Safety',
+    applies: false,
+    last_checked: '',
+    next_due: ''
+  }
+]
 
 export type ComplianceStatus = 'Compliant' | 'Due Soon' | 'Overdue' | 'In Progress' | 'Not Started' | 'Not Applicable'
 
