@@ -3,8 +3,9 @@
 import React, { useEffect, useState } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useParams } from 'next/navigation';
-import { Shield, AlertTriangle, CheckCircle, Clock, Download, Upload, Eye, Calendar, Mail, Loader2 } from 'lucide-react';
+import { Shield, AlertTriangle, CheckCircle, Clock, Download, Upload, Eye, Calendar, Mail, Loader2, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
+import EnhancedAIInput from '@/components/EnhancedAIInput';
 
 interface ComplianceAsset {
   id: number;
@@ -54,6 +55,7 @@ export default function ComplianceTrackerPage() {
   const [sendingReminders, setSendingReminders] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [showAI, setShowAI] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -341,6 +343,13 @@ export default function ComplianceTrackerPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowAI(!showAI)}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <MessageSquare className="h-4 w-4 mr-2" />
+            {showAI ? 'Hide AI Assistant' : 'Ask BlocIQ'}
+          </button>
           <Link
             href={`/compliance/documents?building=${buildingId}`}
             className="inline-flex items-center px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
@@ -384,6 +393,24 @@ export default function ComplianceTrackerPage() {
               ×
             </button>
           </div>
+        </div>
+      )}
+
+      {/* AI Assistant */}
+      {showAI && (
+        <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <MessageSquare className="h-5 w-5 text-blue-600" />
+            Ask BlocIQ Assistant
+          </h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Get intelligent answers about compliance, repairs, and building management using real-time data.
+          </p>
+          <EnhancedAIInput
+            buildingId={parseInt(buildingId)}
+            buildingName={building?.name}
+            placeholder="Ask about compliance status, document findings, or building management..."
+          />
         </div>
       )}
 
