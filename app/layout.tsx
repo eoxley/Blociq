@@ -3,9 +3,8 @@ import { Inter } from 'next/font/google';
 import type { Metadata } from 'next';
 import SupabaseProvider from '@/components/SupabaseProvider';
 import { BlocIQProvider } from '@/components/BlocIQContext';
-import GlobalAskBlocIQ from '@/components/GlobalAskBlocIQ';
+import ConditionalFloatingButtons from '@/components/ConditionalFloatingButtons';
 import { Toaster } from 'sonner';
-import GlobalDocumentUploader from '@/components/GlobalDocumentUploader';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -24,8 +23,7 @@ export default function RootLayout({
       <body className={`${inter.className} bg-background`}>
         <BlocIQProvider>
           <SupabaseProvider>{children}</SupabaseProvider>
-          <GlobalAskBlocIQ />
-          <GlobalDocumentUploader />
+          <ConditionalFloatingButtons />
           <Toaster position="top-right" />
         </BlocIQProvider>
       </body>
