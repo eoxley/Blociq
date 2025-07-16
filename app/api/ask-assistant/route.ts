@@ -4,15 +4,29 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import OpenAI from 'openai';
 import { createServerClient } from '@supabase/ssr';
+import { getActiveComplianceAssets } from '@/lib/complianceUtils';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
+interface DocumentSummary {
+  id: string;
+  doc_type: string;
+  summary?: string;
+  issue_date?: string;
+  expiry_date?: string;
+  key_risks?: string;
+  compliance_status?: string;
+  created_at: string;
+}
+
 export async function POST(req: Request) {
-  console.log("✅ BlocIQ Assistant endpoint hit");
+  console.log("✅ Enhanced BlocIQ Assistant endpoint hit");
 
   try {
     const body = await req.json();
     const message = body?.message;
+    const buildingId = body?.buildingId; // Optional: if building is selected in UI
+    const unitId = body?.unitId; // Optional: if unit is specified
 
     if (!message) {
       console.error("❌ No message provided");
@@ -31,6 +45,7 @@ export async function POST(req: Request) {
         },
       }
     );
+
     const {
       data: { session },
       error: sessionError,
@@ -41,81 +56,219 @@ export async function POST(req: Request) {
     }
 
     console.log("📩 User message:", message);
+    console.log("🏢 Building ID from context:", buildingId);
+    console.log("🏠 Unit ID from context:", unitId);
 
-    // Fetch all buildings with ops notes
-    const { data: allBuildings, error: buildingListError } = await supabase
-      .from('buildings')
-      .select(`
-        id,
-        name,
-        unit_count,
-        key_access_notes,
-        parking_notes,
-        meter_location,
-        bin_location,
-        entry_code,
-        fire_panel_location
-      `);
-
-    if (buildingListError) {
-      console.error("❌ Failed to fetch building list:", buildingListError.message);
-    }
-
-    let matchedBuilding: {
-      id: number;
-      name: string;
-      unit_count: number;
-      key_access_notes: string | null;
-      parking_notes: string | null;
-      meter_location: string | null;
-      bin_location: string | null;
-      entry_code: string | null;
-      fire_panel_location: string | null;
-    } | null = null;
+    // 🏢 BUILDING CONTEXT
+    let matchedBuilding: any = null;
     let buildingContext = '';
     let leaseContext = '';
+    let complianceContext = '';
+    let documentContext = '';
+    let unitContext = '';
 
-    if (allBuildings && allBuildings.length > 0) {
-      for (const building of allBuildings) {
-        const pattern = new RegExp(`\\b${building.name}\\b`, 'i');
-        if (pattern.test(message)) {
-          matchedBuilding = building;
-          console.log(`🏠 Matched building: ${building.name}`);
-          buildingContext = `
-Building: ${building.name}
-Units: ${building.unit_count}
-🔑 Keys: ${building.key_access_notes || 'Not available'}
-🅿️ Parking: ${building.parking_notes || 'Not available'}
-📟 Entry Code: ${building.entry_code || 'Not available'}
-⚡ Meter Location: ${building.meter_location || 'Not available'}
-🗑️ Bin Location: ${building.bin_location || 'Not available'}
-🔥 Fire Panel: ${building.fire_panel_location || 'Not available'}
-          `.trim();
-          break;
+    // If buildingId is provided, use it directly
+    if (buildingId) {
+      const { data: building, error: buildingError } = await supabase
+        .from('buildings')
+        .select(`
+          id,
+          name,
+          address,
+          unit_count,
+          key_access_notes,
+          parking_notes,
+          meter_location,
+          bin_location,
+          entry_code,
+          fire_panel_location,
+          service_charge_start,
+          service_charge_end
+        `)
+        .eq('id', buildingId)
+        .single();
+
+      if (building && !buildingError) {
+        matchedBuilding = building;
+        console.log(`🏢 Using provided building: ${building.name}`);
+      }
+    }
+
+    // If no building provided, try to match from message
+    if (!matchedBuilding) {
+      const { data: allBuildings, error: buildingListError } = await supabase
+        .from('buildings')
+        .select(`
+          id,
+          name,
+          address,
+          unit_count,
+          key_access_notes,
+          parking_notes,
+          meter_location,
+          bin_location,
+          entry_code,
+          fire_panel_location
+        `);
+
+      if (!buildingListError && allBuildings) {
+        for (const building of allBuildings) {
+          const pattern = new RegExp(`\\b${building.name}\\b`, 'i');
+          if (pattern.test(message)) {
+            matchedBuilding = building;
+            console.log(`🏠 Matched building from message: ${building.name}`);
+            break;
+          }
         }
       }
     }
 
-    // 🧠 Fetch leaseholders for matched building
+    // 📋 BUILD BUILDING CONTEXT
     if (matchedBuilding) {
+      buildingContext = `
+🏢 BUILDING: ${matchedBuilding.name}
+📍 Address: ${matchedBuilding.address || 'Not available'}
+🏠 Units: ${matchedBuilding.unit_count || 'Not specified'}
+🔑 Key Access: ${matchedBuilding.key_access_notes || 'Not available'}
+🅿️ Parking: ${matchedBuilding.parking_notes || 'Not available'}
+📟 Entry Code: ${matchedBuilding.entry_code || 'Not available'}
+⚡ Meter Location: ${matchedBuilding.meter_location || 'Not available'}
+🗑️ Bin Location: ${matchedBuilding.bin_location || 'Not available'}
+🔥 Fire Panel: ${matchedBuilding.fire_panel_location || 'Not available'}
+💰 Service Charge Period: ${matchedBuilding.service_charge_start || 'Not set'} to ${matchedBuilding.service_charge_end || 'Not set'}
+      `.trim();
+
+      // 🏠 UNIT CONTEXT
+      if (unitId) {
+        const { data: unit, error: unitError } = await supabase
+          .from('units')
+          .select(`
+            id,
+            name,
+            building_id,
+            leaseholder:leaseholder_id (
+              full_name,
+              email,
+              phone
+            )
+          `)
+          .eq('id', unitId)
+          .single();
+
+                 if (unit && !unitError) {
+           const leaseholder = Array.isArray(unit.leaseholder) ? unit.leaseholder[0] : unit.leaseholder;
+           unitContext = `
+🏠 UNIT: ${unit.name}
+👤 Leaseholder: ${leaseholder?.full_name || 'Not assigned'}
+📧 Email: ${leaseholder?.email || 'Not available'}
+📞 Phone: ${leaseholder?.phone || 'Not available'}
+           `.trim();
+         }
+      }
+
+      // 📄 LEASEHOLDER CONTEXT
       const { data: leases, error: leaseError } = await supabase
         .from('leases')
-        .select('unit, leaseholder_name')
+        .select('unit, leaseholder_name, building_name')
         .ilike('building_name', `%${matchedBuilding.name}%`);
 
-      if (leaseError) {
-        console.warn("⚠️ Lease fetch error:", leaseError.message);
-      } else {
-        console.log("📄 Lease rows fetched:", leases?.length || 0);
-        if (leases?.length > 0) {
-          leaseContext = leases.map(l => `${l.unit}: ${l.leaseholder_name}`).join('\n');
-          console.log("📄 Leaseholders injected:", leaseContext);
-        } else {
-          console.log("📭 No leases matched for building:", matchedBuilding.name);
+      if (!leaseError && leases?.length > 0) {
+        leaseContext = `📄 LEASEHOLDERS:\n${leases.map(l => `${l.unit}: ${l.leaseholder_name}`).join('\n')}`;
+        console.log("📄 Leaseholders loaded:", leases.length);
+      }
+
+      // 🛡️ COMPLIANCE CONTEXT
+      try {
+        const complianceAssets = await getActiveComplianceAssets(supabase, matchedBuilding.id.toString());
+        
+        if (complianceAssets.length > 0) {
+          const overdueAssets = complianceAssets.filter(asset => asset.status === 'overdue');
+          const dueSoonAssets = complianceAssets.filter(asset => asset.status === 'due_soon');
+          const missingAssets = complianceAssets.filter(asset => asset.status === 'missing');
+          const compliantAssets = complianceAssets.filter(asset => asset.status === 'compliant');
+
+          complianceContext = `
+🛡️ COMPLIANCE STATUS:
+📊 Total Assets: ${complianceAssets.length}
+✅ Compliant: ${compliantAssets.length}
+⚠️ Due Soon: ${dueSoonAssets.length}
+❌ Overdue: ${overdueAssets.length}
+❓ Missing: ${missingAssets.length}
+
+${overdueAssets.length > 0 ? `🚨 OVERDUE ITEMS:\n${overdueAssets.map(asset => 
+  `• ${asset.title} (${asset.category}) - Expired: ${asset.expiry_date ? new Date(asset.expiry_date).toLocaleDateString() : 'Unknown'}`
+).join('\n')}\n` : ''}
+
+${dueSoonAssets.length > 0 ? `⏰ DUE SOON:\n${dueSoonAssets.map(asset => 
+  `• ${asset.title} (${asset.category}) - Due: ${asset.expiry_date ? new Date(asset.expiry_date).toLocaleDateString() : 'Unknown'}`
+).join('\n')}\n` : ''}
+
+${missingAssets.length > 0 ? `❓ MISSING DOCUMENTS:\n${missingAssets.map(asset => 
+  `• ${asset.title} (${asset.category}) - Frequency: ${asset.frequency}`
+).join('\n')}\n` : ''}
+          `.trim();
         }
+      } catch (complianceError) {
+        console.warn("⚠️ Compliance context error:", complianceError);
+      }
+
+      // 📄 DOCUMENT CONTEXT
+      try {
+        // Get all compliance documents for this building
+        const { data: complianceDocs, error: docsError } = await supabase
+          .from('compliance_docs')
+          .select('*')
+          .eq('building_id', matchedBuilding.id)
+          .order('created_at', { ascending: false });
+
+        if (!docsError && complianceDocs?.length > 0) {
+          // Group by document type and get the most recent
+          const docMap = new Map<string, DocumentSummary>();
+          complianceDocs.forEach(doc => {
+            if (!docMap.has(doc.doc_type) || new Date(doc.created_at) > new Date(docMap.get(doc.doc_type)!.created_at)) {
+              docMap.set(doc.doc_type, doc as DocumentSummary);
+            }
+          });
+
+          const recentDocs = Array.from(docMap.values());
+          
+          documentContext = `
+📄 RECENT COMPLIANCE DOCUMENTS:
+${recentDocs.map(doc => {
+  let docInfo = `• ${doc.doc_type} (${new Date(doc.created_at).toLocaleDateString()})`;
+  
+  if (doc.expiry_date) {
+    const expiryDate = new Date(doc.expiry_date);
+    const today = new Date();
+    const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (expiryDate < today) {
+      docInfo += ` - EXPIRED ${Math.abs(daysUntilExpiry)} days ago`;
+    } else if (daysUntilExpiry <= 30) {
+      docInfo += ` - Expires in ${daysUntilExpiry} days`;
+    } else {
+      docInfo += ` - Expires ${expiryDate.toLocaleDateString()}`;
+    }
+  }
+  
+  if (doc.summary) {
+    docInfo += `\n  Summary: ${doc.summary.substring(0, 200)}${doc.summary.length > 200 ? '...' : ''}`;
+  }
+  
+  if (doc.key_risks) {
+    docInfo += `\n  Key Risks: ${doc.key_risks}`;
+  }
+  
+  return docInfo;
+}).join('\n\n')}
+          `.trim();
+        }
+      } catch (docsError) {
+        console.warn("⚠️ Document context error:", docsError);
       }
     }
 
+    // 🧠 ENHANCED SYSTEM PROMPT
     const systemPrompt = `You are BlocIQ, a professional AI assistant built for UK **leasehold block management**.
 
 🧠 Your role is to assist property managers dealing with **leaseholders**, not tenants. Always respond from the perspective of a managing agent handling communal issues, compliance, and coordination within blocks of flats.
@@ -123,12 +276,16 @@ Units: ${building.unit_count}
 🔒 HARD RULES:
 - Do NOT use tenancy-related terms like "tenant", "landlord" (except when referring to the freeholder), "rent", "deposit", or "your home".
 - Do NOT assume internal repairs fall under the agent's remit — they often do not.
+- Always reference specific compliance requirements and document status when relevant.
+- Use leaseholder-facing language that explains communal responsibilities clearly.
 
 ✅ YOU SHOULD:
 - Refer to structural or communal issues (roof, external walls, shared services)
 - Recommend inspections before assigning responsibility
 - Mention access coordination, insurance claims, and service charge implications
 - Use phrases like "as the managing agent for the building…" or "under the terms of the lease…"
+- Reference specific compliance documents and their status when relevant
+- Explain compliance requirements in plain English for leaseholders
 
 📚 LEGAL CONTEXT:
 Reference UK legislation and standards where helpful:
@@ -146,10 +303,27 @@ Reference UK legislation and standards where helpful:
 If context includes \`mode: "lettings"\`, you may adjust to tenancy tone — otherwise always assume leasehold.
 
 📄 CONTEXTUAL DATA:
-${buildingContext ? `🏢 Building Info:\n${buildingContext}` : ''}
-${leaseContext ? `📄 Leaseholders:\n${leaseContext}` : ''}`;
+${buildingContext ? `🏢 Building Info:\n${buildingContext}\n` : ''}
+${unitContext ? `🏠 Unit Info:\n${unitContext}\n` : ''}
+${leaseContext ? `📄 Leaseholders:\n${leaseContext}\n` : ''}
+${complianceContext ? `🛡️ Compliance Status:\n${complianceContext}\n` : ''}
+${documentContext ? `📄 Document Status:\n${documentContext}\n` : ''}
 
-    console.log("📦 Final prompt to OpenAI:\n", systemPrompt);
+💡 INTELLIGENCE FEATURES:
+- You have access to real-time compliance status and document summaries
+- You can reference specific compliance requirements and their due dates
+- You can explain document findings and key risks in leaseholder-friendly terms
+- You can provide context about building operations and access arrangements
+
+🎯 RESPONSE GUIDELINES:
+1. If asked about compliance, reference the specific status and any relevant documents
+2. If asked about repairs, clarify communal vs leaseholder responsibilities
+3. If asked about access, reference the building's access arrangements
+4. If asked about service charges, reference the service charge period
+5. Always explain technical compliance terms in plain English
+6. Provide actionable next steps when appropriate`;
+
+    console.log("📦 Enhanced prompt to OpenAI with full context");
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
@@ -158,15 +332,24 @@ ${leaseContext ? `📄 Leaseholders:\n${leaseContext}` : ''}`;
         { role: 'user', content: message },
       ],
       temperature: 0.4,
+      max_tokens: 1000,
     });
 
     const reply = completion.choices?.[0]?.message?.content?.trim() || "🤖 Sorry, I couldn't generate a response.";
-    console.log("🧠 Assistant reply:", reply);
+    console.log("🧠 Enhanced assistant reply:", reply);
 
-    return NextResponse.json({ answer: reply });
+    return NextResponse.json({ 
+      answer: reply,
+      context: {
+        building: matchedBuilding?.name || null,
+        unit: unitContext ? 'Unit context available' : null,
+        complianceAssets: complianceContext ? 'Compliance data available' : null,
+        documents: documentContext ? 'Document summaries available' : null
+      }
+    });
 
   } catch (err: any) {
-    console.error("🔥 Fatal assistant error:", err.message || err);
+    console.error("🔥 Fatal enhanced assistant error:", err.message || err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 } 
