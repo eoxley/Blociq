@@ -62,7 +62,7 @@ function ComplianceDocumentsInner() {
           <div>
             <div className="flex items-center gap-2 mb-2">
               <Link
-                href={buildingId ? `/dashboard/buildings/${buildingId}/compliance/tracker` : '/compliance'}
+                href={buildingId ? `/buildings/${buildingId}/compliance/tracker` : '/compliance'}
                 className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors"
               >
                 <ArrowLeft className="h-4 w-4 mr-1" />

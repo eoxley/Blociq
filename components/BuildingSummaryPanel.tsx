@@ -106,7 +106,7 @@ export default function BuildingSummaryPanel({
           Building Summary
         </h2>
         <Link
-          href={`/dashboard/buildings/${buildingId}/setup`}
+          href={`/buildings/${buildingId}/setup`}
           className="inline-flex items-center px-3 py-1.5 text-sm bg-teal-50 text-teal-700 rounded-md hover:bg-teal-100 transition-colors"
         >
           <Edit className="h-4 w-4 mr-1" />
@@ -122,7 +122,7 @@ export default function BuildingSummaryPanel({
             Complete the building setup to customize communications and compliance tracking.
           </p>
           <Link
-            href={`/dashboard/buildings/${buildingId}/setup`}
+            href={`/buildings/${buildingId}/setup`}
             className="inline-flex items-center px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition-colors"
           >
             <Settings className="h-4 w-4 mr-2" />

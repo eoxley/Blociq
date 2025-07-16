@@ -18,7 +18,7 @@ export default function ComplianceClient({ complianceAssets: initialAssets }: Co
   const [assets, setAssets] = useState<ComplianceAsset[]>(initialAssets)
   const [filter, setFilter] = useState<'all' | 'always' | 'if present' | 'if HRB'>('all')
   const [searchTerm, setSearchTerm] = useState('')
-  const [viewMode, setViewMode] = useState<'dashboard' | 'grid' | 'setup'>('dashboard')
+  const [viewMode, setViewMode] = useState<'grid' | 'setup'>('grid')
 
   // Filter assets based on search and filter
   const filteredAssets = assets.filter(asset => {
@@ -115,17 +115,6 @@ export default function ComplianceClient({ complianceAssets: initialAssets }: Co
       <div className="flex justify-between items-center">
         <div className="flex items-center space-x-4">
           <button
-            onClick={() => setViewMode('dashboard')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              viewMode === 'dashboard' 
-                ? 'bg-teal-600 text-white' 
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            <BarChart3 className="h-4 w-4 inline mr-2" />
-            Dashboard
-          </button>
-          <button
             onClick={() => setViewMode('grid')}
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
               viewMode === 'grid' 
@@ -133,7 +122,7 @@ export default function ComplianceClient({ complianceAssets: initialAssets }: Co
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            <Shield className="h-4 w-4 inline mr-2" />
+            <BarChart3 className="h-4 w-4 inline mr-2" />
             Overview
           </button>
           <button
@@ -150,9 +139,7 @@ export default function ComplianceClient({ complianceAssets: initialAssets }: Co
         </div>
       </div>
 
-      {viewMode === 'dashboard' ? (
-        <ComplianceDashboard assets={assets} />
-      ) : viewMode === 'grid' ? (
+      {viewMode === 'grid' ? (
         <>
           {/* Search and Filter Bar */}
           <div className="flex flex-col sm:flex-row gap-4">
