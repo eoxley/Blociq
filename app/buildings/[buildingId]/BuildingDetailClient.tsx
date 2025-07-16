@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowLeft, Calendar, DollarSign, Shield, FileText, Mail, ChevronDown, ChevronUp, ExternalLink, Brain, AlertTriangle, Clock, Wrench, Plus, Users } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import AIInput from '../../../components/AIInput'
+import { useBlocIQContext } from '@/components/BlocIQContext'
 
 type Building = {
   id: string
@@ -49,6 +50,15 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
   const [units, setUnits] = useState<Unit[]>([])
   const [loadingUnits, setLoadingUnits] = useState(true)
   const supabase = createClientComponentClient()
+  const { setContext } = useBlocIQContext()
+
+  // Set building context for AskBlocIQ
+  useEffect(() => {
+    setContext({
+      buildingId: parseInt(building.id),
+      buildingName: building.name,
+    });
+  }, [building.id, building.name, setContext]);
 
   console.log('BuildingDetailClient rendered with building:', building)
   console.log('Current units state:', units)

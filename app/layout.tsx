@@ -2,6 +2,8 @@ import './globals.css';
 import { Inter } from 'next/font/google';
 import type { Metadata } from 'next';
 import SupabaseProvider from '@/components/SupabaseProvider';
+import { BlocIQProvider } from '@/components/BlocIQContext';
+import GlobalAskBlocIQ from '@/components/GlobalAskBlocIQ';
 import { Toaster } from 'sonner';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -19,8 +21,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <SupabaseProvider>{children}</SupabaseProvider>
-        <Toaster position="top-right" />
+        <BlocIQProvider>
+          <SupabaseProvider>{children}</SupabaseProvider>
+          <GlobalAskBlocIQ />
+          <Toaster position="top-right" />
+        </BlocIQProvider>
       </body>
     </html>
   );
