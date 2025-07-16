@@ -261,9 +261,14 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* BlocIQ Chat Assistant Section */}
         <div className="bg-white rounded-xl shadow-lg p-6 border flex flex-col h-[600px]">
-          <div className="flex items-center gap-3 mb-6">
-            <MessageCircle className="h-6 w-6 text-teal-600" />
-            <h2 className="text-2xl font-semibold text-gray-900">BlocIQ Assistant</h2>
+          <div className="flex items-center gap-3 mb-6 bg-gradient-to-r from-primary to-primary/80 text-white p-4 rounded-lg -m-6 mb-6">
+            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+              <MessageCircle className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-semibold text-white">BlocIQ Assistant</h2>
+              <p className="text-white/80 text-sm">Your AI property management companion</p>
+            </div>
           </div>
           
           {/* Chat Messages */}
@@ -272,12 +277,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               <div key={message.id} className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
                   message.isUser 
-                    ? 'bg-teal-600 text-white' 
-                    : 'bg-gray-100 text-gray-900'
+                    ? 'bg-primary text-white shadow-lg' 
+                    : 'bg-gray-50 text-gray-900 border border-gray-200'
                 }`}>
                   <div className="text-sm whitespace-pre-line">{message.content}</div>
                   <div className={`text-xs mt-1 ${
-                    message.isUser ? 'text-teal-100' : 'text-gray-500'
+                    message.isUser ? 'text-white/70' : 'text-gray-500'
                   }`}>
                     {formatMessageTime(message.timestamp)}
                   </div>
@@ -288,7 +293,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             {/* Loading indicator */}
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-gray-100 rounded-2xl px-4 py-3">
+                <div className="bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3">
                   <div className="flex items-center gap-2 text-gray-600">
                     <Loader2 className="animate-spin h-4 w-4" />
                     <span className="text-sm">Thinking...</span>
@@ -301,15 +306,15 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           {/* Action buttons for last AI message */}
           {messages.length > 1 && !messages[messages.length - 1].isUser && !isLoading && (
             <div className="flex gap-2 mb-4">
-              <button className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm">
+              <button className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm border border-blue-200">
                 <Mail className="h-4 w-4" />
                 📧 Turn into email
               </button>
-              <button className="flex items-center gap-2 px-3 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm">
+              <button className="flex items-center gap-2 px-3 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm border border-green-200">
                 <FileText className="h-4 w-4" />
                 📝 Save as advice note
               </button>
-              <button className="flex items-center gap-2 px-3 py-2 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors text-sm">
+              <button className="flex items-center gap-2 px-3 py-2 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors text-sm border border-orange-200">
                 <Pin className="h-4 w-4" />
                 📌 Attach to building diary
               </button>
@@ -317,19 +322,19 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           )}
 
           {/* Input form */}
-          <form onSubmit={handleSubmit} className="flex gap-3">
+          <form onSubmit={handleSubmit} className="flex gap-3 bg-gray-50 p-4 rounded-lg border border-gray-200">
             <input
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Ask about your buildings, compliance, or recent emails…"
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white"
               disabled={isLoading}
             />
             <button 
               type="submit"
               disabled={isLoading || !inputValue.trim()}
-              className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
             >
               <Send className="h-5 w-5" />
               Send

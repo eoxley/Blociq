@@ -154,11 +154,11 @@ export default function GlobalDocumentUploader() {
     <>
       {/* Floating Button */}
       <button
-        className="fixed bottom-6 right-6 bg-slate-800 text-white p-3 rounded-full shadow-xl z-50 hover:bg-primary transition-colors"
+        className="fixed bottom-6 right-6 bg-primary text-white p-4 rounded-full shadow-2xl z-50 hover:bg-primary/90 hover:scale-110 transition-all duration-200 border-2 border-white"
         onClick={() => setOpen(true)}
         aria-label="Upload Document"
       >
-        <Paperclip className="h-6 w-6" />
+        <Paperclip className="h-7 w-7" />
       </button>
 
       {/* Modal */}
