@@ -219,40 +219,17 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
             </div>
           </div>
           
-          {/* Navigation Links */}
-          <div className="flex items-center gap-4 mt-4">
-            <Link 
-              href={`/buildings/${building.id}/units`}
-              className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
-            >
-              <Users className="h-4 w-4" />
-              View Units
-            </Link>
-            <Link 
-              href={`/buildings/${building.id}/major-works`}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              <Wrench className="h-4 w-4" />
-              Major Works
-            </Link>
-          </div>
+
         </div>
       </div>
 
       {/* Units Section */}
       <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center mb-6">
           <h2 className="text-2xl font-semibold text-[#0F5D5D] flex items-center gap-2">
             <Users className="h-6 w-6" />
             Units ({units.length})
           </h2>
-          <Link 
-            href={`/buildings/${building.id}/units`}
-            className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            View All Units
-          </Link>
         </div>
 
         {loadingUnits ? (
