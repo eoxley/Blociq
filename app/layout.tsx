@@ -5,6 +5,7 @@ import SupabaseProvider from '@/components/SupabaseProvider';
 import { BlocIQProvider } from '@/components/BlocIQContext';
 import GlobalAskBlocIQ from '@/components/GlobalAskBlocIQ';
 import { Toaster } from 'sonner';
+import GlobalDocumentUploader from '@/components/GlobalDocumentUploader';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -24,6 +25,7 @@ export default function RootLayout({
         <BlocIQProvider>
           <SupabaseProvider>{children}</SupabaseProvider>
           <GlobalAskBlocIQ />
+          <GlobalDocumentUploader />
           <Toaster position="top-right" />
         </BlocIQProvider>
       </body>
