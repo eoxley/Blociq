@@ -315,15 +315,27 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           {/* Action buttons for last AI message */}
           {messages.length > 1 && !messages[messages.length - 1].isUser && !isLoading && (
             <div className="flex gap-2 mb-4">
-              <button className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm border border-blue-200">
+              <button 
+                className="flex items-center gap-2 px-3 py-2 bg-gray-50 text-gray-500 rounded-lg transition-colors text-sm border border-gray-200 cursor-not-allowed opacity-60"
+                disabled
+                title="Coming soon"
+              >
                 <Mail className="h-4 w-4" />
                 📧 Turn into email
               </button>
-              <button className="flex items-center gap-2 px-3 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm border border-green-200">
+              <button 
+                className="flex items-center gap-2 px-3 py-2 bg-gray-50 text-gray-500 rounded-lg transition-colors text-sm border border-gray-200 cursor-not-allowed opacity-60"
+                disabled
+                title="Coming soon"
+              >
                 <FileText className="h-4 w-4" />
                 📝 Save as advice note
               </button>
-              <button className="flex items-center gap-2 px-3 py-2 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors text-sm border border-orange-200">
+              <button 
+                className="flex items-center gap-2 px-3 py-2 bg-gray-50 text-gray-500 rounded-lg transition-colors text-sm border border-gray-200 cursor-not-allowed opacity-60"
+                disabled
+                title="Coming soon"
+              >
                 <Pin className="h-4 w-4" />
                 📌 Attach to building diary
               </button>
