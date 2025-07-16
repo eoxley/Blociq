@@ -12,12 +12,29 @@ import { Select } from '@/components/ui/select'
 export default function NewCommunicationPage() {
   const router = useRouter()
   const [type, setType] = useState('email')
+  const [subject, setSubject] = useState('')
+  const [content, setContent] = useState('')
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // You'll hook this up to Supabase later
-    console.log('Sending...', type)
-    router.push('/dashboard/communications')
+    
+    try {
+      const res = await fetch('/api/communications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ type, subject, content }),
+      })
+
+      if (res.ok) {
+        router.push('/dashboard/communications')
+      } else {
+        console.error('Failed to save communication')
+      }
+    } catch (error) {
+      console.error('Error saving communication:', error)
+    }
   }
 
   return (
@@ -36,12 +53,21 @@ export default function NewCommunicationPage() {
 
         <div className="space-y-2">
           <Label>Subject / Title</Label>
-          <Input placeholder="e.g. Service Charge Reminder" />
+          <Input 
+            placeholder="e.g. Service Charge Reminder" 
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+          />
         </div>
 
         <div className="space-y-2">
           <Label>Message</Label>
-          <Textarea placeholder="Enter your message or letter content..." rows={10} />
+          <Textarea 
+            placeholder="Enter your message or letter content..." 
+            rows={10}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+          />
         </div>
 
         <Button type="submit">Send / Save</Button>
