@@ -8,6 +8,7 @@ import { FileText, Sparkles, Download, Calendar } from "lucide-react";
 import { handleUploadComplete, updateDocumentWithAIAnalysis } from "@/lib/aiDocumentAnalysis";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { toast } from "sonner";
+import DocumentTypeSelector from "./DocumentTypeSelector";
 
 type ComplianceDocument = {
   id: string;
@@ -30,6 +31,8 @@ export default function ComplianceDocumentAnalyzer({
 }: ComplianceDocumentAnalyzerProps) {
   const [analyzing, setAnalyzing] = useState<string | null>(null);
   const [analysisResults, setAnalysisResults] = useState<Record<string, any>>({});
+  const [showTypeSelector, setShowTypeSelector] = useState(false);
+  const [currentDocumentId, setCurrentDocumentId] = useState<string>("");
   const supabase = createClientComponentClient();
 
   const handleAnalyzeDocument = async (documentId: string) => {
@@ -42,6 +45,15 @@ export default function ComplianceDocumentAnalyzer({
       const result = await handleUploadComplete(documentId);
       
       if (result.success) {
+        // Check if AI couldn't detect the document type
+        if (!result.data.doc_type || result.data.doc_type === 'Unknown' || result.data.doc_type === 'null') {
+          console.log("⚠️ AI couldn't detect document type, showing manual selector");
+          setCurrentDocumentId(documentId);
+          setShowTypeSelector(true);
+          setAnalyzing(null);
+          return;
+        }
+        
         // Update the document with AI results
         const updateSuccess = await updateDocumentWithAIAnalysis(
           documentId, 
@@ -68,6 +80,48 @@ export default function ComplianceDocumentAnalyzer({
       toast.error("Analysis failed");
     } finally {
       setAnalyzing(null);
+    }
+  };
+
+  const handleTypeSelected = (docType: string) => {
+    console.log("✅ User selected document type:", docType);
+    toast.success(`Document type updated to ${docType}`);
+    setShowTypeSelector(false);
+    onAnalysisComplete?.();
+  };
+
+  const handleReanalyze = async () => {
+    if (!currentDocumentId) return;
+    
+    try {
+      toast.info("Re-analyzing document with AI...");
+      
+      const result = await handleUploadComplete(currentDocumentId);
+      
+      if (result.success) {
+        if (result.data.doc_type && result.data.doc_type !== 'Unknown' && result.data.doc_type !== 'null') {
+          // AI found a type, update the database
+          const updateSuccess = await updateDocumentWithAIAnalysis(
+            currentDocumentId, 
+            result.data, 
+            supabase
+          );
+          
+          if (updateSuccess) {
+            toast.success(`AI re-analysis successful! Type: ${result.data.doc_type}`);
+            setShowTypeSelector(false);
+            onAnalysisComplete?.();
+          }
+        } else {
+          // AI still couldn't detect, show selector again
+          setShowTypeSelector(true);
+        }
+      } else {
+        toast.error("Re-analysis failed");
+      }
+    } catch (error) {
+      console.error("Re-analysis error:", error);
+      toast.error("Re-analysis failed");
     }
   };
 
@@ -214,6 +268,15 @@ export default function ComplianceDocumentAnalyzer({
           );
         })}
       </div>
+
+      {/* Document Type Selector Modal */}
+      <DocumentTypeSelector
+        isOpen={showTypeSelector}
+        onClose={() => setShowTypeSelector(false)}
+        documentId={currentDocumentId}
+        onTypeSelected={handleTypeSelected}
+        onReanalyze={handleReanalyze}
+      />
     </div>
   );
 } 

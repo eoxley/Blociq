@@ -5,12 +5,15 @@ import { supabase } from "@/lib/supabase"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { toast } from "sonner"
+import DocumentTypeSelector from "./DocumentTypeSelector"
 
 const TEST_BUILDING_ID = 3
 
 export default function UploadClean() {
   const [uploading, setUploading] = useState(false)
   const [file, setFile] = useState<File | null>(null)
+  const [showTypeSelector, setShowTypeSelector] = useState(false)
+  const [currentDocumentId, setCurrentDocumentId] = useState<string>("")
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -107,6 +110,16 @@ export default function UploadClean() {
           const { summary, doc_type, issue_date, expiry_date, key_risks, compliance_status } = await res.json();
           console.log("✅ AI Analysis complete:", { summary, doc_type, issue_date, expiry_date, key_risks, compliance_status });
           
+          // Check if AI couldn't detect the document type
+          if (!doc_type || doc_type === 'Unknown' || doc_type === 'null') {
+            console.log("⚠️ AI couldn't detect document type, showing manual selector");
+            setCurrentDocumentId(documentId);
+            setShowTypeSelector(true);
+            setUploading(false);
+            setFile(null);
+            return; // Don't update the database yet, wait for user selection
+          }
+          
           // Update the document with AI-extracted information
           const updateData: any = {};
           if (doc_type && doc_type !== 'Unknown') updateData.doc_type = doc_type;
@@ -144,6 +157,51 @@ export default function UploadClean() {
     setFile(null)
   }
 
+  const handleTypeSelected = (docType: string) => {
+    console.log("✅ User selected document type:", docType);
+    toast.success(`Document type updated to ${docType}`);
+    setShowTypeSelector(false);
+  };
+
+  const handleReanalyze = async () => {
+    if (!currentDocumentId) return;
+    
+    try {
+      toast.info("Re-analyzing document with AI...");
+      
+      const res = await fetch('/api/extract-summary', {
+        method: 'POST',
+        body: JSON.stringify({ documentId: currentDocumentId }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (res.ok) {
+        const analysisResult = await res.json();
+        
+        if (analysisResult.doc_type && analysisResult.doc_type !== 'Unknown' && analysisResult.doc_type !== 'null') {
+          // AI found a type, update the database
+          const { error: updateError } = await supabase
+            .from('compliance_docs')
+            .update({ doc_type: analysisResult.doc_type })
+            .eq('id', currentDocumentId);
+            
+          if (!updateError) {
+            toast.success(`AI re-analysis successful! Type: ${analysisResult.doc_type}`);
+            setShowTypeSelector(false);
+          }
+        } else {
+          // AI still couldn't detect, show selector again
+          setShowTypeSelector(true);
+        }
+      } else {
+        toast.error("Re-analysis failed");
+      }
+    } catch (error) {
+      console.error("Re-analysis error:", error);
+      toast.error("Re-analysis failed");
+    }
+  };
+
   function extractMetadataFromFilename(fileName: string) {
     const name = fileName.toLowerCase()
 
@@ -179,6 +237,15 @@ export default function UploadClean() {
       <Button onClick={handleUpload} disabled={uploading}>
         {uploading ? "Uploading..." : "Upload File"}
       </Button>
+
+      {/* Document Type Selector Modal */}
+      <DocumentTypeSelector
+        isOpen={showTypeSelector}
+        onClose={() => setShowTypeSelector(false)}
+        documentId={currentDocumentId}
+        onTypeSelected={handleTypeSelected}
+        onReanalyze={handleReanalyze}
+      />
     </div>
   )
 }
