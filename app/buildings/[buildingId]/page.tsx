@@ -171,7 +171,7 @@ export default async function BuildingDetailPage({
             className="flex items-center gap-2 text-[#0F5D5D] hover:text-teal-700 transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
-            Back to Dashboard
+            Back to Home
           </Link>
         </div>
         
