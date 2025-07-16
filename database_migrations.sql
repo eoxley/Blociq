@@ -278,6 +278,18 @@ CREATE TABLE IF NOT EXISTS communication_templates (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Create building_documents table for storing generated documents
+CREATE TABLE IF NOT EXISTS building_documents (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  building_id INTEGER REFERENCES buildings(id) ON DELETE CASCADE,
+  unit_id INTEGER REFERENCES units(id) ON DELETE SET NULL,
+  leaseholder_id UUID REFERENCES leaseholders(id) ON DELETE SET NULL,
+  file_name VARCHAR(255) NOT NULL,
+  file_url TEXT NOT NULL,
+  type VARCHAR(100),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Create property_events table if it doesn't exist
 CREATE TABLE IF NOT EXISTS property_events (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

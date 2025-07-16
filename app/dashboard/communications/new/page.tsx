@@ -60,6 +60,37 @@ export default function NewCommunicationPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    if (sendMethod === 'letter') {
+      const res = await fetch('/api/communications/generate-letters', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type,
+          subject,
+          content,
+          building_id: buildingId,
+          unit_id: unitId,
+        }),
+      })
+
+      if (res.ok) {
+        const blob = await res.blob()
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.setAttribute('download', `letters-${Date.now()}.zip`)
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        window.URL.revokeObjectURL(url)
+      } else {
+        console.error('Failed to generate letters')
+      }
+
+      return
+    }
+
+    // Fallback: save/send email
     try {
       const res = await fetch('/api/communications', {
         method: 'POST',
@@ -81,7 +112,7 @@ export default function NewCommunicationPage() {
       if (res.ok) {
         router.push('/dashboard/communications')
       } else {
-        console.error('Failed to send')
+        console.error('Failed to save communication')
       }
     } catch (error) {
       console.error('Error sending communication:', error)
