@@ -66,15 +66,19 @@ export async function POST(req: NextRequest) {
     console.log("👤 Fetching user context for user:", userId);
     const userContext = await fetchUserContext(userId, supabase);
     
-    // Build agency-specific context
-    const agencyContext = userContext.agency 
-      ? `This user works for ${userContext.agency.name}. ${userContext.agency.tone ? `Use their internal tone: ${userContext.agency.tone}.` : ''} ${userContext.agency.policies ? `Follow their internal policies: ${userContext.agency.policies}.` : ''}`
-      : '';
+    // Build building context
+    const buildingContext = buildingData ? `
+Building Information:
+- Name: ${buildingData.name}
+- Address: ${buildingData.address || 'Not specified'}
+- Unit Count: ${buildingData.unit_count || 'Unknown'}
+- Created: ${buildingData.created_at ? new Date(buildingData.created_at).toLocaleDateString() : 'Unknown'}
+` : 'No building data available';
     
-    console.log("🏢 Agency context:", agencyContext || "No agency context");
+    console.log("🏢 Building context:", buildingContext);
     
-    // Get system prompt with agency context
-    const systemPrompt = getSystemPrompt(agencyContext);
+    // Get system prompt with building context
+    const systemPrompt = getSystemPrompt(buildingContext);
     
     // 3. Inject Supabase Context
     const contextMessages = formatContextMessages(userContext);
@@ -100,14 +104,6 @@ export async function POST(req: NextRequest) {
     }
     
     // 5. Build AI prompt with building context
-    const buildingContext = buildingData ? `
-Building Information:
-- Name: ${buildingData.name}
-- Address: ${buildingData.address || 'Not specified'}
-- Unit Count: ${buildingData.unit_count || 'Unknown'}
-- Created: ${buildingData.created_at ? new Date(buildingData.created_at).toLocaleDateString() : 'Unknown'}
-` : 'No building data available';
-    
     const aiPrompt = `
 You are BlocIQ, a property management AI assistant. You have access to the following building context:
 
