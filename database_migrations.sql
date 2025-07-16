@@ -472,7 +472,22 @@ INSERT INTO property_events (building_id, title, description, start_time, end_ti
 (1, 'Building Insurance Renewal', 'Annual building insurance renewal process', '2024-01-15 10:00:00', '2024-01-15 12:00:00', 'Administrative', 'Insurance')
 ON CONFLICT DO NOTHING;
 
--- 14. Summary
+-- 14. Create communications table
+CREATE TABLE IF NOT EXISTS communications (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamp with time zone default now(),
+  created_by uuid references profiles(id),
+  type text check (type in ('email', 'letter', 'announcement')),
+  subject text,
+  content text,
+  building_id uuid references buildings(id),
+  unit_id uuid references units(id),
+  leaseholder_id uuid references leaseholders(id),
+  sent boolean default false,
+  sent_at timestamp
+);
+
+-- 15. Summary
 SELECT 'Sample House Data Summary:' as info;
 SELECT 'Buildings: ' || COUNT(*) as buildings_count FROM buildings;
 SELECT 'Units: ' || COUNT(*) as units_count FROM units;
@@ -480,4 +495,5 @@ SELECT 'Leaseholders: ' || COUNT(*) as leaseholders_count FROM leaseholders;
 SELECT 'Leases: ' || COUNT(*) as leases_count FROM leases;
 SELECT 'Emails: ' || COUNT(*) as emails_count FROM incoming_emails;
 SELECT 'Compliance Docs: ' || COUNT(*) as compliance_docs_count FROM compliance_docs;
-SELECT 'Property Events: ' || COUNT(*) as events_count FROM property_events; 
+SELECT 'Property Events: ' || COUNT(*) as events_count FROM property_events;
+SELECT 'Communications: ' || COUNT(*) as communications_count FROM communications; 
