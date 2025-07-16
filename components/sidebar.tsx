@@ -32,6 +32,7 @@ export default function Sidebar() {
     { href: '/inbox', icon: Inbox, label: 'Inbox' },
     { href: '/buildings', icon: Building2, label: 'Buildings' },
     { href: '/compliance', icon: Shield, label: 'Compliance' },
+    { href: '/compliance/documents', icon: FileText, label: 'Compliance Docs' },
     { href: '/documents', icon: FileText, label: 'Documents' },
     { href: '/mail-templates', icon: Mail, label: 'Mail Templates' },
     { href: '/mail-merge', icon: Calendar, label: 'Mail Merge' },

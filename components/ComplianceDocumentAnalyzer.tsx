@@ -1,135 +1,219 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { FileText, Sparkles, Download, Calendar } from "lucide-react";
+import { handleUploadComplete, updateDocumentWithAIAnalysis } from "@/lib/aiDocumentAnalysis";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { toast } from "sonner";
 
-interface AnalysisResult {
-  success: boolean;
-  summary: string;
+type ComplianceDocument = {
+  id: string;
   doc_type: string | null;
-  issue_date: string | null;
+  doc_url: string | null;
+  start_date: string | null;
   expiry_date: string | null;
-  key_risks: string | null;
-  compliance_status: string | null;
-  building_id: number | null;
+  created_at: string | null;
+  building_name?: string;
+};
+
+interface ComplianceDocumentAnalyzerProps {
+  documents: ComplianceDocument[];
+  onAnalysisComplete?: () => void;
 }
 
-export default function ComplianceDocumentAnalyzer() {
-  const [documentId, setDocumentId] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
+export default function ComplianceDocumentAnalyzer({ 
+  documents, 
+  onAnalysisComplete 
+}: ComplianceDocumentAnalyzerProps) {
+  const [analyzing, setAnalyzing] = useState<string | null>(null);
+  const [analysisResults, setAnalysisResults] = useState<Record<string, any>>({});
+  const supabase = createClientComponentClient();
 
-  const handleAnalyze = async () => {
-    if (!documentId.trim()) {
-      setError("Please enter a document ID");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    setResult(null);
-
+  const handleAnalyzeDocument = async (documentId: string) => {
+    setAnalyzing(documentId);
+    
     try {
-      const res = await fetch('/api/extract-summary', {
-        method: 'POST',
-        body: JSON.stringify({ documentId: documentId.trim() }),
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Analysis failed');
+      toast.info("Analyzing document with AI...");
+      
+      // Call the AI analysis endpoint
+      const result = await handleUploadComplete(documentId);
+      
+      if (result.success) {
+        // Update the document with AI results
+        const updateSuccess = await updateDocumentWithAIAnalysis(
+          documentId, 
+          result.data, 
+          supabase
+        );
+        
+        if (updateSuccess) {
+          setAnalysisResults(prev => ({
+            ...prev,
+            [documentId]: result.data
+          }));
+          
+          toast.success(`Document analyzed! Type: ${result.data.doc_type || 'Unknown'}`);
+          onAnalysisComplete?.();
+        } else {
+          toast.warning("Analysis complete, but failed to update document");
+        }
+      } else {
+        toast.error(`Analysis failed: ${result.message}`);
       }
-
-      const analysisResult = await res.json();
-      setResult(analysisResult);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+    } catch (error) {
+      console.error('Analysis error:', error);
+      toast.error("Analysis failed");
     } finally {
-      setLoading(false);
+      setAnalyzing(null);
     }
   };
 
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'Not set';
+    return new Date(dateString).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  const getDocumentTypeColor = (docType: string | null) => {
+    if (!docType) return 'bg-gray-100 text-gray-800';
+    
+    const type = docType.toLowerCase();
+    if (type.includes('fire')) return 'bg-red-100 text-red-800';
+    if (type.includes('electrical') || type.includes('eicr')) return 'bg-yellow-100 text-yellow-800';
+    if (type.includes('gas')) return 'bg-orange-100 text-orange-800';
+    if (type.includes('asbestos')) return 'bg-purple-100 text-purple-800';
+    if (type.includes('insurance')) return 'bg-blue-100 text-blue-800';
+    if (type.includes('lift')) return 'bg-indigo-100 text-indigo-800';
+    if (type.includes('legionella')) return 'bg-green-100 text-green-800';
+    return 'bg-gray-100 text-gray-800';
+  };
+
+  if (documents.length === 0) {
+    return (
+      <Card className="p-8 text-center">
+        <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">No documents to analyze</h3>
+        <p className="text-gray-500">Upload some compliance documents to get started with AI analysis.</p>
+      </Card>
+    );
+  }
+
   return (
-    <div className="max-w-2xl mx-auto p-6 space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Compliance Document Analyzer</h2>
-        <p className="text-gray-600">
-          Analyze existing compliance documents using AI to extract key information.
-        </p>
-      </div>
-
-      <div className="space-y-4">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <Label htmlFor="documentId">Document ID</Label>
-          <Input
-            id="documentId"
-            type="text"
-            placeholder="Enter the document ID from compliance_docs table"
-            value={documentId}
-            onChange={(e) => setDocumentId(e.target.value)}
-            className="mt-1"
-          />
+          <h2 className="text-xl font-semibold text-gray-900">AI Document Analysis</h2>
+          <p className="text-sm text-gray-600">
+            Analyze existing documents with AI to extract key information
+          </p>
         </div>
-
-        <Button 
-          onClick={handleAnalyze} 
-          disabled={loading || !documentId.trim()}
-          className="w-full"
-        >
-          {loading ? "Analyzing..." : "Analyze Document"}
-        </Button>
       </div>
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800 font-medium">Error</p>
-          <p className="text-red-600 text-sm">{error}</p>
-        </div>
-      )}
-
-      {result && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-4">
-          <h3 className="text-green-800 font-medium">Analysis Results</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {documents.map((doc) => {
+          const isAnalyzing = analyzing === doc.id;
+          const hasAnalysis = analysisResults[doc.id];
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label className="text-sm font-medium text-gray-700">Document Type</Label>
-              <p className="text-sm text-gray-900">{result.doc_type || "Not identified"}</p>
-            </div>
-            
-            <div>
-              <Label className="text-sm font-medium text-gray-700">Compliance Status</Label>
-              <p className="text-sm text-gray-900">{result.compliance_status || "Not specified"}</p>
-            </div>
-            
-            <div>
-              <Label className="text-sm font-medium text-gray-700">Issue Date</Label>
-              <p className="text-sm text-gray-900">{result.issue_date || "Not found"}</p>
-            </div>
-            
-            <div>
-              <Label className="text-sm font-medium text-gray-700">Expiry Date</Label>
-              <p className="text-sm text-gray-900">{result.expiry_date || "Not found"}</p>
-            </div>
-          </div>
+          return (
+            <Card key={doc.id} className="p-6">
+              {/* Header */}
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <FileText className="h-5 w-5 text-gray-400" />
+                    <Badge className={getDocumentTypeColor(doc.doc_type)}>
+                      {doc.doc_type || 'Unknown Type'}
+                    </Badge>
+                    {hasAnalysis && (
+                      <Sparkles className="h-4 w-4 text-teal-500" />
+                    )}
+                  </div>
+                  
+                  {doc.building_name && (
+                    <p className="text-sm text-gray-600">{doc.building_name}</p>
+                  )}
+                </div>
+                
+                {doc.doc_url && (
+                  <Button asChild size="sm" variant="outline">
+                    <a href={doc.doc_url} target="_blank" rel="noopener noreferrer">
+                      <Download className="h-4 w-4" />
+                    </a>
+                  </Button>
+                )}
+              </div>
 
-          {result.key_risks && (
-            <div>
-              <Label className="text-sm font-medium text-gray-700">Key Risks/Actions</Label>
-              <p className="text-sm text-gray-900 mt-1">{result.key_risks}</p>
-            </div>
-          )}
+              {/* Dates */}
+              <div className="space-y-2 mb-4">
+                {doc.start_date && (
+                  <div className="flex items-center text-sm text-gray-600">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    <span>Issue: {formatDate(doc.start_date)}</span>
+                  </div>
+                )}
+                
+                {doc.expiry_date && (
+                  <div className="flex items-center text-sm text-gray-600">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    <span>Expiry: {formatDate(doc.expiry_date)}</span>
+                  </div>
+                )}
+              </div>
 
-          <div>
-            <Label className="text-sm font-medium text-gray-700">Summary</Label>
-            <p className="text-sm text-gray-900 mt-1 whitespace-pre-line">{result.summary}</p>
-          </div>
-        </div>
-      )}
+              {/* Analysis Results */}
+              {hasAnalysis && (
+                <div className="mb-4 p-3 bg-teal-50 rounded-lg">
+                  <h4 className="text-sm font-medium text-teal-900 mb-2">AI Analysis Results</h4>
+                  <div className="space-y-1 text-xs text-teal-800">
+                    {hasAnalysis.doc_type && hasAnalysis.doc_type !== 'Unknown' && (
+                      <div><strong>Type:</strong> {hasAnalysis.doc_type}</div>
+                    )}
+                    {hasAnalysis.issue_date && hasAnalysis.issue_date !== 'Not found' && (
+                      <div><strong>Issue Date:</strong> {hasAnalysis.issue_date}</div>
+                    )}
+                    {hasAnalysis.expiry_date && hasAnalysis.expiry_date !== 'Not found' && (
+                      <div><strong>Expiry Date:</strong> {hasAnalysis.expiry_date}</div>
+                    )}
+                    {hasAnalysis.compliance_status && (
+                      <div><strong>Status:</strong> {hasAnalysis.compliance_status}</div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Action Button */}
+              <Button
+                onClick={() => handleAnalyzeDocument(doc.id)}
+                disabled={isAnalyzing}
+                className="w-full bg-teal-600 hover:bg-teal-700"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Analyzing...
+                  </>
+                ) : hasAnalysis ? (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Re-analyze
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Analyze with AI
+                  </>
+                )}
+              </Button>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 } 
