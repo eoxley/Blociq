@@ -50,14 +50,23 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     'The lifts are stuck again — but not your motivation 🚀',
     'Time to inspect fire doors like legends 🚪🔥',
     'Let\'s make leaseholders smile (or at least not shout) 😅',
-    'Your property empire awaits 👑'
+    'Your property empire awaits 👑',
+    'Another day, another service charge query 📊',
+    'Ready to tackle those compliance deadlines? ⚡',
+    'Property management: where every day is an adventure 🏢',
+    'Let\'s make today\'s to-do list yesterday\'s problem ✅',
+    'Channeling your inner property superhero today 🦸‍♂️',
+    'Time to turn chaos into organized chaos 🎯',
+    'Your buildings are lucky to have you managing them 🍀',
+    'Let\'s make some magic happen in the property world ✨',
+    'Ready to be the hero your buildings deserve 🦸‍♀️',
+    'Another opportunity to excel in property management 🌟'
   ]
 
-  // Get random welcome message based on day
+  // Get random welcome message on every render
   const getWelcomeMessage = () => {
-    const today = new Date().getDate()
-    const messageIndex = today % welcomeMessages.length
-    return welcomeMessages[messageIndex]
+    const randomIndex = Math.floor(Math.random() * welcomeMessages.length)
+    return welcomeMessages[randomIndex]
   }
 
   // Fetch real upcoming events from database
