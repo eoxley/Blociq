@@ -7,6 +7,7 @@ import { Shield, Building, Calendar, Wrench, Brain } from 'lucide-react';
 import Link from 'next/link';
 import AIInput from '../../../../components/AIInput';
 import BuildingSummaryPanel from '../../../../components/BuildingSummaryPanel';
+import BuildingEvents from '../../../../components/BuildingEvents';
 
 export default function BuildingDetailsPage() {
   const supabase = createClientComponentClient();
@@ -66,6 +67,12 @@ export default function BuildingDetailsPage() {
         buildingId={parseInt(buildingId)} 
         buildingName={building.name} 
         buildingAddress={building.address} 
+      />
+
+      {/* Building Events */}
+      <BuildingEvents 
+        buildingId={parseInt(buildingId)} 
+        buildingName={building.name} 
       />
 
       {/* Quick Actions */}

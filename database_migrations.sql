@@ -267,8 +267,12 @@ CREATE TABLE IF NOT EXISTS property_events (
   created_by VARCHAR(255) REFERENCES users(id) ON DELETE SET NULL,
   title VARCHAR(255) NOT NULL,
   description TEXT,
-  date DATE NOT NULL,
+  start_time TIMESTAMP WITH TIME ZONE NOT NULL,
+  end_time TIMESTAMP WITH TIME ZONE,
+  event_type VARCHAR(100),
   category VARCHAR(100),
+  outlook_event_id VARCHAR(255),
+  location VARCHAR(255),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

@@ -788,8 +788,12 @@ export type Database = {
           building_id: number | null
           title: string
           description: string | null
-          date: string
+          start_time: string
+          end_time: string | null
+          event_type: string | null
           category: string | null
+          outlook_event_id: string | null
+          location: string | null
           created_by: string | null
           created_at: string | null
           updated_at: string | null
@@ -799,8 +803,12 @@ export type Database = {
           building_id?: number | null
           title: string
           description?: string | null
-          date: string
+          start_time: string
+          end_time?: string | null
+          event_type?: string | null
           category?: string | null
+          outlook_event_id?: string | null
+          location?: string | null
           created_by?: string | null
           created_at?: string | null
           updated_at?: string | null
@@ -810,8 +818,12 @@ export type Database = {
           building_id?: number | null
           title?: string
           description?: string | null
-          date?: string
+          start_time?: string
+          end_time?: string | null
+          event_type?: string | null
           category?: string | null
+          outlook_event_id?: string | null
+          location?: string | null
           created_by?: string | null
           created_at?: string | null
           updated_at?: string | null
