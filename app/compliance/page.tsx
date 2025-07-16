@@ -32,7 +32,10 @@ export default function CompliancePage() {
   const renderView = () => {
     switch (currentView) {
       case 'setup':
-        return <UKComplianceSetup buildingId={1} buildingName="Demo Building" />
+        return <UKComplianceSetup onSaveSuccess={() => {
+          // Optionally refresh the buildings view if needed
+          console.log('Compliance setup saved successfully')
+        }} />
       case 'buildings':
         return <ComplianceBuildingsView onViewBuilding={handleViewBuilding} />
       case 'building-detail':
