@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { v4 as uuidv4 } from "uuid";
+import { toast } from "sonner";
 
 type Props = {
   table: "leases" | "compliance_docs";
@@ -139,6 +140,7 @@ const SmartUploader: React.FC<Props> = ({
 
     if (error) {
       console.error("❌ Save error:", error.message);
+      toast.error("Failed to save document");
     } else {
       setSaved(true);
       
@@ -146,6 +148,8 @@ const SmartUploader: React.FC<Props> = ({
       if (table === "compliance_docs" && data?.[0]?.id) {
         try {
           console.log("🤖 Triggering compliance document analysis...");
+          toast.info("Analyzing document with AI...");
+          
           const res = await fetch('/api/extract-summary', {
             method: 'POST',
             body: JSON.stringify({ documentId: data[0].id }),
@@ -176,14 +180,21 @@ const SmartUploader: React.FC<Props> = ({
                 
               if (!updateError) {
                 console.log("✅ Document updated with AI analysis results");
+                toast.success(`Document analyzed! Type: ${analysisResult.doc_type || 'Unknown'}`);
               }
+            } else {
+              toast.success("Document saved successfully");
             }
           } else {
             console.warn("⚠️ Compliance analysis failed, but document was saved");
+            toast.warning("Document saved, but AI analysis failed");
           }
         } catch (aiError) {
           console.error("❌ Compliance analysis error:", aiError);
+          toast.error("Document saved, but AI analysis failed");
         }
+      } else {
+        toast.success("Document saved successfully");
       }
       
       onSaveSuccess?.(data[0]);

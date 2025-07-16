@@ -4,6 +4,7 @@ import React, { useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
+import { toast } from "sonner"
 
 const TEST_BUILDING_ID = 3
 
@@ -87,13 +88,15 @@ export default function UploadClean() {
 
     if (insertError) {
       console.error("❌ Metadata insert failed:", insertError)
-      alert("Metadata save failed. Check console.")
+      toast.error("Metadata save failed. Check console.")
     } else {
       console.log("✅ File uploaded and metadata saved.")
       
       // Now trigger AI analysis
       try {
         console.log("🤖 Starting AI document analysis...")
+        toast.info("Analyzing document with AI...")
+        
         const res = await fetch('/api/extract-summary', {
           method: 'POST',
           body: JSON.stringify({ documentId }),
@@ -118,20 +121,22 @@ export default function UploadClean() {
               
             if (updateError) {
               console.error("⚠️ Failed to update with AI data:", updateError);
+              toast.warning("Upload successful, but failed to update with AI data");
             } else {
               console.log("✅ Document updated with AI-extracted data");
+              toast.success(`Upload successful! Document analyzed as: ${doc_type}`);
             }
+          } else {
+            toast.success("Upload successful! AI analysis complete.");
           }
-          
-          alert(`Upload successful! AI analysis complete.\nDocument Type: ${doc_type}\nCompliance Status: ${compliance_status}`);
         } else {
           const errorData = await res.json();
           console.error("❌ AI analysis failed:", errorData);
-          alert("Upload successful, but AI analysis failed. Check console for details.");
+          toast.warning("Upload successful, but AI analysis failed");
         }
       } catch (aiError) {
         console.error("❌ AI analysis error:", aiError);
-        alert("Upload successful, but AI analysis failed. Check console for details.");
+        toast.error("Upload successful, but AI analysis failed");
       }
     }
 
