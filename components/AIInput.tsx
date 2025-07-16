@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 interface AIInputProps {
   buildingId: string;
@@ -11,6 +12,16 @@ export default function AIInput({ buildingId, context }: AIInputProps) {
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
   const [loading, setLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const supabase = createClientComponentClient();
+
+  useEffect(() => {
+    const getSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUserId(session?.user?.id ?? null);
+    };
+    getSession();
+  }, [supabase]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,52 +29,37 @@ export default function AIInput({ buildingId, context }: AIInputProps) {
       setAnswer('Please enter a question.');
       return;
     }
-
-    console.log("🧠 AIInput: Starting AI request");
-    console.log("📝 Question:", question);
-    console.log("🏢 Building ID:", buildingId);
-    console.log("📋 Context:", context);
+    if (!userId) {
+      setAnswer('User not authenticated. Please log in.');
+      return;
+    }
 
     setLoading(true);
     try {
       const requestBody = { 
         question, 
-        buildingId
+        buildingId,
+        userId
       };
-      
-      console.log("📤 Sending request to /api/generate-answer");
-      console.log("📦 Request body:", requestBody);
-
-      const response = await fetch('/api/generate-answer', {
+      const response = await fetch('/api/ask', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(requestBody),
       });
-
-      console.log("📥 Response status:", response.status);
-      console.log("📥 Response headers:", Object.fromEntries(response.headers.entries()));
-
       const data = await response.json();
-      console.log("📦 Response data:", data);
-
       if (data.answer) {
-        console.log("✅ AI response received:", data.answer.substring(0, 100) + "...");
         setAnswer(data.answer);
       } else if (data.error) {
-        console.error("❌ AI error:", data.error);
         setAnswer(`Error: ${data.error}`);
       } else {
-        console.error("❌ No answer or error in response");
         setAnswer('Error: No response from AI service');
       }
     } catch (error) {
-      console.error('❌ Network error generating answer:', error);
       setAnswer('Error: Failed to connect to AI service. Please check your internet connection and try again.');
     } finally {
       setLoading(false);
-      console.log("🏁 AI request completed");
     }
   };
 
