@@ -85,7 +85,7 @@ export const UK_COMPLIANCE_ITEMS = [
   },
   {
     id: 4,
-    name: 'Lift Service',
+    name: 'Lift Inspections',
     description: 'Lift maintenance and safety inspections',
     required_if: 'if present' as const,
     default_frequency: '6 months',
@@ -480,7 +480,7 @@ function formatAssetTitle(code: string): string {
     'Fire Risk Assessment': 'Fire Risk Assessment',
     'Emergency Lighting': 'Emergency Lighting',
     'Fire Extinguishers': 'Fire Extinguishers',
-    'Lift Service': 'Lift Service',
+    'Lift Inspections': 'Lift Inspections',
     'Ventilation Systems': 'Ventilation Systems',
     'Electrical Installation Condition Report (EICR)': 'Electrical Installation Condition Report (EICR)',
     'Gas Safety Certificate': 'Gas Safety Certificate',

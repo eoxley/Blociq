@@ -1,30 +1,65 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Shield, AlertTriangle, Clock, CheckCircle, Save, CheckSquare, XCircle, Info } from 'lucide-react'
+import { Shield, AlertTriangle, Clock, CheckCircle, Save, CheckSquare, XCircle, Info, Building } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { UK_COMPLIANCE_ITEMS, BuildingAsset } from '../../lib/complianceUtils'
 
-interface UKComplianceSetupProps {
-  buildingId: number
-  buildingName: string
+interface Building {
+  id: number
+  name: string
 }
 
-export default function UKComplianceSetup({ buildingId, buildingName }: UKComplianceSetupProps) {
+interface UKComplianceSetupProps {
+  onSaveSuccess?: () => void
+}
+
+export default function UKComplianceSetup({ onSaveSuccess }: UKComplianceSetupProps) {
+  const [buildings, setBuildings] = useState<Building[]>([])
+  const [selectedBuildingId, setSelectedBuildingId] = useState<number | null>(null)
   const [assets, setAssets] = useState<BuildingAsset[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [applyToAll, setApplyToAll] = useState(false)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
+  const [saveSuccess, setSaveSuccess] = useState(false)
   const supabase = createClientComponentClient()
 
-  // Load existing building assets
+  // Load buildings on component mount
   useEffect(() => {
-    loadBuildingAssets()
-  }, [buildingId])
+    loadBuildings()
+  }, [])
 
-  const loadBuildingAssets = async () => {
+  // Load building assets when building is selected
+  useEffect(() => {
+    if (selectedBuildingId) {
+      loadBuildingAssets(selectedBuildingId)
+    } else {
+      setAssets([])
+      setLoading(false)
+    }
+  }, [selectedBuildingId])
+
+  const loadBuildings = async () => {
     try {
+      const { data, error } = await supabase
+        .from('buildings')
+        .select('id, name')
+        .order('name')
+
+      if (error) {
+        console.error('Error loading buildings:', error)
+        return
+      }
+
+      setBuildings(data || [])
+    } catch (error) {
+      console.error('Error loading buildings:', error)
+    }
+  }
+
+  const loadBuildingAssets = async (buildingId: number) => {
+    try {
+      setLoading(true)
       const response = await fetch(`/api/building-assets?buildingId=${buildingId}`)
       const { assets: data, error } = await response.json()
 
@@ -93,6 +128,12 @@ export default function UKComplianceSetup({ buildingId, buildingName }: UKCompli
   const validateSetup = () => {
     const errors: string[] = []
     
+    if (!selectedBuildingId) {
+      errors.push('Please select a building')
+      setValidationErrors(errors)
+      return false
+    }
+    
     // Check that all always required items are selected
     const alwaysRequired = UK_COMPLIANCE_ITEMS.filter(item => item.required_if === 'always')
     const selectedAlwaysRequired = assets.filter(asset => 
@@ -101,14 +142,6 @@ export default function UKComplianceSetup({ buildingId, buildingName }: UKCompli
     
     if (selectedAlwaysRequired.length !== alwaysRequired.length) {
       errors.push('All legally required items must be selected')
-    }
-
-    // Check that selected items have dates if they're due soon
-    const selectedAssets = assets.filter(asset => asset.applies)
-    const missingDates = selectedAssets.filter(asset => !asset.last_checked || !asset.next_due)
-    
-    if (missingDates.length > 0) {
-      errors.push('Selected items must have last checked and next due dates')
     }
 
     setValidationErrors(errors)
@@ -128,9 +161,9 @@ export default function UKComplianceSetup({ buildingId, buildingName }: UKCompli
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          buildingId,
+          buildingId: selectedBuildingId,
           assets,
-          applyToAll
+          applyToAll: false
         })
       })
 
@@ -142,7 +175,12 @@ export default function UKComplianceSetup({ buildingId, buildingName }: UKCompli
         return
       }
 
-      alert(`Compliance setup saved successfully!${result.appliedToAll ? ' Applied to all buildings.' : ''}`)
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 3000) // Hide success message after 3 seconds
+      
+      if (onSaveSuccess) {
+        onSaveSuccess()
+      }
     } catch (error) {
       console.error('Error saving setup:', error)
       alert('Failed to save compliance setup. Please try again.')
@@ -193,14 +231,6 @@ export default function UKComplianceSetup({ buildingId, buildingName }: UKCompli
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
-      </div>
-    )
-  }
-
   const alwaysRequired = UK_COMPLIANCE_ITEMS.filter(item => item.required_if === 'always')
   const optionalItems = UK_COMPLIANCE_ITEMS.filter(item => item.required_if !== 'always')
 
@@ -208,27 +238,46 @@ export default function UKComplianceSetup({ buildingId, buildingName }: UKCompli
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">
-          Compliance Setup for {buildingName}
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          Building Compliance Setup
         </h2>
         <p className="text-gray-600 mb-4">
-          Configure which compliance obligations apply to this building. Legally required items are pre-selected and cannot be removed.
+          Configure which compliance obligations apply to each building. Legally required items are pre-selected and cannot be removed.
         </p>
         
-        {/* Apply to all toggle */}
-        <div className="flex items-center space-x-3">
-          <input
-            type="checkbox"
-            id="applyToAll"
-            checked={applyToAll}
-            onChange={(e) => setApplyToAll(e.target.checked)}
-            className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded"
-          />
-          <label htmlFor="applyToAll" className="text-sm font-medium text-gray-700">
-            Apply this configuration to all buildings in portfolio
+        {/* Building Selector */}
+        <div className="mb-4">
+          <label htmlFor="building-select" className="block text-sm font-medium text-gray-700 mb-2">
+            Select Building
           </label>
+          <select
+            id="building-select"
+            value={selectedBuildingId || ''}
+            onChange={(e) => setSelectedBuildingId(e.target.value ? parseInt(e.target.value) : null)}
+            className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500"
+          >
+            <option value="">Choose a building...</option>
+            {buildings.map((building) => (
+              <option key={building.id} value={building.id}>
+                {building.name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
+
+      {/* Success Message */}
+      {saveSuccess && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex">
+            <CheckCircle className="h-5 w-5 text-green-400 mr-2" />
+            <div>
+              <h3 className="text-sm font-medium text-green-800">Success!</h3>
+              <p className="text-sm text-green-700">Compliance setup saved successfully.</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Validation Errors */}
       {validationErrors.length > 0 && (
@@ -247,184 +296,204 @@ export default function UKComplianceSetup({ buildingId, buildingName }: UKCompli
         </div>
       )}
 
-      {/* Always Required Section */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900 flex items-center">
-            <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-            Always Required (Legally Mandatory)
-          </h3>
-          <p className="text-sm text-gray-600 mt-1">
-            These items are legally required for all buildings and cannot be deselected.
-          </p>
-        </div>
-        <div className="p-6 space-y-4">
-          {alwaysRequired.map(item => {
-            const asset = assets.find(a => a.compliance_item_id === item.id)
-            return (
-              <div key={item.id} className={`p-4 rounded-lg border ${getCategoryColor(item.category)}`}>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <input
-                        type="checkbox"
-                        checked={asset?.applies || false}
-                        disabled
-                        className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded"
-                      />
-                      <h4 className="font-medium text-gray-900">{item.name}</h4>
-                      {getRequirementBadge(item.required_if)}
-                    </div>
-                    <p className="text-sm text-gray-600 mb-3">{item.description}</p>
-                    <div className="text-xs text-gray-500 mb-3">
-                      Frequency: {item.default_frequency}
-                    </div>
-                    
-                    {asset?.applies && (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">
-                            Last Checked
-                          </label>
-                          <input
-                            type="date"
-                            value={asset.last_checked || ''}
-                            onChange={(e) => updateDate(item.id, 'last_checked', e.target.value)}
-                            className="block w-full text-sm border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">
-                            Next Due
-                          </label>
-                          <input
-                            type="date"
-                            value={asset.next_due || ''}
-                            onChange={(e) => updateDate(item.id, 'next_due', e.target.value)}
-                            className="block w-full text-sm border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">
-                            Notes
-                          </label>
-                          <input
-                            type="text"
-                            value={asset.notes || ''}
-                            onChange={(e) => updateNotes(item.id, e.target.value)}
-                            placeholder="Optional notes"
-                            className="block w-full text-sm border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Optional Assets Section */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900 flex items-center">
-            <Info className="h-5 w-5 text-blue-600 mr-2" />
-            Optional Assets (If Present)
-          </h3>
-          <p className="text-sm text-gray-600 mt-1">
-            Select these items if they apply to your building.
-          </p>
-        </div>
-        <div className="p-6 space-y-4">
-          {optionalItems.map(item => {
-            const asset = assets.find(a => a.compliance_item_id === item.id)
-            return (
-              <div key={item.id} className={`p-4 rounded-lg border ${getCategoryColor(item.category)}`}>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <input
-                        type="checkbox"
-                        checked={asset?.applies || false}
-                        onChange={() => toggleAsset(item.id)}
-                        className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded"
-                      />
-                      <h4 className="font-medium text-gray-900">{item.name}</h4>
-                      {getRequirementBadge(item.required_if)}
-                    </div>
-                    <p className="text-sm text-gray-600 mb-3">{item.description}</p>
-                    <div className="text-xs text-gray-500 mb-3">
-                      Frequency: {item.default_frequency}
-                    </div>
-                    
-                    {asset?.applies && (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">
-                            Last Checked
-                          </label>
-                          <input
-                            type="date"
-                            value={asset.last_checked || ''}
-                            onChange={(e) => updateDate(item.id, 'last_checked', e.target.value)}
-                            className="block w-full text-sm border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">
-                            Next Due
-                          </label>
-                          <input
-                            type="date"
-                            value={asset.next_due || ''}
-                            onChange={(e) => updateDate(item.id, 'next_due', e.target.value)}
-                            className="block w-full text-sm border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">
-                            Notes
-                          </label>
-                          <input
-                            type="text"
-                            value={asset.notes || ''}
-                            onChange={(e) => updateNotes(item.id, e.target.value)}
-                            placeholder="Optional notes"
-                            className="block w-full text-sm border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <button
-          onClick={saveSetup}
-          disabled={saving}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {saving ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              Saving...
-            </>
+      {selectedBuildingId && (
+        <>
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+            </div>
           ) : (
             <>
-              <Save className="h-4 w-4 mr-2" />
-              Save & Continue
+              {/* Always Required Section */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                    Always Required (Legally Mandatory)
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    These items are legally required for all buildings and cannot be deselected.
+                  </p>
+                </div>
+                <div className="p-6 space-y-4">
+                  {alwaysRequired.map(item => {
+                    const asset = assets.find(a => a.compliance_item_id === item.id)
+                    return (
+                      <div key={item.id} className={`p-4 rounded-lg border ${getCategoryColor(item.category)}`}>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3 mb-2">
+                              <input
+                                type="checkbox"
+                                checked={asset?.applies || false}
+                                disabled
+                                className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded"
+                              />
+                              <h4 className="font-medium text-gray-900">{item.name}</h4>
+                              {getRequirementBadge(item.required_if)}
+                            </div>
+                            <p className="text-sm text-gray-600 mb-3">{item.description}</p>
+                            <div className="text-xs text-gray-500 mb-3">
+                              Frequency: {item.default_frequency}
+                            </div>
+                            
+                            {asset?.applies && (
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                                    Last Checked
+                                  </label>
+                                  <input
+                                    type="date"
+                                    value={asset.last_checked || ''}
+                                    onChange={(e) => updateDate(item.id, 'last_checked', e.target.value)}
+                                    className="block w-full text-sm border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                                    Next Due
+                                  </label>
+                                  <input
+                                    type="date"
+                                    value={asset.next_due || ''}
+                                    onChange={(e) => updateDate(item.id, 'next_due', e.target.value)}
+                                    className="block w-full text-sm border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                                    Notes
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={asset.notes || ''}
+                                    onChange={(e) => updateNotes(item.id, e.target.value)}
+                                    placeholder="Optional notes"
+                                    className="block w-full text-sm border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Optional Assets Section */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                    <Info className="h-5 w-5 text-blue-600 mr-2" />
+                    Optional Assets (If Present)
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Select these items if they apply to your building.
+                  </p>
+                </div>
+                <div className="p-6 space-y-4">
+                  {optionalItems.map(item => {
+                    const asset = assets.find(a => a.compliance_item_id === item.id)
+                    return (
+                      <div key={item.id} className={`p-4 rounded-lg border ${getCategoryColor(item.category)}`}>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3 mb-2">
+                              <input
+                                type="checkbox"
+                                checked={asset?.applies || false}
+                                onChange={() => toggleAsset(item.id)}
+                                className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded"
+                              />
+                              <h4 className="font-medium text-gray-900">{item.name}</h4>
+                              {getRequirementBadge(item.required_if)}
+                            </div>
+                            <p className="text-sm text-gray-600 mb-3">{item.description}</p>
+                            <div className="text-xs text-gray-500 mb-3">
+                              Frequency: {item.default_frequency}
+                            </div>
+                            
+                            {asset?.applies && (
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                                    Last Checked
+                                  </label>
+                                  <input
+                                    type="date"
+                                    value={asset.last_checked || ''}
+                                    onChange={(e) => updateDate(item.id, 'last_checked', e.target.value)}
+                                    className="block w-full text-sm border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                                    Next Due
+                                  </label>
+                                  <input
+                                    type="date"
+                                    value={asset.next_due || ''}
+                                    onChange={(e) => updateDate(item.id, 'next_due', e.target.value)}
+                                    className="block w-full text-sm border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                                    Notes
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={asset.notes || ''}
+                                    onChange={(e) => updateNotes(item.id, e.target.value)}
+                                    placeholder="Optional notes"
+                                    className="block w-full text-sm border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Save Button */}
+              <div className="flex justify-end">
+                <button
+                  onClick={saveSetup}
+                  disabled={saving}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Changes
+                    </>
+                  )}
+                </button>
+              </div>
             </>
           )}
-        </button>
-      </div>
+        </>
+      )}
+
+      {!selectedBuildingId && !loading && (
+        <div className="text-center py-12">
+          <Building className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Select a Building</h3>
+          <p className="text-gray-500">Choose a building from the dropdown above to configure its compliance requirements.</p>
+        </div>
+      )}
     </div>
   )
 } 
