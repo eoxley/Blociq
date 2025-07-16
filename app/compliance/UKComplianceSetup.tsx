@@ -38,7 +38,7 @@ export default function UKComplianceSetup({ buildingId, buildingName }: UKCompli
       
       // Merge with UK compliance items
       const mergedAssets = UK_COMPLIANCE_ITEMS.map(item => {
-        const existing = existingAssets.get(item.id)
+        const existing = existingAssets.get(item.id) as BuildingAsset | undefined
         return {
           id: existing?.id || 0,
           building_id: buildingId,
