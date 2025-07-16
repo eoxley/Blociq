@@ -266,6 +266,18 @@ CREATE TABLE IF NOT EXISTS mail_templates (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Create communication_templates table for reusable communication templates
+CREATE TABLE IF NOT EXISTS communication_templates (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  type VARCHAR(50) NOT NULL CHECK (type IN ('email', 'letter', 'announcement')),
+  subject VARCHAR(500),
+  content TEXT NOT NULL,
+  created_by VARCHAR(255),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Create property_events table if it doesn't exist
 CREATE TABLE IF NOT EXISTS property_events (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -482,6 +494,7 @@ CREATE TABLE IF NOT EXISTS communications (
   content text,
   building_id uuid references buildings(id),
   unit_id uuid references units(id),
+  template_id integer references communication_templates(id),
   leaseholder_id uuid references leaseholders(id),
   sent boolean default false,
   sent_at timestamp
