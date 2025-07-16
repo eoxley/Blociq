@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowLeft, Calendar, Shield, FileText, Mail, ChevronDown, ChevronUp, ExternalLink, Clock, Wrench, Plus, Users, Edit, Save, X, UserPlus } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useBlocIQContext } from '@/components/BlocIQContext'
+import BuildingSetup from '@/components/building/BuildingSetup'
 
 type Building = {
   id: string
@@ -291,6 +292,11 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
             <p className="text-gray-500">No units have been added to this building yet.</p>
           </div>
         )}
+      </div>
+
+      {/* Building Structure & Setup */}
+      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <BuildingSetup />
       </div>
 
       {/* Key Dates & Metrics */}
