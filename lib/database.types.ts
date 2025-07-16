@@ -104,6 +104,53 @@ export type Database = {
         }
         Relationships: []
       }
+      building_setup: {
+        Row: {
+          id: number
+          building_id: number
+          structure_type: string | null
+          operational_notes: string | null
+          client_type: string | null
+          client_name: string | null
+          client_contact: string | null
+          client_email: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: number
+          building_id: number
+          structure_type?: string | null
+          operational_notes?: string | null
+          client_type?: string | null
+          client_name?: string | null
+          client_contact?: string | null
+          client_email?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: number
+          building_id?: number
+          structure_type?: string | null
+          operational_notes?: string | null
+          client_type?: string | null
+          client_name?: string | null
+          client_contact?: string | null
+          client_email?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "building_setup_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       chat_history: {
         Row: {
           building_id: string | null
