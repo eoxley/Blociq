@@ -6,7 +6,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export type Database = {
+export interface Database {
   // Allows to automatically instanciate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
@@ -82,37 +82,103 @@ export type Database = {
       }
       buildings: {
         Row: {
-          address: string | null
-          created_at: string | null
           id: number
           name: string
+          address: string | null
           unit_count: number | null
+          created_at: string | null
+          demo_ready: boolean | null
           access_notes: string | null
           sites_staff: string | null
           parking_info: string | null
           council_borough: string | null
+          building_manager_name: string | null
+          building_manager_email: string | null
+          building_manager_phone: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          building_age: string | null
+          construction_type: string | null
+          total_floors: string | null
+          lift_available: string | null
+          heating_type: string | null
+          hot_water_type: string | null
+          waste_collection_day: string | null
+          recycling_info: string | null
+          building_insurance_provider: string | null
+          building_insurance_expiry: string | null
+          fire_safety_status: string | null
+          asbestos_status: string | null
+          energy_rating: string | null
+          service_charge_frequency: string | null
+          ground_rent_amount: number | null
+          ground_rent_frequency: string | null
         }
         Insert: {
-          address?: string | null
-          created_at?: string | null
           id?: number
           name: string
+          address?: string | null
           unit_count?: number | null
+          created_at?: string | null
+          demo_ready?: boolean | null
           access_notes?: string | null
           sites_staff?: string | null
           parking_info?: string | null
           council_borough?: string | null
+          building_manager_name?: string | null
+          building_manager_email?: string | null
+          building_manager_phone?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          building_age?: string | null
+          construction_type?: string | null
+          total_floors?: string | null
+          lift_available?: string | null
+          heating_type?: string | null
+          hot_water_type?: string | null
+          waste_collection_day?: string | null
+          recycling_info?: string | null
+          building_insurance_provider?: string | null
+          building_insurance_expiry?: string | null
+          fire_safety_status?: string | null
+          asbestos_status?: string | null
+          energy_rating?: string | null
+          service_charge_frequency?: string | null
+          ground_rent_amount?: number | null
+          ground_rent_frequency?: string | null
         }
         Update: {
-          address?: string | null
-          created_at?: string | null
           id?: number
           name?: string
+          address?: string | null
           unit_count?: number | null
+          created_at?: string | null
+          demo_ready?: boolean | null
           access_notes?: string | null
           sites_staff?: string | null
           parking_info?: string | null
           council_borough?: string | null
+          building_manager_name?: string | null
+          building_manager_email?: string | null
+          building_manager_phone?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          building_age?: string | null
+          construction_type?: string | null
+          total_floors?: string | null
+          lift_available?: string | null
+          heating_type?: string | null
+          hot_water_type?: string | null
+          waste_collection_day?: string | null
+          recycling_info?: string | null
+          building_insurance_provider?: string | null
+          building_insurance_expiry?: string | null
+          fire_safety_status?: string | null
+          asbestos_status?: string | null
+          energy_rating?: string | null
+          service_charge_frequency?: string | null
+          ground_rent_amount?: number | null
+          ground_rent_frequency?: string | null
         }
         Relationships: []
       }
@@ -1030,6 +1096,113 @@ export type Database = {
             referencedRelation: "buildings"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      occupiers: {
+        Row: {
+          id: string
+          unit_id: number
+          full_name: string
+          email: string | null
+          phone: string | null
+          start_date: string | null
+          end_date: string | null
+          rent_amount: number | null
+          rent_frequency: string | null
+          status: string | null
+          notes: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          unit_id: number
+          full_name: string
+          email?: string | null
+          phone?: string | null
+          start_date?: string | null
+          end_date?: string | null
+          rent_amount?: number | null
+          rent_frequency?: string | null
+          status?: string | null
+          notes?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          unit_id?: number
+          full_name?: string
+          email?: string | null
+          phone?: string | null
+          start_date?: string | null
+          end_date?: string | null
+          rent_amount?: number | null
+          rent_frequency?: string | null
+          status?: string | null
+          notes?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "occupiers_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      building_amendments: {
+        Row: {
+          id: string
+          building_id: number
+          field_name: string
+          old_value: string | null
+          new_value: string | null
+          change_type: string
+          change_description: string | null
+          created_by: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          building_id: number
+          field_name: string
+          old_value?: string | null
+          new_value?: string | null
+          change_type: string
+          change_description?: string | null
+          created_by?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          building_id?: number
+          field_name?: string
+          old_value?: string | null
+          new_value?: string | null
+          change_type?: string
+          change_description?: string | null
+          created_by?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "building_amendments_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "building_amendments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
         ]
       }
       users: {

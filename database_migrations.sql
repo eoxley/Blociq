@@ -18,6 +18,29 @@ ALTER TABLE buildings ADD COLUMN IF NOT EXISTS sites_staff TEXT;
 ALTER TABLE buildings ADD COLUMN IF NOT EXISTS parking_info TEXT;
 ALTER TABLE buildings ADD COLUMN IF NOT EXISTS council_borough VARCHAR(255);
 
+-- Add new building information fields
+ALTER TABLE buildings ADD COLUMN IF NOT EXISTS building_manager_name VARCHAR(255);
+ALTER TABLE buildings ADD COLUMN IF NOT EXISTS building_manager_email VARCHAR(255);
+ALTER TABLE buildings ADD COLUMN IF NOT EXISTS building_manager_phone VARCHAR(50);
+ALTER TABLE buildings ADD COLUMN IF NOT EXISTS emergency_contact_name VARCHAR(255);
+ALTER TABLE buildings ADD COLUMN IF NOT EXISTS emergency_contact_phone VARCHAR(50);
+ALTER TABLE buildings ADD COLUMN IF NOT EXISTS building_age VARCHAR(100);
+ALTER TABLE buildings ADD COLUMN IF NOT EXISTS construction_type VARCHAR(100);
+ALTER TABLE buildings ADD COLUMN IF NOT EXISTS total_floors VARCHAR(10);
+ALTER TABLE buildings ADD COLUMN IF NOT EXISTS lift_available VARCHAR(10);
+ALTER TABLE buildings ADD COLUMN IF NOT EXISTS heating_type VARCHAR(100);
+ALTER TABLE buildings ADD COLUMN IF NOT EXISTS hot_water_type VARCHAR(100);
+ALTER TABLE buildings ADD COLUMN IF NOT EXISTS waste_collection_day VARCHAR(20);
+ALTER TABLE buildings ADD COLUMN IF NOT EXISTS recycling_info TEXT;
+ALTER TABLE buildings ADD COLUMN IF NOT EXISTS building_insurance_provider VARCHAR(255);
+ALTER TABLE buildings ADD COLUMN IF NOT EXISTS building_insurance_expiry DATE;
+ALTER TABLE buildings ADD COLUMN IF NOT EXISTS fire_safety_status VARCHAR(100);
+ALTER TABLE buildings ADD COLUMN IF NOT EXISTS asbestos_status VARCHAR(100);
+ALTER TABLE buildings ADD COLUMN IF NOT EXISTS energy_rating VARCHAR(10);
+ALTER TABLE buildings ADD COLUMN IF NOT EXISTS service_charge_frequency VARCHAR(50);
+ALTER TABLE buildings ADD COLUMN IF NOT EXISTS ground_rent_amount DECIMAL(10,2);
+ALTER TABLE buildings ADD COLUMN IF NOT EXISTS ground_rent_frequency VARCHAR(50);
+
 -- Create building_setup table for detailed building configuration
 CREATE TABLE IF NOT EXISTS building_setup (
   id SERIAL PRIMARY KEY,
@@ -307,7 +330,37 @@ CREATE TABLE IF NOT EXISTS property_events (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create indexes for better performance
+-- Create occupiers table for sub-tenancies
+CREATE TABLE IF NOT EXISTS occupiers (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  unit_id INTEGER NOT NULL REFERENCES units(id) ON DELETE CASCADE,
+  full_name VARCHAR(255) NOT NULL,
+  email VARCHAR(255),
+  phone VARCHAR(50),
+  start_date DATE,
+  end_date DATE,
+  rent_amount DECIMAL(10,2),
+  rent_frequency VARCHAR(20) DEFAULT 'monthly',
+  status VARCHAR(20) DEFAULT 'active',
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create building amendments table to track changes
+CREATE TABLE IF NOT EXISTS building_amendments (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  building_id INTEGER NOT NULL REFERENCES buildings(id) ON DELETE CASCADE,
+  field_name VARCHAR(100) NOT NULL,
+  old_value TEXT,
+  new_value TEXT,
+  change_type VARCHAR(20) NOT NULL, -- 'update', 'add', 'delete'
+  change_description TEXT,
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Add indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_buildings_name ON buildings(name);
 CREATE INDEX IF NOT EXISTS idx_units_building_id ON units(building_id);
 CREATE INDEX IF NOT EXISTS idx_leaseholders_unit_id ON leaseholders(unit_id);
@@ -320,6 +373,119 @@ CREATE INDEX IF NOT EXISTS idx_leases_unit_id ON leases(unit_id);
 CREATE INDEX IF NOT EXISTS idx_diary_entries_building_id ON diary_entries(building_id);
 CREATE INDEX IF NOT EXISTS idx_property_events_building_id ON property_events(building_id);
 CREATE INDEX IF NOT EXISTS idx_building_setup_building_id ON building_setup(building_id);
+CREATE INDEX IF NOT EXISTS idx_occupiers_unit_id ON occupiers(unit_id);
+CREATE INDEX IF NOT EXISTS idx_occupiers_status ON occupiers(status);
+CREATE INDEX IF NOT EXISTS idx_building_amendments_building_id ON building_amendments(building_id);
+CREATE INDEX IF NOT EXISTS idx_building_amendments_created_at ON building_amendments(created_at);
+
+-- Add RLS policies for occupiers
+ALTER TABLE occupiers ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view occupiers for their buildings" ON occupiers
+  FOR SELECT USING (
+    unit_id IN (
+      SELECT id FROM units 
+      WHERE building_id IN (
+        SELECT building_id FROM profiles WHERE id = auth.uid()
+      )
+    )
+  );
+
+CREATE POLICY "Users can insert occupiers for their buildings" ON occupiers
+  FOR INSERT WITH CHECK (
+    unit_id IN (
+      SELECT id FROM units 
+      WHERE building_id IN (
+        SELECT building_id FROM profiles WHERE id = auth.uid()
+      )
+    )
+  );
+
+CREATE POLICY "Users can update occupiers for their buildings" ON occupiers
+  FOR UPDATE USING (
+    unit_id IN (
+      SELECT id FROM units 
+      WHERE building_id IN (
+        SELECT building_id FROM profiles WHERE id = auth.uid()
+      )
+    )
+  );
+
+CREATE POLICY "Users can delete occupiers for their buildings" ON occupiers
+  FOR DELETE USING (
+    unit_id IN (
+      SELECT id FROM units 
+      WHERE building_id IN (
+        SELECT building_id FROM profiles WHERE id = auth.uid()
+      )
+    )
+  );
+
+-- Add RLS policies for building amendments
+ALTER TABLE building_amendments ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view amendments for their buildings" ON building_amendments
+  FOR SELECT USING (
+    building_id IN (
+      SELECT building_id FROM profiles WHERE id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can insert amendments for their buildings" ON building_amendments
+  FOR INSERT WITH CHECK (
+    building_id IN (
+      SELECT building_id FROM profiles WHERE id = auth.uid()
+    )
+  );
+
+-- Function to automatically log building amendments
+CREATE OR REPLACE FUNCTION log_building_amendment()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Log changes when building information is updated
+  IF TG_OP = 'UPDATE' THEN
+    -- Check each field for changes
+    IF OLD.name IS DISTINCT FROM NEW.name THEN
+      INSERT INTO building_amendments (building_id, field_name, old_value, new_value, change_type, change_description)
+      VALUES (NEW.id, 'name', OLD.name, NEW.name, 'update', 'Building name updated');
+    END IF;
+    
+    IF OLD.address IS DISTINCT FROM NEW.address THEN
+      INSERT INTO building_amendments (building_id, field_name, old_value, new_value, change_type, change_description)
+      VALUES (NEW.id, 'address', OLD.address, NEW.address, 'update', 'Building address updated');
+    END IF;
+    
+    IF OLD.access_notes IS DISTINCT FROM NEW.access_notes THEN
+      INSERT INTO building_amendments (building_id, field_name, old_value, new_value, change_type, change_description)
+      VALUES (NEW.id, 'access_notes', OLD.access_notes, NEW.access_notes, 'update', 'Access notes updated');
+    END IF;
+    
+    IF OLD.sites_staff IS DISTINCT FROM NEW.sites_staff THEN
+      INSERT INTO building_amendments (building_id, field_name, old_value, new_value, change_type, change_description)
+      VALUES (NEW.id, 'sites_staff', OLD.sites_staff, NEW.sites_staff, 'update', 'Sites staff updated');
+    END IF;
+    
+    IF OLD.parking_info IS DISTINCT FROM NEW.parking_info THEN
+      INSERT INTO building_amendments (building_id, field_name, old_value, new_value, change_type, change_description)
+      VALUES (NEW.id, 'parking_info', OLD.parking_info, NEW.parking_info, 'update', 'Parking information updated');
+    END IF;
+    
+    IF OLD.council_borough IS DISTINCT FROM NEW.council_borough THEN
+      INSERT INTO building_amendments (building_id, field_name, old_value, new_value, change_type, change_description)
+      VALUES (NEW.id, 'council_borough', OLD.council_borough, NEW.council_borough, 'update', 'Council borough updated');
+    END IF;
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger for building amendments
+DROP TRIGGER IF EXISTS trigger_log_building_amendment ON buildings;
+CREATE TRIGGER trigger_log_building_amendment
+  AFTER UPDATE ON buildings
+  FOR EACH ROW
+  EXECUTE FUNCTION log_building_amendment();
 
 -- Insert sample data for testing
 INSERT INTO buildings (id, name, address, unit_count) VALUES 

@@ -1,6 +1,6 @@
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
-import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import { createClient } from '@/utils/supabase/server'
 import { Badge } from '@/components/ui/badge'
 
 interface ComplianceAsset {
@@ -14,57 +14,55 @@ interface BuildingComplianceAsset {
 }
 
 export default async function ComplianceTrackerPage({ params }: { params: { id: string } }) {
-  const supabase = createServerComponentClient({ cookies })
+  const supabase = createClient(cookies())
+  const buildingId = params.id
 
   const { data: session } = await supabase.auth.getSession()
   if (!session.session) redirect('/login')
 
-  const buildingId = params.id
-
-  // Fetch all compliance assets
+  // Load compliance asset definitions
   const { data: assets, error: assetError } = await supabase
     .from('compliance_assets')
     .select('id, name')
+    .order('name', { ascending: true })
 
-  if (assetError) {
-    console.error('Asset fetch error:', assetError.message)
-    throw new Error('Unable to load compliance assets')
+  if (assetError || !assets) {
+    console.error('Error loading compliance assets:', assetError)
+    return <p className="text-red-500">Error loading compliance asset list.</p>
   }
 
-  // Fetch saved compliance status per building
-  const { data: buildingAssets, error: statusError } = await supabase
+  // Load current building compliance status
+  const { data: statuses, error: statusError } = await supabase
     .from('building_compliance_assets')
     .select('asset_id, status')
     .eq('building_id', buildingId)
 
-  if (statusError) {
-    console.error('Status fetch error:', statusError.message)
-    throw new Error('Unable to load building compliance statuses')
+  if (statusError || !statuses) {
+    console.error('Error loading building statuses:', statusError)
+    return <p className="text-red-500">Error loading building compliance data.</p>
   }
 
-  const assetStatusMap = Object.fromEntries(
-    (buildingAssets || []).map((ba: BuildingComplianceAsset) => [ba.asset_id, ba.status])
-  )
+  const statusMap = Object.fromEntries((statuses as BuildingComplianceAsset[]).map((item) => [item.asset_id, item.status]))
 
   return (
     <div className="p-6 space-y-4">
       <h1 className="text-2xl font-semibold">Compliance Tracker</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {(assets || []).map((asset: ComplianceAsset) => {
-          const status = assetStatusMap[asset.id] || 'Not Selected'
+        {(assets as ComplianceAsset[]).map((asset) => {
+          const status = statusMap[asset.id] || 'Not Tracked'
+          const badgeVariant =
+            status === 'Compliant'
+              ? 'default'
+              : status === 'Overdue'
+              ? 'destructive'
+              : status === 'Missing'
+              ? 'warning'
+              : 'outline'
+
           return (
-            <div
-              key={asset.id}
-              className="border rounded-xl p-4 shadow-sm bg-white space-y-2"
-            >
+            <div key={asset.id} className="p-4 border rounded-xl shadow-sm space-y-2 bg-white">
               <div className="font-medium">{asset.name}</div>
-              <Badge variant={
-                status === 'Compliant' ? 'default' :
-                status === 'Overdue' ? 'destructive' :
-                status === 'Missing' ? 'warning' : 'outline'
-              }>
-                {status}
-              </Badge>
+              <Badge variant={badgeVariant}>{status}</Badge>
             </div>
           )
         })}
