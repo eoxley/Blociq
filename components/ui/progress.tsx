@@ -10,11 +10,11 @@ const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
     return (
       <div
         ref={ref}
-        className={cn("w-full h-2 bg-gray-200 rounded", className)}
+        className={cn("w-full h-2 bg-muted rounded", className)}
         {...props}
       >
         <div
-          className="h-2 bg-teal-500 rounded transition-all"
+          className="h-2 bg-primary rounded transition-all"
           style={{ width: `${value ?? 0}%` }}
         />
       </div>

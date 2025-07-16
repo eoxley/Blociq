@@ -49,7 +49,7 @@ export default function Sidebar() {
   ]
 
   return (
-    <aside className="min-h-screen w-64 bg-gradient-to-b from-teal-700 to-teal-800 text-white flex flex-col py-6 px-4 shadow-xl">
+    <aside className="min-h-screen w-64 bg-gradient-to-b from-secondary to-secondary/90 text-white flex flex-col py-6 px-4 shadow-xl">
       {/* Logo Section */}
       <div className="mb-8 px-4">
         <div className="flex items-center gap-3 mb-2">
@@ -58,7 +58,7 @@ export default function Sidebar() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-serif">BlocIQ</h1>
-            <p className="text-xs text-teal-200 opacity-75">Property Intelligence</p>
+            <p className="text-xs text-white/75">Property Intelligence</p>
           </div>
         </div>
       </div>
@@ -80,9 +80,9 @@ export default function Sidebar() {
         })}
 
         {/* Coming Soon Section */}
-        <div className="pt-4 border-t border-teal-600 mt-4">
+        <div className="pt-4 border-t border-white/20 mt-4">
           <div className="px-4 py-2">
-            <p className="text-xs text-teal-200 opacity-75 mb-2">Coming Soon</p>
+            <p className="text-xs text-white/75 mb-2">Coming Soon</p>
           </div>
           {/* Major Works */}
           <a
@@ -132,10 +132,10 @@ export default function Sidebar() {
       </nav>
 
       {/* Logout Section */}
-      <div className="border-t border-teal-600 pt-4 mt-6">
+      <div className="border-t border-white/20 pt-4 mt-6">
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium hover:bg-red-500/20 transition-all duration-200 w-full text-left group"
+          className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium hover:bg-error/20 transition-all duration-200 w-full text-left group"
         >
           <LogOut className="h-5 w-5 group-hover:scale-110 transition-transform" />
           <span>Logout</span>
