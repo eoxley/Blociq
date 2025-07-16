@@ -87,6 +87,10 @@ export type Database = {
           id: number
           name: string
           unit_count: number | null
+          access_notes: string | null
+          sites_staff: string | null
+          parking_info: string | null
+          council_borough: string | null
         }
         Insert: {
           address?: string | null
@@ -94,6 +98,10 @@ export type Database = {
           id?: number
           name: string
           unit_count?: number | null
+          access_notes?: string | null
+          sites_staff?: string | null
+          parking_info?: string | null
+          council_borough?: string | null
         }
         Update: {
           address?: string | null
@@ -101,6 +109,10 @@ export type Database = {
           id?: number
           name?: string
           unit_count?: number | null
+          access_notes?: string | null
+          sites_staff?: string | null
+          parking_info?: string | null
+          council_borough?: string | null
         }
         Relationships: []
       }

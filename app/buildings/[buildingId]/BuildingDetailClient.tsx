@@ -6,6 +6,7 @@ import { ArrowLeft, Calendar, Shield, FileText, Mail, ChevronDown, ChevronUp, Ex
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useBlocIQContext } from '@/components/BlocIQContext'
 import BuildingSetup from '@/components/building/BuildingSetup'
+import BuildingInfo from '@/components/building/BuildingInfo'
 
 type Building = {
   id: string
@@ -292,6 +293,11 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
             <p className="text-gray-500">No units have been added to this building yet.</p>
           </div>
         )}
+      </div>
+
+      {/* Building Information */}
+      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <BuildingInfo buildingId={building.id} />
       </div>
 
       {/* Building Structure & Setup */}
