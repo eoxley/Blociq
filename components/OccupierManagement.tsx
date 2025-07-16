@@ -1,398 +1,351 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
-import { Plus, Edit, Trash2, Calendar, Mail, Phone, PoundSterling } from 'lucide-react'
-import { Tables } from '@/lib/database.types'
+import React, { useState, useEffect } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { toast } from 'sonner';
 
-type Occupier = Tables<'occupiers'>
-type Unit = Tables<'units'>
-
-interface OccupierManagementProps {
-  unit: Unit
-  onOccupierAdded?: () => void
+interface Occupier {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  status: 'active' | 'inactive';
+  start_date: string;
+  end_date?: string;
+  notes?: string;
 }
 
-export default function OccupierManagement({ unit, onOccupierAdded }: OccupierManagementProps) {
-  const supabase = createClientComponentClient()
-  const [occupiers, setOccupiers] = useState<Occupier[]>([])
-  const [loading, setLoading] = useState(true)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingOccupier, setEditingOccupier] = useState<Occupier | null>(null)
+interface OccupierManagementProps {
+  unitId: string;
+}
+
+export default function OccupierManagement({ unitId }: OccupierManagementProps) {
+  const [occupiers, setOccupiers] = useState<Occupier[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingOccupier, setEditingOccupier] = useState<Occupier | null>(null);
   const [formData, setFormData] = useState({
-    full_name: '',
+    name: '',
     email: '',
     phone: '',
+    status: 'active' as 'active' | 'inactive',
     start_date: '',
     end_date: '',
-    rent_amount: '',
-    rent_frequency: 'monthly',
-    status: 'active',
     notes: ''
-  })
+  });
+  const supabase = createClientComponentClient();
 
   useEffect(() => {
-    fetchOccupiers()
-  }, [unit.id])
+    fetchOccupiers();
+  }, [unitId]);
 
   const fetchOccupiers = async () => {
     try {
       const { data, error } = await supabase
         .from('occupiers')
         .select('*')
-        .eq('unit_id', unit.id)
-        .order('created_at', { ascending: false })
+        .eq('unit_id', unitId)
+        .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching occupiers:', error)
+        console.error('Error fetching occupiers:', error);
+        toast.error('Failed to load occupiers');
       } else {
-        setOccupiers(data || [])
+        setOccupiers(data || []);
       }
     } catch (error) {
-      console.error('Error fetching occupiers:', error)
+      console.error('Error fetching occupiers:', error);
+      toast.error('Failed to load occupiers');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     
     try {
       const occupierData = {
-        unit_id: unit.id,
-        full_name: formData.full_name,
-        email: formData.email || null,
-        phone: formData.phone || null,
-        start_date: formData.start_date || null,
-        end_date: formData.end_date || null,
-        rent_amount: formData.rent_amount ? parseFloat(formData.rent_amount) : null,
-        rent_frequency: formData.rent_frequency,
+        unit_id: unitId,
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
         status: formData.status,
+        start_date: formData.start_date,
+        end_date: formData.end_date || null,
         notes: formData.notes || null
-      }
+      };
 
       if (editingOccupier) {
         // Update existing occupier
         const { error } = await supabase
           .from('occupiers')
           .update(occupierData)
-          .eq('id', editingOccupier.id)
+          .eq('id', editingOccupier.id);
 
         if (error) {
-          console.error('Error updating occupier:', error)
-          return
+          console.error('Error updating occupier:', error);
+          toast.error('Failed to update occupier');
+        } else {
+          toast.success('Occupier updated successfully');
+          fetchOccupiers();
         }
       } else {
         // Create new occupier
         const { error } = await supabase
           .from('occupiers')
-          .insert(occupierData)
+          .insert([occupierData]);
 
         if (error) {
-          console.error('Error creating occupier:', error)
-          return
+          console.error('Error creating occupier:', error);
+          toast.error('Failed to create occupier');
+        } else {
+          toast.success('Occupier added successfully');
+          fetchOccupiers();
         }
       }
 
       // Reset form and close dialog
-      resetForm()
-      setIsDialogOpen(false)
-      fetchOccupiers()
-      onOccupierAdded?.()
+      resetForm();
+      setIsDialogOpen(false);
     } catch (error) {
-      console.error('Error saving occupier:', error)
+      console.error('Error saving occupier:', error);
+      toast.error('Failed to save occupier');
     }
-  }
+  };
 
   const handleEdit = (occupier: Occupier) => {
-    setEditingOccupier(occupier)
+    setEditingOccupier(occupier);
     setFormData({
-      full_name: occupier.full_name,
-      email: occupier.email || '',
-      phone: occupier.phone || '',
-      start_date: occupier.start_date || '',
+      name: occupier.name,
+      email: occupier.email,
+      phone: occupier.phone,
+      status: occupier.status,
+      start_date: occupier.start_date,
       end_date: occupier.end_date || '',
-      rent_amount: occupier.rent_amount?.toString() || '',
-      rent_frequency: occupier.rent_frequency || 'monthly',
-      status: occupier.status || 'active',
       notes: occupier.notes || ''
-    })
-    setIsDialogOpen(true)
-  }
+    });
+    setIsDialogOpen(true);
+  };
 
   const handleDelete = async (occupierId: string) => {
-    if (!confirm('Are you sure you want to delete this occupier?')) return
+    if (!confirm('Are you sure you want to delete this occupier?')) {
+      return;
+    }
 
     try {
       const { error } = await supabase
         .from('occupiers')
         .delete()
-        .eq('id', occupierId)
+        .eq('id', occupierId);
 
       if (error) {
-        console.error('Error deleting occupier:', error)
+        console.error('Error deleting occupier:', error);
+        toast.error('Failed to delete occupier');
       } else {
-        fetchOccupiers()
+        toast.success('Occupier deleted successfully');
+        fetchOccupiers();
       }
     } catch (error) {
-      console.error('Error deleting occupier:', error)
+      console.error('Error deleting occupier:', error);
+      toast.error('Failed to delete occupier');
     }
-  }
+  };
 
   const resetForm = () => {
     setFormData({
-      full_name: '',
+      name: '',
       email: '',
       phone: '',
+      status: 'active',
       start_date: '',
       end_date: '',
-      rent_amount: '',
-      rent_frequency: 'monthly',
-      status: 'active',
       notes: ''
-    })
-    setEditingOccupier(null)
-  }
+    });
+    setEditingOccupier(null);
+  };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'success'
-      case 'inactive': return 'secondary'
-      case 'pending': return 'warning'
-      default: return 'outline'
-    }
-  }
+  const handleAddNew = () => {
+    resetForm();
+    setIsDialogOpen(true);
+  };
 
   if (loading) {
-    return <div className="p-4">Loading occupiers...</div>
+    return <div className="text-center py-4">Loading occupiers...</div>;
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Occupiers (Sub-tenancies)</h3>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => resetForm()}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Occupier
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>
-                {editingOccupier ? 'Edit Occupier' : 'Add New Occupier'}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="full_name">Full Name *</Label>
-                <Input
-                  id="full_name"
-                  value={formData.full_name}
-                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                  required
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="phone">Phone</Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="start_date">Start Date</Label>
-                  <Input
-                    id="start_date"
-                    type="date"
-                    value={formData.start_date}
-                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="end_date">End Date</Label>
-                  <Input
-                    id="end_date"
-                    type="date"
-                    value={formData.end_date}
-                    onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                  />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="rent_amount">Rent Amount</Label>
-                  <Input
-                    id="rent_amount"
-                    type="number"
-                    step="0.01"
-                    value={formData.rent_amount}
-                    onChange={(e) => setFormData({ ...formData, rent_amount: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="rent_frequency">Frequency</Label>
-                  <Select
-                    value={formData.rent_frequency}
-                    onValueChange={(value) => setFormData({ ...formData, rent_frequency: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="weekly">Weekly</SelectItem>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                      <SelectItem value="quarterly">Quarterly</SelectItem>
-                      <SelectItem value="annually">Annually</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="status">Status</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) => setFormData({ ...formData, status: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  rows={3}
-                />
-              </div>
-              
-              <div className="flex gap-2 pt-4">
-                <Button type="submit" className="flex-1">
-                  {editingOccupier ? 'Update' : 'Add'} Occupier
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold">Occupiers</h3>
+        <Button onClick={handleAddNew} size="sm">
+          Add Occupier
+        </Button>
       </div>
 
       {occupiers.length === 0 ? (
-        <Card>
-          <CardContent className="p-6 text-center text-gray-500">
-            <p>No occupiers found for this unit.</p>
-            <p className="text-sm">Add an occupier to track sub-tenancies.</p>
-          </CardContent>
-        </Card>
+        <div className="text-center py-8 text-gray-500">
+          <p>No occupiers found for this unit.</p>
+          <p className="text-sm">Add an occupier to track sub-tenancies.</p>
+        </div>
       ) : (
         <div className="space-y-3">
           {occupiers.map((occupier) => (
-            <Card key={occupier.id}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-medium">{occupier.full_name}</h4>
-                      <Badge variant={getStatusColor(occupier.status)}>
-                        {occupier.status}
-                      </Badge>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
-                      {occupier.email && (
-                        <div className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          {occupier.email}
-                        </div>
-                      )}
-                      {occupier.phone && (
-                        <div className="flex items-center gap-1">
-                          <Phone className="h-3 w-3" />
-                          {occupier.phone}
-                        </div>
-                      )}
-                      {occupier.start_date && (
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {new Date(occupier.start_date).toLocaleDateString()}
-                        </div>
-                      )}
-                      {occupier.rent_amount && (
-                        <div className="flex items-center gap-1">
-                          <PoundSterling className="h-3 w-3" />
-                          £{occupier.rent_amount} {occupier.rent_frequency}
-                        </div>
-                      )}
-                    </div>
-                    
-                    {occupier.notes && (
-                      <p className="text-sm text-gray-500">{occupier.notes}</p>
-                    )}
+            <div key={occupier.id} className="bg-white border rounded-lg p-4 shadow-sm">
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h4 className="font-medium">{occupier.name}</h4>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      occupier.status === 'active' 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {occupier.status}
+                    </span>
                   </div>
-                  
-                  <div className="flex gap-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(occupier)}
-                    >
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(occupier.id)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
+                  <p className="text-sm text-gray-600">{occupier.email}</p>
+                  <p className="text-sm text-gray-600">{occupier.phone}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Start: {new Date(occupier.start_date).toLocaleDateString()}
+                    {occupier.end_date && ` • End: ${new Date(occupier.end_date).toLocaleDateString()}`}
+                  </p>
+                  {occupier.notes && (
+                    <p className="text-sm text-gray-600 mt-2">{occupier.notes}</p>
+                  )}
                 </div>
-              </CardContent>
-            </Card>
+                <div className="flex gap-2">
+                  <Button onClick={() => handleEdit(occupier)} size="sm" variant="outline">
+                    Edit
+                  </Button>
+                  <Button onClick={() => handleDelete(occupier.id)} size="sm" variant="destructive">
+                    Delete
+                  </Button>
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       )}
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogTrigger asChild>
+          <div style={{ display: 'none' }}></div>
+        </DialogTrigger>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {editingOccupier ? 'Edit Occupier' : 'Add New Occupier'}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Name *
+              </label>
+              <Input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                required
+                placeholder="Full name"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Email *
+              </label>
+              <Input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                required
+                placeholder="email@example.com"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Phone
+              </label>
+              <Input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                placeholder="Phone number"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </label>
+              <Select
+                value={formData.status}
+                onChange={(e) => setFormData({...formData, status: e.target.value as 'active' | 'inactive'})}
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Start Date *
+              </label>
+              <Input
+                type="date"
+                value={formData.start_date}
+                onChange={(e) => setFormData({...formData, start_date: e.target.value})}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                End Date
+              </label>
+              <Input
+                type="date"
+                value={formData.end_date}
+                onChange={(e) => setFormData({...formData, end_date: e.target.value})}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Notes
+              </label>
+              <Textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                placeholder="Additional notes..."
+                rows={3}
+              />
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <Button type="submit" className="flex-1">
+                {editingOccupier ? 'Update' : 'Add'} Occupier
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
-  )
+  );
 } 

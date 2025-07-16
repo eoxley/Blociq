@@ -182,6 +182,72 @@ export interface Database {
         }
         Relationships: []
       }
+      compliance_assets: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          category: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          category?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          category?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      building_compliance_assets: {
+        Row: {
+          id: string
+          building_id: number
+          asset_id: string
+          status: string
+          notes: string | null
+          last_updated: string
+        }
+        Insert: {
+          id?: string
+          building_id: number
+          asset_id: string
+          status: string
+          notes?: string | null
+          last_updated?: string
+        }
+        Update: {
+          id?: string
+          building_id?: number
+          asset_id?: string
+          status?: string
+          notes?: string | null
+          last_updated?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "building_compliance_assets_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "building_compliance_assets_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_assets"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       building_setup: {
         Row: {
           id: number
