@@ -197,40 +197,73 @@ export type Database = {
       }
       communications: {
         Row: {
-          body: string | null
-          building_id: string | null
-          created_at: string | null
           id: string
-          recipient: string | null
-          sender_id: string | null
+          created_at: string | null
+          created_by: string | null
+          type: string | null
           subject: string | null
+          content: string | null
+          building_id: string | null
+          unit_id: string | null
+          leaseholder_id: string | null
+          sent: boolean | null
+          sent_at: string | null
         }
         Insert: {
-          body?: string | null
-          building_id?: string | null
-          created_at?: string | null
           id?: string
-          recipient?: string | null
-          sender_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          type?: string | null
           subject?: string | null
+          content?: string | null
+          building_id?: string | null
+          unit_id?: string | null
+          leaseholder_id?: string | null
+          sent?: boolean | null
+          sent_at?: string | null
         }
         Update: {
-          body?: string | null
-          building_id?: string | null
-          created_at?: string | null
           id?: string
-          recipient?: string | null
-          sender_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          type?: string | null
           subject?: string | null
+          content?: string | null
+          building_id?: string | null
+          unit_id?: string | null
+          leaseholder_id?: string | null
+          sent?: boolean | null
+          sent_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "communications_sender_id_fkey"
-            columns: ["sender_id"]
+            foreignKeyName: "communications_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
-            referencedRelation: "users"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "communications_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communications_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communications_leaseholder_id_fkey"
+            columns: ["leaseholder_id"]
+            isOneToOne: false
+            referencedRelation: "leaseholders"
+            referencedColumns: ["id"]
+          }
         ]
       }
       compliance_docs: {
