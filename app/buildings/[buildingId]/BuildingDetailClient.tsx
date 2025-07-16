@@ -2,9 +2,8 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Calendar, DollarSign, Shield, FileText, Mail, ChevronDown, ChevronUp, ExternalLink, Brain, AlertTriangle, Clock, Wrench, Plus, Users } from 'lucide-react'
+import { ArrowLeft, Calendar, Shield, FileText, Mail, ChevronDown, ChevronUp, ExternalLink, Clock, Wrench, Plus, Users, Edit, Save, X, UserPlus } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import AIInput from '../../../components/AIInput'
 import { useBlocIQContext } from '@/components/BlocIQContext'
 
 type Building = {
@@ -49,6 +48,8 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
   const [complianceExpanded, setComplianceExpanded] = useState(false)
   const [units, setUnits] = useState<Unit[]>([])
   const [loadingUnits, setLoadingUnits] = useState(true)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editedBuilding, setEditedBuilding] = useState(building)
   const supabase = createClientComponentClient()
   const { setContext } = useBlocIQContext()
 
@@ -60,14 +61,9 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
     });
   }, [building.id, building.name, setContext]);
 
-  console.log('BuildingDetailClient rendered with building:', building)
-  console.log('Current units state:', units)
-  console.log('Loading units:', loadingUnits)
-
   // Fetch units for this building
   useEffect(() => {
     const fetchUnits = async () => {
-      console.log('Fetching units for building:', building.id)
       try {
         const { data, error } = await supabase
           .from('units')
@@ -85,12 +81,9 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
           .eq('building_id', building.id)
           .order('unit_number')
 
-        console.log('Units query result:', { data, error })
-
         if (error) {
           console.error('Error fetching units:', error)
         } else {
-          console.log('Setting units:', data)
           setUnits(data || [])
         }
       } catch (error) {
@@ -118,15 +111,30 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
     })
   }
 
+  const handleSave = async () => {
+    try {
+      const { error } = await supabase
+        .from('buildings')
+        .update(editedBuilding)
+        .eq('id', building.id)
+
+      if (error) {
+        console.error('Error updating building:', error)
+      } else {
+        setIsEditing(false)
+        // Update the building prop if needed
+      }
+    } catch (error) {
+      console.error('Error saving building:', error)
+    }
+  }
+
+  const handleEmailLeaseholder = (email: string) => {
+    window.open(`mailto:${email}`, '_blank')
+  }
+
   return (
     <div className="max-w-6xl mx-auto p-6">
-      {/* Debug Info */}
-      <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-2 rounded mb-4">
-        <p><strong>Debug:</strong> Building ID: {building.id}</p>
-        <p><strong>Debug:</strong> Units count: {units.length}</p>
-        <p><strong>Debug:</strong> Loading: {loadingUnits ? 'Yes' : 'No'}</p>
-      </div>
-      
       {/* Building Overview Header */}
       <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
         <div className="flex items-center gap-4 mb-4">
@@ -140,12 +148,65 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
         </div>
         
         <div className="border-b border-gray-200 pb-4">
-          <h1 className="text-3xl font-bold text-[#0F5D5D] mb-2">
-            {building.name}
-          </h1>
-          <p className="text-lg text-gray-600">
-            {building.address}
-          </p>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-bold text-[#0F5D5D] mb-2">
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editedBuilding.name}
+                    onChange={(e) => setEditedBuilding({...editedBuilding, name: e.target.value})}
+                    className="text-3xl font-bold text-[#0F5D5D] bg-transparent border-b border-gray-300 focus:outline-none focus:border-teal-500"
+                  />
+                ) : (
+                  building.name
+                )}
+              </h1>
+              <p className="text-lg text-gray-600">
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editedBuilding.address}
+                    onChange={(e) => setEditedBuilding({...editedBuilding, address: e.target.value})}
+                    className="text-lg text-gray-600 bg-transparent border-b border-gray-300 focus:outline-none focus:border-teal-500 w-full"
+                  />
+                ) : (
+                  building.address
+                )}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              {isEditing ? (
+                <>
+                  <button
+                    onClick={handleSave}
+                    className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                  >
+                    <Save className="h-4 w-4" />
+                    Save
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsEditing(false)
+                      setEditedBuilding(building)
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                >
+                  <Edit className="h-4 w-4" />
+                  Edit
+                </button>
+              )}
+            </div>
+          </div>
           
           {/* Navigation Links */}
           <div className="flex items-center gap-4 mt-4">
@@ -200,12 +261,40 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
                 </div>
                 <p className="text-sm text-gray-600 mb-2">Floor {unit.floor}</p>
                 {unit.leaseholders && unit.leaseholders.length > 0 ? (
-                  <div className="text-sm text-gray-700">
-                    <p className="font-medium">{unit.leaseholders[0].name}</p>
-                    <p className="text-gray-600">{unit.leaseholders[0].email}</p>
+                  <div className="space-y-2">
+                    <div className="text-sm text-gray-700">
+                      <p className="font-medium">{unit.leaseholders[0].name}</p>
+                      <p className="text-gray-600">{unit.leaseholders[0].email}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEmailLeaseholder(unit.leaseholders[0].email)}
+                        className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs hover:bg-blue-100 transition-colors"
+                        title="Email leaseholder"
+                      >
+                        <Mail className="h-3 w-3" />
+                        Email
+                      </button>
+                      <button
+                        className="flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded text-xs hover:bg-green-100 transition-colors"
+                        title="Add occupier"
+                      >
+                        <UserPlus className="h-3 w-3" />
+                        Add Occupier
+                      </button>
+                    </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-500 italic">No leaseholder assigned</p>
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-500 italic">No leaseholder assigned</p>
+                    <button
+                      className="flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded text-xs hover:bg-green-100 transition-colors"
+                      title="Add occupier"
+                    >
+                      <UserPlus className="h-3 w-3" />
+                      Add Occupier
+                    </button>
+                  </div>
                 )}
               </div>
             ))}
@@ -219,122 +308,54 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
         )}
       </div>
 
-      {/* BlocAI Summary Box */}
-      <div className="bg-gradient-to-r from-teal-50 to-blue-50 border border-teal-200 rounded-xl shadow-lg p-6 mb-8">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex items-center justify-center w-10 h-10 bg-teal-600 rounded-lg">
-            <Brain className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h2 className="text-xl font-semibold text-[#0F5D5D]">BlocAI Summary</h2>
-            <p className="text-sm text-gray-600">Key insights and recommendations</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Upcoming Events */}
-          <div className="bg-white rounded-lg p-4 border border-teal-100">
-            <div className="flex items-center gap-2 mb-2">
-              <Clock className="h-4 w-4 text-teal-600" />
-              <h3 className="font-medium text-gray-900">Upcoming Events</h3>
-            </div>
-            <p className="text-sm text-gray-700">
-              <span className="font-semibold text-orange-600">3 urgent items</span> require attention this month. 
-              Insurance renewal due in 23 days, and fire safety inspection scheduled for next week.
-            </p>
-          </div>
-
-          {/* Compliance Status */}
-          <div className="bg-white rounded-lg p-4 border border-teal-100">
-            <div className="flex items-center gap-2 mb-2">
-              <Shield className="h-4 w-4 text-teal-600" />
-              <h3 className="font-medium text-gray-900">Compliance Status</h3>
-            </div>
-            <p className="text-sm text-gray-700">
-              <span className="font-semibold text-red-600">1 overdue item:</span> Fire door survey is 15 days past due. 
-              EWS1 certificate and gas inspection are current.
-            </p>
-          </div>
-
-          {/* Email Sentiment */}
-          <div className="bg-white rounded-lg p-4 border border-teal-100">
-            <div className="flex items-center gap-2 mb-2">
-              <Mail className="h-4 w-4 text-teal-600" />
-              <h3 className="font-medium text-gray-900">Email Sentiment</h3>
-            </div>
-            <p className="text-sm text-gray-700">
-              <span className="font-semibold text-yellow-600">2 urgent emails</span> from residents this week. 
-              One complaint about heating system, one inquiry about service charges.
-            </p>
-          </div>
-        </div>
-
-        {/* Action Items */}
-        <div className="mt-4 pt-4 border-t border-teal-200">
-          <h4 className="font-medium text-[#0F5D5D] mb-2">Recommended Actions:</h4>
-          <ul className="text-sm text-gray-700 space-y-1">
-            <li className="flex items-center gap-2">
-              <AlertTriangle className="h-3 w-3 text-red-500" />
-              Schedule fire door survey immediately (overdue)
-            </li>
-            <li className="flex items-center gap-2">
-              <Clock className="h-3 w-3 text-orange-500" />
-              Contact insurance provider for renewal quotes
-            </li>
-            <li className="flex items-center gap-2">
-              <Mail className="h-3 w-3 text-blue-500" />
-              Respond to urgent resident emails within 24 hours
-            </li>
-          </ul>
-        </div>
-
-        {/* AI Input Section */}
-        <div className="mt-6 pt-4 border-t border-teal-200">
-          <h4 className="font-medium text-[#0F5D5D] mb-3">Ask BlocIQ:</h4>
-          <AIInput buildingId={building.id} context={`You are assisting with ${building.name}.`} />
-        </div>
-      </div>
-
       {/* Key Dates & Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <div className="bg-white rounded-xl shadow-lg p-6">
           <div className="flex items-center gap-3 mb-3">
             <Calendar className="h-6 w-6 text-teal-600" />
             <h3 className="font-semibold text-[#0F5D5D]">Service Charge Year End</h3>
           </div>
-          <p className="text-2xl font-bold text-gray-900">
-            {building.service_charge_year_end ? formatDate(building.service_charge_year_end) : '31 March 2025'}
-          </p>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <div className="flex items-center gap-3 mb-3">
-            <DollarSign className="h-6 w-6 text-teal-600" />
-            <h3 className="font-semibold text-[#0F5D5D]">Section 20 Threshold</h3>
+          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-4">
+            <div className="text-center">
+              <div className="text-2xl mb-2">🚧</div>
+              <h4 className="font-medium text-gray-900 mb-2">Coming Soon</h4>
+              <p className="text-gray-600 text-sm">
+                Service charge management features are under development.
+              </p>
+            </div>
           </div>
-          <p className="text-2xl font-bold text-gray-900">
-            {building.section_20_threshold ? formatCurrency(building.section_20_threshold) : '£250'}
-          </p>
         </div>
 
         <div className="bg-white rounded-xl shadow-lg p-6">
           <div className="flex items-center gap-3 mb-3">
             <Shield className="h-6 w-6 text-teal-600" />
-            <h3 className="font-semibold text-[#0F5D5D]">Insurance Renewal</h3>
+            <h3 className="font-semibold text-[#0F5D5D]">Section 20 Threshold</h3>
           </div>
-          <p className="text-2xl font-bold text-gray-900">
-            {building.insurance_renewal_date ? formatDate(building.insurance_renewal_date) : '15 August 2025'}
-          </p>
+          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-4">
+            <div className="text-center">
+              <div className="text-2xl mb-2">🚧</div>
+              <h4 className="font-medium text-gray-900 mb-2">Coming Soon</h4>
+              <p className="text-gray-600 text-sm">
+                Section 20 management features are under development.
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="bg-white rounded-xl shadow-lg p-6">
           <div className="flex items-center gap-3 mb-3">
-            <DollarSign className="h-6 w-6 text-teal-600" />
+            <FileText className="h-6 w-6 text-teal-600" />
             <h3 className="font-semibold text-[#0F5D5D]">Account Balance</h3>
           </div>
-          <p className="text-2xl font-bold text-gray-900">
-            {building.property_account_balance ? formatCurrency(building.property_account_balance) : '£23,500'}
-          </p>
+          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-4">
+            <div className="text-center">
+              <div className="text-2xl mb-2">🚧</div>
+              <h4 className="font-medium text-gray-900 mb-2">Coming Soon</h4>
+              <p className="text-gray-600 text-sm">
+                Financial management features are under development.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
