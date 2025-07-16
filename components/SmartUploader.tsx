@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
+import DocumentTypeSelector from "./DocumentTypeSelector";
 
 type Props = {
   table: "leases" | "compliance_docs";
@@ -17,18 +18,20 @@ type Props = {
   onSaveSuccess?: (saved: any) => void;
 };
 
-const SmartUploader: React.FC<Props> = ({
+export default function SmartUploader({
   table,
   docTypePreset,
   buildingId,
   unitId,
   uploadedBy,
   onSaveSuccess,
-}) => {
+}: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [metadata, setMetadata] = useState<any>(null);
   const [saved, setSaved] = useState(false);
+  const [showTypeSelector, setShowTypeSelector] = useState(false);
+  const [currentDocumentId, setCurrentDocumentId] = useState<string>("");
 
   const handleExtract = async () => {
     if (!file) return;
@@ -160,6 +163,14 @@ const SmartUploader: React.FC<Props> = ({
             const analysisResult = await res.json();
             console.log("✅ Compliance analysis complete:", analysisResult);
             
+            // Check if AI couldn't detect the document type
+            if (!analysisResult.doc_type || analysisResult.doc_type === 'Unknown' || analysisResult.doc_type === 'null') {
+              console.log("⚠️ AI couldn't detect document type, showing manual selector");
+              setCurrentDocumentId(data[0].id);
+              setShowTypeSelector(true);
+              return; // Don't update the database yet, wait for user selection
+            }
+            
             // Update with AI-extracted data if it's better than what we have
             const updateData: any = {};
             if (analysisResult.doc_type && analysisResult.doc_type !== 'Unknown') {
@@ -201,6 +212,51 @@ const SmartUploader: React.FC<Props> = ({
     }
 
     setLoading(false);
+  };
+
+  const handleTypeSelected = (docType: string) => {
+    console.log("✅ User selected document type:", docType);
+    toast.success(`Document type updated to ${docType}`);
+    onSaveSuccess?.({ id: currentDocumentId, doc_type: docType });
+  };
+
+  const handleReanalyze = async () => {
+    if (!currentDocumentId) return;
+    
+    try {
+      toast.info("Re-analyzing document with AI...");
+      
+      const res = await fetch('/api/extract-summary', {
+        method: 'POST',
+        body: JSON.stringify({ documentId: currentDocumentId }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (res.ok) {
+        const analysisResult = await res.json();
+        
+        if (analysisResult.doc_type && analysisResult.doc_type !== 'Unknown' && analysisResult.doc_type !== 'null') {
+          // AI found a type, update the database
+          const { error: updateError } = await supabase
+            .from('compliance_docs')
+            .update({ doc_type: analysisResult.doc_type })
+            .eq('id', currentDocumentId);
+            
+          if (!updateError) {
+            toast.success(`AI re-analysis successful! Type: ${analysisResult.doc_type}`);
+            onSaveSuccess?.({ id: currentDocumentId, doc_type: analysisResult.doc_type });
+          }
+        } else {
+          // AI still couldn't detect, show selector again
+          setShowTypeSelector(true);
+        }
+      } else {
+        toast.error("Re-analysis failed");
+      }
+    } catch (error) {
+      console.error("Re-analysis error:", error);
+      toast.error("Re-analysis failed");
+    }
   };
 
   return (
@@ -270,8 +326,15 @@ const SmartUploader: React.FC<Props> = ({
       )}
 
       {saved && <p className="text-green-600 text-sm">✅ Document saved successfully.</p>}
+
+      {/* Document Type Selector Modal */}
+      <DocumentTypeSelector
+        isOpen={showTypeSelector}
+        onClose={() => setShowTypeSelector(false)}
+        documentId={currentDocumentId}
+        onTypeSelected={handleTypeSelected}
+        onReanalyze={handleReanalyze}
+      />
     </div>
   );
-};
-
-export default SmartUploader;
+}
