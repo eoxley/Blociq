@@ -1,3 +1,5 @@
+import { SupabaseClient } from '@supabase/supabase-js'
+
 export interface ComplianceAsset {
   id: string
   name: string
@@ -8,6 +10,7 @@ export interface ComplianceAsset {
   last_checked: string
   next_due: string
   category: string
+  status?: 'compliant' | 'overdue' | 'missing' | 'due_soon'
 }
 
 export interface UKComplianceItem {
@@ -32,6 +35,17 @@ export interface BuildingAsset {
   notes: string | null
   created_at: string | null
   updated_at: string | null
+}
+
+export interface ActiveComplianceAsset {
+  asset_type: string
+  title: string
+  required: boolean
+  last_doc_date: string | null
+  expiry_date: string | null
+  status: 'compliant' | 'overdue' | 'missing' | 'due_soon'
+  category: string
+  frequency: string
 }
 
 // UK-specific compliance items with proper terminology
@@ -389,4 +403,107 @@ export const formatRelativeDate = (dateString: string): string => {
   } else {
     return `Due in ${diffDays} days`
   }
+} 
+
+export async function getActiveComplianceAssets(supabase: SupabaseClient, buildingId: string): Promise<ActiveComplianceAsset[]> {
+  const { data: assetLinks, error } = await supabase
+    .from('building_assets')
+    .select(`
+      compliance_item_id,
+      applies,
+      last_checked,
+      next_due,
+      compliance_items (
+        id,
+        item_type,
+        category,
+        frequency
+      ),
+      compliance_docs!left(building_id, doc_type, start_date, expiry_date)
+    `)
+    .eq('building_id', parseInt(buildingId))
+    .eq('applies', true);
+
+  if (error) throw new Error(`Failed to fetch compliance assets: ${error.message}`);
+
+  const today = new Date();
+
+  return assetLinks.map(asset => {
+    const doc = asset.compliance_docs?.[0]; // latest doc
+    const complianceItem = Array.isArray(asset.compliance_items) ? asset.compliance_items[0] : asset.compliance_items;
+
+    let status: ActiveComplianceAsset['status'] = 'missing';
+    if (doc) {
+      if (doc.expiry_date) {
+        const expiry = new Date(doc.expiry_date);
+        const daysUntilExpiry = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (expiry < today) {
+          status = 'overdue';
+        } else if (daysUntilExpiry <= 30) {
+          status = 'due_soon';
+        } else {
+          status = 'compliant';
+        }
+      } else {
+        status = 'compliant';
+      }
+    } else if (asset.last_checked && asset.next_due) {
+      const nextDue = new Date(asset.next_due);
+      const daysUntilDue = Math.ceil((nextDue.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (nextDue < today) {
+        status = 'overdue';
+      } else if (daysUntilDue <= 30) {
+        status = 'due_soon';
+      } else {
+        status = 'compliant';
+      }
+    }
+
+    return {
+      asset_type: complianceItem?.item_type || 'Unknown',
+      title: formatAssetTitle(complianceItem?.item_type || 'Unknown'),
+      required: complianceItem?.category === 'Safety' || complianceItem?.item_type?.includes('Assessment') || false,
+      last_doc_date: doc?.start_date ?? asset.last_checked ?? null,
+      expiry_date: doc?.expiry_date ?? asset.next_due ?? null,
+      status,
+      category: complianceItem?.category || 'Unknown',
+      frequency: complianceItem?.frequency || 'Unknown'
+    };
+  });
+}
+
+// Format asset type to readable name with UK-specific terminology
+function formatAssetTitle(code: string): string {
+  const map: Record<string, string> = {
+    'Fire Risk Assessment': 'Fire Risk Assessment',
+    'Emergency Lighting': 'Emergency Lighting',
+    'Fire Extinguishers': 'Fire Extinguishers',
+    'Lift Service': 'Lift Service',
+    'Ventilation Systems': 'Ventilation Systems',
+    'Electrical Installation Condition Report (EICR)': 'Electrical Installation Condition Report (EICR)',
+    'Gas Safety Certificate': 'Gas Safety Certificate',
+    'Water Risk Assessment': 'Water Risk Assessment',
+    'Asbestos Management Survey': 'Asbestos Management Survey',
+    'Energy Performance Certificate (EPC)': 'Energy Performance Certificate (EPC)',
+    'Building Insurance': 'Building Insurance',
+    'Public Liability Insurance': 'Public Liability Insurance',
+    'Employers Liability Insurance': 'Employers Liability Insurance',
+    'Roof Inspection': 'Roof Inspection',
+    'Drainage Survey': 'Drainage Survey',
+    'External Wall Survey': 'External Wall Survey',
+    'Communal Area Risk Assessment': 'Communal Area Risk Assessment',
+    'Legionella Risk Assessment': 'Legionella Risk Assessment',
+    'PAT Testing': 'PAT Testing',
+    'Fire Door Inspection': 'Fire Door Inspection',
+    // Legacy mappings for backward compatibility
+    'FRA': 'Fire Risk Assessment',
+    'EICR': 'Electrical Installation Condition Report',
+    'H&S': 'Health & Safety Risk Assessment',
+    'Lift': 'Lift Inspection',
+    'Asbestos': 'Asbestos Survey',
+    'Insurance': 'Building Insurance',
+  };
+  return map[code] || code;
 } 
