@@ -213,6 +213,7 @@ export interface Database {
           asset_id: string
           status: string
           notes: string | null
+          next_due_date: string | null
           last_updated: string
         }
         Insert: {
@@ -221,6 +222,7 @@ export interface Database {
           asset_id: string
           status: string
           notes?: string | null
+          next_due_date?: string | null
           last_updated?: string
         }
         Update: {
@@ -229,6 +231,7 @@ export interface Database {
           asset_id?: string
           status?: string
           notes?: string | null
+          next_due_date?: string | null
           last_updated?: string
         }
         Relationships: [
