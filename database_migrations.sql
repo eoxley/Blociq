@@ -153,7 +153,10 @@ CREATE TABLE IF NOT EXISTS incoming_emails (
   tag VARCHAR(100),
   unit VARCHAR(50),
   thread_id VARCHAR(255),
-  message_id VARCHAR(255)
+  message_id VARCHAR(255),
+  -- Enhanced fields for better email management
+  flag_status VARCHAR(50) DEFAULT 'notFlagged' CHECK (flag_status IN ('notFlagged', 'flagged', 'complete')),
+  categories TEXT[] DEFAULT '{}'
 );
 
 -- Create email_drafts table

@@ -55,11 +55,12 @@ export async function GET() {
       },
     });
 
-    // Query emails using graphClient.messages.list()
+    // Query emails using graphClient.messages.list() with enhanced fields
     const messages = await graphClient
       .api('/users/testbloc@blociq.co.uk/messages')
       .top(50)
       .orderby('receivedDateTime DESC')
+      .select('id,subject,body,bodyPreview,from,receivedDateTime,isRead,flag,categories,conversationId')
       .get();
 
     const emails = messages.value || [];
@@ -73,6 +74,9 @@ export async function GET() {
           body_preview: "Hi, there's a leak in the bathroom. Can someone please check it out?",
           received_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
           handled: false,
+          unread: true,
+          flag_status: 'notFlagged',
+          categories: ['Maintenance'],
         },
         {
           from_email: "property@example.com",
@@ -80,6 +84,9 @@ export async function GET() {
           body_preview: "Your lease is due for renewal. Please contact us to discuss terms.",
           received_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
           handled: false,
+          unread: false,
+          flag_status: 'flagged',
+          categories: ['Urgent', 'Leaseholder'],
         },
         {
           from_email: "maintenance@example.com",
@@ -87,6 +94,9 @@ export async function GET() {
           body_preview: "We will be conducting our monthly building inspection tomorrow.",
           received_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
           handled: false,
+          unread: true,
+          flag_status: 'notFlagged',
+          categories: ['Compliance'],
         }
       ];
 
@@ -114,7 +124,7 @@ export async function GET() {
       });
     }
 
-    // Process real emails and insert into Supabase with handled = false
+    // Process real emails and insert into Supabase with enhanced fields
     const processedEmails = emails.map((email: any) => ({
       from_email: email.from?.emailAddress?.address || email.from?.emailAddress?.name || 'unknown@example.com',
       subject: email.subject || 'No Subject',
@@ -124,6 +134,12 @@ export async function GET() {
       unread: !email.isRead,
       thread_id: email.conversationId,
       handled: false, // Ensure all emails are saved with handled = false
+      // Enhanced fields from Microsoft Graph
+      flag_status: email.flag?.flagStatus || 'notFlagged',
+      categories: email.categories || [],
+      // Additional fields for better email management
+      pinned: false, // Can be set manually
+      tag: null, // Can be set manually for custom tagging
     }));
 
     // Upsert emails into Supabase
