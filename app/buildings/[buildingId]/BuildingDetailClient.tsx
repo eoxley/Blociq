@@ -143,6 +143,29 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
 
   return (
     <div className="max-w-6xl mx-auto p-6">
+      {/* Compliance Widget - Prominent Position */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-lg p-6 mb-8 text-white">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+              <Shield className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-1">Building Compliance</h2>
+              <p className="text-blue-100">Manage safety certificates, inspections, and regulatory requirements</p>
+            </div>
+          </div>
+          <Link
+            href={`/buildings/${building.id}/compliance/tracker`}
+            className="bg-white text-blue-600 px-6 py-3 rounded-lg hover:bg-blue-50 transition-colors font-semibold flex items-center gap-2 shadow-lg"
+          >
+            <Shield className="h-5 w-5" />
+            View Compliance
+            <ExternalLink className="h-4 w-4" />
+          </Link>
+        </div>
+      </div>
+
       {/* Building Overview Header */}
       <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
         <div className="flex items-center gap-4 mb-4">
@@ -317,16 +340,23 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
 
         <div className="bg-white rounded-xl shadow-lg p-6">
           <div className="flex items-center gap-3 mb-3">
-            <FileText className="h-6 w-6 text-teal-600" />
-            <h3 className="font-semibold text-[#0F5D5D]">Account Balance</h3>
+            <Shield className="h-6 w-6 text-teal-600" />
+            <h3 className="font-semibold text-[#0F5D5D]">Compliance Status</h3>
           </div>
-          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-4">
+          <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
             <div className="text-center">
-              <div className="text-2xl mb-2">🚧</div>
-              <h4 className="font-medium text-gray-900 mb-2">Coming Soon</h4>
-              <p className="text-gray-600 text-sm">
-                Financial management features are under development.
+              <div className="text-2xl mb-2">🛡️</div>
+              <h4 className="font-medium text-gray-900 mb-2">Active</h4>
+              <p className="text-gray-600 text-sm mb-3">
+                All compliance requirements are up to date
               </p>
+              <Link
+                href={`/buildings/${building.id}/compliance/tracker`}
+                className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+              >
+                <Shield className="h-4 w-4" />
+                View Details
+              </Link>
             </div>
           </div>
         </div>

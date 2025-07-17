@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { MessageCircle, Calendar, ExternalLink, Send, Loader2, Plus, Mail, FileText, Pin } from 'lucide-react'
+import { MessageCircle, Calendar, ExternalLink, Send, Loader2, Plus, Mail, FileText, Pin, RefreshCw, Paperclip, Home, X } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 type PropertyEvent = {
@@ -24,6 +24,18 @@ type ChatMessage = {
   timestamp: Date
 }
 
+type Email = {
+  id: string
+  subject: string
+  from_email: string
+  body_preview: string
+  received_at: string
+  handled: boolean
+  unread: boolean
+  flag_status: string
+  categories: string[]
+}
+
 interface HomePageClientProps {
   userData: UserData
 }
@@ -31,6 +43,7 @@ interface HomePageClientProps {
 export default function HomePageClient({ userData }: HomePageClientProps) {
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [attachments, setAttachments] = useState<File[]>([])
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
@@ -42,6 +55,10 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const [error, setError] = useState<string | null>(null)
   const [isAddingEvent, setIsAddingEvent] = useState(false)
   const [context, setContext] = useState<any>(null)
+  const [recentEmails, setRecentEmails] = useState<Email[]>([])
+  const [loadingEmails, setLoadingEmails] = useState(true)
+  const [syncingEmails, setSyncingEmails] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClientComponentClient()
 
   // Dynamic welcome messages
@@ -69,97 +86,149 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     return welcomeMessages[randomIndex]
   }
 
-  // Fetch real upcoming events from database
+  // Example upcoming events for demonstration
   const [upcomingEvents, setUpcomingEvents] = useState<PropertyEvent[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
 
   useEffect(() => {
-    const fetchEvents = async () => {
+    // Simulate loading delay
+    const timer = setTimeout(() => {
+      const exampleEvents: PropertyEvent[] = [
+        {
+          building: "Test Property",
+          date: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(), // 2 hours from now
+          title: "AGM Meeting",
+          category: "🏢 AGM"
+        },
+        {
+          building: "Test Property",
+          date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
+          title: "Legionella Inspections",
+          category: "🔍 Safety Inspection"
+        },
+        {
+          building: "XX Building",
+          date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // Day after tomorrow
+          title: "Contractor visiting to quote for roof works",
+          category: "🔨 Maintenance"
+        },
+        {
+          building: "Client Office",
+          date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days from now
+          title: "Call to discuss arrears with client",
+          category: "💰 Financial"
+        },
+        {
+          building: "TPI Conference Centre",
+          date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 1 week from now
+          title: "TPI Seminar",
+          category: "📚 Training"
+        }
+      ];
+      
+      setUpcomingEvents(exampleEvents);
+      setLoadingEvents(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Fetch recent emails
+  useEffect(() => {
+    const fetchEmails = async () => {
       try {
-        const { data: events, error } = await supabase
-          .from('property_events')
-          .select(`
-            id,
-            title,
-            start_time,
-            event_type,
-            category,
-            building_id
-          `)
-          .gte('start_time', new Date().toISOString())
-          .order('start_time', { ascending: true })
+        const { data: emails, error } = await supabase
+          .from('incoming_emails')
+          .select('*')
+          .order('received_at', { ascending: false })
           .limit(5);
 
         if (error) {
-          console.error('Error fetching events:', error);
+          console.error('Error fetching emails:', error);
         } else {
-          // Fetch building names separately
-          const buildingIds = events?.map(e => e.building_id).filter(Boolean) || [];
-          let buildingNames: Record<number, string> = {};
-          
-          if (buildingIds.length > 0) {
-            const { data: buildings } = await supabase
-              .from('buildings')
-              .select('id, name')
-              .in('id', buildingIds);
-            
-            buildingNames = buildings?.reduce((acc, building) => {
-              acc[building.id] = building.name;
-              return acc;
-            }, {} as Record<number, string>) || {};
-          }
-
-          const formattedEvents = events?.map(event => ({
-            building: buildingNames[event.building_id] || 'Unknown Building',
-            date: event.start_time,
-            title: event.title,
-            category: event.event_type || event.category || '📅 Event'
-          })) || [];
-          setUpcomingEvents(formattedEvents);
+          setRecentEmails(emails || []);
         }
       } catch (error) {
-        console.error('Error fetching events:', error);
+        console.error('Error fetching emails:', error);
       } finally {
-        setLoadingEvents(false);
+        setLoadingEmails(false);
       }
     };
 
-    fetchEvents();
+    fetchEmails();
   }, [supabase]);
+
+  // Sync emails function
+  const syncEmails = async () => {
+    setSyncingEmails(true);
+    try {
+      const response = await fetch('/api/sync-emails');
+      if (response.ok) {
+        // Refresh the emails list
+        const { data: emails, error } = await supabase
+          .from('incoming_emails')
+          .select('*')
+          .order('received_at', { ascending: false })
+          .limit(5);
+
+        if (!error) {
+          setRecentEmails(emails || []);
+        }
+      }
+    } catch (error) {
+      console.error('Error syncing emails:', error);
+    } finally {
+      setSyncingEmails(false);
+    }
+  };
+
+  const handleFileAttachment = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || [])
+    if (files.length > 0) {
+      setAttachments(prev => [...prev, ...files])
+    }
+  }
+
+  const removeAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!inputValue.trim()) return
+    if (!inputValue.trim() && attachments.length === 0) return
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
-      content: inputValue,
+      content: inputValue + (attachments.length > 0 ? `\n\n📎 Attachments: ${attachments.map(f => f.name).join(', ')}` : ''),
       isUser: true,
       timestamp: new Date()
     }
 
     setMessages(prev => [...prev, userMessage])
     setInputValue('')
+    setAttachments([])
     setIsLoading(true)
     setError(null)
 
     try {
       console.log("🧠 HomePageClient: Starting AI request");
       console.log("📝 Input value:", inputValue);
+      console.log("📎 Attachments:", attachments.length);
 
-      const requestBody = { 
-        message: inputValue // Use 'message' for the new simplified endpoint
-      };
+      const formData = new FormData()
+      formData.append('message', inputValue)
+      
+      // Add attachments to form data
+      attachments.forEach((file, index) => {
+        formData.append(`attachment_${index}`, file)
+      })
 
       console.log("📤 Sending request to /api/ask-assistant");
-      console.log("📦 Request body:", requestBody);
+      console.log("📦 Request body:", formData);
 
       const res = await fetch('/api/ask-assistant', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
+        body: formData,
       })
 
       console.log("📥 Response status:", res.status);
@@ -331,23 +400,64 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           )}
 
           {/* Input form */}
-          <form onSubmit={handleSubmit} className="flex gap-3 bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <form onSubmit={handleSubmit} className="space-y-3 bg-gray-50 p-4 rounded-lg border border-gray-200">
+            {/* Attachments Display */}
+            {attachments.length > 0 && (
+              <div className="p-2 bg-white rounded-lg border border-gray-200">
+                <div className="text-xs text-gray-600 mb-2">📎 Attachments:</div>
+                <div className="space-y-1">
+                  {attachments.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between text-xs bg-gray-50 p-2 rounded border">
+                      <span className="truncate flex-1">{file.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeAttachment(index)}
+                        className="text-red-500 hover:text-red-700 ml-2"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors text-gray-600 bg-white"
+                disabled={isLoading}
+              >
+                <Paperclip className="h-5 w-5" />
+              </button>
+              <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder="Ask about your buildings, compliance, or recent emails…"
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white"
+                disabled={isLoading}
+              />
+              <button 
+                type="submit"
+                disabled={isLoading || (!inputValue.trim() && attachments.length === 0)}
+                className="bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+              >
+                <Home className="h-5 w-5" />
+                Send
+              </button>
+            </div>
+            
+            {/* Hidden file input */}
             <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Ask about your buildings, compliance, or recent emails…"
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white"
-              disabled={isLoading}
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={handleFileAttachment}
+              className="hidden"
+              accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
             />
-            <button 
-              type="submit"
-              disabled={isLoading || !inputValue.trim()}
-              className="bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-            >
-              <Send className="h-5 w-5" />
-              Send
-            </button>
           </form>
         </div>
 
@@ -356,7 +466,10 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <Calendar className="h-6 w-6 text-teal-600" />
-              <h2 className="text-2xl font-semibold text-gray-900">Upcoming Property Events</h2>
+              <div>
+                <h2 className="text-2xl font-semibold text-gray-900">Upcoming Property Events</h2>
+                <p className="text-sm text-gray-500">Example events - would sync with Outlook calendar</p>
+              </div>
             </div>
             <a
               href="https://outlook.office.com/calendar/view/month"
@@ -378,21 +491,34 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             ) : upcomingEvents.length > 0 ? (
               upcomingEvents.map((event, index) => {
                 const { date, time } = formatEventDate(event.date)
+                const eventDate = new Date(event.date)
+                const isToday = eventDate.toDateString() === new Date().toDateString()
+                const isTomorrow = eventDate.toDateString() === new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString()
+                
                 return (
-                  <div key={index} className="bg-white shadow rounded-xl p-4 hover:shadow-lg text-sm">
+                  <div key={index} className="bg-white shadow rounded-xl p-4 hover:shadow-lg text-sm border-l-4 border-teal-500">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="font-bold text-gray-900 mb-1">
-                          {event.category}
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className="font-bold text-gray-900">
+                            {event.category}
+                          </div>
+                          {(isToday || isTomorrow) && (
+                            <span className={`px-2 py-1 text-xs rounded-full ${
+                              isToday ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                            }`}>
+                              {isToday ? 'Today' : 'Tomorrow'}
+                            </span>
+                          )}
                         </div>
-                        <div className="text-gray-800 mb-1">
+                        <div className="text-gray-800 mb-1 font-medium">
                           {event.title}
                         </div>
                         <div className="text-gray-600 mb-1">
-                          {event.building}
+                          📍 {event.building}
                         </div>
                         <div className="text-gray-500">
-                          {date} at {time}
+                          🕒 {date} at {time}
                         </div>
                       </div>
                     </div>
@@ -407,6 +533,97 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Recent Emails Section */}
+      <div className="bg-white rounded-xl shadow-lg p-6 border">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <Mail className="h-6 w-6 text-teal-600" />
+            <h2 className="text-2xl font-semibold text-gray-900">Recent Emails</h2>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={syncEmails}
+              disabled={syncingEmails}
+              className="inline-flex items-center gap-2 px-3 py-2 bg-teal-50 text-teal-700 rounded-lg hover:bg-teal-100 transition-colors text-sm border border-teal-200 disabled:opacity-50"
+            >
+              <RefreshCw className={`h-4 w-4 ${syncingEmails ? 'animate-spin' : ''}`} />
+              {syncingEmails ? 'Syncing...' : 'Sync'}
+            </button>
+            <Link
+              href="/inbox"
+              className="inline-flex items-center gap-2 text-teal-600 hover:text-teal-700 font-medium transition-colors"
+            >
+              <ExternalLink className="h-4 w-4" />
+              View All
+            </Link>
+          </div>
+        </div>
+        
+        <div className="space-y-4">
+          {loadingEmails ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto mb-2"></div>
+              <p className="text-gray-500 text-sm">Loading emails...</p>
+            </div>
+          ) : recentEmails.length > 0 ? (
+            recentEmails.map((email) => (
+              <div key={email.id} className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-medium text-gray-900 truncate">
+                        {email.subject}
+                      </h3>
+                      {email.unread && (
+                        <span className="inline-block w-2 h-2 bg-blue-500 rounded-full"></span>
+                      )}
+                      {email.flag_status === 'flagged' && (
+                        <span className="inline-block w-2 h-2 bg-red-500 rounded-full"></span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600 mb-1">
+                      From: {email.from_email}
+                    </p>
+                    <p className="text-sm text-gray-500 mb-2 line-clamp-2">
+                      {email.body_preview}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-400">
+                        {new Date(email.received_at).toLocaleDateString()} at {new Date(email.received_at).toLocaleTimeString()}
+                      </span>
+                      {email.categories && email.categories.length > 0 && (
+                        <div className="flex gap-1">
+                          {email.categories.slice(0, 2).map((category, index) => (
+                            <span key={index} className="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded">
+                              {category}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="ml-4">
+                    <span className={`inline-block px-2 py-1 text-xs rounded ${
+                      email.handled 
+                        ? 'bg-green-100 text-green-700' 
+                        : 'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {email.handled ? 'Handled' : 'Unhandled'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8">
+              <Mail className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-500 text-sm">No emails found</p>
+              <p className="text-gray-400 text-xs mt-1">Click "Sync" to fetch emails from your inbox</p>
+            </div>
+          )}
         </div>
       </div>
 

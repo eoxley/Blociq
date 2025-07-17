@@ -11,14 +11,40 @@ export async function POST(req: Request) {
   console.log("✅ BlocIQ Assistant endpoint hit");
 
   try {
-    const body = await req.json();
-    const message = body?.message;
-    const buildingId = body?.buildingId; // Optional: if building is selected in UI
-    const unitId = body?.unitId; // Optional: if unit is specified
+    let message: string;
+    let buildingId: string | undefined;
+    let unitId: string | undefined;
+    let attachments: File[] = [];
 
-    if (!message) {
-      console.error("❌ No message provided");
-      return NextResponse.json({ error: 'No message provided' }, { status: 400 });
+    // Check if the request is multipart/form-data (with attachments) or JSON
+    const contentType = req.headers.get('content-type') || '';
+    
+    if (contentType.includes('multipart/form-data')) {
+      // Handle FormData with attachments
+      const formData = await req.formData();
+      message = formData.get('message') as string;
+      buildingId = formData.get('buildingId') as string;
+      unitId = formData.get('unitId') as string;
+      
+      // Extract attachments
+      for (const [key, value] of formData.entries()) {
+        if (key.startsWith('attachment_') && value instanceof File) {
+          attachments.push(value);
+        }
+      }
+      
+      console.log(`📎 Found ${attachments.length} attachments`);
+    } else {
+      // Handle JSON request
+      const body = await req.json();
+      message = body?.message;
+      buildingId = body?.buildingId;
+      unitId = body?.unitId;
+    }
+
+    if (!message && attachments.length === 0) {
+      console.error("❌ No message or attachments provided");
+      return NextResponse.json({ error: 'No message or attachments provided' }, { status: 400 });
     }
 
     const cookieStore = await cookies();
@@ -74,8 +100,10 @@ You are BlocIQ — a property management assistant for UK leasehold blocks. Use 
 If relevant, documents you can reference include:
 ${context || '[No matching documents found]'}
 
+${attachments.length > 0 ? `User has attached ${attachments.length} file(s): ${attachments.map(f => f.name).join(', ')}` : ''}
+
 Question:
-${message}
+${message || 'User has uploaded files for analysis'}
 
 Answer:
     `;
@@ -95,6 +123,7 @@ Answer:
         building: buildingId ? 'Building context available' : null,
         unit: unitId ? 'Unit context available' : null,
         documentsFound: matchedDocs?.length || 0,
+        attachmentsProcessed: attachments.length,
       }
     });
 

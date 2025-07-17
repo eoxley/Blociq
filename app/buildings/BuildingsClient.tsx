@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { Building2, MapPin, Users, ArrowRight, Search, Shield, Plus } from 'lucide-react'
+import { Building2, MapPin, Users, ArrowRight, Search, Shield, Plus, Wrench } from 'lucide-react'
 
 // Define the Building type based on the database schema
 type Building = {
@@ -42,9 +42,10 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
         <p className="text-gray-600 mb-6 max-w-md mx-auto">
           Get started by adding your first building to begin managing your property portfolio.
         </p>
-        <button className="bg-gradient-to-r from-teal-600 to-teal-700 text-white px-6 py-3 rounded-lg hover:from-teal-700 hover:to-teal-800 transition-all duration-200 transform hover:scale-105 shadow-lg">
-          <Plus className="h-5 w-5 inline mr-2" />
+        <button className="bg-gradient-to-r from-teal-600 to-teal-700 text-white px-6 py-3 rounded-lg hover:from-teal-700 hover:to-teal-800 transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center gap-2 mx-auto">
+          <Plus className="h-5 w-5" />
           Add First Building
+          <Wrench className="h-4 w-4" />
         </button>
       </div>
     )
@@ -129,12 +130,34 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
                   )}
                   
                   {/* Unit Count */}
-                  <div className="flex items-center space-x-3 mb-6">
+                  <div className="flex items-center space-x-3 mb-4">
                     <Users className="h-5 w-5 text-teal-500" />
                     <span className="text-sm font-medium text-gray-700">
                       {building.unit_count || 0} {building.unit_count === 1 ? 'unit' : 'units'}
                     </span>
                   </div>
+                  
+                  {/* Sample Units */}
+                  {building.units && building.units.length > 0 && (
+                    <div className="mb-6">
+                      <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Sample Units</h4>
+                      <div className="space-y-1">
+                        {building.units.slice(0, 3).map((unit) => (
+                          <div key={unit.id} className="flex items-center justify-between text-xs">
+                            <span className="text-gray-600">{unit.unit_number}</span>
+                            {building.leases && building.leases.find(lease => lease.unit === unit.id) && (
+                              <span className="text-green-600 font-medium">Occupied</span>
+                            )}
+                          </div>
+                        ))}
+                        {building.units.length > 3 && (
+                          <div className="text-xs text-gray-400 italic">
+                            +{building.units.length - 3} more units
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   
                   {/* Action Buttons */}
                   <div className="space-y-3">
@@ -185,14 +208,19 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
         <div className="text-center pt-8 border-t border-gray-200">
           <div className="bg-gradient-to-r from-teal-50 to-blue-50 rounded-2xl p-8 max-w-md mx-auto">
             <div className="bg-gradient-to-br from-teal-500 to-blue-600 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-              <Plus className="h-8 w-8 text-white" />
+              <div className="relative">
+                <Plus className="h-8 w-8 text-white" />
+                <Wrench className="h-4 w-4 text-white absolute -top-1 -right-1 bg-orange-500 rounded-full p-0.5" />
+              </div>
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">Add Another Building</h3>
             <p className="text-gray-600 mb-4">
               Expand your property portfolio and manage more buildings efficiently.
             </p>
-            <button className="bg-gradient-to-r from-teal-600 to-teal-700 text-white px-6 py-3 rounded-lg hover:from-teal-700 hover:to-teal-800 transition-all duration-200 transform hover:scale-105 shadow-lg">
+            <button className="bg-gradient-to-r from-teal-600 to-teal-700 text-white px-6 py-3 rounded-lg hover:from-teal-700 hover:to-teal-800 transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center gap-2">
+              <Plus className="h-5 w-5" />
               Add Building
+              <Wrench className="h-4 w-4" />
             </button>
           </div>
         </div>
