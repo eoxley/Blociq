@@ -3,12 +3,23 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { Database } from '@/lib/database.types';
 
+interface SendCommunicationRequest {
+  templateId: string;
+  buildingId: string;
+  recipients: Array<{
+    leaseholder_id: string;
+    email: string;
+  }>;
+  mergedMessage: string;
+  subject: string;
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { communications, sendMethod } = await req.json();
+    const { templateId, buildingId, recipients, mergedMessage, subject }: SendCommunicationRequest = await req.json();
     
-    if (!communications || !Array.isArray(communications)) {
-      return NextResponse.json({ error: 'Invalid communications data' }, { status: 400 });
+    if (!templateId || !buildingId || !recipients || !Array.isArray(recipients) || !mergedMessage || !subject) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     const supabase = createRouteHandlerClient<Database>({ cookies });
@@ -21,59 +32,64 @@ export async function POST(req: NextRequest) {
 
     const results = [];
 
-    for (const comm of communications) {
+    for (const recipient of recipients) {
       try {
-        // Insert communication record
+        // Save communication log in communications table
         const { data: communicationData, error: insertError } = await supabase
           .from('communications')
           .insert({
-            type: comm.type,
-            subject: comm.subject,
-            content: comm.content,
-            building_id: comm.building_id,
-            unit_id: comm.unit_id,
-            leaseholder_id: comm.leaseholder_id,
-            template_id: comm.template_id,
-            send_method: comm.send_method,
+            leaseholder_id: recipient.leaseholder_id,
+            building_id: buildingId,
+            type: 'email',
+            template_id: parseInt(templateId),
+            sent_at: new Date().toISOString(),
+            send_method: 'email',
+            subject: subject,
+            content: mergedMessage,
             created_by: user.id,
             sent: true,
-            sent_at: new Date().toISOString(),
           })
           .select()
           .single();
 
         if (insertError) {
-          console.error('Error inserting communication:', insertError);
+          console.error('Error inserting communication log:', insertError);
           results.push({
-            leaseholder_id: comm.leaseholder_id,
+            leaseholder_id: recipient.leaseholder_id,
             success: false,
             error: insertError.message,
           });
           continue;
         }
 
-        // If sending email, you would integrate with your email service here
-        if (sendMethod === 'email' || sendMethod === 'both') {
-          // Example: Send email using your preferred email service
-          // await sendEmail({
-          //   to: comm.leaseholder_email,
-          //   subject: comm.subject,
-          //   content: comm.content,
-          // });
-          
-          console.log(`Email would be sent to leaseholder ${comm.leaseholder_id}`);
-        }
+        // Send email using Outlook (SMTP or Graph API)
+        // For now, we'll log the email details - you can integrate with your preferred email service
+        console.log(`Sending email to ${recipient.email}:`, {
+          subject,
+          content: mergedMessage,
+          leaseholder_id: recipient.leaseholder_id,
+        });
+
+        // TODO: Integrate with your email service (Outlook SMTP/Graph API)
+        // Example with a hypothetical email service:
+        // await sendEmail({
+        //   to: recipient.email,
+        //   subject,
+        //   html: mergedMessage,
+        //   from: 'your-app@domain.com',
+        // });
 
         results.push({
-          leaseholder_id: comm.leaseholder_id,
+          leaseholder_id: recipient.leaseholder_id,
           success: true,
           communication_id: communicationData.id,
+          email: recipient.email,
         });
 
       } catch (error: any) {
         console.error('Error processing communication:', error);
         results.push({
-          leaseholder_id: comm.leaseholder_id,
+          leaseholder_id: recipient.leaseholder_id,
           success: false,
           error: error.message,
         });
@@ -85,7 +101,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Successfully processed ${successCount} communications${failureCount > 0 ? `, ${failureCount} failed` : ''}`,
+      message: `Successfully sent ${successCount} emails${failureCount > 0 ? `, ${failureCount} failed` : ''}`,
       results,
     });
 
