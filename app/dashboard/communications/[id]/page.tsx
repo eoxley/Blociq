@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -10,14 +10,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select } from '@/components/ui/select';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Database } from '@/lib/database.types';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import MergeTagHelper from '@/components/MergeTagHelper';
 
-export default function NewTemplatePage() {
+type Template = Database['public']['Tables']['communication_templates']['Row'];
+
+export default function EditTemplatePage() {
   const router = useRouter();
+  const params = useParams();
+  const templateId = params?.id as string;
   const supabase = createClientComponentClient<Database>();
   
+  const [template, setTemplate] = useState<Template | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     type: 'email',
@@ -25,7 +30,43 @@ export default function NewTemplatePage() {
     content: '',
   });
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (templateId) {
+      fetchTemplate();
+    }
+  }, [templateId]);
+
+  const fetchTemplate = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('communication_templates')
+        .select('*')
+        .eq('id', parseInt(templateId))
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        setTemplate(data);
+        setFormData({
+          name: data.name,
+          type: data.type,
+          subject: data.subject || '',
+          content: data.content,
+        });
+      }
+    } catch (err: any) {
+      console.error('Error fetching template:', err);
+      setError(err.message || 'Failed to load template');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -43,26 +84,20 @@ export default function NewTemplatePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSaving(true);
     setError(null);
 
     try {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
-
       const { error } = await supabase
         .from('communication_templates')
-        .insert({
+        .update({
           name: formData.name,
           type: formData.type,
           subject: formData.subject || null,
           content: formData.content,
-          created_by: user.id,
-        });
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', parseInt(templateId));
 
       if (error) {
         throw error;
@@ -70,12 +105,60 @@ export default function NewTemplatePage() {
 
       router.push('/dashboard/communications');
     } catch (err: any) {
-      console.error('Error creating template:', err);
-      setError(err.message || 'Failed to create template');
+      console.error('Error updating template:', err);
+      setError(err.message || 'Failed to update template');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/dashboard/communications">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Templates
+            </Link>
+          </Button>
+          <div>
+            <h1 className="text-2xl font-semibold">Edit Template</h1>
+            <p className="text-muted-foreground">Loading template...</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !template) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/dashboard/communications">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Templates
+            </Link>
+          </Button>
+        </div>
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center">
+              <h3 className="text-lg font-medium text-destructive mb-2">Error Loading Template</h3>
+              <p className="text-muted-foreground mb-4">{error}</p>
+              <Button asChild>
+                <Link href="/dashboard/communications">Back to Templates</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
@@ -88,8 +171,8 @@ export default function NewTemplatePage() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-semibold">Create New Template</h1>
-          <p className="text-muted-foreground">Create a reusable email or letter template</p>
+          <h1 className="text-2xl font-semibold">Edit Template</h1>
+          <p className="text-muted-foreground">Update your template content and settings</p>
         </div>
       </div>
 
@@ -154,6 +237,14 @@ export default function NewTemplatePage() {
                 </p>
               </div>
 
+              {/* Template Info */}
+              {template && (
+                <div className="text-xs text-muted-foreground bg-muted p-3 rounded-md">
+                  <p><strong>Created:</strong> {new Date(template.created_at || '').toLocaleDateString()}</p>
+                  <p><strong>Last Updated:</strong> {new Date(template.updated_at || template.created_at || '').toLocaleDateString()}</p>
+                </div>
+              )}
+
               {/* Error Display */}
               {error && (
                 <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
@@ -163,9 +254,9 @@ export default function NewTemplatePage() {
 
               {/* Submit Button */}
               <div className="flex gap-3 pt-4">
-                <Button type="submit" disabled={loading}>
+                <Button type="submit" disabled={saving}>
                   <Save className="h-4 w-4 mr-2" />
-                  {loading ? 'Creating...' : 'Create Template'}
+                  {saving ? 'Saving...' : 'Save Changes'}
                 </Button>
                 <Button type="button" variant="outline" asChild>
                   <Link href="/dashboard/communications">Cancel</Link>
