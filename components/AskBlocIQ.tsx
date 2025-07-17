@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
+import { handleAssistantQuery } from '@/lib/ai/handleAssistantQuery';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { 
   MessageSquare, 
   X, 
@@ -35,6 +37,7 @@ export default function AskBlocIQ({
   const [context, setContext] = useState<any>(null);
   const [isMinimized, setIsMinimized] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const supabase = createClientComponentClient();
 
   // Keyboard shortcut handler
   useEffect(() => {
@@ -64,27 +67,19 @@ export default function AskBlocIQ({
     setAnswer('');
 
     try {
-      const requestBody = { 
-        message: question,
-        buildingId,
-        unitId
-      };
-
-      const response = await fetch('/api/ask-assistant', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
+      const answer = await handleAssistantQuery({
+        userQuestion: question,
+        buildingId: buildingId?.toString() || null,
+        supabase,
       });
 
-      const data = await response.json();
-
-      if (data.answer) {
-        setAnswer(data.answer);
-        setContext(data.context);
-      } else if (data.error) {
-        setAnswer(`Error: ${data.error}`);
+      if (answer) {
+        setAnswer(answer);
+        setContext({
+          building: buildingId ? 'Building context available' : null,
+          unit: unitId ? 'Unit context available' : null,
+          documents: 'Document search available'
+        });
       } else {
         setAnswer('Error: No response from AI service');
       }

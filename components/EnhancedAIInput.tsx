@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
+import { handleAssistantQuery } from '@/lib/ai/handleAssistantQuery';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Loader2, Send, Building, Home } from 'lucide-react';
 
 interface EnhancedAIInputProps {
@@ -25,6 +27,7 @@ export default function EnhancedAIInput({
   const [answer, setAnswer] = useState('');
   const [loading, setLoading] = useState(false);
   const [context, setContext] = useState<any>(null);
+  const supabase = createClientComponentClient();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,37 +43,22 @@ export default function EnhancedAIInput({
 
     setLoading(true);
     try {
-      const requestBody = { 
-        message: question,
-        buildingId,
-        unitId
-      };
-      
-      console.log("📤 Sending request to /api/ask-assistant");
-      console.log("📦 Request body:", requestBody);
-
-      const response = await fetch('/api/ask-assistant', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
+      const answer = await handleAssistantQuery({
+        userQuestion: question,
+        buildingId: buildingId?.toString() || null,
+        supabase,
       });
 
-      console.log("📥 Response status:", response.status);
-
-      const data = await response.json();
-      console.log("📦 Response data:", data);
-
-      if (data.answer) {
-        console.log("✅ Enhanced AI response received:", data.answer.substring(0, 100) + "...");
-        setAnswer(data.answer);
-        setContext(data.context);
-      } else if (data.error) {
-        console.error("❌ AI error:", data.error);
-        setAnswer(`Error: ${data.error}`);
+      if (answer) {
+        console.log("✅ Enhanced AI response received:", answer.substring(0, 100) + "...");
+        setAnswer(answer);
+        setContext({
+          building: buildingId ? 'Building context available' : null,
+          unit: unitId ? 'Unit context available' : null,
+          documents: 'Document search available'
+        });
       } else {
-        console.error("❌ No answer or error in response");
+        console.error("❌ No answer received");
         setAnswer('Error: No response from AI service');
       }
     } catch (error) {

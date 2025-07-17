@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { handleAssistantQuery } from '@/lib/ai/handleAssistantQuery';
 
 interface AIInputProps {
   buildingId: string;
@@ -36,23 +37,14 @@ export default function AIInput({ buildingId, context }: AIInputProps) {
 
     setLoading(true);
     try {
-      const requestBody = { 
-        question, 
-        buildingId,
-        userId
-      };
-      const response = await fetch('/api/ask', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
+      const answer = await handleAssistantQuery({
+        userQuestion: question,
+        buildingId: buildingId,
+        supabase,
       });
-      const data = await response.json();
-      if (data.answer) {
-        setAnswer(data.answer);
-      } else if (data.error) {
-        setAnswer(`Error: ${data.error}`);
+
+      if (answer) {
+        setAnswer(answer);
       } else {
         setAnswer('Error: No response from AI service');
       }
