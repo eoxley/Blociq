@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
+import LayoutWithSidebar from '@/components/LayoutWithSidebar'
 
 export default async function CompliancePage({ params }: { params: Promise<{ buildingId: string }> }) {
   try {
@@ -10,13 +11,15 @@ export default async function CompliancePage({ params }: { params: Promise<{ bui
 
     if (!buildingId) {
       return (
-        <div className="p-6 space-y-4">
-          <h1 className="text-2xl font-semibold">Compliance</h1>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-600">Missing building ID.</p>
-            <p className="text-red-500 text-sm mt-2">Please provide a valid building ID in the URL.</p>
+        <LayoutWithSidebar>
+          <div className="p-6 space-y-4">
+            <h1 className="text-2xl font-semibold">Compliance</h1>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-600">Missing building ID.</p>
+              <p className="text-red-500 text-sm mt-2">Please provide a valid building ID in the URL.</p>
+            </div>
           </div>
-        </div>
+        </LayoutWithSidebar>
       )
     }
 
@@ -33,25 +36,29 @@ export default async function CompliancePage({ params }: { params: Promise<{ bui
     if (buildingError) {
       console.error('Building fetch error:', buildingError.message)
       return (
-        <div className="p-6 space-y-4">
-          <h1 className="text-2xl font-semibold">Compliance</h1>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-600">Could not load building information.</p>
-            <p className="text-red-500 text-sm mt-2">Error: {buildingError.message}</p>
+        <LayoutWithSidebar>
+          <div className="p-6 space-y-4">
+            <h1 className="text-2xl font-semibold">Compliance</h1>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-600">Could not load building information.</p>
+              <p className="text-red-500 text-sm mt-2">Error: {buildingError.message}</p>
+            </div>
           </div>
-        </div>
+        </LayoutWithSidebar>
       )
     }
 
     if (!building) {
       return (
-        <div className="p-6 space-y-4">
-          <h1 className="text-2xl font-semibold">Compliance</h1>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-600">Building not found.</p>
-            <p className="text-red-500 text-sm mt-2">Building ID: {buildingId}</p>
+        <LayoutWithSidebar>
+          <div className="p-6 space-y-4">
+            <h1 className="text-2xl font-semibold">Compliance</h1>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-600">Building not found.</p>
+              <p className="text-red-500 text-sm mt-2">Building ID: {buildingId}</p>
+            </div>
           </div>
-        </div>
+        </LayoutWithSidebar>
       )
     }
 
@@ -72,13 +79,15 @@ export default async function CompliancePage({ params }: { params: Promise<{ bui
     if (assetsError) {
       console.error('Compliance assets fetch error:', assetsError.message)
       return (
-        <div className="p-6 space-y-4">
-          <h1 className="text-2xl font-semibold">Compliance</h1>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-600">Could not load compliance data.</p>
-            <p className="text-red-500 text-sm mt-2">Error: {assetsError.message}</p>
+        <LayoutWithSidebar>
+          <div className="p-6 space-y-4">
+            <h1 className="text-2xl font-semibold">Compliance</h1>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-600">Could not load compliance data.</p>
+              <p className="text-red-500 text-sm mt-2">Error: {assetsError.message}</p>
+            </div>
           </div>
-        </div>
+        </LayoutWithSidebar>
       )
     }
 
@@ -115,9 +124,10 @@ export default async function CompliancePage({ params }: { params: Promise<{ bui
     }
 
     return (
-      <div className="p-6 space-y-4">
-        <h1 className="text-2xl font-semibold">Compliance</h1>
-        <p className="text-sm text-gray-600">Building: <strong>{building.name}</strong></p>
+      <LayoutWithSidebar>
+        <div className="p-6 space-y-4">
+          <h1 className="text-2xl font-semibold">Compliance</h1>
+          <p className="text-sm text-gray-600">Building: <strong>{building.name}</strong></p>
 
         {complianceAssets && complianceAssets.length > 0 ? (
           <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
@@ -191,18 +201,21 @@ export default async function CompliancePage({ params }: { params: Promise<{ bui
             Status is determined based on due dates and current compliance state.
           </p>
         </div>
-      </div>
+        </div>
+      </LayoutWithSidebar>
     )
   } catch (err) {
     console.error('Compliance page crash:', err)
     return (
-      <div className="p-6 space-y-4">
-        <h1 className="text-2xl font-semibold">Compliance</h1>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-600">An unexpected error occurred.</p>
-          <p className="text-red-500 text-sm mt-2">Error details: {err instanceof Error ? err.message : String(err)}</p>
+      <LayoutWithSidebar>
+        <div className="p-6 space-y-4">
+          <h1 className="text-2xl font-semibold">Compliance</h1>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-red-600">An unexpected error occurred.</p>
+            <p className="text-red-500 text-sm mt-2">Error details: {err instanceof Error ? err.message : String(err)}</p>
+          </div>
         </div>
-      </div>
+      </LayoutWithSidebar>
     )
   }
 } 
