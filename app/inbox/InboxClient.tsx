@@ -39,6 +39,7 @@ export default function InboxClient({ emails }: InboxClientProps) {
   const [showTagTools, setShowTagTools] = useState<Set<string>>(new Set())
   const [newTags, setNewTags] = useState<Record<string, string>>({})
   const [savingTags, setSavingTags] = useState<Set<string>>(new Set())
+  const [aiClassifying, setAiClassifying] = useState<Set<string>>(new Set())
 
 
 
@@ -121,13 +122,15 @@ export default function InboxClient({ emails }: InboxClientProps) {
     })
 
     try {
-      const response = await fetch('/api/generate-draft', {
+      const response = await fetch('/api/generate-reply', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          prompt: `Generate a professional reply to this email:\n\nSubject: ${subject || 'No subject'}\n\nContent: ${bodyPreview || 'No content available'}\n\nPlease provide a courteous and professional response.`,
+          emailId: emailId,
+          subject: subject,
+          body: bodyPreview,
         }),
       })
 
@@ -390,6 +393,70 @@ export default function InboxClient({ emails }: InboxClientProps) {
     })
   }
 
+  const handleAiClassify = async (emailId: string, subject: string | null, bodyPreview: string | null) => {
+    if (!subject && !bodyPreview) {
+      console.error('No content available for AI classification')
+      return
+    }
+
+    setAiClassifying(prev => new Set(prev).add(emailId))
+
+    try {
+      const response = await fetch('/api/ai-classify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          subject: subject || '',
+          body: bodyPreview || ''
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to classify email')
+      }
+
+      const result = await response.json()
+      
+      if (result.success && result.tags?.length > 0) {
+        // Get current email data
+        const currentEmail = emails.find(e => e.id === emailId)
+        if (!currentEmail) return
+
+        // Merge AI tags with existing categories
+        const existingCategories = currentEmail.categories || []
+        const aiTags = result.tags || []
+        const mergedCategories = [...new Set([...existingCategories, ...aiTags])]
+        
+        // Update the email with AI classification
+        const { error } = await supabase
+          .from('incoming_emails')
+          .update({ 
+            categories: mergedCategories,
+            flag_status: result.confidence >= 80 && result.flag_status === 'flagged' ? 'flagged' : currentEmail.flag_status
+          })
+          .eq('id', emailId)
+        
+        if (error) {
+          console.error('Error updating email with AI classification:', error)
+          return
+        }
+        
+        // Reload the page to show updated data
+        window.location.reload()
+      }
+    } catch (error) {
+      console.error('Error in AI classification:', error)
+    } finally {
+      setAiClassifying(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(emailId)
+        return newSet
+      })
+    }
+  }
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Unknown date'
     
@@ -569,6 +636,20 @@ export default function InboxClient({ emails }: InboxClientProps) {
                     >
                       <Tag className="h-3 w-3" />
                       {showTagTools.has(email.id) ? 'Cancel' : 'Edit Tags'}
+                    </button>
+
+                    <button
+                      onClick={() => handleAiClassify(email.id, email.subject, email.body_preview)}
+                      disabled={aiClassifying.has(email.id)}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors disabled:opacity-50"
+                      title="AI Classify"
+                    >
+                      {aiClassifying.has(email.id) ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        '🧠 AI'
+                      )}
+                      {aiClassifying.has(email.id) ? 'Classifying...' : 'Classify'}
                     </button>
                   </div>
 

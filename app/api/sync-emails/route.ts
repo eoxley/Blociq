@@ -125,21 +125,69 @@ export async function GET() {
     }
 
     // Process real emails and insert into Supabase with enhanced fields
-    const processedEmails = emails.map((email: any) => ({
-      from_email: email.from?.emailAddress?.address || email.from?.emailAddress?.name || 'unknown@example.com',
-      subject: email.subject || 'No Subject',
-      body_preview: email.bodyPreview || email.body?.content || 'No preview available',
-      received_at: email.receivedDateTime || new Date().toISOString(),
-      message_id: email.id,
-      unread: !email.isRead,
-      thread_id: email.conversationId,
-      handled: false, // Ensure all emails are saved with handled = false
-      // Enhanced fields from Microsoft Graph
-      flag_status: email.flag?.flagStatus || 'notFlagged',
-      categories: email.categories || [],
-      // Additional fields for better email management
-      pinned: false, // Can be set manually
-      tag: null, // Can be set manually for custom tagging
+    const processedEmails = await Promise.all(emails.map(async (email: any) => {
+      const baseEmail = {
+        from_email: email.from?.emailAddress?.address || email.from?.emailAddress?.name || 'unknown@example.com',
+        subject: email.subject || 'No Subject',
+        body_preview: email.bodyPreview || email.body?.content || 'No preview available',
+        received_at: email.receivedDateTime || new Date().toISOString(),
+        message_id: email.id,
+        unread: !email.isRead,
+        thread_id: email.conversationId,
+        handled: false, // Ensure all emails are saved with handled = false
+        // Enhanced fields from Microsoft Graph
+        flag_status: email.flag?.flagStatus || 'notFlagged',
+        categories: email.categories || [],
+        // Additional fields for better email management
+        pinned: false, // Can be set manually
+        tag: null, // Can be set manually for custom tagging
+      };
+
+      // AI Classification for new emails (only if we have subject or body content)
+      if ((email.subject || email.bodyPreview) && !email.categories?.length) {
+        try {
+          const aiResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ai-classify`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              subject: email.subject || '',
+              body: email.bodyPreview || email.body?.content || ''
+            })
+          });
+
+          if (aiResponse.ok) {
+            const aiResult = await aiResponse.json();
+            
+            if (aiResult.success && aiResult.tags?.length > 0) {
+              // Merge AI tags with existing categories, avoiding duplicates
+              const existingCategories = email.categories || [];
+              const aiTags = aiResult.tags || [];
+              const mergedCategories = [...new Set([...existingCategories, ...aiTags])];
+              
+              baseEmail.categories = mergedCategories;
+              
+              // Auto-flag if AI has high confidence and suggests flagging
+              if (aiResult.confidence >= 80 && aiResult.flag_status === 'flagged') {
+                baseEmail.flag_status = 'flagged';
+              }
+              
+              console.log(`AI classified email "${email.subject}":`, {
+                tags: aiResult.tags,
+                flag_status: aiResult.flag_status,
+                confidence: aiResult.confidence,
+                reasoning: aiResult.reasoning
+              });
+            }
+          }
+        } catch (aiError) {
+          console.error('AI classification failed for email:', email.subject, aiError);
+          // Continue with original email data if AI fails
+        }
+      }
+
+      return baseEmail;
     }));
 
     // Upsert emails into Supabase
