@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { UK_COMPLIANCE_ITEMS } from '@/lib/complianceUtils'
+import ComplianceAssetList from '@/components/ComplianceAssetList'
 
 export default async function ComplianceTrackerPage({ params }: { params: Promise<{ buildingId: string }> }) {
   try {
@@ -74,22 +74,6 @@ export default async function ComplianceTrackerPage({ params }: { params: Promis
 
     if (assetsError) {
       console.error('Compliance assets fetch error:', assetsError.message)
-    }
-
-    // Create a map of existing assets for quick lookup
-    const existingAssetMap = new Map()
-    if (existingAssets) {
-      existingAssets.forEach(asset => {
-        const complianceAsset = Array.isArray(asset.compliance_assets) 
-          ? asset.compliance_assets[0] 
-          : asset.compliance_assets
-        if (complianceAsset) {
-          existingAssetMap.set(complianceAsset.name, {
-            ...asset,
-            complianceAsset
-          })
-        }
-      })
     }
 
     // Helper function to get status badge variant
@@ -235,76 +219,10 @@ export default async function ComplianceTrackerPage({ params }: { params: Promis
                 </p>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {UK_COMPLIANCE_ITEMS.map((item) => {
-                    const isApplied = existingAssetMap.has(item.name)
-                    const existingAsset = existingAssetMap.get(item.name)
-                    
-                    return (
-                      <div key={item.id} className={`p-4 rounded-lg border transition-colors ${
-                        isApplied 
-                          ? 'bg-primary/5 border-primary/20' 
-                          : 'bg-white border-slate-200'
-                      }`}>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3 flex-1">
-                            {/* Toggle Switch */}
-                            <div className="relative">
-                              <input
-                                type="checkbox"
-                                id={`toggle-${item.id}`}
-                                className="sr-only"
-                                defaultChecked={isApplied}
-                                disabled
-                              />
-                              <label
-                                htmlFor={`toggle-${item.id}`}
-                                className={`block w-12 h-6 rounded-full transition-colors cursor-pointer ${
-                                  isApplied 
-                                    ? 'bg-primary' 
-                                    : 'bg-slate-300'
-                                }`}
-                              >
-                                <span className={`block w-4 h-4 bg-white rounded-full transition-transform transform ${
-                                  isApplied ? 'translate-x-6' : 'translate-x-1'
-                                } mt-1`} />
-                              </label>
-                            </div>
-                            
-                            {/* Asset Info */}
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2 mb-1">
-                                <h3 className="font-medium text-dark">{item.name}</h3>
-                                <Badge variant={item.required_if === 'always' ? 'destructive' : 'outline'}>
-                                  {item.required_if === 'always' ? 'Required' : 'Optional'}
-                                </Badge>
-                              </div>
-                              <p className="text-sm text-neutral mb-2">{item.description}</p>
-                              <div className="flex items-center space-x-4 text-xs text-neutral">
-                                <span>Category: {item.category}</span>
-                                <span>Frequency: {item.default_frequency}</span>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {/* Status Indicator */}
-                          {isApplied && (
-                            <div className="ml-4">
-                              <Badge variant="default" className="bg-primary text-white">
-                                Applied
-                              </Badge>
-                              {existingAsset?.status && (
-                                <div className="text-xs text-neutral mt-1">
-                                  Status: {existingAsset.status}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
+                <ComplianceAssetList 
+                  buildingId={buildingId} 
+                  existingAssets={existingAssets || []} 
+                />
               </CardContent>
             </Card>
           </TabsContent>
