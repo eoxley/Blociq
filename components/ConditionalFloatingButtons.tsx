@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { usePathname } from 'next/navigation';
 import GlobalAskBlocIQ from './GlobalAskBlocIQ';
-import GlobalDocumentUploader from './GlobalDocumentUploader';
 
 export default function ConditionalFloatingButtons() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -48,7 +47,6 @@ export default function ConditionalFloatingButtons() {
   return (
     <>
       <GlobalAskBlocIQ />
-      <GlobalDocumentUploader />
     </>
   );
 } 

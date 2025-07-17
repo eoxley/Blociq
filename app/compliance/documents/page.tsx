@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import LayoutWithSidebar from '@/components/LayoutWithSidebar';
 import SmartUploader from '@/components/SmartUploader';
-import { Shield, Upload, ArrowLeft } from 'lucide-react';
+import { Shield, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 function ComplianceDocumentsInner() {
