@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select } from '@/components/ui/select';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Database } from '@/lib/database.types';
-import { ArrowLeft, Send, Download, Building, Users, Mail, FileText, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Send, Download, Building, Users, Mail, FileText, Eye, EyeOff, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 
 type Template = Database['public']['Tables']['communication_templates']['Row'];
@@ -19,7 +19,7 @@ type Unit = Database['public']['Tables']['units']['Row'];
 type Leaseholder = Database['public']['Tables']['leaseholders']['Row'];
 
 interface LeaseholderWithUnit extends Leaseholder {
-  unit: Unit;
+  unit: Unit | null;
 }
 
 export default function ComposeMessagePage() {
@@ -38,6 +38,11 @@ export default function ComposeMessagePage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // AI Draft Generator states
+  const [generatingDraft, setGeneratingDraft] = useState(false);
+  const [draftPurpose, setDraftPurpose] = useState('');
+  const [draftCategory, setDraftCategory] = useState('general');
 
   useEffect(() => {
     if (templateId) {
@@ -291,6 +296,62 @@ export default function ComposeMessagePage() {
     }
   };
 
+  const handleGenerateDraft = async () => {
+    if (!template || !selectedBuilding || !draftPurpose.trim()) {
+      setError('Please select a building and enter a purpose for the draft');
+      return;
+    }
+
+    setGeneratingDraft(true);
+    setError(null);
+
+    try {
+      const building = buildings.find(b => b.id === selectedBuilding);
+      if (!building) {
+        throw new Error('Building not found');
+      }
+
+      const response = await fetch('/api/generate-draft', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          templateName: template.name,
+          buildingName: building.name,
+          leaseholderCount: selectedLeaseholders.length || leaseholders.length,
+          category: draftCategory,
+          purpose: draftPurpose,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate draft');
+      }
+
+      const result = await response.json();
+      
+      if (result.success && result.content) {
+        // Update the template content with the AI-generated draft
+        setTemplate(prev => prev ? {
+          ...prev,
+          content: result.content
+        } : null);
+        
+        // Clear the purpose field
+        setDraftPurpose('');
+      } else {
+        throw new Error('No content generated');
+      }
+    } catch (err: any) {
+      console.error('Error generating draft:', err);
+      setError(err.message || 'Failed to generate draft');
+    } finally {
+      setGeneratingDraft(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6 max-w-6xl mx-auto space-y-6">
@@ -386,6 +447,63 @@ export default function ComposeMessagePage() {
             </CardContent>
           </Card>
 
+          {/* AI Draft Generator */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5" />
+                AI Draft Generator
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="draft-category" className="text-sm font-medium">Category</Label>
+                <Select 
+                  id="draft-category"
+                  value={draftCategory} 
+                  onChange={(e) => setDraftCategory(e.target.value)}
+                >
+                  <option value="general">General Communication</option>
+                  <option value="maintenance">Maintenance Notice</option>
+                  <option value="service_charge">Service Charge</option>
+                  <option value="emergency">Emergency Notice</option>
+                  <option value="reminder">Reminder</option>
+                  <option value="update">Update</option>
+                  <option value="complaint">Complaint Response</option>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="draft-purpose" className="text-sm font-medium">Purpose</Label>
+                <Textarea
+                  id="draft-purpose"
+                  placeholder="e.g., inform leaseholders about overdue service charges, notify about upcoming maintenance work, etc."
+                  value={draftPurpose}
+                  onChange={(e) => setDraftPurpose(e.target.value)}
+                  rows={3}
+                />
+              </div>
+              <Button 
+                onClick={handleGenerateDraft}
+                disabled={generatingDraft || !selectedBuilding || !draftPurpose.trim()}
+                className="w-full"
+                variant="outline"
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                {generatingDraft ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900 mr-2"></div>
+                    Generating Draft...
+                  </>
+                ) : (
+                  '💡 Generate Draft'
+                )}
+              </Button>
+              <div className="text-xs text-muted-foreground">
+                <p>AI will generate a professional message based on your purpose and automatically include appropriate merge tags.</p>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Building Selection */}
           <Card>
             <CardHeader>
@@ -398,6 +516,7 @@ export default function ComposeMessagePage() {
               <div className="space-y-2">
                 <Label htmlFor="building">Building *</Label>
                 <Select 
+                  id="building"
                   value={selectedBuilding} 
                   onChange={(e) => setSelectedBuilding(e.target.value)}
                 >
