@@ -1,5 +1,3 @@
-// File: app/api/ask-assistant/route.ts
-
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
@@ -8,17 +6,15 @@ import OpenAI from 'openai';
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req: Request) {
-  console.log("✅ BlocIQ Assistant endpoint hit");
+  console.log("✅ Assistant Query endpoint hit");
 
   try {
     const body = await req.json();
-    const message = body?.message;
-    const buildingId = body?.buildingId; // Optional: if building is selected in UI
-    const unitId = body?.unitId; // Optional: if unit is specified
+    const { userQuestion, buildingId } = body;
 
-    if (!message) {
-      console.error("❌ No message provided");
-      return NextResponse.json({ error: 'No message provided' }, { status: 400 });
+    if (!userQuestion) {
+      console.error("❌ No user question provided");
+      return NextResponse.json({ error: 'No user question provided' }, { status: 400 });
     }
 
     const cookieStore = await cookies();
@@ -34,19 +30,6 @@ export async function POST(req: Request) {
       }
     );
 
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
-
-    if (sessionError) {
-      console.warn("⚠️ Supabase session error:", sessionError.message);
-    }
-
-    console.log("📩 User message:", message);
-    console.log("🏢 Building ID from context:", buildingId);
-    console.log("🏠 Unit ID from context:", unitId);
-
     // 🔍 Search documents by relevance to user question
     const { data: documents } = await supabase
       .from('building_documents')
@@ -56,7 +39,7 @@ export async function POST(req: Request) {
 
     const matchedDocs = documents
       ?.filter((doc) => {
-        const match = message.toLowerCase();
+        const match = userQuestion.toLowerCase();
         return (
           doc.text_content?.toLowerCase().includes(match) ||
           doc.type?.toLowerCase().includes(match)
@@ -75,7 +58,7 @@ If relevant, documents you can reference include:
 ${context || '[No matching documents found]'}
 
 Question:
-${message}
+${userQuestion}
 
 Answer:
     `;
@@ -93,13 +76,12 @@ Answer:
       answer: answer || "🤖 Sorry, I couldn't generate a response.",
       context: {
         building: buildingId ? 'Building context available' : null,
-        unit: unitId ? 'Unit context available' : null,
         documentsFound: matchedDocs?.length || 0,
       }
     });
 
   } catch (error: any) {
-    console.error("❌ Assistant error:", error);
+    console.error("❌ Assistant query error:", error);
     return NextResponse.json({ 
       error: 'Failed to process assistant query',
       details: error.message 
