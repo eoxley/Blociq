@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import SupabaseProvider from '@/components/SupabaseProvider';
 import { BlocIQProvider } from '@/components/BlocIQContext';
 import ConditionalFloatingButtons from '@/components/ConditionalFloatingButtons';
+import GlobalNavigation from '@/components/GlobalNavigation';
 import { Toaster } from 'sonner';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -22,7 +23,10 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.className} bg-background`}>
         <BlocIQProvider>
-          <SupabaseProvider>{children}</SupabaseProvider>
+          <SupabaseProvider>
+            {children}
+            <GlobalNavigation />
+          </SupabaseProvider>
           <ConditionalFloatingButtons />
           <Toaster position="top-right" />
         </BlocIQProvider>
