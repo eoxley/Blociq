@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { FileText, Download, Calendar, Building, User, Sparkles } from "lucide-react";
+import SmartUploader from "./SmartUploader";
 
 type ComplianceDocument = {
   id: string;
@@ -162,10 +163,11 @@ export default function ComplianceDocumentsList({
             <p className="text-sm text-gray-600 mb-4">
               Upload a compliance document and our AI will automatically analyze it to extract key information.
             </p>
-            {/* Note: You would need to import and use your SmartUploader component here */}
-            <p className="text-sm text-gray-500 italic">
-              Uploader component would be integrated here
-            </p>
+            <SmartUploader
+              table="compliance_docs"
+              buildingId={buildingId}
+              onSaveSuccess={handleUploadSuccess}
+            />
           </div>
         </Card>
       )}
