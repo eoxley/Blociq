@@ -14,10 +14,10 @@ export default async function ComplianceTrackerPage({ params }: { params: Promis
     if (!buildingId) {
       return (
         <div className="p-6 space-y-4">
-          <h1 className="text-2xl font-semibold">Compliance Tracker</h1>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-600">Missing building ID.</p>
-            <p className="text-red-500 text-sm mt-2">Please provide a valid building ID in the URL.</p>
+          <h1 className="text-2xl font-semibold text-dark">Compliance Tracker</h1>
+          <div className="bg-error/10 border border-error/20 rounded-lg p-4">
+            <p className="text-error">Missing building ID.</p>
+            <p className="text-error/80 text-sm mt-2">Please provide a valid building ID in the URL.</p>
           </div>
         </div>
       )
@@ -37,10 +37,10 @@ export default async function ComplianceTrackerPage({ params }: { params: Promis
       console.error('Building fetch error:', buildingError.message)
       return (
         <div className="p-6 space-y-4">
-          <h1 className="text-2xl font-semibold">Compliance Tracker</h1>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-600">Could not load building information.</p>
-            <p className="text-red-500 text-sm mt-2">Error: {buildingError.message}</p>
+          <h1 className="text-2xl font-semibold text-dark">Compliance Tracker</h1>
+          <div className="bg-error/10 border border-error/20 rounded-lg p-4">
+            <p className="text-error">Could not load building information.</p>
+            <p className="text-error/80 text-sm mt-2">Error: {buildingError.message}</p>
           </div>
         </div>
       )
@@ -49,10 +49,10 @@ export default async function ComplianceTrackerPage({ params }: { params: Promis
     if (!building) {
       return (
         <div className="p-6 space-y-4">
-          <h1 className="text-2xl font-semibold">Compliance Tracker</h1>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-600">Building not found.</p>
-            <p className="text-red-500 text-sm mt-2">Building ID: {buildingId}</p>
+          <h1 className="text-2xl font-semibold text-dark">Compliance Tracker</h1>
+          <div className="bg-error/10 border border-error/20 rounded-lg p-4">
+            <p className="text-error">Building not found.</p>
+            <p className="text-error/80 text-sm mt-2">Building ID: {buildingId}</p>
           </div>
         </div>
       )
@@ -132,46 +132,46 @@ export default async function ComplianceTrackerPage({ params }: { params: Promis
     const complianceRate = totalAssets > 0 ? Math.round((compliantAssets / totalAssets) * 100) : 0
 
     return (
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 bg-background min-h-screen">
         {/* Header */}
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold">Compliance Tracker</h1>
-          <p className="text-lg text-gray-600">Building: <strong>{building.name}</strong></p>
+          <h1 className="text-3xl font-bold text-dark">Compliance Tracker</h1>
+          <p className="text-lg text-neutral">Building: <strong className="text-dark">{building.name}</strong></p>
         </div>
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
+          <Card className="border-0 shadow-soft">
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-blue-600">{totalAssets}</div>
-              <div className="text-sm text-gray-600">Total Assets</div>
+              <div className="text-2xl font-bold text-primary">{totalAssets}</div>
+              <div className="text-sm text-neutral">Total Assets</div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-0 shadow-soft">
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-green-600">{compliantAssets}</div>
-              <div className="text-sm text-gray-600">Compliant</div>
+              <div className="text-2xl font-bold text-success">{compliantAssets}</div>
+              <div className="text-sm text-neutral">Compliant</div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-0 shadow-soft">
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-red-600">{overdueAssets}</div>
-              <div className="text-sm text-gray-600">Overdue</div>
+              <div className="text-2xl font-bold text-error">{overdueAssets}</div>
+              <div className="text-sm text-neutral">Overdue</div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-0 shadow-soft">
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-yellow-600">{complianceRate}%</div>
-              <div className="text-sm text-gray-600">Compliance Rate</div>
+              <div className="text-2xl font-bold text-secondary">{complianceRate}%</div>
+              <div className="text-sm text-neutral">Compliance Rate</div>
             </CardContent>
           </Card>
         </div>
 
         {/* Tabs */}
         <Tabs defaultValue="tracker" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="tracker">Compliance Tracker</TabsTrigger>
-            <TabsTrigger value="setup">Setup Assets</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 bg-grey border-0">
+            <TabsTrigger value="tracker" className="data-[state=active]:bg-primary data-[state=active]:text-white">Compliance Tracker</TabsTrigger>
+            <TabsTrigger value="setup" className="data-[state=active]:bg-primary data-[state=active]:text-white">Setup Assets</TabsTrigger>
           </TabsList>
 
           {/* Tracker Tab */}
@@ -186,24 +186,24 @@ export default async function ComplianceTrackerPage({ params }: { params: Promis
                   if (!complianceAsset) return null
 
                   return (
-                    <Card key={asset.id} className="hover:shadow-md transition-shadow">
+                    <Card key={asset.id} className="border-0 shadow-soft hover:shadow-md transition-shadow">
                       <CardHeader className="pb-3">
                         <div className="flex items-start justify-between">
-                          <CardTitle className="text-base">{complianceAsset.name}</CardTitle>
+                          <CardTitle className="text-base text-dark">{complianceAsset.name}</CardTitle>
                           <Badge variant={getStatusBadgeVariant(asset.status)}>
                             {asset.status || 'Not Started'}
                           </Badge>
                         </div>
                       </CardHeader>
                       <CardContent className="pt-0">
-                        <div className="space-y-2 text-sm text-gray-600">
+                        <div className="space-y-2 text-sm text-neutral">
                           <p>{complianceAsset.description}</p>
                           <div className="flex items-center justify-between">
                             <span>Category: {complianceAsset.category}</span>
                             <span>Updated: {formatDate(asset.last_updated)}</span>
                           </div>
                           {asset.notes && (
-                            <p className="text-xs bg-gray-50 p-2 rounded">
+                            <p className="text-xs bg-grey p-2 rounded">
                               <strong>Notes:</strong> {asset.notes}
                             </p>
                           )}
@@ -214,9 +214,9 @@ export default async function ComplianceTrackerPage({ params }: { params: Promis
                 })}
               </div>
             ) : (
-              <Card>
+              <Card className="border-0 shadow-soft">
                 <CardContent className="p-8 text-center">
-                  <div className="text-gray-500 space-y-2">
+                  <div className="text-neutral space-y-2">
                     <p className="text-lg font-medium">No compliance assets configured</p>
                     <p className="text-sm">Use the Setup Assets tab to configure compliance requirements for this building.</p>
                   </div>
@@ -227,44 +227,81 @@ export default async function ComplianceTrackerPage({ params }: { params: Promis
 
           {/* Setup Tab */}
           <TabsContent value="setup" className="space-y-4">
-            <Card>
+            <Card className="border-0 shadow-soft">
               <CardHeader>
-                <CardTitle>Available Compliance Assets</CardTitle>
-                <p className="text-sm text-gray-600">
-                  Select which compliance assets apply to this building. Required assets are marked as mandatory.
+                <CardTitle className="text-dark">Available Compliance Assets</CardTitle>
+                <p className="text-sm text-neutral">
+                  Toggle which compliance assets apply to this building. Required assets are marked as mandatory.
                 </p>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="space-y-3">
                   {UK_COMPLIANCE_ITEMS.map((item) => {
                     const isApplied = existingAssetMap.has(item.name)
                     const existingAsset = existingAssetMap.get(item.name)
                     
                     return (
-                      <Card key={item.id} className={`border-2 ${isApplied ? 'border-green-200 bg-green-50' : 'border-gray-200'}`}>
-                        <CardHeader className="pb-3">
-                          <div className="flex items-start justify-between">
-                            <CardTitle className="text-base">{item.name}</CardTitle>
-                            <Badge variant={item.required_if === 'always' ? 'destructive' : 'outline'}>
-                              {item.required_if === 'always' ? 'Required' : 'Optional'}
-                            </Badge>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="pt-0">
-                          <div className="space-y-2 text-sm text-gray-600">
-                            <p>{item.description}</p>
-                            <div className="flex items-center justify-between">
-                              <span>Category: {item.category}</span>
-                              <span>Frequency: {item.default_frequency}</span>
+                      <div key={item.id} className={`p-4 rounded-lg border transition-colors ${
+                        isApplied 
+                          ? 'bg-primary/5 border-primary/20' 
+                          : 'bg-white border-slate-200'
+                      }`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3 flex-1">
+                            {/* Toggle Switch */}
+                            <div className="relative">
+                              <input
+                                type="checkbox"
+                                id={`toggle-${item.id}`}
+                                className="sr-only"
+                                defaultChecked={isApplied}
+                                disabled
+                              />
+                              <label
+                                htmlFor={`toggle-${item.id}`}
+                                className={`block w-12 h-6 rounded-full transition-colors cursor-pointer ${
+                                  isApplied 
+                                    ? 'bg-primary' 
+                                    : 'bg-slate-300'
+                                }`}
+                              >
+                                <span className={`block w-4 h-4 bg-white rounded-full transition-transform transform ${
+                                  isApplied ? 'translate-x-6' : 'translate-x-1'
+                                } mt-1`} />
+                              </label>
                             </div>
-                            {isApplied && (
-                              <div className="mt-2 p-2 bg-green-100 rounded text-xs">
-                                <strong>Applied</strong> - Status: {existingAsset.status || 'Not Started'}
+                            
+                            {/* Asset Info */}
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2 mb-1">
+                                <h3 className="font-medium text-dark">{item.name}</h3>
+                                <Badge variant={item.required_if === 'always' ? 'destructive' : 'outline'}>
+                                  {item.required_if === 'always' ? 'Required' : 'Optional'}
+                                </Badge>
                               </div>
-                            )}
+                              <p className="text-sm text-neutral mb-2">{item.description}</p>
+                              <div className="flex items-center space-x-4 text-xs text-neutral">
+                                <span>Category: {item.category}</span>
+                                <span>Frequency: {item.default_frequency}</span>
+                              </div>
+                            </div>
                           </div>
-                        </CardContent>
-                      </Card>
+                          
+                          {/* Status Indicator */}
+                          {isApplied && (
+                            <div className="ml-4">
+                              <Badge variant="default" className="bg-primary text-white">
+                                Applied
+                              </Badge>
+                              {existingAsset?.status && (
+                                <div className="text-xs text-neutral mt-1">
+                                  Status: {existingAsset.status}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     )
                   })}
                 </div>
@@ -278,10 +315,10 @@ export default async function ComplianceTrackerPage({ params }: { params: Promis
     console.error('Compliance tracker page crash:', err)
     return (
       <div className="p-6 space-y-4">
-        <h1 className="text-2xl font-semibold">Compliance Tracker</h1>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-600">An unexpected error occurred.</p>
-          <p className="text-red-500 text-sm mt-2">Error details: {err instanceof Error ? err.message : String(err)}</p>
+        <h1 className="text-2xl font-semibold text-dark">Compliance Tracker</h1>
+        <div className="bg-error/10 border border-error/20 rounded-lg p-4">
+          <p className="text-error">An unexpected error occurred.</p>
+          <p className="text-error/80 text-sm mt-2">Error details: {err instanceof Error ? err.message : String(err)}</p>
         </div>
       </div>
     )
