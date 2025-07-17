@@ -103,10 +103,12 @@ export default async function CompliancePage({ params }: { params: Promise<{ bui
       console.error('Building compliance assets fetch error:', buildingAssetsError.message)
     }
 
-    // Create status map
+    // Create status map and dates map
     const statusMap: Record<string, string> = {}
+    const statusDatesMap: Record<string, string> = {}
     buildingAssets?.forEach((buildingAsset) => {
       statusMap[buildingAsset.asset_id] = buildingAsset.status || 'Not Tracked'
+      statusDatesMap[buildingAsset.asset_id] = buildingAsset.next_due_date || ''
     })
 
     // Group compliance assets by category
@@ -144,6 +146,28 @@ export default async function CompliancePage({ params }: { params: Promise<{ bui
                       <div className="font-medium">{asset.name}</div>
                       <Badge variant={badgeVariant}>{status}</Badge>
                       <p className="text-xs text-muted-foreground">{asset.description}</p>
+                      
+                      <form
+                        action="/api/compliance-assets/set-due-date"
+                        method="post"
+                        className="space-y-1 text-xs"
+                      >
+                        <input type="hidden" name="building_id" value={buildingId} />
+                        <input type="hidden" name="asset_id" value={asset.id} />
+                        <label className="block font-medium">Next Due Date</label>
+                        <input
+                          type="date"
+                          name="next_due_date"
+                          defaultValue={statusDatesMap[asset.id] || ''}
+                          className="border rounded px-2 py-1 text-sm w-full"
+                        />
+                        <button
+                          type="submit"
+                          className="text-blue-600 hover:underline mt-1"
+                        >
+                          Save Date
+                        </button>
+                      </form>
                     </div>
                   )
                 })}

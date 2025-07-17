@@ -719,4 +719,30 @@ create table if not exists compliance_contracts (
 create index if not exists idx_compliance_contracts_building_id on compliance_contracts(building_id);
 create index if not exists idx_compliance_contracts_compliance_asset_id on compliance_contracts(compliance_asset_id);
 create index if not exists idx_compliance_contracts_contractor_id on compliance_contracts(contractor_id);
-create index if not exists idx_contractors_name on contractors(name); 
+create index if not exists idx_contractors_name on contractors(name);
+
+-- Create compliance_assets table
+CREATE TABLE IF NOT EXISTS compliance_assets (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  category VARCHAR(100),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create building_compliance_assets table
+CREATE TABLE IF NOT EXISTS building_compliance_assets (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  building_id INTEGER REFERENCES buildings(id) ON DELETE CASCADE,
+  asset_id UUID REFERENCES compliance_assets(id) ON DELETE CASCADE,
+  status VARCHAR(50) DEFAULT 'Not Tracked',
+  notes TEXT,
+  next_due_date DATE,
+  last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(building_id, asset_id)
+);
+
+-- Create indexes for compliance tables
+CREATE INDEX IF NOT EXISTS idx_compliance_assets_category ON compliance_assets(category);
+CREATE INDEX IF NOT EXISTS idx_building_compliance_assets_building_id ON building_compliance_assets(building_id);
+CREATE INDEX IF NOT EXISTS idx_building_compliance_assets_asset_id ON building_compliance_assets(asset_id); 
