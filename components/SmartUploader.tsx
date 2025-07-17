@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
 import DocumentTypeSelector from "./DocumentTypeSelector";
@@ -34,6 +35,7 @@ export default function SmartUploader({
   const [currentDocumentId, setCurrentDocumentId] = useState<string>("");
   const [aiResult, setAiResult] = useState<any>(null);
   const [uploadedFileUrl, setUploadedFileUrl] = useState<string>("");
+  const [showModal, setShowModal] = useState(false);
 
   const handleExtract = async () => {
     if (!file) return;
@@ -282,16 +284,12 @@ export default function SmartUploader({
           <p><strong>Confidence:</strong> {aiResult.confidence}</p>
           <p><strong>Suggested Action:</strong> {aiResult.suggested_action}</p>
 
-          <form action="/api/documents/confirm-file" method="POST">
-            <input type="hidden" name="file_url" value={uploadedFileUrl} />
-            <input type="hidden" name="type" value={aiResult.type} />
-            <input type="hidden" name="confidence" value={aiResult.confidence} />
-            <input type="hidden" name="suggested_action" value={aiResult.suggested_action} />
-            <input type="hidden" name="building_name" value={aiResult.building_name || ''} />
-            <button type="submit" className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
-              Accept & File
-            </button>
-          </form>
+          <Button 
+            onClick={() => setShowModal(true)}
+            className="mt-2 bg-blue-600 hover:bg-blue-700"
+          >
+            Review & File
+          </Button>
         </div>
       )}
 
@@ -311,6 +309,46 @@ export default function SmartUploader({
         onTypeSelected={handleTypeSelected}
         onReanalyze={handleReanalyze}
       />
+
+      {/* AI Review Modal */}
+      {aiResult && (
+        <Dialog open={showModal} onOpenChange={setShowModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Review AI Classification</DialogTitle>
+            </DialogHeader>
+
+            <form action="/api/documents/confirm-file" method="POST" className="space-y-4">
+              <div>
+                <Label>Document Type</Label>
+                <Input name="type" defaultValue={aiResult.type} />
+              </div>
+              
+              <div>
+                <Label>Building Name</Label>
+                <Input name="building_name" defaultValue={aiResult.building_name || ''} />
+              </div>
+
+              <div>
+                <Label>Suggested Action</Label>
+                <Input name="suggested_action" defaultValue={aiResult.suggested_action} />
+              </div>
+
+              <input type="hidden" name="confidence" value={aiResult.confidence} />
+              <input type="hidden" name="file_url" value={uploadedFileUrl} />
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setShowModal(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  Accept & File
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
