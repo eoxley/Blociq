@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
 import DocumentTypeSelector from "./DocumentTypeSelector";
+import { useRouter } from 'next/navigation';
 
 type Props = {
   table: "leases" | "compliance_docs";
@@ -36,6 +37,32 @@ export default function SmartUploader({
   const [aiResult, setAiResult] = useState<any>(null);
   const [uploadedFileUrl, setUploadedFileUrl] = useState<string>("");
   const [showModal, setShowModal] = useState(false);
+  const [toastVisible, setToastVisible] = useState(false);
+  const router = useRouter();
+
+  async function handleConfirm(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+
+    const form = new FormData(e.currentTarget);
+    const res = await fetch('/api/documents/confirm-file', {
+      method: 'POST',
+      body: form,
+    });
+
+    if (res.ok) {
+      setToastVisible(true);
+      const { building_id } = await res.json();
+      setTimeout(() => {
+        if (building_id) {
+          router.push(`/buildings/${building_id}/documents`);
+        } else {
+          router.push('/documents');
+        }
+      }, 1500);
+    } else {
+      alert('Failed to save document. Please try again.');
+    }
+  }
 
   const handleExtract = async () => {
     if (!file) return;
@@ -318,7 +345,7 @@ export default function SmartUploader({
               <DialogTitle>Review AI Classification</DialogTitle>
             </DialogHeader>
 
-            <form action="/api/documents/confirm-file" method="POST" className="space-y-4">
+            <form onSubmit={handleConfirm} className="space-y-4">
               <div>
                 <Label>Document Type</Label>
                 <Input name="type" defaultValue={aiResult.type} />
@@ -348,6 +375,12 @@ export default function SmartUploader({
             </form>
           </DialogContent>
         </Dialog>
+      )}
+
+      {toastVisible && (
+        <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded shadow z-50">
+          Document saved successfully! Redirecting...
+        </div>
       )}
     </div>
   );

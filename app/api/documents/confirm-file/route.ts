@@ -62,9 +62,8 @@ export async function POST(req: Request) {
     // This could be handled in the UI with a modal selection
   }
 
-  if (building_id) {
-    return NextResponse.redirect(`/buildings/${building_id}/documents`)
-  } else {
-    return NextResponse.redirect('/documents')
-  }
+  return NextResponse.json({ 
+    success: true, 
+    building_id: building_id 
+  })
 } 
