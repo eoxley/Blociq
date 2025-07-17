@@ -690,3 +690,33 @@ SELECT 'Emails: ' || COUNT(*) as emails_count FROM incoming_emails;
 SELECT 'Compliance Docs: ' || COUNT(*) as compliance_docs_count FROM compliance_docs;
 SELECT 'Property Events: ' || COUNT(*) as events_count FROM property_events;
 SELECT 'Communications: ' || COUNT(*) as communications_count FROM communications; 
+
+-- STEP 1: Add new tables to your Supabase schema
+
+-- Create contractors table
+create table if not exists contractors (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  email text,
+  phone text,
+  notes text,
+  inserted_at timestamp default now()
+);
+
+-- Create compliance_contracts table (join table)
+create table if not exists compliance_contracts (
+  id uuid primary key default gen_random_uuid(),
+  building_id uuid references buildings(id) on delete cascade,
+  compliance_asset_id uuid references compliance_assets(id) on delete cascade,
+  contractor_id uuid references contractors(id) on delete set null,
+  start_date date,
+  end_date date,
+  contract_file_url text,
+  inserted_at timestamp default now()
+);
+
+-- Add indexes for better performance
+create index if not exists idx_compliance_contracts_building_id on compliance_contracts(building_id);
+create index if not exists idx_compliance_contracts_compliance_asset_id on compliance_contracts(compliance_asset_id);
+create index if not exists idx_compliance_contracts_contractor_id on compliance_contracts(contractor_id);
+create index if not exists idx_contractors_name on contractors(name); 

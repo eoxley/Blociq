@@ -248,6 +248,88 @@ export interface Database {
           }
         ]
       }
+      contractors: {
+        Row: {
+          id: string
+          name: string
+          email: string | null
+          phone: string | null
+          notes: string | null
+          inserted_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          email?: string | null
+          phone?: string | null
+          notes?: string | null
+          inserted_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          email?: string | null
+          phone?: string | null
+          notes?: string | null
+          inserted_at?: string
+        }
+        Relationships: []
+      }
+      compliance_contracts: {
+        Row: {
+          id: string
+          building_id: string
+          compliance_asset_id: string
+          contractor_id: string | null
+          start_date: string | null
+          end_date: string | null
+          contract_file_url: string | null
+          inserted_at: string
+        }
+        Insert: {
+          id?: string
+          building_id: string
+          compliance_asset_id: string
+          contractor_id?: string | null
+          start_date?: string | null
+          end_date?: string | null
+          contract_file_url?: string | null
+          inserted_at?: string
+        }
+        Update: {
+          id?: string
+          building_id?: string
+          compliance_asset_id?: string
+          contractor_id?: string | null
+          start_date?: string | null
+          end_date?: string | null
+          contract_file_url?: string | null
+          inserted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_contracts_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_contracts_compliance_asset_id_fkey"
+            columns: ["compliance_asset_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_contracts_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractors"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       building_setup: {
         Row: {
           id: number

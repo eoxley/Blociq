@@ -68,6 +68,14 @@ export default async function ComplianceTrackerPage({ params }: { params: Promis
           name,
           description,
           category
+        ),
+        compliance_contracts (
+          start_date,
+          end_date,
+          contract_file_url,
+          contractors (
+            name
+          )
         )
       `)
       .eq('building_id', parseInt(buildingId, 10))
