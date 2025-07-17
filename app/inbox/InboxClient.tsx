@@ -13,6 +13,8 @@ type Email = {
   unread: boolean | null
   handled: boolean | null
   pinned: boolean | null
+  flag_status: string | null
+  categories: string[] | null
 }
 
 interface InboxClientProps {
@@ -372,7 +374,26 @@ export default function InboxClient({ emails }: InboxClientProps) {
                         Pinned
                       </span>
                     )}
+                    {email.flag_status === 'flagged' && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                        📌 Flagged
+                      </span>
+                    )}
                   </div>
+
+                  {/* Categories */}
+                  {email.categories && email.categories.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {email.categories.map((category, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                        >
+                          {category}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Action buttons */}

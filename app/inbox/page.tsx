@@ -1,5 +1,6 @@
 import LayoutWithSidebar from '@/components/LayoutWithSidebar'
 import InboxClient from './InboxClient'
+import InboxSummary from '@/components/InboxSummary'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
@@ -26,8 +27,15 @@ export default async function InboxPage() {
 
   return (
     <LayoutWithSidebar>
-      <div className="p-6">
+      <div className="p-6 space-y-6">
         <h1 className="text-3xl font-bold text-[#0F5D5D] mb-6">Inbox</h1>
+        
+        {/* Inbox Summary */}
+        <div className="max-w-4xl">
+          <InboxSummary />
+        </div>
+        
+        {/* Inbox Client */}
         <InboxClient emails={emails || []} />
       </div>
     </LayoutWithSidebar>
