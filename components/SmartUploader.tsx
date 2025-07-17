@@ -33,6 +33,7 @@ export default function SmartUploader({
   const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [currentDocumentId, setCurrentDocumentId] = useState<string>("");
   const [aiResult, setAiResult] = useState<any>(null);
+  const [uploadedFileUrl, setUploadedFileUrl] = useState<string>("");
 
   const handleExtract = async () => {
     if (!file) return;
@@ -58,6 +59,7 @@ export default function SmartUploader({
 
       // Set AI result for display
       setAiResult(data.ai);
+      setUploadedFileUrl(data.file_url);
 
       // Set metadata for saving
       setMetadata({
@@ -279,6 +281,17 @@ export default function SmartUploader({
           <p><strong>Building:</strong> {aiResult.building_name || 'Not identified'}</p>
           <p><strong>Confidence:</strong> {aiResult.confidence}</p>
           <p><strong>Suggested Action:</strong> {aiResult.suggested_action}</p>
+
+          <form action="/api/documents/confirm-file" method="POST">
+            <input type="hidden" name="file_url" value={uploadedFileUrl} />
+            <input type="hidden" name="type" value={aiResult.type} />
+            <input type="hidden" name="confidence" value={aiResult.confidence} />
+            <input type="hidden" name="suggested_action" value={aiResult.suggested_action} />
+            <input type="hidden" name="building_name" value={aiResult.building_name || ''} />
+            <button type="submit" className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
+              Accept & File
+            </button>
+          </form>
         </div>
       )}
 
