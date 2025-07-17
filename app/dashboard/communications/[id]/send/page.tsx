@@ -311,6 +311,19 @@ export default function ComposeMessagePage() {
         throw new Error('Building not found');
       }
 
+      // Map category to relevant tags
+      const categoryToTags: Record<string, string[]> = {
+        'maintenance': ['Maintenance'],
+        'service_charge': ['Financial'],
+        'emergency': ['Emergency', 'Urgent'],
+        'complaint': ['Leaseholder'],
+        'general': ['General'],
+        'reminder': ['Routine'],
+        'update': ['General']
+      };
+
+      const tags = categoryToTags[draftCategory] || [];
+
       const response = await fetch('/api/generate-draft', {
         method: 'POST',
         headers: {
@@ -322,6 +335,22 @@ export default function ComposeMessagePage() {
           leaseholderCount: selectedLeaseholders.length || leaseholders.length,
           category: draftCategory,
           purpose: draftPurpose,
+          tags: tags,
+          buildingType: building.construction_type || undefined,
+          buildingAge: building.building_age || undefined,
+          specialFeatures: [
+            building.lift_available && 'Lift Available',
+            building.heating_type && `Heating: ${building.heating_type}`,
+            building.hot_water_type && `Hot Water: ${building.hot_water_type}`,
+            building.total_floors && `${building.total_floors} Floors`,
+            building.parking_info && 'Parking Available'
+          ].filter(Boolean) as string[],
+          complianceIssues: [
+            building.fire_safety_status && `Fire Safety: ${building.fire_safety_status}`,
+            building.asbestos_status && `Asbestos: ${building.asbestos_status}`,
+            building.energy_rating && `Energy Rating: ${building.energy_rating}`
+          ].filter(Boolean) as string[],
+          maintenanceHistory: building.building_insurance_expiry ? `Insurance expires: ${new Date(building.building_insurance_expiry).toLocaleDateString()}` : undefined,
         }),
       });
 
