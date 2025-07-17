@@ -32,9 +32,34 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // Optional: auto-attach to compliance or lease if applicable
-  if (type.toLowerCase().includes('fire risk') || type.toLowerCase().includes('eicr')) {
-    // TODO: insert into building_compliance_assets or link to compliance dashboard
+  // Auto-link to compliance assets if it's a compliance document
+  if (
+    type.toLowerCase().includes('fire risk') ||
+    type.toLowerCase().includes('eicr') ||
+    type.toLowerCase().includes('asbestos') ||
+    type.toLowerCase().includes('legionella') ||
+    type.toLowerCase().includes('lightning') ||
+    type.toLowerCase().includes('loler')
+  ) {
+    const { data: asset } = await supabase
+      .from('compliance_assets')
+      .select('id')
+      .ilike('name', `%${type}%`)
+      .maybeSingle()
+
+    if (asset && building_id) {
+      await supabase.from('building_compliance_assets').upsert({
+        building_id,
+        asset_id: asset.id,
+        status: 'Compliant',
+      })
+    }
+  }
+
+  // Future: Add leaseholder/unit logic if type includes 'lease'
+  if (type.toLowerCase().includes('lease')) {
+    // TODO: Prompt for unit_id or leaseholder_id
+    // This could be handled in the UI with a modal selection
   }
 
   if (building_id) {
