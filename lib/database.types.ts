@@ -82,7 +82,7 @@ export interface Database {
       }
       buildings: {
         Row: {
-          id: number
+          id: string
           name: string
           address: string | null
           unit_count: number | null
@@ -115,7 +115,7 @@ export interface Database {
           ground_rent_frequency: string | null
         }
         Insert: {
-          id?: number
+          id?: string
           name: string
           address?: string | null
           unit_count?: number | null
@@ -148,7 +148,7 @@ export interface Database {
           ground_rent_frequency?: string | null
         }
         Update: {
-          id?: number
+          id?: string
           name?: string
           address?: string | null
           unit_count?: number | null
