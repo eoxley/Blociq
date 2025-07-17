@@ -41,40 +41,54 @@ export default function ComplianceAssetList({ buildingId, existingAssets }: Comp
     setSelectedAssets(assetMap)
   }, [existingAssets])
 
-  const handleFormSubmit = async (formData: FormData) => {
-    const assetName = formData.get('asset_name') as string
-    const toggle = formData.get('toggle') as string
-    const isAdding = toggle === '1'
+  const handleToggleAsset = async (assetName: string, isAdding: boolean) => {
+    try {
+      const formData = new FormData()
+      formData.append('building_id', buildingId)
+      formData.append('asset_name', assetName)
+      formData.append('toggle', isAdding ? '1' : '0')
 
-    // Optimistically update UI
-    if (isAdding) {
-      // Create a temporary asset entry
-      const tempAsset: ComplianceAsset = {
-        id: `temp-${Date.now()}`,
-        building_id: parseInt(buildingId, 10),
-        asset_id: assetName,
-        status: 'Missing',
-        notes: null,
-        last_updated: new Date().toISOString(),
-        compliance_assets: {
-          id: assetName,
-          name: assetName,
-          description: UK_COMPLIANCE_ITEMS.find(item => item.name === assetName)?.description || '',
-          category: UK_COMPLIANCE_ITEMS.find(item => item.name === assetName)?.category || ''
+      const response = await fetch('/api/compliance-assets', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (response.ok) {
+        // Optimistically update UI
+        if (isAdding) {
+          // Create a temporary asset entry
+          const tempAsset: ComplianceAsset = {
+            id: `temp-${Date.now()}`,
+            building_id: parseInt(buildingId, 10),
+            asset_id: assetName,
+            status: 'Missing',
+            notes: null,
+            last_updated: new Date().toISOString(),
+            compliance_assets: {
+              id: assetName,
+              name: assetName,
+              description: UK_COMPLIANCE_ITEMS.find(item => item.name === assetName)?.description || '',
+              category: UK_COMPLIANCE_ITEMS.find(item => item.name === assetName)?.category || ''
+            }
+          }
+          setSelectedAssets(prev => new Map(prev).set(assetName, tempAsset))
+        } else {
+          setSelectedAssets(prev => {
+            const newMap = new Map(prev)
+            newMap.delete(assetName)
+            return newMap
+          })
+          setTrackingAssets(prev => {
+            const newSet = new Set(prev)
+            newSet.delete(assetName)
+            return newSet
+          })
         }
+      } else {
+        console.error('Failed to toggle asset')
       }
-      setSelectedAssets(prev => new Map(prev).set(assetName, tempAsset))
-    } else {
-      setSelectedAssets(prev => {
-        const newMap = new Map(prev)
-        newMap.delete(assetName)
-        return newMap
-      })
-      setTrackingAssets(prev => {
-        const newSet = new Set(prev)
-        newSet.delete(assetName)
-        return newSet
-      })
+    } catch (error) {
+      console.error('Error toggling asset:', error)
     }
   }
 
@@ -196,21 +210,17 @@ export default function ComplianceAssetList({ buildingId, existingAssets }: Comp
                 )}
               </div>
               
-              <form action={`/api/compliance-assets`} method="POST" className="ml-4">
-                <input type="hidden" name="building_id" value={buildingId} />
-                <input type="hidden" name="asset_name" value={item.name} />
-                <input type="hidden" name="toggle" value={isSelected ? "0" : "1"} />
-                <button 
-                  type="submit" 
-                  className={`px-3 py-1 border rounded text-sm font-medium transition-colors ${
-                    isSelected 
-                      ? 'bg-red-100 hover:bg-red-200 text-red-800 border-red-300' 
-                      : 'bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300'
-                  }`}
-                >
-                  {isSelected ? 'Remove' : 'Add'}
-                </button>
-              </form>
+              <button 
+                type="button"
+                onClick={() => handleToggleAsset(item.name, !isSelected)}
+                className={`px-3 py-1 border rounded text-sm font-medium transition-colors ${
+                  isSelected 
+                    ? 'bg-red-100 hover:bg-red-200 text-red-800 border-red-300' 
+                    : 'bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300'
+                }`}
+              >
+                {isSelected ? 'Remove' : 'Add'}
+              </button>
             </div>
           </div>
         )

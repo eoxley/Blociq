@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     .maybeSingle()
 
   if (!complianceAsset) {
-    return NextResponse.redirect(`/buildings/${building_id}/compliance/tracker?error=asset_not_found`)
+    return NextResponse.json({ error: 'Compliance asset not found' }, { status: 404 })
   }
 
   const { data: exists } = await supabase
@@ -28,18 +28,26 @@ export async function POST(req: Request) {
 
   if (exists) {
     // Remove the row
-    await supabase
+    const { error: deleteError } = await supabase
       .from('building_compliance_assets')
       .delete()
       .eq('id', exists.id)
+    
+    if (deleteError) {
+      return NextResponse.json({ error: 'Failed to remove asset' }, { status: 500 })
+    }
   } else {
     // Add the row
-    await supabase.from('building_compliance_assets').insert({
+    const { error: insertError } = await supabase.from('building_compliance_assets').insert({
       building_id: parseInt(building_id, 10),
       asset_id: complianceAsset.id,
       status: 'Missing',
     })
+    
+    if (insertError) {
+      return NextResponse.json({ error: 'Failed to add asset' }, { status: 500 })
+    }
   }
 
-  return NextResponse.redirect(`/buildings/${building_id}/compliance/tracker`)
+  return NextResponse.json({ success: true })
 } 
