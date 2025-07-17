@@ -34,11 +34,12 @@ type Unit = {
   unit_number: string
   type: string
   floor: string
-  leaseholders: Array<{
-    name: string
+  notes?: string
+  leaseholder?: {
+    full_name: string
     email: string
     phone: string
-  }>
+  }
 }
 
 interface BuildingDetailClientProps {
@@ -51,8 +52,17 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
   const [loadingUnits, setLoadingUnits] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [editedBuilding, setEditedBuilding] = useState(building)
+  const [searchTerm, setSearchTerm] = useState('')
   const supabase = createClientComponentClient()
   const { setContext } = useBlocIQContext()
+
+  // Filter units based on search term
+  const filteredUnits = units.filter((unit) => {
+    const unitNumber = unit.unit_number?.toLowerCase() || ''
+    const leaseholder = unit.leaseholder?.full_name?.toLowerCase() || ''
+    const search = searchTerm.toLowerCase()
+    return unitNumber.includes(search) || leaseholder.includes(search)
+  })
 
   // Set building context for AskBlocIQ
   useEffect(() => {
@@ -66,10 +76,9 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
   useEffect(() => {
     const fetchUnits = async () => {
       try {
-        // First fetch units
         const { data: unitsData, error: unitsError } = await supabase
           .from('units')
-          .select('id, unit_number, type, floor')
+          .select('id, unit_number, type, floor, notes, leaseholders(full_name, email, phone)')
           .eq('building_id', building.id)
           .order('unit_number')
 
@@ -78,27 +87,13 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
           return
         }
 
-        // Then fetch leaseholders separately
-        let leaseholders: any[] = []
-        if (unitsData && unitsData.length > 0) {
-          const unitIds = unitsData.map(u => u.id)
-          const { data: leaseholdersData, error: leaseholdersError } = await supabase
-            .from('leaseholders')
-            .select('id, unit_id, name, email, phone')
-            .in('unit_id', unitIds)
-          
-          if (!leaseholdersError && leaseholdersData) {
-            leaseholders = leaseholdersData
-          }
-        }
-
-        // Combine units with their leaseholders
-        const unitsWithLeaseholders = unitsData?.map(unit => ({
+        // Transform the data to match our Unit type
+        const transformedUnits = (unitsData || []).map((unit: any) => ({
           ...unit,
-          leaseholders: leaseholders.filter(l => l.unit_id === unit.id)
-        })) || []
+          leaseholder: unit.leaseholders?.[0] || null
+        }))
 
-        setUnits(unitsWithLeaseholders)
+        setUnits(transformedUnits)
       } catch (error) {
         console.error('Error fetching units:', error)
       } finally {
@@ -227,72 +222,53 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
 
       {/* Units Section */}
       <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-        <div className="flex items-center mb-6">
-          <h2 className="text-2xl font-semibold text-[#0F5D5D] flex items-center gap-2">
-            <Users className="h-6 w-6" />
-            Units ({units.length})
-          </h2>
-        </div>
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold border-b pb-1">Units ({units.length})</h2>
 
-        {loadingUnits ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto"></div>
-            <p className="text-gray-500 mt-2">Loading units...</p>
-          </div>
-        ) : units.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {units.slice(0, 6).map((unit) => (
-              <div key={unit.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-gray-900">{unit.unit_number}</h3>
-                </div>
-                <p className="text-sm text-gray-600 mb-2">Floor {unit.floor}</p>
-                {unit.leaseholders && unit.leaseholders.length > 0 ? (
-                  <div className="space-y-2">
-                    <div className="text-sm text-gray-700">
-                      <p className="font-medium">{unit.leaseholders[0].name}</p>
-                      <p className="text-gray-600">{unit.leaseholders[0].email}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleEmailLeaseholder(unit.leaseholders[0].email)}
-                        className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs hover:bg-blue-100 transition-colors"
-                        title="Email leaseholder"
-                      >
-                        <Mail className="h-3 w-3" />
-                        Email
-                      </button>
-                      <button
-                        className="flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded text-xs hover:bg-green-100 transition-colors"
-                        title="Add occupier"
-                      >
-                        <UserPlus className="h-3 w-3" />
-                        Add Occupier
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-500 italic">No leaseholder assigned</p>
-                    <button
-                      className="flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded text-xs hover:bg-green-100 transition-colors"
-                      title="Add occupier"
-                    >
-                      <UserPlus className="h-3 w-3" />
-                      Add Occupier
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Units Found</h3>
-            <p className="text-gray-500">No units have been added to this building yet.</p>
-          </div>
-        )}
+          <input
+            type="text"
+            placeholder="Search by unit or leaseholder name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full max-w-md border rounded px-3 py-2 text-sm"
+          />
+
+          {loadingUnits ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto"></div>
+              <p className="text-gray-500 mt-2">Loading units...</p>
+            </div>
+          ) : filteredUnits.length > 0 ? (
+            <div className="border rounded-md overflow-auto">
+              <table className="w-full text-sm table-fixed">
+                <thead className="bg-muted text-muted-foreground">
+                  <tr>
+                    <th className="text-left px-3 py-2 w-1/4">Unit</th>
+                    <th className="text-left px-3 py-2 w-1/4">Leaseholder</th>
+                    <th className="text-left px-3 py-2 w-1/2">Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUnits.map((unit) => (
+                    <tr key={unit.id} className="border-t hover:bg-muted/50">
+                      <td className="px-3 py-2">{unit.unit_number}</td>
+                      <td className="px-3 py-2">{unit.leaseholder?.full_name || '—'}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{unit.notes || ''}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Units Found</h3>
+              <p className="text-gray-500">
+                {searchTerm ? 'No units match your search criteria.' : 'No units have been added to this building yet.'}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Building Information */}
