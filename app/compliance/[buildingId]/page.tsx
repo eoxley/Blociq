@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
+import { Badge } from '@/components/ui/badge'
 
 export default async function CompliancePage({ params }: { params: Promise<{ buildingId: string }> }) {
   try {
@@ -25,7 +26,7 @@ export default async function CompliancePage({ params }: { params: Promise<{ bui
     // Fetch building data
     const { data: building, error: buildingError } = await supabase
       .from('buildings')
-      .select('name')
+      .select('id, name')
       .eq('id', buildingId)
       .maybeSingle()
 
@@ -54,42 +55,140 @@ export default async function CompliancePage({ params }: { params: Promise<{ bui
       )
     }
 
+    // Query building compliance assets with related data
+    const { data: complianceAssets, error: assetsError } = await supabase
+      .from('building_compliance_assets')
+      .select(`
+        *,
+        compliance_assets (
+          id,
+          name,
+          description,
+          category
+        )
+      `)
+      .eq('building_id', parseInt(buildingId, 10))
+
+    if (assetsError) {
+      console.error('Compliance assets fetch error:', assetsError.message)
+      return (
+        <div className="p-6 space-y-4">
+          <h1 className="text-2xl font-semibold">Compliance</h1>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-red-600">Could not load compliance data.</p>
+            <p className="text-red-500 text-sm mt-2">Error: {assetsError.message}</p>
+          </div>
+        </div>
+      )
+    }
+
+    // Helper function to format date
+    const formatDate = (dateString: string | null): string => {
+      if (!dateString) return 'Not set'
+      return new Date(dateString).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      })
+    }
+
+    // Helper function to get status badge variant
+    const getStatusBadgeVariant = (status: string | null): "default" | "destructive" | "warning" | "outline" => {
+      if (!status) return 'outline'
+      
+      switch (status.toLowerCase()) {
+        case 'compliant':
+          return 'default'
+        case 'overdue':
+          return 'destructive'
+        case 'due soon':
+        case 'missing':
+          return 'warning'
+        default:
+          return 'outline'
+      }
+    }
+
+    // Helper function to determine status
+    const getStatus = (asset: any): string => {
+      return asset.status || 'Not Started'
+    }
+
     return (
       <div className="p-6 space-y-4">
         <h1 className="text-2xl font-semibold">Compliance</h1>
-        <p>Building: <strong>{building.name || 'Unknown'}</strong></p>
-        <p className="text-sm text-gray-600">Building ID: {buildingId}</p>
+        <p className="text-sm text-gray-600">Building: <strong>{building.name}</strong></p>
 
-        {/* Placeholder area for compliance content */}
-        <div className="bg-white border rounded-lg p-6 shadow-sm">
-          <h2 className="text-lg font-medium mb-4">Compliance Overview</h2>
-          <div className="space-y-4">
-            <div className="border p-4 rounded-lg">
-              <h3 className="font-medium mb-2">Fire Risk Assessment</h3>
-              <p className="text-sm text-gray-600">Status: <span className="text-yellow-600">Pending</span></p>
+        {complianceAssets && complianceAssets.length > 0 ? (
+          <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b bg-gray-50">
+              <h2 className="text-lg font-medium">Compliance Assets</h2>
             </div>
-            
-            <div className="border p-4 rounded-lg">
-              <h3 className="font-medium mb-2">Electrical Installation Condition Report (EICR)</h3>
-              <p className="text-sm text-gray-600">Status: <span className="text-yellow-600">Pending</span></p>
-            </div>
-            
-            <div className="border p-4 rounded-lg">
-              <h3 className="font-medium mb-2">Gas Safety Certificate</h3>
-              <p className="text-sm text-gray-600">Status: <span className="text-yellow-600">Pending</span></p>
-            </div>
-            
-            <div className="border p-4 rounded-lg">
-              <h3 className="font-medium mb-2">Energy Performance Certificate (EPC)</h3>
-              <p className="text-sm text-gray-600">Status: <span className="text-yellow-600">Pending</span></p>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Asset Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Due Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Category
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {complianceAssets.map((asset) => {
+                    const complianceAsset = Array.isArray(asset.compliance_assets) 
+                      ? asset.compliance_assets[0] 
+                      : asset.compliance_assets
+                    const status = getStatus(asset)
+                    
+                    return (
+                      <tr key={asset.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">
+                            {complianceAsset?.name || 'Unknown Asset'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Badge variant={getStatusBadgeVariant(status)}>
+                            {status}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {formatDate(asset.last_updated)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {complianceAsset?.category || 'Unknown'}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <p className="text-yellow-800">
+              <strong>No compliance records for this building.</strong>
+            </p>
+            <p className="text-yellow-700 text-sm mt-2">
+              Compliance assets need to be set up for this building. Contact your administrator to configure compliance requirements.
+            </p>
+          </div>
+        )}
 
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <p className="text-blue-800 text-sm">
-            <strong>Note:</strong> This is a placeholder compliance page for building {building.name}. 
-            Full compliance tracking functionality will be implemented here.
+            <strong>Note:</strong> This page shows compliance assets for building {building.name}. 
+            Status is determined based on due dates and current compliance state.
           </p>
         </div>
       </div>
