@@ -2,9 +2,9 @@ import { cookies } from 'next/headers'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 
-export default async function CompliancePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CompliancePage({ params }: { params: Promise<{ buildingId: string }> }) {
   try {
-    const { id: buildingId } = await params
+    const { buildingId } = await params
     const supabase = createClient(cookies())
 
     if (!buildingId) {
