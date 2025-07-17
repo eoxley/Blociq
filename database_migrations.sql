@@ -139,25 +139,67 @@ CREATE TABLE IF NOT EXISTS compliance_docs (
 
 -- Create incoming_emails table if it doesn't exist
 CREATE TABLE IF NOT EXISTS incoming_emails (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  building_id INTEGER REFERENCES buildings(id) ON DELETE CASCADE,
-  user_id VARCHAR(255),
-  subject VARCHAR(500),
-  from_email VARCHAR(255),
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  from_email TEXT NOT NULL,
+  subject TEXT NOT NULL,
   body_preview TEXT,
-  received_at TIMESTAMP WITH TIME ZONE,
+  body_content TEXT,
+  received_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  message_id TEXT UNIQUE,
+  thread_id TEXT,
+  unread BOOLEAN DEFAULT true,
+  handled BOOLEAN DEFAULT false,
+  flag_status TEXT DEFAULT 'notFlagged',
+  categories TEXT[] DEFAULT '{}',
+  pinned BOOLEAN DEFAULT false,
+  tag TEXT,
+  building_id INTEGER REFERENCES buildings(id),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  handled BOOLEAN DEFAULT FALSE,
-  unread BOOLEAN DEFAULT TRUE,
-  pinned BOOLEAN DEFAULT FALSE,
-  tag VARCHAR(100),
-  unit VARCHAR(50),
-  thread_id VARCHAR(255),
-  message_id VARCHAR(255),
-  -- Enhanced fields for better email management
-  flag_status VARCHAR(50) DEFAULT 'notFlagged' CHECK (flag_status IN ('notFlagged', 'flagged', 'complete')),
-  categories TEXT[] DEFAULT '{}'
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Create index for better query performance
+CREATE INDEX IF NOT EXISTS idx_incoming_emails_received_at ON incoming_emails(received_at DESC);
+CREATE INDEX IF NOT EXISTS idx_incoming_emails_handled ON incoming_emails(handled);
+CREATE INDEX IF NOT EXISTS idx_incoming_emails_unread ON incoming_emails(unread);
+CREATE INDEX IF NOT EXISTS idx_incoming_emails_building_id ON incoming_emails(building_id);
+
+-- Create email_history table for tracking sent emails
+CREATE TABLE IF NOT EXISTS email_history (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  email_id UUID REFERENCES incoming_emails(id),
+  sent_text TEXT NOT NULL,
+  sent_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  sent_by UUID REFERENCES auth.users(id)
+);
+
+-- Enable Row Level Security
+ALTER TABLE incoming_emails ENABLE ROW LEVEL SECURITY;
+ALTER TABLE email_history ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policies
+CREATE POLICY "Users can view emails for their buildings" ON incoming_emails
+  FOR SELECT USING (
+    building_id IN (
+      SELECT building_id FROM profiles WHERE id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can update emails for their buildings" ON incoming_emails
+  FOR UPDATE USING (
+    building_id IN (
+      SELECT building_id FROM profiles WHERE id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can view email history for their buildings" ON email_history
+  FOR SELECT USING (
+    email_id IN (
+      SELECT id FROM incoming_emails WHERE building_id IN (
+        SELECT building_id FROM profiles WHERE id = auth.uid()
+      )
+    )
+  );
 
 -- Create email_drafts table
 CREATE TABLE IF NOT EXISTS email_drafts (
@@ -165,14 +207,6 @@ CREATE TABLE IF NOT EXISTS email_drafts (
   email_id UUID REFERENCES incoming_emails(id) ON DELETE CASCADE,
   draft_text TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Create email_history table
-CREATE TABLE IF NOT EXISTS email_history (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  email_id UUID REFERENCES incoming_emails(id) ON DELETE CASCADE,
-  sent_text TEXT,
-  sent_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Create documents table if it doesn't exist
