@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Database } from '@/lib/database.types';
-import { Plus, Search, Edit, Trash2, Mail, FileText } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Mail, FileText, Send } from 'lucide-react';
 
 type Template = Database['public']['Tables']['communication_templates']['Row'];
 
@@ -205,6 +205,12 @@ export default function CommunicationsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
+                    <Button variant="default" size="sm" asChild>
+                      <Link href={`/dashboard/communications/${template.id}/send`}>
+                        <Send className="h-4 w-4 mr-1" />
+                        Send
+                      </Link>
+                    </Button>
                     <Button variant="outline" size="sm" asChild>
                       <Link href={`/dashboard/communications/${template.id}`}>
                         <Edit className="h-4 w-4 mr-1" />
