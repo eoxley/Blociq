@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Database } from '@/lib/database.types';
-import { Plus, Search, Edit, Trash2, Mail, FileText, Send } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Mail, FileText, Send, History } from 'lucide-react';
 
 type Template = Database['public']['Tables']['communication_templates']['Row'];
 
@@ -117,12 +117,20 @@ export default function CommunicationsPage() {
           <h1 className="text-2xl font-semibold">Communication Templates</h1>
           <p className="text-muted-foreground">Manage your email and letter templates</p>
         </div>
-        <Button asChild>
-          <Link href="/dashboard/communications/new">
-            <Plus className="h-4 w-4 mr-2" />
-            New Template
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/dashboard/communications/log">
+              <History className="h-4 w-4 mr-2" />
+              View Log
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/dashboard/communications/new">
+              <Plus className="h-4 w-4 mr-2" />
+              New Template
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
