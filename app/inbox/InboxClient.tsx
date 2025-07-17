@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Mail, Clock, User, RefreshCw, ExternalLink, ChevronDown, ChevronUp, History, MessageSquare, Loader2, Send, Edit3, Check } from 'lucide-react'
+import { Mail, Clock, User, RefreshCw, ExternalLink, ChevronDown, ChevronUp, History, MessageSquare, Loader2, Send, Edit3, Check, Tag, Flag } from 'lucide-react'
+import { supabase } from '@/utils/supabase/client'
 
 // Define the Email type based on the database schema
 type Email = {
@@ -33,6 +34,13 @@ export default function InboxClient({ emails }: InboxClientProps) {
   const [editedReplies, setEditedReplies] = useState<Record<string, string>>({})
   const [sendingEmails, setSendingEmails] = useState<Set<string>>(new Set())
   const [sendResults, setSendResults] = useState<Record<string, { success: boolean; message: string }>>({})
+  
+  // New state for tagging and flagging
+  const [showTagTools, setShowTagTools] = useState<Set<string>>(new Set())
+  const [newTags, setNewTags] = useState<Record<string, string>>({})
+  const [savingTags, setSavingTags] = useState<Set<string>>(new Set())
+
+
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
@@ -254,6 +262,134 @@ export default function InboxClient({ emails }: InboxClientProps) {
     }
   }
 
+  const toggleFlag = async (emailId: string, currentFlagStatus: string | null) => {
+    setSavingTags(prev => new Set(prev).add(emailId))
+    
+    try {
+      const nextFlag = currentFlagStatus === 'flagged' ? 'notFlagged' : 'flagged'
+      const { error } = await supabase
+        .from('incoming_emails')
+        .update({ flag_status: nextFlag })
+        .eq('id', emailId)
+      
+      if (error) {
+        console.error('Error updating flag status:', error)
+        return
+      }
+      
+      // Reload the page to show updated emails
+      window.location.reload()
+    } catch (error) {
+      console.error('Error toggling flag:', error)
+    } finally {
+      setSavingTags(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(emailId)
+        return newSet
+      })
+    }
+  }
+
+  const addCategory = async (emailId: string) => {
+    const newTag = newTags[emailId]?.trim()
+    if (!newTag) return
+
+    setSavingTags(prev => new Set(prev).add(emailId))
+    
+    try {
+      // Get current categories
+      const currentEmail = emails.find(e => e.id === emailId)
+      const currentCategories = currentEmail?.categories || []
+      
+      // Add new category if it doesn't exist
+      if (!currentCategories.includes(newTag)) {
+        const updatedCategories = [...currentCategories, newTag]
+        
+        const { error } = await supabase
+          .from('incoming_emails')
+          .update({ categories: updatedCategories })
+          .eq('id', emailId)
+        
+        if (error) {
+          console.error('Error adding category:', error)
+          return
+        }
+        
+        // Clear the input and hide tools
+        setNewTags(prev => {
+          const newTags = { ...prev }
+          delete newTags[emailId]
+          return newTags
+        })
+        setShowTagTools(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(emailId)
+          return newSet
+        })
+        
+        // Reload the page to show updated emails
+        window.location.reload()
+      }
+    } catch (error) {
+      console.error('Error adding category:', error)
+    } finally {
+      setSavingTags(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(emailId)
+        return newSet
+      })
+    }
+  }
+
+  const removeCategory = async (emailId: string, categoryToRemove: string) => {
+    setSavingTags(prev => new Set(prev).add(emailId))
+    
+    try {
+      const currentEmail = emails.find(e => e.id === emailId)
+      const currentCategories = currentEmail?.categories || []
+      const updatedCategories = currentCategories.filter(cat => cat !== categoryToRemove)
+      
+      const { error } = await supabase
+        .from('incoming_emails')
+        .update({ categories: updatedCategories })
+        .eq('id', emailId)
+      
+      if (error) {
+        console.error('Error removing category:', error)
+        return
+      }
+      
+      // Reload the page to show updated emails
+      window.location.reload()
+    } catch (error) {
+      console.error('Error removing category:', error)
+    } finally {
+      setSavingTags(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(emailId)
+        return newSet
+      })
+    }
+  }
+
+  const toggleTagTools = (emailId: string) => {
+    setShowTagTools(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(emailId)) {
+        newSet.delete(emailId)
+        // Clear the input when hiding
+        setNewTags(prev => {
+          const newTags = { ...prev }
+          delete newTags[emailId]
+          return newTags
+        })
+      } else {
+        newSet.add(emailId)
+      }
+      return newSet
+    })
+  }
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Unknown date'
     
@@ -387,11 +523,85 @@ export default function InboxClient({ emails }: InboxClientProps) {
                       {email.categories.map((category, index) => (
                         <span
                           key={index}
-                          className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                          className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 group relative"
                         >
                           {category}
+                          <button
+                            onClick={() => removeCategory(email.id, category)}
+                            disabled={savingTags.has(email.id)}
+                            className="ml-1 text-blue-600 hover:text-blue-800 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
+                            title="Remove category"
+                          >
+                            ×
+                          </button>
                         </span>
                       ))}
+                    </div>
+                  )}
+
+                  {/* Tag and Flag Tools */}
+                  <div className="mt-3 flex items-center gap-2">
+                    <button
+                      onClick={() => toggleFlag(email.id, email.flag_status)}
+                      disabled={savingTags.has(email.id)}
+                      className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors disabled:opacity-50 ${
+                        email.flag_status === 'flagged'
+                          ? 'bg-orange-100 text-orange-800 hover:bg-orange-200'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                      title={email.flag_status === 'flagged' ? 'Unflag email' : 'Flag email'}
+                    >
+                      <Flag className="h-3 w-3" />
+                      {savingTags.has(email.id) ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : email.flag_status === 'flagged' ? (
+                        'Unflag'
+                      ) : (
+                        'Flag'
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => toggleTagTools(email.id)}
+                      disabled={savingTags.has(email.id)}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors disabled:opacity-50"
+                      title="Edit tags"
+                    >
+                      <Tag className="h-3 w-3" />
+                      {showTagTools.has(email.id) ? 'Cancel' : 'Edit Tags'}
+                    </button>
+                  </div>
+
+                  {/* Add Tag Input */}
+                  {showTagTools.has(email.id) && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="Add category"
+                        value={newTags[email.id] || ''}
+                        onChange={(e) => setNewTags(prev => ({
+                          ...prev,
+                          [email.id]: e.target.value
+                        }))}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            addCategory(email.id)
+                          }
+                        }}
+                        className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        disabled={savingTags.has(email.id)}
+                      />
+                      <button
+                        onClick={() => addCategory(email.id)}
+                        disabled={savingTags.has(email.id) || !newTags[email.id]?.trim()}
+                        className="bg-teal-600 text-white px-3 py-1 rounded text-sm hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {savingTags.has(email.id) ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          'Add'
+                        )}
+                      </button>
                     </div>
                   )}
                 </div>
