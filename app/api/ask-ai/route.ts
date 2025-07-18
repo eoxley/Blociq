@@ -1,0 +1,220 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import OpenAI from 'openai';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+export async function POST(req: NextRequest) {
+  try {
+    console.log("🤖 AI Assistant processing request...");
+    
+    const body = await req.json();
+    const { prompt, buildingId, templateId, action } = body;
+
+    if (!prompt) {
+      return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
+    }
+
+    console.log("✅ Valid request received:", { prompt, buildingId, templateId, action });
+
+    let contextData = {};
+    let templateData = null;
+    let buildingData = null;
+
+    // 1. Load building data if buildingId provided
+    if (buildingId) {
+      const { data: building, error: buildingError } = await supabase
+        .from('buildings')
+        .select(`
+          *,
+          units (
+            id,
+            unit_number,
+            leaseholders (
+              id,
+              name,
+              email,
+              phone
+            )
+          )
+        `)
+        .eq('id', buildingId)
+        .single();
+
+      if (!buildingError && building) {
+        buildingData = building;
+        contextData = {
+          ...contextData,
+          building_name: building.name,
+          building_address: building.address,
+          total_units: building.units?.length || 0,
+          leaseholders: building.units?.map(unit => ({
+            unit_number: unit.unit_number,
+            leaseholders: unit.leaseholders
+          })) || []
+        };
+      }
+    }
+
+    // 2. Load template data if templateId provided
+    if (templateId) {
+      const { data: template, error: templateError } = await supabase
+        .from('templates')
+        .select('*')
+        .eq('id', templateId)
+        .single();
+
+      if (!templateError && template) {
+        templateData = template;
+        contextData = {
+          ...contextData,
+          template_name: template.name,
+          template_type: template.type,
+          template_content: template.content_text,
+          available_placeholders: template.placeholders
+        };
+      }
+    }
+
+    // 3. If no specific template provided, search for relevant templates
+    if (!templateId && action !== 'create_new') {
+      const { data: templates, error: searchError } = await supabase
+        .from('templates')
+        .select('*')
+        .ilike('content_text', `%${prompt.split(' ').slice(0, 3).join(' ')}%`)
+        .limit(3);
+
+      if (!searchError && templates && templates.length > 0) {
+        contextData = {
+          ...contextData,
+          relevant_templates: templates.map(t => ({
+            id: t.id,
+            name: t.name,
+            type: t.type,
+            content: t.content_text,
+            placeholders: t.placeholders
+          }))
+        };
+      }
+    }
+
+    // 4. Build the AI prompt based on the action
+    let systemPrompt = '';
+    let userPrompt = '';
+
+    switch (action) {
+      case 'rewrite':
+        if (!templateData) {
+          return NextResponse.json({ error: 'Template ID required for rewrite action' }, { status: 400 });
+        }
+        systemPrompt = `You are a professional block manager drafting legally compliant letters and notices for UK leasehold properties. You have access to building data and template content.`;
+        userPrompt = `Please rewrite the following template content to address this specific request: "${prompt}"
+
+Template Content:
+${templateData.content_text}
+
+Available Placeholders: ${templateData.placeholders?.join(', ')}
+
+Building Context:
+${JSON.stringify(contextData, null, 2)}
+
+Please provide a rewritten version that:
+1. Maintains the same structure and placeholders
+2. Addresses the specific request
+3. Remains legally compliant
+4. Is professional and clear
+
+Return only the rewritten content with placeholders intact.`;
+
+        break;
+
+      case 'search':
+        systemPrompt = `You are an AI assistant helping to find the most relevant communication templates for UK leasehold block management.`;
+        userPrompt = `Based on this request: "${prompt}"
+
+Available Templates:
+${contextData.relevant_templates ? JSON.stringify(contextData.relevant_templates, null, 2) : 'No templates found'}
+
+Building Context:
+${JSON.stringify(contextData, null, 2)}
+
+Please recommend the best template(s) for this request and explain why they are suitable. Also suggest any modifications needed.`;
+
+        break;
+
+      case 'create_new':
+        systemPrompt = `You are a professional block manager creating new communication templates for UK leasehold properties.`;
+        userPrompt = `Create a new template based on this request: "${prompt}"
+
+Building Context:
+${JSON.stringify(contextData, null, 2)}
+
+Please create a professional template that:
+1. Uses appropriate placeholders in {{placeholder_name}} format
+2. Is legally compliant for UK leasehold
+3. Includes all necessary sections
+4. Is clear and professional
+
+Return the template content with placeholders.`;
+
+        break;
+
+      default:
+        systemPrompt = `You are a professional block manager assistant helping with UK leasehold communications.`;
+        userPrompt = `Request: "${prompt}"
+
+Available Context:
+${JSON.stringify(contextData, null, 2)}
+
+Please provide helpful guidance on how to handle this request, including:
+1. Recommended templates to use
+2. Key information needed
+3. Legal considerations
+4. Best practices for UK leasehold management`;
+
+        break;
+    }
+
+    // 5. Call OpenAI
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 2000
+    });
+
+    const aiResponse = completion.choices[0]?.message?.content;
+
+    if (!aiResponse) {
+      throw new Error('No response from AI');
+    }
+
+    console.log("✅ AI response generated successfully");
+
+    return NextResponse.json({
+      success: true,
+      response: aiResponse,
+      context: contextData,
+      action: action,
+      templateId: templateId,
+      buildingId: buildingId
+    });
+
+  } catch (error) {
+    console.error('❌ AI Assistant error:', error);
+    return NextResponse.json({ 
+      error: 'Failed to process AI request',
+      details: process.env.NODE_ENV === 'development' ? error instanceof Error ? error.message : 'Unknown error' : undefined
+    }, { status: 500 });
+  }
+} 

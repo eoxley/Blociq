@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     console.log("📄 Generating document...");
     
     const body = await req.json();
-    const { templateId, buildingId, placeholderData } = body;
+    const { templateId, buildingId, placeholderData, aiGenerated = false } = body;
 
     // Validate required parameters
     if (!templateId) {
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Placeholder data is required' }, { status: 400 });
     }
 
-    console.log("✅ Valid request received:", { templateId, buildingId });
+    console.log("✅ Valid request received:", { templateId, buildingId, aiGenerated });
 
     // 1. Fetch template from database
     const { data: template, error: templateError } = await supabase
@@ -91,6 +91,8 @@ export async function POST(req: NextRequest) {
         building_id: buildingId,
         filled_by: 'system', // TODO: Get actual user ID
         filepath: filePath,
+        placeholder_data: placeholderData, // ✅ NEW: Store the data used
+        ai_generated: aiGenerated, // ✅ NEW: Track if AI was used
         created_at: new Date().toISOString()
       });
 
@@ -105,7 +107,8 @@ export async function POST(req: NextRequest) {
       success: true,
       fileUrl: publicUrl,
       filename: filename,
-      templateName: template.name
+      templateName: template.name,
+      aiGenerated: aiGenerated
     });
 
   } catch (error) {
