@@ -1,9 +1,81 @@
 import PizZip from 'pizzip';
 import Docxtemplater from 'docxtemplater';
 
-export async function replacePlaceholdersInDocx(buffer: Blob, data: Record<string, string>): Promise<Blob> {
+// UK Letter formatting helper functions
+function formatUKDate(dateString: string): string {
+  const date = new Date(dateString);
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+function generateAddressBlock(data: Record<string, string>): string {
+  const addressParts = [];
+  
+  if (data.unit_number) {
+    addressParts.push(`Flat ${data.unit_number}`);
+  }
+  if (data.building_name) {
+    addressParts.push(data.building_name);
+  }
+  if (data.building_address_line1) {
+    addressParts.push(data.building_address_line1);
+  }
+  if (data.building_city) {
+    addressParts.push(data.building_city);
+  }
+  if (data.building_postcode) {
+    addressParts.push(data.building_postcode);
+  }
+  
+  return addressParts.join('\n');
+}
+
+function determineSignOff(data: Record<string, string>): string {
+  const recipientName = data.recipient_name || '';
+  const isGenericRecipient = !recipientName || 
+    recipientName.toLowerCase().includes('sir') || 
+    recipientName.toLowerCase().includes('madam') ||
+    recipientName.toLowerCase().includes('occupier');
+  
+  const signOff = isGenericRecipient ? 'Yours faithfully,' : 'Yours sincerely,';
+  const managerName = data.property_manager_name || 'Property Manager';
+  
+  return `${signOff}\n\n${managerName}\nBlocIQ Property Management`;
+}
+
+function processLetterData(data: Record<string, string>): Record<string, string> {
+  const processedData = { ...data };
+  
+  // Format today_date as UK format
+  if (processedData.today_date) {
+    processedData.today_date = formatUKDate(processedData.today_date);
+  }
+  
+  // Generate address block
+  const addressBlock = generateAddressBlock(processedData);
+  if (addressBlock) {
+    processedData.address_block = addressBlock;
+  }
+  
+  // Determine sign-off
+  processedData.sign_off = determineSignOff(processedData);
+  
+  return processedData;
+}
+
+export async function replacePlaceholdersInDocx(buffer: Blob, data: Record<string, string>, templateType?: string): Promise<Blob> {
   try {
     console.log("🔧 Starting placeholder replacement...");
+    
+    // Apply UK letter formatting if template type is "letter"
+    let processedData = data;
+    if (templateType === 'letter') {
+      console.log("📝 Applying UK letter formatting...");
+      processedData = processLetterData(data);
+    }
     
     // Convert Blob to ArrayBuffer
     const arrayBuffer = await buffer.arrayBuffer();
@@ -19,7 +91,7 @@ export async function replacePlaceholdersInDocx(buffer: Blob, data: Record<strin
     });
     
     // Set the data for replacement
-    doc.setData(data);
+    doc.setData(processedData);
     
     // Render the document (replace placeholders)
     doc.render();
@@ -100,6 +172,19 @@ export const commonPlaceholders = {
     'today_date',
     'contact_email',
     'contact_phone'
+  ],
+  letter: [
+    'today_date',
+    'address_block',
+    'recipient_name',
+    'letter_body',
+    'sign_off',
+    'unit_number',
+    'building_name',
+    'building_address_line1',
+    'building_city',
+    'building_postcode',
+    'property_manager_name'
   ],
   notice: [
     'building_name',
