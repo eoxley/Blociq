@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Reply, Building, Calendar, User, Mail } from "lucide-react";
+import { ArrowLeft, Reply, Building, Calendar, User, Mail, CheckCircle, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ReplyModal from "@/components/ReplyModal";
 import { createClient } from "@supabase/supabase-js";
 
@@ -20,6 +21,9 @@ interface Email {
   building_name?: string;
   status?: string;
   isUnread?: boolean;
+  is_handled?: boolean;
+  handled_at?: string;
+  folder?: string;
 }
 
 export default function EmailDetailPage() {
@@ -28,6 +32,8 @@ export default function EmailDetailPage() {
   const [email, setEmail] = useState<Email | null>(null);
   const [loading, setLoading] = useState(true);
   const [showReplyModal, setShowReplyModal] = useState(false);
+  const [handlingEmail, setHandlingEmail] = useState(false);
+  const [selectedFolder, setSelectedFolder] = useState("handled");
 
   useEffect(() => {
     if (params.id) {
@@ -84,6 +90,39 @@ export default function EmailDetailPage() {
     }
   };
 
+  const handleMarkAsHandled = async () => {
+    if (!email) return;
+
+    setHandlingEmail(true);
+    try {
+      const response = await fetch("/api/mark-handled", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messageId: email.message_id,
+          userId: "current_user", // This should come from auth context
+          moveToFolder: selectedFolder,
+          customFolderName: selectedFolder === "custom" ? "BlocIQ/Processed" : null
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        // Refresh the email to show updated status
+        await fetchEmail(email.message_id);
+        console.log("✅ Email marked as handled successfully");
+      } else {
+        console.error("Failed to mark email as handled:", data.error);
+        alert("Failed to mark email as handled. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error marking email as handled:", error);
+      alert("Failed to mark email as handled. Please try again.");
+    } finally {
+      setHandlingEmail(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6">
@@ -130,13 +169,15 @@ export default function EmailDetailPage() {
           <div className="h-6 w-px bg-gray-300"></div>
           <h1 className="text-2xl font-bold">Email Detail</h1>
         </div>
-        <Button 
-          onClick={() => setShowReplyModal(true)}
-          className="bg-blue-600 hover:bg-blue-700"
-        >
-          <Reply className="h-4 w-4 mr-2" />
-          Reply
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => setShowReplyModal(true)}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Reply className="h-4 w-4 mr-2" />
+            Reply
+          </Button>
+        </div>
       </div>
 
       {/* Email Content */}
@@ -164,9 +205,21 @@ export default function EmailDetailPage() {
                     Unread
                   </Badge>
                 )}
+                {email.is_handled && (
+                  <Badge variant="secondary" className="bg-green-100 text-green-800">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Handled
+                  </Badge>
+                )}
                 {email.status && (
                   <Badge variant="outline">
                     {email.status}
+                  </Badge>
+                )}
+                {email.folder && email.folder !== "inbox" && (
+                  <Badge variant="outline">
+                    <FolderOpen className="h-3 w-3 mr-1" />
+                    {email.folder}
                   </Badge>
                 )}
               </div>
@@ -176,6 +229,13 @@ export default function EmailDetailPage() {
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <Building className="h-4 w-4" />
                 <span>Related to: {email.building_name}</span>
+              </div>
+            )}
+
+            {email.handled_at && (
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <CheckCircle className="h-4 w-4" />
+                <span>Handled: {new Date(email.handled_at).toLocaleString()}</span>
               </div>
             )}
           </div>
@@ -194,7 +254,7 @@ export default function EmailDetailPage() {
         {/* Quick Actions */}
         <Card className="p-6">
           <h3 className="font-semibold mb-4">Quick Actions</h3>
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
             <Button 
               onClick={() => setShowReplyModal(true)}
               className="bg-blue-600 hover:bg-blue-700"
@@ -202,14 +262,37 @@ export default function EmailDetailPage() {
               <Reply className="h-4 w-4 mr-2" />
               Reply with AI
             </Button>
-            <Button variant="outline">
-              <Building className="h-4 w-4 mr-2" />
-              View Building
-            </Button>
-            <Button variant="outline">
-              <Mail className="h-4 w-4 mr-2" />
-              Mark as Handled
-            </Button>
+            
+            {!email.is_handled && (
+              <div className="flex gap-2 items-center">
+                <Select value={selectedFolder} onValueChange={setSelectedFolder}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="handled">BlocIQ/Handled</SelectItem>
+                    <SelectItem value="processed">BlocIQ/Processed</SelectItem>
+                    <SelectItem value="custom">Custom Folder</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button 
+                  onClick={handleMarkAsHandled}
+                  disabled={handlingEmail}
+                  variant="outline"
+                  className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  {handlingEmail ? "Marking..." : "Mark as Handled"}
+                </Button>
+              </div>
+            )}
+            
+            {email.building_id && (
+              <Button variant="outline">
+                <Building className="h-4 w-4 mr-2" />
+                View Building
+              </Button>
+            )}
           </div>
         </Card>
       </div>
