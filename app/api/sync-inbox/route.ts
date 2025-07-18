@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     for (const msg of messages.value) {
       try {
         // Parse email data
-        const emailData = {
+        const emailData: any = {
           outlook_message_id: msg.id,
           message_id: msg.internetMessageId,
           thread_id: msg.conversationId,
@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
             if (unitMatch) {
               emailData.unit = unitMatch.unit_number;
               emailData.building_id = unitMatch.building_id;
-              emailData.building_name = unitMatch.buildings?.name;
+              emailData.building_name = (unitMatch.buildings as any)?.name;
               console.log(`🏢 Matched: ${emailData.from_email} → ${emailData.unit}, building ${emailData.building_id}`);
             } else {
               // Fallback: match "Flat 7" in subject
@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
                 if (fallbackUnit) {
                   emailData.unit = fallbackUnit.unit_number;
                   emailData.building_id = fallbackUnit.building_id;
-                  emailData.building_name = fallbackUnit.buildings?.name;
+                  emailData.building_name = (fallbackUnit.buildings as any)?.name;
                   console.log(`🏢 Fallback matched subject to unit: ${emailData.unit}`);
                 }
               }
