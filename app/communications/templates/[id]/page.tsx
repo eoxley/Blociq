@@ -3,12 +3,13 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import SendEmailForm from "@/components/SendEmailForm";
+import RecipientSelector from "@/components/RecipientSelector";
 import { 
   FileText, 
   Download, 
@@ -23,7 +24,9 @@ import {
   Search,
   Edit3,
   Plus,
-  Sparkles
+  Sparkles,
+  Users,
+  X
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -76,6 +79,8 @@ export default function TemplateGenerationPage() {
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiAction, setAiAction] = useState<'rewrite' | 'search' | 'create_new'>('rewrite');
   const [showEmailForm, setShowEmailForm] = useState(false);
+  const [selectedRecipients, setSelectedRecipients] = useState<any[]>([]);
+  const [showRecipientSelector, setShowRecipientSelector] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     building_name: "",
     property_manager_name: "",
@@ -264,6 +269,10 @@ export default function TemplateGenerationPage() {
   const handleEmailSent = (result: any) => {
     toast.success(`Email sent successfully to ${result.recipient}`);
     setShowEmailForm(false);
+  };
+
+  const handleRecipientsChange = (recipients: any[]) => {
+    setSelectedRecipients(recipients);
   };
 
   const getTypeIcon = (type: string) => {
@@ -571,6 +580,16 @@ export default function TemplateGenerationPage() {
                   </Button>
                   
                   <Button
+                    onClick={() => setShowRecipientSelector(true)}
+                    variant="outline"
+                    size="sm"
+                    className="text-green-600 border-green-600 hover:bg-green-50"
+                  >
+                    <Users className="w-4 h-4 mr-2" />
+                    Select Recipients
+                  </Button>
+                  
+                  <Button
                     onClick={convertToPdf}
                     disabled={convertingPdf}
                     variant="outline"
@@ -706,6 +725,32 @@ export default function TemplateGenerationPage() {
           </Card>
         )}
       </div>
+
+      {/* Recipient Selector */}
+      {showRecipientSelector && (
+        <div className="mt-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Select Email Recipients</span>
+                <Button
+                  onClick={() => setShowRecipientSelector(false)}
+                  variant="ghost"
+                  size="sm"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RecipientSelector
+                buildingId={buildings.find(b => b.name === formData.building_name)?.id}
+                onRecipientsChange={handleRecipientsChange}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Email Sending Form */}
       {showEmailForm && generatedFileUrl && generatedFilePath && (
