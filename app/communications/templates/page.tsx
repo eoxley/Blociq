@@ -14,7 +14,11 @@ import {
   AlertTriangle,
   CheckCircle,
   Calendar,
-  Building2
+  Building2,
+  Bot,
+  Sparkles,
+  Eye,
+  Edit3
 } from "lucide-react";
 
 interface Template {
@@ -23,6 +27,8 @@ interface Template {
   type: string;
   description: string;
   storage_path: string;
+  content_text?: string;
+  placeholders?: string[];
   created_at: string;
 }
 
@@ -31,7 +37,8 @@ const templateTypes = [
   { value: "welcome_letter", label: "Welcome Letters", icon: Mail },
   { value: "notice", label: "Notices", icon: AlertTriangle },
   { value: "form", label: "Forms", icon: CheckCircle },
-  { value: "invoice", label: "Invoices", icon: Calendar }
+  { value: "invoice", label: "Invoices", icon: Calendar },
+  { value: "section_20", label: "Section 20", icon: AlertTriangle }
 ];
 
 export default function TemplatesPage() {
@@ -39,6 +46,7 @@ export default function TemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState("all");
+  const [showContent, setShowContent] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTemplates();
@@ -67,7 +75,8 @@ export default function TemplatesPage() {
 
   const filteredTemplates = templates.filter(template => {
     const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         template.description.toLowerCase().includes(searchTerm.toLowerCase());
+                         template.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (template.content_text && template.content_text.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesType = selectedType === "all" || template.type === selectedType;
     return matchesSearch && matchesType;
   });
@@ -82,6 +91,8 @@ export default function TemplatesPage() {
         return <CheckCircle className="w-5 h-5" />;
       case "invoice":
         return <Calendar className="w-5 h-5" />;
+      case "section_20":
+        return <AlertTriangle className="w-5 h-5" />;
       default:
         return <FileText className="w-5 h-5" />;
     }
@@ -97,9 +108,16 @@ export default function TemplatesPage() {
         return "bg-green-100 text-green-800";
       case "invoice":
         return "bg-purple-100 text-purple-800";
+      case "section_20":
+        return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
+  };
+
+  const truncateText = (text: string, maxLength: number = 100) => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
   };
 
   if (loading) {
@@ -133,7 +151,7 @@ export default function TemplatesPage() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <input
             type="text"
-            placeholder="Search templates..."
+            placeholder="Search templates by name, description, or content..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -187,18 +205,74 @@ export default function TemplatesPage() {
               <p className="text-sm text-gray-600 mb-4 line-clamp-3">
                 {template.description}
               </p>
+
+              {/* Template Content Preview */}
+              {template.content_text && (
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-gray-700">Content Preview:</span>
+                    <button
+                      onClick={() => setShowContent(showContent === template.id ? null : template.id)}
+                      className="text-xs text-primary hover:text-dark flex items-center space-x-1"
+                    >
+                      <Eye className="w-3 h-3" />
+                      <span>{showContent === template.id ? 'Hide' : 'Show'}</span>
+                    </button>
+                  </div>
+                  {showContent === template.id ? (
+                    <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded border max-h-32 overflow-y-auto">
+                      {template.content_text}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-gray-500">
+                      {truncateText(template.content_text, 80)}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Placeholders */}
+              {template.placeholders && template.placeholders.length > 0 && (
+                <div className="mb-4">
+                  <span className="text-xs font-medium text-gray-700 block mb-2">
+                    Placeholders ({template.placeholders.length}):
+                  </span>
+                  <div className="flex flex-wrap gap-1">
+                    {template.placeholders.slice(0, 3).map((placeholder, index) => (
+                      <Badge key={index} variant="secondary" className="text-xs">
+                        {placeholder}
+                      </Badge>
+                    ))}
+                    {template.placeholders.length > 3 && (
+                      <Badge variant="secondary" className="text-xs">
+                        +{template.placeholders.length - 3} more
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              )}
               
               <div className="flex items-center text-xs text-gray-500 mb-4">
                 <Calendar className="w-3 h-3 mr-1" />
                 <span>Created {new Date(template.created_at).toLocaleDateString()}</span>
               </div>
               
-              <Link href={`/communications/templates/${template.id}`}>
-                <Button className="w-full bg-primary hover:bg-dark text-white">
-                  <FileText className="w-4 h-4 mr-2" />
-                  Generate Document
+              <div className="flex space-x-2">
+                <Link href={`/communications/templates/${template.id}`} className="flex-1">
+                  <Button className="w-full bg-primary hover:bg-dark text-white">
+                    <FileText className="w-4 h-4 mr-2" />
+                    Generate Document
+                  </Button>
+                </Link>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="px-3"
+                  title="AI Assistant"
+                >
+                  <Bot className="w-4 h-4" />
                 </Button>
-              </Link>
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -248,6 +322,40 @@ export default function TemplatesPage() {
                   View Generated Documents
                 </Button>
               </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* AI Features Card */}
+      <div className="mt-8">
+        <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-dark">AI-Powered Features</h3>
+                <p className="text-sm text-gray-600">Enhance your templates with AI assistance</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center">
+                <Edit3 className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+                <h4 className="font-medium text-dark mb-1">Rewrite Templates</h4>
+                <p className="text-xs text-gray-600">AI can rewrite and improve your templates</p>
+              </div>
+              <div className="text-center">
+                <Search className="w-8 h-8 text-purple-600 mx-auto mb-2" />
+                <h4 className="font-medium text-dark mb-1">Smart Search</h4>
+                <p className="text-xs text-gray-600">Find the perfect template for your needs</p>
+              </div>
+              <div className="text-center">
+                <Plus className="w-8 h-8 text-green-600 mx-auto mb-2" />
+                <h4 className="font-medium text-dark mb-1">Create New</h4>
+                <p className="text-xs text-gray-600">Generate new templates from scratch</p>
+              </div>
             </div>
           </CardContent>
         </Card>

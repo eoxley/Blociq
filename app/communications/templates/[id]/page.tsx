@@ -17,7 +17,12 @@ import {
   ArrowLeft,
   Loader2,
   CheckCircle,
-  AlertTriangle
+  AlertTriangle,
+  Bot,
+  Search,
+  Edit3,
+  Plus,
+  Sparkles
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -27,6 +32,8 @@ interface Template {
   type: string;
   description: string;
   storage_path: string;
+  content_text?: string;
+  placeholders?: string[];
   created_at: string;
 }
 
@@ -59,6 +66,11 @@ export default function TemplateGenerationPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [generatedFileUrl, setGeneratedFileUrl] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResponse, setAiResponse] = useState<string | null>(null);
+  const [showAiPanel, setShowAiPanel] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiAction, setAiAction] = useState<'rewrite' | 'search' | 'create_new'>('rewrite');
   const [formData, setFormData] = useState<FormData>({
     building_name: "",
     property_manager_name: "",
@@ -151,7 +163,8 @@ export default function TemplateGenerationPage() {
         body: JSON.stringify({
           templateId: template.id,
           buildingId: buildings.find(b => b.name === formData.building_name)?.id || null,
-          placeholderData: formData
+          placeholderData: formData,
+          aiGenerated: false
         }),
       });
 
@@ -170,6 +183,42 @@ export default function TemplateGenerationPage() {
     }
   };
 
+  const askAI = async () => {
+    if (!aiPrompt.trim()) {
+      toast.error('Please enter a prompt for AI');
+      return;
+    }
+
+    setAiLoading(true);
+    try {
+      const response = await fetch('/api/ask-ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: aiPrompt,
+          buildingId: buildings.find(b => b.name === formData.building_name)?.id || null,
+          templateId: aiAction === 'rewrite' ? templateId : null,
+          action: aiAction
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get AI response');
+      }
+
+      const result = await response.json();
+      setAiResponse(result.response);
+      toast.success('AI response generated!');
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+      toast.error('Failed to get AI response');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const getTypeIcon = (type: string) => {
     switch (type) {
       case "welcome_letter":
@@ -178,6 +227,8 @@ export default function TemplateGenerationPage() {
         return <AlertTriangle className="w-5 h-5" />;
       case "form":
         return <CheckCircle className="w-5 h-5" />;
+      case "section_20":
+        return <AlertTriangle className="w-5 h-5" />;
       default:
         return <FileText className="w-5 h-5" />;
     }
@@ -191,6 +242,8 @@ export default function TemplateGenerationPage() {
         return "bg-yellow-100 text-yellow-800";
       case "form":
         return "bg-green-100 text-green-800";
+      case "section_20":
+        return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -243,13 +296,23 @@ export default function TemplateGenerationPage() {
               Fill in the details below to generate your {template.name.toLowerCase()}.
             </p>
           </div>
-          <Badge className={getTypeColor(template.type)}>
-            {template.type.replace('_', ' ')}
-          </Badge>
+          <div className="flex items-center space-x-2">
+            <Badge className={getTypeColor(template.type)}>
+              {template.type.replace('_', ' ')}
+            </Badge>
+            <Button
+              onClick={() => setShowAiPanel(!showAiPanel)}
+              variant="outline"
+              className="flex items-center space-x-2"
+            >
+              <Bot className="w-4 h-4" />
+              <span>AI Assistant</span>
+            </Button>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Template Info */}
         <Card>
           <CardContent className="p-6">
@@ -266,6 +329,28 @@ export default function TemplateGenerationPage() {
             <p className="text-gray-600 mb-4">
               {template.description}
             </p>
+            
+            {template.content_text && (
+              <div className="mb-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Template Content:</h4>
+                <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded border max-h-32 overflow-y-auto">
+                  {template.content_text}
+                </div>
+              </div>
+            )}
+            
+            {template.placeholders && template.placeholders.length > 0 && (
+              <div className="mb-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Available Placeholders:</h4>
+                <div className="flex flex-wrap gap-1">
+                  {template.placeholders.map((placeholder, index) => (
+                    <Badge key={index} variant="secondary" className="text-xs">
+                      {placeholder}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
             
             <div className="space-y-2 text-sm text-gray-500">
               <div className="flex items-center">
@@ -429,6 +514,104 @@ export default function TemplateGenerationPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* AI Assistant Panel */}
+        {showAiPanel && (
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-2 mb-4">
+                <Bot className="w-5 h-5 text-primary" />
+                <h3 className="text-lg font-semibold text-dark">AI Assistant</h3>
+              </div>
+              
+              <div className="space-y-4">
+                {/* AI Action Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    AI Action
+                  </label>
+                  <select
+                    value={aiAction}
+                    onChange={(e) => setAiAction(e.target.value as any)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  >
+                    <option value="rewrite">Rewrite Template</option>
+                    <option value="search">Search Templates</option>
+                    <option value="create_new">Create New Template</option>
+                  </select>
+                </div>
+
+                {/* AI Prompt */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    What would you like AI to help with?
+                  </label>
+                  <Textarea
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    placeholder={
+                      aiAction === 'rewrite' 
+                        ? "e.g., Make this more formal and add legal disclaimers"
+                        : aiAction === 'search'
+                        ? "e.g., Find templates for service charge increases"
+                        : "e.g., Create a template for emergency maintenance notices"
+                    }
+                    rows={4}
+                  />
+                </div>
+
+                {/* AI Action Button */}
+                <Button
+                  onClick={askAI}
+                  disabled={aiLoading || !aiPrompt.trim()}
+                  className="w-full bg-gradient-to-r from-primary to-blue-600 hover:from-dark hover:to-blue-700 text-white"
+                >
+                  {aiLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      AI Thinking...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Ask AI
+                    </>
+                  )}
+                </Button>
+
+                {/* AI Response */}
+                {aiResponse && (
+                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 className="text-sm font-medium text-blue-800 mb-2">AI Response:</h4>
+                    <div className="text-sm text-blue-700 whitespace-pre-wrap">
+                      {aiResponse}
+                    </div>
+                    <div className="mt-3 flex space-x-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          // Copy to clipboard
+                          navigator.clipboard.writeText(aiResponse);
+                          toast.success('Copied to clipboard!');
+                        }}
+                      >
+                        Copy
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setAiResponse(null)}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
