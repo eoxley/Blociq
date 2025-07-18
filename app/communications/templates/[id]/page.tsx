@@ -59,13 +59,16 @@ interface FormData {
 export default function TemplateGenerationPage() {
   const params = useParams();
   const router = useRouter();
-  const templateId = params.id as string;
+  const templateId = params?.id as string;
 
   const [template, setTemplate] = useState<Template | null>(null);
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [generatedFileUrl, setGeneratedFileUrl] = useState<string | null>(null);
+  const [generatedFilePath, setGeneratedFilePath] = useState<string | null>(null);
+  const [convertingPdf, setConvertingPdf] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [showAiPanel, setShowAiPanel] = useState(false);
@@ -174,12 +177,49 @@ export default function TemplateGenerationPage() {
 
       const result = await response.json();
       setGeneratedFileUrl(result.fileUrl);
+      setGeneratedFilePath(result.filePath);
       toast.success('Document generated successfully!');
     } catch (error) {
       console.error('Error generating document:', error);
       toast.error('Failed to generate document');
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const convertToPdf = async () => {
+    if (!generatedFilePath) return;
+
+    setConvertingPdf(true);
+    try {
+      const response = await fetch('/api/convert-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filePath: generatedFilePath
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (errorData.fallback) {
+          toast.info('PDF conversion unavailable. Downloading DOCX instead.');
+          window.open(generatedFileUrl, '_blank');
+          return;
+        }
+        throw new Error('Failed to convert to PDF');
+      }
+
+      const result = await response.json();
+      setPdfUrl(result.pdfUrl);
+      toast.success('PDF generated successfully!');
+    } catch (error) {
+      console.error('Error converting to PDF:', error);
+      toast.error('Failed to convert to PDF');
+    } finally {
+      setConvertingPdf(false);
     }
   };
 
@@ -342,13 +382,13 @@ export default function TemplateGenerationPage() {
             {template.placeholders && template.placeholders.length > 0 && (
               <div className="mb-4">
                 <h4 className="text-sm font-medium text-gray-700 mb-2">Available Placeholders:</h4>
-                <div className="flex flex-wrap gap-1">
-                  {template.placeholders.map((placeholder, index) => (
-                    <Badge key={index} variant="secondary" className="text-xs">
-                      {placeholder}
-                    </Badge>
-                  ))}
-                </div>
+                                  <div className="flex flex-wrap gap-1">
+                    {template.placeholders.map((placeholder, index) => (
+                      <Badge key={index} className="text-xs bg-gray-100 text-gray-800">
+                        {placeholder}
+                      </Badge>
+                    ))}
+                  </div>
               </div>
             )}
             
@@ -496,20 +536,56 @@ export default function TemplateGenerationPage() {
             {/* Generated File */}
             {generatedFileUrl && (
               <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center">
                     <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
                     <span className="text-green-800 font-medium">Document generated successfully!</span>
                   </div>
+                </div>
+                
+                <div className="flex space-x-3">
                   <a
                     href={generatedFileUrl}
                     download
-                    className="inline-flex items-center text-green-600 hover:text-green-800"
+                    className="inline-flex items-center px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
                   >
-                    <Download className="w-4 h-4 mr-1" />
-                    Download
+                    <Download className="w-4 h-4 mr-2" />
+                    Download DOCX
                   </a>
+                  
+                  <Button
+                    onClick={convertToPdf}
+                    disabled={convertingPdf}
+                    variant="outline"
+                    size="sm"
+                    className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                  >
+                    {convertingPdf ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Converting...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="w-4 h-4 mr-2" />
+                        Download as PDF
+                      </>
+                    )}
+                  </Button>
                 </div>
+
+                {pdfUrl && (
+                  <div className="mt-3 pt-3 border-t border-green-200">
+                    <a
+                      href={pdfUrl}
+                      download
+                      className="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm"
+                    >
+                      <FileText className="w-4 h-4 mr-1" />
+                      PDF Ready - Click to Download
+                    </a>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>

@@ -157,10 +157,12 @@ export default function TemplatesPage() {
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
           />
         </div>
-        <Button className="bg-primary hover:bg-dark text-white px-6 py-2 rounded-lg flex items-center space-x-2">
-          <Plus className="w-4 h-4" />
-          <span>Upload Template</span>
-        </Button>
+        <Link href="/communications/templates/upload">
+          <Button className="bg-primary hover:bg-dark text-white px-6 py-2 rounded-lg flex items-center space-x-2">
+            <Plus className="w-4 h-4" />
+            <span>Upload Template</span>
+          </Button>
+        </Link>
       </div>
 
       {/* Type Filters */}

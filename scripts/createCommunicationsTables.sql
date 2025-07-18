@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS generated_documents (
     building_id UUID REFERENCES buildings(id) ON DELETE SET NULL,
     filled_by VARCHAR(255) NOT NULL,
     filepath VARCHAR(500) NOT NULL,
+    pdf_path VARCHAR(500), -- ✅ NEW: PDF file path
     placeholder_data JSONB, -- ✅ NEW: Store the data used to fill placeholders
     ai_generated BOOLEAN DEFAULT FALSE, -- ✅ NEW: Track if AI was used
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

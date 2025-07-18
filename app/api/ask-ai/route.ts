@@ -83,15 +83,54 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 3. If no specific template provided, search for relevant templates
+    // 3. If no specific template provided, search for relevant templates using semantic search
     if (!templateId && action !== 'create_new') {
-      const { data: templates, error: searchError } = await supabase
-        .from('templates')
-        .select('*')
-        .ilike('content_text', `%${prompt.split(' ').slice(0, 3).join(' ')}%`)
-        .limit(3);
+      // First try semantic search if embeddings are available
+      let templates = [];
+      
+      try {
+        // Generate embedding for the search query
+        const embeddingResponse = await openai.embeddings.create({
+          model: "text-embedding-3-small",
+          input: prompt,
+          encoding_format: "float"
+        });
 
-      if (!searchError && templates && templates.length > 0) {
+        const queryEmbedding = embeddingResponse.data[0].embedding;
+
+        if (queryEmbedding) {
+          // Try vector similarity search
+          const { data: vectorResults, error: vectorError } = await supabase.rpc(
+            'match_templates',
+            {
+              query_embedding: queryEmbedding,
+              match_threshold: 0.7,
+              match_count: 5
+            }
+          );
+
+          if (!vectorError && vectorResults && vectorResults.length > 0) {
+            templates = vectorResults;
+          }
+        }
+      } catch (embeddingError) {
+        console.warn('Semantic search failed, falling back to text search:', embeddingError);
+      }
+
+      // Fallback to text search if semantic search didn't work
+      if (templates.length === 0) {
+        const { data: textResults, error: searchError } = await supabase
+          .from('templates')
+          .select('*')
+          .or(`content_text.ilike.%${prompt.split(' ').slice(0, 3).join(' ')}%,name.ilike.%${prompt.split(' ').slice(0, 3).join(' ')}%`)
+          .limit(5);
+
+        if (!searchError && textResults) {
+          templates = textResults;
+        }
+      }
+
+      if (templates.length > 0) {
         contextData = {
           ...contextData,
           relevant_templates: templates.map(t => ({
@@ -99,7 +138,8 @@ export async function POST(req: NextRequest) {
             name: t.name,
             type: t.type,
             content: t.content_text,
-            placeholders: t.placeholders
+            placeholders: t.placeholders,
+            similarity_score: t.similarity_score || null
           }))
         };
       }
@@ -145,7 +185,14 @@ ${contextData.relevant_templates ? JSON.stringify(contextData.relevant_templates
 Building Context:
 ${JSON.stringify(contextData, null, 2)}
 
-Please recommend the best template(s) for this request and explain why they are suitable. Also suggest any modifications needed.`;
+Please provide:
+1. The best matching template(s) for this request
+2. Why each template is suitable
+3. Any modifications needed
+4. A direct link to the template (format: /communications/templates/[template_id])
+5. Suggested placeholder values based on the building context
+
+Format your response as a structured recommendation.`;
 
         break;
 
@@ -161,8 +208,9 @@ Please create a professional template that:
 2. Is legally compliant for UK leasehold
 3. Includes all necessary sections
 4. Is clear and professional
+5. Suggests a template name and type
 
-Return the template content with placeholders.`;
+Return the template content with placeholders and metadata.`;
 
         break;
 
@@ -174,10 +222,11 @@ Available Context:
 ${JSON.stringify(contextData, null, 2)}
 
 Please provide helpful guidance on how to handle this request, including:
-1. Recommended templates to use
+1. Recommended templates to use (with links)
 2. Key information needed
 3. Legal considerations
-4. Best practices for UK leasehold management`;
+4. Best practices for UK leasehold management
+5. Next steps for document generation`;
 
         break;
     }
@@ -207,7 +256,8 @@ Please provide helpful guidance on how to handle this request, including:
       context: contextData,
       action: action,
       templateId: templateId,
-      buildingId: buildingId
+      buildingId: buildingId,
+      suggestedTemplates: contextData.relevant_templates || []
     });
 
   } catch (error) {
