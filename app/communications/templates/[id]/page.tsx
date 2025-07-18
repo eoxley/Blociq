@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import SendEmailForm from "@/components/SendEmailForm";
 import { 
   FileText, 
   Download, 
@@ -74,6 +75,7 @@ export default function TemplateGenerationPage() {
   const [showAiPanel, setShowAiPanel] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiAction, setAiAction] = useState<'rewrite' | 'search' | 'create_new'>('rewrite');
+  const [showEmailForm, setShowEmailForm] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     building_name: "",
     property_manager_name: "",
@@ -257,6 +259,11 @@ export default function TemplateGenerationPage() {
     } finally {
       setAiLoading(false);
     }
+  };
+
+  const handleEmailSent = (result: any) => {
+    toast.success(`Email sent successfully to ${result.recipient}`);
+    setShowEmailForm(false);
   };
 
   const getTypeIcon = (type: string) => {
@@ -554,11 +561,21 @@ export default function TemplateGenerationPage() {
                   </a>
                   
                   <Button
+                    onClick={() => setShowEmailForm(true)}
+                    variant="outline"
+                    size="sm"
+                    className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                  >
+                    <Mail className="w-4 h-4 mr-2" />
+                    Send via Email
+                  </Button>
+                  
+                  <Button
                     onClick={convertToPdf}
                     disabled={convertingPdf}
                     variant="outline"
                     size="sm"
-                    className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                    className="text-purple-600 border-purple-600 hover:bg-purple-50"
                   >
                     {convertingPdf ? (
                       <>
@@ -689,6 +706,24 @@ export default function TemplateGenerationPage() {
           </Card>
         )}
       </div>
+
+      {/* Email Sending Form */}
+      {showEmailForm && generatedFileUrl && generatedFilePath && (
+        <div className="mt-8">
+          <SendEmailForm
+            generatedFileUrl={generatedFileUrl}
+            generatedFilePath={generatedFilePath}
+            templateName={template.name}
+            templateId={template.id}
+            buildingId={buildings.find(b => b.name === formData.building_name)?.id}
+            buildingName={formData.building_name}
+            unitNumber={formData.unit_number}
+            leaseholderEmail={formData.contact_email}
+            onEmailSent={handleEmailSent}
+            onCancel={() => setShowEmailForm(false)}
+          />
+        </div>
+      )}
     </div>
   );
 } 
