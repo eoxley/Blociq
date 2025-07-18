@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ReplyModal from "@/components/ReplyModal";
+import AISuggestedActionSidebar from "@/components/AISuggestedActionSidebar";
 import { createClient } from "@supabase/supabase-js";
 
 interface Email {
@@ -24,6 +25,14 @@ interface Email {
   is_handled?: boolean;
   handled_at?: string;
   folder?: string;
+  // AI analysis fields
+  tags?: string[];
+  ai_summary?: string;
+  suggested_action?: string;
+  suggested_action_type?: string;
+  suggested_template_id?: string;
+  related_unit_id?: string;
+  ai_analyzed_at?: string;
 }
 
 export default function EmailDetailPage() {
@@ -154,9 +163,9 @@ export default function EmailDetailPage() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 max-w-7xl mx-auto">
         <div className="flex items-center gap-3">
           <Button 
             variant="ghost" 
@@ -180,121 +189,138 @@ export default function EmailDetailPage() {
         </div>
       </div>
 
-      {/* Email Content */}
-      <div className="space-y-6">
-        {/* Email Header */}
-        <Card className="p-6">
-          <div className="space-y-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <h2 className="text-xl font-semibold mb-2">{email.subject}</h2>
-                <div className="flex items-center gap-4 text-sm text-gray-600">
-                  <div className="flex items-center gap-1">
-                    <User className="h-4 w-4" />
-                    <span>{email.from_name || email.from_email}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    <span>{new Date(email.received_at).toLocaleString()}</span>
+      {/* Main Content with Sidebar */}
+      <div className="max-w-7xl mx-auto flex gap-6">
+        {/* Email Content */}
+        <div className="flex-1 space-y-6">
+          {/* Email Header */}
+          <Card className="p-6">
+            <div className="space-y-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold mb-2">{email.subject}</h2>
+                  <div className="flex items-center gap-4 text-sm text-gray-600">
+                    <div className="flex items-center gap-1">
+                      <User className="h-4 w-4" />
+                      <span>{email.from_name || email.from_email}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4" />
+                      <span>{new Date(email.received_at).toLocaleString()}</span>
+                    </div>
                   </div>
                 </div>
+                <div className="flex gap-2">
+                  {email.isUnread && (
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                      Unread
+                    </Badge>
+                  )}
+                  {email.is_handled && (
+                    <Badge variant="secondary" className="bg-green-100 text-green-800">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Handled
+                    </Badge>
+                  )}
+                  {email.status && (
+                    <Badge variant="outline">
+                      {email.status}
+                    </Badge>
+                  )}
+                  {email.folder && email.folder !== "inbox" && (
+                    <Badge variant="outline">
+                      <FolderOpen className="h-3 w-3 mr-1" />
+                      {email.folder}
+                    </Badge>
+                  )}
+                </div>
               </div>
-              <div className="flex gap-2">
-                {email.isUnread && (
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                    Unread
-                  </Badge>
-                )}
-                {email.is_handled && (
-                  <Badge variant="secondary" className="bg-green-100 text-green-800">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    Handled
-                  </Badge>
-                )}
-                {email.status && (
-                  <Badge variant="outline">
-                    {email.status}
-                  </Badge>
-                )}
-                {email.folder && email.folder !== "inbox" && (
-                  <Badge variant="outline">
-                    <FolderOpen className="h-3 w-3 mr-1" />
-                    {email.folder}
-                  </Badge>
-                )}
+
+              {email.building_name && (
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Building className="h-4 w-4" />
+                  <span>Related to: {email.building_name}</span>
+                </div>
+              )}
+
+              {email.handled_at && (
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Handled: {new Date(email.handled_at).toLocaleString()}</span>
+                </div>
+              )}
+            </div>
+          </Card>
+
+          {/* Email Body */}
+          <Card className="p-6">
+            <h3 className="font-semibold mb-4">Message</h3>
+            <div className="prose max-w-none">
+              <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
+                {email.body}
               </div>
             </div>
+          </Card>
 
-            {email.building_name && (
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Building className="h-4 w-4" />
-                <span>Related to: {email.building_name}</span>
-              </div>
-            )}
-
-            {email.handled_at && (
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <CheckCircle className="h-4 w-4" />
-                <span>Handled: {new Date(email.handled_at).toLocaleString()}</span>
-              </div>
-            )}
-          </div>
-        </Card>
-
-        {/* Email Body */}
-        <Card className="p-6">
-          <h3 className="font-semibold mb-4">Message</h3>
-          <div className="prose max-w-none">
-            <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
-              {email.body}
-            </div>
-          </div>
-        </Card>
-
-        {/* Quick Actions */}
-        <Card className="p-6">
-          <h3 className="font-semibold mb-4">Quick Actions</h3>
-          <div className="flex gap-3 flex-wrap">
-            <Button 
-              onClick={() => setShowReplyModal(true)}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <Reply className="h-4 w-4 mr-2" />
-              Reply with AI
-            </Button>
-            
-            {!email.is_handled && (
-              <div className="flex gap-2 items-center">
-                <Select value={selectedFolder} onValueChange={setSelectedFolder}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="handled">BlocIQ/Handled</SelectItem>
-                    <SelectItem value="processed">BlocIQ/Processed</SelectItem>
-                    <SelectItem value="custom">Custom Folder</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button 
-                  onClick={handleMarkAsHandled}
-                  disabled={handlingEmail}
-                  variant="outline"
-                  className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  {handlingEmail ? "Marking..." : "Mark as Handled"}
-                </Button>
-              </div>
-            )}
-            
-            {email.building_id && (
-              <Button variant="outline">
-                <Building className="h-4 w-4 mr-2" />
-                View Building
+          {/* Quick Actions */}
+          <Card className="p-6">
+            <h3 className="font-semibold mb-4">Quick Actions</h3>
+            <div className="flex gap-3 flex-wrap">
+              <Button 
+                onClick={() => setShowReplyModal(true)}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Reply className="h-4 w-4 mr-2" />
+                Reply with AI
               </Button>
-            )}
-          </div>
-        </Card>
+              
+              {!email.is_handled && (
+                <div className="flex gap-2 items-center">
+                  <Select value={selectedFolder} onValueChange={setSelectedFolder}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="handled">BlocIQ/Handled</SelectItem>
+                      <SelectItem value="processed">BlocIQ/Processed</SelectItem>
+                      <SelectItem value="custom">Custom Folder</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button 
+                    onClick={handleMarkAsHandled}
+                    disabled={handlingEmail}
+                    variant="outline"
+                    className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    {handlingEmail ? "Marking..." : "Mark as Handled"}
+                  </Button>
+                </div>
+              )}
+              
+              {email.building_id && (
+                <Button variant="outline">
+                  <Building className="h-4 w-4 mr-2" />
+                  View Building
+                </Button>
+              )}
+            </div>
+          </Card>
+        </div>
+
+        {/* AI Suggested Action Sidebar */}
+        <div className="flex-shrink-0">
+          <AISuggestedActionSidebar
+            messageId={email.message_id}
+            buildingId={email.building_id}
+            onActionTaken={() => {
+              // Refresh email data when action is taken
+              fetchEmail(email.message_id);
+              // Open reply modal if action was reply
+              setShowReplyModal(true);
+            }}
+          />
+        </div>
       </div>
 
       {/* Reply Modal */}

@@ -72,6 +72,23 @@ export async function GET(req: NextRequest) {
       if (!previewOnly) {
         const { error } = await supabase.from("incoming_emails").insert(email)
         results.push({ email, status: error ? "error" : "inserted", error })
+        
+        // Trigger AI analysis for newly inserted emails
+        if (!error) {
+          try {
+            console.log(`🧠 Triggering AI analysis for email: ${email.message_id}`)
+            // Trigger AI analysis asynchronously
+            fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/analyze-email`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ messageId: email.message_id })
+            }).catch(err => {
+              console.warn('Failed to trigger AI analysis:', err)
+            })
+          } catch (analysisError) {
+            console.warn('Failed to trigger AI analysis:', analysisError)
+          }
+        }
       } else {
         results.push({ email, status: "preview" })
       }
