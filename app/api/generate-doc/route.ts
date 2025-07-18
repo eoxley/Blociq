@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     console.log("📥 Template file downloaded");
 
     // 3. Replace placeholders in the document
-    const processedDocx = await replacePlaceholdersInDocx(templateFile, placeholderData);
+    const processedDocx = await replacePlaceholdersInDocx(templateFile, placeholderData, template.type);
     
     console.log("🔧 Placeholders replaced successfully");
 
