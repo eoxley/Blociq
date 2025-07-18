@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'react-toastify';
 
 interface SendEmailFormProps {
   generatedFileUrl: string;
@@ -51,6 +52,8 @@ BlocIQ Property Management`,
 
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [convertingPdf, setConvertingPdf] = useState(false);
 
   const handleInputChange = (field: string, value: string) => {
     setEmailData(prev => ({ ...prev, [field]: value }));
@@ -99,11 +102,60 @@ BlocIQ Property Management`,
 
   const handleDownload = () => {
     const link = document.createElement('a');
-    link.href = generatedFileUrl;
-    link.download = `${templateName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.${emailData.fileType}`;
+    const downloadUrl = emailData.fileType === 'pdf' && pdfUrl ? pdfUrl : generatedFileUrl;
+    const fileExtension = emailData.fileType;
+    
+    link.href = downloadUrl;
+    link.download = `${templateName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.${fileExtension}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const convertToPdf = async () => {
+    if (!generatedFilePath) return;
+
+    setConvertingPdf(true);
+    try {
+      const response = await fetch('/api/convert-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filePath: generatedFilePath
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (errorData.fallback) {
+          toast.info('PDF conversion unavailable. Downloading DOCX instead.');
+          handleDownload();
+          return;
+        }
+        throw new Error('Failed to convert to PDF');
+      }
+
+      const result = await response.json();
+      setPdfUrl(result.pdfUrl);
+      setEmailData(prev => ({ ...prev, fileType: 'pdf' }));
+      toast.success('PDF generated successfully!');
+    } catch (error) {
+      console.error('Error converting to PDF:', error);
+      toast.error('Failed to convert to PDF');
+    } finally {
+      setConvertingPdf(false);
+    }
+  };
+
+  const handleFileTypeChange = (newFileType: string) => {
+    setEmailData(prev => ({ ...prev, fileType: newFileType }));
+    
+    // If switching to PDF and we don't have a PDF yet, convert it
+    if (newFileType === 'pdf' && !pdfUrl) {
+      convertToPdf();
+    }
   };
 
   return (
@@ -142,7 +194,7 @@ BlocIQ Property Management`,
           
           <div>
             <Label htmlFor="fileType">File Type</Label>
-            <Select value={emailData.fileType} onValueChange={(value) => handleInputChange('fileType', value)}>
+            <Select value={emailData.fileType} onValueChange={handleFileTypeChange}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -151,6 +203,9 @@ BlocIQ Property Management`,
                 <SelectItem value="pdf">PDF</SelectItem>
               </SelectContent>
             </Select>
+            {emailData.fileType === 'pdf' && convertingPdf && (
+              <p className="text-xs text-blue-600 mt-1">Converting to PDF...</p>
+            )}
           </div>
         </div>
 
@@ -200,7 +255,7 @@ BlocIQ Property Management`,
             variant="outline"
             disabled={loading}
           >
-            📥 Download
+            📥 Download {emailData.fileType.toUpperCase()}
           </Button>
           
           {onCancel && (

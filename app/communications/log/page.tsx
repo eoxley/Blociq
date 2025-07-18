@@ -20,6 +20,7 @@ import {
   Eye
 } from "lucide-react";
 import { toast } from "sonner";
+import { exportCommunicationsToCSV } from "@/lib/csvExport";
 
 interface CommunicationLog {
   id: string;
@@ -187,6 +188,14 @@ export default function CommunicationsLogPage() {
             </p>
           </div>
           <div className="flex items-center space-x-2">
+            <Button
+              onClick={() => exportCommunicationsToCSV(filteredCommunications, 'communications_log')}
+              variant="outline"
+              disabled={filteredCommunications.length === 0}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </Button>
             <Badge variant="secondary" className="text-sm">
               {filteredCommunications.length} communications
             </Badge>
