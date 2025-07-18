@@ -7,9 +7,7 @@ import { Building, Users, Mail, Phone, UserPlus } from 'lucide-react'
 import Link from 'next/link'
 import { Tables } from '@/lib/database.types'
 
-type Unit = Tables<'units'> & {
-  leaseholders: Tables<'leaseholders'>[]
-}
+type Unit = Tables<'units'>
 
 interface BuildingUnitsClientProps {
   building: Tables<'buildings'>
@@ -17,6 +15,11 @@ interface BuildingUnitsClientProps {
 }
 
 export default function BuildingUnitsClient({ building, units }: BuildingUnitsClientProps) {
+  // Add logging to debug units display
+  console.log('BuildingUnitsClient - Received building:', building)
+  console.log('BuildingUnitsClient - Received units:', units)
+  console.log('BuildingUnitsClient - Units count:', units?.length || 0)
+
   // Safety checks
   if (!building) {
     console.error('BuildingUnitsClient - No building data provided')
@@ -87,51 +90,38 @@ export default function BuildingUnitsClient({ building, units }: BuildingUnitsCl
                 
                 <CardContent className="pt-0">
                   {/* Leaseholder Information */}
-                  {unit.leaseholders && Array.isArray(unit.leaseholders) && unit.leaseholders.length > 0 ? (
+                  {unit.leaseholder_email ? (
                     <div className="space-y-3">
                       <div className="space-y-2">
                         <div className="flex items-center space-x-2 text-sm">
                           <Users className="h-4 w-4 text-gray-400" />
                           <span className="font-medium text-gray-700">
-                            {unit.leaseholders[0]?.name || 'Unknown'}
+                            Leaseholder
                           </span>
                         </div>
                         
-                        {unit.leaseholders[0]?.email && (
-                          <div className="flex items-center space-x-2 text-sm">
-                            <Mail className="h-4 w-4 text-gray-400" />
-                            <span className="text-gray-600 truncate">
-                              {unit.leaseholders[0].email}
-                            </span>
-                          </div>
-                        )}
-                        
-                        {unit.leaseholders[0]?.phone && (
-                          <div className="flex items-center space-x-2 text-sm">
-                            <Phone className="h-4 w-4 text-gray-400" />
-                            <span className="text-gray-600">
-                              {unit.leaseholders[0].phone}
-                            </span>
-                          </div>
-                        )}
+                        <div className="flex items-center space-x-2 text-sm">
+                          <Mail className="h-4 w-4 text-gray-400" />
+                          <span className="text-gray-600 truncate">
+                            {unit.leaseholder_email}
+                          </span>
+                        </div>
                       </div>
                       
                       {/* Action Buttons */}
                       <div className="flex gap-2 pt-2 border-t border-gray-100">
-                        {unit.leaseholders[0]?.email && (
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              handleEmailLeaseholder(unit.leaseholders[0].email)
-                            }}
-                            className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs hover:bg-blue-100 transition-colors"
-                            title="Email leaseholder"
-                          >
-                            <Mail className="h-3 w-3" />
-                            Email
-                          </button>
-                        )}
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            handleEmailLeaseholder(unit.leaseholder_email!)
+                          }}
+                          className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs hover:bg-blue-100 transition-colors"
+                          title="Email leaseholder"
+                        >
+                          <Mail className="h-3 w-3" />
+                          Email
+                        </button>
                         <button
                           onClick={(e) => {
                             e.preventDefault()
@@ -196,7 +186,7 @@ export default function BuildingUnitsClient({ building, units }: BuildingUnitsCl
               </p>
             </div>
             <Badge variant="outline" className="text-sm">
-              {units.filter(u => u.leaseholders && Array.isArray(u.leaseholders) && u.leaseholders.length > 0).length} Occupied
+              {units.filter(u => u.leaseholder_email).length} Occupied
             </Badge>
           </div>
         </div>

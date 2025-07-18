@@ -1356,6 +1356,93 @@ export interface Database {
           }
         ]
       }
+      document_analysis: {
+        Row: {
+          id: string
+          document_id: string | null
+          extracted_text: string | null
+          summary: string | null
+          extracted_at: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          document_id?: string | null
+          extracted_text?: string | null
+          summary?: string | null
+          extracted_at?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          document_id?: string | null
+          extracted_text?: string | null
+          summary?: string | null
+          extracted_at?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_analysis_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "building_documents"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      document_queries: {
+        Row: {
+          id: string
+          user_id: string
+          building_id: number | null
+          document_id: string | null
+          question: string
+          answer: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          building_id?: number | null
+          document_id?: string | null
+          question: string
+          answer: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          building_id?: number | null
+          document_id?: string | null
+          question?: string
+          answer?: string
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_queries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_queries_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_queries_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "building_documents"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       users: {
         Row: {
           agency_id: string | null
