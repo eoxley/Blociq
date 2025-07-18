@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...emailData,
-          buildingId,
+          buildingId: building_id,
           sentBy: user_id
         })
       });

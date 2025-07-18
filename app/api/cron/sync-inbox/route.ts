@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
     for (const msg of messages.value) {
       try {
         // Parse email data
-        const emailData = {
+        const emailData: any = {
           outlook_message_id: msg.id,
           message_id: msg.internetMessageId,
           thread_id: msg.conversationId,
@@ -108,7 +108,7 @@ export async function GET(req: NextRequest) {
             if (unitMatch) {
               emailData.unit = unitMatch.unit_number;
               emailData.building_id = unitMatch.building_id;
-              emailData.building_name = unitMatch.buildings?.name;
+              emailData.building_name = (unitMatch.buildings as any)?.name;
             } else {
               // Fallback: match "Flat 7" in subject
               const match = emailData.subject?.match(/flat\s?(\d+[A-Za-z]?)/i);
@@ -123,7 +123,7 @@ export async function GET(req: NextRequest) {
                 if (fallbackUnit) {
                   emailData.unit = fallbackUnit.unit_number;
                   emailData.building_id = fallbackUnit.building_id;
-                  emailData.building_name = fallbackUnit.buildings?.name;
+                  emailData.building_name = (fallbackUnit.buildings as any)?.name;
                 }
               }
             }

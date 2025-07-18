@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 
     console.log("✅ Valid request received:", { prompt, buildingId, templateId, action });
 
-    let contextData = {};
+    let contextData: any = {};
     let templateData = null;
     let buildingData = null;
 
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
           building_name: building.name,
           building_address: building.address,
           total_units: building.units?.length || 0,
-          leaseholders: building.units?.map(unit => ({
+          leaseholders: building.units?.map((unit: any) => ({
             unit_number: unit.unit_number,
             leaseholders: unit.leaseholders
           })) || []
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
     // 3. If no specific template provided, search for relevant templates using semantic search
     if (!templateId && action !== 'create_new') {
       // First try semantic search if embeddings are available
-      let templates = [];
+      let templates: any[] = [];
       
       try {
         // Generate embedding for the search query
@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
       if (templates.length > 0) {
         contextData = {
           ...contextData,
-          relevant_templates: templates.map(t => ({
+          relevant_templates: templates.map((t: any) => ({
             id: t.id,
             name: t.name,
             type: t.type,
@@ -149,13 +149,43 @@ export async function POST(req: NextRequest) {
     let systemPrompt = '';
     let userPrompt = '';
 
-    switch (action) {
-      case 'rewrite':
-        if (!templateData) {
-          return NextResponse.json({ error: 'Template ID required for rewrite action' }, { status: 400 });
-        }
-        systemPrompt = `You are a professional block manager drafting legally compliant letters and notices for UK leasehold properties. You have access to building data and template content.`;
-        userPrompt = `Please rewrite the following template content to address this specific request: "${prompt}"
+    // Check if this is a Section 20 threshold query
+    const isSection20Query = prompt.toLowerCase().includes('section 20') || 
+                            prompt.toLowerCase().includes('s20') ||
+                            prompt.toLowerCase().includes('threshold') ||
+                            prompt.toLowerCase().includes('consultation') ||
+                            prompt.toLowerCase().includes('apportionment');
+
+    if (isSection20Query) {
+      systemPrompt = `You are a property management expert specializing in Section 20 consultation requirements for UK leasehold properties. You can calculate thresholds and provide guidance on consultation requirements.`;
+      
+      userPrompt = `The user is asking about Section 20 consultation thresholds: "${prompt}"
+
+Building Context:
+${JSON.stringify(contextData, null, 2)}
+
+Please:
+1. If apportionment data is provided, calculate the Section 20 threshold using the correct formula
+2. For residential-only buildings: threshold = 250 / (highest_apportionment / 100)
+3. For mixed-use buildings: threshold = (250 / (highest_apportionment / 100)) × (residential_pct / 100)
+4. Provide clear guidance on whether consultation is required
+5. Suggest next steps if consultation is needed
+
+If no apportionment data is provided, ask the user to provide:
+- Highest residential apportionment percentage
+- Whether the building has commercial elements
+- Commercial percentage (if applicable)
+
+Format your response clearly with the calculation and practical advice.`;
+
+    } else {
+      switch (action) {
+        case 'rewrite':
+          if (!templateData) {
+            return NextResponse.json({ error: 'Template ID required for rewrite action' }, { status: 400 });
+          }
+          systemPrompt = `You are a professional block manager drafting legally compliant letters and notices for UK leasehold properties. You have access to building data and template content.`;
+          userPrompt = `Please rewrite the following template content to address this specific request: "${prompt}"
 
 Template Content:
 ${templateData.content_text}
@@ -173,11 +203,11 @@ Please provide a rewritten version that:
 
 Return only the rewritten content with placeholders intact.`;
 
-        break;
+          break;
 
-      case 'search':
-        systemPrompt = `You are an AI assistant helping to find the most relevant communication templates for UK leasehold block management.`;
-        userPrompt = `Based on this request: "${prompt}"
+        case 'search':
+          systemPrompt = `You are an AI assistant helping to find the most relevant communication templates for UK leasehold block management.`;
+          userPrompt = `Based on this request: "${prompt}"
 
 Available Templates:
 ${contextData.relevant_templates ? JSON.stringify(contextData.relevant_templates, null, 2) : 'No templates found'}
@@ -194,11 +224,11 @@ Please provide:
 
 Format your response as a structured recommendation.`;
 
-        break;
+          break;
 
-      case 'create_new':
-        systemPrompt = `You are a professional block manager creating new communication templates for UK leasehold properties.`;
-        userPrompt = `Create a new template based on this request: "${prompt}"
+        case 'create_new':
+          systemPrompt = `You are a professional block manager creating new communication templates for UK leasehold properties.`;
+          userPrompt = `Create a new template based on this request: "${prompt}"
 
 Building Context:
 ${JSON.stringify(contextData, null, 2)}
@@ -212,11 +242,11 @@ Please create a professional template that:
 
 Return the template content with placeholders and metadata.`;
 
-        break;
+          break;
 
-      default:
-        systemPrompt = `You are a professional block manager assistant helping with UK leasehold communications.`;
-        userPrompt = `Request: "${prompt}"
+        default:
+          systemPrompt = `You are a professional block manager assistant helping with UK leasehold communications.`;
+          userPrompt = `Request: "${prompt}"
 
 Available Context:
 ${JSON.stringify(contextData, null, 2)}
@@ -228,7 +258,8 @@ Please provide helpful guidance on how to handle this request, including:
 4. Best practices for UK leasehold management
 5. Next steps for document generation`;
 
-        break;
+          break;
+      }
     }
 
     // 5. Call OpenAI
