@@ -211,7 +211,7 @@ export default function TemplateGenerationPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        if (errorData.fallback) {
+        if (errorData.fallback && generatedFileUrl) {
           toast.info('PDF conversion unavailable. Downloading DOCX instead.');
           window.open(generatedFileUrl, '_blank');
           return;
