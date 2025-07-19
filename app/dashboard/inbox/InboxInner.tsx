@@ -220,11 +220,11 @@ export default function InboxInner() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Emails</SelectItem>
-              <SelectItem value="unread">Unread</SelectItem>
-              <SelectItem value="unhandled">Unhandled</SelectItem>
-              <SelectItem value="handled">Handled</SelectItem>
-              <SelectItem value="inbox">Inbox Only</SelectItem>
+              <SelectItem onClick={() => setFilter("all")}>All Emails</SelectItem>
+              <SelectItem onClick={() => setFilter("unread")}>Unread</SelectItem>
+              <SelectItem onClick={() => setFilter("unhandled")}>Unhandled</SelectItem>
+              <SelectItem onClick={() => setFilter("handled")}>Handled</SelectItem>
+              <SelectItem onClick={() => setFilter("inbox")}>Inbox Only</SelectItem>
             </SelectContent>
           </Select>
         </div>
