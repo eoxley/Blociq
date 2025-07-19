@@ -1,4 +1,7 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
@@ -116,13 +119,14 @@
   * {
     @apply border-border outline-ring/50;
   }
+  
+  html {
+    font-family: Georgia, serif;
+  }
+  
   body {
     @apply bg-background text-foreground;
-  }
-}
-@layer base {
-  body {
-    @apply font-brand;
+    font-family: Georgia, serif;
   }
 
   a {
@@ -130,6 +134,27 @@
   }
 
   button {
-    @apply transition duration-150 ease-in-out;
+    @apply transition duration-150;
+    transition-timing-function: ease-in-out;
+  }
+  
+  /* BlocIQ Design System Overrides */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: Georgia, serif;
+  }
+  
+  /* Ensure consistent spacing */
+  p {
+    line-height: 1.625;
+  }
+  
+  /* Custom focus styles */
+  *:focus {
+    @apply outline-none ring-2 ring-primary/50 ring-offset-2;
+  }
+  
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
   }
 }
