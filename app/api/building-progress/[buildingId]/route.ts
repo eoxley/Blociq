@@ -6,12 +6,18 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+interface RouteParams {
+  params: Promise<{
+    buildingId: string;
+  }>;
+}
+
 export async function GET(
   req: NextRequest,
-  { params }: { params: { buildingId: string } }
+  { params }: RouteParams
 ) {
   try {
-    const buildingId = params.buildingId;
+    const { buildingId } = await params;
 
     if (!buildingId) {
       return NextResponse.json({ error: 'Building ID is required' }, { status: 400 });

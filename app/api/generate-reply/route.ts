@@ -52,7 +52,7 @@ Total Units: ${building.total_units}
     if (history.length > 0) {
       threadHistory = `
 Previous messages in this thread:
-${history.map((msg: any, index: number) => 
+${history.map((msg: Record<string, unknown>, index: number) => 
   `${index + 1}. ${msg.sender}: ${msg.body}`
 ).join('\n')}
       `.trim();

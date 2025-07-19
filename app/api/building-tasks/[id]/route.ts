@@ -6,8 +6,24 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+interface RouteParams {
+  params: Promise<{
+    id: string;
+  }>;
+}
+
+interface TaskUpdateData {
+  task?: string;
+  due_date?: string | null;
+  assigned_to?: string | null;
+  status?: 'Not Started' | 'In Progress' | 'Complete';
+  priority?: 'Low' | 'Medium' | 'High' | 'Urgent';
+  notes?: string | null;
+}
+
+export async function PUT(req: NextRequest, { params }: RouteParams) {
   try {
+    const { id } = await params;
     const body = await req.json();
     const { 
       task, 
@@ -18,7 +34,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       notes 
     } = body;
 
-    const updateData: any = {};
+    const updateData: TaskUpdateData = {};
     
     if (task !== undefined) updateData.task = task;
     if (dueDate !== undefined) updateData.due_date = dueDate;
@@ -30,7 +46,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const { data, error } = await supabase
       .from('building_tasks')
       .update(updateData)
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single();
 
@@ -47,12 +63,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: RouteParams) {
   try {
+    const { id } = await params;
     const { error } = await supabase
       .from('building_tasks')
       .delete()
-      .eq('id', params.id);
+      .eq('id', id);
 
     if (error) {
       console.error('Error deleting building task:', error);

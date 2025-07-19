@@ -31,7 +31,7 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [tone, setTone] = useState("Professional");
-  const [buildingContext, setBuildingContext] = useState<any>(null);
+  const [buildingContext, setBuildingContext] = useState<string | null>(null);
 
   // Generate AI draft when modal opens
   useEffect(() => {

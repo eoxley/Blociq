@@ -79,7 +79,7 @@ export default function TemplateGenerationPage() {
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiAction, setAiAction] = useState<'rewrite' | 'search' | 'create_new'>('rewrite');
   const [showEmailForm, setShowEmailForm] = useState(false);
-  const [selectedRecipients, setSelectedRecipients] = useState<any[]>([]);
+  const [selectedRecipients, setSelectedRecipients] = useState<Record<string, unknown>[]>([]);
   const [showRecipientSelector, setShowRecipientSelector] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     building_name: "",
@@ -266,12 +266,12 @@ export default function TemplateGenerationPage() {
     }
   };
 
-  const handleEmailSent = (result: any) => {
+  const handleEmailSent = (result: Record<string, unknown>) => {
     toast.success(`Email sent successfully to ${result.recipient}`);
     setShowEmailForm(false);
   };
 
-  const handleRecipientsChange = (recipients: any[]) => {
+  const handleRecipientsChange = (recipients: Record<string, unknown>[]) => {
     setSelectedRecipients(recipients);
   };
 
@@ -644,7 +644,7 @@ export default function TemplateGenerationPage() {
                   </label>
                   <select
                     value={aiAction}
-                    onChange={(e) => setAiAction(e.target.value as any)}
+                    onChange={(e) => setAiAction(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   >
                     <option value="rewrite">Rewrite Template</option>

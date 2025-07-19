@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
   ArrowLeft, 
-  Upload, 
   FileText, 
   CheckCircle,
   AlertTriangle,
@@ -82,7 +81,7 @@ export default function TemplateUploadPage() {
               </h3>
               <div className="space-y-2 text-sm text-gray-600">
                 <p>• <strong>File Format:</strong> Only .docx files are supported</p>
-                <p>• <strong>Placeholders:</strong> Use {{placeholder_name}} format for dynamic content</p>
+                <p>• <strong>Placeholders:</strong> Use &#123;&#123;placeholder_name&#125;&#125; format for dynamic content</p>
                 <p>• <strong>File Size:</strong> Maximum 10MB per template</p>
                 <p>• <strong>Content:</strong> Templates should be professional and legally compliant</p>
               </div>
@@ -101,28 +100,28 @@ export default function TemplateUploadPage() {
             <div className="space-y-2">
               <h4 className="font-medium text-gray-800">Basic Information</h4>
               <div className="space-y-1 text-sm text-gray-600">
-                <p>• {{leaseholder_name}}</p>
-                <p>• {{building_name}}</p>
-                <p>• {{unit_number}}</p>
-                <p>• {{today_date}}</p>
+                <p>• &#123;&#123;leaseholder_name&#125;&#125;</p>
+                <p>• &#123;&#123;building_name&#125;&#125;</p>
+                <p>• &#123;&#123;unit_number&#125;&#125;</p>
+                <p>• &#123;&#123;today_date&#125;&#125;</p>
               </div>
             </div>
             <div className="space-y-2">
               <h4 className="font-medium text-gray-800">Contact Details</h4>
               <div className="space-y-1 text-sm text-gray-600">
-                <p>• {{property_manager_name}}</p>
-                <p>• {{contact_email}}</p>
-                <p>• {{contact_phone}}</p>
-                <p>• {{office_address}}</p>
+                <p>• &#123;&#123;property_manager_name&#125;&#125;</p>
+                <p>• &#123;&#123;contact_email&#125;&#125;</p>
+                <p>• &#123;&#123;contact_phone&#125;&#125;</p>
+                <p>• &#123;&#123;office_address&#125;&#125;</p>
               </div>
             </div>
             <div className="space-y-2">
               <h4 className="font-medium text-gray-800">Financial</h4>
               <div className="space-y-1 text-sm text-gray-600">
-                <p>• {{service_charge_amount}}</p>
-                <p>• {{due_date}}</p>
-                <p>• {{invoice_number}}</p>
-                <p>• {{payment_details}}</p>
+                <p>• &#123;&#123;service_charge_amount&#125;&#125;</p>
+                <p>• &#123;&#123;due_date&#125;&#125;</p>
+                <p>• &#123;&#123;invoice_number&#125;&#125;</p>
+                <p>• &#123;&#123;payment_details&#125;&#125;</p>
               </div>
             </div>
           </div>

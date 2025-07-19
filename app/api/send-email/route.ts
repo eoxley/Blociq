@@ -154,7 +154,7 @@ async function sendViaSupabaseEmail(
     const base64 = Buffer.from(arrayBuffer).toString('base64');
     
     // Use Supabase's email function (requires email extension to be set up)
-    const { data, error } = await supabase.functions.invoke('send-email', {
+    const { error } = await supabase.functions.invoke('send-email', {
       body: {
         to: to,
         subject: subject,

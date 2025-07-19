@@ -398,7 +398,7 @@ export default function BuildingTasks({ buildingId }: BuildingTasksProps) {
               
               <div>
                 <Label htmlFor="priority">Priority</Label>
-                <Select value={newTask.priority} onValueChange={(value: any) => setNewTask({ ...newTask, priority: value })}>
+                <Select value={newTask.priority} onValueChange={(value: string) => setNewTask({ ...newTask, priority: value })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -473,7 +473,7 @@ export default function BuildingTasks({ buildingId }: BuildingTasksProps) {
               
               <div>
                 <Label htmlFor="edit-status">Status</Label>
-                <Select value={editingTask.status} onValueChange={(value: any) => setEditingTask({ ...editingTask, status: value })}>
+                <Select value={editingTask.status} onValueChange={(value: string) => setEditingTask({ ...editingTask, status: value })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -487,7 +487,7 @@ export default function BuildingTasks({ buildingId }: BuildingTasksProps) {
               
               <div>
                 <Label htmlFor="edit-priority">Priority</Label>
-                <Select value={editingTask.priority} onValueChange={(value: any) => setEditingTask({ ...editingTask, priority: value })}>
+                <Select value={editingTask.priority} onValueChange={(value: string) => setEditingTask({ ...editingTask, priority: value })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>

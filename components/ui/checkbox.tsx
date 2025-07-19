@@ -1,6 +1,12 @@
 import * as React from "react";
 
-export function Checkbox({ id, checked, onCheckedChange }: any) {
+interface CheckboxProps {
+  id: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}
+
+export function Checkbox({ id, checked, onCheckedChange }: CheckboxProps) {
   return (
     <input
       id={id}

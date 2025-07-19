@@ -6,7 +6,7 @@ interface Section20Calculation {
   residentialPercentage?: number;
   commercialPercentage?: number;
   highestApportionment: number;
-  requiresConsultation: boolean;
+  requiresConsultation: boolean | null;
   description: string;
   calculation: string;
 }
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     // Calculate threshold
     let threshold: number;
     let calculation: string;
-    let isResidentialOnly = !hasCommercial;
+    const isResidentialOnly = !hasCommercial;
 
     if (!hasCommercial) {
       // Residential-only building

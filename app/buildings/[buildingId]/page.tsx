@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Building, MapPin, Calendar, Users, Phone, Mail } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import LayoutWithSidebar from "@/components/LayoutWithSidebar";
 import BuildingTasks from "@/components/BuildingTasks";
@@ -26,7 +26,7 @@ interface BuildingData {
 
 export default function BuildingDetailPage() {
   const params = useParams();
-  const buildingId = params.buildingId as string;
+  const buildingId = params?.buildingId as string;
   const [building, setBuilding] = useState<BuildingData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -62,6 +62,20 @@ export default function BuildingDetailPage() {
     }
   };
 
+  if (!buildingId) {
+    return (
+      <LayoutWithSidebar title="Building Not Found" subtitle="No building ID provided">
+        <div className="p-6">
+          <div className="text-center">
+            <Building className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-600">Building Not Found</h2>
+            <p className="text-gray-500 mt-2">No building ID was provided in the URL.</p>
+          </div>
+        </div>
+      </LayoutWithSidebar>
+    );
+  }
+
   if (loading) {
     return (
       <LayoutWithSidebar title="Building Details" subtitle="Loading building information...">
@@ -87,7 +101,7 @@ export default function BuildingDetailPage() {
           <div className="text-center">
             <Building className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-gray-600">Building Not Found</h2>
-            <p className="text-gray-500 mt-2">The building you're looking for doesn't exist or you don't have access to it.</p>
+            <p className="text-gray-500 mt-2">The building you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.</p>
           </div>
         </div>
       </LayoutWithSidebar>

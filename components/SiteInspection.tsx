@@ -341,7 +341,7 @@ export default function SiteInspection({ buildingId }: SiteInspectionProps) {
                   <div className="flex items-center gap-3">
                     <Select 
                       value={item.status} 
-                      onValueChange={(value: any) => handleUpdateItem(item.id, { status: value })}
+                      onValueChange={(value: string) => handleUpdateItem(item.id, { status: value })}
                     >
                       <SelectTrigger className="w-32">
                         <SelectValue />

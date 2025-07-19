@@ -8,13 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { 
   FileText, 
   Search, 
-  Filter, 
   Plus, 
   Mail, 
   AlertTriangle,
   CheckCircle,
   Calendar,
-  Building2,
   Bot,
   Sparkles,
   Eye,
@@ -195,7 +193,7 @@ export default function TemplatesPage() {
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
                   {getTypeIcon(template.type)}
                 </div>
-                <Badge className={getTypeColor(template.type)}>
+                <Badge variant="outline" className={getTypeColor(template.type)}>
                   {template.type.replace('_', ' ')}
                 </Badge>
               </div>
@@ -241,12 +239,12 @@ export default function TemplatesPage() {
                   </span>
                   <div className="flex flex-wrap gap-1">
                     {template.placeholders.slice(0, 3).map((placeholder, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
+                      <Badge key={index} variant="outline" className="text-xs">
                         {placeholder}
                       </Badge>
                     ))}
                     {template.placeholders.length > 3 && (
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge variant="outline" className="text-xs">
                         +{template.placeholders.length - 3} more
                       </Badge>
                     )}
