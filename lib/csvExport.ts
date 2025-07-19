@@ -92,7 +92,16 @@ export function exportCommunicationsToCSV(communications: Record<string, unknown
   // Transform the data to include formatted dates
   const transformedData = communications.map(comm => ({
     ...comm,
-    sent_at: new Date(comm.sent_at).toLocaleDateString()
+    sent_at: (() => {
+      const sentAt = comm.sent_at;
+      if (sentAt instanceof Date) {
+        return sentAt.toLocaleDateString();
+      }
+      if (typeof sentAt === 'string' || typeof sentAt === 'number') {
+        return new Date(sentAt).toLocaleDateString();
+      }
+      return 'Unknown Date';
+    })()
   }));
 
   exportToCSV(transformedData, columns, filename);
@@ -115,7 +124,16 @@ export function exportDocumentsToCSV(documents: Record<string, unknown>[], filen
   // Transform the data to include formatted dates and boolean values
   const transformedData = documents.map(doc => ({
     ...doc,
-    created_at: new Date(doc.created_at).toLocaleDateString(),
+    created_at: (() => {
+      const createdAt = doc.created_at;
+      if (createdAt instanceof Date) {
+        return createdAt.toLocaleDateString();
+      }
+      if (typeof createdAt === 'string' || typeof createdAt === 'number') {
+        return new Date(createdAt).toLocaleDateString();
+      }
+      return 'Unknown Date';
+    })(),
     ai_generated: doc.ai_generated ? 'Yes' : 'No'
   }));
 
