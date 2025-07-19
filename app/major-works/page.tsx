@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { ArrowLeft, Plus, Wrench, CheckCircle, Calendar, Building2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import MajorWorksTimeline from '@/components/MajorWorksTimeline'
 
 export default async function MajorWorksPage() {
   const supabase = createServerComponentClient({ cookies })
@@ -110,6 +111,19 @@ export default async function MajorWorksPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
+                    {/* Timeline Section */}
+                    <div className="mb-6">
+                      <h4 className="text-sm font-semibold text-gray-700 mb-3">Section 20 Timeline (18 months)</h4>
+                      <MajorWorksTimeline
+                        startDate={project.start_date}
+                        estimatesIssued={project.estimates_issued}
+                        constructionStart={project.construction_start}
+                        completionDate={project.completion_date}
+                        status={project.status}
+                      />
+                    </div>
+
+                    {/* Date Details */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
                         <div className="flex items-center gap-1 text-gray-500 mb-1">
@@ -180,6 +194,19 @@ export default async function MajorWorksPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
+                    {/* Timeline Section */}
+                    <div className="mb-6">
+                      <h4 className="text-sm font-semibold text-gray-700 mb-3">Section 20 Timeline (18 months)</h4>
+                      <MajorWorksTimeline
+                        startDate={project.start_date}
+                        estimatesIssued={project.estimates_issued}
+                        constructionStart={project.construction_start}
+                        completionDate={project.completion_date}
+                        status={project.status}
+                      />
+                    </div>
+
+                    {/* Date Details */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
                         <div className="flex items-center gap-1 text-gray-500 mb-1">
