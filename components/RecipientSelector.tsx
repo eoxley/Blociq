@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { saveAs } from 'file-saver';
 
-interface Recipient {
+export interface Recipient {
   id: string;
   name: string;
   email: string;
