@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { X, Send, RefreshCw, MessageSquare, Building, User, Bold, Italic, Underline, Sparkles } from "lucide-react";
+import { X, Send, RefreshCw, MessageSquare, Building, User, Bold, Italic, Underline } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
@@ -31,9 +31,6 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
   const [isSending, setIsSending] = useState(false);
   const [tone, setTone] = useState("Professional");
   const [buildingContext, setBuildingContext] = useState<string | null>(null);
-  const [improvedText, setImprovedText] = useState("");
-  const [isPolishing, setIsPolishing] = useState(false);
-  const [showImproved, setShowImproved] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Generate AI draft when modal opens
@@ -96,46 +93,6 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
       textarea.focus();
       textarea.setSelectionRange(start + formattedText.length, start + formattedText.length);
     }, 0);
-  };
-
-  const polishGrammar = async () => {
-    if (!replyText.trim()) return;
-
-    setIsPolishing(true);
-    setShowImproved(false);
-    
-    try {
-      const response = await fetch("/api/improve-draft", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content: replyText,
-          improvementType: "polish",
-          originalEmail: email.body,
-          tone
-        })
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        setImprovedText(data.plainText);
-        setShowImproved(true);
-      } else {
-        console.error("Failed to polish grammar:", data.error);
-        alert("Failed to polish grammar. Please try again.");
-      }
-    } catch (error) {
-      console.error("Error polishing grammar:", error);
-      alert("Failed to polish grammar. Please try again.");
-    } finally {
-      setIsPolishing(false);
-    }
-  };
-
-  const useImprovedVersion = () => {
-    setReplyText(improvedText);
-    setShowImproved(false);
-    setImprovedText("");
   };
 
   const sendReply = async () => {
@@ -301,42 +258,6 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
                   spellCheck={true}
                 />
               </div>
-
-              {/* Polish Grammar Button */}
-              <div className="flex justify-center">
-                <Button
-                  variant="outline"
-                  onClick={polishGrammar}
-                  disabled={isPolishing || !replyText.trim()}
-                  className="border-blue-300 text-blue-600 hover:bg-blue-50"
-                >
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  {isPolishing ? "Polishing..." : "✨ Polish Grammar"}
-                </Button>
-              </div>
-
-              {/* Improved Version */}
-              {showImproved && (
-                <div className="space-y-3 border-t pt-4">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-green-700">Improved Version</label>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={useImprovedVersion}
-                      className="bg-green-50 border-green-300 text-green-700 hover:bg-green-100"
-                    >
-                      Use This Version
-                    </Button>
-                  </div>
-                  <Textarea
-                    value={improvedText}
-                    readOnly
-                    className="flex-1 resize-none bg-green-50 border-green-200"
-                    spellCheck={true}
-                  />
-                </div>
-              )}
 
               {/* Action Buttons */}
               <div className="flex justify-between items-center pt-4 border-t">

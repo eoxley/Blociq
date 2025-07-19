@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Mail, Calendar, User, Building, Reply, Eye, CheckCircle, FolderOpen, Filter, RefreshCw } from "lucide-react";
+import { Mail, Calendar, User, Building, Reply, Eye, CheckCircle, Filter, RefreshCw, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,7 @@ export default function InboxInner() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [syncStatus, setSyncStatus] = useState<string>("");
+  const [handlingEmails, setHandlingEmails] = useState<Set<string>>(new Set());
   const router = useRouter();
 
   useEffect(() => {
@@ -94,6 +95,50 @@ export default function InboxInner() {
 
   const handleQuickReply = (email: Email) => {
     router.push(`/dashboard/inbox/${email.message_id}`);
+  };
+
+  const markAsHandled = async (email: Email, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (email.is_handled) return;
+
+    setHandlingEmails(prev => new Set(prev).add(email.message_id));
+
+    try {
+      const response = await fetch("/api/mark-handled", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messageId: email.message_id,
+          userId: "current_user" // This should come from auth context
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Update the email in local state
+        setEmails(prevEmails => 
+          prevEmails.map(e => 
+            e.message_id === email.message_id 
+              ? { ...e, is_handled: true, handled_at: data.handledAt }
+              : e
+          )
+        );
+      } else {
+        console.error("Failed to mark as handled:", data.error);
+        alert("Failed to mark email as handled. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error marking as handled:", error);
+      alert("Failed to mark email as handled. Please try again.");
+    } finally {
+      setHandlingEmails(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(email.message_id);
+        return newSet;
+      });
+    }
   };
 
   const handleManualSync = async () => {
@@ -260,8 +305,10 @@ export default function InboxInner() {
           {emails.map((email) => (
             <Card 
               key={email.message_id} 
-              className={`hover:shadow-md transition-all duration-200 cursor-pointer ${
+              className={`hover:shadow-md transition-all duration-200 cursor-pointer group ${
                 email.isUnread ? 'border-l-4 border-l-blue-500 bg-blue-50/50' : ''
+              } ${
+                email.is_handled ? 'opacity-60 bg-gray-50' : ''
               }`}
               onClick={() => handleEmailClick(email.message_id)}
             >
@@ -269,14 +316,19 @@ export default function InboxInner() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className={`font-semibold truncate ${email.isUnread ? 'text-blue-900' : 'text-gray-900'}`}>
+                      <h3 className={`font-semibold truncate ${
+                        email.isUnread ? 'text-blue-900' : 'text-gray-900'
+                      } ${
+                        email.is_handled ? 'line-through text-gray-500' : ''
+                      }`}>
                         {email.subject || '(No Subject)'}
                       </h3>
-                      {email.isUnread && (
+                      {email.isUnread && !email.is_handled && (
                         <Badge variant="default" className="text-xs">New</Badge>
                       )}
                       {email.is_handled && (
-                        <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
+                        <Badge variant="outline" className="text-xs bg-green-50 text-green-700 flex items-center gap-1">
+                          <Check className="h-3 w-3" />
                           Handled
                         </Badge>
                       )}
@@ -302,13 +354,31 @@ export default function InboxInner() {
                     </div>
                     
                     {email.body_preview && (
-                      <p className="text-sm text-gray-600 line-clamp-2">
+                      <p className={`text-sm line-clamp-2 ${
+                        email.is_handled ? 'text-gray-400' : 'text-gray-600'
+                      }`}>
                         {email.body_preview}
                       </p>
                     )}
                   </div>
                   
                   <div className="flex items-center gap-2 ml-4">
+                    {!email.is_handled && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => markAsHandled(email, e)}
+                        disabled={handlingEmails.has(email.message_id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-green-50 hover:text-green-700"
+                        title="Mark as Handled"
+                      >
+                        {handlingEmails.has(email.message_id) ? (
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <CheckCircle className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"
