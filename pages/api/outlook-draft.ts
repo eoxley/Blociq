@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).end();
@@ -49,9 +49,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     res.status(200).json({ success: true, draftId: draftRes.data.id });
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error 
-      ? error.message 
-      : (error as any)?.response?.data || 'Unknown error occurred';
+    let errorMessage = 'Unknown error occurred';
+    
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (axios.isAxiosError(error)) {
+      errorMessage = error.response?.data?.message || error.message || 'Axios error occurred';
+    }
+    
     console.error('Outlook Draft Error:', errorMessage);
     res.status(500).json({ error: 'Failed to create Outlook draft' });
   }
