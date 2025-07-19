@@ -33,6 +33,7 @@ export default function Sidebar() {
     { href: '/buildings', icon: Building2, label: 'Buildings' },
     { href: '/communications', icon: MessageSquare, label: 'Communications' },
     { href: '/documents', icon: FileText, label: 'Documents' },
+    { href: '/major-works', icon: Wrench, label: 'Major Works' },
     { href: '/ai-assistant', icon: Brain, label: 'AI Assistant' },
   ]
 
@@ -79,17 +80,6 @@ export default function Sidebar() {
           <div className="px-4 py-2">
             <p className="text-xs text-white/75 mb-2">Coming Soon</p>
           </div>
-          {/* Major Works */}
-          <a
-            href="/major-works"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium opacity-60 cursor-not-allowed"
-            tabIndex={-1}
-            aria-disabled="true"
-          >
-            <Wrench className="h-5 w-5" />
-            <span>Major Works</span>
-            <Clock className="h-3 w-3 ml-auto" />
-          </a>
           {/* Finances Parent */}
           <div className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium opacity-60 cursor-not-allowed">
             <span className="text-lg font-bold">£</span>
