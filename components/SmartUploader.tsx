@@ -13,7 +13,7 @@ type Props = {
   buildingId?: number;
   unitId?: number;
   uploadedBy?: string;
-  onSaveSuccess?: (saved: Record<string, unknown>) => void;
+  onSaveSuccess?: (saved: any) => void;
 };
 
 const SmartUploader: React.FC<Props> = ({
@@ -26,7 +26,14 @@ const SmartUploader: React.FC<Props> = ({
 }) => {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
-  const [metadata, setMetadata] = useState<Record<string, unknown> | null>(null);
+  const [metadata, setMetadata] = useState<{
+    doc_type: string | undefined;
+    building_name: string;
+    start_date: string;
+    expiry_date: string;
+    reminder_days: number;
+    doc_url: string;
+  } | null>(null);
   const [saved, setSaved] = useState(false);
 
   const handleExtract = async () => {
@@ -176,7 +183,7 @@ const SmartUploader: React.FC<Props> = ({
           <div>
             <Label>Document Type</Label>
             <Input
-              value={metadata.doc_type}
+              value={metadata.doc_type ?? ''}
               onChange={(e) => setMetadata({ ...metadata, doc_type: e.target.value })}
             />
           </div>
@@ -200,7 +207,7 @@ const SmartUploader: React.FC<Props> = ({
             <Label>Reminder Days</Label>
             <Input
               type="number"
-              value={metadata.reminder_days}
+              value={metadata.reminder_days.toString()}
               onChange={(e) =>
                 setMetadata({ ...metadata, reminder_days: parseInt(e.target.value) })
               }
