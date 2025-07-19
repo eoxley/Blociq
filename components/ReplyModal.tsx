@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { X, Send, RefreshCw, MessageSquare, Building, User, Bold, Italic, Underline, Sparkles, RotateCcw } from "lucide-react";
+import { X, Send, RefreshCw, MessageSquare, Building, User, Bold, Italic, Underline, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
@@ -33,12 +33,11 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
   const [buildingContext, setBuildingContext] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
-  // AI improvement modal states
+  // Polish Reply modal states
   const [showImprovementModal, setShowImprovementModal] = useState(false);
-  const [improvedText, setImprovedText] = useState("");
-  const [isImproving, setIsImproving] = useState(false);
-  const [improvementError, setImprovementError] = useState("");
-  const [improvementMode, setImprovementMode] = useState<"polish" | "formal">("polish");
+  const [isPolishing, setIsPolishing] = useState(false);
+  const [improvedDraft, setImprovedDraft] = useState("");
+  const [polishError, setPolishError] = useState("");
 
   // Generate AI draft when modal opens
   useEffect(() => {
@@ -102,51 +101,45 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
     }, 0);
   };
 
-  const improveDraft = async (mode: "polish" | "formal") => {
+  const polishReply = async () => {
     if (!replyText.trim()) return;
 
-    setIsImproving(true);
-    setImprovementError("");
-    setImprovementMode(mode);
-    setShowImprovementModal(true);
-
+    setIsPolishing(true);
+    setPolishError("");
+    
     try {
       const response = await fetch("/api/improve-draft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content: replyText,
-          improvementType: mode,
-          originalEmail: email.body,
-          tone
-        })
+        body: JSON.stringify({ replyText })
       });
 
       const data = await response.json();
       if (data.success) {
-        setImprovedText(data.improvedContent);
+        setImprovedDraft(data.improvedDraft);
+        setShowImprovementModal(true);
       } else {
-        setImprovementError(data.error || "Failed to improve draft");
+        setPolishError(data.error || "Failed to improve draft");
       }
     } catch (error) {
-      console.error("Error improving draft:", error);
-      setImprovementError("Failed to improve draft. Please try again.");
+      console.error("Error polishing reply:", error);
+      setPolishError("Failed to connect to improvement service");
     } finally {
-      setIsImproving(false);
+      setIsPolishing(false);
     }
   };
 
   const useImprovedVersion = () => {
-    setReplyText(improvedText);
+    setReplyText(improvedDraft);
     setShowImprovementModal(false);
-    setImprovedText("");
-    setImprovementError("");
+    setImprovedDraft("");
+    setPolishError("");
   };
 
   const cancelImprovement = () => {
     setShowImprovementModal(false);
-    setImprovedText("");
-    setImprovementError("");
+    setImprovedDraft("");
+    setPolishError("");
   };
 
   const sendReply = async () => {
@@ -314,29 +307,25 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
                   />
                 </div>
 
-                {/* AI Improvement Buttons */}
-                <div className="flex gap-2">
+                {/* Polish Reply Button */}
+                <div className="flex justify-center">
                   <Button
                     variant="outline"
-                    size="sm"
-                    onClick={() => improveDraft("polish")}
-                    disabled={!replyText.trim() || isImproving}
+                    onClick={polishReply}
+                    disabled={isPolishing || !replyText.trim()}
                     className="flex items-center gap-2"
                   >
-                    <Sparkles className="h-4 w-4" />
-                    Polish Grammar
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => improveDraft("formal")}
-                    disabled={!replyText.trim() || isImproving}
-                    className="flex items-center gap-2"
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                    Make More Formal
+                    <Sparkles className={`h-4 w-4 ${isPolishing ? 'animate-spin' : ''}`} />
+                    {isPolishing ? "Polishing..." : "Polish Reply"}
                   </Button>
                 </div>
+
+                {/* Error Message */}
+                {polishError && (
+                  <div className="text-red-600 text-sm text-center bg-red-50 p-2 rounded">
+                    {polishError}
+                  </div>
+                )}
 
                 {/* Action Buttons */}
                 <div className="flex justify-between items-center pt-4 border-t">
@@ -371,14 +360,8 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b">
               <div className="flex items-center gap-3">
-                {improvementMode === "polish" ? (
-                  <Sparkles className="h-5 w-5 text-purple-600" />
-                ) : (
-                  <RotateCcw className="h-5 w-5 text-blue-600" />
-                )}
-                <h3 className="text-lg font-semibold">
-                  {improvementMode === "polish" ? "Polish Grammar" : "Make More Formal"}
-                </h3>
+                <Sparkles className="h-5 w-5 text-purple-600" />
+                <h2 className="text-xl font-semibold">AI-Improved Draft</h2>
               </div>
               <Button variant="ghost" size="sm" onClick={cancelImprovement}>
                 <X className="h-4 w-4" />
@@ -387,44 +370,28 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
 
             {/* Modal Content */}
             <div className="p-6 flex-1 overflow-y-auto">
-              {isImproving ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="flex items-center gap-3">
-                    <RefreshCw className="h-6 w-6 animate-spin text-blue-600" />
-                    <span className="text-gray-600">Improving your draft...</span>
-                  </div>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-medium text-sm text-gray-700 mb-2">Improved Version</h3>
+                  <Card className="p-4 bg-gray-50">
+                    <p className="text-sm whitespace-pre-wrap">{improvedDraft}</p>
+                  </Card>
                 </div>
-              ) : improvementError ? (
-                <div className="text-center py-8">
-                  <div className="text-red-600 mb-4">{improvementError}</div>
-                  <Button onClick={cancelImprovement} variant="outline">
-                    Close
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-medium text-sm text-gray-700 mb-2">Improved Version</h4>
-                    <div 
-                      className="border rounded-md p-4 bg-gray-50 max-h-96 overflow-y-auto"
-                      dangerouslySetInnerHTML={{ __html: improvedText }}
-                    />
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
 
-            {/* Modal Footer */}
-            {!isImproving && !improvementError && (
-              <div className="flex justify-end gap-3 p-6 border-t">
-                <Button variant="outline" onClick={cancelImprovement}>
-                  ❌ Cancel
-                </Button>
-                <Button onClick={useImprovedVersion} className="bg-green-600 hover:bg-green-700">
-                  ✅ Use this version
-                </Button>
-              </div>
-            )}
+            {/* Modal Actions */}
+            <div className="flex justify-end gap-3 p-6 border-t">
+              <Button variant="outline" onClick={cancelImprovement}>
+                ❌ Cancel
+              </Button>
+              <Button 
+                onClick={useImprovedVersion}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                ✅ Use This Version
+              </Button>
+            </div>
           </div>
         </div>
       )}
