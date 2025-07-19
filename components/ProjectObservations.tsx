@@ -16,7 +16,7 @@ interface ProjectObservation {
   phase: string
   observer_type: string
   comment: string
-  notify_director: boolean
+  notify_director?: boolean
   created_at: string
 }
 
@@ -116,7 +116,7 @@ export default function ProjectObservations({ projectId }: ProjectObservationsPr
           phase,
           observer_type: formData.observerType,
           comment: formData.comment.trim(),
-          notify_director: formData.notifyDirector
+          ...(formData.notifyDirector && { notify_director: formData.notifyDirector })
         })
         .select()
         .single()
@@ -275,7 +275,7 @@ export default function ProjectObservations({ projectId }: ProjectObservationsPr
                       <span className="text-sm text-gray-500">
                         {new Date(observation.created_at).toLocaleDateString('en-GB')}
                       </span>
-                      {observation.notify_director && (
+                      {observation.notify_director === true && (
                         <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
                           <Bell className="h-3 w-3 mr-1" />
                           Notified
@@ -382,7 +382,7 @@ export default function ProjectObservations({ projectId }: ProjectObservationsPr
                       <span className="text-sm text-gray-500">
                         {new Date(observation.created_at).toLocaleDateString('en-GB')}
                       </span>
-                      {observation.notify_director && (
+                      {observation.notify_director === true && (
                         <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
                           <Bell className="h-3 w-3 mr-1" />
                           Notified
