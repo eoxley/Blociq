@@ -44,8 +44,8 @@ interface MajorWorksProject {
   contractor_appointed_date: string;
   expected_completion_date: string;
   actual_completion_date: string;
-  estimated_cost: number;
-  actual_cost: number;
+  estimated_cost: number | undefined;
+  actual_cost: number | undefined;
   contractor_name: string;
   contractor_contact: string;
   notes: string;
@@ -390,7 +390,7 @@ export default function ProjectDetailsPage() {
                         id="estimated_cost"
                         type="number"
                         value={editData.estimated_cost || ''}
-                        onChange={(e) => setEditData(prev => ({ ...prev, estimated_cost: parseFloat(e.target.value) || null }))}
+                        onChange={(e) => setEditData(prev => ({ ...prev, estimated_cost: parseFloat(e.target.value) || undefined }))}
                       />
                     </div>
                     <div>
@@ -399,7 +399,7 @@ export default function ProjectDetailsPage() {
                         id="actual_cost"
                         type="number"
                         value={editData.actual_cost || ''}
-                        onChange={(e) => setEditData(prev => ({ ...prev, actual_cost: parseFloat(e.target.value) || null }))}
+                        onChange={(e) => setEditData(prev => ({ ...prev, actual_cost: parseFloat(e.target.value) || undefined }))}
                       />
                     </div>
                   </div>
