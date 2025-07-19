@@ -172,14 +172,14 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
               {/* Tone Selector */}
               <div className="flex items-center gap-3">
                 <span className="text-sm font-medium">Tone:</span>
-                <Select value={tone} onValueChange={setTone}>
+                <Select value={tone} onChange={(e) => setTone(e.target.value)}>
                   <SelectTrigger className="w-40">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Professional">Professional</SelectItem>
-                    <SelectItem value="Friendly">Friendly</SelectItem>
-                    <SelectItem value="Firm">Firm</SelectItem>
+                    <SelectItem>Professional</SelectItem>
+                    <SelectItem>Friendly</SelectItem>
+                    <SelectItem>Firm</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button 
