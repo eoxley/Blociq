@@ -1,61 +1,55 @@
-# BlocIQ Visual & Structural Lock – July 19, 2025
+# 🚫 BlocIQ UI Visual Baseline Lock
 
-This snapshot represents the last known good baseline of BlocIQ's UI and layout — deployed and confirmed working at 6:33 PM on July 18.
-
-## Status
-✅ Layout is correct across all pages
-✅ Global styles (tailwind.config.js, globals.css) are stable
-✅ Font, spacing, colors, and sidebar are intact
-✅ All page routes load visually and functionally as intended
-
-## Protected Files
-Do not modify the following files without testing and review:
-- `app/layout.tsx`
-- `app/globals.css`
-- `tailwind.config.js`
-- `components/LayoutWithSidebar.tsx`
-- `components/Sidebar.tsx` (if used)
-
-## Recovery Instructions
-If any visual issues appear, revert to this commit:
-```bash
-git reset --hard 1ee08056202cc840d60c26fcba94e56270e8bc94
-```
-
-## Baseline Details
-- **Date**: July 19, 2025
-- **Time**: 6:33 PM (July 18 deployment)
-- **Branch**: cursor/lock-blociq-ui-baseline-daa2
-- **Commit Hash**: 1ee08056202cc840d60c26fcba94e56270e8bc94
-
-## Key UI Components Locked
-1. **Global Styles**
-   - Tailwind configuration
-   - Global CSS rules
-   - Font families and sizes
-   - Color palette
-   - Spacing system
-
-2. **Layout Structure**
-   - Main app layout
-   - Sidebar navigation
-   - Page routing
-   - Component hierarchy
-
-3. **Visual Elements**
-   - Button styles
-   - Form inputs
-   - Cards and containers
-   - Typography
-   - Icons and imagery
-
-## Testing Checklist
-Before modifying any protected files:
-- [ ] Test on all major routes
-- [ ] Verify responsive design
-- [ ] Check component rendering
-- [ ] Validate style inheritance
-- [ ] Confirm no layout shifts
+This file documents the current stable UI and layout baseline for BlocIQ.
 
 ---
-*This baseline lock was created to preserve the stable visual state of BlocIQ.*
+
+## 📦 Baseline Details
+
+- **Branch**: `feature/deploy-mvp`
+- **Commit Hash**: `d60714c`
+- **Deployment ID**: `63rXXk3Ju`
+- **Environment**: Production
+- **Primary Domain**: [www.blociq.co.uk](https://www.blociq.co.uk)
+- **Vercel Preview Domain**: `blociq-h3xv-git-feature-deploy-mvp-eleanoroxley-9774s-projects.vercel.app`
+
+---
+
+## 🔐 Locked Files (Do not modify without test confirmation)
+
+- `app/layout.tsx`
+- `app/globals.css`
+- `tailwind.config.ts`
+- `postcss.config.js`
+- `components/Layout.tsx`
+- `components/LayoutWithSidebar.tsx`
+
+---
+
+## ✅ Visual Snapshot Includes
+
+- Homepage layout and hero text
+- Custom fonts (Georgia serif)
+- Brand colours (Aqua Teal, Deep Teal, Charcoal, Soft White)
+- All Tailwind styling intact
+- Functional navigation and inbox components
+
+---
+
+## 🧪 Test Checklist Before Modifying Layout or Styles
+
+- [ ] Visually test all key pages
+- [ ] Confirm production build compiles successfully on Vercel
+- [ ] Avoid unsupported utility classes (e.g., `font-brand`)
+- [ ] Check mobile responsiveness
+
+---
+
+## ♻️ Recovery Instructions
+
+To restore this exact baseline:
+
+```bash
+git checkout feature/deploy-mvp
+git reset --hard d60714c
+```
