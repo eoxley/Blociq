@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { X, Send, RefreshCw, MessageSquare, Building, User } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { X, Send, RefreshCw, MessageSquare, Building, User, Bold, Italic, Underline } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select } from "@/components/ui/select";
 
 interface Email {
   message_id: string;
@@ -32,6 +31,7 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
   const [isSending, setIsSending] = useState(false);
   const [tone, setTone] = useState("Professional");
   const [buildingContext, setBuildingContext] = useState<string | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Generate AI draft when modal opens
   useEffect(() => {
@@ -69,6 +69,30 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const applyFormatting = (tag: 'b' | 'i' | 'u') => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = replyText.substring(start, end);
+
+    if (selectedText.length === 0) return;
+
+    const beforeText = replyText.substring(0, start);
+    const afterText = replyText.substring(end);
+    const formattedText = `<${tag}>${selectedText}</${tag}>`;
+    
+    const newText = beforeText + formattedText + afterText;
+    setReplyText(newText);
+
+    // Set cursor position after the formatted text
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + formattedText.length, start + formattedText.length);
+    }, 0);
   };
 
   const sendReply = async () => {
@@ -173,14 +197,9 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
               <div className="flex items-center gap-3">
                 <span className="text-sm font-medium">Tone:</span>
                 <Select value={tone} onChange={(e) => setTone(e.target.value)}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem>Professional</SelectItem>
-                    <SelectItem>Friendly</SelectItem>
-                    <SelectItem>Firm</SelectItem>
-                  </SelectContent>
+                  <option value="Professional">Professional</option>
+                  <option value="Friendly">Friendly</option>
+                  <option value="Firm">Firm</option>
                 </Select>
                 <Button 
                   variant="outline" 
@@ -193,15 +212,50 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
                 </Button>
               </div>
 
+              {/* Custom Formatting Toolbar */}
+              <div className="border rounded-md p-2 bg-gray-50">
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => applyFormatting('b')}
+                    title="Bold"
+                    className="hover:bg-blue-100"
+                  >
+                    <Bold className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => applyFormatting('i')}
+                    title="Italic"
+                    className="hover:bg-blue-100"
+                  >
+                    <Italic className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => applyFormatting('u')}
+                    title="Underline"
+                    className="hover:bg-blue-100"
+                  >
+                    <Underline className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
               {/* Reply Editor */}
               <div className="flex-1 flex flex-col">
                 <label className="text-sm font-medium mb-2">Your Reply</label>
                 <Textarea
+                  ref={textareaRef}
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   placeholder="AI will generate a draft reply..."
                   className="flex-1 resize-none"
                   disabled={isGenerating}
+                  spellCheck={true}
                 />
               </div>
 

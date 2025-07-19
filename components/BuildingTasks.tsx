@@ -247,26 +247,26 @@ export default function BuildingTasks({ buildingId }: BuildingTasksProps) {
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue />
             </SelectTrigger>
-                              <SelectContent>
+            <SelectContent>
                     <SelectItem>All Status</SelectItem>
                     <SelectItem>Not Started</SelectItem>
                     <SelectItem>In Progress</SelectItem>
                     <SelectItem>Complete</SelectItem>
-                  </SelectContent>
+            </SelectContent>
           </Select>
           <Select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)}>
             <SelectTrigger className="w-40">
               <User className="h-4 w-4 mr-2" />
               <SelectValue />
             </SelectTrigger>
-                              <SelectContent>
+            <SelectContent>
                     <SelectItem>All Assignees</SelectItem>
-                    {uniqueAssignees.map(assignee => (
+              {uniqueAssignees.map(assignee => (
                       <SelectItem key={assignee}>
-                        {assignee}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                  {assignee}
+                </SelectItem>
+              ))}
+            </SelectContent>
           </Select>
         </div>
 
