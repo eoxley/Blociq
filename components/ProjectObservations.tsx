@@ -90,11 +90,17 @@ export default function ProjectObservations({ projectId }: ProjectObservationsPr
         .eq('project_id', projectId)
         .order('created_at', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase error fetching observations:', error)
+        // Don't throw error, just set empty array
+        setObservations([])
+        return
+      }
       setObservations(data || [])
     } catch (error) {
       console.error('Error fetching observations:', error)
-      toast.error('Failed to load observations')
+      // Don't show toast for table not existing yet
+      setObservations([])
     }
   }
 
