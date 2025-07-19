@@ -13,8 +13,7 @@ import {
   Calendar,
   Plus,
   Download,
-  History,
-  Search
+  History
 } from "lucide-react";
 
 const communicationTypes = [

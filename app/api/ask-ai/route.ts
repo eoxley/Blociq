@@ -24,9 +24,8 @@ export async function POST(req: NextRequest) {
 
     console.log("✅ Valid request received:", { prompt, buildingId, templateId, action });
 
-    let contextData: any = {};
+    let contextData: Record<string, unknown> = {};
     let templateData = null;
-    let buildingData = null;
 
     // 1. Load building data if buildingId provided
     if (buildingId) {
@@ -49,13 +48,12 @@ export async function POST(req: NextRequest) {
         .single();
 
       if (!buildingError && building) {
-        buildingData = building;
         contextData = {
           ...contextData,
           building_name: building.name,
           building_address: building.address,
           total_units: building.units?.length || 0,
-          leaseholders: building.units?.map((unit: any) => ({
+          leaseholders: building.units?.map((unit: Record<string, unknown>) => ({
             unit_number: unit.unit_number,
             leaseholders: unit.leaseholders
           })) || []
@@ -86,7 +84,7 @@ export async function POST(req: NextRequest) {
     // 3. If no specific template provided, search for relevant templates using semantic search
     if (!templateId && action !== 'create_new') {
       // First try semantic search if embeddings are available
-      let templates: any[] = [];
+      let templates: Record<string, unknown>[] = [];
       
       try {
         // Generate embedding for the search query
@@ -133,7 +131,7 @@ export async function POST(req: NextRequest) {
       if (templates.length > 0) {
         contextData = {
           ...contextData,
-          relevant_templates: templates.map((t: any) => ({
+          relevant_templates: templates.map((t: Record<string, unknown>) => ({
             id: t.id,
             name: t.name,
             type: t.type,

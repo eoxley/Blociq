@@ -6,15 +6,27 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+interface RouteParams {
+  params: Promise<{
+    id: string;
+  }>;
+}
+
+interface InspectionItemUpdateData {
+  status?: 'OK' | 'Issue Found' | 'Not Inspected' | 'Needs Attention';
+  notes?: string | null;
+}
+
+export async function PUT(req: NextRequest, { params }: RouteParams) {
   try {
+    const { id } = await params;
     const body = await req.json();
     const { 
       status, 
       notes 
     } = body;
 
-    const updateData: any = {};
+    const updateData: InspectionItemUpdateData = {};
     
     if (status !== undefined) updateData.status = status;
     if (notes !== undefined) updateData.notes = notes;
@@ -22,7 +34,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const { data, error } = await supabase
       .from('inspection_items')
       .update(updateData)
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single();
 

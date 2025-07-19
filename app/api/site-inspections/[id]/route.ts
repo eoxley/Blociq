@@ -11,8 +11,15 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+interface RouteParams {
+  params: Promise<{
+    id: string;
+  }>;
+}
+
+export async function PUT(req: NextRequest, { params }: RouteParams) {
   try {
+    const { id } = await params;
     const body = await req.json();
     const { 
       status, 
@@ -20,7 +27,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       generateSummary = false 
     } = body;
 
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     
     if (status !== undefined) updateData.status = status;
     if (notes !== undefined) updateData.notes = notes;
@@ -30,7 +37,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       const { data: inspectionItems } = await supabase
         .from('inspection_items')
         .select('*')
-        .eq('inspection_id', params.id);
+        .eq('inspection_id', id);
 
       if (inspectionItems && inspectionItems.length > 0) {
         const summary = await generateInspectionSummary(inspectionItems);
@@ -41,7 +48,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const { data, error } = await supabase
       .from('site_inspections')
       .update(updateData)
-      .eq('id', params.id)
+      .eq('id', id)
       .select(`
         *,
         inspection_items (
@@ -69,12 +76,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: RouteParams) {
   try {
+    const { id } = await params;
     const { error } = await supabase
       .from('site_inspections')
       .delete()
-      .eq('id', params.id);
+      .eq('id', id);
 
     if (error) {
       console.error('Error deleting site inspection:', error);
@@ -89,7 +97,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   }
 }
 
-async function generateInspectionSummary(inspectionItems: any[]): Promise<string> {
+async function generateInspectionSummary(inspectionItems: Record<string, unknown>[]): Promise<string> {
   try {
     const itemsText = inspectionItems.map(item => 
       `${item.asset_name} (${item.asset_type}): ${item.status}${item.notes ? ` - ${item.notes}` : ''}`

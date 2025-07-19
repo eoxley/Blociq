@@ -13,7 +13,7 @@ type Props = {
   buildingId?: number;
   unitId?: number;
   uploadedBy?: string;
-  onSaveSuccess?: (saved: any) => void;
+  onSaveSuccess?: (saved: Record<string, unknown>) => void;
 };
 
 const SmartUploader: React.FC<Props> = ({
@@ -26,7 +26,7 @@ const SmartUploader: React.FC<Props> = ({
 }) => {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
-  const [metadata, setMetadata] = useState<any>(null);
+  const [metadata, setMetadata] = useState<Record<string, unknown> | null>(null);
   const [saved, setSaved] = useState(false);
 
   const handleExtract = async () => {
@@ -111,7 +111,7 @@ const SmartUploader: React.FC<Props> = ({
         reminder_days: 30,
         doc_url: publicUrl,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("❌ Extraction error:", error.message);
       alert(`Extraction error: ${error.message}`);
     }

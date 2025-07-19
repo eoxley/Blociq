@@ -19,7 +19,7 @@ interface SendEmailFormProps {
   buildingName?: string;
   unitNumber?: string;
   leaseholderEmail?: string;
-  onEmailSent?: (result: any) => void;
+  onEmailSent?: (result: Record<string, unknown>) => void;
   onCancel?: () => void;
 }
 

@@ -56,15 +56,15 @@ export async function GET(req: NextRequest) {
     for (const msg of messages.value) {
       try {
         // Parse email data
-        const emailData: any = {
+        const emailData: Record<string, unknown> = {
           outlook_message_id: msg.id,
           message_id: msg.internetMessageId,
           thread_id: msg.conversationId,
           subject: msg.subject || "(No subject)",
           from_email: msg.from?.emailAddress?.address,
           from_name: msg.from?.emailAddress?.name,
-          to_email: msg.toRecipients?.map((r: any) => r.emailAddress.address) || [],
-          cc_email: msg.ccRecipients?.map((r: any) => r.emailAddress.address) || [],
+          to_email: msg.toRecipients?.map((r: Record<string, unknown>) => (r as { emailAddress: { address: string } }).emailAddress.address) || [],
+          cc_email: msg.ccRecipients?.map((r: Record<string, unknown>) => (r as { emailAddress: { address: string } }).emailAddress.address) || [],
           body: msg.body?.content || msg.bodyPreview || "",
           body_preview: msg.bodyPreview || "",
           received_at: msg.receivedDateTime,
@@ -108,10 +108,10 @@ export async function GET(req: NextRequest) {
             if (unitMatch) {
               emailData.unit = unitMatch.unit_number;
               emailData.building_id = unitMatch.building_id;
-              emailData.building_name = (unitMatch.buildings as any)?.name;
+              emailData.building_name = (unitMatch.buildings as { name: string }[])?.[0]?.name;
             } else {
               // Fallback: match "Flat 7" in subject
-              const match = emailData.subject?.match(/flat\s?(\d+[A-Za-z]?)/i);
+              const match = (emailData.subject as string)?.match(/flat\s?(\d+[A-Za-z]?)/i);
               if (match) {
                 const flat = `Flat ${match[1]}`;
                 const { data: fallbackUnit } = await supabase
@@ -123,7 +123,7 @@ export async function GET(req: NextRequest) {
                 if (fallbackUnit) {
                   emailData.unit = fallbackUnit.unit_number;
                   emailData.building_id = fallbackUnit.building_id;
-                  emailData.building_name = (fallbackUnit.buildings as any)?.name;
+                  emailData.building_name = (fallbackUnit.buildings as { name: string }[])?.[0]?.name;
                 }
               }
             }

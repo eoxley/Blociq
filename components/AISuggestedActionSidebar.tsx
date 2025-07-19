@@ -48,7 +48,7 @@ const tagColors: Record<string, string> = {
   "default": "bg-gray-100 text-gray-700"
 };
 
-const actionTypeIcons: Record<string, any> = {
+const actionTypeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   generate_template: FileText,
   reply: MessageSquare,
   raise_task: Wrench,

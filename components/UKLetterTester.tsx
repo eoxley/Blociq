@@ -230,8 +230,8 @@ export default function UKLetterTester() {
           <div><strong>✅ Date Format:</strong> 19 July 2025 (no comma)</div>
           <div><strong>✅ Address Block:</strong> Left-aligned, above salutation</div>
           <div><strong>✅ Body Formatting:</strong> Left-aligned, 1.15 spacing, no indentation</div>
-          <div><strong>✅ Sign-Off Logic:</strong> "Yours sincerely," for known recipients, "Yours faithfully," for generic</div>
-          <div><strong>✅ Professional Footer:</strong> Property manager name + "BlocIQ Property Management"</div>
+          <div><strong>✅ Sign-Off Logic:</strong> &quot;Yours sincerely,&quot; for known recipients, &quot;Yours faithfully,&quot; for generic</div>
+          <div><strong>✅ Professional Footer:</strong> Property manager name + &quot;BlocIQ Property Management&quot;</div>
         </CardContent>
       </Card>
     </div>

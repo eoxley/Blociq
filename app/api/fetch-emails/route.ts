@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { getAccessToken } from "@/lib/outlookAuth"
 import { Client } from "@microsoft/microsoft-graph-client"
 import "isomorphic-fetch"
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const accessToken = await getAccessToken()
 
@@ -18,10 +18,10 @@ export async function GET(req: NextRequest) {
       .orderby("receivedDateTime DESC")
       .get()
 
-    const parsedEmails = messages.value.map((msg: any) => ({
+    const parsedEmails = messages.value.map((msg: Record<string, unknown>) => ({
       thread_id: msg.conversationId,
       message_id: msg.internetMessageId,
-      from_email: msg.from?.emailAddress?.address,
+      from_email: (msg.from as { emailAddress?: { address: string } })?.emailAddress?.address,
       subject: msg.subject,
       body_preview: msg.bodyPreview,
       received_at: msg.receivedDateTime

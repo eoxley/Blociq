@@ -24,12 +24,13 @@ function extractTextFromPDF(buffer: Buffer): Promise<string> {
     parser.on("pdfParser_dataError", err => reject(err.parserError));
 
     parser.on("pdfParser_dataReady", pdfData => {
-      const pages = (pdfData as any)?.formImage?.Pages || [];
+      const pages = (pdfData as unknown as { formImage?: { Pages?: unknown[] } })?.formImage?.Pages || [];
 
       const allText = pages
-        .flatMap((page: any) =>
-          page.Texts.map((t: any) => decodeURIComponent(t.R[0].T))
-        )
+        .flatMap((page: unknown) => {
+          const pageData = page as { Texts?: Array<{ R: Array<{ T: string }> }> };
+          return pageData.Texts?.map((t) => decodeURIComponent(t.R[0].T)) || [];
+        })
         .join(" ");
 
       resolve(allText);

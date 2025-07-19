@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -11,13 +11,10 @@ import {
   Search, 
   Filter, 
   Calendar,
-  Building2,
-  FileText,
   CheckCircle,
   AlertTriangle,
   ArrowLeft,
-  Download,
-  Eye
+  Download
 } from "lucide-react";
 import { toast } from "sonner";
 import { exportCommunicationsToCSV } from "@/lib/csvExport";
@@ -52,7 +49,7 @@ export default function CommunicationsLogPage() {
     try {
       const { supabase } = await import("@/utils/supabase");
       
-      let query = supabase
+      const query = supabase
         .from('communications_sent')
         .select(`
           *,
@@ -189,14 +186,14 @@ export default function CommunicationsLogPage() {
           </div>
           <div className="flex items-center space-x-2">
             <Button
-              onClick={() => exportCommunicationsToCSV(filteredCommunications, 'communications_log')}
+              onClick={() => exportCommunicationsToCSV(filteredCommunications as unknown as Record<string, unknown>[], 'communications_log')}
               variant="outline"
               disabled={filteredCommunications.length === 0}
             >
               <Download className="w-4 h-4 mr-2" />
               Export CSV
             </Button>
-            <Badge variant="secondary" className="text-sm">
+            <Badge variant="outline" className="text-sm">
               {filteredCommunications.length} communications
             </Badge>
           </div>

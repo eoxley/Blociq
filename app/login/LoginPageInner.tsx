@@ -25,7 +25,7 @@ export default function LoginPageInner() {
   if (session) {
     return (
       <div className="p-6">
-        <h2 className="text-xl font-semibold">You're already signed in.</h2>
+        <h2 className="text-xl font-semibold">You&apos;re already signed in.</h2>
       </div>
     );
   }

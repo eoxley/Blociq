@@ -52,7 +52,7 @@ export function exportToCSV(
  * @param recipients Array of recipient objects
  * @param filename Name of the CSV file (without extension)
  */
-export function exportRecipientsToCSV(recipients: any[], filename: string = 'recipients'): void {
+export function exportRecipientsToCSV(recipients: Record<string, unknown>[], filename: string = 'recipients'): void {
   const columns: CSVColumn[] = [
     { key: 'name', label: 'Name' },
     { key: 'email', label: 'Email' },
@@ -69,7 +69,7 @@ export function exportRecipientsToCSV(recipients: any[], filename: string = 'rec
  * @param communications Array of communication objects
  * @param filename Name of the CSV file (without extension)
  */
-export function exportCommunicationsToCSV(communications: any[], filename: string = 'communications'): void {
+export function exportCommunicationsToCSV(communications: Record<string, unknown>[], filename: string = 'communications'): void {
   const columns: CSVColumn[] = [
     { key: 'to_email', label: 'Recipient Email' },
     { key: 'subject', label: 'Subject' },
@@ -94,7 +94,7 @@ export function exportCommunicationsToCSV(communications: any[], filename: strin
  * @param documents Array of document objects
  * @param filename Name of the CSV file (without extension)
  */
-export function exportDocumentsToCSV(documents: any[], filename: string = 'generated_documents'): void {
+export function exportDocumentsToCSV(documents: Record<string, unknown>[], filename: string = 'generated_documents'): void {
   const columns: CSVColumn[] = [
     { key: 'template_name', label: 'Template' },
     { key: 'building_name', label: 'Building' },

@@ -131,7 +131,7 @@ export default function Section20ThresholdCalculator() {
     }
   };
 
-  const readExcelFile = (file: File): Promise<any[]> => {
+  const readExcelFile = (file: File): Promise<Record<string, unknown>[]> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       
@@ -144,7 +144,7 @@ export default function Section20ThresholdCalculator() {
           const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
           
           // Skip header row and process data
-          const processedData = jsonData.slice(1).map((row: any) => ({
+          const processedData = jsonData.slice(1).map((row: unknown[]) => ({
             unit: row[0] || '',
             name: row[1] || '',
             apportionment: parseFloat(row[2]) || 0
@@ -161,7 +161,7 @@ export default function Section20ThresholdCalculator() {
     });
   };
 
-  const processBulkCalculation = async (leaseholderData: any[]): Promise<BulkCalculationResult> => {
+  const processBulkCalculation = async (leaseholderData: Record<string, unknown>[]): Promise<BulkCalculationResult> => {
     // Find highest apportionment
     const highestApportionment = Math.max(...leaseholderData.map(item => item.apportionment));
     
@@ -575,7 +575,7 @@ export default function Section20ThresholdCalculator() {
                 <ul className="list-disc list-inside text-gray-700 space-y-1 mb-4">
                   <li>The £250 threshold applies per leaseholder, not per building</li>
                   <li>For mixed-use buildings, only residential leaseholders are considered</li>
-                  <li>Works below the threshold don't require formal consultation</li>
+                  <li>Works below the threshold don&apos;t require formal consultation</li>
                   <li>Works above the threshold require a three-stage consultation process</li>
                 </ul>
 

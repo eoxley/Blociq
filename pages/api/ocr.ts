@@ -26,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     return res.status(200).json({ text });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("❌ OCR error:", err.message);
     return res.status(500).json({
       error: "Google Vision OCR failed",

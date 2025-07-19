@@ -9,7 +9,7 @@ const { getDocument } = await import("pdfjs-dist/legacy/build/pdf");
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
-    text += content.items.map((item: any) => item.str).join(" ") + "\n";
+    text += content.items.map((item: Record<string, unknown>) => (item as { str: string }).str).join(" ") + "\n";
   }
 
   return text;
