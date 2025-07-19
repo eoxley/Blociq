@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { X, Send, RefreshCw, MessageSquare, Building, User, Bold, Italic, Underline } from "lucide-react";
+import { X, Send, RefreshCw, MessageSquare, Building, User, Bold, Italic, Underline, Sparkles, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
@@ -29,6 +29,8 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
   const [replyText, setReplyText] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isPolishing, setIsPolishing] = useState(false);
+  const [isFormalizing, setIsFormalizing] = useState(false);
   const [tone, setTone] = useState("Professional");
   const [buildingContext, setBuildingContext] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -93,6 +95,39 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
       textarea.focus();
       textarea.setSelectionRange(start + formattedText.length, start + formattedText.length);
     }, 0);
+  };
+
+  const improveDraft = async (mode: 'polish' | 'formal') => {
+    if (!replyText.trim()) return;
+
+    const setIsLoading = mode === 'polish' ? setIsPolishing : setIsFormalizing;
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("/api/improve-draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: replyText,
+          improvementType: mode,
+          originalEmail: email.body,
+          tone
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setReplyText(data.plainText);
+      } else {
+        console.error("Failed to improve draft:", data.error);
+        alert(`Failed to ${mode} the draft. Please try again.`);
+      }
+    } catch (error) {
+      console.error("Error improving draft:", error);
+      alert(`Failed to ${mode} the draft. Please try again.`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const sendReply = async () => {
@@ -257,6 +292,30 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
                   disabled={isGenerating}
                   spellCheck={true}
                 />
+              </div>
+
+              {/* AI Rewrite Buttons */}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => improveDraft('polish')}
+                  disabled={isPolishing || isFormalizing || !replyText.trim()}
+                  className="flex-1"
+                >
+                  <Sparkles className={`h-4 w-4 mr-2 ${isPolishing ? 'animate-spin' : ''}`} />
+                  {isPolishing ? "Polishing..." : "✨ Polish Tone & Fix Grammar"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => improveDraft('formal')}
+                  disabled={isPolishing || isFormalizing || !replyText.trim()}
+                  className="flex-1"
+                >
+                  <RotateCcw className={`h-4 w-4 mr-2 ${isFormalizing ? 'animate-spin' : ''}`} />
+                  {isFormalizing ? "Making Formal..." : "🔁 Make More Formal"}
+                </Button>
               </div>
 
               {/* Action Buttons */}
