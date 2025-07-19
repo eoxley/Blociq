@@ -43,11 +43,17 @@ export default function DocumentsAndObservationsTab({
         .eq('project_id', projectId)
         .order('uploaded_at', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase error fetching documents:', error)
+        // Don't throw error, just set empty array
+        setDocuments([])
+        return
+      }
       setDocuments(data || [])
     } catch (error) {
       console.error('Error fetching documents:', error)
-      toast.error('Failed to load documents')
+      // Don't show toast for table not existing yet
+      setDocuments([])
     } finally {
       setIsLoading(false)
     }
