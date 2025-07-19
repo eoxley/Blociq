@@ -7,13 +7,28 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { v4 as uuidv4 } from "uuid";
 
+type SavedDocument = {
+  id: number;
+  doc_type: string | null;
+  start_date: string | null;
+  expiry_date: string | null;
+  reminder_days: number | null;
+  doc_url: string;
+  uploaded_by: string | null;
+  building_id: number | null;
+  unit_id: number | null;
+  is_headlease: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 type Props = {
   table: "leases" | "compliance_docs";
   docTypePreset?: string;
   buildingId?: number;
   unitId?: number;
   uploadedBy?: string;
-  onSaveSuccess?: (saved: any) => void;
+  onSaveSuccess?: (saved: SavedDocument) => void;
 };
 
 const SmartUploader: React.FC<Props> = ({
