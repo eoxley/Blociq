@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
     <main className="min-h-screen flex items-center justify-center">
@@ -6,9 +8,9 @@ export default function Home() {
         <p className="text-gray-600 text-sm sm:text-base">
           Your AI-powered property inbox is ready to take on leaks, complaints, budgets, and all the admin chaos.
         </p>
-        <a href="/dashboard/inbox" className="text-blue-600 underline hover:text-blue-800">
+        <Link href="/inbox" className="text-blue-600 underline hover:text-blue-800">
           🚀 Open Inbox
-        </a>
+        </Link>
       </div>
     </main>
   );
