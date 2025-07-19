@@ -2,16 +2,53 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { replyText } = await request.json();
+    const { content, improvementType, originalEmail, tone } = await request.json();
 
-    if (!replyText || typeof replyText !== 'string') {
-      return NextResponse.json(
-        { success: false, error: 'Invalid reply text provided' },
-        { status: 400 }
-      );
+    if (!content) {
+      return NextResponse.json({ success: false, error: 'Content is required' }, { status: 400 });
     }
 
-    // Call OpenAI API to improve the draft
+    // Extract plain text from HTML content
+    const plainText = content.replace(/<[^>]*>/g, '');
+
+    let prompt = '';
+    if (improvementType === 'polish') {
+      prompt = `Please improve the following email draft by polishing the tone, fixing grammar, and making it more professional while maintaining the same meaning:
+
+Original email context:
+${originalEmail}
+
+Current draft:
+${plainText}
+
+Please provide an improved version that:
+- Fixes any grammar or spelling errors
+- Improves sentence structure and flow
+- Maintains a ${tone.toLowerCase()} tone
+- Keeps the same core message and intent
+- Uses clear, professional language
+
+Return only the improved text without any explanations.`;
+    } else if (improvementType === 'formal') {
+      prompt = `Please make the following email draft more formal and professional while maintaining the same meaning:
+
+Original email context:
+${originalEmail}
+
+Current draft:
+${plainText}
+
+Please provide a more formal version that:
+- Uses more professional and formal language
+- Maintains a ${tone.toLowerCase()} but formal tone
+- Keeps the same core message and intent
+- Uses proper business email conventions
+- Is suitable for professional correspondence
+
+Return only the improved text without any explanations.`;
+    }
+
+    // Call OpenAI API
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -19,15 +56,15 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-4',
         messages: [
           {
             role: 'system',
-            content: 'You are a professional email assistant. Improve the given email draft to make it more polished, professional, and clear while maintaining the original intent and tone. Keep any HTML formatting tags intact.'
+            content: 'You are a professional email writing assistant. Provide clear, well-written email content that is appropriate for business communication.'
           },
           {
             role: 'user',
-            content: `Please polish and improve this email draft:\n\n${replyText}`
+            content: prompt
           }
         ],
         max_tokens: 1000,
@@ -36,28 +73,33 @@ export async function POST(request: NextRequest) {
     });
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
+      throw new Error(`OpenAI API error: ${response.statusText}`);
     }
 
     const data = await response.json();
-    const improvedDraft = data.choices[0]?.message?.content;
+    const improvedContent = data.choices[0]?.message?.content?.trim();
 
-    if (!improvedDraft) {
-      throw new Error('No response from OpenAI');
+    if (!improvedContent) {
+      throw new Error('No content received from OpenAI');
     }
+
+    // Convert plain text back to basic HTML formatting
+    const htmlContent = improvedContent
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/\n/g, '<br>')
+      .replace(/^/, '<p>')
+      .replace(/$/, '</p>');
 
     return NextResponse.json({
       success: true,
-      improvedDraft: improvedDraft.trim()
+      improvedContent: htmlContent,
+      plainText: improvedContent
     });
 
   } catch (error) {
     console.error('Error improving draft:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to improve draft' 
-      },
+      { success: false, error: 'Failed to improve draft' },
       { status: 500 }
     );
   }
