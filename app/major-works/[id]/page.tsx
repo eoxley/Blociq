@@ -251,7 +251,7 @@ export default function ProjectDetailsPage() {
     }
   };
 
-  const formatCurrency = (amount: number | null) => {
+  const formatCurrency = (amount: number | undefined) => {
     if (!amount) return "Not specified";
     return new Intl.NumberFormat('en-GB', {
       style: 'currency',
