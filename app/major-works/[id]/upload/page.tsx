@@ -24,6 +24,7 @@ import { toast } from "sonner";
 interface MajorWorksProject {
   id: string;
   name: string;
+  building_id: string;
   building_name: string;
 }
 
@@ -57,6 +58,7 @@ export default function DocumentUploadPage() {
         .select(`
           id,
           name,
+          building_id,
           buildings:building_id(name)
         `)
         .eq('id', projectId)
@@ -68,7 +70,7 @@ export default function DocumentUploadPage() {
       } else {
         setProject({
           ...data,
-          building_name: data.buildings?.name || 'Unknown'
+          building_name: data.buildings?.[0]?.name || 'Unknown'
         });
       }
     } catch (error) {

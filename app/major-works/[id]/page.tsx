@@ -113,7 +113,7 @@ export default function ProjectDetailsPage() {
       } else {
         const transformedData = {
           ...data,
-          building_name: data.buildings?.name || 'Unknown'
+          building_name: data.buildings?.[0]?.name || 'Unknown'
         };
         setProject(transformedData);
         setEditData(transformedData);

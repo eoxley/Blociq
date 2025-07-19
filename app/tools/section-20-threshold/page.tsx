@@ -144,11 +144,14 @@ export default function Section20ThresholdCalculator() {
           const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
           
           // Skip header row and process data
-          const processedData = jsonData.slice(1).map((row: unknown[]) => ({
-            unit: row[0] || '',
-            name: row[1] || '',
-            apportionment: parseFloat(row[2]) || 0
-          })).filter(item => item.unit && item.apportionment > 0);
+          const processedData = jsonData.slice(1).map((row: unknown) => {
+            const rowArray = row as unknown[];
+            return {
+              unit: rowArray[0] || '',
+              name: rowArray[1] || '',
+              apportionment: parseFloat(rowArray[2] as string) || 0
+            };
+          }).filter(item => item.unit && item.apportionment > 0);
           
           resolve(processedData);
         } catch (error) {
@@ -163,18 +166,18 @@ export default function Section20ThresholdCalculator() {
 
   const processBulkCalculation = async (leaseholderData: Record<string, unknown>[]): Promise<BulkCalculationResult> => {
     // Find highest apportionment
-    const highestApportionment = Math.max(...leaseholderData.map(item => item.apportionment));
+    const highestApportionment = Math.max(...leaseholderData.map(item => item.apportionment as number));
     
     // Calculate building threshold (assuming residential-only for now)
     const buildingThreshold = 250 / (highestApportionment / 100);
     
     // Calculate individual thresholds and check consultation triggers
     const processedLeaseholders: LeaseholderData[] = leaseholderData.map(item => ({
-      unit: item.unit,
-      name: item.name,
-      apportionment: item.apportionment,
-      threshold: 250 / (item.apportionment / 100),
-      triggersConsultation: (250 / (item.apportionment / 100)) <= 250
+      unit: item.unit as string,
+      name: item.name as string,
+      apportionment: item.apportionment as number,
+      threshold: 250 / ((item.apportionment as number) / 100),
+      triggersConsultation: (250 / ((item.apportionment as number) / 100)) <= 250
     }));
     
     const unitsTriggeringConsultation = processedLeaseholders.filter(item => item.triggersConsultation).length;
@@ -255,8 +258,10 @@ export default function Section20ThresholdCalculator() {
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
                   <div className="flex-1">
-                    <Label htmlFor="excel-upload" className="flex items-center gap-2">
-                      Upload Excel File
+                    <div className="flex items-center gap-2 mb-2">
+                      <Label htmlFor="excel-upload">
+                        Upload Excel File
+                      </Label>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Info className="h-4 w-4 text-gray-400 cursor-help" />
@@ -268,7 +273,7 @@ export default function Section20ThresholdCalculator() {
                           </p>
                         </TooltipContent>
                       </Tooltip>
-                    </Label>
+                    </div>
                     <Input
                       id="excel-upload"
                       type="file"
@@ -397,8 +402,10 @@ export default function Section20ThresholdCalculator() {
               <CardContent className="space-y-6">
                 {/* Highest Residential Apportionment */}
                 <div>
-                  <Label htmlFor="apportionment" className="flex items-center gap-2">
-                    Highest Residential Apportionment %
+                  <div className="flex items-center gap-2 mb-2">
+                    <Label htmlFor="apportionment">
+                      Highest Residential Apportionment %
+                    </Label>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Info className="h-4 w-4 text-gray-400 cursor-help" />
@@ -409,7 +416,7 @@ export default function Section20ThresholdCalculator() {
                         </p>
                       </TooltipContent>
                     </Tooltip>
-                  </Label>
+                  </div>
                   <Input
                     id="apportionment"
                     type="number"
@@ -425,8 +432,10 @@ export default function Section20ThresholdCalculator() {
 
                 {/* Commercial Elements Toggle */}
                 <div>
-                  <Label className="flex items-center gap-2">
-                    Does the building contain commercial elements?
+                  <div className="flex items-center gap-2 mb-2">
+                    <Label>
+                      Does the building contain commercial elements?
+                    </Label>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Info className="h-4 w-4 text-gray-400 cursor-help" />
@@ -437,7 +446,7 @@ export default function Section20ThresholdCalculator() {
                         </p>
                       </TooltipContent>
                     </Tooltip>
-                  </Label>
+                  </div>
                   <div className="flex gap-4 mt-2">
                     <Button
                       variant={hasCommercial ? "outline" : "default"}
@@ -459,8 +468,10 @@ export default function Section20ThresholdCalculator() {
                 {/* Commercial Percentage */}
                 {hasCommercial && (
                   <div>
-                    <Label htmlFor="commercial" className="flex items-center gap-2">
-                      Total Commercial %
+                    <div className="flex items-center gap-2 mb-2">
+                      <Label htmlFor="commercial">
+                        Total Commercial %
+                      </Label>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Info className="h-4 w-4 text-gray-400 cursor-help" />
@@ -471,7 +482,7 @@ export default function Section20ThresholdCalculator() {
                           </p>
                         </TooltipContent>
                       </Tooltip>
-                    </Label>
+                    </div>
                     <Input
                       id="commercial"
                       type="number"

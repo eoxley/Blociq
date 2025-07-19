@@ -78,7 +78,7 @@ export default function InboxInner() {
       } else {
         setEmails(data?.map(email => ({
           ...email,
-          building_name: email.buildings?.name
+          building_name: email.buildings?.[0]?.name
         })) || []);
       }
     } catch (error) {

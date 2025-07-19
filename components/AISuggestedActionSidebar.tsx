@@ -276,7 +276,7 @@ export default function AISuggestedActionSidebar({
                 {analysis.tags.map((tag, index) => (
                   <Badge 
                     key={index} 
-                    variant="secondary" 
+                    variant="outline" 
                     className={getTagColor(tag)}
                   >
                     {tag}

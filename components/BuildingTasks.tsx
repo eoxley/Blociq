@@ -242,31 +242,31 @@ export default function BuildingTasks({ buildingId }: BuildingTasksProps) {
               />
             </div>
           </div>
-          <Select value={filter} onValueChange={setFilter}>
+          <Select value={filter} onChange={(e) => setFilter(e.target.value)}>
             <SelectTrigger className="w-40">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="Not Started">Not Started</SelectItem>
-              <SelectItem value="In Progress">In Progress</SelectItem>
-              <SelectItem value="Complete">Complete</SelectItem>
-            </SelectContent>
+                              <SelectContent>
+                    <SelectItem>All Status</SelectItem>
+                    <SelectItem>Not Started</SelectItem>
+                    <SelectItem>In Progress</SelectItem>
+                    <SelectItem>Complete</SelectItem>
+                  </SelectContent>
           </Select>
-          <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+          <Select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)}>
             <SelectTrigger className="w-40">
               <User className="h-4 w-4 mr-2" />
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Assignees</SelectItem>
-              {uniqueAssignees.map(assignee => (
-                <SelectItem key={assignee} value={assignee!}>
-                  {assignee}
-                </SelectItem>
-              ))}
-            </SelectContent>
+                              <SelectContent>
+                    <SelectItem>All Assignees</SelectItem>
+                    {uniqueAssignees.map(assignee => (
+                      <SelectItem key={assignee}>
+                        {assignee}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
           </Select>
         </div>
 
@@ -398,15 +398,15 @@ export default function BuildingTasks({ buildingId }: BuildingTasksProps) {
               
               <div>
                 <Label htmlFor="priority">Priority</Label>
-                <Select value={newTask.priority} onValueChange={(value: string) => setNewTask({ ...newTask, priority: value })}>
+                <Select value={newTask.priority} onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Low">Low</SelectItem>
-                    <SelectItem value="Medium">Medium</SelectItem>
-                    <SelectItem value="High">High</SelectItem>
-                    <SelectItem value="Urgent">Urgent</SelectItem>
+                    <SelectItem>Low</SelectItem>
+                    <SelectItem>Medium</SelectItem>
+                    <SelectItem>High</SelectItem>
+                    <SelectItem>Urgent</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -473,29 +473,29 @@ export default function BuildingTasks({ buildingId }: BuildingTasksProps) {
               
               <div>
                 <Label htmlFor="edit-status">Status</Label>
-                <Select value={editingTask.status} onValueChange={(value: string) => setEditingTask({ ...editingTask, status: value })}>
+                <Select value={editingTask.status} onChange={(e) => setEditingTask({ ...editingTask, status: e.target.value })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Not Started">Not Started</SelectItem>
-                    <SelectItem value="In Progress">In Progress</SelectItem>
-                    <SelectItem value="Complete">Complete</SelectItem>
+                    <SelectItem>Not Started</SelectItem>
+                    <SelectItem>In Progress</SelectItem>
+                    <SelectItem>Complete</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               
               <div>
                 <Label htmlFor="edit-priority">Priority</Label>
-                <Select value={editingTask.priority} onValueChange={(value: string) => setEditingTask({ ...editingTask, priority: value })}>
+                <Select value={editingTask.priority} onChange={(e) => setEditingTask({ ...editingTask, priority: e.target.value })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Low">Low</SelectItem>
-                    <SelectItem value="Medium">Medium</SelectItem>
-                    <SelectItem value="High">High</SelectItem>
-                    <SelectItem value="Urgent">Urgent</SelectItem>
+                    <SelectItem>Low</SelectItem>
+                    <SelectItem>Medium</SelectItem>
+                    <SelectItem>High</SelectItem>
+                    <SelectItem>Urgent</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
