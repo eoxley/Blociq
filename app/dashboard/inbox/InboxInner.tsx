@@ -214,7 +214,7 @@ export default function InboxInner() {
       {/* Controls */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex gap-2">
-          <Select value={filter} onValueChange={setFilter}>
+          <Select value={filter} onChange={(e) => setFilter(e.target.value)}>
             <SelectTrigger className="w-40">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue />
