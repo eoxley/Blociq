@@ -271,7 +271,7 @@ export default function TemplateGenerationPage() {
     setShowEmailForm(false);
   };
 
-  const handleRecipientsChange = (recipients: Record<string, unknown>[]) => {
+  const handleRecipientsChange = (recipients: any[]) => {
     setSelectedRecipients(recipients);
   };
 
@@ -644,7 +644,12 @@ export default function TemplateGenerationPage() {
                   </label>
                   <select
                     value={aiAction}
-                    onChange={(e) => setAiAction(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === 'rewrite' || value === 'search' || value === 'create_new') {
+                        setAiAction(value);
+                      }
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   >
                     <option value="rewrite">Rewrite Template</option>
