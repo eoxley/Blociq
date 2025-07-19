@@ -271,7 +271,7 @@ export default function TemplateGenerationPage() {
     setShowEmailForm(false);
   };
 
-  const handleRecipientsChange = (recipients: any[]) => {
+  const handleRecipientsChange = (recipients: Record<string, unknown>[]) => {
     setSelectedRecipients(recipients);
   };
 
