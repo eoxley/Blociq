@@ -112,8 +112,9 @@ const SmartUploader: React.FC<Props> = ({
         doc_url: publicUrl,
       });
     } catch (error: unknown) {
-      console.error("❌ Extraction error:", error.message);
-      alert(`Extraction error: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error("❌ Extraction error:", errorMessage);
+      alert(`Extraction error: ${errorMessage}`);
     }
 
     setLoading(false);
@@ -138,7 +139,8 @@ const SmartUploader: React.FC<Props> = ({
     const { data, error } = await supabase.from(table).insert([insertPayload]).select();
 
     if (error) {
-      console.error("❌ Save error:", error.message);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error("❌ Save error:", errorMessage);
     } else {
       setSaved(true);
       onSaveSuccess?.(data[0]);
