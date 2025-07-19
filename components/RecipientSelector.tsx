@@ -297,11 +297,11 @@ export default function RecipientSelector({
                   >
                     <div className="flex items-center space-x-3">
                       <div className="flex-shrink-0">
-                        <Checkbox
+                      <Checkbox
                           id={`recipient-${recipient.id}`}
-                          checked={isSelected}
-                          onCheckedChange={() => handleRecipientToggle(recipient)}
-                        />
+                        checked={isSelected}
+                        onCheckedChange={() => handleRecipientToggle(recipient)}
+                      />
                       </div>
                       
                       <div className="flex-1 min-w-0">

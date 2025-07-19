@@ -260,7 +260,7 @@ export default function Section20ThresholdCalculator() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <Label htmlFor="excel-upload">
-                        Upload Excel File
+                      Upload Excel File
                       </Label>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -404,7 +404,7 @@ export default function Section20ThresholdCalculator() {
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <Label htmlFor="apportionment">
-                      Highest Residential Apportionment %
+                    Highest Residential Apportionment %
                     </Label>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -434,7 +434,7 @@ export default function Section20ThresholdCalculator() {
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <Label>
-                      Does the building contain commercial elements?
+                    Does the building contain commercial elements?
                     </Label>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -470,7 +470,7 @@ export default function Section20ThresholdCalculator() {
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <Label htmlFor="commercial">
-                        Total Commercial %
+                      Total Commercial %
                       </Label>
                       <Tooltip>
                         <TooltipTrigger asChild>
