@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import SendEmailForm from "@/components/SendEmailForm";
-import RecipientSelector from "@/components/RecipientSelector";
+import RecipientSelector, { Recipient } from "@/components/RecipientSelector";
 import { 
   FileText, 
   Download, 
@@ -79,7 +79,7 @@ export default function TemplateGenerationPage() {
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiAction, setAiAction] = useState<'rewrite' | 'search' | 'create_new'>('rewrite');
   const [showEmailForm, setShowEmailForm] = useState(false);
-  const [selectedRecipients, setSelectedRecipients] = useState<Record<string, unknown>[]>([]);
+  const [selectedRecipients, setSelectedRecipients] = useState<Recipient[]>([]);
   const [showRecipientSelector, setShowRecipientSelector] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     building_name: "",
@@ -271,7 +271,7 @@ export default function TemplateGenerationPage() {
     setShowEmailForm(false);
   };
 
-  const handleRecipientsChange = (recipients: Record<string, unknown>[]) => {
+  const handleRecipientsChange = (recipients: Recipient[]) => {
     setSelectedRecipients(recipients);
   };
 
