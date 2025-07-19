@@ -212,12 +212,12 @@ export default function EmailDetailPage() {
                 </div>
                 <div className="flex gap-2">
                   {email.isUnread && (
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                    <Badge variant="default" className="bg-blue-100 text-blue-800">
                       Unread
                     </Badge>
                   )}
                   {email.is_handled && (
-                    <Badge variant="secondary" className="bg-green-100 text-green-800">
+                    <Badge variant="success" className="bg-green-100 text-green-800">
                       <CheckCircle className="h-3 w-3 mr-1" />
                       Handled
                     </Badge>
