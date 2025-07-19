@@ -276,14 +276,14 @@ export default function EmailDetailPage() {
               
               {!email.is_handled && (
                 <div className="flex gap-2 items-center">
-                  <Select value={selectedFolder} onValueChange={setSelectedFolder}>
+                  <Select value={selectedFolder} onChange={(e) => setSelectedFolder(e.target.value)}>
                     <SelectTrigger className="w-40">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="handled">BlocIQ/Handled</SelectItem>
-                      <SelectItem value="processed">BlocIQ/Processed</SelectItem>
-                      <SelectItem value="custom">Custom Folder</SelectItem>
+                      <SelectItem onClick={() => setSelectedFolder("handled")}>BlocIQ/Handled</SelectItem>
+                      <SelectItem onClick={() => setSelectedFolder("processed")}>BlocIQ/Processed</SelectItem>
+                      <SelectItem onClick={() => setSelectedFolder("custom")}>Custom Folder</SelectItem>
                     </SelectContent>
                   </Select>
                   <Button 
