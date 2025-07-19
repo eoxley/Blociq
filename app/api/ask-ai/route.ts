@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
                             prompt.toLowerCase().includes('apportionment');
 
     if (isSection20Query) {
-      systemPrompt = `You are a property management expert specializing in Section 20 consultation requirements for UK leasehold properties. You can calculate thresholds and provide guidance on consultation requirements.`;
+      systemPrompt = `You are a property management expert specializing in Section 20 consultation requirements for UK leasehold properties. You can calculate thresholds and provide guidance on consultation requirements. You can also analyze Excel data with multiple leaseholders.`;
       
       userPrompt = `The user is asking about Section 20 consultation thresholds: "${prompt}"
 
@@ -165,18 +165,26 @@ Building Context:
 ${JSON.stringify(contextData, null, 2)}
 
 Please:
-1. If apportionment data is provided, calculate the Section 20 threshold using the correct formula
+1. If apportionment data is provided (single or multiple leaseholders), calculate the Section 20 threshold using the correct formula
 2. For residential-only buildings: threshold = 250 / (highest_apportionment / 100)
 3. For mixed-use buildings: threshold = (250 / (highest_apportionment / 100)) × (residential_pct / 100)
-4. Provide clear guidance on whether consultation is required
-5. Suggest next steps if consultation is needed
+4. If multiple leaseholders are provided, analyze each one and identify which trigger consultation
+5. Provide clear guidance on whether consultation is required
+6. Suggest next steps if consultation is needed
+7. If Excel data is mentioned, suggest using the bulk upload feature at /tools/section-20-threshold
 
 If no apportionment data is provided, ask the user to provide:
-- Highest residential apportionment percentage
-- Whether the building has commercial elements
-- Commercial percentage (if applicable)
+- Highest residential apportionment percentage, OR
+- Upload an Excel file with columns: Unit, Leaseholder Name, Apportionment %
 
-Format your response clearly with the calculation and practical advice.`;
+For bulk analysis, explain that they can:
+- Download a template from the calculator page
+- Upload their Excel file for instant analysis
+- Get individual thresholds for each leaseholder
+- See which units require consultation
+- Download results as Excel
+
+Format your response clearly with calculations, practical advice, and next steps.`;
 
     } else {
       switch (action) {
