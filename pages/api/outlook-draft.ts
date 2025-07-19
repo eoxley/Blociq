@@ -49,7 +49,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     res.status(200).json({ success: true, draftId: draftRes.data.id });
   } catch (error: unknown) {
-    console.error('Outlook Draft Error:', error.response?.data || error.message);
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : (error as any)?.response?.data || 'Unknown error occurred';
+    console.error('Outlook Draft Error:', errorMessage);
     res.status(500).json({ error: 'Failed to create Outlook draft' });
   }
 }
