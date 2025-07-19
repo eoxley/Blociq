@@ -1,17 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Send, RefreshCw, MessageSquare, Building, User, Bold, Italic, Underline, List, ListOrdered, Palette, Highlighter, RotateCcw, Sparkles, FileText, AlignLeft, AlignCenter, AlignRight } from "lucide-react";
+import { X, Send, RefreshCw, MessageSquare, Building, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Select } from "@/components/ui/select";
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import { TextStyle } from '@tiptap/extension-text-style';
-import { Color } from '@tiptap/extension-color';
-import { Highlight } from '@tiptap/extension-highlight';
-import { FontSize } from '@tiptap/extension-font-size';
-import { TextAlign } from '@tiptap/extension-text-align';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Email {
   message_id: string;
@@ -32,39 +27,18 @@ interface ReplyModalProps {
 }
 
 export default function ReplyModal({ email, isOpen, onClose, onReplySent }: ReplyModalProps) {
+  const [replyText, setReplyText] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [isRewriting, setIsRewriting] = useState(false);
   const [tone, setTone] = useState("Professional");
   const [buildingContext, setBuildingContext] = useState<string | null>(null);
-  const [selectedColor, setSelectedColor] = useState("#000000");
-  const [selectedHighlight, setSelectedHighlight] = useState("#ffff00");
-
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      TextStyle,
-      Color,
-      Highlight,
-      FontSize,
-      TextAlign.configure({
-        types: ['heading', 'paragraph'],
-      }),
-    ],
-    content: '',
-    editorProps: {
-      attributes: {
-        class: 'prose prose-sm max-w-none focus:outline-none min-h-[300px] p-4 border rounded-md',
-      },
-    },
-  });
 
   // Generate AI draft when modal opens
   useEffect(() => {
-    if (isOpen && editor && !editor.getText().trim()) {
+    if (isOpen && !replyText) {
       generateAIDraft();
     }
-  }, [isOpen, editor]);
+  }, [isOpen]);
 
   const generateAIDraft = async () => {
     setIsGenerating(true);
@@ -82,57 +56,23 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
       });
 
       const data = await response.json();
-      if (data.success && editor) {
-        editor.commands.setContent(data.draft);
+      if (data.success) {
+        setReplyText(data.draft);
         setBuildingContext(data.buildingContext);
       } else {
         console.error("Failed to generate draft:", data.error);
-        const fallbackText = `Dear ${email.from_name || email.from_email.split('@')[0]},\n\nThank you for your email.\n\nBest regards,\nEllie Oxley\nBlocIQ`;
-        editor?.commands.setContent(fallbackText);
+        setReplyText("Dear " + (email.from_name || email.from_email.split('@')[0]) + ",\n\nThank you for your email.\n\nBest regards,\nEllie Oxley\nBlocIQ");
       }
     } catch (error) {
       console.error("Error generating draft:", error);
-      const fallbackText = `Dear ${email.from_name || email.from_email.split('@')[0]},\n\nThank you for your email.\n\nBest regards,\nEllie Oxley\nBlocIQ`;
-      editor?.commands.setContent(fallbackText);
+      setReplyText("Dear " + (email.from_name || email.from_email.split('@')[0]) + ",\n\nThank you for your email.\n\nBest regards,\nEllie Oxley\nBlocIQ");
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const improveDraft = async (improvementType: 'polish' | 'formal') => {
-    if (!editor) return;
-    
-    setIsRewriting(true);
-    try {
-      const currentContent = editor.getHTML();
-      const response = await fetch("/api/improve-draft", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content: currentContent,
-          improvementType,
-          originalEmail: email.body,
-          tone
-        })
-      });
-
-      const data = await response.json();
-      if (data.success && data.improvedContent) {
-        editor.commands.setContent(data.improvedContent);
-      } else {
-        console.error("Failed to improve draft:", data.error);
-        alert("Failed to improve draft. Please try again.");
-      }
-    } catch (error) {
-      console.error("Error improving draft:", error);
-      alert("Failed to improve draft. Please try again.");
-    } finally {
-      setIsRewriting(false);
-    }
-  };
-
   const sendReply = async () => {
-    if (!editor || !editor.getText().trim()) return;
+    if (!replyText.trim()) return;
 
     setIsSending(true);
     try {
@@ -141,8 +81,7 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           reply_to_message_id: email.message_id,
-          reply_text: editor.getHTML(), // Send HTML content
-          reply_text_plain: editor.getText(), // Also send plain text
+          reply_text: replyText,
           to: [email.from_email],
           building_id: email.building_id,
           user_id: "current_user", // This should come from auth context
@@ -170,7 +109,7 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
           <div className="flex items-center gap-3">
@@ -227,16 +166,21 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
             </div>
           </div>
 
-          {/* Right Panel - Rich Text Editor */}
+          {/* Right Panel - Reply Editor */}
           <div className="flex-1 p-6 flex flex-col">
             <div className="space-y-4 flex-1">
-              {/* Tone Selector and Regenerate */}
+              {/* Tone Selector */}
               <div className="flex items-center gap-3">
                 <span className="text-sm font-medium">Tone:</span>
                 <Select value={tone} onChange={(e) => setTone(e.target.value)}>
-                  <option value="Professional">Professional</option>
-                  <option value="Friendly">Friendly</option>
-                  <option value="Firm">Firm</option>
+                  <SelectTrigger className="w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem>Professional</SelectItem>
+                    <SelectItem>Friendly</SelectItem>
+                    <SelectItem>Firm</SelectItem>
+                  </SelectContent>
                 </Select>
                 <Button 
                   variant="outline" 
@@ -249,176 +193,16 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
                 </Button>
               </div>
 
-              {/* Enhanced Formatting Toolbar */}
-              <div className="border rounded-md p-3 bg-gray-50">
-                <div className="flex items-center gap-1 flex-wrap">
-                  {/* Text Formatting */}
-                  <div className="flex items-center gap-1 border-r pr-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => editor?.chain().focus().toggleBold().run()}
-                      className={editor?.isActive('bold') ? 'bg-blue-100 text-blue-700' : ''}
-                      title="Bold"
-                    >
-                      <Bold className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => editor?.chain().focus().toggleItalic().run()}
-                      className={editor?.isActive('italic') ? 'bg-blue-100 text-blue-700' : ''}
-                      title="Italic"
-                    >
-                      <Italic className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => editor?.chain().focus().toggleUnderline().run()}
-                      className={editor?.isActive('underline') ? 'bg-blue-100 text-blue-700' : ''}
-                      title="Underline"
-                    >
-                      <Underline className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  
-                  {/* Lists */}
-                  <div className="flex items-center gap-1 border-r pr-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => editor?.chain().focus().toggleBulletList().run()}
-                      className={editor?.isActive('bulletList') ? 'bg-blue-100 text-blue-700' : ''}
-                      title="Bullet List"
-                    >
-                      <List className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-                      className={editor?.isActive('orderedList') ? 'bg-blue-100 text-blue-700' : ''}
-                      title="Numbered List"
-                    >
-                      <ListOrdered className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  
-                  {/* Text Alignment */}
-                  <div className="flex items-center gap-1 border-r pr-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => editor?.chain().focus().setTextAlign('left').run()}
-                      className={editor?.isActive({ textAlign: 'left' }) ? 'bg-blue-100 text-blue-700' : ''}
-                      title="Align Left"
-                    >
-                      <AlignLeft className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => editor?.chain().focus().setTextAlign('center').run()}
-                      className={editor?.isActive({ textAlign: 'center' }) ? 'bg-blue-100 text-blue-700' : ''}
-                      title="Align Center"
-                    >
-                      <AlignCenter className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => editor?.chain().focus().setTextAlign('right').run()}
-                      className={editor?.isActive({ textAlign: 'right' }) ? 'bg-blue-100 text-blue-700' : ''}
-                      title="Align Right"
-                    >
-                      <AlignRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  
-                  {/* Font Size */}
-                  <div className="flex items-center gap-1 border-r pr-2">
-                    <Select onChange={(e) => editor?.chain().focus().setFontSize(e.target.value).run()}>
-                      <option value="">Size</option>
-                      <option value="12px">Small</option>
-                      <option value="14px">Normal</option>
-                      <option value="16px">Large</option>
-                      <option value="18px">XL</option>
-                    </Select>
-                  </div>
-                  
-                  {/* Color and Highlight */}
-                  <div className="flex items-center gap-1 border-r pr-2">
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="color"
-                        value={selectedColor}
-                        onChange={(e) => {
-                          setSelectedColor(e.target.value);
-                          editor?.chain().focus().setColor(e.target.value).run();
-                        }}
-                        className="w-8 h-8 border rounded cursor-pointer"
-                        title="Text Color"
-                      />
-                      <Palette className="h-4 w-4 text-gray-600" />
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="color"
-                        value={selectedHighlight}
-                        onChange={(e) => {
-                          setSelectedHighlight(e.target.value);
-                          editor?.chain().focus().toggleHighlight({ color: e.target.value }).run();
-                        }}
-                        className="w-8 h-8 border rounded cursor-pointer"
-                        title="Highlight Color"
-                      />
-                      <Highlighter className="h-4 w-4 text-gray-600" />
-                    </div>
-                  </div>
-                  
-                  {/* Clear Formatting */}
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => editor?.chain().focus().clearNodes().unsetAllMarks().run()}
-                      title="Clear Formatting"
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Rich Text Editor */}
+              {/* Reply Editor */}
               <div className="flex-1 flex flex-col">
                 <label className="text-sm font-medium mb-2">Your Reply</label>
-                <div className="flex-1 border rounded-md overflow-hidden bg-white">
-                  <EditorContent editor={editor} />
-                </div>
-              </div>
-
-              {/* AI Rewrite Buttons */}
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => improveDraft('polish')}
-                  disabled={isRewriting || !editor?.getText().trim()}
-                  className="flex-1"
-                >
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  {isRewriting ? "Polishing..." : "✨ Polish Tone & Fix Grammar"}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => improveDraft('formal')}
-                  disabled={isRewriting || !editor?.getText().trim()}
-                  className="flex-1"
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  {isRewriting ? "Making Formal..." : "🔁 Make More Formal / Professional"}
-                </Button>
+                <Textarea
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  placeholder="AI will generate a draft reply..."
+                  className="flex-1 resize-none"
+                  disabled={isGenerating}
+                />
               </div>
 
               {/* Action Buttons */}
@@ -433,7 +217,7 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
                   </Button>
                   <Button 
                     onClick={sendReply}
-                    disabled={isSending || !editor?.getText().trim()}
+                    disabled={isSending || !replyText.trim()}
                     className="bg-blue-600 hover:bg-blue-700"
                   >
                     <Send className="h-4 w-4 mr-2" />
