@@ -88,7 +88,7 @@ export default function LayoutWithSidebar({
         <nav className="mt-6 px-3">
           <div className="space-y-1">
             {navigation.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+              const isActive = pathname === item.href || (pathname && pathname.startsWith(item.href + '/'));
               return (
                 <Link
                   key={item.name}
