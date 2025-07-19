@@ -67,8 +67,8 @@ export default function CommunicationsLogPage() {
         // Transform the data to flatten the joined tables
         const transformedData = data?.map(item => ({
           ...item,
-          template_name: item.templates?.name,
-          building_name: item.buildings?.name
+          template_name: item.templates?.[0]?.name,
+          building_name: item.buildings?.[0]?.name
         })) || [];
         
         setCommunications(transformedData);

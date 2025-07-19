@@ -86,7 +86,7 @@ export default function MajorWorksPage() {
         // Transform the data to flatten the joined tables
         const transformedData = data?.map(project => ({
           ...project,
-          building_name: project.buildings?.name || 'Unknown',
+          building_name: project.buildings?.[0]?.name || 'Unknown',
           document_count: project.documents?.[0]?.count || 0
         })) || [];
         

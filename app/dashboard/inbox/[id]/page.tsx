@@ -74,7 +74,7 @@ export default function EmailDetailPage() {
       if (data) {
         setEmail({
           ...data,
-          building_name: data.buildings?.name
+          building_name: data.buildings?.[0]?.name
         });
 
         // Mark as read if unread
