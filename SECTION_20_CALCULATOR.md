@@ -8,35 +8,43 @@ The Section 20 Consultation Threshold Calculator is a utility that helps propert
 
 ### 🧮 **UI Calculator** (`/tools/section-20-threshold`)
 
-#### **Inputs**
-- **Highest Residential Apportionment %** (required)
-  - The highest percentage of service charge costs that any single residential leaseholder is responsible for
-  - Range: 0.1% to 100%
-- **Commercial Elements Toggle** (Yes/No)
-  - Whether the building contains commercial units
-- **Total Commercial %** (if commercial elements exist)
-  - The percentage of service charge costs attributable to commercial units
-  - Range: 0% to 100%
+#### **Single Calculation Mode**
+- **Inputs**: 
+  - Highest residential apportionment percentage
+  - Commercial elements toggle (Yes/No)
+  - Commercial percentage (if applicable)
+- **Real-time Results**: Live calculation with visual feedback
+- **Copy Functionality**: One-click copying of results
 
-#### **Calculation Logic**
+#### **Bulk Calculation Mode (Excel Upload)**
+- **File Upload**: Accept `.xlsx` and `.xls` files
+- **Template Download**: Pre-formatted Excel template
+- **Bulk Processing**: Analyze multiple leaseholders at once
+- **Results Export**: Download analysis as Excel file
 
-**Residential-Only Buildings:**
-```
-threshold = 250 / (highest_apportionment / 100)
-```
+### 📊 **Excel Upload Features**
 
-**Mixed-Use Buildings:**
-```
-residential_pct = 100 - commercial_pct
-threshold = (250 / (highest_apportionment / 100)) × (residential_pct / 100)
-```
+#### **Required Format**
+The Excel file should have the following columns:
+| Unit | Leaseholder Name | Apportionment % |
+|------|------------------|-----------------|
+| Flat 1 | John Smith | 15.5 |
+| Flat 2 | Jane Doe | 12.3 |
+| Flat 3 | Bob Wilson | 18.7 |
 
-#### **Output**
-- **Threshold Amount**: Formatted as currency (e.g., £1,666.67)
-- **Threshold Status**: Low/Standard threshold badge
-- **Description**: Contextual advice based on threshold value
-- **Calculation Details**: Step-by-step formula breakdown
-- **Copy Result**: One-click copying to clipboard
+#### **Processing Capabilities**
+- **Automatic Parsing**: Reads Excel files and extracts leaseholder data
+- **Validation**: Checks for required fields and valid percentages
+- **Individual Analysis**: Calculates threshold for each leaseholder
+- **Consultation Triggers**: Identifies which units require consultation
+- **Summary Statistics**: Building-wide analysis and recommendations
+
+#### **Output Features**
+- **Summary Dashboard**: Key metrics at a glance
+- **Detailed Table**: Individual leaseholder analysis
+- **Risk Assessment**: Low/Medium/High risk classification
+- **Recommendations**: Actionable advice based on results
+- **Export Options**: Download results as Excel file
 
 ### 🤖 **AI Integration**
 
@@ -45,6 +53,7 @@ The AI assistant can handle questions like:
 - "What's the S20 threshold for these apportionments?"
 - "Do I need to consult for £10K works?"
 - "Calculate the Section 20 threshold for a building with 15% highest apportionment"
+- "Analyze this Excel file with leaseholder data"
 
 #### **AI Processing**
 1. **Detects Section 20 queries** using keyword matching
@@ -52,16 +61,18 @@ The AI assistant can handle questions like:
 3. **Applies correct formula** (residential-only vs mixed-use)
 4. **Provides guidance** on consultation requirements
 5. **Suggests next steps** if consultation is needed
+6. **Recommends bulk upload** for multiple leaseholders
 
 #### **Excel Upload Support**
 - Accepts `.xlsx` files with apportionment data
 - Calculates thresholds for all leaseholders
 - Shows which leaseholders trigger the threshold
 - Suggests appropriate letters if Section 20 is required
+- Provides bulk analysis recommendations
 
 ## API Endpoints
 
-### **Calculate Section 20 Threshold**
+### **Calculate Section 20 Threshold (Single)**
 **POST** `/api/calculate-section20`
 
 **Request Body:**
@@ -91,29 +102,67 @@ The AI assistant can handle questions like:
 }
 ```
 
-## Legal Context
+### **Calculate Section 20 Threshold (Bulk)**
+**POST** `/api/calculate-section20-bulk`
 
-### **Section 20 Requirements**
-- **Threshold**: £250 per leaseholder (not per building)
-- **Scope**: Qualifying works that cost any leaseholder more than £250
-- **Process**: Three-stage consultation process required
-- **Mixed-use**: Only residential leaseholders are considered
+**Request Body:**
+```json
+{
+  "leaseholderData": [
+    {
+      "unit": "Flat 1",
+      "name": "John Smith",
+      "apportionment": 15.5
+    },
+    {
+      "unit": "Flat 2", 
+      "name": "Jane Doe",
+      "apportionment": 12.3
+    }
+  ],
+  "hasCommercial": false,
+  "worksValue": 5000
+}
+```
 
-### **When Consultation is Required**
-- Major works or improvements
-- Works exceeding the calculated threshold
-- Service charge costs above threshold per leaseholder
-- Qualifying long-term agreements
-
-### **When Consultation is NOT Required**
-- Routine maintenance below threshold
-- Emergency works
-- Works below the calculated threshold
-- Non-qualifying works
+**Response:**
+```json
+{
+  "success": true,
+  "result": {
+    "buildingThreshold": 1612.90,
+    "leaseholders": [
+      {
+        "unit": "Flat 1",
+        "name": "John Smith",
+        "apportionment": 15.5,
+        "threshold": 1612.90,
+        "triggersConsultation": false,
+        "consultationRequired": true
+      }
+    ],
+    "totalUnits": 2,
+    "unitsTriggeringConsultation": 0,
+    "highestApportionment": 15.5,
+    "hasCommercial": false,
+    "residentialPercentage": 100,
+    "summary": {
+      "buildingType": "Residential-only",
+      "consultationRequired": true,
+      "riskLevel": "medium",
+      "recommendations": [
+        "Monitor works costs closely",
+        "Prepare Section 20 notices for major works",
+        "Communicate clearly with leaseholders"
+      ]
+    }
+  }
+}
+```
 
 ## Usage Examples
 
-### **Example 1: Residential-Only Building**
+### **Example 1: Single Calculation**
 ```
 Input:
 - Highest apportionment: 10%
@@ -126,32 +175,33 @@ Result:
 ✅ No consultation required for works under £2,500
 ```
 
-### **Example 2: Mixed-Use Building**
+### **Example 2: Bulk Excel Upload**
 ```
-Input:
-- Highest apportionment: 15%
-- Commercial elements: Yes
-- Commercial percentage: 40%
+Excel File:
+| Unit | Leaseholder | Apportionment % |
+|------|-------------|-----------------|
+| Flat 1 | John Smith | 15.5 |
+| Flat 2 | Jane Doe | 12.3 |
+| Flat 3 | Bob Wilson | 18.7 |
 
-Calculation:
-residential_pct = 100 - 40 = 60%
-threshold = (250 / (15 / 100)) × (60 / 100) = £1,000
-
-Result:
-✅ No consultation required for works under £1,000
+Results:
+- Building Threshold: £1,337.97
+- Total Units: 3
+- Units Requiring Consultation: 0
+- Risk Level: Medium
+- Recommendations: Monitor works costs, prepare Section 20 notices
 ```
 
-### **Example 3: Low Threshold Warning**
+### **Example 3: AI Analysis**
 ```
-Input:
-- Highest apportionment: 50%
-- Commercial elements: No
+User Query: "What's the S20 threshold for a building with 20% highest apportionment?"
 
-Calculation:
-threshold = 250 / (50 / 100) = £500
-
-Result:
-⚠️ Low threshold - consider reviewing lease terms
+AI Response:
+"Based on a 20% highest apportionment for a residential-only building:
+- Section 20 Threshold: £1,250
+- Risk Level: Medium
+- Consultation required for works above £1,250
+- Recommendation: Monitor costs and prepare Section 20 notices for major works"
 ```
 
 ## UI Features
@@ -162,46 +212,35 @@ Result:
 - **Tooltips** explaining each field
 - **Responsive design** for mobile and desktop
 
+### **Excel Upload Interface**
+- **Drag & Drop**: Easy file upload
+- **Template Download**: Pre-formatted Excel template
+- **Progress Indicators**: Upload and processing status
+- **Error Handling**: Clear error messages for invalid files
+- **Results Display**: Comprehensive analysis table
+
 ### **Visual Feedback**
 - **Color-coded thresholds** (red for low, green for standard)
 - **Currency formatting** with proper UK formatting
 - **Copy to clipboard** functionality
 - **Calculation breakdown** showing the formula used
+- **Risk level indicators** with appropriate colors
 
-### **Information Section**
-- **Legal context** about Section 20 requirements
-- **Key points** about consultation process
-- **Usage scenarios** for different situations
-- **Best practices** for property managers
-
-## AI Integration Features
-
-### **Natural Language Processing**
-- **Keyword detection** for Section 20 queries
-- **Context awareness** from building data
-- **Multi-format input** (text, numbers, spreadsheets)
-- **Intelligent suggestions** based on threshold results
-
-### **Excel Processing**
-- **Upload .xlsx files** with apportionment data
-- **Parse multiple leaseholders** from spreadsheets
-- **Calculate thresholds** for all units
-- **Identify trigger points** for consultation
-
-### **Smart Recommendations**
-- **Consultation requirements** based on works value
-- **Template suggestions** for Section 20 notices
-- **Next steps guidance** for compliance
-- **Legal considerations** and best practices
+### **Export Features**
+- **Excel Export**: Download results with multiple sheets
+- **Summary Sheet**: Key metrics and recommendations
+- **Detailed Sheet**: Individual leaseholder analysis
+- **Professional Formatting**: Ready for reports and presentations
 
 ## Benefits
 
 ### **For Property Managers**
 1. **Quick Calculations**: Instant threshold determination
-2. **Compliance Assurance**: Clear guidance on consultation requirements
-3. **Time Savings**: No manual spreadsheet calculations
-4. **Risk Reduction**: Avoid missing consultation requirements
-5. **Professional Tool**: Impress clients with accurate calculations
+2. **Bulk Processing**: Handle multiple properties efficiently
+3. **Compliance Assurance**: Clear guidance on consultation requirements
+4. **Time Savings**: No manual spreadsheet calculations
+5. **Risk Reduction**: Avoid missing consultation requirements
+6. **Professional Reports**: Export-ready analysis
 
 ### **For Leaseholders**
 1. **Transparency**: Clear understanding of consultation triggers
@@ -214,6 +253,7 @@ Result:
 2. **Audit Trail**: Documented calculations and decisions
 3. **Efficiency**: Faster decision-making on works
 4. **Compliance**: Reduced risk of legal challenges
+5. **Scalability**: Handle multiple properties and leaseholders
 
 ## Technical Implementation
 
@@ -221,12 +261,14 @@ Result:
 - **React/Next.js** with TypeScript
 - **Tailwind CSS** for styling
 - **Radix UI** components for accessibility
+- **XLSX Library** for Excel processing
 - **Real-time validation** and calculation
 
 ### **Backend**
 - **API Routes** for calculations
 - **TypeScript** for type safety
 - **Error handling** and validation
+- **Excel processing** with XLSX
 - **Integration** with AI assistant
 
 ### **AI Integration**
@@ -234,24 +276,27 @@ Result:
 - **Excel parsing** for spreadsheet uploads
 - **Context awareness** from building data
 - **Smart recommendations** and guidance
+- **Bulk analysis** suggestions
 
 ## Future Enhancements
 
 ### **Planned Features**
-1. **Bulk Calculations**: Process multiple buildings at once
-2. **Historical Tracking**: Log calculations and decisions
+1. **Advanced Excel Processing**: Support for multiple sheets and formats
+2. **Historical Tracking**: Log calculations and decisions over time
 3. **Template Integration**: Direct link to Section 20 templates
 4. **Mobile App**: Native mobile calculator
 5. **API Access**: Public API for third-party integrations
+6. **Batch Processing**: Process multiple Excel files at once
 
 ### **Advanced AI Features**
 1. **Document Analysis**: Extract apportionments from lease documents
 2. **Predictive Modeling**: Estimate consultation likelihood
 3. **Compliance Monitoring**: Track consultation deadlines
 4. **Legal Updates**: Automatic updates for regulation changes
+5. **Smart Templates**: Generate Section 20 notices automatically
 
 ## Conclusion
 
-The Section 20 Consultation Threshold Calculator transforms complex legal calculations into simple, accessible tools. Property managers can now quickly determine consultation requirements, ensure compliance, and provide transparent service to leaseholders.
+The Section 20 Consultation Threshold Calculator with Excel upload functionality transforms complex legal calculations into simple, accessible tools. Property managers can now quickly determine consultation requirements for individual properties or entire portfolios, ensure compliance, and provide transparent service to leaseholders.
 
-The combination of a user-friendly calculator and intelligent AI integration makes this an essential tool for modern property management, reducing risk and improving efficiency in leasehold administration. 
+The combination of a user-friendly calculator, bulk Excel processing, and intelligent AI integration makes this an essential tool for modern property management, reducing risk and improving efficiency in leasehold administration. 
