@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { MessageSquare, User, Calendar, Plus, Trash2 } from 'lucide-react'
+import { MessageSquare, User, Calendar, Plus, Trash2, Search, Bell } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
 
 interface ProjectObservation {
@@ -14,6 +16,7 @@ interface ProjectObservation {
   phase: string
   observer_type: string
   comment: string
+  notify_director: boolean
   created_at: string
 }
 
@@ -39,20 +42,45 @@ export default function ProjectObservations({ projectId }: ProjectObservationsPr
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filteredObservations, setFilteredObservations] = useState<ProjectObservation[]>([])
+
   // Form state for each phase
   const [noticeForm, setNoticeForm] = useState({
     observerType: '',
-    comment: ''
+    comment: '',
+    notifyDirector: false
   })
   const [estimatesForm, setEstimatesForm] = useState({
     observerType: '',
-    comment: ''
+    comment: '',
+    notifyDirector: false
   })
 
   // Fetch existing observations
   useEffect(() => {
     fetchObservations()
   }, [projectId])
+
+  // Filter observations based on search query
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredObservations(observations)
+      return
+    }
+
+    const filtered = observations.filter(observation => {
+      const query = searchQuery.toLowerCase()
+      return (
+        observation.comment.toLowerCase().includes(query) ||
+        observation.observer_type.toLowerCase().includes(query) ||
+        observation.phase.toLowerCase().includes(query) ||
+        new Date(observation.created_at).toLocaleDateString('en-GB').includes(query)
+      )
+    })
+    setFilteredObservations(filtered)
+  }, [searchQuery, observations])
 
   const fetchObservations = async () => {
     try {
@@ -70,7 +98,7 @@ export default function ProjectObservations({ projectId }: ProjectObservationsPr
     }
   }
 
-  const handleSubmit = async (phase: string, formData: { observerType: string; comment: string }) => {
+  const handleSubmit = async (phase: string, formData: { observerType: string; comment: string; notifyDirector: boolean }) => {
     if (!formData.observerType || !formData.comment.trim()) {
       toast.error('Please fill in all fields')
       return
@@ -87,7 +115,8 @@ export default function ProjectObservations({ projectId }: ProjectObservationsPr
           project_id: projectId,
           phase,
           observer_type: formData.observerType,
-          comment: formData.comment.trim()
+          comment: formData.comment.trim(),
+          notify_director: formData.notifyDirector
         })
         .select()
         .single()
@@ -99,9 +128,9 @@ export default function ProjectObservations({ projectId }: ProjectObservationsPr
 
       // Reset form
       if (phase === 'notice_intention') {
-        setNoticeForm({ observerType: '', comment: '' })
+        setNoticeForm({ observerType: '', comment: '', notifyDirector: false })
       } else {
-        setEstimatesForm({ observerType: '', comment: '' })
+        setEstimatesForm({ observerType: '', comment: '', notifyDirector: false })
       }
     } catch (error) {
       console.error('Error adding observation:', error)
@@ -139,11 +168,30 @@ export default function ProjectObservations({ projectId }: ProjectObservationsPr
   }
 
   const getObservationsByPhase = (phase: string) => {
-    return observations.filter(obs => obs.phase === phase)
+    return filteredObservations.filter(obs => obs.phase === phase)
   }
 
   return (
     <div className="space-y-8">
+      {/* Search Bar */}
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            type="text"
+            placeholder="Search by comment, type, or date..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        {searchQuery && (
+          <p className="text-sm text-gray-600 mt-2">
+            Found {filteredObservations.length} observation{filteredObservations.length !== 1 ? 's' : ''}
+          </p>
+        )}
+      </div>
+
       {/* Notice of Intention Observations */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -192,6 +240,17 @@ export default function ProjectObservations({ projectId }: ProjectObservationsPr
               className="w-full"
             />
           </div>
+          <div className="mt-4 flex items-center space-x-2">
+            <Checkbox
+              id="notice-notify"
+              checked={noticeForm.notifyDirector}
+              onCheckedChange={(checked: boolean) => setNoticeForm(prev => ({ ...prev, notifyDirector: checked }))}
+            />
+            <label htmlFor="notice-notify" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+              <Bell className="h-4 w-4" />
+              Notify Director
+            </label>
+          </div>
           <Button
             onClick={() => handleSubmit('notice_intention', noticeForm)}
             disabled={isSubmitting || !noticeForm.observerType || !noticeForm.comment.trim()}
@@ -216,6 +275,12 @@ export default function ProjectObservations({ projectId }: ProjectObservationsPr
                       <span className="text-sm text-gray-500">
                         {new Date(observation.created_at).toLocaleDateString('en-GB')}
                       </span>
+                      {observation.notify_director && (
+                        <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                          <Bell className="h-3 w-3 mr-1" />
+                          Notified
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-gray-700">{observation.comment}</p>
                   </div>
@@ -282,6 +347,17 @@ export default function ProjectObservations({ projectId }: ProjectObservationsPr
               className="w-full"
             />
           </div>
+          <div className="mt-4 flex items-center space-x-2">
+            <Checkbox
+              id="estimates-notify"
+              checked={estimatesForm.notifyDirector}
+              onCheckedChange={(checked: boolean) => setEstimatesForm(prev => ({ ...prev, notifyDirector: checked }))}
+            />
+            <label htmlFor="estimates-notify" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+              <Bell className="h-4 w-4" />
+              Notify Director
+            </label>
+          </div>
           <Button
             onClick={() => handleSubmit('estimates', estimatesForm)}
             disabled={isSubmitting || !estimatesForm.observerType || !estimatesForm.comment.trim()}
@@ -306,6 +382,12 @@ export default function ProjectObservations({ projectId }: ProjectObservationsPr
                       <span className="text-sm text-gray-500">
                         {new Date(observation.created_at).toLocaleDateString('en-GB')}
                       </span>
+                      {observation.notify_director && (
+                        <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                          <Bell className="h-3 w-3 mr-1" />
+                          Notified
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-gray-700">{observation.comment}</p>
                   </div>
