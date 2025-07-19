@@ -45,10 +45,10 @@ export default function EmailDetailPage() {
   const [selectedFolder, setSelectedFolder] = useState("handled");
 
   useEffect(() => {
-    if (params.id) {
+    if (params?.id) {
       fetchEmail(params.id as string);
     }
-  }, [params.id]);
+  }, [params?.id]);
 
   const fetchEmail = async (emailId: string) => {
     try {
