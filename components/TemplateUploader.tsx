@@ -315,7 +315,7 @@ export default function TemplateUploader({ onUploadComplete }: TemplateUploaderP
                   <div className="flex flex-wrap gap-2">
                     {extractedData.placeholders.length > 0 ? (
                       extractedData.placeholders.map((placeholder, index) => (
-                        <Badge key={index} variant="secondary" className="text-sm">
+                        <Badge key={index} variant="outline" className="text-sm">
                           {placeholder}
                         </Badge>
                       ))

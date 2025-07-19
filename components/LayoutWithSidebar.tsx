@@ -106,7 +106,7 @@ export default function LayoutWithSidebar({
                   {item.name}
                   {item.badge && (
                     <Badge 
-                      variant={isActive ? "default" : "secondary"} 
+                      variant={isActive ? "default" : "outline"} 
                       className="ml-auto"
                     >
                       {item.badge}

@@ -163,7 +163,7 @@ BlocIQ Property Management`,
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           📧 Send via Email
-          <Badge variant="secondary">{emailData.fileType.toUpperCase()}</Badge>
+                          <Badge variant="outline">{emailData.fileType.toUpperCase()}</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -194,13 +194,13 @@ BlocIQ Property Management`,
           
           <div>
             <Label htmlFor="fileType">File Type</Label>
-            <Select value={emailData.fileType} onValueChange={handleFileTypeChange}>
+            <Select value={emailData.fileType} onChange={(e) => handleFileTypeChange(e.target.value)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="docx">DOCX</SelectItem>
-                <SelectItem value="pdf">PDF</SelectItem>
+                <SelectItem>DOCX</SelectItem>
+                <SelectItem>PDF</SelectItem>
               </SelectContent>
             </Select>
             {emailData.fileType === 'pdf' && convertingPdf && (
