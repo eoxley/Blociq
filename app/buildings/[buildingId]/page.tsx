@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import LayoutWithSidebar from "@/components/LayoutWithSidebar";
 import BuildingTasks from "@/components/BuildingTasks";
 import SiteInspection from "@/components/SiteInspection";
+import ProgressTrackerWidget from "@/components/ProgressTrackerWidget";
 import { createClient } from "@supabase/supabase-js";
 
 interface BuildingData {
@@ -171,6 +172,11 @@ export default function BuildingDetailPage() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Progress Tracker Widget */}
+          <div className="mb-6">
+            <ProgressTrackerWidget buildingId={buildingId} />
           </div>
 
           {/* Contact Information */}
