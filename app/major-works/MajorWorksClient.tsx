@@ -1,13 +1,14 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import CreateMajorWorksModal from '@/components/CreateMajorWorksModal'
 import MajorWorksTimeline from '@/components/MajorWorksTimeline'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Building2, Calendar, Wrench, CheckCircle } from 'lucide-react'
+import Link from 'next/link'
 
 interface Building {
   name: string
@@ -98,6 +99,13 @@ export default function MajorWorksClient({
                         {project.status?.replace('_', ' ').toUpperCase() || 'UNKNOWN'}
                       </Badge>
                     </div>
+                    <Link
+                      href={`/major-works/${project.id}`}
+                      className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-teal-50 text-teal-700 rounded-lg hover:bg-teal-100 transition-colors border border-teal-200"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      View Details
+                    </Link>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -181,6 +189,13 @@ export default function MajorWorksClient({
                         {project.status?.replace('_', ' ').toUpperCase() || 'UNKNOWN'}
                       </Badge>
                     </div>
+                    <Link
+                      href={`/major-works/${project.id}`}
+                      className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-teal-50 text-teal-700 rounded-lg hover:bg-teal-100 transition-colors border border-teal-200"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      View Details
+                    </Link>
                   </div>
                 </CardHeader>
                 <CardContent>
