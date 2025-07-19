@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import LayoutWithSidebar from "@/components/LayoutWithSidebar";
 import * as XLSX from 'xlsx';
 
 interface LeaseholderData {
@@ -236,20 +237,12 @@ export default function Section20ThresholdCalculator() {
   };
 
   return (
-    <TooltipProvider>
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-6xl mx-auto px-4">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Section 20 Consultation Threshold Calculator
-            </h1>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Calculate the spending threshold that triggers Section 20 consultation requirements 
-              for leasehold properties based on apportionment percentages.
-            </p>
-          </div>
-
+    <LayoutWithSidebar 
+      title="Section 20 Calculator" 
+      subtitle="Calculate consultation thresholds for leasehold properties"
+    >
+      <TooltipProvider>
+        <div className="p-6">
           {/* Excel Upload Section */}
           <Card className="mb-8">
             <CardHeader>
@@ -597,7 +590,7 @@ export default function Section20ThresholdCalculator() {
             </CardContent>
           </Card>
         </div>
-      </div>
-    </TooltipProvider>
+      </TooltipProvider>
+    </LayoutWithSidebar>
   );
 } 
