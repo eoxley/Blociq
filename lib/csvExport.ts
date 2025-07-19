@@ -61,7 +61,16 @@ export function exportRecipientsToCSV(recipients: Record<string, unknown>[], fil
     { key: 'building_name', label: 'Building' }
   ];
 
-  exportToCSV(recipients, columns, filename);
+  // Transform the data to ensure all values are strings, numbers, or booleans
+  const transformedData: CSVExportData[] = recipients.map(recipient => ({
+    name: String(recipient.name || ''),
+    email: String(recipient.email || ''),
+    unit: String(recipient.unit || ''),
+    type: String(recipient.type || ''),
+    building_name: String(recipient.building_name || '')
+  }));
+
+  exportToCSV(transformedData, columns, filename);
 }
 
 /**
