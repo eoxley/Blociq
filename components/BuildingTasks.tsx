@@ -53,7 +53,7 @@ export default function BuildingTasks({ buildingId }: BuildingTasksProps) {
     task: '',
     dueDate: '',
     assignedTo: '',
-    priority: 'Medium' as const,
+    priority: 'Medium' as Task['priority'],
     notes: ''
   });
 
@@ -398,7 +398,7 @@ export default function BuildingTasks({ buildingId }: BuildingTasksProps) {
               
               <div>
                 <Label htmlFor="priority">Priority</Label>
-                <Select value={newTask.priority} onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}>
+                <Select value={newTask.priority} onChange={(e) => setNewTask({ ...newTask, priority: e.target.value as Task['priority'] })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -473,7 +473,7 @@ export default function BuildingTasks({ buildingId }: BuildingTasksProps) {
               
               <div>
                 <Label htmlFor="edit-status">Status</Label>
-                <Select value={editingTask.status} onChange={(e) => setEditingTask({ ...editingTask, status: e.target.value })}>
+                <Select value={editingTask.status} onChange={(e) => setEditingTask({ ...editingTask, status: e.target.value as Task['status'] })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -487,7 +487,7 @@ export default function BuildingTasks({ buildingId }: BuildingTasksProps) {
               
               <div>
                 <Label htmlFor="edit-priority">Priority</Label>
-                <Select value={editingTask.priority} onChange={(e) => setEditingTask({ ...editingTask, priority: e.target.value })}>
+                <Select value={editingTask.priority} onChange={(e) => setEditingTask({ ...editingTask, priority: e.target.value as Task['priority'] })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
