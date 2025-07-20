@@ -1,15 +1,19 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { Calendar, FileText, CheckCircle, Construction, AlertCircle } from 'lucide-react'
-
-interface TimelineEvent {
-  id: string
-  title: string
-  notes?: string
-  created_by: string
-  timestamp: string
-}
+import { useState } from "react";
+import { format } from "date-fns";
+import {
+  AlertTriangle,
+  ClipboardList,
+  FileText,
+  UserCheck,
+  Hammer,
+  CheckCircle,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { CalendarPlus } from "lucide-react";
 
 interface Project {
   id: string
@@ -20,6 +24,14 @@ interface Project {
   completion_date: string
   status: string
   consultation_stage: string
+}
+
+interface TimelineEvent {
+  id: string
+  title: string
+  notes?: string
+  created_by: string
+  timestamp: string
 }
 
 interface MajorWorksTimelineProps {
@@ -66,191 +78,207 @@ export default function MajorWorksTimeline({ project, logs }: MajorWorksTimeline
     }
   }
 
-  // Calculate timeline dates
-  const startDate = new Date(project.start_date)
-  const timelineStart = new Date(startDate.getTime() - 30 * 24 * 60 * 60 * 1000) // 30 days before
-  const timelineEnd = new Date(startDate.getTime() + 18 * 30 * 24 * 60 * 60 * 1000) // 18 months after
+  // Calculate Section 20 timeline stages based on project dates
+  const startDate = project.start_date ? new Date(project.start_date) : new Date()
+  const estimatesDate = project.estimates_issued ? new Date(project.estimates_issued) : null
+  const constructionDate = project.construction_start ? new Date(project.construction_start) : null
+  const completionDate = project.completion_date ? new Date(project.completion_date) : null
 
-  // Key milestones
-  const milestones = [
+  // Calculate estimated dates if not provided
+  const observationCloseDate = new Date(startDate.getTime() + 30 * 24 * 60 * 60 * 1000) // 30 days after NOI
+  const estimatesCloseDate = estimatesDate ? new Date(estimatesDate.getTime() + 30 * 24 * 60 * 60 * 1000) : new Date(observationCloseDate.getTime() + 14 * 24 * 60 * 60 * 1000)
+  const contractorAppointmentDate = estimatesDate ? new Date(estimatesDate.getTime() + 45 * 24 * 60 * 60 * 1000) : new Date(estimatesCloseDate.getTime() + 15 * 24 * 60 * 60 * 1000)
+  const worksStartDate = constructionDate || new Date(contractorAppointmentDate.getTime() + 30 * 24 * 60 * 60 * 1000)
+  const worksCompleteDate = completionDate || new Date(worksStartDate.getTime() + 90 * 24 * 60 * 60 * 1000) // 3 months estimate
+
+  const timelineStages = [
     {
-      id: 'notice',
-      title: 'Notice of Intention',
-      date: project.start_date,
+      title: "Notice of Intention Issued",
+      date: startDate,
+      icon: ClipboardList,
+      status: "Completed",
+      description: "Section 20 consultation begins"
+    },
+    {
+      title: "Observation Period Closes",
+      date: observationCloseDate,
+      icon: AlertTriangle,
+      status: new Date() > observationCloseDate ? "Completed" : "Pending",
+      description: "30-day consultation period ends"
+    },
+    {
+      title: "Statement of Estimates Issued",
+      date: estimatesDate || new Date(observationCloseDate.getTime() + 7 * 24 * 60 * 60 * 1000),
       icon: FileText,
-      color: 'bg-blue-500',
-      completed: true
+      status: estimatesDate ? "Completed" : "Pending",
+      description: "Contractor estimates provided to leaseholders"
     },
     {
-      id: 'estimates',
-      title: 'Estimates Stage',
-      date: project.estimates_issued,
-      icon: AlertCircle,
-      color: 'bg-yellow-500',
-      completed: !!project.estimates_issued
+      title: "Estimates Observation Closes",
+      date: estimatesCloseDate,
+      icon: AlertTriangle,
+      status: new Date() > estimatesCloseDate ? "Completed" : "Pending",
+      description: "30-day estimates consultation period ends"
     },
     {
-      id: 'construction',
-      title: 'Works Commence',
-      date: project.construction_start,
-      icon: Construction,
-      color: 'bg-orange-500',
-      completed: !!project.construction_start
+      title: "Contractor Appointed",
+      date: contractorAppointmentDate,
+      icon: UserCheck,
+      status: project.status === 'ongoing' || project.status === 'completed' ? "Completed" : "Pending",
+      description: "Contractor selected and appointed"
     },
     {
-      id: 'completion',
-      title: 'Completion',
-      date: project.completion_date,
+      title: "Works Commence",
+      date: worksStartDate,
+      icon: Hammer,
+      status: constructionDate ? "Completed" : (project.status === 'completed' ? "Completed" : "Pending"),
+      description: "Physical works begin on site"
+    },
+    {
+      title: "Works Complete",
+      date: worksCompleteDate,
       icon: CheckCircle,
-      color: 'bg-green-500',
-      completed: project.status === 'completed'
-    }
-  ]
+      status: project.status === 'completed' ? "Completed" : "Pending",
+      description: "All works completed and signed off"
+    },
+  ];
 
-  // Combine milestones and logs
+  // Combine timeline stages with custom logs
   const allEvents = [
-    ...milestones.map(milestone => ({
-      ...milestone,
+    ...timelineStages.map((stage, index) => ({
+      ...stage,
       type: 'milestone' as const,
-      timestamp: milestone.date
+      id: `milestone-${index}`,
+      isMilestone: true,
+      timestamp: stage.date.toISOString()
     })),
     ...logs.map(log => ({
       ...log,
       type: 'log' as const,
-      icon: Calendar,
-      color: 'bg-gray-500'
+      icon: CalendarPlus,
+      status: 'Completed',
+      description: log.notes,
+      isMilestone: false,
+      date: new Date(log.timestamp)
     }))
-  ].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+  ].sort((a, b) => new Date(a.date || a.timestamp).getTime() - new Date(b.date || b.timestamp).getTime())
 
   return (
-    <div className="space-y-6">
-      {/* Timeline Header */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">Timeline & Observations</h3>
-        <button
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold">Section 20 Timeline & Observations</h2>
+        <Button 
+          variant="outline" 
+          size="sm"
           onClick={() => setShowAddForm(!showAddForm)}
-          className="inline-flex items-center gap-2 px-3 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 transition-colors"
         >
-          <Calendar className="h-4 w-4" />
-          Add Log
-        </button>
+          <CalendarPlus className="w-4 h-4 mr-2" /> Add Log
+        </Button>
       </div>
 
       {/* Add Log Form */}
       {showAddForm && (
-        <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Log Title
-              </label>
-              <input
-                type="text"
-                value={newLogTitle}
-                onChange={(e) => setNewLogTitle(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                placeholder="e.g., Consultation feedback received"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Notes
-              </label>
-              <textarea
-                value={newLogNotes}
-                onChange={(e) => setNewLogNotes(e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                placeholder="Add any additional details..."
-              />
-            </div>
-            <div className="flex gap-3">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
-              >
-                {isSubmitting ? 'Adding...' : 'Add Log'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowAddForm(false)}
-                className="px-4 py-2 bg-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-400 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
+        <Card className="bg-gray-50 border-gray-200">
+          <CardContent className="p-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Log Title
+                </label>
+                <input
+                  type="text"
+                  value={newLogTitle}
+                  onChange={(e) => setNewLogTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  placeholder="e.g., Consultation feedback received"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Notes
+                </label>
+                <textarea
+                  value={newLogNotes}
+                  onChange={(e) => setNewLogNotes(e.target.value)}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  placeholder="Add any additional details..."
+                />
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="bg-teal-600 hover:bg-teal-700"
+                >
+                  {isSubmitting ? 'Adding...' : 'Add Log'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowAddForm(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Timeline */}
-      <div className="relative">
-        {/* Timeline line */}
-        <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200"></div>
-        
-        {/* Events */}
-        <div className="space-y-6">
-          {allEvents.map((event, index) => {
-            const Icon = event.icon
-            const isMilestone = event.type === 'milestone'
-            
-            return (
-              <div key={event.id} className="relative flex items-start gap-4">
-                {/* Timeline dot */}
-                <div className={`relative z-10 flex-shrink-0 w-12 h-12 rounded-full ${event.color} flex items-center justify-center text-white shadow-md`}>
-                  <Icon className="h-5 w-5" />
-                </div>
-                
-                {/* Event content */}
-                <div className="flex-1 min-w-0 bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between mb-2">
-                    <h4 className="text-sm font-semibold text-gray-900">
-                      {event.title}
-                    </h4>
-                    {isMilestone && (
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        event.completed ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        {event.completed ? 'Completed' : 'Pending'}
-                      </span>
-                    )}
-                  </div>
-                  
-                  <p className="text-xs text-gray-500 mb-2">
-                    {new Date(event.timestamp).toLocaleDateString('en-GB', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
-                  
-                  {event.type === 'log' && event.notes && (
-                    <p className="text-sm text-gray-600">{event.notes}</p>
-                  )}
-                  
-                  {event.type === 'log' && (
-                    <p className="text-xs text-gray-400 mt-2">
-                      Logged by: {event.created_by}
-                    </p>
-                  )}
-                </div>
+      <div className="border-l-2 border-gray-200 pl-4 space-y-6">
+        {allEvents.map((event, i) => {
+          const Icon = event.icon
+          const eventDate = event.date || event.timestamp
+          
+          return (
+            <div key={event.id} className="flex items-start space-x-4">
+              <div className="mt-1">
+                <Icon className="w-6 h-6 text-teal-600" />
               </div>
-            )
-          })}
-        </div>
+              <Card className="flex-1">
+                <CardContent className="py-4">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-sm md:text-base">
+                        {event.title}
+                      </h3>
+                      {event.description && (
+                        <p className="text-sm text-gray-600 mt-1">
+                          {event.description}
+                        </p>
+                      )}
+                      <p className="text-sm text-gray-500 mt-1">
+                        {format(new Date(eventDate), "d MMMM yyyy @ HH:mm")}
+                      </p>
+                                             {!event.isMilestone && 'created_by' in event && (
+                         <p className="text-xs text-gray-400 mt-1">
+                           Logged by: {event.created_by}
+                         </p>
+                       )}
+                    </div>
+                                         <Badge 
+                       variant={event.status === "Completed" ? "default" : "outline"}
+                       className={event.status === "Completed" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"}
+                     >
+                      {event.status}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )
+        })}
       </div>
 
       {/* No events message */}
       {allEvents.length === 0 && (
         <div className="text-center py-8 text-gray-500">
-          <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+          <CalendarPlus className="h-12 w-12 mx-auto mb-4 text-gray-300" />
           <p>No timeline events yet. Add the first log to get started.</p>
         </div>
       )}
     </div>
-  )
+  );
 } 
