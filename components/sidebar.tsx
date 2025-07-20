@@ -15,6 +15,7 @@ import {
   ChevronRight,
   FileText,
   Brain,
+  Shield,
 } from 'lucide-react'
 import BlocIQLogo from './BlocIQLogo'
 
@@ -33,6 +34,7 @@ export default function Sidebar() {
     { href: '/home', icon: Home, label: 'Home' },
     { href: '/inbox', icon: Inbox, label: 'Inbox' },
     { href: '/buildings', icon: Building2, label: 'Buildings' },
+    { href: '/compliance', icon: Shield, label: 'Compliance' },
     { href: '/communications', icon: MessageSquare, label: 'Communications' },
     { href: '/ai-documents', icon: Brain, label: 'AI Documents' },
     { href: '/major-works', icon: Wrench, label: 'Major Works' },

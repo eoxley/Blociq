@@ -81,7 +81,6 @@ export default function NewInboxClient({
           id, subject, from_name, from_email, received_at, body_preview, body_full, building_id, is_read, is_handled, tags, outlook_id, buildings(name)
         `)
         .order('received_at', { ascending: false })
-        .limit(50)
 
       // Apply filters based on current filter state
       if (filter === 'inbox') {

@@ -29,10 +29,10 @@ export default async function ComplianceSetupPage() {
       )
     }
 
-    // Fetch all compliance assets
+    // Fetch all compliance assets (no limit)
     const { data: complianceAssets, error: assetsError } = await supabase
       .from('compliance_assets')
-      .select('id, name, description, category')
+      .select('*')
       .order('category', { ascending: true })
       .order('name', { ascending: true })
 
@@ -59,9 +59,9 @@ export default async function ComplianceSetupPage() {
     }
 
     // Create a map of buildings that already have compliance setup
-    const buildingsWithCompliance = new Set()
+    const buildingsWithCompliance = new Set<string>()
     existingCompliance?.forEach(item => {
-      buildingsWithCompliance.add(item.building_id)
+      buildingsWithCompliance.add(String(item.building_id))
     })
 
     return (
@@ -73,11 +73,23 @@ export default async function ComplianceSetupPage() {
               <p className="text-gray-600">
                 Configure compliance tracking for your buildings. This wizard will help you set up which compliance requirements apply to each building in your portfolio.
               </p>
+              
+              {/* Asset Count Display */}
+              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Total compliance assets loaded:</strong> {complianceAssets?.length || 0}
+                </p>
+                {complianceAssets && complianceAssets.length === 0 && (
+                  <p className="text-sm text-red-600 mt-1">
+                    ⚠️ No compliance assets found. Please check your database setup.
+                  </p>
+                )}
+              </div>
             </div>
 
             <ComplianceSetupWizard 
               buildings={buildings || []}
-              complianceAssets={complianceAssets || []}
+              complianceAssets={(complianceAssets as any[]) || []}
               buildingsWithCompliance={Array.from(buildingsWithCompliance)}
             />
           </div>

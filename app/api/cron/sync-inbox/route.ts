@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAccessToken } from "@/lib/outlookAuth";
+import { getValidAccessToken } from "@/lib/outlookAuth";
 import { Client } from "@microsoft/microsoft-graph-client";
 import { createClient } from "@supabase/supabase-js";
 import "isomorphic-fetch";
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
     console.log(`📅 Auto-syncing emails since: ${filterDate}`);
 
     // Get access token for Microsoft Graph
-    const accessToken = await getAccessToken();
+    const accessToken = await getValidAccessToken();
     const client = Client.init({
       authProvider: (done) => done(null, accessToken)
     });
