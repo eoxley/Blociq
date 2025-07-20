@@ -1,25 +1,6 @@
-<<<<<<< HEAD
-import Link from "next/link";
-
-export default function Home() {
-  return (
-    <main className="min-h-screen flex items-center justify-center">
-      <div className="text-center max-w-xl px-4 space-y-6">
-        <h1 className="text-3xl font-bold font-serif">Welcome to BlocIQ</h1>
-        <p className="text-gray-600 text-sm sm:text-base">
-          Your AI-powered property inbox is ready to take on leaks, complaints, budgets, and all the admin chaos.
-        </p>
-        <Link href="/inbox" className="text-blue-600 underline hover:text-blue-800">
-          🚀 Open Inbox
-        </Link>
-      </div>
-    </main>
-  );
-}
-=======
 import React from 'react'
 import Link from 'next/link'
-import { ArrowRight, Brain, FileText, Calendar, Shield, Users, Zap, CheckCircle } from 'lucide-react'
+import { ArrowRight, Brain, FileText, Calendar, Shield, Zap } from 'lucide-react'
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -86,7 +67,7 @@ export default function LandingPage() {
               BlocIQ Vision Statement
             </h2>
             <p className="text-lg text-gray-600 leading-relaxed">
-              BlocIQ exists to reimagine property management through compliance intelligence, AI-enhanced workflows, and operational transparency. We're building the operating system for modern property teams — from prime city blocks to social housing estates.
+              BlocIQ exists to reimagine property management through compliance intelligence, AI-enhanced workflows, and operational transparency. We&apos;re building the operating system for modern property teams — from prime city blocks to social housing estates.
             </p>
           </div>
         </div>
@@ -100,13 +81,13 @@ export default function LandingPage() {
               Why BlocIQ?
             </h2>
             <p className="text-lg text-gray-600 leading-relaxed">
-              BlocIQ is one of the UK's first AI-powered proptech platforms built specifically for leasehold compliance.
+              BlocIQ is one of the UK&apos;s first AI-powered proptech platforms built specifically for leasehold compliance.
             </p>
           </div>
           
           <div className="bg-white rounded-xl p-8 shadow-lg border border-gray-100 mb-8">
             <p className="text-lg text-gray-600 leading-relaxed mb-6">
-              While AI is being rapidly adopted across industries, most property firms are using generic tools like ChatGPT without oversight, data safeguards, or regulatory alignment. That's a risk — for firms, for clients, and for residents.
+              While AI is being rapidly adopted across industries, most property firms are using generic tools like ChatGPT without oversight, data safeguards, or regulatory alignment. That&apos;s a risk — for firms, for clients, and for residents.
             </p>
             <p className="text-lg text-gray-600 leading-relaxed mb-6">
               At BlocIQ, we do things differently:
@@ -140,7 +121,7 @@ export default function LandingPage() {
             
             <div className="mt-8 pt-6 border-t border-gray-200">
               <p className="text-lg text-gray-600 leading-relaxed font-medium">
-                BlocIQ isn't just another AI tool — it's a purpose-built assistant for professional property managers.
+                BlocIQ isn&apos;t just another AI tool — it&apos;s a purpose-built assistant for professional property managers.
               </p>
             </div>
           </div>
@@ -216,7 +197,7 @@ export default function LandingPage() {
               Purpose-Built AI — Trained for Property, Tailored to You
             </h2>
             <p className="text-lg text-gray-600 leading-relaxed">
-              BlocIQ's AI is pre-trained on property management logic, regulations, and best practices. It dynamically adapts to your specific portfolio using real-time data from Supabase, ensuring every recommendation and response is contextually relevant to your buildings, lease terms, and compliance requirements.
+              BlocIQ&apos;s AI is pre-trained on property management logic, regulations, and best practices. It dynamically adapts to your specific portfolio using real-time data from Supabase, ensuring every recommendation and response is contextually relevant to your buildings, lease terms, and compliance requirements.
             </p>
           </div>
           
@@ -253,7 +234,7 @@ export default function LandingPage() {
             Improving Lives Through Better Buildings
           </h2>
           <p className="text-xl text-teal-100 leading-relaxed">
-            BlocIQ's subsidised rollout strategy for housing associations to improve safety and response times. We believe everyone deserves safe, well-managed homes, regardless of income.
+            BlocIQ&apos;s subsidised rollout strategy for housing associations to improve safety and response times. We believe everyone deserves safe, well-managed homes, regardless of income.
           </p>
         </div>
       </section>
@@ -266,7 +247,7 @@ export default function LandingPage() {
               Fixing an Industry Full of Friction
             </h2>
             <p className="text-lg text-gray-600 mb-8">
-              Property management is broken. Here's what we're fixing:
+              Property management is broken. Here&apos;s what we&apos;re fixing:
             </p>
           </div>
           
@@ -278,7 +259,7 @@ export default function LandingPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-2">Fragmented Tools</h3>
-                  <p className="text-gray-600 text-sm">Multiple disconnected systems that don't talk to each other</p>
+                  <p className="text-gray-600 text-sm">Multiple disconnected systems that don&apos;t talk to each other</p>
                 </div>
               </div>
             </div>
@@ -290,7 +271,7 @@ export default function LandingPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-2">Lack of Transparency</h3>
-                  <p className="text-gray-600 text-sm">Residents and stakeholders can't see what's happening</p>
+                  <p className="text-gray-600 text-sm">Residents and stakeholders can&apos;t see what&apos;s happening</p>
                 </div>
               </div>
             </div>
@@ -368,7 +349,7 @@ export default function LandingPage() {
               </p>
               
               <p className="text-lg text-gray-700 leading-relaxed mb-6">
-                She's a mum to two brilliant little girls, kept firmly on her toes by a high-energy (and slightly unhinged) cocker spaniel.
+                She&apos;s a mum to two brilliant little girls, kept firmly on her toes by a high-energy (and slightly unhinged) cocker spaniel.
               </p>
               
               <p className="text-lg text-gray-700 leading-relaxed mb-6">
@@ -437,4 +418,3 @@ export default function LandingPage() {
     </div>
   )
 }
->>>>>>> locked-ui-baseline
