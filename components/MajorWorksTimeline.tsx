@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Calendar, FileText, CheckCircle, Construction, AlertCircle } from 'lucide-react'
+import { Calendar, FileText, CheckCircle, Construction, AlertCircle, AlertTriangle } from 'lucide-react'
 
 interface TimelineEvent {
   id: string
@@ -16,6 +16,7 @@ interface Project {
   title: string
   start_date: string
   estimates_issued: string
+  notice_of_reason_issued?: string
   funds_confirmed?: string
   contractor_appointed?: string
   construction_start: string
@@ -92,6 +93,15 @@ export default function MajorWorksTimeline({ project, logs }: MajorWorksTimeline
       color: 'bg-yellow-500',
       completed: !!project.estimates_issued,
       description: '30 days consultation on estimates'
+    },
+    {
+      id: 'notice_of_reason',
+      title: 'Notice of Reason',
+      date: project.notice_of_reason_issued,
+      icon: AlertTriangle,
+      color: 'bg-red-500',
+      completed: !!project.notice_of_reason_issued,
+      description: 'Issued if leaseholders object (if applicable)'
     },
     {
       id: 'funds',
@@ -175,9 +185,11 @@ export default function MajorWorksTimeline({ project, logs }: MajorWorksTimeline
                 required
               >
                 <option value="">Select an action type...</option>
+                <option value="Notice of Reason Issued">Notice of Reason Issued</option>
                 <option value="Surveyor Appointed">Surveyor Appointed</option>
                 <option value="Leaseholder Meeting">Leaseholder Meeting</option>
                 <option value="Consultation Feedback">Consultation Feedback</option>
+                <option value="Leaseholder Objection">Leaseholder Objection</option>
                 <option value="Document Uploaded">Document Uploaded</option>
                 <option value="Contractor Quote Received">Contractor Quote Received</option>
                 <option value="Planning Permission">Planning Permission</option>
