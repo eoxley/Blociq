@@ -270,6 +270,9 @@ export default function AIDocumentsPage() {
                     </div>
                   </CardContent>
                 </Card>
+                <p className="text-xs italic text-gray-500 mt-2 text-center">
+                  AI-generated guidance is for support only and should not replace professional advice.
+                </p>
               </div>
 
               {/* AI Assistant Information Panel */}

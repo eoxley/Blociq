@@ -251,6 +251,10 @@ export default function DocumentUploader({
           >
             {loading ? 'Analyzing...' : 'Upload & Analyze'}
           </Button>
+          
+          <p className="text-xs italic text-gray-500 text-center mt-2">
+            AI analysis is for guidance only. Please verify all extracted information.
+          </p>
         </CardContent>
       </Card>
 
