@@ -1,7 +1,7 @@
--- Create building_todos table
+-- Create building_todos table (without foreign key constraint initially)
 create table if not exists building_todos (
   id uuid primary key default gen_random_uuid(),
-  building_id integer references buildings(id) on delete cascade,
+  building_id integer,
   title text not null,
   is_complete boolean default false,
   due_date date,
@@ -45,4 +45,8 @@ insert into building_todos (building_id, title, is_complete, due_date, priority)
 (4, 'Review and approve budget for roof repairs', false, current_date + interval '14 days', 'Medium'),
 (4, 'Schedule annual AGM', false, current_date + interval '21 days', 'Medium'),
 (4, 'Check and test fire alarms', true, current_date - interval '1 day', 'High'),
-(4, 'Update building access codes', false, current_date + interval '3 days', 'Low'); 
+(4, 'Update building access codes', false, current_date + interval '3 days', 'Low');
+
+-- Add foreign key constraint after table is created (if buildings table exists)
+-- ALTER TABLE building_todos ADD CONSTRAINT building_todos_building_id_fkey 
+-- FOREIGN KEY (building_id) REFERENCES buildings(id) ON DELETE CASCADE; 
