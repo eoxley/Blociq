@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { MessageCircle, Calendar, ExternalLink, Send, Loader2, Plus, Mail, FileText, Pin, RefreshCw, Paperclip, Home, X } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import DailySummary from '@/components/DailySummary'
 
 type PropertyEvent = {
   building: string
@@ -536,96 +537,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         </div>
       </div>
 
-      {/* Recent Emails Section */}
-      <div className="bg-white rounded-xl shadow-lg p-6 border">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <Mail className="h-6 w-6 text-teal-600" />
-            <h2 className="text-2xl font-semibold text-gray-900">Recent Emails</h2>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={syncEmails}
-              disabled={syncingEmails}
-              className="inline-flex items-center gap-2 px-3 py-2 bg-teal-50 text-teal-700 rounded-lg hover:bg-teal-100 transition-colors text-sm border border-teal-200 disabled:opacity-50"
-            >
-              <RefreshCw className={`h-4 w-4 ${syncingEmails ? 'animate-spin' : ''}`} />
-              {syncingEmails ? 'Syncing...' : 'Sync'}
-            </button>
-            <Link
-              href="/inbox"
-              className="inline-flex items-center gap-2 text-teal-600 hover:text-teal-700 font-medium transition-colors"
-            >
-              <ExternalLink className="h-4 w-4" />
-              View All
-            </Link>
-          </div>
-        </div>
-        
-        <div className="space-y-4">
-          {loadingEmails ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto mb-2"></div>
-              <p className="text-gray-500 text-sm">Loading emails...</p>
-            </div>
-          ) : recentEmails.length > 0 ? (
-            recentEmails.map((email) => (
-              <div key={email.id} className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-medium text-gray-900 truncate">
-                        {email.subject}
-                      </h3>
-                      {email.unread && (
-                        <span className="inline-block w-2 h-2 bg-blue-500 rounded-full"></span>
-                      )}
-                      {email.flag_status === 'flagged' && (
-                        <span className="inline-block w-2 h-2 bg-red-500 rounded-full"></span>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-600 mb-1">
-                      From: {email.from_email}
-                    </p>
-                    <p className="text-sm text-gray-500 mb-2 line-clamp-2">
-                      {email.body_preview}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-400">
-                        {new Date(email.received_at).toLocaleDateString()} at {new Date(email.received_at).toLocaleTimeString()}
-                      </span>
-                      {email.categories && email.categories.length > 0 && (
-                        <div className="flex gap-1">
-                          {email.categories.slice(0, 2).map((category, index) => (
-                            <span key={index} className="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded">
-                              {category}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="ml-4">
-                    <span className={`inline-block px-2 py-1 text-xs rounded ${
-                      email.handled 
-                        ? 'bg-green-100 text-green-700' 
-                        : 'bg-yellow-100 text-yellow-700'
-                    }`}>
-                      {email.handled ? 'Handled' : 'Unhandled'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="text-center py-8">
-              <Mail className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-500 text-sm">No emails found</p>
-              <p className="text-gray-400 text-xs mt-1">Click "Sync" to fetch emails from your inbox</p>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Daily Summary Section */}
+      <DailySummary />
     </div>
   )
 } 
