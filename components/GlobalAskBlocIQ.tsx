@@ -5,14 +5,12 @@ import AskBlocIQ from './AskBlocIQ';
 import { useBlocIQContext } from './BlocIQContext';
 
 export default function GlobalAskBlocIQ() {
-  const { buildingId, unitId, buildingName, unitName } = useBlocIQContext();
+  const { buildingId, buildingName } = useBlocIQContext();
 
   return (
     <AskBlocIQ
-      buildingId={buildingId}
-      unitId={unitId}
+      buildingId={buildingId?.toString()}
       buildingName={buildingName}
-      unitName={unitName}
     />
   );
 } 
