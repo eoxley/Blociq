@@ -4,7 +4,11 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import NewInboxClient from './NewInboxClient'
 
-export default async function InboxPage() {
+interface InboxPageProps {
+  searchParams: Promise<{ success?: string; email?: string; error?: string }>
+}
+
+export default async function InboxPage({ searchParams }: InboxPageProps) {
   const supabase = createServerComponentClient({ cookies })
   
   // Check if user is authenticated
@@ -46,13 +50,18 @@ export default async function InboxPage() {
     .limit(1)
 
   const lastSyncTime = lastSync?.[0]?.received_at || null
+  const params = await searchParams
 
   return (
     <LayoutWithSidebar>
       <NewInboxClient 
-        initialEmails={emails || []} 
+        initialEmails={emails?.map((email: any) => ({
+          ...email,
+          buildings: Array.isArray(email.buildings) ? email.buildings[0] : email.buildings
+        })) || []} 
         lastSyncTime={lastSyncTime}
         userId={user.id}
+        searchParams={params}
       />
     </LayoutWithSidebar>
   )

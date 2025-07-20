@@ -76,7 +76,15 @@ export async function GET(request: NextRequest) {
       throw new Error('No email found in Microsoft user data')
     }
 
+    // Clean up any existing tokens for this user before saving new ones
+    console.log('🧹 Cleaning up existing tokens for user:', session.user.id)
+    await supabase
+      .from('outlook_tokens' as any)
+      .delete()
+      .eq('user_id', session.user.id)
+
     // Save tokens to the current user's account
+    console.log('💾 Saving new tokens for user:', session.user.id, 'email:', userEmail)
     await saveUserOutlookTokens(
       userEmail,
       tokenData.access_token,
@@ -84,8 +92,10 @@ export async function GET(request: NextRequest) {
       tokenData.expires_in
     )
 
-    // Redirect to dashboard with success message
-    return NextResponse.redirect(new URL('/dashboard?success=outlook_connected', request.url))
+    console.log('✅ Outlook tokens saved successfully for:', userEmail)
+
+    // Redirect to inbox with success message
+    return NextResponse.redirect(new URL(`/inbox?success=outlook_connected&email=${encodeURIComponent(userEmail)}`, request.url))
 
   } catch (error) {
     console.error('Outlook OAuth callback error:', error)
