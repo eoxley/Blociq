@@ -21,6 +21,7 @@ export default async function MajorWorksPage() {
       .order('created_at', { ascending: false })
 
     console.log('🔍 [MajorWorks] Fetched projects:', projects?.length || 0)
+    console.log('🔍 [MajorWorks] Projects data:', projects)
 
     if (error) {
       console.error('❌ [MajorWorks] Error fetching projects:', error)
