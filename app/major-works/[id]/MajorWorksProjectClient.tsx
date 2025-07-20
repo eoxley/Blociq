@@ -32,10 +32,36 @@ interface MajorWorksProjectClientProps {
 }
 
 export default function MajorWorksProjectClient({ project }: MajorWorksProjectClientProps) {
-  const building = project.buildings
+  console.log('🔍 [MajorWorksClient] Rendering with project:', { id: project?.id, title: project?.title });
+  
+  // Defensive checks for project data
+  if (!project) {
+    console.error('❌ [MajorWorksClient] No project data provided');
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Project Not Found</h1>
+          <p className="text-gray-600">The requested project could not be loaded.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const building = project.buildings || null;
+  const projectTitle = project.title || 'Untitled Project';
+  const projectStatus = project.status || 'unknown';
+  const projectId = project.id || 'Unknown';
+
+  console.log('🔍 [MajorWorksClient] Processed data:', { 
+    title: projectTitle, 
+    status: projectStatus, 
+    building: building ? 'present' : 'null' 
+  });
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    if (!status) return 'bg-gray-100 text-gray-800';
+    
+    switch (status.toLowerCase()) {
       case 'planning': return 'bg-blue-100 text-blue-800'
       case 'consulting': return 'bg-yellow-100 text-yellow-800'
       case 'awaiting contractor': return 'bg-orange-100 text-orange-800'
@@ -46,9 +72,23 @@ export default function MajorWorksProjectClient({ project }: MajorWorksProjectCl
   }
 
   const getStatusLabel = (status: string) => {
+    if (!status) return 'Unknown';
     return status.split('_').map(word => 
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ')
+  }
+
+  // Safe date formatting function
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'Not set';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid date';
+      return date.toLocaleDateString('en-GB');
+    } catch (error) {
+      console.error('❌ [MajorWorksClient] Date formatting error:', error, 'for date:', dateString);
+      return 'Invalid date';
+    }
   }
 
   return (
@@ -57,13 +97,13 @@ export default function MajorWorksProjectClient({ project }: MajorWorksProjectCl
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{project.title}</h1>
+            <h1 className="text-3xl font-bold text-gray-900">{projectTitle}</h1>
             <p className="text-gray-600 mt-1">
-              Project ID: {project.id}
+              Project ID: {projectId}
             </p>
           </div>
-          <Badge className={getStatusColor(project.status)}>
-            {getStatusLabel(project.status)}
+          <Badge className={getStatusColor(projectStatus)}>
+            {getStatusLabel(projectStatus)}
           </Badge>
         </div>
 
@@ -91,7 +131,7 @@ export default function MajorWorksProjectClient({ project }: MajorWorksProjectCl
             </CardHeader>
             <CardContent>
               <p className="text-lg font-semibold">
-                {project.start_date ? new Date(project.start_date).toLocaleDateString('en-GB') : 'Not set'}
+                {formatDate(project.start_date)}
               </p>
             </CardContent>
           </Card>
@@ -105,7 +145,7 @@ export default function MajorWorksProjectClient({ project }: MajorWorksProjectCl
             </CardHeader>
             <CardContent>
               <p className="text-lg font-semibold">
-                {project.estimates_date ? new Date(project.estimates_date).toLocaleDateString('en-GB') : 'Not set'}
+                {formatDate(project.estimates_date)}
               </p>
             </CardContent>
           </Card>
@@ -119,7 +159,7 @@ export default function MajorWorksProjectClient({ project }: MajorWorksProjectCl
             </CardHeader>
             <CardContent>
               <p className="text-lg font-semibold">
-                {project.completion_date ? new Date(project.completion_date).toLocaleDateString('en-GB') : 'Not set'}
+                {formatDate(project.completion_date)}
               </p>
             </CardContent>
           </Card>
@@ -135,11 +175,11 @@ export default function MajorWorksProjectClient({ project }: MajorWorksProjectCl
           </CardHeader>
           <CardContent>
             <MajorWorksTimeline 
-              startDate={project.start_date}
-              estimatesIssued={project.estimates_date}
-              constructionStart={project.construction_start_date}
-              completionDate={project.completion_date}
-              status={project.status}
+              startDate={project.start_date || null}
+              estimatesIssued={project.estimates_date || null}
+              constructionStart={project.construction_start_date || null}
+              completionDate={project.completion_date || null}
+              status={projectStatus}
             />
           </CardContent>
         </Card>
@@ -180,19 +220,19 @@ export default function MajorWorksProjectClient({ project }: MajorWorksProjectCl
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Notice of Intention:</span>
-                        <span>{project.start_date ? new Date(project.start_date).toLocaleDateString('en-GB') : 'Not set'}</span>
+                        <span>{formatDate(project.start_date)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Estimates Issued:</span>
-                        <span>{project.estimates_date ? new Date(project.estimates_date).toLocaleDateString('en-GB') : 'Not set'}</span>
+                        <span>{formatDate(project.estimates_date)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Construction Start:</span>
-                        <span>{project.construction_start_date ? new Date(project.construction_start_date).toLocaleDateString('en-GB') : 'Not set'}</span>
+                        <span>{formatDate(project.construction_start_date)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Completion:</span>
-                        <span>{project.completion_date ? new Date(project.completion_date).toLocaleDateString('en-GB') : 'Not set'}</span>
+                        <span>{formatDate(project.completion_date)}</span>
                       </div>
                     </div>
                   </div>
@@ -202,17 +242,17 @@ export default function MajorWorksProjectClient({ project }: MajorWorksProjectCl
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Current Status:</span>
-                        <Badge className={getStatusColor(project.status)}>
-                          {getStatusLabel(project.status)}
+                        <Badge className={getStatusColor(projectStatus)}>
+                          {getStatusLabel(projectStatus)}
                         </Badge>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Building:</span>
-                        <span>{building?.name}</span>
+                        <span>{building?.name || 'Unknown'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Created:</span>
-                        <span>{new Date(project.created_at).toLocaleDateString('en-GB')}</span>
+                        <span>{formatDate(project.created_at)}</span>
                       </div>
                     </div>
                   </div>
