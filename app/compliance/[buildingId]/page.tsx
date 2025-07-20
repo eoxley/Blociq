@@ -106,7 +106,7 @@ export default async function CompliancePage({ params }: { params: Promise<{ bui
           category
         )
       `)
-      .eq('building_id', parseInt(buildingId, 10))
+      .eq('building_id', buildingId)
 
     if (assetsError) {
       console.error('Compliance assets fetch error:', assetsError.message)

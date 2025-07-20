@@ -169,7 +169,7 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
                     
                     {/* Compliance Management Button */}
                     <Link
-                      href={`/buildings/${building.id}/compliance/tracker`}
+                      href={`/compliance/${building.id}`}
                       className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-3 rounded-xl transition-all duration-200 transform group-hover:scale-105 shadow-md"
                       onClick={(e) => e.stopPropagation()}
                     >

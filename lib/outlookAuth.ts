@@ -33,7 +33,7 @@ export async function getUserOutlookTokens(): Promise<OutlookToken | null> {
   }
 
   const { data: tokens, error } = await supabase
-    .from('outlook_tokens')
+    .from('outlook_tokens' as any)
     .select('*')
     .eq('user_id', session.user.id)
     .single()
@@ -46,7 +46,7 @@ export async function getUserOutlookTokens(): Promise<OutlookToken | null> {
     throw new Error(`Failed to fetch Outlook tokens: ${error.message}`)
   }
 
-  return tokens
+  return (tokens as unknown) as OutlookToken | null
 }
 
 /**
@@ -68,7 +68,7 @@ export async function saveUserOutlookTokens(
   const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString()
 
   const { error } = await supabase
-    .from('outlook_tokens')
+    .from('outlook_tokens' as any)
     .upsert({
       user_id: session.user.id,
       email,
@@ -76,7 +76,7 @@ export async function saveUserOutlookTokens(
       refresh_token: refreshToken,
       expires_at: expiresAt
     }, {
-      onConflict: 'user_id,email'
+      onConflict: 'user_id'
     })
 
   if (error) {
@@ -96,7 +96,7 @@ export async function deleteUserOutlookTokens(): Promise<void> {
   }
 
   const { error } = await supabase
-    .from('outlook_tokens')
+    .from('outlook_tokens' as any)
     .delete()
     .eq('user_id', session.user.id)
 

@@ -53,12 +53,14 @@ interface NewInboxClientProps {
   initialEmails: Email[]
   lastSyncTime: string | null
   userId: string
+  searchParams?: { success?: string; email?: string; error?: string }
 }
 
 export default function NewInboxClient({
   initialEmails,
   lastSyncTime,
   userId,
+  searchParams,
 }: NewInboxClientProps) {
   const supabase = createClientComponentClient()
   const [emails, setEmails] = useState<Email[]>(initialEmails)
@@ -235,6 +237,26 @@ export default function NewInboxClient({
     // Refresh the email list to reflect changes
     setFilter('inbox')
   }
+
+  // Handle success/error messages from URL params
+  useEffect(() => {
+    if (searchParams?.success === 'outlook_connected' && searchParams?.email) {
+      toast.success(`✅ Outlook connected as ${searchParams.email}`)
+      // Clear the URL params
+      const url = new URL(window.location.href)
+      url.searchParams.delete('success')
+      url.searchParams.delete('email')
+      window.history.replaceState({}, '', url.toString())
+    }
+    
+    if (searchParams?.error) {
+      toast.error(`❌ ${searchParams.error}`)
+      // Clear the URL params
+      const url = new URL(window.location.href)
+      url.searchParams.delete('error')
+      window.history.replaceState({}, '', url.toString())
+    }
+  }, [searchParams])
 
   return (
     <div className="h-screen flex">
