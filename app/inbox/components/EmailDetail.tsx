@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import ReplyEditor from './ReplyEditor'
 import { toast } from 'sonner'
 
 interface Email {
@@ -32,6 +33,9 @@ export default function EmailDetail({ email }: EmailDetailProps) {
   const [summary, setSummary] = useState<string | null>(null)
   const [isSummarizing, setIsSummarizing] = useState(false)
   const [isDraftingReply, setIsDraftingReply] = useState(false)
+  const [showReplyEditor, setShowReplyEditor] = useState(false)
+  const [draftReply, setDraftReply] = useState<string>('')
+  const [isSendingReply, setIsSendingReply] = useState(false)
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Unknown date'
@@ -89,25 +93,23 @@ export default function EmailDetail({ email }: EmailDetailProps) {
   const handleDraftReply = async () => {
     setIsDraftingReply(true)
     try {
-      // For now, we'll use the existing generate-reply endpoint
-      const response = await fetch('/api/generate-reply', {
+      const response = await fetch('/api/generate-email-reply', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           email_id: email.id,
-          context: 'Generate a professional reply to this email'
+          building_id: email.building_id
         }),
       })
 
       const result = await response.json()
 
-      if (response.ok && result.draft) {
-        // Open the compose modal with the generated draft
-        // This would need to be handled by the parent component
+      if (response.ok && result.success) {
+        setDraftReply(result.draft)
+        setShowReplyEditor(true)
         toast.success('Reply draft generated')
-        // You could emit an event or use a callback to open compose modal
       } else {
         toast.error(result.error || 'Failed to generate reply draft')
       }
@@ -117,6 +119,44 @@ export default function EmailDetail({ email }: EmailDetailProps) {
     } finally {
       setIsDraftingReply(false)
     }
+  }
+
+  const handleSendReply = async (content: string) => {
+    setIsSendingReply(true)
+    try {
+      const response = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          emailId: email.id,
+          draft: content,
+          buildingId: email.building_id
+        }),
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.status === 'sent') {
+        toast.success('Reply sent successfully')
+        setShowReplyEditor(false)
+        setDraftReply('')
+        // Optionally refresh the inbox or mark email as handled
+      } else {
+        toast.error(result.message || 'Failed to send reply')
+      }
+    } catch (error) {
+      console.error('Error sending reply:', error)
+      toast.error('Failed to send reply')
+    } finally {
+      setIsSendingReply(false)
+    }
+  }
+
+  const handleCancelReply = () => {
+    setShowReplyEditor(false)
+    setDraftReply('')
   }
 
   return (
@@ -207,6 +247,17 @@ export default function EmailDetail({ email }: EmailDetailProps) {
                   </div>
                 </CardContent>
               </Card>
+            )}
+
+            {/* Reply Editor */}
+            {showReplyEditor && (
+              <ReplyEditor
+                originalEmail={email}
+                draftContent={draftReply}
+                onCancel={handleCancelReply}
+                onSend={handleSendReply}
+                isSending={isSendingReply}
+              />
             )}
           </div>
 
