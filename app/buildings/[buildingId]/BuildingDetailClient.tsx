@@ -7,6 +7,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useBlocIQContext } from '@/components/BlocIQContext'
 import BuildingSetup from '@/components/building/BuildingSetup'
 import BuildingInfo from '@/components/building/BuildingInfo'
+import BuildingTodoPanel from '@/components/BuildingTodoPanel'
 
 type Building = {
   id: string
@@ -322,6 +323,9 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
           )}
         </div>
       </div>
+
+      {/* Building Todo Panel */}
+      <BuildingTodoPanel buildingId={parseInt(building.id)} />
 
       {/* Building Information */}
       <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
