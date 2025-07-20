@@ -14,6 +14,11 @@ export default async function MajorWorksPage() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     )
 
+    // Test database connection first
+    console.log('🔍 [MajorWorks] Testing database connection...')
+    console.log('🔍 [MajorWorks] Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Set' : 'Missing')
+    console.log('🔍 [MajorWorks] Supabase Key:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Set' : 'Missing')
+    
     // Fetch all major works projects
     const { data: projects, error } = await supabase
       .from('major_works')
@@ -22,6 +27,7 @@ export default async function MajorWorksPage() {
 
     console.log('🔍 [MajorWorks] Fetched projects:', projects?.length || 0)
     console.log('🔍 [MajorWorks] Projects data:', projects)
+    console.log('🔍 [MajorWorks] Error:', error)
 
     if (error) {
       console.error('❌ [MajorWorks] Error fetching projects:', error)
@@ -55,6 +61,13 @@ export default async function MajorWorksPage() {
               <div className="px-6 py-8 text-center">
                 <p className="text-gray-500 text-lg">No projects found</p>
                 <p className="text-gray-400 text-sm mt-1">Create your first major works project to get started.</p>
+                <div className="mt-4 p-4 bg-gray-100 rounded text-left">
+                  <p className="text-sm text-gray-600">Debug Info:</p>
+                  <p className="text-xs text-gray-500">Projects count: {projects?.length || 0}</p>
+                  <p className="text-xs text-gray-500">Error: {error ? 'Yes' : 'No'}</p>
+                  <p className="text-xs text-gray-500">Supabase URL: {process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Set' : 'Missing'}</p>
+                  <p className="text-xs text-gray-500">Supabase Key: {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Set' : 'Missing'}</p>
+                </div>
               </div>
             ) : (
               <div className="divide-y divide-gray-200">
