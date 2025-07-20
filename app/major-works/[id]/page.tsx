@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import MajorWorksTimeline from '@/components/MajorWorksTimeline'
+import DocumentUpload from '@/components/DocumentUpload'
 
 interface PageProps {
   params: {
@@ -165,6 +166,11 @@ export default async function MajorWorksProjectPage({ params }: PageProps) {
                 project={project}
                 logs={logs || []}
               />
+            </div>
+
+            {/* Documents */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
+              <DocumentUpload projectId={projectId} />
             </div>
           </div>
         </div>
