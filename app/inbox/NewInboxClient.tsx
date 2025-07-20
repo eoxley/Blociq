@@ -26,6 +26,7 @@ import ComposeEmailModal from './components/ComposeEmailModal'
 import FolderSidebar from './components/FolderSidebar'
 import TriageAssistant from './components/TriageAssistant'
 import { toast } from 'sonner'
+import { formatDistanceToNow } from 'date-fns'
 
 interface Email {
   id: string
@@ -123,16 +124,48 @@ export default function NewInboxClient({
   const handleSync = async () => {
     setIsSyncing(true)
     try {
+      console.log('🔄 Starting inbox sync...')
       const response = await fetch('/api/sync-inbox', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       })
+      
+      const data = await response.json()
+      console.log('📊 Sync response:', data)
+      
       if (response.ok) {
         setFilter('inbox') // Always show inbox after sync
-        toast.success('Inbox synced with Outlook')
+        setLastSync(new Date().toISOString())
+        
+        if (data.synced_count > 0) {
+          toast.success(`✅ Synced ${data.synced_count} new emails`)
+        } else if (data.total_processed > 0) {
+          toast.info(`📧 No new emails to sync (${data.total_processed} emails checked)`)
+        } else {
+          toast.info('📧 No emails found to sync')
+        }
+        
+        // Refresh the email list to show new emails
+        const { data: refreshedEmails } = await supabase
+          .from('incoming_emails')
+          .select(`
+            id, subject, from_name, from_email, received_at, body_preview, body_full, building_id, is_read, is_handled, tags, outlook_id, buildings(name)
+          `)
+          .order('received_at', { ascending: false })
+        
+        if (refreshedEmails) {
+          setEmails(refreshedEmails.map((email: any) => ({
+            ...email,
+            buildings: Array.isArray(email.buildings) ? email.buildings[0] : email.buildings
+          })))
+        }
+      } else {
+        console.error('❌ Sync failed:', data)
+        toast.error(`❌ Sync failed: ${data.message || 'Unknown error'}`)
       }
     } catch (error) {
-      toast.error('Error syncing emails')
+      console.error('❌ Sync error:', error)
+      toast.error('❌ Sync failed: Network error')
     } finally {
       setIsSyncing(false)
     }
@@ -227,6 +260,22 @@ export default function NewInboxClient({
             )}
           </div>
           <div className="flex-1" />
+          
+          {/* Sync Button */}
+          <Button
+            onClick={handleSync}
+            disabled={isSyncing}
+            variant="outline"
+            className="flex items-center gap-2 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 hover:bg-green-100"
+          >
+            {isSyncing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            {isSyncing ? 'Syncing...' : '🔄 Sync'}
+          </Button>
+          
           <Button
             onClick={startTriageMode}
             variant="outline"

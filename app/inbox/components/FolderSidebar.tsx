@@ -15,6 +15,7 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { formatDistanceToNow } from 'date-fns'
 
 interface Building {
   id: string
@@ -268,7 +269,7 @@ export default function FolderSidebar({
             <InboxIcon className="h-4 w-4 mr-2" />
             Inbox
             {folderCounts.inbox > 0 && (
-              <Badge variant="secondary" className="ml-auto text-xs">
+              <Badge variant="outline" className="ml-auto text-xs">
                 {folderCounts.inbox}
               </Badge>
             )}
@@ -282,7 +283,7 @@ export default function FolderSidebar({
             <CheckCircle className="h-4 w-4 mr-2" />
             Handled
             {folderCounts.handled > 0 && (
-              <Badge variant="secondary" className="ml-auto text-xs">
+              <Badge variant="outline" className="ml-auto text-xs">
                 {folderCounts.handled}
               </Badge>
             )}
@@ -296,7 +297,7 @@ export default function FolderSidebar({
             <Folder className="h-4 w-4 mr-2" />
             All Emails
             {folderCounts.all > 0 && (
-              <Badge variant="secondary" className="ml-auto text-xs">
+              <Badge variant="outline" className="ml-auto text-xs">
                 {folderCounts.all}
               </Badge>
             )}
@@ -321,7 +322,7 @@ export default function FolderSidebar({
                   <BuildingIcon className="h-4 w-4 mr-2" />
                   <span className="truncate">{building.name}</span>
                   {building.emailCount > 0 && (
-                    <Badge variant="secondary" className="ml-auto text-xs">
+                    <Badge variant="outline" className="ml-auto text-xs">
                       {building.emailCount}
                     </Badge>
                   )}
@@ -349,7 +350,7 @@ export default function FolderSidebar({
                   <Tag className="h-4 w-4 mr-2" />
                   <span className="truncate">{tagFolder.tag}</span>
                   {tagFolder.emailCount > 0 && (
-                    <Badge variant="secondary" className="ml-auto text-xs">
+                    <Badge variant="outline" className="ml-auto text-xs">
                       {tagFolder.emailCount}
                     </Badge>
                   )}
@@ -362,22 +363,39 @@ export default function FolderSidebar({
 
       {/* Sync Section */}
       <div className="mt-auto">
-        <Button
-          onClick={onSync}
-          disabled={isSyncing}
-          variant="outline"
-          size="sm"
-          className="w-full flex items-center gap-2"
-        >
-          {isSyncing ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <RefreshCw className="h-4 w-4" />
-          )}
-          {isSyncing ? 'Syncing...' : 'Sync Now'}
-        </Button>
-        <div className="text-xs text-gray-500 mt-2 text-center">
-          Last synced: {formatLastSync(lastSync)}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-blue-900">📧 Outlook Sync</h3>
+            {isSyncing && (
+              <div className="flex items-center gap-1 text-blue-600">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                <span className="text-xs">Syncing...</span>
+              </div>
+            )}
+          </div>
+          
+          <Button
+            onClick={onSync}
+            disabled={isSyncing}
+            variant="outline"
+            size="sm"
+            className="w-full flex items-center gap-2 bg-white hover:bg-blue-50 border-blue-300 text-blue-700"
+          >
+            {isSyncing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            {isSyncing ? 'Syncing...' : '🔄 Sync Inbox'}
+          </Button>
+          
+          <div className="text-xs text-blue-600 mt-2 text-center">
+            {lastSync ? (
+              <span>Last synced: {formatDistanceToNow(new Date(lastSync), { addSuffix: true })}</span>
+            ) : (
+              <span className="text-blue-500">Never synced</span>
+            )}
+          </div>
         </div>
       </div>
     </div>
