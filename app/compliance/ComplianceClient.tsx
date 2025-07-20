@@ -57,62 +57,95 @@ export default function ComplianceClient({ complianceAssets: initialAssets }: Co
     ))
   }
 
+  // Enhanced color coding functions
   const getRequirementBadge = (requiredIf: string) => {
-    switch (requiredIf) {
-      case 'always':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            <AlertTriangle className="h-3 w-3 mr-1" />
-            Always Required
-          </span>
-        )
-      case 'if present':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-            <Clock className="h-3 w-3 mr-1" />
-            If Present
-          </span>
-        )
-      case 'if HRB':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            <Shield className="h-3 w-3 mr-1" />
-            HRB Only
-          </span>
-        )
-      default:
-        return null
+    const config = {
+      'always': { color: 'bg-red-100 text-red-800 border-red-200', text: 'Always Required' },
+      'if present': { color: 'bg-blue-100 text-blue-800 border-blue-200', text: 'If Present' },
+      'if HRB': { color: 'bg-purple-100 text-purple-800 border-purple-200', text: 'HRB Only' }
     }
+    
+    const configItem = config[requiredIf as keyof typeof config] || config['if present']
+    
+    return (
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${configItem.color}`}>
+        {configItem.text}
+      </span>
+    )
+  }
+
+  const getCategoryColor = (category: string) => {
+    const categoryColors: Record<string, { bg: string; border: string; text: string }> = {
+      'Safety': { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700' },
+      'Fire': { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700' },
+      'Electrical': { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-700' },
+      'Gas': { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700' },
+      'Health': { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700' },
+      'Structural': { bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-700' },
+      'Insurance': { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700' },
+      'Energy': { bg: 'bg-teal-50', border: 'border-teal-200', text: 'text-teal-700' },
+      'Equipment': { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-700' }
+    }
+    
+    return categoryColors[category] || categoryColors['Structural']
   }
 
   const getFrequencyColor = (frequency: string) => {
-    if (frequency.includes('6 months')) return 'text-orange-600'
-    if (frequency.includes('1 year')) return 'text-green-600'
-    if (frequency.includes('3 years')) return 'text-blue-600'
-    if (frequency.includes('5 years')) return 'text-purple-600'
-    return 'text-gray-600'
+    const frequencyColors: Record<string, string> = {
+      '6 months': 'text-orange-600',
+      '1 year': 'text-blue-600',
+      '2 years': 'text-green-600',
+      '3 years': 'text-purple-600',
+      '5 years': 'text-indigo-600',
+      '10 years': 'text-gray-600'
+    }
+    return frequencyColors[frequency] || 'text-gray-600'
   }
 
   const getStatusBadge = (status: string) => {
-    return <span className={`px-2 py-1 text-xs rounded-md ${getStatusBadgeColor(status as any)}`}>
-      {status}
-    </span>
+    const statusConfig = {
+      'Compliant': { color: 'bg-green-100 text-green-800 border-green-200', icon: CheckCircle },
+      'Due Soon': { color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: AlertTriangle },
+      'Overdue': { color: 'bg-red-100 text-red-800 border-red-200', icon: AlertTriangle },
+      'In Progress': { color: 'bg-blue-100 text-blue-800 border-blue-200', icon: Clock },
+      'Not Started': { color: 'bg-gray-100 text-gray-800 border-gray-200', icon: Clock },
+      'Not Applicable': { color: 'bg-gray-100 text-gray-800 border-gray-200', icon: Shield }
+    }
+    
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig['Not Started']
+    const Icon = config.icon
+    
+    return (
+      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${config.color}`}>
+        <Icon className="h-3 w-3" />
+        {status}
+      </span>
+    )
   }
 
-  if (assets.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <Shield className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">No compliance assets found</h3>
-        <p className="text-gray-500">Compliance assets will appear here once configured.</p>
-      </div>
-    )
+  const getPriorityIndicator = (asset: ComplianceAsset) => {
+    const status = getComplianceStatus(asset)
+    const isHighPriority = asset.required_if === 'always' || status === 'Overdue' || status === 'Due Soon'
+    
+    if (isHighPriority) {
+      return (
+        <div className="absolute top-2 right-2">
+          <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+        </div>
+      )
+    }
+    return null
   }
 
   return (
     <div className="space-y-6">
-      {/* View Mode Toggle */}
-      <div className="flex justify-between items-center">
+      {/* Header with Dashboard */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Compliance Management</h1>
+          <p className="text-gray-600">Track and manage building compliance requirements</p>
+        </div>
+        
         <div className="flex items-center space-x-4">
           <button
             onClick={() => setViewMode('grid')}
@@ -138,6 +171,9 @@ export default function ComplianceClient({ complianceAssets: initialAssets }: Co
           </button>
         </div>
       </div>
+
+      {/* Dashboard */}
+      <ComplianceDashboard assets={assets} />
 
       {viewMode === 'grid' ? (
         <>
@@ -184,18 +220,32 @@ export default function ComplianceClient({ complianceAssets: initialAssets }: Co
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredAssets.map((asset) => {
               const status = getComplianceStatus(asset)
+              const categoryColors = getCategoryColor(asset.category)
+              const priorityIndicator = getPriorityIndicator(asset)
+              
               return (
                 <div
                   key={asset.id}
-                  className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow duration-200"
+                  className={`relative bg-white rounded-lg shadow-md border overflow-hidden hover:shadow-lg transition-all duration-200 ${categoryColors.border}`}
                 >
+                  {priorityIndicator}
+                  
+                  {/* Category Header */}
+                  <div className={`px-4 py-2 ${categoryColors.bg} border-b ${categoryColors.border}`}>
+                    <div className="flex items-center justify-between">
+                      <span className={`text-xs font-medium ${categoryColors.text}`}>
+                        {asset.category}
+                      </span>
+                      {getRequirementBadge(asset.required_if)}
+                    </div>
+                  </div>
+                  
                   <div className="p-6">
                     {/* Header */}
                     <div className="flex items-start justify-between mb-4">
                       <h3 className="text-lg font-semibold text-gray-900 leading-tight">
                         {asset.name}
                       </h3>
-                      {getRequirementBadge(asset.required_if)}
                     </div>
                     
                     {/* Description */}
@@ -218,10 +268,16 @@ export default function ComplianceClient({ complianceAssets: initialAssets }: Co
                       {asset.applies && (
                         <div className="text-xs text-gray-500 space-y-1">
                           {asset.last_checked && (
-                            <div>Last checked: {new Date(asset.last_checked).toLocaleDateString()}</div>
+                            <div className="flex items-center gap-1">
+                              <CheckCircle className="h-3 w-3 text-green-500" />
+                              Last checked: {new Date(asset.last_checked).toLocaleDateString()}
+                            </div>
                           )}
                           {asset.next_due && (
-                            <div>Next due: {new Date(asset.next_due).toLocaleDateString()}</div>
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3 text-blue-500" />
+                              Next due: {new Date(asset.next_due).toLocaleDateString()}
+                            </div>
                           )}
                         </div>
                       )}
@@ -234,7 +290,11 @@ export default function ComplianceClient({ complianceAssets: initialAssets }: Co
                           toggleAsset(asset.id)
                           setViewMode('setup')
                         }}
-                        className="w-full px-3 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700 transition-colors"
+                        className={`w-full px-3 py-2 text-sm rounded-md transition-colors ${
+                          asset.applies 
+                            ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                            : 'bg-teal-600 text-white hover:bg-teal-700'
+                        }`}
                       >
                         {asset.applies ? 'Update Tracking' : 'Start Tracking'}
                       </button>
@@ -267,47 +327,62 @@ export default function ComplianceClient({ complianceAssets: initialAssets }: Co
         <div className="space-y-6">
           <h2 className="text-xl font-semibold">Building Compliance Setup</h2>
 
-          {assets.map((asset) => (
-            <div key={asset.id} className="flex items-start justify-between py-2 border-b gap-4">
-              <div>
-                <p className="font-medium">{asset.name}</p>
-                <p className="text-sm text-gray-500">{asset.description}</p>
-                <p className="text-xs text-gray-400 mt-1">Frequency: {asset.default_frequency}</p>
-                {getRequirementBadge(asset.required_if)}
-              </div>
+          {assets.map((asset) => {
+            const categoryColors = getCategoryColor(asset.category)
+            const status = getComplianceStatus(asset)
+            
+            return (
+              <div key={asset.id} className={`flex items-start justify-between py-4 px-4 rounded-lg border ${categoryColors.border} ${categoryColors.bg}`}>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <p className="font-medium text-gray-900">{asset.name}</p>
+                    {getRequirementBadge(asset.required_if)}
+                    {getStatusBadge(status)}
+                  </div>
+                  <p className="text-sm text-gray-600 mb-2">{asset.description}</p>
+                  <div className="flex items-center gap-4 text-xs text-gray-500">
+                    <span className={`font-medium ${getFrequencyColor(asset.default_frequency)}`}>
+                      Frequency: {asset.default_frequency}
+                    </span>
+                    <span className={`font-medium ${categoryColors.text}`}>
+                      Category: {asset.category}
+                    </span>
+                  </div>
+                </div>
 
-              <div className="flex flex-col items-end gap-1">
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={asset.applies}
-                    onChange={() => toggleAsset(asset.id)}
-                    className="accent-teal-600"
-                  />
-                  Applies
-                </label>
+                <div className="flex flex-col items-end gap-2">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={asset.applies}
+                      onChange={() => toggleAsset(asset.id)}
+                      className="accent-teal-600"
+                    />
+                    Applies
+                  </label>
 
-                {asset.applies && (
-                  <>
-                    <input
-                      type="date"
-                      value={asset.last_checked || ''}
-                      onChange={(e) => updateLastChecked(asset.id, e.target.value)}
-                      className="text-xs border px-2 py-1 rounded"
-                      placeholder="Last checked"
-                    />
-                    <input
-                      type="date"
-                      value={asset.next_due || ''}
-                      onChange={(e) => updateNextDue(asset.id, e.target.value)}
-                      className="text-xs border px-2 py-1 rounded"
-                      placeholder="Next due"
-                    />
-                  </>
-                )}
+                  {asset.applies && (
+                    <div className="flex flex-col gap-2">
+                      <input
+                        type="date"
+                        value={asset.last_checked || ''}
+                        onChange={(e) => updateLastChecked(asset.id, e.target.value)}
+                        className="text-xs border px-2 py-1 rounded bg-white"
+                        placeholder="Last checked"
+                      />
+                      <input
+                        type="date"
+                        value={asset.next_due || ''}
+                        onChange={(e) => updateNextDue(asset.id, e.target.value)}
+                        className="text-xs border px-2 py-1 rounded bg-white"
+                        placeholder="Next due"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
