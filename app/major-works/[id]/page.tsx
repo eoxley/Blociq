@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import MajorWorksTimeline from '@/components/MajorWorksTimeline'
 
 interface PageProps {
   params: {
@@ -61,7 +62,15 @@ export default async function MajorWorksProjectPage({ params }: PageProps) {
       )
     }
 
-          console.log('✅ [MajorWorks] Project loaded successfully:', { id: project.id, title: project.title })
+    // Fetch logs for this project
+    const { data: logs, error: logsError } = await supabase
+      .from('major_works_logs')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('timestamp', { ascending: false })
+
+    console.log('🔍 [MajorWorks] Project logs:', logs?.length || 0)
+    console.log('✅ [MajorWorks] Project loaded successfully:', { id: project.id, title: project.title })
 
       return (
         <div className="container mx-auto px-4 py-8">
@@ -148,6 +157,14 @@ export default async function MajorWorksProjectPage({ params }: PageProps) {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Timeline & Observations */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
+              <MajorWorksTimeline 
+                project={project}
+                logs={logs || []}
+              />
             </div>
           </div>
         </div>
