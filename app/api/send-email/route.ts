@@ -1,141 +1,94 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
-import { Database } from '@/lib/database.types';
+import { NextRequest, NextResponse } from 'next/server'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+import { makeGraphRequest, hasOutlookConnection } from '@/lib/outlookAuth'
 
 export async function POST(req: NextRequest) {
-  const supabase = createRouteHandlerClient<Database>({ cookies: () => cookies() });
-  const { emailId, draft, buildingId } = await req.json();
-
+  const supabase = createRouteHandlerClient({ cookies: () => cookies() })
+  
   // Get the current user's session
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession()
   
   if (sessionError || !session) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
   }
 
-  // Step 1: Get the original email
-  const { data: email, error: fetchError } = await supabase
-    .from('incoming_emails')
-    .select('*')
-    .eq('id', emailId)
-    .single();
-
-  if (fetchError || !email) {
-    console.error('Email not found:', fetchError?.message);
-    return NextResponse.json({ error: 'Email not found' }, { status: 404 });
-  }
-
-  // Step 2: Send email via Outlook API
-  let outlookMessageId = null;
-  let sendSuccess = false;
-  
   try {
-    // Get Outlook access token from cookies
-    const cookieStore = await cookies();
-    const accessToken = cookieStore.get('outlook_access_token')?.value;
-
-    if (accessToken) {
-      // Send email via Microsoft Graph API
-      const sendResponse = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: {
-            subject: `RE: ${email.subject}`,
-            body: {
-              contentType: 'HTML',
-              content: draft,
-            },
-            toRecipients: [
-              {
-                emailAddress: {
-                  address: email.from_email,
-                },
-              },
-            ],
-          },
-        }),
-      });
-
-      if (sendResponse.ok) {
-        sendSuccess = true;
-        // Get the message ID from the response headers or create a unique one
-        outlookMessageId = `outlook_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
-        console.log('✅ Email sent successfully via Outlook API');
-      } else {
-        console.error('❌ Failed to send email via Outlook API:', await sendResponse.text());
-      }
-    } else {
-      console.log('⚠️ No Outlook access token found, using placeholder send');
-      sendSuccess = true; // For development/testing
+    // Check if user has connected Outlook
+    const hasConnection = await hasOutlookConnection()
+    if (!hasConnection) {
+      return NextResponse.json({ 
+        error: 'Outlook not connected', 
+        message: 'Please connect your Outlook account first' 
+      }, { status: 400 })
     }
-  } catch (error) {
-    console.error('❌ Error sending email:', error);
-    // Continue with logging even if send fails
-  }
 
-  // Step 3: Log the sent email to sent_emails table
-  let logId = null;
-  try {
-    const { data: sentEmailLog, error: logError } = await supabase
-      .from('sent_emails')
+    const { to, subject, body, cc, bcc, replyTo } = await req.json()
+
+    if (!to || !subject || !body) {
+      return NextResponse.json({ 
+        error: 'Missing required fields', 
+        message: 'To, subject, and body are required' 
+      }, { status: 400 })
+    }
+
+    // Prepare email data for Microsoft Graph API
+    const emailData = {
+      message: {
+        subject,
+        body: {
+          contentType: 'HTML',
+          content: body
+        },
+        toRecipients: Array.isArray(to) ? to.map(email => ({ emailAddress: { address: email } })) : [{ emailAddress: { address: to } }],
+        ...(cc && { ccRecipients: Array.isArray(cc) ? cc.map(email => ({ emailAddress: { address: email } })) : [{ emailAddress: { address: cc } }] }),
+        ...(bcc && { bccRecipients: Array.isArray(bcc) ? bcc.map(email => ({ emailAddress: { address: email } })) : [{ emailAddress: { address: bcc } }] }),
+        ...(replyTo && { replyTo: [{ emailAddress: { address: replyTo } }] })
+      },
+      saveToSentItems: true
+    }
+
+    // Send email via Microsoft Graph API
+    const response = await makeGraphRequest('/me/sendMail', {
+      method: 'POST',
+      body: JSON.stringify(emailData)
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Send email error:', errorText)
+      throw new Error(`Failed to send email: ${response.statusText}`)
+    }
+
+    // Log the sent email to database
+    const { error: logError } = await supabase
+      .from('outgoing_emails')
       .insert({
+        to_emails: Array.isArray(to) ? to : [to],
+        cc_emails: cc ? (Array.isArray(cc) ? cc : [cc]) : [],
+        bcc_emails: bcc ? (Array.isArray(bcc) ? bcc : [bcc]) : [],
+        subject,
+        body,
+        reply_to: replyTo,
         user_id: session.user.id,
-        to_email: email.from_email,
-        subject: `RE: ${email.subject}`,
-        body: draft,
-        building_id: buildingId || null,
-        outlook_id: outlookMessageId,
-        related_incoming_email: emailId,
         sent_at: new Date().toISOString()
       })
-      .select('id')
-      .single();
 
     if (logError) {
-      console.error('❌ Error logging sent email:', logError);
-    } else {
-      logId = sentEmailLog?.id;
-      console.log('✅ Sent email logged successfully:', logId);
+      console.error('Error logging sent email:', logError)
+      // Don't fail the request if logging fails
     }
-  } catch (logError) {
-    console.error('❌ Error logging sent email:', logError);
-    // Don't fail the entire request if logging fails
-  }
 
-  // Step 4: Mark original email as handled
-  try {
-    await supabase
-      .from('incoming_emails')
-      .update({ 
-        is_handled: true,
-        handled_at: new Date().toISOString()
-      })
-      .eq('id', emailId);
-    
-    console.log('✅ Email marked as handled');
-  } catch (handleError) {
-    console.error('❌ Error marking email as handled:', handleError);
-  }
+    return NextResponse.json({
+      success: true,
+      message: 'Email sent successfully'
+    })
 
-  // Step 5: Log to email history (existing functionality)
-  try {
-    await supabase.from('email_history').insert({
-      email_id: emailId,
-      sent_text: draft,
-    });
-  } catch (historyError) {
-    console.error('❌ Error logging to email history:', historyError);
+  } catch (error) {
+    console.error('Send email error:', error)
+    return NextResponse.json({ 
+      error: 'Failed to send email',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
-
-  return NextResponse.json({ 
-    status: sendSuccess ? "sent" : "failed",
-    log_id: logId,
-    message: sendSuccess ? "Email sent successfully" : "Failed to send email",
-    outlook_message_id: outlookMessageId
-  });
 }

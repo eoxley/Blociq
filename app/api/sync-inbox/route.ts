@@ -1,111 +1,135 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
-import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+import { makeGraphRequest, hasOutlookConnection } from '@/lib/outlookAuth'
 
 export async function POST(req: NextRequest) {
+  const supabase = createRouteHandlerClient({ cookies: () => cookies() })
+  
+  // Get the current user's session
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+  
+  if (sessionError || !session) {
+    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+  }
+
   try {
-    const supabase = createClient(cookies());
-    
-    // Get the current user's session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError || !session) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-    }
-
-    // Get Outlook access token from cookies
-    const cookieStore = await cookies();
-    const accessToken = cookieStore.get('outlook_access_token')?.value;
-
-    if (!accessToken) {
+    // Check if user has connected Outlook
+    const hasConnection = await hasOutlookConnection()
+    if (!hasConnection) {
       return NextResponse.json({ 
-        error: 'Outlook not connected. Please connect your Outlook account first.' 
-      }, { status: 400 });
+        error: 'Outlook not connected', 
+        message: 'Please connect your Outlook account first' 
+      }, { status: 400 })
     }
 
-    // Fetch recent emails from Microsoft Graph API
-    const response = await fetch('https://graph.microsoft.com/v1.0/me/messages?$top=50&$orderby=receivedDateTime desc', {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    // Get emails from Microsoft Graph API
+    const response = await makeGraphRequest('/me/messages?$top=50&$orderby=receivedDateTime desc&$select=id,subject,bodyPreview,receivedDateTime,from,toRecipients,isRead,hasAttachments,importance,conversationId')
 
     if (!response.ok) {
-      console.error('Failed to fetch emails from Outlook:', await response.text());
-      return NextResponse.json({ 
-        error: 'Failed to fetch emails from Outlook' 
-      }, { status: 500 });
+      const errorText = await response.text()
+      console.error('Graph API error:', errorText)
+      throw new Error(`Failed to fetch emails: ${response.statusText}`)
     }
 
-    const outlookData = await response.json();
-    const outlookEmails = outlookData.value || [];
+    const data = await response.json()
+    const emails = data.value || []
 
-    let syncedCount = 0;
-    let skippedCount = 0;
+    // Process and save emails to database
+    const savedEmails = []
+    const errors = []
 
-    // Process each email
-    for (const outlookEmail of outlookEmails) {
+    for (const email of emails) {
       try {
         // Check if email already exists
         const { data: existingEmail } = await supabase
           .from('incoming_emails')
           .select('id')
-          .eq('outlook_id', outlookEmail.id)
-          .single();
+          .eq('microsoft_id', email.id)
+          .single()
 
         if (existingEmail) {
-          skippedCount++;
-          continue; // Skip if already exists
+          // Email already exists, skip
+          continue
         }
 
-        // Extract email content
-        const emailBody = outlookEmail.body?.content || '';
-        const bodyPreview = emailBody.length > 200 
-          ? emailBody.substring(0, 200) + '...' 
-          : emailBody;
+        // Extract email addresses
+        const fromEmail = email.from?.emailAddress?.address || ''
+        const toEmails = email.toRecipients?.map((recipient: any) => recipient.emailAddress?.address).filter(Boolean) || []
 
-        // Insert new email
-        const { error: insertError } = await supabase
+        // Save email to database
+        const { data: savedEmail, error: saveError } = await supabase
           .from('incoming_emails')
           .insert({
-            subject: outlookEmail.subject || 'No Subject',
-            from_name: outlookEmail.from?.emailAddress?.name || null,
-            from_email: outlookEmail.from?.emailAddress?.address || null,
-            received_at: outlookEmail.receivedDateTime,
-            body_preview: bodyPreview,
-            body_full: emailBody,
-            outlook_id: outlookEmail.id,
-            is_read: outlookEmail.isRead || false,
-            is_handled: false,
-            user_id: session.user.id,
-            tags: [], // Will be populated by AI later
-          });
+            microsoft_id: email.id,
+            subject: email.subject || 'No Subject',
+            body_preview: email.bodyPreview || '',
+            received_date: email.receivedDateTime,
+            from_email: fromEmail,
+            to_emails: toEmails,
+            is_read: email.isRead || false,
+            has_attachments: email.hasAttachments || false,
+            importance: email.importance || 'normal',
+            conversation_id: email.conversationId,
+            user_id: session.user.id
+          })
+          .select()
+          .single()
 
-        if (insertError) {
-          console.error('Error inserting email:', insertError);
-          continue;
+        if (saveError) {
+          console.error('Error saving email:', saveError)
+          errors.push({ emailId: email.id, error: saveError.message })
+        } else {
+          savedEmails.push(savedEmail)
         }
 
-        syncedCount++;
       } catch (error) {
-        console.error('Error processing email:', error);
-        continue;
+        console.error('Error processing email:', error)
+        errors.push({ emailId: email.id, error: error instanceof Error ? error.message : 'Unknown error' })
       }
     }
 
     return NextResponse.json({
       success: true,
-      synced: syncedCount,
-      skipped: skippedCount,
-      total: outlookEmails.length,
-      message: `Synced ${syncedCount} new emails, skipped ${skippedCount} existing emails`
-    });
+      message: `Synced ${savedEmails.length} new emails`,
+      synced_count: savedEmails.length,
+      total_processed: emails.length,
+      errors: errors.length > 0 ? errors : undefined
+    })
 
   } catch (error) {
-    console.error('Error syncing inbox:', error);
+    console.error('Sync inbox error:', error)
     return NextResponse.json({ 
-      error: 'Internal server error during sync' 
-    }, { status: 500 });
+      error: 'Failed to sync inbox',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
+  }
+}
+
+export async function GET(req: NextRequest) {
+  const supabase = createRouteHandlerClient({ cookies: () => cookies() })
+  
+  // Get the current user's session
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+  
+  if (sessionError || !session) {
+    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+  }
+
+  try {
+    // Check if user has connected Outlook
+    const hasConnection = await hasOutlookConnection()
+    
+    return NextResponse.json({
+      connected: hasConnection,
+      message: hasConnection ? 'Outlook is connected' : 'Outlook is not connected'
+    })
+
+  } catch (error) {
+    console.error('Check connection error:', error)
+    return NextResponse.json({ 
+      error: 'Failed to check connection',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 } 
