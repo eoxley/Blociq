@@ -1,5 +1,9 @@
 {
-<<<<<<< HEAD
+  "version": 2,
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
   "crons": [
     {
       "path": "/api/cron/sync-inbox",
@@ -9,22 +13,9 @@
   "functions": {
     "app/api/cron/sync-inbox/route.ts": {
       "maxDuration": 60
-=======
-  "version": 2,
-  "buildCommand": "npm run build",
-  "devCommand": "npm run dev",
-  "installCommand": "npm install",
-  "framework": "nextjs",
-  "git": {
-    "deploymentEnabled": {
-      "main": true,
-      "feature/deploy-mvp": true
-    }
-  },
-  "functions": {
+    },
     "app/api/**/*.ts": {
       "maxDuration": 30
->>>>>>> locked-ui-baseline
     }
   }
 } 
