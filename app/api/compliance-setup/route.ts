@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Check for existing records to avoid duplicates
+    // Check for existing records to prevent duplicates
     const { data: existingRecords, error: checkError } = await supabase
       .from('building_compliance_assets')
       .select('building_id, asset_id')
@@ -47,15 +47,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to check existing records' }, { status: 500 });
     }
 
-    // Filter out existing combinations
+    // Create a set of existing combinations for efficient lookup
     const existingCombinations = new Set();
     existingRecords?.forEach(record => {
       existingCombinations.add(`${record.building_id}-${record.asset_id}`);
     });
 
+    // Filter out existing combinations
     const newRecords = insertData.filter(record => {
       const combination = `${record.building_id}-${record.asset_id}`;
       return !existingCombinations.has(combination);
+    });
+
+    // Track which buildings and assets were skipped
+    const skippedBuildings = new Set();
+    const skippedAssets = new Set();
+    insertData.forEach(record => {
+      const combination = `${record.building_id}-${record.asset_id}`;
+      if (existingCombinations.has(combination)) {
+        skippedBuildings.add(record.building_id);
+        skippedAssets.add(record.asset_id);
+      }
     });
 
     if (newRecords.length === 0) {
@@ -63,7 +75,10 @@ export async function POST(req: NextRequest) {
         success: true,
         message: 'All compliance assets already exist for the selected buildings',
         inserted: 0,
-        skipped: insertData.length
+        skipped: insertData.length,
+        skippedBuildings: Array.from(skippedBuildings),
+        skippedAssets: Array.from(skippedAssets),
+        total: insertData.length
       });
     }
 
@@ -83,7 +98,15 @@ export async function POST(req: NextRequest) {
       message: `Successfully set up compliance for ${buildingIds.length} buildings with ${assetIds.length} assets`,
       inserted: insertedRecords?.length || 0,
       skipped: insertData.length - (insertedRecords?.length || 0),
-      total: insertData.length
+      skippedBuildings: Array.from(skippedBuildings),
+      skippedAssets: Array.from(skippedAssets),
+      total: insertData.length,
+      details: {
+        buildingsProcessed: buildingIds.length,
+        assetsProcessed: assetIds.length,
+        newCombinations: insertedRecords?.length || 0,
+        existingCombinations: insertData.length - (insertedRecords?.length || 0)
+      }
     });
 
   } catch (error) {

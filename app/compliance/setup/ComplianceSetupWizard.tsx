@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { useRouter } from 'next/navigation'
 import { 
   Building2, 
   Shield, 
@@ -13,7 +14,9 @@ import {
   AlertTriangle,
   Loader2,
   Check,
-  X
+  X,
+  BarChart3,
+  Eye
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,6 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 
 interface Building {
@@ -51,6 +55,7 @@ export default function ComplianceSetupWizard({
   buildingsWithCompliance 
 }: ComplianceSetupWizardProps) {
   const supabase = createClientComponentClient()
+  const router = useRouter()
   const [currentStep, setCurrentStep] = useState<Step>('buildings')
   const [selectedBuildings, setSelectedBuildings] = useState<string[]>([])
   const [selectedAssets, setSelectedAssets] = useState<string[]>([])
@@ -58,6 +63,7 @@ export default function ComplianceSetupWizard({
   const [assetSearchTerm, setAssetSearchTerm] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submittedCount, setSubmittedCount] = useState(0)
+  const [setupResult, setSetupResult] = useState<any>(null)
 
   // Group compliance assets by category
   const assetsByCategory = complianceAssets.reduce((acc, asset) => {
@@ -185,15 +191,8 @@ export default function ComplianceSetupWizard({
 
       if (response.ok && result.success) {
         setSubmittedCount(result.inserted)
+        setSetupResult(result)
         toast.success(result.message)
-        
-        // Reset form after successful submission
-        setTimeout(() => {
-          setSelectedBuildings([])
-          setSelectedAssets([])
-          setCurrentStep('buildings')
-          setSubmittedCount(0)
-        }, 3000)
       } else {
         toast.error(result.error || 'Failed to set up compliance. Please try again.')
       }
@@ -204,6 +203,23 @@ export default function ComplianceSetupWizard({
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  // Navigation functions
+  const goToComplianceDashboard = () => {
+    router.push('/compliance')
+  }
+
+  const goToBuildingCompliance = (buildingId: string) => {
+    router.push(`/buildings/${buildingId}/compliance`)
+  }
+
+  const resetWizard = () => {
+    setSelectedBuildings([])
+    setSelectedAssets([])
+    setCurrentStep('buildings')
+    setSubmittedCount(0)
+    setSetupResult(null)
   }
 
   // Get step progress
@@ -224,29 +240,111 @@ export default function ComplianceSetupWizard({
   const getStepTitle = () => {
     switch (currentStep) {
       case 'buildings':
-        return 'Select Buildings'
+        return 'Step 1: Select Buildings'
       case 'assets':
-        return 'Select Compliance Assets'
+        return 'Step 2: Select Compliance Assets'
       case 'confirm':
-        return 'Confirm Setup'
+        return 'Step 3: Confirm Setup'
       default:
         return ''
     }
   }
 
-  // Success state
+  // Success state with navigation options
   if (submittedCount > 0) {
     return (
-      <div className="text-center py-12">
-        <div className="bg-green-50 border border-green-200 rounded-lg p-8 max-w-md mx-auto">
-          <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Setup Complete!</h2>
-          <p className="text-gray-600 mb-4">
-            Successfully configured compliance tracking for {selectedBuildings.length} buildings with {selectedAssets.length} assets.
-          </p>
-          <p className="text-sm text-gray-500">
-            Redirecting to compliance dashboard...
-          </p>
+      <div className="space-y-6">
+        <div className="text-center py-8">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-8 max-w-2xl mx-auto">
+            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Setup Complete!</h2>
+            <p className="text-gray-600 mb-6">
+              Successfully configured compliance tracking for {selectedBuildings.length} buildings with {selectedAssets.length} assets.
+            </p>
+            
+            {/* Setup Summary */}
+            {setupResult && (
+              <div className="bg-white rounded-lg p-4 mb-6 border border-green-200">
+                <h3 className="font-medium text-gray-900 mb-3">Setup Summary</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">New records created:</span>
+                    <span className="font-medium ml-2 text-green-600">{setupResult.inserted}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Existing records skipped:</span>
+                    <span className="font-medium ml-2 text-gray-600">{setupResult.skipped}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Buildings processed:</span>
+                    <span className="font-medium ml-2">{setupResult.details?.buildingsProcessed}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Assets processed:</span>
+                    <span className="font-medium ml-2">{setupResult.details?.assetsProcessed}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Navigation Options */}
+            <div className="space-y-3">
+              <Button
+                onClick={goToComplianceDashboard}
+                className="w-full bg-teal-600 hover:bg-teal-700"
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Go to Compliance Dashboard
+              </Button>
+              
+              {selectedBuildings.length === 1 && (
+                <Button
+                  variant="outline"
+                  onClick={() => goToBuildingCompliance(selectedBuildings[0])}
+                  className="w-full"
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  View Compliance Tracker for {buildings.find(b => b.id === selectedBuildings[0])?.name}
+                </Button>
+              )}
+              
+              {selectedBuildings.length > 1 && (
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600">View compliance tracker for individual buildings:</p>
+                  <div className="grid grid-cols-1 gap-2">
+                    {selectedBuildings.slice(0, 3).map(buildingId => {
+                      const building = buildings.find(b => b.id === buildingId)
+                      return (
+                        <Button
+                          key={buildingId}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => goToBuildingCompliance(buildingId)}
+                          className="justify-start"
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          {building?.name}
+                        </Button>
+                      )
+                    })}
+                    {selectedBuildings.length > 3 && (
+                      <p className="text-xs text-gray-500">
+                        ... and {selectedBuildings.length - 3} more buildings
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              <Button
+                variant="ghost"
+                onClick={resetWizard}
+                className="w-full mt-4"
+              >
+                Set Up More Buildings
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -270,307 +368,327 @@ export default function ComplianceSetupWizard({
         </p>
       </div>
 
-      {/* Step 1: Building Selection */}
-      {currentStep === 'buildings' && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
-              Select Buildings
-            </CardTitle>
-            <p className="text-gray-600">
-              Choose which buildings should have compliance tracking set up. You can select multiple buildings.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search buildings by name or address..."
-                value={buildingSearchTerm}
-                onChange={(e) => setBuildingSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+      {/* Main Content with Tabs */}
+      <Tabs value={currentStep} className="w-full">
+        <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsTrigger value="buildings" disabled={currentStep !== 'buildings'}>
+            <Building2 className="h-4 w-4 mr-2" />
+            Buildings
+          </TabsTrigger>
+          <TabsTrigger value="assets" disabled={currentStep !== 'assets'}>
+            <Shield className="h-4 w-4 mr-2" />
+            Assets
+          </TabsTrigger>
+          <TabsTrigger value="confirm" disabled={currentStep !== 'confirm'}>
+            <CheckCircle className="h-4 w-4 mr-2" />
+            Confirm
+          </TabsTrigger>
+        </TabsList>
 
-            {/* Select All/Deselect All */}
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={selectAllBuildings}
-                disabled={filteredBuildings.length === 0}
-              >
-                Select All ({filteredBuildings.length})
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={deselectAllBuildings}
-                disabled={selectedBuildings.length === 0}
-              >
-                Deselect All
-              </Button>
-            </div>
+        {/* Step 1: Building Selection */}
+        <TabsContent value="buildings" className="space-y-0">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                Select Buildings
+              </CardTitle>
+              <p className="text-gray-600">
+                Choose which buildings should have compliance tracking set up. You can select multiple buildings.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search buildings by name or address..."
+                  value={buildingSearchTerm}
+                  onChange={(e) => setBuildingSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
 
-            {/* Buildings List */}
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {filteredBuildings.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Building2 className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-                  <p>No buildings found matching your search.</p>
-                </div>
-              ) : (
-                filteredBuildings.map((building) => {
-                  const isSelected = selectedBuildings.includes(building.id)
-                  const hasExistingCompliance = buildingsWithCompliance.includes(building.id)
-                  
-                  return (
-                    <div
-                      key={building.id}
-                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                        isSelected 
-                          ? 'bg-teal-50 border-teal-200' 
-                          : 'bg-white border-gray-200 hover:bg-gray-50'
-                      }`}
-                      onClick={() => toggleBuilding(building.id)}
-                    >
-                      <Checkbox
-                        checked={isSelected}
-                        onChange={() => toggleBuilding(building.id)}
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{building.name}</span>
-                          {hasExistingCompliance && (
-                            <Badge variant="outline" className="text-xs">
-                              Has Compliance
-                            </Badge>
+              {/* Select All/Deselect All */}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={selectAllBuildings}
+                  disabled={filteredBuildings.length === 0}
+                >
+                  Select All ({filteredBuildings.length})
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={deselectAllBuildings}
+                  disabled={selectedBuildings.length === 0}
+                >
+                  Deselect All
+                </Button>
+              </div>
+
+              {/* Buildings List */}
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {filteredBuildings.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Building2 className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                    <p>No buildings found matching your search.</p>
+                  </div>
+                ) : (
+                  filteredBuildings.map((building) => {
+                    const isSelected = selectedBuildings.includes(building.id)
+                    const hasExistingCompliance = buildingsWithCompliance.includes(building.id)
+                    
+                    return (
+                      <div
+                        key={building.id}
+                        className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                          isSelected 
+                            ? 'bg-teal-50 border-teal-200' 
+                            : 'bg-white border-gray-200 hover:bg-gray-50'
+                        }`}
+                        onClick={() => toggleBuilding(building.id)}
+                      >
+                        <Checkbox
+                          id={`building-${building.id}`}
+                          checked={isSelected}
+                          onCheckedChange={() => toggleBuilding(building.id)}
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{building.name}</span>
+                            {hasExistingCompliance && (
+                              <Badge variant="outline" className="text-xs">
+                                Has Compliance
+                              </Badge>
+                            )}
+                          </div>
+                          {building.address && (
+                            <p className="text-sm text-gray-500">{building.address}</p>
+                          )}
+                          {building.unit_count && (
+                            <p className="text-xs text-gray-400">{building.unit_count} units</p>
                           )}
                         </div>
-                        {building.address && (
-                          <p className="text-sm text-gray-500">{building.address}</p>
-                        )}
-                        {building.unit_count && (
-                          <p className="text-xs text-gray-400">{building.unit_count} units</p>
-                        )}
                       </div>
-                    </div>
-                  )
-                })
-              )}
-            </div>
-
-            {selectedBuildings.length > 0 && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-sm text-blue-800">
-                  <strong>{selectedBuildings.length}</strong> building{selectedBuildings.length !== 1 ? 's' : ''} selected
-                </p>
+                    )
+                  })
+                )}
               </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Step 2: Asset Selection */}
-      {currentStep === 'assets' && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Select Compliance Assets
-            </CardTitle>
-            <p className="text-gray-600">
-              Choose which compliance requirements should apply to the selected buildings.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search assets by name, description, or category..."
-                value={assetSearchTerm}
-                onChange={(e) => setAssetSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
-            {/* Select All/Deselect All */}
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={selectAllAssets}
-                disabled={Object.keys(filteredAssetsByCategory).length === 0}
-              >
-                Select All
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={deselectAllAssets}
-                disabled={selectedAssets.length === 0}
-              >
-                Deselect All
-              </Button>
-            </div>
-
-            {/* Assets by Category */}
-            <div className="space-y-6 max-h-96 overflow-y-auto">
-              {Object.keys(filteredAssetsByCategory).length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Shield className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-                  <p>No compliance assets found matching your search.</p>
+              {selectedBuildings.length > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-800">
+                    <strong>{selectedBuildings.length}</strong> building{selectedBuildings.length !== 1 ? 's' : ''} selected
+                  </p>
                 </div>
-              ) : (
-                Object.entries(filteredAssetsByCategory).map(([category, assets]) => (
-                  <div key={category} className="space-y-3">
-                    <h3 className="font-medium text-gray-900 border-b pb-2">{category}</h3>
-                    <div className="space-y-2">
-                      {assets.map((asset) => {
-                        const isSelected = selectedAssets.includes(asset.id)
-                        
-                        return (
-                          <div
-                            key={asset.id}
-                            className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                              isSelected 
-                                ? 'bg-teal-50 border-teal-200' 
-                                : 'bg-white border-gray-200 hover:bg-gray-50'
-                            }`}
-                            onClick={() => toggleAsset(asset.id)}
-                          >
-                            <Checkbox
-                              checked={isSelected}
-                              onChange={() => toggleAsset(asset.id)}
-                            />
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">{asset.name}</span>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Step 2: Asset Selection */}
+        <TabsContent value="assets" className="space-y-0">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Select Compliance Assets
+              </CardTitle>
+              <p className="text-gray-600">
+                Choose which compliance requirements should apply to the selected buildings.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search assets by name, description, or category..."
+                  value={assetSearchTerm}
+                  onChange={(e) => setAssetSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+
+              {/* Select All/Deselect All */}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={selectAllAssets}
+                  disabled={Object.keys(filteredAssetsByCategory).length === 0}
+                >
+                  Select All
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={deselectAllAssets}
+                  disabled={selectedAssets.length === 0}
+                >
+                  Deselect All
+                </Button>
+              </div>
+
+              {/* Assets by Category */}
+              <div className="space-y-6 max-h-96 overflow-y-auto">
+                {Object.keys(filteredAssetsByCategory).length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Shield className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                    <p>No compliance assets found matching your search.</p>
+                  </div>
+                ) : (
+                  Object.entries(filteredAssetsByCategory).map(([category, assets]) => (
+                    <div key={category} className="space-y-3">
+                      <h3 className="font-medium text-gray-900 border-b pb-2">{category}</h3>
+                      <div className="space-y-2">
+                        {assets.map((asset) => {
+                          const isSelected = selectedAssets.includes(asset.id)
+                          
+                          return (
+                            <div
+                              key={asset.id}
+                              className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                                isSelected 
+                                  ? 'bg-teal-50 border-teal-200' 
+                                  : 'bg-white border-gray-200 hover:bg-gray-50'
+                              }`}
+                              onClick={() => toggleAsset(asset.id)}
+                            >
+                              <Checkbox
+                                id={`asset-${asset.id}`}
+                                checked={isSelected}
+                                onCheckedChange={() => toggleAsset(asset.id)}
+                              />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{asset.name}</span>
+                                  {asset.description && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger>
+                                          <Info className="h-4 w-4 text-gray-400" />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p className="max-w-xs">{asset.description}</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
+                                </div>
                                 {asset.description && (
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger>
-                                        <Info className="h-4 w-4 text-gray-400" />
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p className="max-w-xs">{asset.description}</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
+                                  <p className="text-sm text-gray-600 mt-1">{asset.description}</p>
                                 )}
                               </div>
-                              {asset.description && (
-                                <p className="text-sm text-gray-600 mt-1">{asset.description}</p>
-                              )}
                             </div>
-                          </div>
-                        )
-                      })}
+                          )
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))
+                  ))
+                )}
+              </div>
+
+              {selectedAssets.length > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-800">
+                    <strong>{selectedAssets.length}</strong> compliance asset{selectedAssets.length !== 1 ? 's' : ''} selected
+                  </p>
+                </div>
               )}
-            </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-            {selectedAssets.length > 0 && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-sm text-blue-800">
-                  <strong>{selectedAssets.length}</strong> compliance asset{selectedAssets.length !== 1 ? 's' : ''} selected
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Step 3: Confirm */}
-      {currentStep === 'confirm' && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5" />
-              Confirm Setup
-            </CardTitle>
-            <p className="text-gray-600">
-              Review your selections before setting up compliance tracking.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="font-medium text-gray-900 mb-2">Selected Buildings</h3>
-                <div className="space-y-1">
-                  {selectedBuildings.map(buildingId => {
-                    const building = buildings.find(b => b.id === buildingId)
-                    return (
-                      <div key={buildingId} className="flex items-center gap-2 text-sm">
-                        <Check className="h-4 w-4 text-green-500" />
-                        <span>{building?.name}</span>
-                      </div>
-                    )
-                  })}
+        {/* Step 3: Confirm */}
+        <TabsContent value="confirm" className="space-y-0">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5" />
+                Confirm Setup
+              </CardTitle>
+              <p className="text-gray-600">
+                Review your selections before setting up compliance tracking.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Summary */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="font-medium text-gray-900 mb-2">Selected Buildings</h3>
+                  <div className="space-y-1">
+                    {selectedBuildings.map(buildingId => {
+                      const building = buildings.find(b => b.id === buildingId)
+                      return (
+                        <div key={buildingId} className="flex items-center gap-2 text-sm">
+                          <Check className="h-4 w-4 text-green-500" />
+                          <span>{building?.name}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
 
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="font-medium text-gray-900 mb-2">Selected Assets</h3>
-                <div className="space-y-1">
-                  {selectedAssets.map(assetId => {
-                    const asset = complianceAssets.find(a => a.id === assetId)
-                    return (
-                      <div key={assetId} className="flex items-center gap-2 text-sm">
-                        <Check className="h-4 w-4 text-green-500" />
-                        <span>{asset?.name}</span>
-                      </div>
-                    )
-                  })}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="font-medium text-gray-900 mb-2">Selected Assets</h3>
+                  <div className="space-y-1">
+                    {selectedAssets.map(assetId => {
+                      const asset = complianceAssets.find(a => a.id === assetId)
+                      return (
+                        <div key={assetId} className="flex items-center gap-2 text-sm">
+                          <Check className="h-4 w-4 text-green-500" />
+                          <span>{asset?.name}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Impact Summary */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="font-medium text-blue-900 mb-2">Setup Impact</h3>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-blue-700">Total Buildings:</span>
-                  <span className="font-medium ml-2">{selectedBuildings.length}</span>
-                </div>
-                <div>
-                  <span className="text-blue-700">Total Assets:</span>
-                  <span className="font-medium ml-2">{selectedAssets.length}</span>
-                </div>
-                <div>
-                  <span className="text-blue-700">Total Records:</span>
-                  <span className="font-medium ml-2">{selectedBuildings.length * selectedAssets.length}</span>
-                </div>
-                <div>
-                  <span className="text-blue-700">Initial Status:</span>
-                  <span className="font-medium ml-2">Not Started</span>
+              {/* Impact Summary */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="font-medium text-blue-900 mb-2">Setup Impact</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-blue-700">Total Buildings:</span>
+                    <span className="font-medium ml-2">{selectedBuildings.length}</span>
+                  </div>
+                  <div>
+                    <span className="text-blue-700">Total Assets:</span>
+                    <span className="font-medium ml-2">{selectedAssets.length}</span>
+                  </div>
+                  <div>
+                    <span className="text-blue-700">Total Records:</span>
+                    <span className="font-medium ml-2">{selectedBuildings.length * selectedAssets.length}</span>
+                  </div>
+                  <div>
+                    <span className="text-blue-700">Initial Status:</span>
+                    <span className="font-medium ml-2">Not Started</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Warning for existing compliance */}
-            {selectedBuildings.some(buildingId => buildingsWithCompliance.includes(buildingId)) && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                  <span className="font-medium text-yellow-800">Existing Compliance Detected</span>
+              {/* Warning for existing compliance */}
+              {selectedBuildings.some(buildingId => buildingsWithCompliance.includes(buildingId)) && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                    <span className="font-medium text-yellow-800">Existing Compliance Detected</span>
+                  </div>
+                  <p className="text-sm text-yellow-700">
+                    Some selected buildings already have compliance tracking set up. 
+                    This setup will add additional compliance assets to those buildings.
+                  </p>
                 </div>
-                <p className="text-sm text-yellow-700">
-                  Some selected buildings already have compliance tracking set up. 
-                  This setup will add additional compliance assets to those buildings.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Navigation */}
       <div className="flex items-center justify-between pt-6">
