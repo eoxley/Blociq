@@ -87,52 +87,44 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     return welcomeMessages[randomIndex]
   }
 
-  // Example upcoming events for demonstration
+  // Real upcoming events from database
   const [upcomingEvents, setUpcomingEvents] = useState<PropertyEvent[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
 
+  // Fetch real property events from database
   useEffect(() => {
-    // Simulate loading delay
-    const timer = setTimeout(() => {
-      const exampleEvents: PropertyEvent[] = [
-        {
-          building: "Test Property",
-          date: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(), // 2 hours from now
-          title: "AGM Meeting",
-          category: "🏢 AGM"
-        },
-        {
-          building: "Test Property",
-          date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
-          title: "Legionella Inspections",
-          category: "🔍 Safety Inspection"
-        },
-        {
-          building: "XX Building",
-          date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // Day after tomorrow
-          title: "Contractor visiting to quote for roof works",
-          category: "🔨 Maintenance"
-        },
-        {
-          building: "Client Office",
-          date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days from now
-          title: "Call to discuss arrears with client",
-          category: "💰 Financial"
-        },
-        {
-          building: "TPI Conference Centre",
-          date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 1 week from now
-          title: "TPI Seminar",
-          category: "📚 Training"
-        }
-      ];
-      
-      setUpcomingEvents(exampleEvents);
-      setLoadingEvents(false);
-    }, 1000);
+    const fetchEvents = async () => {
+      try {
+        const { data: events, error } = await supabase
+          .from('property_events')
+          .select('*')
+          .gte('start_time', new Date().toISOString())
+          .order('start_time', { ascending: true })
+          .limit(10);
 
-    return () => clearTimeout(timer);
-  }, []);
+        if (error) {
+          console.error('Error fetching events:', error);
+          setUpcomingEvents([]);
+        } else {
+          // Transform database events to match PropertyEvent type
+          const transformedEvents: PropertyEvent[] = (events || []).map(event => ({
+            building: event.building_id ? `Building ${event.building_id}` : 'General',
+            date: event.start_time,
+            title: event.title,
+            category: event.category || event.event_type || '📅 Event'
+          }));
+          setUpcomingEvents(transformedEvents);
+        }
+      } catch (error) {
+        console.error('Error fetching events:', error);
+        setUpcomingEvents([]);
+      } finally {
+        setLoadingEvents(false);
+      }
+    };
+
+    fetchEvents();
+  }, [supabase]);
 
   // Fetch recent emails
   useEffect(() => {
@@ -278,42 +270,20 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       building: formData.get('building') as string,
     }
 
-    setIsAddingEvent(true)
-
-    try {
-      const response = await fetch('/api/add-event', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(eventData),
-      })
-
-      if (response.ok) {
-        // Reset form
-        ;(e.target as HTMLFormElement).reset()
-        alert('Event added successfully!')
-      } else {
-        throw new Error('Failed to add event')
-      }
-    } catch (error) {
-      console.error('Error adding event:', error)
-      alert('Failed to add event. Please try again.')
-    } finally {
-      setIsAddingEvent(false)
-    }
+    // Here you would typically save to database
+    console.log('Adding event:', eventData)
+    setIsAddingEvent(false)
   }
 
   const formatEventDate = (dateString: string) => {
     const date = new Date(dateString)
     return {
-      date: date.toLocaleDateString('en-US', { 
+      date: date.toLocaleDateString('en-GB', { 
         weekday: 'short', 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric' 
+        day: 'numeric', 
+        month: 'short' 
       }),
-      time: date.toLocaleTimeString('en-US', { 
+      time: date.toLocaleTimeString('en-GB', { 
         hour: '2-digit', 
         minute: '2-digit' 
       })
@@ -469,18 +439,16 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               <Calendar className="h-6 w-6 text-teal-600" />
               <div>
                 <h2 className="text-2xl font-semibold text-gray-900">Upcoming Property Events</h2>
-                <p className="text-sm text-gray-500">Example events - would sync with Outlook calendar</p>
+                <p className="text-sm text-gray-500">Real events from your property portfolio</p>
               </div>
             </div>
-            <a
-              href="https://outlook.office.com/calendar/view/month"
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={() => setIsAddingEvent(true)}
               className="inline-flex items-center gap-2 text-teal-600 hover:text-teal-700 font-medium transition-colors"
             >
-              <ExternalLink className="h-4 w-4" />
-              Open Outlook
-            </a>
+              <Plus className="h-4 w-4" />
+              Add Event
+            </button>
           </div>
           
           <div className="space-y-4">
@@ -530,7 +498,14 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               <div className="text-center py-8">
                 <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-3" />
                 <p className="text-gray-500 text-sm">No upcoming events</p>
-                <p className="text-gray-400 text-xs mt-1">Events you create will appear here</p>
+                <p className="text-gray-400 text-xs mt-1">Add events to your property calendar to see them here</p>
+                <button
+                  onClick={() => setIsAddingEvent(true)}
+                  className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Your First Event
+                </button>
               </div>
             )}
           </div>
