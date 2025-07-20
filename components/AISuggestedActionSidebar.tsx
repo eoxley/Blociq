@@ -1,379 +1,174 @@
-"use client";
+'use client'
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState } from 'react'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { 
-  Brain, 
-  Tag, 
-  FileText, 
-  MessageSquare, 
-  Wrench, 
+  Lightbulb, 
+  Plus, 
+  Calendar, 
   AlertTriangle, 
-  Archive,
-  Loader2,
-  RefreshCw,
-  ExternalLink,
-  CheckCircle,
-  Clock
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+  CheckCircle, 
+  X,
+  Loader2
+} from 'lucide-react'
 
-interface EmailAnalysis {
-  tags: string[];
-  ai_summary: string;
-  suggested_action: string;
-  suggested_action_type: string;
-  suggested_template_id?: string;
-  related_unit_id?: string;
-  ai_analyzed_at: string;
+type SuggestedAction = {
+  type: 'todo';
+  title: string;
+  priority: 'High' | 'Medium' | 'Low';
+  due_date?: string | null;
+  description?: string;
 }
 
 interface AISuggestedActionSidebarProps {
-  messageId: string;
-  buildingId?: string;
-  onActionTaken?: () => void;
+  suggestedAction: SuggestedAction | null;
+  buildingId: number;
+  onTaskCreated?: () => void;
+  onDismiss?: () => void;
 }
 
-const tagColors: Record<string, string> = {
-  "service charge": "bg-blue-100 text-blue-800",
-  "maintenance": "bg-orange-100 text-orange-800",
-  "complaint": "bg-red-100 text-red-800",
-  "legal": "bg-purple-100 text-purple-800",
-  "finance": "bg-green-100 text-green-800",
-  "emergency": "bg-red-100 text-red-800",
-  "routine": "bg-gray-100 text-gray-800",
-  "default": "bg-gray-100 text-gray-700"
-};
-
-const actionTypeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
-  generate_template: FileText,
-  reply: MessageSquare,
-  raise_task: Wrench,
-  escalate: AlertTriangle,
-  archive: Archive
-};
-
-const actionTypeLabels: Record<string, string> = {
-  generate_template: "Generate Document",
-  reply: "Reply to Email",
-  raise_task: "Raise Task",
-  escalate: "Escalate Issue",
-  archive: "Archive"
-};
-
 export default function AISuggestedActionSidebar({ 
-  messageId, 
+  suggestedAction, 
   buildingId, 
-  onActionTaken 
+  onTaskCreated,
+  onDismiss 
 }: AISuggestedActionSidebarProps) {
-  const router = useRouter();
-  const [analysis, setAnalysis] = useState<EmailAnalysis | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [analyzing, setAnalyzing] = useState(false);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false)
+  const [isDismissed, setIsDismissed] = useState(false)
+  const supabase = createClientComponentClient()
 
-  useEffect(() => {
-    if (messageId) {
-      fetchAnalysis();
+  if (!suggestedAction || isDismissed) {
+    return null
+  }
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'High': return 'text-red-600 bg-red-100 border-red-200'
+      case 'Medium': return 'text-yellow-600 bg-yellow-100 border-yellow-200'
+      case 'Low': return 'text-green-600 bg-green-100 border-green-200'
+      default: return 'text-gray-600 bg-gray-100 border-gray-200'
     }
-  }, [messageId]);
+  }
 
-  const fetchAnalysis = async () => {
+  const getPriorityIcon = (priority: string) => {
+    switch (priority) {
+      case 'High': return <AlertTriangle className="h-4 w-4" />
+      case 'Medium': return <Calendar className="h-4 w-4" />
+      case 'Low': return <CheckCircle className="h-4 w-4" />
+      default: return <Calendar className="h-4 w-4" />
+    }
+  }
+
+  const createTaskFromSuggestion = async () => {
+    setIsCreating(true)
     try {
-      setLoading(true);
-      const response = await fetch("/api/analyze-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messageId })
-      });
+      const response = await fetch('/api/create-task-from-suggestion', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          suggestedAction,
+          buildingId
+        }),
+      })
 
       if (response.ok) {
-        const data = await response.json();
-        setAnalysis(data.analysis);
+        const result = await response.json()
+        console.log('Task created successfully:', result)
+        
+        // Call the callback to refresh the todo list
+        if (onTaskCreated) {
+          onTaskCreated()
+        }
+        
+        // Dismiss the sidebar
+        setIsDismissed(true)
+        if (onDismiss) {
+          onDismiss()
+        }
       } else {
-        console.error("Failed to fetch analysis");
+        console.error('Failed to create task')
       }
     } catch (error) {
-      console.error("Error fetching analysis:", error);
+      console.error('Error creating task:', error)
     } finally {
-      setLoading(false);
+      setIsCreating(false)
     }
-  };
-
-  const reanalyzeEmail = async () => {
-    try {
-      setAnalyzing(true);
-      const response = await fetch("/api/analyze-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messageId, forceReanalyze: true })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setAnalysis(data.analysis);
-      }
-    } catch (error) {
-      console.error("Error reanalyzing:", error);
-    } finally {
-      setAnalyzing(false);
-    }
-  };
-
-  const handleAction = async (actionType: string) => {
-    setActionLoading(actionType);
-    
-    try {
-      switch (actionType) {
-        case "generate_template":
-          if (analysis?.suggested_template_id) {
-            router.push(`/communications/templates/${analysis.suggested_template_id}?buildingId=${buildingId || ''}`);
-          }
-          break;
-          
-        case "reply":
-          // This will be handled by the parent component opening the reply modal
-          onActionTaken?.();
-          break;
-          
-        case "raise_task":
-          // Navigate to task creation with prefilled data
-          router.push(`/dashboard/tasks/new?emailId=${messageId}&buildingId=${buildingId || ''}`);
-          break;
-          
-        case "escalate":
-          // Mark as escalated in the system
-          await fetch("/api/mark-escalated", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ messageId })
-          });
-          onActionTaken?.();
-          break;
-          
-        case "archive":
-          // Mark as archived
-          await fetch("/api/mark-archived", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ messageId })
-          });
-          onActionTaken?.();
-          break;
-      }
-    } catch (error) {
-      console.error("Error executing action:", error);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const getTagColor = (tag: string) => {
-    const lowerTag = tag.toLowerCase();
-    return tagColors[lowerTag] || tagColors.default;
-  };
-
-  if (loading) {
-    return (
-      <Card className="w-80 h-fit">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Brain className="h-5 w-5" />
-            AI Analysis
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin" />
-            <span className="ml-2">Analyzing email...</span>
-          </div>
-        </CardContent>
-      </Card>
-    );
   }
 
-  if (!analysis) {
-    return (
-      <Card className="w-80 h-fit">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Brain className="h-5 w-5" />
-            AI Analysis
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-6">
-            <Brain className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-            <p className="text-sm text-gray-500 mb-4">No AI analysis available</p>
-            <Button 
-              onClick={reanalyzeEmail} 
-              disabled={analyzing}
-              size="sm"
-              variant="outline"
-            >
-              {analyzing ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <RefreshCw className="h-4 w-4 mr-2" />
-              )}
-              Analyze Email
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
+  const handleDismiss = () => {
+    setIsDismissed(true)
+    if (onDismiss) {
+      onDismiss()
+    }
   }
-
-  const ActionIcon = actionTypeIcons[analysis.suggested_action_type] || FileText;
 
   return (
-    <TooltipProvider>
-      <Card className="w-80 h-fit">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Brain className="h-5 w-5" />
-              AI Analysis
-            </div>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={reanalyzeEmail}
-                  disabled={analyzing}
-                >
-                  {analyzing ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Re-analyze email</p>
-              </TooltipContent>
-            </Tooltip>
-          </CardTitle>
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <Clock className="h-3 w-3" />
-            Analyzed {new Date(analysis.ai_analyzed_at).toLocaleString()}
+    <div className="fixed right-4 top-20 w-80 bg-white rounded-xl shadow-lg border border-gray-200 z-50">
+      <div className="p-4">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Lightbulb className="h-5 w-5 text-yellow-500" />
+            <h3 className="font-semibold text-gray-900">AI Suggestion</h3>
           </div>
-        </CardHeader>
-        
-        <CardContent className="space-y-4">
-          {/* Tags */}
-          {analysis.tags && analysis.tags.length > 0 && (
-            <div>
-              <h4 className="text-sm font-medium mb-2 flex items-center gap-1">
-                <Tag className="h-3 w-3" />
-                Tags
-              </h4>
-              <div className="flex flex-wrap gap-1">
-                {analysis.tags.map((tag, index) => (
-                  <Badge 
-                    key={index} 
-                    variant="outline" 
-                    className={getTagColor(tag)}
-                  >
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
+          <button
+            onClick={handleDismiss}
+            className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Task Details */}
+        <div className="space-y-3">
+          <div>
+            <h4 className="font-medium text-gray-900 mb-1">{suggestedAction.title}</h4>
+            {suggestedAction.description && (
+              <p className="text-sm text-gray-600">{suggestedAction.description}</p>
+            )}
+          </div>
+
+          {/* Priority Badge */}
+          <div className="flex items-center gap-2">
+            <span className={`px-2 py-1 text-xs rounded-full border flex items-center gap-1 ${getPriorityColor(suggestedAction.priority)}`}>
+              {getPriorityIcon(suggestedAction.priority)}
+              {suggestedAction.priority} Priority
+            </span>
+          </div>
+
+          {/* Due Date */}
+          {suggestedAction.due_date && (
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <Calendar className="h-4 w-4" />
+              <span>Due: {new Date(suggestedAction.due_date).toLocaleDateString()}</span>
             </div>
           )}
 
-          {/* AI Summary */}
-          {analysis.ai_summary && (
-            <div>
-              <h4 className="text-sm font-medium mb-2">Summary</h4>
-              <p className="text-sm text-gray-600 leading-relaxed">
-                {analysis.ai_summary}
-              </p>
-            </div>
-          )}
-
-          {/* Suggested Action */}
-          {analysis.suggested_action && (
-            <div>
-              <h4 className="text-sm font-medium mb-2 flex items-center gap-1">
-                <ActionIcon className="h-3 w-3" />
-                Suggested Action
-              </h4>
-              <p className="text-sm text-gray-600 mb-3 leading-relaxed">
-                {analysis.suggested_action}
-              </p>
-              
-              {/* Take Action Button */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={() => handleAction(analysis.suggested_action_type)}
-                    disabled={actionLoading === analysis.suggested_action_type}
-                    className="w-full"
-                    size="sm"
-                  >
-                    {actionLoading === analysis.suggested_action_type ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                    )}
-                    {actionTypeLabels[analysis.suggested_action_type] || "Take Action"}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Execute the suggested action</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          )}
-
-          {/* Quick Actions */}
-          <div className="pt-2 border-t">
-            <h4 className="text-sm font-medium mb-2">Quick Actions</h4>
-            <div className="space-y-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full justify-start"
-                onClick={() => handleAction("reply")}
-                disabled={actionLoading === "reply"}
-              >
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Reply with AI
-              </Button>
-              
-              {analysis.suggested_template_id && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start"
-                  onClick={() => handleAction("generate_template")}
-                  disabled={actionLoading === "generate_template"}
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Generate Document
-                  <ExternalLink className="h-3 w-3 ml-auto" />
-                </Button>
+          {/* Action Buttons */}
+          <div className="flex gap-2 pt-2">
+            <button
+              onClick={createTaskFromSuggestion}
+              disabled={isCreating}
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
+            >
+              {isCreating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4" />
               )}
-              
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full justify-start"
-                onClick={() => handleAction("raise_task")}
-                disabled={actionLoading === "raise_task"}
-              >
-                <Wrench className="h-4 w-4 mr-2" />
-                Create Task
-              </Button>
-            </div>
+              {isCreating ? 'Creating...' : 'Add Task'}
+            </button>
+            <button
+              onClick={handleDismiss}
+              className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Dismiss
+            </button>
           </div>
-        </CardContent>
-      </Card>
-    </TooltipProvider>
-  );
+        </div>
+      </div>
+    </div>
+  )
 } 
