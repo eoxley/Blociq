@@ -2,12 +2,13 @@ import { cookies } from 'next/headers'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import ComplianceAssetList from '@/components/ComplianceAssetList'
 import LayoutWithSidebar from '@/components/LayoutWithSidebar'
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Shield, Settings } from 'lucide-react'
 
 export default async function ComplianceTrackerPage({ params }: { params: Promise<{ buildingId: string }> }) {
   try {
@@ -324,9 +325,20 @@ export default async function ComplianceTrackerPage({ params }: { params: Promis
             ) : (
               <Card className="border-0 shadow-soft">
                 <CardContent className="p-8 text-center">
-                  <div className="text-neutral space-y-2">
-                    <p className="text-lg font-medium">No compliance assets configured</p>
-                    <p className="text-sm">Use the Setup Assets tab to configure compliance requirements for this building.</p>
+                  <div className="flex items-center justify-center mb-4">
+                    <Shield className="h-12 w-12 text-blue-600" />
+                  </div>
+                  <div className="text-neutral space-y-4">
+                    <h2 className="text-xl font-semibold text-blue-900">No Compliance Setup Found</h2>
+                    <p className="text-blue-700">
+                      This building has no compliance assets set up. Set up compliance tracking to monitor requirements and deadlines.
+                    </p>
+                    <Button asChild className="bg-blue-600 hover:bg-blue-700">
+                      <Link href="/compliance/setup">
+                        <Settings className="h-4 w-4 mr-2" />
+                        Go to Setup Wizard
+                      </Link>
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
