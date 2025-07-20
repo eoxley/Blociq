@@ -186,7 +186,7 @@ export default function BuildingUnitsClient({ building, units }: BuildingUnitsCl
               </p>
             </div>
             <Badge variant="outline" className="text-sm">
-              {units.filter(u => u.leaseholder_email).length} Occupied
+                              {units.length} Total Units
             </Badge>
           </div>
         </div>
