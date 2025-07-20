@@ -259,7 +259,7 @@ export default function InboxInner() {
 
       {/* Outlook Integration */}
       <div className="mb-8">
-        <OutlookConnectButton />
+        <OutlookConnectButton onSyncComplete={fetchEmails} />
       </div>
 
       {/* Controls */}
