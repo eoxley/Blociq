@@ -274,11 +274,17 @@ export default function MajorWorksProjectClient({ project }: MajorWorksProjectCl
             </CardHeader>
             <CardContent>
               <MajorWorksTimeline 
-                startDate={project.start_date}
-                estimatesIssued={project.estimates_date}
-                constructionStart={project.construction_start_date}
-                completionDate={project.completion_date}
-                status={project.status}
+                project={{
+                  id: project.id.toString(),
+                  title: project.title,
+                  start_date: project.start_date || '',
+                  estimates_issued: project.estimates_date || '',
+                  construction_start: project.construction_start_date || '',
+                  completion_date: project.completion_date || '',
+                  status: project.status,
+                  consultation_stage: 'active'
+                }}
+                logs={[]}
               />
             </CardContent>
           </Card>

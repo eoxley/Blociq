@@ -5,60 +5,67 @@ import LayoutWithSidebar from '@/components/LayoutWithSidebar';
 import DocumentAwareAI from '@/components/DocumentAwareAI';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Brain, FileText, Upload, MessageSquare, CheckCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function AIAssistantPage() {
   return (
     <LayoutWithSidebar>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold text-[#0F5D5D]">Document-Aware AI Assistant</h1>
-          <p className="text-gray-600">
-            Upload documents and ask questions with AI that understands your building context and compliance requirements.
-          </p>
+      <div className="space-y-8">
+        {/* Enhanced Header with Gradient Background */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-2xl p-8 text-white shadow-2xl">
+          <div className="absolute inset-0 bg-black/10"></div>
+          <div className="relative z-10">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <h1 className="text-4xl font-bold">Document-Aware AI Assistant</h1>
+                <p className="text-teal-100 text-lg">Upload documents and ask questions with AI that understands your building context</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <Button className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload Document
+                </Button>
+                <Button variant="outline" className="border-white/30 text-white hover:bg-white/10">
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Start Chat
+                </Button>
+              </div>
+            </div>
+          </div>
+          {/* Decorative elements */}
+          <div className="absolute top-4 right-4 w-20 h-20 bg-white/10 rounded-full"></div>
+          <div className="absolute bottom-4 left-4 w-16 h-16 bg-white/5 rounded-full"></div>
         </div>
 
-        {/* Features Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Upload className="h-5 w-5 text-blue-600" />
-                Upload & Analyze
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-600">
-                Upload PDF documents and get instant AI analysis with key information extraction, compliance classification, and action items.
-              </p>
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-gradient-to-br from-blue-50 to-blue-100 cursor-pointer">
+            <CardContent className="p-6 text-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <Upload className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="font-bold text-blue-700 mb-2">Upload & Analyze</h3>
+              <p className="text-sm text-blue-600">Upload PDF documents and get instant AI analysis</p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Brain className="h-5 w-5 text-green-600" />
-                Context-Aware AI
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-600">
-                Ask questions about your building, documents, or compliance. AI responds with traceable sources and building-specific context.
-              </p>
+          <Card className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-gradient-to-br from-green-50 to-green-100 cursor-pointer">
+            <CardContent className="p-6 text-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <Brain className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="font-bold text-green-700 mb-2">Context-Aware AI</h3>
+              <p className="text-sm text-green-600">Ask questions with building-specific context</p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <MessageSquare className="h-5 w-5 text-purple-600" />
-                Natural Conversations
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-600">
-                Have natural conversations about leasehold management, compliance deadlines, and building operations with AI that understands UK property law.
-              </p>
+          <Card className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-gradient-to-br from-purple-50 to-purple-100 cursor-pointer">
+            <CardContent className="p-6 text-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <MessageSquare className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="font-bold text-purple-700 mb-2">Natural Conversations</h3>
+              <p className="text-sm text-purple-600">Chat about leasehold management and compliance</p>
             </CardContent>
           </Card>
         </div>
