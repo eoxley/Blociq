@@ -258,14 +258,6 @@ export default async function BuildingsPage() {
   return (
     <LayoutWithSidebar>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-[#0F5D5D] mb-2">Buildings</h1>
-            <p className="text-gray-600">Manage your property portfolio</p>
-          </div>
-        </div>
-
         {finalBuildings.length === 0 && (
           <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-yellow-800 text-sm">
