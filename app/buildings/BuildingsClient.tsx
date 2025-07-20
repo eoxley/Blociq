@@ -34,7 +34,6 @@ type Building = {
   created_at: string | null
   demo_ready?: boolean
   units?: any[]
-  leases?: any[]
 }
 
 interface BuildingsClientProps {
@@ -295,9 +294,6 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
 
 // Building Card Component
 function BuildingCard({ building }: { building: Building }) {
-  const occupancyRate = building.unit_count && building.leases 
-    ? Math.round((building.leases.length / building.unit_count) * 100) 
-    : 0
 
   return (
     <Link href={`/buildings/${building.id}`} className="group block">
@@ -336,36 +332,22 @@ function BuildingCard({ building }: { building: Building }) {
           )}
           
           {/* Stats Row */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="text-center p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center justify-center mb-1">
-                <Users className="h-4 w-4 text-teal-500 mr-1" />
-                <span className="text-lg font-bold text-gray-900">{building.unit_count || 0}</span>
-              </div>
-              <p className="text-xs text-gray-500">Units</p>
+          <div className="text-center p-4 bg-gray-50 rounded-lg mb-6">
+            <div className="flex items-center justify-center mb-1">
+              <Users className="h-5 w-5 text-teal-500 mr-2" />
+              <span className="text-xl font-bold text-gray-900">{building.unit_count || 0}</span>
             </div>
-            <div className="text-center p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center justify-center mb-1">
-                <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                <span className="text-lg font-bold text-gray-900">{occupancyRate}%</span>
-              </div>
-              <p className="text-xs text-gray-500">Occupied</p>
-            </div>
+            <p className="text-sm text-gray-500">Total Units</p>
           </div>
           
           {/* Sample Units */}
           {building.units && building.units.length > 0 && (
             <div className="mb-6">
-              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Recent Units</h4>
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Sample Units</h4>
               <div className="space-y-2">
                 {building.units.slice(0, 3).map((unit) => (
                   <div key={unit.id} className="flex items-center justify-between text-sm p-2 bg-gray-50 rounded-lg">
                     <span className="text-gray-700 font-medium">{unit.unit_number}</span>
-                    {building.leases && building.leases.find(lease => lease.unit === unit.id) ? (
-                      <Badge className="bg-green-100 text-green-700 border-green-200">Occupied</Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-gray-500">Vacant</Badge>
-                    )}
                   </div>
                 ))}
                 {building.units.length > 3 && (
@@ -403,9 +385,6 @@ function BuildingCard({ building }: { building: Building }) {
 
 // Building List Item Component
 function BuildingListItem({ building }: { building: Building }) {
-  const occupancyRate = building.unit_count && building.leases 
-    ? Math.round((building.leases.length / building.unit_count) * 100) 
-    : 0
 
   return (
     <Link href={`/buildings/${building.id}`} className="group block">
@@ -443,10 +422,6 @@ function BuildingListItem({ building }: { building: Building }) {
                   <div className="flex items-center space-x-1">
                     <Users className="h-4 w-4" />
                     <span>{building.unit_count || 0} units</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <TrendingUp className="h-4 w-4" />
-                    <span>{occupancyRate}% occupied</span>
                   </div>
                   <div className="flex items-center space-x-1">
                     <Calendar className="h-4 w-4" />
