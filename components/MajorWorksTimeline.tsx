@@ -157,31 +157,88 @@ export default function MajorWorksTimeline({ project, logs }: MajorWorksTimeline
   ].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
 
   return (
-    <div className="space-y-6">
-      {/* Timeline Header */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">Timeline & Observations</h3>
-        <button
-          onClick={() => setShowAddForm(!showAddForm)}
-          className="inline-flex items-center gap-2 px-3 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 transition-colors"
-        >
-          <Calendar className="h-4 w-4" />
-          Add Log
-        </button>
+    <div className="space-y-8">
+      {/* Enhanced Header with Gradient Background */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-2xl p-6 text-white shadow-2xl">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="relative z-10">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <h3 className="text-2xl font-bold">Section 20 Timeline</h3>
+              <p className="text-teal-100 text-sm">Track major works progress and compliance milestones</p>
+            </div>
+            <button
+              onClick={() => setShowAddForm(!showAddForm)}
+              className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm px-4 py-2 rounded-xl transition-all duration-300"
+            >
+              <Calendar className="h-4 w-4 mr-2 inline" />
+              Add Log
+            </button>
+          </div>
+        </div>
+        {/* Decorative elements */}
+        <div className="absolute top-4 right-4 w-16 h-16 bg-white/10 rounded-full"></div>
+        <div className="absolute bottom-4 left-4 w-12 h-12 bg-white/5 rounded-full"></div>
+      </div>
+
+      {/* Progress Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+              <FileText className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <div className="text-lg font-bold text-blue-700">
+                {milestones.filter(m => m.completed).length}/{milestones.length}
+              </div>
+              <div className="text-sm text-blue-600">Milestones Complete</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+              <CheckCircle className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <div className="text-lg font-bold text-green-700">
+                {logs.length}
+              </div>
+              <div className="text-sm text-green-600">Activity Logs</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+              <Calendar className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <div className="text-lg font-bold text-purple-700">
+                {allEvents.length}
+              </div>
+              <div className="text-sm text-purple-600">Total Events</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Add Log Form */}
       {showAddForm && (
-        <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+          <h4 className="text-lg font-semibold text-gray-900 mb-4">Add Timeline Event</h4>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Action Type
               </label>
               <select
                 value={newLogTitle}
                 onChange={(e) => setNewLogTitle(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-300"
                 required
               >
                 <option value="">Select an action type...</option>
@@ -200,14 +257,14 @@ export default function MajorWorksTimeline({ project, logs }: MajorWorksTimeline
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Details
               </label>
               <textarea
                 value={newLogNotes}
                 onChange={(e) => setNewLogNotes(e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-300"
                 placeholder="Add details about this action, meeting minutes, or observations..."
               />
             </div>
@@ -215,14 +272,14 @@ export default function MajorWorksTimeline({ project, logs }: MajorWorksTimeline
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
+                className="px-6 py-3 bg-gradient-to-r from-teal-600 to-teal-700 text-white font-medium rounded-xl hover:from-teal-700 hover:to-teal-800 transition-all duration-300 disabled:opacity-50 shadow-lg"
               >
                 {isSubmitting ? 'Adding...' : 'Add Action'}
               </button>
               <button
                 type="button"
                 onClick={() => setShowAddForm(false)}
-                className="px-4 py-2 bg-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-400 transition-colors"
+                className="px-6 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-all duration-300"
               >
                 Cancel
               </button>
@@ -232,76 +289,91 @@ export default function MajorWorksTimeline({ project, logs }: MajorWorksTimeline
       )}
 
       {/* Timeline */}
-      <div className="relative">
-        {/* Timeline line */}
-        <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+        <h4 className="text-lg font-semibold text-gray-900 mb-6">Timeline & Observations</h4>
         
-        {/* Events */}
-        <div className="space-y-6">
-          {allEvents.map((event, index) => {
-            const Icon = event.icon
-            const isMilestone = event.type === 'milestone'
-            
-            return (
-              <div key={event.id} className="relative flex items-start gap-4">
-                {/* Timeline dot */}
-                <div className={`relative z-10 flex-shrink-0 w-12 h-12 rounded-full ${event.color} flex items-center justify-center text-white shadow-md`}>
-                  <Icon className="h-5 w-5" />
-                </div>
-                
-                {/* Event content */}
-                <div className="flex-1 min-w-0 bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
-                                     <div className="flex items-start justify-between mb-2">
-                     <div className="flex-1">
-                       <h4 className="text-sm font-semibold text-gray-900">
-                         {event.title}
-                       </h4>
-                       {isMilestone && event.description && (
-                         <p className="text-xs text-gray-500 mt-1">{event.description}</p>
-                       )}
-                     </div>
-                     {isMilestone && (
-                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                         event.completed ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
-                       }`}>
-                         {event.completed ? 'Completed' : 'Pending'}
-                       </span>
-                     )}
-                   </div>
+        <div className="relative">
+          {/* Timeline line */}
+          <div className="absolute left-6 top-0 bottom-0 w-1 bg-gradient-to-b from-teal-500 to-blue-500 rounded-full"></div>
+          
+          {/* Events */}
+          <div className="space-y-6">
+            {allEvents.map((event, index) => {
+              const Icon = event.icon
+              const isMilestone = event.type === 'milestone'
+              
+              return (
+                <div key={event.id} className="relative flex items-start gap-4 group">
+                  {/* Timeline dot */}
+                  <div className={`relative z-10 flex-shrink-0 w-12 h-12 rounded-full ${event.color} flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                    <Icon className="h-5 w-5" />
+                  </div>
                   
-                  <p className="text-xs text-gray-500 mb-2">
-                    {new Date(event.timestamp).toLocaleDateString('en-GB', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
-                  
-                  {event.type === 'log' && event.notes && (
-                    <p className="text-sm text-gray-600">{event.notes}</p>
-                  )}
-                  
-                  {event.type === 'log' && (
-                    <p className="text-xs text-gray-400 mt-2">
-                      Logged by: {event.created_by}
+                  {/* Event content */}
+                  <div className="flex-1 min-w-0 bg-gradient-to-r from-gray-50 to-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-lg transition-all duration-300 group-hover:border-teal-200">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h4 className="text-sm font-semibold text-gray-900">
+                          {event.title}
+                        </h4>
+                        {isMilestone && event.description && (
+                          <p className="text-xs text-gray-500 mt-1">{event.description}</p>
+                        )}
+                      </div>
+                      {isMilestone && (
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                          event.completed ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800' : 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-600'
+                        }`}>
+                          {event.completed ? '✅ Completed' : '⏳ Pending'}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <p className="text-xs text-gray-500 mb-3 font-medium">
+                      {new Date(event.timestamp).toLocaleDateString('en-GB', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
                     </p>
-                  )}
+                    
+                    {event.type === 'log' && event.notes && (
+                      <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">{event.notes}</p>
+                    )}
+                    
+                    {event.type === 'log' && (
+                      <p className="text-xs text-gray-400 mt-3 flex items-center gap-1">
+                        <span className="w-2 h-2 bg-teal-500 rounded-full"></span>
+                        Logged by: {event.created_by}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
-      </div>
 
-      {/* No events message */}
-      {allEvents.length === 0 && (
-        <div className="text-center py-8 text-gray-500">
-          <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-          <p>No timeline events yet. Add the first log to get started.</p>
-        </div>
-      )}
+        {/* No events message */}
+        {allEvents.length === 0 && (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 bg-gradient-to-br from-gray-200 to-gray-300 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Calendar className="h-8 w-8 text-gray-400" />
+            </div>
+            <h4 className="text-lg font-semibold text-gray-900 mb-2">No Timeline Events</h4>
+            <p className="text-gray-500 mb-4">Add the first log to start tracking your project progress.</p>
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="px-6 py-3 bg-gradient-to-r from-teal-600 to-teal-700 text-white font-medium rounded-xl hover:from-teal-700 hover:to-teal-800 transition-all duration-300 shadow-lg"
+            >
+              <Calendar className="h-4 w-4 mr-2 inline" />
+              Add First Event
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 } 
