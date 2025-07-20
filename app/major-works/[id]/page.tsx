@@ -1,19 +1,18 @@
+'use client'
+
 import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import MajorWorksTimeline from '@/components/MajorWorksTimeline'
 import DocumentUpload from '@/components/DocumentUpload'
 import MajorWorksAIButton from '@/components/MajorWorksAIButton'
+import React, { useEffect, useState } from 'react'
 
 interface PageProps {
   params: {
     id: string
   }
 }
-
-'use client'
-
-import React, { useEffect, useState } from 'react'
 
 export default function MajorWorksProjectPage({ params }: PageProps) {
   const [project, setProject] = useState<any>(null)
