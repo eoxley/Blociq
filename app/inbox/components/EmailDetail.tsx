@@ -1,9 +1,12 @@
 'use client'
 
-import React from 'react'
-import { Clock, User, Building, Mail } from 'lucide-react'
+import React, { useState } from 'react'
+import { Clock, User, Building, Mail, Brain, PenTool, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import { toast } from 'sonner'
 
 interface Email {
   id: string
@@ -26,6 +29,10 @@ interface EmailDetailProps {
 }
 
 export default function EmailDetail({ email }: EmailDetailProps) {
+  const [summary, setSummary] = useState<string | null>(null)
+  const [isSummarizing, setIsSummarizing] = useState(false)
+  const [isDraftingReply, setIsDraftingReply] = useState(false)
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Unknown date'
     
@@ -48,6 +55,68 @@ export default function EmailDetail({ email }: EmailDetailProps) {
       return email.split('@')[0].slice(0, 2).toUpperCase()
     }
     return '??'
+  }
+
+  const handleSummarise = async () => {
+    setIsSummarizing(true)
+    try {
+      const response = await fetch('/api/summarise-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email_id: email.id
+        }),
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        setSummary(result.summary)
+        toast.success('Email summarized successfully')
+      } else {
+        toast.error(result.error || 'Failed to summarize email')
+      }
+    } catch (error) {
+      console.error('Error summarizing email:', error)
+      toast.error('Failed to summarize email')
+    } finally {
+      setIsSummarizing(false)
+    }
+  }
+
+  const handleDraftReply = async () => {
+    setIsDraftingReply(true)
+    try {
+      // For now, we'll use the existing generate-reply endpoint
+      const response = await fetch('/api/generate-reply', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email_id: email.id,
+          context: 'Generate a professional reply to this email'
+        }),
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.draft) {
+        // Open the compose modal with the generated draft
+        // This would need to be handled by the parent component
+        toast.success('Reply draft generated')
+        // You could emit an event or use a callback to open compose modal
+      } else {
+        toast.error(result.error || 'Failed to generate reply draft')
+      }
+    } catch (error) {
+      console.error('Error generating reply draft:', error)
+      toast.error('Failed to generate reply draft')
+    } finally {
+      setIsDraftingReply(false)
+    }
   }
 
   return (
@@ -92,6 +161,53 @@ export default function EmailDetail({ email }: EmailDetailProps) {
                 </div>
               )}
             </div>
+
+            {/* AI Action Buttons */}
+            <div className="flex gap-2 mt-4">
+              <Button 
+                onClick={handleSummarise} 
+                disabled={isSummarizing}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                {isSummarizing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Brain className="h-4 w-4" />
+                )}
+                {isSummarizing ? 'Summarising...' : '🧠 Summarise'}
+              </Button>
+              <Button 
+                onClick={handleDraftReply}
+                disabled={isDraftingReply}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                {isDraftingReply ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <PenTool className="h-4 w-4" />
+                )}
+                {isDraftingReply ? 'Drafting...' : '✍️ Draft Reply'}
+              </Button>
+            </div>
+
+            {/* AI Summary Display */}
+            {summary && (
+              <Card className="mt-4">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Brain className="h-4 w-4 text-blue-600" />
+                    <h3 className="text-sm font-medium text-gray-900">AI Summary</h3>
+                  </div>
+                  <div className="text-sm text-gray-700 whitespace-pre-line">
+                    {summary}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Status Badges */}
