@@ -121,16 +121,10 @@ export default function SmartUploader({
         reminder_days: 30,
         doc_url: data.file_url,
       });
-<<<<<<< HEAD
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       console.error("❌ Extraction error:", errorMessage);
-      alert(`Extraction error: ${errorMessage}`);
-=======
-    } catch (error: any) {
-      console.error("❌ Upload and analysis error:", error.message);
-      toast.error(`Upload failed: ${error.message}`);
->>>>>>> locked-ui-baseline
+      toast.error(`Extraction error: ${errorMessage}`);
     }
 
     setLoading(false);
@@ -155,13 +149,9 @@ export default function SmartUploader({
     const { data, error } = await supabase.from(table).insert([insertPayload]).select();
 
     if (error) {
-<<<<<<< HEAD
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       console.error("❌ Save error:", errorMessage);
-=======
-      console.error("❌ Save error:", error.message);
       toast.error("Failed to save document");
->>>>>>> locked-ui-baseline
     } else {
       setSaved(true);
       
