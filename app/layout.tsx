@@ -11,8 +11,8 @@ import { Toaster } from 'sonner';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'BlocIQ',
-  description: 'Your block management assistant',
+  title: 'Blociq - Property Management Platform',
+  description: 'Modern property management platform for managing buildings, units, and leaseholders.',
 };
 
 export default function RootLayout({
