@@ -14,7 +14,9 @@ import {
   Brain,
   Loader2,
   X,
-  Save
+  Save,
+  Filter,
+  Pin
 } from 'lucide-react'
 
 type Todo = {
@@ -41,6 +43,8 @@ type Summary = {
   lastUpdated: string
 }
 
+type FilterType = 'All' | 'Incomplete' | 'Completed'
+
 interface BuildingTodoPanelProps {
   buildingId: number
 }
@@ -52,6 +56,7 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
   const [summaryLoading, setSummaryLoading] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null)
+  const [filter, setFilter] = useState<FilterType>('All')
   const [newTodo, setNewTodo] = useState({
     title: '',
     due_date: '',
@@ -101,6 +106,50 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
     fetchTodos()
     fetchSummary()
   }, [buildingId])
+
+  // Sort and filter todos
+  const getSortedAndFilteredTodos = () => {
+    let filteredTodos = todos
+
+    // Apply filter
+    switch (filter) {
+      case 'Incomplete':
+        filteredTodos = todos.filter(todo => !todo.is_complete)
+        break
+      case 'Completed':
+        filteredTodos = todos.filter(todo => todo.is_complete)
+        break
+      default:
+        filteredTodos = todos
+    }
+
+    // Sort: incomplete first, then by due date, then by priority
+    return filteredTodos.sort((a, b) => {
+      // First: incomplete tasks first
+      if (a.is_complete !== b.is_complete) {
+        return a.is_complete ? 1 : -1
+      }
+
+      // Second: by due date (earliest first, null dates last)
+      const aDate = a.due_date ? new Date(a.due_date) : null
+      const bDate = b.due_date ? new Date(b.due_date) : null
+      
+      if (aDate && bDate) {
+        return aDate.getTime() - bDate.getTime()
+      } else if (aDate && !bDate) {
+        return -1
+      } else if (!aDate && bDate) {
+        return 1
+      }
+
+      // Third: by priority (High > Medium > Low)
+      const priorityOrder = { 'High': 3, 'Medium': 2, 'Low': 1 }
+      const aPriority = priorityOrder[a.priority || 'Medium']
+      const bPriority = priorityOrder[b.priority || 'Medium']
+      
+      return bPriority - aPriority
+    })
+  }
 
   // Toggle todo completion
   const toggleTodo = async (todo: Todo) => {
@@ -208,10 +257,10 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
   // Get priority color
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'High': return 'text-red-600 bg-red-100'
-      case 'Medium': return 'text-yellow-600 bg-yellow-100'
-      case 'Low': return 'text-green-600 bg-green-100'
-      default: return 'text-gray-600 bg-gray-100'
+      case 'High': return 'text-red-600 bg-red-100 border-red-200'
+      case 'Medium': return 'text-yellow-600 bg-yellow-100 border-yellow-200'
+      case 'Low': return 'text-green-600 bg-green-100 border-green-200'
+      default: return 'text-gray-600 bg-gray-100 border-gray-200'
     }
   }
 
@@ -220,6 +269,8 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
     if (!todo.due_date || todo.is_complete) return false
     return new Date(todo.due_date) < new Date()
   }
+
+  const sortedAndFilteredTodos = getSortedAndFilteredTodos()
 
   return (
     <div className="space-y-6">
@@ -236,14 +287,40 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
           </button>
         </div>
 
+        {/* Filter Controls */}
+        <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-gray-500" />
+            <span className="text-sm font-medium text-gray-700">Filter:</span>
+          </div>
+          <div className="flex gap-2">
+            {(['All', 'Incomplete', 'Completed'] as FilterType[]).map((filterType) => (
+              <button
+                key={filterType}
+                onClick={() => setFilter(filterType)}
+                className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+                  filter === filterType
+                    ? 'bg-teal-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {filterType}
+              </button>
+            ))}
+          </div>
+          <span className="text-sm text-gray-500">
+            {sortedAndFilteredTodos.length} of {todos.length} tasks
+          </span>
+        </div>
+
         {loading ? (
           <div className="text-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-teal-600 mx-auto mb-2" />
             <p className="text-gray-500">Loading tasks...</p>
           </div>
-        ) : todos.length > 0 ? (
+        ) : sortedAndFilteredTodos.length > 0 ? (
           <div className="space-y-3">
-            {todos.map((todo) => (
+            {sortedAndFilteredTodos.map((todo) => (
               <div
                 key={todo.id}
                 className={`flex items-center gap-3 p-4 border rounded-lg transition-all duration-200 ${
@@ -301,6 +378,11 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
                         {todo.title}
                       </h3>
                       <div className="flex items-center gap-3 mt-1">
+                        {todo.priority && (
+                          <span className={`px-2 py-1 text-xs rounded-full border ${getPriorityColor(todo.priority)}`}>
+                            📌 {todo.priority}
+                          </span>
+                        )}
                         {todo.due_date && (
                           <div className="flex items-center gap-1 text-sm text-gray-500">
                             <Calendar className="h-3 w-3" />
@@ -309,11 +391,6 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
                               <AlertTriangle className="h-3 w-3 text-red-500" />
                             )}
                           </div>
-                        )}
-                        {todo.priority && (
-                          <span className={`px-2 py-1 text-xs rounded-full ${getPriorityColor(todo.priority)}`}>
-                            {todo.priority}
-                          </span>
                         )}
                       </div>
                     </div>
@@ -362,13 +439,17 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
             <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="h-6 w-6 text-gray-400" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No tasks yet</h3>
-            <p className="text-gray-500">Add your first task to get started!</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              {filter === 'All' ? 'No tasks yet' : `No ${filter.toLowerCase()} tasks`}
+            </h3>
+            <p className="text-gray-500">
+              {filter === 'All' ? 'Add your first task to get started!' : `All tasks are ${filter === 'Completed' ? 'completed' : 'incomplete'}.`}
+            </p>
           </div>
         )}
       </div>
 
-      {/* Building Summary Section */}
+      {/* Weekly Summary Section */}
       <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-gray-900">📋 Weekly Summary</h2>
@@ -378,7 +459,7 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
             className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`h-4 w-4 ${summaryLoading ? 'animate-spin' : ''}`} />
-            Refresh
+            Refresh Summary
           </button>
         </div>
 
@@ -396,7 +477,7 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
                   <CheckCircle className="h-5 w-5 text-green-600" />
                   <span className="text-sm font-medium text-green-800">Completed This Week</span>
                 </div>
-                <p className="text-2xl font-bold text-green-900 mt-1">{summary.statistics.completedThisWeek}</p>
+                <p className="text-2xl font-bold text-green-900 mt-1">✅ {summary.statistics.completedThisWeek}</p>
               </div>
               
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -404,7 +485,7 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
                   <AlertTriangle className="h-5 w-5 text-red-600" />
                   <span className="text-sm font-medium text-red-800">Overdue Tasks</span>
                 </div>
-                <p className="text-2xl font-bold text-red-900 mt-1">{summary.statistics.overdueTasks}</p>
+                <p className="text-2xl font-bold text-red-900 mt-1">⏳ {summary.statistics.overdueTasks}</p>
               </div>
               
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -412,11 +493,11 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
                   <Brain className="h-5 w-5 text-blue-600" />
                   <span className="text-sm font-medium text-blue-800">Completion Rate</span>
                 </div>
-                <p className="text-2xl font-bold text-blue-900 mt-1">{summary.statistics.completionRate}%</p>
+                <p className="text-2xl font-bold text-blue-900 mt-1">💬 {summary.statistics.completionRate}%</p>
               </div>
             </div>
 
-            {/* Summary Text */}
+            {/* AI Summary */}
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
               <div className="flex items-start gap-3">
                 <Brain className="h-5 w-5 text-teal-600 mt-0.5" />
@@ -455,7 +536,7 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Task Title *
+                  📝 Task Title *
                 </label>
                 <input
                   type="text"
@@ -469,19 +550,7 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Due Date
-                </label>
-                <input
-                  type="date"
-                  value={newTodo.due_date}
-                  onChange={(e) => setNewTodo({ ...newTodo, due_date: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Priority
+                  📌 Priority
                 </label>
                 <select
                   value={newTodo.priority}
@@ -492,6 +561,18 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
                   <option value="Medium">Medium</option>
                   <option value="High">High</option>
                 </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  🗓 Due Date (Optional)
+                </label>
+                <input
+                  type="date"
+                  value={newTodo.due_date}
+                  onChange={(e) => setNewTodo({ ...newTodo, due_date: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                />
               </div>
             </div>
             
