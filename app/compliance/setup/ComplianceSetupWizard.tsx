@@ -398,6 +398,45 @@ export default function ComplianceSetupWizard({
 
   return (
     <div className="space-y-6">
+      {/* Floating Save Status */}
+      {(selectedBuildings.length > 0 || selectedAssets.length > 0) && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-4 min-w-64">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="font-semibold text-gray-900">Setup Progress</h4>
+              <div className="flex items-center gap-1">
+                {selectedBuildings.length > 0 && selectedAssets.length > 0 ? (
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                ) : (
+                  <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                )}
+              </div>
+            </div>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Buildings:</span>
+                <span className="font-medium">{selectedBuildings.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Assets:</span>
+                <span className="font-medium">{selectedAssets.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Total Records:</span>
+                <span className="font-medium">{selectedBuildings.length * selectedAssets.length}</span>
+              </div>
+            </div>
+            {selectedBuildings.length > 0 && selectedAssets.length > 0 && (
+              <div className="mt-3 pt-2 border-t border-gray-100">
+                <div className="text-xs text-green-600 font-medium">
+                  ✓ Ready to save
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Progress Bar */}
       <div className="bg-gray-100 rounded-full h-2">
         <div 
@@ -490,10 +529,10 @@ export default function ComplianceSetupWizard({
                     return (
                       <div
                         key={building.id}
-                        className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                        className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
                           isSelected 
-                            ? 'bg-teal-50 border-teal-200' 
-                            : 'bg-white border-gray-200 hover:bg-gray-50'
+                            ? 'bg-gradient-to-r from-teal-50 to-blue-50 border-teal-300 shadow-sm' 
+                            : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
                         }`}
                         onClick={() => toggleBuilding(building.id)}
                       >
@@ -504,18 +543,27 @@ export default function ComplianceSetupWizard({
                         />
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium">{building.name}</span>
+                            <span className={`font-medium ${isSelected ? 'text-teal-800' : 'text-gray-900'}`}>
+                              {building.name}
+                            </span>
                             {hasExistingCompliance && (
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
                                 Has Compliance
                               </Badge>
                             )}
+                            {isSelected && (
+                              <CheckCircle className="h-4 w-4 text-teal-600" />
+                            )}
                           </div>
                           {building.address && (
-                            <p className="text-sm text-gray-500">{building.address}</p>
+                            <p className={`text-sm ${isSelected ? 'text-teal-600' : 'text-gray-500'}`}>
+                              {building.address}
+                            </p>
                           )}
                           {building.unit_count && (
-                            <p className="text-xs text-gray-400">{building.unit_count} units</p>
+                            <p className={`text-xs ${isSelected ? 'text-teal-500' : 'text-gray-400'}`}>
+                              {building.unit_count} units
+                            </p>
                           )}
                         </div>
                       </div>
@@ -565,7 +613,7 @@ export default function ComplianceSetupWizard({
                   <h4 className="font-medium text-blue-900 mb-2">Selected by Category:</h4>
                   <div className="flex flex-wrap gap-2">
                     {getCategorySummary().map(({ category, selectedCount, totalCount }) => (
-                      <Badge key={category} variant="secondary" className="text-xs">
+                      <Badge key={category} variant="outline" className="text-xs">
                         {category} ({selectedCount}/{totalCount})
                       </Badge>
                     ))}
@@ -622,16 +670,18 @@ export default function ComplianceSetupWizard({
                             return (
                               <div
                                 key={asset.id}
-                                className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
+                                className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
                                   isSelected 
-                                    ? 'bg-teal-50 border-teal-200' 
-                                    : 'bg-white border-gray-200 hover:bg-gray-50'
+                                    ? 'bg-gradient-to-r from-teal-50 to-blue-50 border-teal-300 shadow-sm' 
+                                    : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
                                 }`}
                                 onClick={() => toggleAsset(asset.id)}
                               >
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2">
-                                    <span className="font-medium">{asset.name}</span>
+                                    <span className={`font-medium ${isSelected ? 'text-teal-800' : 'text-gray-900'}`}>
+                                      {asset.name}
+                                    </span>
                                     {asset.description && (
                                       <TooltipProvider>
                                         <Tooltip>
@@ -644,9 +694,14 @@ export default function ComplianceSetupWizard({
                                         </Tooltip>
                                       </TooltipProvider>
                                     )}
+                                    {isSelected && (
+                                      <CheckCircle className="h-4 w-4 text-teal-600" />
+                                    )}
                                   </div>
                                   {asset.description && (
-                                    <p className="text-sm text-muted-foreground mt-1">{asset.description}</p>
+                                    <p className={`text-sm mt-1 ${isSelected ? 'text-teal-600' : 'text-muted-foreground'}`}>
+                                      {asset.description}
+                                    </p>
                                   )}
                                 </div>
                                 <Checkbox
@@ -771,14 +826,14 @@ export default function ComplianceSetupWizard({
             <Button
               onClick={handleSubmit}
               disabled={isSubmitting || selectedBuildings.length === 0 || selectedAssets.length === 0}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-8 py-3"
             >
               {isSubmitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <CheckCircle className="h-4 w-4" />
               )}
-              {isSubmitting ? 'Setting Up...' : 'Confirm Setup'}
+              {isSubmitting ? 'Setting Up...' : 'Save Compliance Setup'}
             </Button>
           ) : (
             <Button
