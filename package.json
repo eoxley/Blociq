@@ -9,7 +9,9 @@
     "lint": "next lint",
     "clear-cache": "node scripts/clear-cache.js",
     "seed:compliance": "tsx scripts/seedComplianceAssets.ts",
-    "check:compliance": "tsx scripts/checkComplianceAssets.ts"
+    "check:compliance": "tsx scripts/checkComplianceAssets.ts",
+    "cleanup:audit": "tsx scripts/cleanupTestData.ts audit",
+    "cleanup:cleanup": "tsx scripts/cleanupTestData.ts cleanup"
   },
   "dependencies": {
     "@azure/msal-node": "^3.6.2",
