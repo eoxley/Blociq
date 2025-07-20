@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { 
   Building, 
   Users, 
@@ -41,7 +40,10 @@ import {
   Building2,
   Gavel,
   Handshake,
-  Edit3
+  Edit3,
+  TrendingUp,
+  Activity,
+  Zap
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatDistanceToNow, format } from 'date-fns'
@@ -151,7 +153,6 @@ export default function BuildingCommandCentre({ buildingData }: BuildingCommandC
 
   // Handle task refresh
   const handleTaskAdded = () => {
-    // This will trigger a page refresh to show the new task
     window.location.reload()
   }
 
@@ -168,7 +169,6 @@ export default function BuildingCommandCentre({ buildingData }: BuildingCommandC
         throw new Error('Failed to update building')
       }
 
-      // Update local state with new data
       setUpdatedBuildingData({
         ...updatedBuildingData,
         building: { ...updatedBuildingData.building, ...buildingData },
@@ -183,669 +183,510 @@ export default function BuildingCommandCentre({ buildingData }: BuildingCommandC
   }
 
   return (
-    <div className="space-y-6">
-      {/* Action Buttons */}
-      <div className="flex justify-between items-center">
-        <Button 
-          onClick={() => setIsEditModalOpen(true)} 
-          className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700"
-        >
-          <Edit3 className="h-4 w-4" />
-          Edit Building Information
-        </Button>
-        
-        <Button onClick={handleSummarise} disabled={isSummaryLoading} className="flex items-center gap-2">
-          {isSummaryLoading ? (
-            <RefreshCw className="h-4 w-4 animate-spin" />
-          ) : (
-            <Brain className="h-4 w-4" />
-          )}
-          {isSummaryLoading ? 'Generating Summary...' : '🧠 Summarise this Building'}
-        </Button>
+    <div className="space-y-8">
+      {/* Hero Header Section */}
+      <div className="bg-gradient-to-r from-teal-600 to-blue-700 rounded-2xl p-8 text-white">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-white/20 rounded-xl p-3 backdrop-blur-sm">
+                <Building2 className="h-8 w-8" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold">{building.name}</h1>
+                <p className="text-teal-100 flex items-center gap-2 mt-1">
+                  <MapPin className="h-4 w-4" />
+                  {building.address}
+                </p>
+              </div>
+            </div>
+            
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+              <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
+                <div className="text-2xl font-bold">{units.length}</div>
+                <div className="text-sm text-teal-100">Units</div>
+              </div>
+              <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
+                <div className="text-2xl font-bold">{complianceSummary.compliant}</div>
+                <div className="text-sm text-teal-100">Compliant</div>
+              </div>
+              <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
+                <div className="text-2xl font-bold">{todos.filter((t: any) => !t.is_complete).length}</div>
+                <div className="text-sm text-teal-100">Active Tasks</div>
+              </div>
+              <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
+                <div className="text-2xl font-bold">{recentEmails.filter((e: any) => e.unread).length}</div>
+                <div className="text-sm text-teal-100">New Emails</div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Action Buttons */}
+          <div className="flex flex-col gap-3">
+            <Button 
+              onClick={() => setIsEditModalOpen(true)} 
+              className="bg-white/20 hover:bg-white/30 backdrop-blur-sm border-white/30"
+            >
+              <Edit3 className="h-4 w-4 mr-2" />
+              Edit Building
+            </Button>
+            
+            <Button 
+              onClick={handleSummarise} 
+              disabled={isSummaryLoading} 
+              className="bg-white/20 hover:bg-white/30 backdrop-blur-sm border-white/30"
+            >
+              {isSummaryLoading ? (
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Brain className="h-4 w-4 mr-2" />
+              )}
+              {isSummaryLoading ? 'Generating...' : 'AI Summary'}
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Building Summary Display */}
       {buildingSummary && (
-        <Card className="bg-gray-50">
+        <Card className="border-teal-200 bg-teal-50">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Building Summary</h3>
+              <h3 className="text-lg font-semibold text-teal-900 flex items-center gap-2">
+                <Brain className="h-5 w-5" />
+                AI Building Summary
+              </h3>
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={handleSummarise}
                 disabled={isSummaryLoading}
+                className="border-teal-300 text-teal-700 hover:bg-teal-100"
               >
                 <RefreshCw className="h-4 w-4 mr-1" />
-                Ask Again
+                Refresh
               </Button>
             </div>
             <div className="prose prose-sm max-w-none">
-              <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans">{buildingSummary}</pre>
+              <pre className="whitespace-pre-wrap text-sm text-teal-800 font-sans bg-white/50 p-4 rounded-lg">{buildingSummary}</pre>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Enhanced Building Overview Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
-            Building Information & Structure
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Basic Building Info */}
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-semibold text-lg text-gray-900 mb-2">{building.name}</h3>
-                <p className="text-sm text-gray-600 flex items-center gap-1 mb-3">
-                  <MapPin className="h-4 w-4" />
-                  {building.address}
-                </p>
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Column - Building Details */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Building Information Card */}
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 border-b">
+              <CardTitle className="flex items-center gap-2 text-gray-900">
+                <Building2 className="h-5 w-5 text-teal-600" />
+                Building Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Basic Info */}
+                <div className="space-y-4">
+                  <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                    <h4 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                      <Gavel className="h-4 w-4" />
+                      Legal Structure
+                    </h4>
+                    <div className="space-y-2">
+                      <div>
+                        <span className="text-sm text-blue-700 font-medium">Client Type:</span>
+                        <p className="text-blue-900">{buildingSetup?.client_type || 'Not specified'}</p>
+                      </div>
+                      <div>
+                        <span className="text-sm text-blue-700 font-medium">Client Name:</span>
+                        <p className="text-blue-900">{buildingSetup?.client_name || 'Not specified'}</p>
+                      </div>
+                      {buildingSetup?.client_email && (
+                        <div>
+                          <span className="text-sm text-blue-700 font-medium">Email:</span>
+                          <a href={`mailto:${buildingSetup.client_email}`} className="text-blue-600 hover:underline">
+                            {buildingSetup.client_email}
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Building Stats */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <p className="text-xs text-gray-600 font-medium">Building Type</p>
+                      <p className="font-semibold">{buildingSetup?.structure_type || 'Not specified'}</p>
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <p className="text-xs text-gray-600 font-medium">Total Units</p>
+                      <p className="font-semibold">{units.length}</p>
+                    </div>
+                    {building.building_age && (
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <p className="text-xs text-gray-600 font-medium">Building Age</p>
+                        <p className="font-semibold">{building.building_age}</p>
+                      </div>
+                    )}
+                    {building.total_floors && (
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <p className="text-xs text-gray-600 font-medium">Total Floors</p>
+                        <p className="font-semibold">{building.total_floors}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Management & Safety */}
+                <div className="space-y-4">
+                  {/* Building Management */}
+                  {(building.building_manager_name || building.building_manager_email || building.building_manager_phone) && (
+                    <div className="p-4 bg-green-50 rounded-xl border border-green-200">
+                      <h4 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
+                        <Settings className="h-4 w-4" />
+                        Building Management
+                      </h4>
+                      <div className="space-y-2">
+                        {building.building_manager_name && (
+                          <div>
+                            <span className="text-sm text-green-700 font-medium">Manager:</span>
+                            <p className="text-green-900">{building.building_manager_name}</p>
+                          </div>
+                        )}
+                        {building.building_manager_email && (
+                          <div>
+                            <span className="text-sm text-green-700 font-medium">Email:</span>
+                            <a href={`mailto:${building.building_manager_email}`} className="text-green-600 hover:underline">
+                              {building.building_manager_email}
+                            </a>
+                          </div>
+                        )}
+                        {building.building_manager_phone && (
+                          <div>
+                            <span className="text-sm text-green-700 font-medium">Phone:</span>
+                            <a href={`tel:${building.building_manager_phone}`} className="text-green-600 hover:underline">
+                              {building.building_manager_phone}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Emergency Contact */}
+                  {(building.emergency_contact_name || building.emergency_contact_phone) && (
+                    <div className="p-4 bg-red-50 rounded-xl border border-red-200">
+                      <h4 className="font-semibold text-red-900 mb-3 flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4" />
+                        Emergency Contact
+                      </h4>
+                      <div className="space-y-2">
+                        {building.emergency_contact_name && (
+                          <div>
+                            <span className="text-sm text-red-700 font-medium">Contact:</span>
+                            <p className="text-red-900">{building.emergency_contact_name}</p>
+                          </div>
+                        )}
+                        {building.emergency_contact_phone && (
+                          <div>
+                            <span className="text-sm text-red-700 font-medium">Phone:</span>
+                            <a href={`tel:${building.emergency_contact_phone}`} className="text-red-700 hover:underline font-medium">
+                              {building.emergency_contact_phone}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Operational Notes */}
+                  {buildingSetup?.operational_notes && (
+                    <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-200">
+                      <h4 className="font-semibold text-yellow-900 mb-2 flex items-center gap-2">
+                        <Info className="h-4 w-4" />
+                        Operational Notes
+                      </h4>
+                      <p className="text-sm text-yellow-800">{buildingSetup.operational_notes}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Units & Leaseholders */}
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-gray-50 to-purple-50 border-b">
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-gray-900">
+                  <Users className="h-5 w-5 text-purple-600" />
+                  Units & Leaseholders
+                </div>
+                <Link href={`/buildings/${building.id}/units`}>
+                  <Button variant="outline" size="sm" className="border-purple-300 text-purple-700 hover:bg-purple-50">
+                    View All
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </Link>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="mb-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search units or leaseholders..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2 font-semibold text-gray-700">Unit</th>
+                      <th className="text-left py-2 font-semibold text-gray-700">Leaseholder</th>
+                      <th className="text-left py-2 font-semibold text-gray-700">Contact</th>
+                      <th className="text-left py-2 font-semibold text-gray-700">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredUnits.slice(0, 8).map((unit) => (
+                      <tr key={unit.id} className="border-b hover:bg-gray-50">
+                        <td className="py-3 font-medium">{unit.unit_number}</td>
+                        <td className="py-3">
+                          {unit.leaseholders?.[0]?.name || 'No leaseholder'}
+                        </td>
+                        <td className="py-3">
+                          {unit.leaseholders?.[0]?.email ? (
+                            <a href={`mailto:${unit.leaseholders[0].email}`} className="text-blue-600 hover:underline text-xs">
+                              {unit.leaseholders[0].email}
+                            </a>
+                          ) : '-'}
+                        </td>
+                        <td className="py-3">
+                          <Badge variant={unit.leaseholders?.length > 0 ? "default" : "outline"} className="text-xs">
+                            {unit.leaseholders?.length > 0 ? 'Has Leaseholder' : 'No Leaseholder'}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              {filteredUnits.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  No units found matching your search.
+                </div>
+              )}
+              
+              {filteredUnits.length > 8 && (
+                <div className="text-center pt-4">
+                  <Link href={`/buildings/${building.id}/units`}>
+                    <Button variant="outline" size="sm">
+                      View All {filteredUnits.length} Units
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column - Quick Actions & Status */}
+        <div className="space-y-6">
+          {/* Compliance Status */}
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-gray-50 to-green-50 border-b">
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-gray-900">
+                  <Shield className="h-5 w-5 text-green-600" />
+                  Compliance Status
+                </div>
+                <Link href={`/buildings/${building.id}/compliance`}>
+                  <Button variant="outline" size="sm" className="border-green-300 text-green-700 hover:bg-green-50">
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="text-center p-3 bg-green-100 rounded-lg">
+                  <div className="text-2xl font-bold text-green-700">{complianceSummary.compliant}</div>
+                  <div className="text-xs text-green-600 font-medium">Compliant</div>
+                </div>
+                <div className="text-center p-3 bg-yellow-100 rounded-lg">
+                  <div className="text-2xl font-bold text-yellow-700">{complianceSummary.dueSoon}</div>
+                  <div className="text-xs text-yellow-600 font-medium">Due Soon</div>
+                </div>
+                <div className="text-center p-3 bg-red-100 rounded-lg">
+                  <div className="text-2xl font-bold text-red-700">{complianceSummary.overdue}</div>
+                  <div className="text-xs text-red-600 font-medium">Overdue</div>
+                </div>
+                <div className="text-center p-3 bg-gray-100 rounded-lg">
+                  <div className="text-2xl font-bold text-gray-700">{complianceSummary.total}</div>
+                  <div className="text-xs text-gray-600 font-medium">Total</div>
+                </div>
+              </div>
+              
+              {complianceAssets.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-sm text-gray-600 font-medium">Building Type</p>
-                  <Badge variant="outline" className="w-fit">
-                    {buildingSetup?.structure_type || 'Not specified'}
-                  </Badge>
+                  <p className="text-sm font-medium text-gray-700">Categories:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {Array.from(new Set(complianceAssets.map(asset => asset.compliance_assets?.category).filter(Boolean))).map(category => (
+                      <Badge key={category} variant="outline" className="text-xs">
+                        {category}: {complianceAssets.filter(asset => asset.compliance_assets?.category === category).length}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Quick Tasks */}
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-gray-50 to-orange-50 border-b">
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-gray-900">
+                  <CheckSquare className="h-5 w-5 text-orange-600" />
+                  Quick Tasks
+                </div>
+                <AddTaskModal buildingId={building.id} onTaskAdded={handleTaskAdded} />
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              {todos.filter((t: any) => !t.is_complete).slice(0, 5).length > 0 ? (
+                <div className="space-y-3">
+                  {todos.filter((t: any) => !t.is_complete).slice(0, 5).map((task) => (
+                    <div key={task.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                      <Square className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{task.title}</p>
+                        {task.due_date && (
+                          <p className="text-xs text-gray-500">
+                            Due: {format(new Date(task.due_date), 'MMM dd')}
+                          </p>
+                        )}
+                      </div>
+                      <Badge 
+                        variant="outline" 
+                        className={`text-xs ${
+                          task.priority === 'High' ? 'border-red-300 text-red-700' :
+                          task.priority === 'Medium' ? 'border-yellow-300 text-yellow-700' :
+                          'border-gray-300 text-gray-700'
+                        }`}
+                      >
+                        {task.priority}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <CheckSquare className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                  <p className="text-sm">All caught up!</p>
+                  <p className="text-xs text-gray-400">No active tasks</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Recent Activity */}
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 border-b">
+              <CardTitle className="flex items-center gap-2 text-gray-900">
+                <Activity className="h-5 w-5 text-blue-600" />
+                Recent Activity
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                {/* Recent Emails */}
+                {recentEmails.slice(0, 3).map((email) => (
+                  <div key={email.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                    <Mail className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{email.subject}</p>
+                      <p className="text-xs text-gray-500">
+                        {email.received_at ? formatDistanceToNow(new Date(email.received_at), { addSuffix: true }) : 'Unknown time'}
+                      </p>
+                    </div>
+                    {email.unread && (
+                      <Badge variant="default" className="text-xs flex-shrink-0">New</Badge>
+                    )}
+                  </div>
+                ))}
+
+                {/* Recent Events */}
+                {events.slice(0, 2).map((event) => (
+                  <div key={event.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                    <Calendar className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{event.title}</p>
+                      <p className="text-xs text-gray-500">
+                        {format(new Date(event.start_time), 'MMM dd, HH:mm')}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+
+                {recentEmails.length === 0 && events.length === 0 && (
+                  <div className="text-center py-6 text-gray-500">
+                    <Activity className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                    <p className="text-sm">No recent activity</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* AI Assistant */}
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-gray-50 to-purple-50 border-b">
+              <CardTitle className="flex items-center gap-2 text-gray-900">
+                <Brain className="h-5 w-5 text-purple-600" />
+                AI Assistant
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Ask about this building..."
+                    value={aiQuestion}
+                    onChange={(e) => setAiQuestion(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleAiQuestion()}
+                    className="text-sm"
+                  />
+                  <Button onClick={handleAiQuestion} disabled={isAiLoading} size="sm">
+                    {isAiLoading ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                  </Button>
                 </div>
                 
-                <div className="space-y-2">
-                  <p className="text-sm text-gray-600 font-medium">Total Units</p>
-                  <p className="font-medium text-lg">{units.length} units</p>
-                </div>
-
-                {building.building_age && (
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-600 font-medium">Building Age</p>
-                    <p className="font-medium">{building.building_age}</p>
-                  </div>
-                )}
-
-                {building.total_floors && (
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-600 font-medium">Total Floors</p>
-                    <p className="font-medium">{building.total_floors}</p>
+                {aiResponse && (
+                  <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                    <p className="text-sm text-purple-800">{aiResponse}</p>
                   </div>
                 )}
               </div>
-            </div>
-
-            {/* Freeholder/RMC Structure */}
-            <div className="space-y-4">
-              <h4 className="font-semibold text-gray-900 flex items-center gap-2">
-                <Gavel className="h-4 w-4" />
-                Legal Structure
-              </h4>
-              
-              <div className="space-y-3">
-                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Briefcase className="h-4 w-4 text-blue-600" />
-                    <span className="font-medium text-blue-900">Client Type</span>
-                  </div>
-                  <p className="text-sm text-blue-700">
-                    {buildingSetup?.client_type || 'Not specified'}
-                  </p>
-                </div>
-
-                <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                  <div className="flex items-center gap-2 mb-2">
-                    <User className="h-4 w-4 text-green-600" />
-                    <span className="font-medium text-green-900">Client Name</span>
-                  </div>
-                  <p className="text-sm text-green-700">
-                    {buildingSetup?.client_name || 'Not specified'}
-                  </p>
-                  {buildingSetup?.client_email && (
-                    <p className="text-sm text-green-600 flex items-center gap-1 mt-1">
-                      <MailIcon className="h-3 w-3" />
-                      {buildingSetup.client_email}
-                    </p>
-                  )}
-                  {buildingSetup?.client_contact && (
-                    <p className="text-sm text-green-600 flex items-center gap-1">
-                      <Phone className="h-3 w-3" />
-                      {buildingSetup.client_contact}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Building Management Info */}
-          {(building.building_manager_name || building.building_manager_email || building.building_manager_phone) && (
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-              <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                Building Management
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {building.building_manager_name && (
-                  <div>
-                    <p className="text-sm text-gray-600">Manager</p>
-                    <p className="font-medium">{building.building_manager_name}</p>
-                  </div>
-                )}
-                {building.building_manager_email && (
-                  <div>
-                    <p className="text-sm text-gray-600">Email</p>
-                    <a href={`mailto:${building.building_manager_email}`} className="text-blue-600 hover:underline">
-                      {building.building_manager_email}
-                    </a>
-                  </div>
-                )}
-                {building.building_manager_phone && (
-                  <div>
-                    <p className="text-sm text-gray-600">Phone</p>
-                    <a href={`tel:${building.building_manager_phone}`} className="text-blue-600 hover:underline">
-                      {building.building_manager_phone}
-                    </a>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Emergency Contact */}
-          {(building.emergency_contact_name || building.emergency_contact_phone) && (
-            <div className="mt-4 p-4 bg-red-50 rounded-lg border border-red-200">
-              <h4 className="font-semibold text-red-900 mb-3 flex items-center gap-2">
-                <AlertCircle className="h-4 w-4" />
-                Emergency Contact
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {building.emergency_contact_name && (
-                  <div>
-                    <p className="text-sm text-red-600">Contact</p>
-                    <p className="font-medium text-red-900">{building.emergency_contact_name}</p>
-                  </div>
-                )}
-                {building.emergency_contact_phone && (
-                  <div>
-                    <p className="text-sm text-red-600">Phone</p>
-                    <a href={`tel:${building.emergency_contact_phone}`} className="text-red-700 hover:underline font-medium">
-                      {building.emergency_contact_phone}
-                    </a>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Operational Notes */}
-          {buildingSetup?.operational_notes && (
-            <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-              <h4 className="font-semibold text-yellow-900 mb-2 flex items-center gap-2">
-                <Info className="h-4 w-4" />
-                Operational Notes
-              </h4>
-              <p className="text-sm text-yellow-800">{buildingSetup.operational_notes}</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Building Details Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Construction & Facilities */}
-        {(building.construction_type || building.lift_available || building.heating_type || building.hot_water_type) && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Building className="h-4 w-4" />
-                Construction & Facilities
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {building.construction_type && (
-                <div>
-                  <p className="text-xs text-gray-600">Construction Type</p>
-                  <p className="text-sm font-medium">{building.construction_type}</p>
-                </div>
-              )}
-              {building.lift_available && (
-                <div>
-                  <p className="text-xs text-gray-600">Lift Available</p>
-                  <p className="text-sm font-medium">{building.lift_available}</p>
-                </div>
-              )}
-              {building.heating_type && (
-                <div>
-                  <p className="text-xs text-gray-600">Heating Type</p>
-                  <p className="text-sm font-medium">{building.heating_type}</p>
-                </div>
-              )}
-              {building.hot_water_type && (
-                <div>
-                  <p className="text-xs text-gray-600">Hot Water Type</p>
-                  <p className="text-sm font-medium">{building.hot_water_type}</p>
-                </div>
-              )}
             </CardContent>
           </Card>
-        )}
-
-        {/* Services & Utilities */}
-        {(building.waste_collection_day || building.recycling_info || building.service_charge_frequency) && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                Services & Utilities
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {building.waste_collection_day && (
-                <div>
-                  <p className="text-xs text-gray-600">Waste Collection</p>
-                  <p className="text-sm font-medium">{building.waste_collection_day}</p>
-                </div>
-              )}
-              {building.recycling_info && (
-                <div>
-                  <p className="text-xs text-gray-600">Recycling</p>
-                  <p className="text-sm font-medium">{building.recycling_info}</p>
-                </div>
-              )}
-              {building.service_charge_frequency && (
-                <div>
-                  <p className="text-xs text-gray-600">Service Charge</p>
-                  <p className="text-sm font-medium">{building.service_charge_frequency}</p>
-                </div>
-              )}
-              {building.ground_rent_amount && (
-                <div>
-                  <p className="text-xs text-gray-600">Ground Rent</p>
-                  <p className="text-sm font-medium">£{building.ground_rent_amount} {building.ground_rent_frequency}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Safety & Compliance */}
-        {(building.fire_safety_status || building.asbestos_status || building.energy_rating || building.building_insurance_provider) && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                Safety & Compliance
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {building.fire_safety_status && (
-                <div>
-                  <p className="text-xs text-gray-600">Fire Safety</p>
-                  <Badge variant={building.fire_safety_status === 'Compliant' ? 'default' : 'destructive'} className="text-xs">
-                    {building.fire_safety_status}
-                  </Badge>
-                </div>
-              )}
-              {building.asbestos_status && (
-                <div>
-                  <p className="text-xs text-gray-600">Asbestos Status</p>
-                  <Badge variant={building.asbestos_status === 'Clear' ? 'default' : 'destructive'} className="text-xs">
-                    {building.asbestos_status}
-                  </Badge>
-                </div>
-              )}
-              {building.energy_rating && (
-                <div>
-                  <p className="text-xs text-gray-600">Energy Rating</p>
-                  <p className="text-sm font-medium">{building.energy_rating}</p>
-                </div>
-              )}
-              {building.building_insurance_provider && (
-                <div>
-                  <p className="text-xs text-gray-600">Insurance Provider</p>
-                  <p className="text-sm font-medium">{building.building_insurance_provider}</p>
-                  {building.building_insurance_expiry && (
-                    <p className="text-xs text-gray-500">Expires: {new Date(building.building_insurance_expiry).toLocaleDateString()}</p>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+        </div>
       </div>
-
-      {/* Compliance Summary Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5" />
-              Compliance Summary
-            </div>
-            <Link href={`/buildings/${building.id}/compliance`}>
-              <Button variant="outline" size="sm">
-                View Compliance Tracker
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </Link>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{complianceSummary.compliant}</div>
-              <div className="text-sm text-gray-600">Compliant</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-yellow-600">{complianceSummary.dueSoon}</div>
-              <div className="text-sm text-gray-600">Due Soon</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-red-600">{complianceSummary.overdue}</div>
-              <div className="text-sm text-gray-600">Overdue</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-600">{complianceSummary.total}</div>
-              <div className="text-sm text-gray-600">Total</div>
-            </div>
-          </div>
-          
-          {/* Category badges */}
-          {complianceAssets.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {Array.from(new Set(complianceAssets.map(asset => asset.compliance_assets?.category).filter(Boolean))).map(category => (
-                <Badge key={category} variant="outline">
-                  {category}: {complianceAssets.filter(asset => asset.compliance_assets?.category === category).length}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Units & Leaseholders Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Units & Leaseholders
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search units or leaseholders..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2">Unit</th>
-                  <th className="text-left py-2">Leaseholder</th>
-                  <th className="text-left py-2">Email</th>
-                  <th className="text-left py-2">Phone</th>
-                  <th className="text-left py-2">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUnits.map((unit) => (
-                  <tr key={unit.id} className="border-b hover:bg-gray-50">
-                    <td className="py-2 font-medium">{unit.unit_number}</td>
-                    <td className="py-2">
-                      {unit.leaseholders?.[0]?.name || 'No leaseholder'}
-                    </td>
-                    <td className="py-2">
-                      {unit.leaseholders?.[0]?.email ? (
-                        <a href={`mailto:${unit.leaseholders[0].email}`} className="text-blue-600 hover:underline">
-                          {unit.leaseholders[0].email}
-                        </a>
-                      ) : '-'}
-                    </td>
-                    <td className="py-2">
-                      {unit.leaseholders?.[0]?.phone || '-'}
-                    </td>
-                    <td className="py-2">
-                      <Badge variant={unit.leaseholders?.length > 0 ? "default" : "outline"}>
-                        {unit.leaseholders?.length > 0 ? 'Has Leaseholder' : 'No Leaseholder'}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          
-          {filteredUnits.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              No units found matching your search.
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Tasks Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CheckSquare className="h-5 w-5" />
-              To-Do Items
-            </div>
-            <AddTaskModal buildingId={building.id} onTaskAdded={handleTaskAdded} />
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {todos.length > 0 ? (
-            <div className="space-y-3">
-              {todos.map((task) => (
-                <div key={task.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="flex items-center gap-2">
-                      {task.is_complete ? (
-                        <CheckSquare className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <Square className="h-4 w-4 text-gray-400" />
-                      )}
-                      <span className={task.is_complete ? 'line-through text-gray-500' : 'font-medium'}>
-                        {task.title}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {task.due_date && (
-                      <Badge 
-                        variant={
-                          task.is_complete ? 'outline' : 
-                          new Date(task.due_date) < new Date() ? 'destructive' : 'default'
-                        }
-                        className="text-xs"
-                      >
-                        {format(new Date(task.due_date), 'MMM dd')}
-                      </Badge>
-                    )}
-                    <Badge 
-                      variant="outline" 
-                      className={`text-xs ${
-                        task.priority === 'High' ? 'border-red-300 text-red-700' :
-                        task.priority === 'Medium' ? 'border-yellow-300 text-yellow-700' :
-                        'border-gray-300 text-gray-700'
-                      }`}
-                    >
-                      {task.priority}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              No tasks found for this building.
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Recent Emails Section */}
-      {recentEmails.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
-              Recent Emails
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {recentEmails.slice(0, 5).map((email) => (
-                <div key={email.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium text-sm">{email.subject}</span>
-                      {email.unread && (
-                        <Badge variant="default" className="text-xs">New</Badge>
-                      )}
-                    </div>
-                    <div className="text-xs text-gray-600">
-                      From: {email.from_email} • {email.received_at ? formatDistanceToNow(new Date(email.received_at), { addSuffix: true }) : 'Unknown time'}
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Documents Section */}
-      {(complianceDocs.length > 0 || buildingDocs.length > 0) && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Documents
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {complianceDocs.slice(0, 3).map((doc) => (
-                <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
-                  <div className="flex items-center gap-3">
-                    <FileCheck className="h-4 w-4 text-green-600" />
-                    <div>
-                      <p className="font-medium text-sm">{doc.doc_type}</p>
-                      <p className="text-xs text-gray-600">
-                        {doc.expiry_date && `Expires: ${new Date(doc.expiry_date).toLocaleDateString()}`}
-                      </p>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    <Download className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-              {buildingDocs.slice(0, 3).map((doc) => (
-                <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-4 w-4 text-blue-600" />
-                    <div>
-                      <p className="font-medium text-sm">{doc.file_name}</p>
-                      <p className="text-xs text-gray-600">
-                        {doc.created_at && `Uploaded: ${new Date(doc.created_at).toLocaleDateString()}`}
-                      </p>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    <Download className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Events Section */}
-      {events.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Upcoming Events
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {events.map((event) => (
-                <div key={event.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium text-sm">{event.title}</span>
-                      {event.event_type && (
-                        <Badge variant="outline" className="text-xs">{event.event_type}</Badge>
-                      )}
-                    </div>
-                    <div className="text-xs text-gray-600">
-                      {format(new Date(event.start_time), 'MMM dd, yyyy HH:mm')}
-                      {event.location && ` • ${event.location}`}
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* AI Assistant Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Brain className="h-5 w-5" />
-            AI Assistant
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Ask a question about this building..."
-                value={aiQuestion}
-                onChange={(e) => setAiQuestion(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleAiQuestion()}
-              />
-              <Button onClick={handleAiQuestion} disabled={isAiLoading}>
-                {isAiLoading ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-            
-            {aiResponse && (
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-700">{aiResponse}</p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Edit Building Modal */}
       <EditBuildingModal
