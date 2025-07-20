@@ -15,6 +15,7 @@ import {
   FileText,
   Brain,
 } from 'lucide-react'
+import BlocIQLogo from './BlocIQLogo'
 
 export default function Sidebar() {
   const supabase = createClientComponentClient()
@@ -42,7 +43,7 @@ export default function Sidebar() {
       <div className="mb-8 px-4">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-            <MessageSquare className="h-6 w-6 text-white" />
+            <BlocIQLogo className="h-6 w-6 text-white" />
           </div>
           <div>
             <h1 className="text-xl font-bold font-serif">BlocIQ</h1>
