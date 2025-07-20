@@ -132,18 +132,98 @@ export default function MajorWorksPage() {
 
   return (
     <LayoutWithSidebar>
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Major Works Projects</h1>
-            <p className="text-gray-600">Manage and track major works projects across all buildings</p>
+      <div className="space-y-8">
+        {/* Enhanced Header with Gradient Background */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-2xl p-8 text-white shadow-2xl">
+          <div className="absolute inset-0 bg-black/10"></div>
+          <div className="relative z-10">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <h1 className="text-4xl font-bold">Major Works Projects</h1>
+                <p className="text-teal-100 text-lg">Manage Section 20 consultations and major works projects</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <Button className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Project
+                </Button>
+                <Button variant="outline" className="border-white/30 text-white hover:bg-white/10">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  View Timeline
+                </Button>
+              </div>
+            </div>
           </div>
-          <Link href="/major-works/new">
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-              <Plus className="w-4 h-4 mr-2" />
-              New Project
-            </Button>
-          </Link>
+          {/* Decorative elements */}
+          <div className="absolute top-4 right-4 w-20 h-20 bg-white/10 rounded-full"></div>
+          <div className="absolute bottom-4 left-4 w-16 h-16 bg-white/5 rounded-full"></div>
+        </div>
+
+        {/* Quick Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-gradient-to-br from-teal-50 to-teal-100">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-3xl font-bold text-teal-700 group-hover:scale-110 transition-transform duration-300">
+                    {projects.length}
+                  </div>
+                  <div className="text-sm text-teal-600 font-medium">Total Projects</div>
+                </div>
+                <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <Building2 className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-gradient-to-br from-blue-50 to-blue-100">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-3xl font-bold text-blue-700 group-hover:scale-110 transition-transform duration-300">
+                    {projects.filter(p => p.status === 'works_in_progress').length}
+                  </div>
+                  <div className="text-sm text-blue-600 font-medium">In Progress</div>
+                </div>
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <Calendar className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-gradient-to-br from-green-50 to-green-100">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-3xl font-bold text-green-700 group-hover:scale-110 transition-transform duration-300">
+                    {projects.filter(p => p.status === 'completed').length}
+                  </div>
+                  <div className="text-sm text-green-600 font-medium">Completed</div>
+                </div>
+                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <DollarSign className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-gradient-to-br from-purple-50 to-purple-100">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-3xl font-bold text-purple-700 group-hover:scale-110 transition-transform duration-300">
+                    £{projects.reduce((total, p) => total + (p.estimated_cost || 0), 0).toLocaleString()}
+                  </div>
+                  <div className="text-sm text-purple-600 font-medium">Total Budget</div>
+                </div>
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <DollarSign className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {projects.length === 0 ? (

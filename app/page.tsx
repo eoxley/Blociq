@@ -198,19 +198,6 @@ export default function LandingPage() {
         <div className="absolute -bottom-8 left-1/3 w-72 h-72 bg-indigo-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center mb-20">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-teal-100 text-teal-700 rounded-full text-sm font-medium mb-6">
-              <Building2 className="h-4 w-4" />
-              Building Intelligence Platform
-            </div>
-            <h2 className="text-5xl font-bold text-gray-900 mb-6 bg-gradient-to-r from-gray-900 via-teal-800 to-blue-800 bg-clip-text text-transparent">
-              Complete Building Intelligence
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              Get a comprehensive overview of every building in your portfolio with AI-powered insights and real-time data
-            </p>
-          </div>
-          
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             {/* Left: Enhanced Building Summary Card */}
             <div className="space-y-8">
@@ -229,13 +216,13 @@ export default function LandingPage() {
                             <Building2 className="h-6 w-6 text-white" />
                           </div>
                           <div>
-                            <h3 className="text-3xl font-bold">Ashwood House</h3>
-                            <p className="text-teal-100 text-lg">123 Ashwood Street, London, SW1A 1AA</p>
+                            <h3 className="text-3xl font-bold">Building Summary</h3>
+                            <p className="text-teal-100 text-lg">Your property portfolio overview</p>
                           </div>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-4xl font-bold">24</div>
+                        <div className="text-4xl font-bold">-</div>
                         <div className="text-teal-100 text-sm font-medium">Total Units</div>
                       </div>
                     </div>
@@ -243,15 +230,15 @@ export default function LandingPage() {
                     {/* Quick Stats Row */}
                     <div className="grid grid-cols-3 gap-4 mt-6">
                       <div className="text-center p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-                        <div className="text-2xl font-bold">22</div>
+                        <div className="text-2xl font-bold">-</div>
                         <div className="text-teal-100 text-xs">Occupied</div>
                       </div>
                       <div className="text-center p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-                        <div className="text-2xl font-bold">2</div>
+                        <div className="text-2xl font-bold">-</div>
                         <div className="text-teal-100 text-xs">Available</div>
                       </div>
                       <div className="text-center p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-                        <div className="text-2xl font-bold">98%</div>
+                        <div className="text-2xl font-bold">-</div>
                         <div className="text-teal-100 text-xs">Occupancy</div>
                       </div>
                     </div>
@@ -267,7 +254,7 @@ export default function LandingPage() {
                         <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-green-200 transition-colors">
                           <Users className="h-6 w-6 text-green-600" />
                         </div>
-                        <div className="text-3xl font-bold text-green-700 mb-1">22</div>
+                        <div className="text-3xl font-bold text-green-700 mb-1">-</div>
                         <div className="text-sm text-green-600 font-medium">With Leaseholders</div>
                       </div>
                     </div>
@@ -276,7 +263,7 @@ export default function LandingPage() {
                         <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-blue-200 transition-colors">
                           <Home className="h-6 w-6 text-blue-600" />
                         </div>
-                        <div className="text-3xl font-bold text-blue-700 mb-1">22</div>
+                        <div className="text-3xl font-bold text-blue-700 mb-1">-</div>
                         <div className="text-sm text-blue-600 font-medium">Currently Occupied</div>
                       </div>
                     </div>
