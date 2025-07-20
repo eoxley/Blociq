@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { X, Send, Loader2, User, Building } from 'lucide-react'
+import { X, Send, Loader2, User, Building, Brain } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -43,6 +43,7 @@ export default function ComposeEmailModal({
   const [selectedBuilding, setSelectedBuilding] = useState<string>('')
   const [isSending, setIsSending] = useState(false)
   const [isLoadingContacts, setIsLoadingContacts] = useState(false)
+  const [isGeneratingDraft, setIsGeneratingDraft] = useState(false)
 
   // Fetch contacts and buildings on mount
   useEffect(() => {
@@ -104,6 +105,43 @@ export default function ComposeEmailModal({
   const selectContact = (contact: Contact) => {
     setTo(contact.email)
     setShowContactSuggestions(false)
+  }
+
+  const handleAIDraft = async () => {
+    if (!subject.trim()) {
+      toast.error('Please enter a subject first')
+      return
+    }
+
+    setIsGeneratingDraft(true)
+    try {
+      const response = await fetch('/api/generate-email-draft', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          subject: subject.trim(),
+          recipient: to.trim() || null,
+          building_id: selectedBuilding || null,
+          context: null
+        }),
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        setBody(result.draft)
+        toast.success('AI draft generated successfully')
+      } else {
+        toast.error(result.error || 'Failed to generate AI draft')
+      }
+    } catch (error) {
+      console.error('Error generating AI draft:', error)
+      toast.error('Failed to generate AI draft')
+    } finally {
+      setIsGeneratingDraft(false)
+    }
   }
 
   const handleSend = async () => {
@@ -272,10 +310,26 @@ export default function ComposeEmailModal({
 
           {/* Body Field */}
           <div className="space-y-2">
-            <Label htmlFor="body">Message:</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="body">Message:</Label>
+              <Button
+                onClick={handleAIDraft}
+                disabled={isGeneratingDraft || !subject.trim()}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                {isGeneratingDraft ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Brain className="h-4 w-4" />
+                )}
+                {isGeneratingDraft ? 'Generating...' : '🧠 AI Draft'}
+              </Button>
+            </div>
             <Textarea
               id="body"
-              placeholder="Enter your message..."
+              placeholder="Enter your message or click 'AI Draft' to generate content..."
               value={body}
               onChange={(e) => setBody(e.target.value)}
               rows={12}
@@ -287,7 +341,7 @@ export default function ComposeEmailModal({
         {/* Footer */}
         <div className="flex items-center justify-end gap-3 p-6 border-t bg-gray-50">
           <Button variant="outline" onClick={handleClose}>
-            Cancel
+            ❌ Cancel
           </Button>
           <Button 
             onClick={handleSend} 
@@ -299,7 +353,7 @@ export default function ComposeEmailModal({
             ) : (
               <Send className="h-4 w-4" />
             )}
-            {isSending ? 'Sending...' : 'Send Email'}
+            {isSending ? 'Sending...' : '✈️ Send'}
           </Button>
         </div>
       </div>
