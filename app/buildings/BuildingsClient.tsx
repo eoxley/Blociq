@@ -12,7 +12,6 @@ import {
   Plus, 
   Wrench, 
   Calendar,
-  TrendingUp,
   CheckCircle,
   Grid,
   List,
@@ -274,8 +273,6 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
 
 // Modern Building Card Component
 function BuildingCard({ building }: { building: Building }) {
-  const occupiedUnits = building.units?.filter(unit => unit.leaseholders && unit.leaseholders.length > 0).length || 0
-  const occupancyRate = building.unit_count ? Math.round((occupiedUnits / building.unit_count) * 100) : 0
 
   return (
     <Link href={`/buildings/${building.id}`} className="group block">
@@ -308,28 +305,12 @@ function BuildingCard({ building }: { building: Building }) {
         {/* Content */}
         <CardContent className="p-4">
           {/* Quick Stats */}
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            <div className="text-center p-2 bg-gray-50 rounded-lg">
-              <div className="flex items-center justify-center mb-1">
-                <Home className="h-4 w-4 text-teal-500 mr-1" />
-                <span className="text-lg font-bold text-gray-900">{building.unit_count || 0}</span>
-              </div>
-              <p className="text-xs text-gray-500">Units</p>
+          <div className="text-center p-3 bg-gray-50 rounded-lg mb-4">
+            <div className="flex items-center justify-center mb-1">
+              <Home className="h-5 w-5 text-teal-500 mr-2" />
+              <span className="text-xl font-bold text-gray-900">{building.unit_count || 0}</span>
             </div>
-            <div className="text-center p-2 bg-gray-50 rounded-lg">
-              <div className="flex items-center justify-center mb-1">
-                <User className="h-4 w-4 text-green-500 mr-1" />
-                <span className="text-lg font-bold text-gray-900">{occupiedUnits}</span>
-              </div>
-              <p className="text-xs text-gray-500">Occupied</p>
-            </div>
-            <div className="text-center p-2 bg-gray-50 rounded-lg">
-              <div className="flex items-center justify-center mb-1">
-                <TrendingUp className="h-4 w-4 text-blue-500 mr-1" />
-                <span className="text-lg font-bold text-gray-900">{occupancyRate}%</span>
-              </div>
-              <p className="text-xs text-gray-500">Rate</p>
-            </div>
+            <p className="text-sm text-gray-500">Total Units</p>
           </div>
           
           {/* Sample Units with Leaseholders */}
@@ -398,8 +379,6 @@ function BuildingCard({ building }: { building: Building }) {
 
 // Modern Building List Item Component
 function BuildingListItem({ building }: { building: Building }) {
-  const occupiedUnits = building.units?.filter(unit => unit.leaseholders && unit.leaseholders.length > 0).length || 0
-  const occupancyRate = building.unit_count ? Math.round((occupiedUnits / building.unit_count) * 100) : 0
 
   return (
     <Link href={`/buildings/${building.id}`} className="group block">
@@ -437,14 +416,6 @@ function BuildingListItem({ building }: { building: Building }) {
                   <div className="flex items-center space-x-1">
                     <Home className="h-4 w-4" />
                     <span>{building.unit_count || 0} units</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <User className="h-4 w-4" />
-                    <span>{occupiedUnits} occupied</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <TrendingUp className="h-4 w-4" />
-                    <span>{occupancyRate}% rate</span>
                   </div>
                   <div className="flex items-center space-x-1">
                     <Calendar className="h-4 w-4" />
