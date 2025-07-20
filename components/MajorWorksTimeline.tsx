@@ -1,167 +1,256 @@
 'use client'
 
-import React from 'react'
-import { AlertTriangle, CheckCircle, Clock, FileText, Wrench } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Calendar, FileText, CheckCircle, Construction, AlertCircle } from 'lucide-react'
 
-interface TimelineProps {
-  startDate: string | null
-  estimatesIssued: string | null
-  constructionStart: string | null
-  completionDate: string | null
-  status: string
+interface TimelineEvent {
+  id: string
+  title: string
+  notes?: string
+  created_by: string
+  timestamp: string
 }
 
-export default function MajorWorksTimeline({
-  startDate,
-  estimatesIssued,
-  constructionStart,
-  completionDate,
-  status
-}: TimelineProps) {
-  if (!startDate) {
-    return (
-      <div className="text-center py-4 text-gray-500 text-sm">
-        No start date set
-      </div>
-    )
+interface Project {
+  id: string
+  title: string
+  start_date: string
+  estimates_issued: string
+  construction_start: string
+  completion_date: string
+  status: string
+  consultation_stage: string
+}
+
+interface MajorWorksTimelineProps {
+  project: Project
+  logs: TimelineEvent[]
+}
+
+export default function MajorWorksTimeline({ project, logs }: MajorWorksTimelineProps) {
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newLogTitle, setNewLogTitle] = useState('')
+  const [newLogNotes, setNewLogNotes] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newLogTitle.trim()) return
+
+    setIsSubmitting(true)
+    try {
+      const response = await fetch('/api/major-works-logs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          project_id: project.id,
+          title: newLogTitle.trim(),
+          notes: newLogNotes.trim(),
+          created_by: 'Property Manager'
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to add log')
+      }
+
+      // Refresh the page to show the new log
+      window.location.reload()
+    } catch (error) {
+      console.error('Failed to add log:', error)
+      alert('Failed to add log. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  const start = new Date(startDate)
-  const today = new Date()
-  const eighteenMonthsLater = new Date(start)
-  eighteenMonthsLater.setMonth(eighteenMonthsLater.getMonth() + 18)
+  // Calculate timeline dates
+  const startDate = new Date(project.start_date)
+  const timelineStart = new Date(startDate.getTime() - 30 * 24 * 60 * 60 * 1000) // 30 days before
+  const timelineEnd = new Date(startDate.getTime() + 18 * 30 * 24 * 60 * 60 * 1000) // 18 months after
 
-  // Calculate current position (months from start)
-  const monthsFromStart = Math.max(0, (today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 30.44))
-  const currentPosition = Math.min(18, monthsFromStart)
+  // Key milestones
+  const milestones = [
+    {
+      id: 'notice',
+      title: 'Notice of Intention',
+      date: project.start_date,
+      icon: FileText,
+      color: 'bg-blue-500',
+      completed: true
+    },
+    {
+      id: 'estimates',
+      title: 'Estimates Stage',
+      date: project.estimates_issued,
+      icon: AlertCircle,
+      color: 'bg-yellow-500',
+      completed: !!project.estimates_issued
+    },
+    {
+      id: 'construction',
+      title: 'Works Commence',
+      date: project.construction_start,
+      icon: Construction,
+      color: 'bg-orange-500',
+      completed: !!project.construction_start
+    },
+    {
+      id: 'completion',
+      title: 'Completion',
+      date: project.completion_date,
+      icon: CheckCircle,
+      color: 'bg-green-500',
+      completed: project.status === 'completed'
+    }
+  ]
 
-  // Calculate milestone positions
-  const getMilestonePosition = (dateString: string | null) => {
-    if (!dateString) return null
-    const date = new Date(dateString)
-    const monthsFromStart = Math.max(0, (date.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 30.44))
-    return Math.min(18, monthsFromStart)
-  }
-
-  const estimatesPosition = getMilestonePosition(estimatesIssued)
-  const constructionPosition = getMilestonePosition(constructionStart)
-  const completionPosition = getMilestonePosition(completionDate)
-
-  // Check for flags
-  const isOver6MonthsNoConstruction = monthsFromStart >= 6 && !constructionStart
-  const isOver18MonthsNotCompleted = monthsFromStart >= 18 && status !== 'completed'
+  // Combine milestones and logs
+  const allEvents = [
+    ...milestones.map(milestone => ({
+      ...milestone,
+      type: 'milestone' as const,
+      timestamp: milestone.date
+    })),
+    ...logs.map(log => ({
+      ...log,
+      type: 'log' as const,
+      icon: Calendar,
+      color: 'bg-gray-500'
+    }))
+  ].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
 
   return (
-    <div className="space-y-3">
-      {/* Timeline Bar */}
-      <div className="relative">
-        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-          {/* Progress bar showing current position */}
-          <div 
-            className="h-full bg-teal-500 transition-all duration-300"
-            style={{ width: `${(currentPosition / 18) * 100}%` }}
-          />
-          
-          {/* Current position indicator */}
-          <div 
-            className="absolute top-0 w-3 h-3 bg-teal-600 rounded-full border-2 border-white shadow-md transform -translate-y-0.5 transition-all duration-300"
-            style={{ left: `${(currentPosition / 18) * 100}%` }}
-          />
-        </div>
-
-        {/* Month markers */}
-        <div className="flex justify-between text-xs text-gray-500 mt-1">
-          {Array.from({ length: 19 }, (_, i) => (
-            <div key={i} className="flex flex-col items-center">
-              <div className="w-1 h-1 bg-gray-300 rounded-full mb-1" />
-              {i % 6 === 0 && <span>{i}</span>}
-            </div>
-          ))}
-        </div>
-
-        {/* Milestone markers */}
-        <div className="relative -mt-8">
-          {/* Notice Issued (start date) */}
-          <div className="absolute transform -translate-x-1/2" style={{ left: '0%' }}>
-            <div className="w-3 h-3 bg-blue-500 rounded-full border-2 border-white shadow-md" />
-            <div className="text-xs text-blue-600 font-medium mt-1">Notice</div>
-          </div>
-
-          {/* Estimates Issued */}
-          {estimatesPosition !== null && (
-            <div className="absolute transform -translate-x-1/2" style={{ left: `${(estimatesPosition / 18) * 100}%` }}>
-              <div className="w-3 h-3 bg-yellow-500 rounded-full border-2 border-white shadow-md" />
-              <div className="text-xs text-yellow-600 font-medium mt-1">Estimates</div>
-            </div>
-          )}
-
-          {/* Construction Start */}
-          {constructionPosition !== null && (
-            <div className="absolute transform -translate-x-1/2" style={{ left: `${(constructionPosition / 18) * 100}%` }}>
-              <div className="w-3 h-3 bg-orange-500 rounded-full border-2 border-white shadow-md" />
-              <div className="text-xs text-orange-600 font-medium mt-1">Works Start</div>
-            </div>
-          )}
-
-          {/* Completion */}
-          {completionPosition !== null && (
-            <div className="absolute transform -translate-x-1/2" style={{ left: `${(completionPosition / 18) * 100}%` }}>
-              <div className="w-3 h-3 bg-green-500 rounded-full border-2 border-white shadow-md" />
-              <div className="text-xs text-green-600 font-medium mt-1">Complete</div>
-            </div>
-          )}
-        </div>
+    <div className="space-y-6">
+      {/* Timeline Header */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-gray-900">Timeline & Observations</h3>
+        <button
+          onClick={() => setShowAddForm(!showAddForm)}
+          className="inline-flex items-center gap-2 px-3 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 transition-colors"
+        >
+          <Calendar className="h-4 w-4" />
+          Add Log
+        </button>
       </div>
 
-      {/* Timeline labels */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-        <div className="flex items-center gap-1">
-          <div className="w-2 h-2 bg-blue-500 rounded-full" />
-          <span>Notice Issued</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-2 h-2 bg-yellow-500 rounded-full" />
-          <span>Estimates</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-2 h-2 bg-orange-500 rounded-full" />
-          <span>Works Start</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-2 h-2 bg-green-500 rounded-full" />
-          <span>Completion</span>
-        </div>
-      </div>
-
-      {/* Warning flags */}
-      {(isOver6MonthsNoConstruction || isOver18MonthsNotCompleted) && (
-        <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded-md">
-          <div className="flex items-center gap-2 text-red-700">
-            {isOver18MonthsNotCompleted ? (
-              <>
-                <AlertTriangle className="h-4 w-4" />
-                <span className="text-sm font-medium">⚠️ 18+ months passed - Section 20 consultation period exceeded</span>
-              </>
-            ) : (
-              <>
-                <Clock className="h-4 w-4" />
-                <span className="text-sm font-medium">⚠️ 6+ months passed with no construction start</span>
-              </>
-            )}
-          </div>
+      {/* Add Log Form */}
+      {showAddForm && (
+        <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Log Title
+              </label>
+              <input
+                type="text"
+                value={newLogTitle}
+                onChange={(e) => setNewLogTitle(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                placeholder="e.g., Consultation feedback received"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Notes
+              </label>
+              <textarea
+                value={newLogNotes}
+                onChange={(e) => setNewLogNotes(e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                placeholder="Add any additional details..."
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
+              >
+                {isSubmitting ? 'Adding...' : 'Add Log'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAddForm(false)}
+                className="px-4 py-2 bg-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-400 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
-      {/* Timeline info */}
-      <div className="text-xs text-gray-500">
-        <div className="flex items-center gap-1">
-          <div className="w-2 h-2 bg-teal-500 rounded-full" />
-          <span>Current position: {Math.round(currentPosition)} months from start</span>
-        </div>
-        <div className="mt-1">
-          <span>Timeline: {start.toLocaleDateString('en-GB')} → {eighteenMonthsLater.toLocaleDateString('en-GB')}</span>
+      {/* Timeline */}
+      <div className="relative">
+        {/* Timeline line */}
+        <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+        
+        {/* Events */}
+        <div className="space-y-6">
+          {allEvents.map((event, index) => {
+            const Icon = event.icon
+            const isMilestone = event.type === 'milestone'
+            
+            return (
+              <div key={event.id} className="relative flex items-start gap-4">
+                {/* Timeline dot */}
+                <div className={`relative z-10 flex-shrink-0 w-12 h-12 rounded-full ${event.color} flex items-center justify-center text-white shadow-md`}>
+                  <Icon className="h-5 w-5" />
+                </div>
+                
+                {/* Event content */}
+                <div className="flex-1 min-w-0 bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between mb-2">
+                    <h4 className="text-sm font-semibold text-gray-900">
+                      {event.title}
+                    </h4>
+                    {isMilestone && (
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        event.completed ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {event.completed ? 'Completed' : 'Pending'}
+                      </span>
+                    )}
+                  </div>
+                  
+                  <p className="text-xs text-gray-500 mb-2">
+                    {new Date(event.timestamp).toLocaleDateString('en-GB', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                  
+                  {event.type === 'log' && event.notes && (
+                    <p className="text-sm text-gray-600">{event.notes}</p>
+                  )}
+                  
+                  {event.type === 'log' && (
+                    <p className="text-xs text-gray-400 mt-2">
+                      Logged by: {event.created_by}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
+
+      {/* No events message */}
+      {allEvents.length === 0 && (
+        <div className="text-center py-8 text-gray-500">
+          <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+          <p>No timeline events yet. Add the first log to get started.</p>
+        </div>
+      )}
     </div>
   )
 } 
