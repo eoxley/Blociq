@@ -36,84 +36,11 @@ export async function GET() {
       .limit(1);
 
     if (!existingEmails || existingEmails.length === 0) {
-      const dummyEmails = [
-        {
-          building_id: buildingId,
-          from_email: "tenant@example.com",
-          subject: "Maintenance Request - Unit 101",
-          body_preview: "Hi, there's a leak in the bathroom. Can someone please check it out?",
-          received_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-          handled: false,
-          unread: true,
-          flag_status: 'notFlagged',
-          categories: ['Maintenance'],
-        },
-        {
-          building_id: buildingId,
-          from_email: "property@example.com",
-          subject: "Lease Renewal Notice",
-          body_preview: "Your lease is due for renewal. Please contact us to discuss terms.",
-          received_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
-          handled: false,
-          unread: false,
-          flag_status: 'flagged',
-          categories: ['Urgent', 'Leaseholder'],
-        },
-        {
-          building_id: buildingId,
-          from_email: "maintenance@example.com",
-          subject: "Scheduled Building Inspection",
-          body_preview: "We will be conducting our monthly building inspection tomorrow.",
-          received_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
-          handled: false,
-          unread: true,
-          flag_status: 'notFlagged',
-          categories: ['Compliance'],
-        },
-        {
-          building_id: buildingId,
-          from_email: "compliance@example.com",
-          subject: "Fire Safety Certificate Expiry",
-          body_preview: "Your fire safety certificate expires next month. Please ensure renewal is completed.",
-          received_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), // 4 days ago
-          handled: false,
-          unread: true,
-          flag_status: 'flagged',
-          categories: ['Compliance', 'Urgent'],
-        },
-        {
-          building_id: buildingId,
-          from_email: "leaseholder@example.com",
-          subject: "Service Charge Query",
-          body_preview: "I have a question about the recent service charge increase. Can you explain the breakdown?",
-          received_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
-          handled: false,
-          unread: false,
-          flag_status: 'notFlagged',
-          categories: ['Service Charge'],
-        }
-      ];
-
-      const { data: insertedEmails, error: insertError } = await supabase
-        .from('incoming_emails')
-        .upsert(dummyEmails, { 
-          onConflict: 'id',
-          ignoreDuplicates: false 
-        })
-        .select();
-
-      if (insertError) {
-        console.error('Error inserting dummy emails:', insertError);
-        return NextResponse.json(
-          { error: "Failed to insert dummy emails", details: insertError.message },
-          { status: 500 }
-        );
-      }
-
+      // Remove dummy data - return empty state instead
       return NextResponse.json({
-        message: "Azure credentials not configured, inserted dummy data",
-        emailsInserted: insertedEmails?.length || 0,
-        dummyEmails: true,
+        message: "Azure credentials not configured, no emails available",
+        emailsInserted: 0,
+        dummyEmails: false,
         configStatus: "missing_credentials"
       });
     }
@@ -165,67 +92,14 @@ export async function GET() {
 
     const emails = messages.value || [];
 
-    // If no messages are returned, insert static dummy messages
+    // If no messages are returned, return empty state instead of dummy data
     if (emails.length === 0) {
-      console.log('📧 No emails found in Microsoft Graph, using dummy data');
+      console.log('📧 No emails found in Microsoft Graph');
       
-      const dummyEmails = [
-        {
-          building_id: buildingId,
-          from_email: "tenant@example.com",
-          subject: "Maintenance Request - Unit 101",
-          body_preview: "Hi, there's a leak in the bathroom. Can someone please check it out?",
-          received_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-          handled: false,
-          unread: true,
-          flag_status: 'notFlagged',
-          categories: ['Maintenance'],
-        },
-        {
-          building_id: buildingId,
-          from_email: "property@example.com",
-          subject: "Lease Renewal Notice",
-          body_preview: "Your lease is due for renewal. Please contact us to discuss terms.",
-          received_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
-          handled: false,
-          unread: false,
-          flag_status: 'flagged',
-          categories: ['Urgent', 'Leaseholder'],
-        },
-        {
-          building_id: buildingId,
-          from_email: "maintenance@example.com",
-          subject: "Scheduled Building Inspection",
-          body_preview: "We will be conducting our monthly building inspection tomorrow.",
-          received_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
-          handled: false,
-          unread: true,
-          flag_status: 'notFlagged',
-          categories: ['Compliance'],
-        }
-      ];
-
-      // Insert dummy emails into Supabase with handled = false
-      const { data: insertedEmails, error: insertError } = await supabase
-        .from('incoming_emails')
-        .upsert(dummyEmails, { 
-          onConflict: 'id',
-          ignoreDuplicates: false 
-        })
-        .select();
-
-      if (insertError) {
-        console.error('Error inserting dummy emails:', insertError);
-        return NextResponse.json(
-          { error: "Failed to insert dummy emails", details: insertError.message },
-          { status: 500 }
-        );
-      }
-
       return NextResponse.json({
-        message: "No emails found in inbox, inserted dummy data",
-        emailsInserted: insertedEmails?.length || 0,
-        dummyEmails: true,
+        message: "No emails found in inbox",
+        emailsInserted: 0,
+        dummyEmails: false,
         configStatus: "no_emails_found"
       });
     }
