@@ -19,11 +19,33 @@ export default async function MajorWorksPage() {
     console.log('🔍 [MajorWorks] Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Set' : 'Missing')
     console.log('🔍 [MajorWorks] Supabase Key:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Set' : 'Missing')
     
+    // Test simple query first
+    console.log('🔍 [MajorWorks] Testing simple query...')
+    const { data: testData, error: testError } = await supabase
+      .from('major_works')
+      .select('count')
+      .limit(1)
+    
+    console.log('🔍 [MajorWorks] Test query result:', { testData, testError })
+    
+    // Test count query
+    console.log('🔍 [MajorWorks] Testing count query...')
+    const { count, error: countError } = await supabase
+      .from('major_works')
+      .select('*', { count: 'exact', head: true })
+    
+    console.log('🔍 [MajorWorks] Count query result:', { count, countError })
+    
     // Fetch all major works projects
+    console.log('🔍 [MajorWorks] Executing database query...')
+    
     const { data: projects, error } = await supabase
       .from('major_works')
       .select('*')
       .order('created_at', { ascending: false })
+    
+    console.log('🔍 [MajorWorks] Query completed')
+    console.log('🔍 [MajorWorks] Raw response:', { data: projects, error })
 
     console.log('🔍 [MajorWorks] Fetched projects:', projects?.length || 0)
     console.log('🔍 [MajorWorks] Projects data:', projects)
