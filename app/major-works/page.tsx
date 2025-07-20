@@ -72,12 +72,12 @@ export default async function MajorWorksPage() {
                         </div>
                         <div className="ml-4">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            project.status === 'Planned' ? 'bg-blue-100 text-blue-800' :
-                            project.status === 'Ongoing' ? 'bg-yellow-100 text-yellow-800' :
-                            project.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                            project.status === 'planned' ? 'bg-blue-100 text-blue-800' :
+                            project.status === 'ongoing' ? 'bg-yellow-100 text-yellow-800' :
+                            project.status === 'completed' ? 'bg-green-100 text-green-800' :
                             'bg-gray-100 text-gray-800'
                           }`}>
-                            {project.status}
+                            {project.status?.charAt(0).toUpperCase() + project.status?.slice(1) || 'Unknown'}
                           </span>
                         </div>
                       </div>
