@@ -19,6 +19,18 @@ type Building = {
   ews1_status?: string
   fire_door_survey?: string
   gas_eicr_status?: string
+  units?: {
+    id: string
+    unit_number: string
+    type?: string
+    floor?: string
+    notes?: string
+  }[]
+  leases?: {
+    id: string
+    unit: string
+    leaseholder_name: string
+  }[]
 }
 
 type Email = {
@@ -39,7 +51,7 @@ type Unit = {
     full_name: string
     email: string
     phone: string
-  }
+  } | null
 }
 
 interface BuildingDetailClientProps {
@@ -76,6 +88,30 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
   useEffect(() => {
     const fetchUnits = async () => {
       try {
+        // First, check if units are already available in the building prop
+        if (building.units && building.units.length > 0) {
+          // Transform the units data from the building prop
+          const transformedUnits = building.units.map((unit: any) => {
+            const matchingLease = building.leases?.find((lease: any) => lease.unit === unit.id)
+            return {
+              id: unit.id,
+              unit_number: unit.unit_number,
+              type: unit.type || 'Residential',
+              floor: unit.floor || 'Ground',
+              notes: unit.notes || '',
+              leaseholder: matchingLease ? {
+                full_name: matchingLease.leaseholder_name || '',
+                email: '',
+                phone: ''
+              } : undefined
+            }
+          })
+          setUnits(transformedUnits)
+          setLoadingUnits(false)
+          return
+        }
+
+        // If no units in building prop, try to fetch from database
         const { data: unitsData, error: unitsError } = await supabase
           .from('units')
           .select('id, unit_number, type, floor, notes, leaseholders(full_name, email, phone)')
@@ -102,7 +138,7 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
     }
 
     fetchUnits()
-  }, [building.id, supabase])
+  }, [building.id, building.units, building.leases, supabase])
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-GB', {

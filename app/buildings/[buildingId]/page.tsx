@@ -150,6 +150,50 @@ export default async function BuildingDetailPage({
         { id: 43, leaseholder_name: "Jeffrey Cook", unit: 43 },
         { id: 44, leaseholder_name: "Tiffany Morgan", unit: 44 }
       ]
+    },
+    "4": {
+      id: 4,
+      name: "Ashwood House",
+      address: "Ashwood Lane, London, SW15 2AB",
+      unit_count: 16,
+      created_at: new Date().toISOString(),
+      demo_ready: true,
+      units: [
+        { id: 45, unit_number: "Flat 1", building_id: 4 },
+        { id: 46, unit_number: "Flat 2", building_id: 4 },
+        { id: 47, unit_number: "Flat 3", building_id: 4 },
+        { id: 48, unit_number: "Flat 4", building_id: 4 },
+        { id: 49, unit_number: "Flat 5", building_id: 4 },
+        { id: 50, unit_number: "Flat 6", building_id: 4 },
+        { id: 51, unit_number: "Flat 7", building_id: 4 },
+        { id: 52, unit_number: "Flat 8", building_id: 4 },
+        { id: 53, unit_number: "Flat 9", building_id: 4 },
+        { id: 54, unit_number: "Flat 10", building_id: 4 },
+        { id: 55, unit_number: "Flat 11", building_id: 4 },
+        { id: 56, unit_number: "Flat 12", building_id: 4 },
+        { id: 57, unit_number: "Flat 13", building_id: 4 },
+        { id: 58, unit_number: "Flat 14", building_id: 4 },
+        { id: 59, unit_number: "Flat 15", building_id: 4 },
+        { id: 60, unit_number: "Flat 16", building_id: 4 }
+      ],
+      leases: [
+        { id: 45, leaseholder_name: "Eleanor Oxley", unit: 45 },
+        { id: 46, leaseholder_name: "James Thompson", unit: 46 },
+        { id: 47, leaseholder_name: "Sarah Williams", unit: 47 },
+        { id: 48, leaseholder_name: "Michael Davis", unit: 48 },
+        { id: 49, leaseholder_name: "Emma Wilson", unit: 49 },
+        { id: 50, leaseholder_name: "David Brown", unit: 50 },
+        { id: 51, leaseholder_name: "Lisa Johnson", unit: 51 },
+        { id: 52, leaseholder_name: "Robert Miller", unit: 52 },
+        { id: 53, leaseholder_name: "Jennifer Garcia", unit: 53 },
+        { id: 54, leaseholder_name: "Christopher Martinez", unit: 54 },
+        { id: 55, leaseholder_name: "Amanda Rodriguez", unit: 55 },
+        { id: 56, leaseholder_name: "James Lopez", unit: 56 },
+        { id: 57, leaseholder_name: "Michelle Gonzalez", unit: 57 },
+        { id: 58, leaseholder_name: "Thomas Anderson", unit: 58 },
+        { id: 59, leaseholder_name: "Jessica Taylor", unit: 59 },
+        { id: 60, leaseholder_name: "Daniel Moore", unit: 60 }
+      ]
     }
   }
 
