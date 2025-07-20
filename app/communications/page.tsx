@@ -18,10 +18,6 @@ import {
   Eye, 
   Edit3, 
   Copy,
-  BarChart3,
-  PieChart,
-  Activity,
-  Zap,
   Target,
   CheckCircle,
   AlertCircle,
@@ -220,7 +216,7 @@ export default function CommunicationsPage() {
 
         {/* Enhanced Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-gray-100 p-1 rounded-xl">
+          <TabsList className="grid w-full grid-cols-3 bg-gray-100 p-1 rounded-xl">
             <TabsTrigger value="overview" className="data-[state=active]:bg-white data-[state=active]:text-teal-700 data-[state=active]:shadow-sm rounded-lg">
               <Mail className="h-4 w-4 mr-2" />
               Recent
@@ -232,10 +228,6 @@ export default function CommunicationsPage() {
             <TabsTrigger value="buildings" className="data-[state=active]:bg-white data-[state=active]:text-teal-700 data-[state=active]:shadow-sm rounded-lg">
               <Building className="h-4 w-4 mr-2" />
               By Building
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="data-[state=active]:bg-white data-[state=active]:text-teal-700 data-[state=active]:shadow-sm rounded-lg">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Analytics
             </TabsTrigger>
           </TabsList>
 
@@ -493,80 +485,6 @@ export default function CommunicationsPage() {
                   </CardContent>
                 </Card>
               </div>
-            </div>
-          </TabsContent>
-
-          {/* Enhanced Analytics Tab */}
-          <TabsContent value="analytics" className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Communication Analytics</h2>
-              <p className="text-gray-600 mt-1">Track leaseholder engagement and communication performance</p>
-            </div>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <Card className="border-0 shadow-lg bg-white rounded-2xl overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
-                  <CardTitle className="flex items-center text-lg font-bold text-gray-900">
-                    <PieChart className="h-5 w-5 mr-2 text-teal-600" />
-                    Communication Types
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="text-center py-8">
-                    <div className="w-16 h-16 bg-gradient-to-br from-gray-400 to-gray-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                      <PieChart className="h-8 w-8 text-white" />
-                    </div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">No Data Available</h3>
-                    <p className="text-gray-600">Start sending communications to see engagement analytics</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-lg bg-white rounded-2xl overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
-                  <CardTitle className="flex items-center text-lg font-bold text-gray-900">
-                    <BarChart3 className="h-5 w-5 mr-2 text-blue-600" />
-                    Leaseholder Engagement
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="text-center py-8">
-                    <div className="w-16 h-16 bg-gradient-to-br from-gray-400 to-gray-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                      <BarChart3 className="h-8 w-8 text-white" />
-                    </div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">No Data Available</h3>
-                    <p className="text-gray-600">Response rates will appear once leaseholders engage</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <Card className="border-0 bg-gradient-to-br from-teal-50 to-teal-100 rounded-2xl">
-                <CardContent className="p-6 text-center">
-                  <div className="text-3xl font-bold text-teal-700 mb-2">0</div>
-                  <div className="text-sm text-teal-600">Total Sent</div>
-                </CardContent>
-              </Card>
-              <Card className="border-0 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl">
-                <CardContent className="p-6 text-center">
-                  <div className="text-3xl font-bold text-blue-700 mb-2">0%</div>
-                  <div className="text-sm text-blue-600">Response Rate</div>
-                </CardContent>
-              </Card>
-              <Card className="border-0 bg-gradient-to-br from-green-50 to-green-100 rounded-2xl">
-                <CardContent className="p-6 text-center">
-                  <div className="text-3xl font-bold text-green-700 mb-2">0</div>
-                  <div className="text-sm text-green-600">Active Leaseholders</div>
-                </CardContent>
-              </Card>
-              <Card className="border-0 bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl">
-                <CardContent className="p-6 text-center">
-                  <div className="text-3xl font-bold text-purple-700 mb-2">0</div>
-                  <div className="text-sm text-purple-600">Templates Used</div>
-                </CardContent>
-              </Card>
             </div>
           </TabsContent>
         </Tabs>
