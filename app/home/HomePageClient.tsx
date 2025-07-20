@@ -626,29 +626,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           )}
         </div>
       </div>
-
-      {/* Quick Actions Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Link href="/inbox" className="bg-white shadow-lg rounded-xl p-6 hover:shadow-xl transition-all border hover:border-teal-200 group">
-          <div className="text-center">
-            <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:bg-teal-200 transition-colors">
-              <MessageCircle className="h-6 w-6 text-teal-600" />
-            </div>
-            <h3 className="font-semibold text-gray-900 mb-2">Inbox</h3>
-            <p className="text-sm text-gray-600">Manage your communications</p>
-          </div>
-        </Link>
-        
-        <Link href="/buildings" className="bg-white shadow-lg rounded-xl p-6 hover:shadow-xl transition-all border hover:border-teal-200 group">
-          <div className="text-center">
-            <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:bg-teal-200 transition-colors">
-              <div className="w-6 h-6 border-2 border-teal-600 rounded"></div>
-            </div>
-            <h3 className="font-semibold text-gray-900 mb-2">Buildings</h3>
-            <p className="text-sm text-gray-600">View property details</p>
-          </div>
-        </Link>
-      </div>
     </div>
   )
 } 
