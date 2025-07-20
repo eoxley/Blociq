@@ -60,11 +60,6 @@ export async function seedComplianceAssets() {
       category: 'Insurance'
     },
     {
-      name: 'Energy Performance',
-      description: 'Energy Performance Certificates (EPC), Display Energy Certificates',
-      category: 'Environmental'
-    },
-    {
       name: 'Planning & Building Control',
       description: 'Planning permissions, building control certificates',
       category: 'Regulatory'
