@@ -178,23 +178,23 @@ export default function AIDocumentsPage() {
                   </CardHeader>
                   <CardContent className="space-y-2 text-sm">
                     <div className="p-2 bg-gray-50 rounded">
-                      <p className="font-medium">"Summarize this document"</p>
+                      <p className="font-medium">&ldquo;Summarize this document&rdquo;</p>
                       <p className="text-gray-600">Get a concise overview</p>
                     </div>
                     <div className="p-2 bg-gray-50 rounded">
-                      <p className="font-medium">"What are the key actions?"</p>
+                      <p className="font-medium">&ldquo;What are the key actions?&rdquo;</p>
                       <p className="text-gray-600">Extract required actions</p>
                     </div>
                     <div className="p-2 bg-gray-50 rounded">
-                      <p className="font-medium">"What are the deadlines?"</p>
+                      <p className="font-medium">&ldquo;What are the deadlines?&rdquo;</p>
                       <p className="text-gray-600">Find important dates</p>
                     </div>
                     <div className="p-2 bg-gray-50 rounded">
-                      <p className="font-medium">"Who is responsible?"</p>
+                      <p className="font-medium">&ldquo;Who is responsible?&rdquo;</p>
                       <p className="text-gray-600">Identify responsible parties</p>
                     </div>
                     <div className="p-2 bg-gray-50 rounded">
-                      <p className="font-medium">"Compare with previous version"</p>
+                      <p className="font-medium">&ldquo;Compare with previous version&rdquo;</p>
                       <p className="text-gray-600">Compare document changes</p>
                     </div>
                   </CardContent>
@@ -246,7 +246,7 @@ export default function AIDocumentsPage() {
                         <div className="space-y-4">
                           <div className="bg-white p-3 rounded-lg shadow-sm">
                             <p className="text-sm text-gray-600">AI Assistant</p>
-                            <p className="text-gray-900">Hello! I'm your AI property management assistant. I can help you with:</p>
+                            <p className="text-gray-900">Hello! I&apos;m your AI property management assistant. I can help you with:</p>
                             <ul className="mt-2 text-sm text-gray-700 space-y-1">
                               <li>• Building and leaseholder information</li>
                               <li>• Compliance and document analysis</li>
@@ -311,19 +311,19 @@ export default function AIDocumentsPage() {
                   </CardHeader>
                   <CardContent className="space-y-2 text-sm">
                     <div className="p-2 bg-gray-50 rounded cursor-pointer hover:bg-gray-100 transition-colors">
-                      <p className="font-medium">"Show me building 1 details"</p>
+                      <p className="font-medium">&ldquo;Show me building 1 details&rdquo;</p>
                     </div>
                     <div className="p-2 bg-gray-50 rounded cursor-pointer hover:bg-gray-100 transition-colors">
-                      <p className="font-medium">"What compliance documents are due?"</p>
+                      <p className="font-medium">&ldquo;What compliance documents are due?&rdquo;</p>
                     </div>
                     <div className="p-2 bg-gray-50 rounded cursor-pointer hover:bg-gray-100 transition-colors">
-                      <p className="font-medium">"Draft an email about noise complaints"</p>
+                      <p className="font-medium">&ldquo;Draft an email about noise complaints&rdquo;</p>
                     </div>
                     <div className="p-2 bg-gray-50 rounded cursor-pointer hover:bg-gray-100 transition-colors">
-                      <p className="font-medium">"Summarize major works projects"</p>
+                      <p className="font-medium">&ldquo;Summarize major works projects&rdquo;</p>
                     </div>
                     <div className="p-2 bg-gray-50 rounded cursor-pointer hover:bg-gray-100 transition-colors">
-                      <p className="font-medium">"Who is the leaseholder of Flat 5?"</p>
+                      <p className="font-medium">&ldquo;Who is the leaseholder of Flat 5?&rdquo;</p>
                     </div>
                   </CardContent>
                 </Card>

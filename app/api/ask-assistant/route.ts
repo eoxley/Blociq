@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     let message: string;
     let buildingId: string | undefined;
     let unitId: string | undefined;
-    let attachments: File[] = [];
+    const attachments: File[] = [];
 
     // Check if the request is multipart/form-data (with attachments) or JSON
     const contentType = req.headers.get('content-type') || '';
@@ -127,11 +127,12 @@ Answer:
       }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("❌ Assistant error:", error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ 
       error: 'Failed to process assistant query',
-      details: error.message 
+      details: errorMessage 
     }, { status: 500 });
   }
 } 

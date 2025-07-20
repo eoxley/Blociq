@@ -4,8 +4,7 @@ import { Suspense } from "react";
 import LayoutWithSidebar from '@/components/LayoutWithSidebar';
 import DocumentAwareAI from '@/components/DocumentAwareAI';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Brain, FileText, Upload, MessageSquare, CheckCircle, AlertCircle } from 'lucide-react';
+import { Brain, FileText, Upload, MessageSquare, CheckCircle } from 'lucide-react';
 
 export default function AIAssistantPage() {
   return (
@@ -82,19 +81,19 @@ export default function AIAssistantPage() {
                 <div className="space-y-2 text-sm">
                   <div className="flex items-start gap-2">
                     <CheckCircle className="h-3 w-3 text-green-600 mt-0.5" />
-                    <span>"Summarise this Fire Risk Assessment"</span>
+                    <span>&ldquo;Summarise this Fire Risk Assessment&rdquo;</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <CheckCircle className="h-3 w-3 text-green-600 mt-0.5" />
-                    <span>"What are the actions from this EICR?"</span>
+                    <span>&ldquo;What are the actions from this EICR?&rdquo;</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <CheckCircle className="h-3 w-3 text-green-600 mt-0.5" />
-                    <span>"When is the next lift inspection due?"</span>
+                    <span>&ldquo;When is the next lift inspection due?&rdquo;</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <CheckCircle className="h-3 w-3 text-green-600 mt-0.5" />
-                    <span>"Is this insurance certificate up to date?"</span>
+                    <span>&ldquo;Is this insurance certificate up to date?&rdquo;</span>
                   </div>
                 </div>
               </div>
@@ -107,19 +106,19 @@ export default function AIAssistantPage() {
                 <div className="space-y-2 text-sm">
                   <div className="flex items-start gap-2">
                     <CheckCircle className="h-3 w-3 text-green-600 mt-0.5" />
-                    <span>"Who is the leaseholder of Flat 5?"</span>
+                    <span>&ldquo;Who is the leaseholder of Flat 5?&rdquo;</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <CheckCircle className="h-3 w-3 text-green-600 mt-0.5" />
-                    <span>"What compliance certificates are missing?"</span>
+                    <span>&ldquo;What compliance certificates are missing?&rdquo;</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <CheckCircle className="h-3 w-3 text-green-600 mt-0.5" />
-                    <span>"When is the next EICR due?"</span>
+                    <span>&ldquo;When is the next EICR due?&rdquo;</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <CheckCircle className="h-3 w-3 text-green-600 mt-0.5" />
-                    <span>"What's the service charge apportionment for Unit 3?"</span>
+                    <span>&ldquo;What&apos;s the service charge apportionment for Unit 3?&rdquo;</span>
                   </div>
                 </div>
               </div>
