@@ -1,35 +1,57 @@
-import { NextResponse } from "next/server"
-import { getAccessToken } from "@/lib/outlookAuth"
-import { Client } from "@microsoft/microsoft-graph-client"
-import "isomorphic-fetch"
+import { NextResponse } from "next/server";
 
 export async function GET() {
+  // ✅ Dynamically import MSAL to avoid breaking during Vercel build
+  const { ConfidentialClientApplication } = await import("@azure/msal-node");
+
+  const {
+    AZURE_CLIENT_ID,
+    AZURE_CLIENT_SECRET,
+    AZURE_TENANT_ID,
+  } = process.env;
+
+  if (!AZURE_CLIENT_ID || !AZURE_CLIENT_SECRET || !AZURE_TENANT_ID) {
+    return NextResponse.json(
+      {
+        error:
+          "Missing Azure credentials: AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, or AZURE_TENANT_ID",
+      },
+      { status: 500 }
+    );
+  }
+
+  const clientApp = new ConfidentialClientApplication({
+    auth: {
+      clientId: AZURE_CLIENT_ID,
+      clientSecret: AZURE_CLIENT_SECRET,
+      authority: `https://login.microsoftonline.com/${AZURE_TENANT_ID}`,
+    },
+  });
+
   try {
-    const accessToken = await getAccessToken()
+    const result = await clientApp.acquireTokenByClientCredential({
+      scopes: ["https://graph.microsoft.com/.default"],
+    });
 
-    const client = Client.init({
-      authProvider: (done) => done(null, accessToken)
-    })
+    // ✅ Add null check before accessing result
+    if (!result) {
+      return NextResponse.json(
+        { error: "No token result received from Microsoft Graph" },
+        { status: 500 }
+      );
+    }
 
-    const messages = await client
-      .api("/users/eleanor.oxley@blociq.co.uk/messages")
-      .top(10)
-      .select("subject,from,bodyPreview,internetMessageId,conversationId,receivedDateTime")
-      .orderby("receivedDateTime DESC")
-      .get()
-
-    const parsedEmails = messages.value.map((msg: Record<string, unknown>) => ({
-      thread_id: msg.conversationId,
-      message_id: msg.internetMessageId,
-      from_email: (msg.from as { emailAddress?: { address: string } })?.emailAddress?.address,
-      subject: msg.subject,
-      body_preview: msg.bodyPreview,
-      received_at: msg.receivedDateTime
-    }))
-
-    return NextResponse.json({ emails: parsedEmails })
-  } catch (error) {
-    console.error("Outlook fetch failed:", error)
-    return NextResponse.json({ error: "Failed to fetch emails" }, { status: 500 })
+    return NextResponse.json({
+      message: "Successfully authenticated with Microsoft Graph",
+      tokenExpires: result.expiresOn?.toISOString(),
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      {
+        error: "Failed to authenticate with Microsoft Graph",
+        details: error.message,
+      },
+      { status: 500 }
+    );
   }
 }

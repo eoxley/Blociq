@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import React, { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
@@ -61,7 +61,7 @@ export default function EmailDraftAssistant(props: Props) {
         building_name: building,
         unit: unit,
         leaseholder_name: leaseData?.leaseholder_name || "Leaseholder",
-        property_manager: "Ellie Oxley",
+        property_manager: "Property Manager",
         email_thread: {
           original_sender: props.defaultFrom || "Unknown",
           subject: props.defaultSubject || "No subject",
@@ -95,7 +95,7 @@ export default function EmailDraftAssistant(props: Props) {
       request: {
         goal: "Write a reply to the leaseholder based on the history and context. Respond to the original email content and acknowledge prior replies if applicable.",
         tone: "Warm and professional",
-        sign_off: "Kind regards\nEllie Oxley"
+        sign_off: "Kind regards\nProperty Manager"
       }
     }
 
@@ -111,77 +111,50 @@ export default function EmailDraftAssistant(props: Props) {
   }
 
   return (
-    <Card className="p-4 mt-4">
-      <CardContent>
-        <Label>🏢 Building Name</Label>
-        <Input
-          placeholder="e.g. Jubilee House"
-          value={building}
-          onChange={e => setBuilding(e.target.value)}
-        />
-
-        <Label className="mt-2">🏠 Unit</Label>
-        <Input
-          placeholder="e.g. Flat 7"
-          value={unit}
-          onChange={e => setUnit(e.target.value)}
-        />
-
-        <Label className="mt-2">🧵 Email Thread or Summary</Label>
-        <Textarea
-          placeholder="Paste the thread or describe the issue..."
-          value={issue}
-          onChange={e => setIssue(e.target.value)}
-        />
-
-        <Button onClick={handleGenerate} disabled={loading} className="mt-4">
-          {loading ? "Generating..." : "Generate Email with AI"}
-        </Button>
-
-        {draft && (
-          <div className="mt-6">
-            <Label>📬 Draft Email</Label>
-            <Textarea
-              rows={12}
-              value={draft}
-              onChange={e => setDraft(e.target.value)}
-            />
-
-            <div className="mt-4 flex gap-4">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  navigator.clipboard.writeText(draft)
-                  alert("Draft copied to clipboard!")
-                }}
-              >
-                Copy Draft
-              </Button>
-
-              <Button
-                onClick={async () => {
-                  const { error } = await supabase.from("email_drafts").insert({
-                    draft,
-                    subject: props.defaultSubject || "No subject",
-                    from_email: props.defaultFrom || "Unknown",
-                    unit: unit,
-                    building_id: building,
-                    created_at: new Date().toISOString()
-                  })
-                  if (error) {
-                    alert("❌ Failed to save draft.")
-                    console.error(error)
-                  } else {
-                    alert("✅ Draft saved to Supabase.")
-                  }
-                }}
-              >
-                Save Draft
-              </Button>
+    <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-6 mt-4">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center justify-center w-10 h-10 bg-purple-500 rounded-lg">
+          <span className="text-white text-lg">✉️</span>
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Email Draft Assistant</h3>
+          <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">Coming Soon</span>
+        </div>
+      </div>
+      
+      <div className="text-gray-600 text-sm mb-4">
+        <p className="mb-2">🎯 <strong>What's coming:</strong></p>
+        <ul className="space-y-1 text-sm">
+          <li>• AI-powered email drafting with lease context</li>
+          <li>• Automatic legal compliance checking</li>
+          <li>• Template library and customization</li>
+          <li>• Integration with email systems</li>
+        </ul>
+      </div>
+      
+      <div className="bg-white rounded-lg p-6 border border-purple-200">
+        <div className="text-center py-8">
+          <div className="text-4xl mb-3">🚧</div>
+          <h4 className="font-medium text-gray-900 mb-2">AI Email Assistant</h4>
+          <p className="text-gray-600 text-sm mb-4">
+            Generate professional, legally compliant emails using AI that understands your lease terms and building context.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div className="text-center">
+              <div className="text-2xl mb-1">🏢</div>
+              <p className="text-gray-600">Building Context</p>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl mb-1">📋</div>
+              <p className="text-gray-600">Lease Integration</p>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl mb-1">⚖️</div>
+              <p className="text-gray-600">Legal Compliance</p>
             </div>
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+      </div>
+    </div>
   )
 }

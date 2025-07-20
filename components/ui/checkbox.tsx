@@ -11,7 +11,7 @@ export function Checkbox({ id, checked, onCheckedChange }: CheckboxProps) {
     <input
       id={id}
       type="checkbox"
-      className="w-4 h-4"
+      className="w-4 h-4 text-primary focus:ring-primary border-gray-300 rounded"
       checked={checked}
       onChange={(e) => onCheckedChange(e.target.checked)}
     />

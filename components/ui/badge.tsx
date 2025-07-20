@@ -2,15 +2,17 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = {
-  default: "bg-gray-100 text-gray-800",
-  destructive: "bg-red-100 text-red-800",
-  success: "bg-green-100 text-green-800",
-  outline: "border border-gray-300 text-gray-600",
+  default: "bg-slate-100 text-slate-700 border border-slate-200",
+  destructive: "bg-error/10 text-error border border-error/20",
+  success: "bg-success/10 text-success border border-success/20",
+  warning: "bg-warning/10 text-warning border border-warning/20",
+  info: "bg-info/10 text-info border border-info/20",
+  outline: "border border-slate-300 text-slate-600",
 
   // BlocIQ-specific
-  urgent: "bg-red-100 text-red-800",
-  finance: "bg-cyan-100 text-cyan-800",
-  complaint: "bg-yellow-100 text-yellow-800"
+  urgent: "bg-error/10 text-error border border-error/20",
+  finance: "bg-primary/10 text-primary border border-primary/20",
+  complaint: "bg-warning/10 text-warning border border-warning/20"
 }
 
 export function Badge({

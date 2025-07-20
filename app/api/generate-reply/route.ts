@@ -1,116 +1,173 @@
-import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
-import { createClient } from "@supabase/supabase-js";
+import { NextRequest, NextResponse } from 'next/server';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
+import { Database } from '@/lib/database.types';
+import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+interface GenerateReplyRequest {
+  emailId?: string;
+  subject?: string;
+  body?: string;
+  categories?: string[];
+  flag_status?: string;
+  from_email?: string;
+  prompt?: string;
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { 
-      emailId, 
-      buildingId, 
-      history = [], 
-      senderName, 
-      emailBody,
-      tone = "Professional" 
-    } = body;
-
-    if (!emailId || !emailBody) {
-      return NextResponse.json({ 
-        error: "Email ID and body are required" 
-      }, { status: 400 });
+    const { emailId, subject, body, categories, flag_status, from_email, prompt }: GenerateReplyRequest = await req.json();
+    
+    if (!subject && !body && !prompt) {
+      return NextResponse.json({ error: 'Subject, body, or prompt is required' }, { status: 400 });
     }
 
-    // Fetch building context if buildingId provided
-    let buildingContext = "";
-    if (buildingId) {
-      const { data: building } = await supabase
-        .from("buildings")
-        .select("name, address, total_units")
-        .eq("id", buildingId)
+    const supabase = createRouteHandlerClient<Database>({ cookies });
+
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // If emailId is provided, fetch the email details from database
+    let emailData = { subject, body, categories, flag_status, from_email };
+    if (emailId) {
+      const { data: email, error } = await supabase
+        .from('incoming_emails')
+        .select('subject, body_preview, categories, flag_status, from_email')
+        .eq('id', emailId)
         .single();
 
-      if (building) {
-        buildingContext = `
-Building: ${building.name}
-Address: ${building.address}
-Total Units: ${building.total_units}
-        `.trim();
+      if (error) {
+        console.error('Error fetching email:', error);
+      } else if (email) {
+        // Type assertion since the database types might not be updated yet
+        const emailRecord = email as any;
+        emailData = {
+          subject: emailRecord.subject || undefined,
+          body: emailRecord.body_preview || undefined,
+          categories: emailRecord.categories || undefined,
+          flag_status: emailRecord.flag_status || undefined,
+          from_email: emailRecord.from_email || undefined
+        };
       }
     }
 
-    // Fetch email thread history if available
-    let threadHistory = "";
-    if (history.length > 0) {
-      threadHistory = `
-Previous messages in this thread:
-${history.map((msg: Record<string, unknown>, index: number) => 
-  `${index + 1}. ${msg.sender}: ${msg.body}`
-).join('\n')}
-      `.trim();
-    }
+    // Initialize OpenAI client
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
 
-    // Build the AI prompt
-    const systemPrompt = `You are Ellie Oxley, a professional UK block manager at BlocIQ. You draft clear, helpful, and leaseholder-focused email replies.
+    // Build context-aware prompt based on email tags and status
+    const tagContext = buildTagContext(emailData.categories || [], emailData.flag_status || null);
+    const urgencyContext = emailData.flag_status === 'flagged' ? 'URGENT - This email has been flagged as requiring immediate attention.' : '';
+    
+    const systemPrompt = `You are a professional property management assistant responding to leaseholder emails. 
+    
+${tagContext}
 
-Key principles:
-- Always be polite and professional
-- Address the leaseholder's concerns directly
-- Provide clear next steps when possible
-- Use appropriate UK property management terminology
+Guidelines:
+- Use a professional, courteous, and helpful tone
+- Address the specific concerns mentioned in the email
+- Provide clear, actionable responses
+- Be empathetic to leaseholder concerns
+- Include next steps or follow-up actions when appropriate
 - Keep responses concise but comprehensive
-- Sign off as "Ellie Oxley, BlocIQ"
+- Use appropriate formality based on the email context
+${urgencyContext ? `- ${urgencyContext}` : ''}
 
-Tone: ${tone}`;
+Response Structure:
+1. Acknowledge the concern/request
+2. Provide relevant information or solution
+3. Outline next steps or timeline
+4. Offer additional support if needed
+5. Professional closing`;
 
-    const userPrompt = `
-Email received from: ${senderName || "Leaseholder"}
-Original message:
-"${emailBody}"
+    const userPrompt = prompt || `Generate a professional reply to this email:
 
-${buildingContext ? `Building Context:\n${buildingContext}\n` : ""}
-${threadHistory ? `Email Thread History:\n${threadHistory}\n` : ""}
+Subject: ${emailData.subject || 'No subject'}
+From: ${emailData.from_email || 'Unknown sender'}
+Content: ${emailData.body || 'No content available'}
 
-Please draft a professional reply that:
-1. Acknowledges their message
-2. Addresses their specific concern or question
-3. Provides relevant information or next steps
-4. Maintains a ${tone.toLowerCase()} tone
-5. Signs off appropriately
-
-Reply:`;
+Please provide a helpful and professional response that addresses the sender's concerns.`;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4-turbo",
+      model: "gpt-4",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }
       ],
+      max_tokens: 800,
       temperature: 0.7,
-      max_tokens: 500
     });
 
-    const aiDraft = completion.choices[0].message.content;
+    const generatedReply = completion.choices[0]?.message?.content || '';
 
-    return NextResponse.json({ 
-      success: true, 
-      draft: aiDraft,
-      buildingContext: buildingContext || null
+    if (!generatedReply) {
+      return NextResponse.json({ error: 'Failed to generate reply' }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      response: generatedReply,
+      context: {
+        tags: emailData.categories,
+        flag_status: emailData.flag_status,
+        urgency: emailData.flag_status === 'flagged'
+      }
     });
 
-  } catch (error) {
-    console.error("Error generating reply:", error);
+  } catch (error: any) {
+    console.error('Error in generate-reply:', error);
     return NextResponse.json(
-      { error: "Failed to generate AI reply" },
+      { error: 'Internal server error', details: error.message },
       { status: 500 }
     );
   }
+}
+
+// Helper function to build context based on email tags
+function buildTagContext(categories: string[], flagStatus: string | null): string {
+  const contextParts = [];
+  
+  if (categories.includes('Urgent')) {
+    contextParts.push('This is an URGENT matter requiring immediate attention and quick response.');
+  }
+  
+  if (categories.includes('Compliance')) {
+    contextParts.push('This involves compliance or regulatory matters. Be thorough and reference relevant policies or regulations.');
+  }
+  
+  if (categories.includes('Leaseholder')) {
+    contextParts.push('This is a leaseholder concern. Be empathetic and provide clear guidance on lease-related matters.');
+  }
+  
+  if (categories.includes('Maintenance')) {
+    contextParts.push('This is a maintenance request. Provide clear timeline and next steps for resolution.');
+  }
+  
+  if (categories.includes('Financial')) {
+    contextParts.push('This involves financial matters. Be precise with numbers and payment terms.');
+  }
+  
+  if (categories.includes('Legal')) {
+    contextParts.push('This involves legal matters. Be careful with language and suggest professional consultation if needed.');
+  }
+  
+  if (categories.includes('Emergency')) {
+    contextParts.push('This is an EMERGENCY situation. Prioritize safety and immediate action.');
+  }
+  
+  if (categories.includes('Routine')) {
+    contextParts.push('This is a routine matter. Provide standard information and procedures.');
+  }
+  
+  if (flagStatus === 'flagged') {
+    contextParts.push('This email has been flagged for special attention. Ensure thorough and prompt response.');
+  }
+  
+  return contextParts.length > 0 
+    ? `Context: ${contextParts.join(' ')}`
+    : 'This is a general inquiry. Provide helpful and professional assistance.';
 } 
