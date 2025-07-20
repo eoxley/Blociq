@@ -52,12 +52,6 @@ const basicComplianceAssets = [
     category: 'Health'
   },
   {
-    id: 'energy-epc',
-    name: 'Energy Performance Certificate (EPC)',
-    description: 'Energy efficiency rating for the building',
-    category: 'Energy'
-  },
-  {
     id: 'building-insurance',
     name: 'Building Insurance',
     description: 'Comprehensive building insurance policy',

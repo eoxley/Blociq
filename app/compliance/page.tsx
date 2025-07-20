@@ -362,10 +362,6 @@ export default async function CompliancePage() {
                     Gas Safety Certificates
                   </li>
                   <li className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    Energy Performance Certificates (EPC)
-                  </li>
-                  <li className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
                     Building Insurance
                   </li>
