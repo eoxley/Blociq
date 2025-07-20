@@ -113,6 +113,13 @@ export default function Sidebar() {
               <ChevronRight className="h-3 w-3" /> Accounts
             </a>
           </div>
+          
+          {/* Client Portal */}
+          <div className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium opacity-60 cursor-not-allowed mt-2">
+            <span className="text-lg">👥</span>
+            <span>Client Portal</span>
+            <Clock className="h-3 w-3 ml-auto" />
+          </div>
         </div>
       </nav>
 
