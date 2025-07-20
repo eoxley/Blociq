@@ -2,8 +2,11 @@ import { cookies } from 'next/headers'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import LayoutWithSidebar from '@/components/LayoutWithSidebar'
+import Link from 'next/link'
 import { groupBy } from 'lodash'
+import { Shield, Settings } from 'lucide-react'
 
 interface ComplianceAsset {
   id: string
@@ -114,6 +117,9 @@ export default async function CompliancePage({ params }: { params: Promise<{ bui
     // Group compliance assets by category
     const groupedAssets = groupBy(assets, 'category')
 
+    // Check if building has any compliance assets set up
+    const hasComplianceAssets = buildingAssets && buildingAssets.length > 0
+
     return (
       <LayoutWithSidebar>
         <div className="p-6 space-y-6">
@@ -122,7 +128,27 @@ export default async function CompliancePage({ params }: { params: Promise<{ bui
             <p className="text-lg text-neutral">Building: <strong className="text-dark">{building.name}</strong></p>
           </div>
 
-          {Object.entries(groupedAssets).map(([category, items]) => (
+          {/* Show setup wizard link if no compliance assets are configured */}
+          {!hasComplianceAssets && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+              <div className="flex items-center justify-center mb-4">
+                <Shield className="h-12 w-12 text-blue-600" />
+              </div>
+              <h2 className="text-xl font-semibold text-blue-900 mb-2">No Compliance Setup Found</h2>
+              <p className="text-blue-700 mb-4">
+                This building has no compliance assets set up. Set up compliance tracking to monitor requirements and deadlines.
+              </p>
+              <Button asChild className="bg-blue-600 hover:bg-blue-700">
+                <Link href="/compliance/setup">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Go to Setup Wizard
+                </Link>
+              </Button>
+            </div>
+          )}
+
+          {/* Show compliance assets if they exist */}
+          {hasComplianceAssets && Object.entries(groupedAssets).map(([category, items]) => (
             <div key={category} className="space-y-4">
               <h2 className="text-xl font-semibold border-b pb-1">{category}</h2>
 
