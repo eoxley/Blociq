@@ -4,8 +4,6 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import LayoutWithSidebar from '@/components/LayoutWithSidebar'
 import BuildingCommandCentre from './BuildingCommandCentre'
-import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
 
 export default async function BuildingDetailPage({ 
   params 
@@ -145,21 +143,14 @@ export default async function BuildingDetailPage({
   return (
     <LayoutWithSidebar>
       <div className="space-y-6">
-        {/* Header with Back to Buildings navigation */}
-        <div className="flex items-center gap-4 mb-6">
-          <Link 
-            href="/buildings" 
-            className="inline-flex items-center gap-2 px-4 py-2 bg-teal-50 text-teal-700 rounded-lg hover:bg-teal-100 transition-colors border border-teal-200"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Buildings
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              {building.name} - Command Centre
-            </h1>
-            <p className="text-gray-600">{building.address}</p>
-          </div>
+        {/* Clean Header */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            {building.name}
+          </h1>
+          {building.address && (
+            <p className="text-gray-600 text-lg">{building.address}</p>
+          )}
         </div>
 
         {/* Building Command Centre Component */}
