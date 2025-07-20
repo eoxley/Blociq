@@ -1,40 +1,36 @@
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
-import { notFound } from 'next/navigation'
+import { createClient } from '@/utils/supabase/server';
+import { notFound } from 'next/navigation';
 import MajorWorksProjectClient from './MajorWorksProjectClient'
 
 interface PageProps {
   params: {
-    id: string
+    id?: string
   }
 }
 
 export default async function MajorWorksProjectPage({ params }: PageProps) {
-  try {
-    const supabase = createServerComponentClient({ cookies })
-    
-    // Fetch project details
-    const { data: project, error } = await supabase
-      .from('major_works')
-      .select(`
-        *,
-        buildings (
-          id,
-          name,
-          address
-        )
-      `)
-      .eq('id', params.id)
-      .single()
+  const supabase = createClient();
+  const projectId = params?.id;
 
-    if (error || !project) {
-      console.error('Project not found or error:', error)
-      notFound()
-    }
+  if (!projectId) return notFound();
 
-    return <MajorWorksProjectClient project={project} />
-  } catch (error) {
-    console.error('Error loading Major Works project:', error)
-    notFound()
+  const { data: project, error } = await supabase
+    .from('major_works')
+    .select(`
+      *,
+      buildings (
+        id,
+        name,
+        address
+      )
+    `)
+    .eq('id', projectId)
+    .single();
+
+  if (error || !project) {
+    console.error('Failed to fetch project:', error);
+    return notFound(); // This prevents the server crash
   }
+
+  return <MajorWorksProjectClient project={project} />
 } 
