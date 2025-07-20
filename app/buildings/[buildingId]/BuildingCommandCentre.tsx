@@ -29,7 +29,18 @@ import {
   Send,
   RefreshCw,
   CheckSquare,
-  Square
+  Square,
+  Shield,
+  Settings,
+  Home,
+  User,
+  Briefcase,
+  FileCheck,
+  AlertCircle,
+  Info,
+  Building2,
+  Gavel,
+  Handshake
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatDistanceToNow, format } from 'date-fns'
@@ -177,58 +188,294 @@ export default function BuildingCommandCentre({ buildingData }: BuildingCommandC
         </Card>
       )}
 
-      {/* Building Overview Section */}
+      {/* Enhanced Building Overview Section */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Building className="h-5 w-5" />
-            Building Overview
+            <Building2 className="h-5 w-5" />
+            Building Information & Structure
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <h3 className="font-semibold text-gray-900">{building.name}</h3>
-              <p className="text-sm text-gray-600 flex items-center gap-1">
-                <MapPin className="h-4 w-4" />
-                {building.address}
-              </p>
-            </div>
-            
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600">Type</p>
-              <Badge variant="outline">
-                {buildingSetup?.structure_type || 'Not specified'}
-              </Badge>
-            </div>
-            
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600">Client</p>
-              <p className="font-medium">{buildingSetup?.client_name || 'Not specified'}</p>
-              {buildingSetup?.client_email && (
-                <p className="text-sm text-gray-600 flex items-center gap-1">
-                  <MailIcon className="h-3 w-3" />
-                  {buildingSetup.client_email}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Basic Building Info */}
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold text-lg text-gray-900 mb-2">{building.name}</h3>
+                <p className="text-sm text-gray-600 flex items-center gap-1 mb-3">
+                  <MapPin className="h-4 w-4" />
+                  {building.address}
                 </p>
-              )}
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600 font-medium">Building Type</p>
+                  <Badge variant="outline" className="w-fit">
+                    {buildingSetup?.structure_type || 'Not specified'}
+                  </Badge>
+                </div>
+                
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600 font-medium">Total Units</p>
+                  <p className="font-medium text-lg">{units.length} units</p>
+                </div>
+
+                {building.building_age && (
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-600 font-medium">Building Age</p>
+                    <p className="font-medium">{building.building_age}</p>
+                  </div>
+                )}
+
+                {building.total_floors && (
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-600 font-medium">Total Floors</p>
+                    <p className="font-medium">{building.total_floors}</p>
+                  </div>
+                )}
+              </div>
             </div>
-            
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600">Units</p>
-              <p className="font-medium">{units.length} units</p>
-              <p className="text-sm text-gray-600">
-                {units.filter(u => u.leaseholders?.length > 0).length} occupied
-              </p>
+
+            {/* Freeholder/RMC Structure */}
+            <div className="space-y-4">
+              <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                <Gavel className="h-4 w-4" />
+                Legal Structure
+              </h4>
+              
+              <div className="space-y-3">
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Briefcase className="h-4 w-4 text-blue-600" />
+                    <span className="font-medium text-blue-900">Client Type</span>
+                  </div>
+                  <p className="text-sm text-blue-700">
+                    {buildingSetup?.client_type || 'Not specified'}
+                  </p>
+                </div>
+
+                <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <User className="h-4 w-4 text-green-600" />
+                    <span className="font-medium text-green-900">Client Name</span>
+                  </div>
+                  <p className="text-sm text-green-700">
+                    {buildingSetup?.client_name || 'Not specified'}
+                  </p>
+                  {buildingSetup?.client_email && (
+                    <p className="text-sm text-green-600 flex items-center gap-1 mt-1">
+                      <MailIcon className="h-3 w-3" />
+                      {buildingSetup.client_email}
+                    </p>
+                  )}
+                  {buildingSetup?.client_contact && (
+                    <p className="text-sm text-green-600 flex items-center gap-1">
+                      <Phone className="h-3 w-3" />
+                      {buildingSetup.client_contact}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-          
+
+          {/* Building Management Info */}
+          {(building.building_manager_name || building.building_manager_email || building.building_manager_phone) && (
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+              <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Building Management
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {building.building_manager_name && (
+                  <div>
+                    <p className="text-sm text-gray-600">Manager</p>
+                    <p className="font-medium">{building.building_manager_name}</p>
+                  </div>
+                )}
+                {building.building_manager_email && (
+                  <div>
+                    <p className="text-sm text-gray-600">Email</p>
+                    <a href={`mailto:${building.building_manager_email}`} className="text-blue-600 hover:underline">
+                      {building.building_manager_email}
+                    </a>
+                  </div>
+                )}
+                {building.building_manager_phone && (
+                  <div>
+                    <p className="text-sm text-gray-600">Phone</p>
+                    <a href={`tel:${building.building_manager_phone}`} className="text-blue-600 hover:underline">
+                      {building.building_manager_phone}
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Emergency Contact */}
+          {(building.emergency_contact_name || building.emergency_contact_phone) && (
+            <div className="mt-4 p-4 bg-red-50 rounded-lg border border-red-200">
+              <h4 className="font-semibold text-red-900 mb-3 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                Emergency Contact
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {building.emergency_contact_name && (
+                  <div>
+                    <p className="text-sm text-red-600">Contact</p>
+                    <p className="font-medium text-red-900">{building.emergency_contact_name}</p>
+                  </div>
+                )}
+                {building.emergency_contact_phone && (
+                  <div>
+                    <p className="text-sm text-red-600">Phone</p>
+                    <a href={`tel:${building.emergency_contact_phone}`} className="text-red-700 hover:underline font-medium">
+                      {building.emergency_contact_phone}
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Operational Notes */}
           {buildingSetup?.operational_notes && (
-            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-700">{buildingSetup.operational_notes}</p>
+            <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+              <h4 className="font-semibold text-yellow-900 mb-2 flex items-center gap-2">
+                <Info className="h-4 w-4" />
+                Operational Notes
+              </h4>
+              <p className="text-sm text-yellow-800">{buildingSetup.operational_notes}</p>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Building Details Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Construction & Facilities */}
+        {(building.construction_type || building.lift_available || building.heating_type || building.hot_water_type) && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Building className="h-4 w-4" />
+                Construction & Facilities
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {building.construction_type && (
+                <div>
+                  <p className="text-xs text-gray-600">Construction Type</p>
+                  <p className="text-sm font-medium">{building.construction_type}</p>
+                </div>
+              )}
+              {building.lift_available && (
+                <div>
+                  <p className="text-xs text-gray-600">Lift Available</p>
+                  <p className="text-sm font-medium">{building.lift_available}</p>
+                </div>
+              )}
+              {building.heating_type && (
+                <div>
+                  <p className="text-xs text-gray-600">Heating Type</p>
+                  <p className="text-sm font-medium">{building.heating_type}</p>
+                </div>
+              )}
+              {building.hot_water_type && (
+                <div>
+                  <p className="text-xs text-gray-600">Hot Water Type</p>
+                  <p className="text-sm font-medium">{building.hot_water_type}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Services & Utilities */}
+        {(building.waste_collection_day || building.recycling_info || building.service_charge_frequency) && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Services & Utilities
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {building.waste_collection_day && (
+                <div>
+                  <p className="text-xs text-gray-600">Waste Collection</p>
+                  <p className="text-sm font-medium">{building.waste_collection_day}</p>
+                </div>
+              )}
+              {building.recycling_info && (
+                <div>
+                  <p className="text-xs text-gray-600">Recycling</p>
+                  <p className="text-sm font-medium">{building.recycling_info}</p>
+                </div>
+              )}
+              {building.service_charge_frequency && (
+                <div>
+                  <p className="text-xs text-gray-600">Service Charge</p>
+                  <p className="text-sm font-medium">{building.service_charge_frequency}</p>
+                </div>
+              )}
+              {building.ground_rent_amount && (
+                <div>
+                  <p className="text-xs text-gray-600">Ground Rent</p>
+                  <p className="text-sm font-medium">£{building.ground_rent_amount} {building.ground_rent_frequency}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Safety & Compliance */}
+        {(building.fire_safety_status || building.asbestos_status || building.energy_rating || building.building_insurance_provider) && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Safety & Compliance
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {building.fire_safety_status && (
+                <div>
+                  <p className="text-xs text-gray-600">Fire Safety</p>
+                  <Badge variant={building.fire_safety_status === 'Compliant' ? 'default' : 'destructive'} className="text-xs">
+                    {building.fire_safety_status}
+                  </Badge>
+                </div>
+              )}
+              {building.asbestos_status && (
+                <div>
+                  <p className="text-xs text-gray-600">Asbestos Status</p>
+                  <Badge variant={building.asbestos_status === 'Clear' ? 'default' : 'destructive'} className="text-xs">
+                    {building.asbestos_status}
+                  </Badge>
+                </div>
+              )}
+              {building.energy_rating && (
+                <div>
+                  <p className="text-xs text-gray-600">Energy Rating</p>
+                  <p className="text-sm font-medium">{building.energy_rating}</p>
+                </div>
+              )}
+              {building.building_insurance_provider && (
+                <div>
+                  <p className="text-xs text-gray-600">Insurance Provider</p>
+                  <p className="text-sm font-medium">{building.building_insurance_provider}</p>
+                  {building.building_insurance_expiry && (
+                    <p className="text-xs text-gray-500">Expires: {new Date(building.building_insurance_expiry).toLocaleDateString()}</p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
       {/* Compliance Summary Section */}
       <Card>
@@ -316,7 +563,7 @@ export default function BuildingCommandCentre({ buildingData }: BuildingCommandC
                   <tr key={unit.id} className="border-b hover:bg-gray-50">
                     <td className="py-2 font-medium">{unit.unit_number}</td>
                     <td className="py-2">
-                      {unit.leaseholders?.[0]?.name || 'Vacant'}
+                      {unit.leaseholders?.[0]?.name || 'No leaseholder'}
                     </td>
                     <td className="py-2">
                       {unit.leaseholders?.[0]?.email ? (
@@ -330,7 +577,7 @@ export default function BuildingCommandCentre({ buildingData }: BuildingCommandC
                     </td>
                     <td className="py-2">
                       <Badge variant={unit.leaseholders?.length > 0 ? "default" : "outline"}>
-                        {unit.leaseholders?.length > 0 ? 'Occupied' : 'Vacant'}
+                        {unit.leaseholders?.length > 0 ? 'Has Leaseholder' : 'No Leaseholder'}
                       </Badge>
                     </td>
                   </tr>
@@ -410,188 +657,121 @@ export default function BuildingCommandCentre({ buildingData }: BuildingCommandC
       </Card>
 
       {/* Recent Emails Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+      {recentEmails.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
               <Mail className="h-5 w-5" />
               Recent Emails
-            </div>
-            <Link href="/inbox">
-              <Button variant="outline" size="sm">
-                Open in Inbox
-                <ExternalLink className="h-4 w-4 ml-1" />
-              </Button>
-            </Link>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {recentEmails.length > 0 ? (
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
             <div className="space-y-3">
-              {recentEmails.map((email) => (
+              {recentEmails.slice(0, 5).map((email) => (
                 <div key={email.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{email.subject || 'No Subject'}</p>
-                    <p className="text-sm text-gray-600 truncate">From: {email.from_email}</p>
-                    <p className="text-xs text-gray-500">
-                      {email.received_at ? formatDistanceToNow(new Date(email.received_at), { addSuffix: true }) : 'Unknown date'}
-                    </p>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-medium text-sm">{email.subject}</span>
+                      {email.unread && (
+                        <Badge variant="default" className="text-xs">New</Badge>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      From: {email.from_email} • {email.received_at ? formatDistanceToNow(new Date(email.received_at), { addSuffix: true }) : 'Unknown time'}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {email.unread && <Badge variant="destructive" className="text-xs">New</Badge>}
-                    <Button variant="ghost" size="sm">
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Button variant="outline" size="sm">
+                    <Eye className="h-4 w-4" />
+                  </Button>
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              No recent emails for this building.
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Documents Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+      {(complianceDocs.length > 0 || buildingDocs.length > 0) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              📁 Documents
-            </div>
-            <Link href={`/buildings/${building.id}/documents`}>
-              <Button variant="outline" size="sm">
-                View All Documents
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </Link>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {complianceDocs.length > 0 || buildingDocs.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>File Name</TableHead>
-                    <TableHead>Doc Type</TableHead>
-                    <TableHead>Uploaded</TableHead>
-                    <TableHead>Expiry Date</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {complianceDocs.map((doc) => (
-                    <TableRow key={`compliance-${doc.id}`}>
-                      <TableCell className="font-medium">
-                        <a href={doc.doc_url || '#'} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                          {doc.doc_type || 'Compliance Document'}
-                        </a>
-                      </TableCell>
-                      <TableCell>Compliance</TableCell>
-                      <TableCell>
-                        {doc.created_at ? format(new Date(doc.created_at), 'MMM dd, yyyy') : '-'}
-                      </TableCell>
-                      <TableCell>
-                        {doc.expiry_date ? (
-                          <Badge 
-                            variant={new Date(doc.expiry_date) < new Date() ? 'destructive' : 'outline'}
-                            className="text-xs"
-                          >
-                            {format(new Date(doc.expiry_date), 'MMM dd, yyyy')}
-                          </Badge>
-                        ) : '-'}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {buildingDocs.map((doc) => (
-                    <TableRow key={`building-${doc.id}`}>
-                      <TableCell className="font-medium">
-                        <a href={doc.file_url || '#'} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                          {doc.file_name}
-                        </a>
-                      </TableCell>
-                      <TableCell>{doc.type || 'Building Document'}</TableCell>
-                      <TableCell>
-                        {doc.created_at ? format(new Date(doc.created_at), 'MMM dd, yyyy') : '-'}
-                      </TableCell>
-                      <TableCell>-</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              <p className="text-sm text-muted">No documents uploaded for this building yet.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Events Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Upcoming Events
-            </div>
-            <Link href={`/buildings/${building.id}/events`}>
-              <Button variant="outline" size="sm">
-                View All Events
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </Link>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {events.length > 0 ? (
+              Documents
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
             <div className="space-y-3">
-              {events.map((event) => (
-                <div key={event.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex-1">
-                    <p className="font-medium">{event.title}</p>
-                    <p className="text-sm text-gray-600">{event.description}</p>
-                    <p className="text-xs text-gray-500 flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {format(new Date(event.start_time), 'MMM dd, yyyy HH:mm')}
-                    </p>
+              {complianceDocs.slice(0, 3).map((doc) => (
+                <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                  <div className="flex items-center gap-3">
+                    <FileCheck className="h-4 w-4 text-green-600" />
+                    <div>
+                      <p className="font-medium text-sm">{doc.doc_type}</p>
+                      <p className="text-xs text-gray-600">
+                        {doc.expiry_date && `Expires: ${new Date(doc.expiry_date).toLocaleDateString()}`}
+                      </p>
+                    </div>
                   </div>
-                  <Badge variant="outline">{event.event_type || 'Event'}</Badge>
+                  <Button variant="outline" size="sm">
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              {buildingDocs.slice(0, 3).map((doc) => (
+                <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-4 w-4 text-blue-600" />
+                    <div>
+                      <p className="font-medium text-sm">{doc.file_name}</p>
+                      <p className="text-xs text-gray-600">
+                        {doc.created_at && `Uploaded: ${new Date(doc.created_at).toLocaleDateString()}`}
+                      </p>
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm">
+                    <Download className="h-4 w-4" />
+                  </Button>
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              No upcoming events scheduled.
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Events Section */}
+      {events.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Upcoming Events
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {events.map((event) => (
+                <div key={event.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-medium text-sm">{event.title}</span>
+                      {event.event_type && (
+                        <Badge variant="outline" className="text-xs">{event.event_type}</Badge>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      {format(new Date(event.start_time), 'MMM dd, yyyy HH:mm')}
+                      {event.location && ` • ${event.location}`}
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm">
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* AI Assistant Section */}
       <Card>
@@ -605,14 +785,14 @@ export default function BuildingCommandCentre({ buildingData }: BuildingCommandC
           <div className="space-y-4">
             <div className="flex gap-2">
               <Input
-                placeholder="Ask about this building (e.g., 'Summarise open issues', 'Draft email to directors')"
+                placeholder="Ask a question about this building..."
                 value={aiQuestion}
                 onChange={(e) => setAiQuestion(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleAiQuestion()}
               />
               <Button onClick={handleAiQuestion} disabled={isAiLoading}>
                 {isAiLoading ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
                 ) : (
                   <Send className="h-4 w-4" />
                 )}
@@ -620,20 +800,10 @@ export default function BuildingCommandCentre({ buildingData }: BuildingCommandC
             </div>
             
             {aiResponse && (
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{aiResponse}</p>
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <p className="text-sm text-gray-700">{aiResponse}</p>
               </div>
             )}
-            
-            <div className="text-xs text-gray-500">
-              <p>💡 Try asking:</p>
-              <ul className="list-disc list-inside space-y-1 mt-1">
-                <li>"Summarise open compliance issues"</li>
-                <li>"Draft email to directors about recent maintenance"</li>
-                <li>"List all vacant units"</li>
-                <li>"What documents are expiring soon?"</li>
-              </ul>
-            </div>
           </div>
         </CardContent>
       </Card>
