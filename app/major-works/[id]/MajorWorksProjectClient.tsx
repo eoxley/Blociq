@@ -32,20 +32,21 @@ interface MajorWorksProjectClientProps {
 }
 
 export default function MajorWorksProjectClient({ project }: MajorWorksProjectClientProps) {
-  console.log('🔍 [MajorWorksClient] Rendering with project:', { id: project?.id, title: project?.title });
-  
-  // Defensive checks for project data
-  if (!project) {
-    console.error('❌ [MajorWorksClient] No project data provided');
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Project Not Found</h1>
-          <p className="text-gray-600">The requested project could not be loaded.</p>
+  try {
+    console.log('🔍 [MajorWorksClient] Rendering with project:', { id: project?.id, title: project?.title });
+    
+    // Defensive checks for project data
+    if (!project) {
+      console.error('❌ [MajorWorksClient] No project data provided');
+      return (
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">Project Not Found</h1>
+            <p className="text-gray-600">The requested project could not be loaded.</p>
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
   const building = project.buildings || null;
   const projectTitle = project.title || 'Untitled Project';
@@ -285,4 +286,16 @@ export default function MajorWorksProjectClient({ project }: MajorWorksProjectCl
       </Tabs>
     </div>
   )
+  } catch (error) {
+    console.error('💥 [MajorWorksClient] Error rendering component:', error);
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Error Loading Project</h1>
+          <p className="text-gray-600">There was an error rendering the project details.</p>
+          <p className="text-sm text-gray-500 mt-2">Error: {error instanceof Error ? error.message : 'Unknown error'}</p>
+        </div>
+      </div>
+    );
+  }
 } 
