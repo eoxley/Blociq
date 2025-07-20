@@ -1,5 +1,6 @@
 -- Add new Section 20 fields to major_works table
 ALTER TABLE major_works 
+ADD COLUMN IF NOT EXISTS notice_of_reason_issued TIMESTAMP WITH TIME ZONE,
 ADD COLUMN IF NOT EXISTS funds_confirmed TIMESTAMP WITH TIME ZONE,
 ADD COLUMN IF NOT EXISTS contractor_appointed TIMESTAMP WITH TIME ZONE,
 ADD COLUMN IF NOT EXISTS surveyor_appointed TIMESTAMP WITH TIME ZONE,
@@ -36,6 +37,10 @@ CREATE INDEX IF NOT EXISTS idx_major_works_documents_type ON major_works_documen
 -- Update existing projects with sample data for new fields
 UPDATE major_works 
 SET 
+  notice_of_reason_issued = CASE 
+    WHEN id = '550e8400-e29b-41d4-a716-446655440001' THEN '2025-08-05 14:00:00+00'
+    ELSE NULL
+  END,
   funds_confirmed = CASE 
     WHEN id = '550e8400-e29b-41d4-a716-446655440001' THEN '2025-08-15 10:00:00+00'
     WHEN id = '550e8400-e29b-41d4-a716-446655440002' THEN '2025-07-20 14:30:00+00'
@@ -99,6 +104,15 @@ INSERT INTO major_works_documents (
 ),
 (
   '550e8400-e29b-41d4-a716-446655440001',
+  'Notice_of_Reason_Roof_Works.pdf',
+  189440,
+  'application/pdf',
+  'notice_of_reason',
+  'Notice of Reason issued due to leaseholder objections',
+  'Property Manager'
+),
+(
+  '550e8400-e29b-41d4-a716-446655440001',
   'Contractor_Estimates_Roof_Works.xlsx',
   189440,
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -138,6 +152,7 @@ INSERT INTO major_works_documents (
 SELECT 
   id,
   title,
+  notice_of_reason_issued,
   funds_confirmed,
   contractor_appointed,
   surveyor_appointed,
