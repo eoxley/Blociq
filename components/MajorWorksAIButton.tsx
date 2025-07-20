@@ -155,6 +155,9 @@ export default function MajorWorksAIButton({
                   <div className="text-gray-800 whitespace-pre-wrap text-sm leading-relaxed">
                     {answer}
                   </div>
+                  <p className="text-xs italic text-gray-500 mt-3 pt-3 border-t border-gray-200">
+                    AI-generated guidance is for support only and should not replace professional advice.
+                  </p>
                 </div>
               )}
             </div>

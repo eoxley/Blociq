@@ -1,220 +1,94 @@
-import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import LayoutWithSidebar from '@/components/LayoutWithSidebar'
 
-export default function TermsOfServicePage() {
+export default function TermsOfUse() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center gap-4">
-            <Link 
-              href="/"
-              className="flex items-center gap-2 text-[#0F5D5D] hover:text-teal-700 transition-colors"
-            >
-              <ArrowLeft className="h-5 w-5" />
-              Back to Home
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="bg-white rounded-xl shadow-lg p-8 md:p-12">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">
-              Terms of Service
-            </h1>
-            <p className="text-gray-600">
-              Last updated: {new Date().toLocaleDateString('en-GB', { 
-                day: 'numeric', 
-                month: 'long', 
-                year: 'numeric' 
-              })}
+    <LayoutWithSidebar>
+      <div className="p-6 max-w-4xl mx-auto">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+          <h1 className="text-3xl font-bold text-[#0F5D5D] mb-6">Terms of Use</h1>
+          
+          <div className="prose prose-gray max-w-none">
+            <p className="text-lg text-gray-700 mb-6">
+              Welcome to BlocIQ. By using this platform, you agree to the following terms and conditions.
             </p>
-          </div>
 
-          <div className="prose prose-gray max-w-none space-y-8">
-            {/* Introduction */}
-            <section>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                1. Introduction
-              </h2>
-              <p className="text-gray-700 leading-relaxed">
-                These Terms of Service ("Terms") govern your use of BlocIQ, an AI-powered property management platform operated by BlocIQ Ltd ("we," "our," or "us"). By accessing or using our services, you agree to be bound by these Terms. If you disagree with any part of these terms, you may not access our service.
-              </p>
-            </section>
+            <h2 className="text-xl font-semibold text-[#0F5D5D] mt-8 mb-4">1. License and Use</h2>
+            <p className="text-gray-700 mb-4">
+              BlocIQ grants you a limited, non-transferable licence to use the software for property management purposes. 
+              This licence is personal to you and may not be assigned or sublicensed.
+            </p>
 
-            {/* Acceptance of Terms */}
-            <section>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                2. Acceptance of Terms
-              </h2>
-              <p className="text-gray-700 leading-relaxed mb-4">
-                By using BlocIQ, you confirm that:
-              </p>
-              <ul className="list-disc pl-6 text-gray-700 space-y-2">
-                <li>You are at least 18 years old and have the legal capacity to enter into these Terms</li>
-                <li>You have the authority to bind your organisation to these Terms if using BlocIQ on behalf of a company</li>
-                <li>You will use the service in compliance with all applicable laws and regulations</li>
-                <li>You will provide accurate and complete information when creating your account</li>
-              </ul>
-            </section>
+            <h2 className="text-xl font-semibold text-[#0F5D5D] mt-8 mb-4">2. User Responsibilities</h2>
+            <ul className="list-disc ml-6 mt-4 space-y-2 text-gray-700">
+              <li>You are responsible for ensuring all data entered is accurate and lawful.</li>
+              <li>You must maintain the security of your account credentials.</li>
+              <li>You agree not to use the platform for any illegal or unauthorized purpose.</li>
+              <li>You are responsible for compliance with all applicable laws and regulations.</li>
+            </ul>
 
-            {/* Service Description */}
-            <section>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                3. Service Description
-              </h2>
-              <p className="text-gray-700 leading-relaxed mb-4">
-                BlocIQ provides AI-powered property management tools including:
+            <h2 className="text-xl font-semibold text-[#0F5D5D] mt-8 mb-4">3. AI-Generated Content</h2>
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+              <p className="text-gray-700">
+                <strong>Important:</strong> AI-generated content is for guidance only and must not be relied upon as legal 
+                or professional advice. Always consult with qualified professionals for legal, financial, or technical matters.
               </p>
-              <ul className="list-disc pl-6 text-gray-700 space-y-2">
-                <li>AI-assisted email management and response generation</li>
-                <li>Compliance tracking and document management</li>
-                <li>Portfolio calendar and event management</li>
-                <li>Property data analysis and insights</li>
-              </ul>
-              <p className="text-gray-700 leading-relaxed mt-4">
-                We reserve the right to modify, suspend, or discontinue any part of our service at any time with reasonable notice.
-              </p>
-            </section>
+            </div>
 
-            {/* User Obligations */}
-            <section>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                4. User Obligations
-              </h2>
-              <p className="text-gray-700 leading-relaxed mb-4">
-                You agree to:
-              </p>
-              <ul className="list-disc pl-6 text-gray-700 space-y-2">
-                <li>Maintain the security of your account credentials and not share them with others</li>
-                <li>Use the service only for lawful purposes and in compliance with UK property management regulations</li>
-                <li>Not attempt to reverse engineer, decompile, or otherwise attempt to extract source code from our service</li>
-                <li>Not use the service to transmit malicious code, spam, or other harmful content</li>
-                <li>Comply with all applicable data protection laws, including GDPR</li>
-                <li>Ensure all data uploaded to our platform is accurate and legally obtained</li>
-              </ul>
-            </section>
+            <h2 className="text-xl font-semibold text-[#0F5D5D] mt-8 mb-4">4. Data and Privacy</h2>
+            <p className="text-gray-700 mb-4">
+              Your use of BlocIQ is also governed by our Privacy Policy, which is incorporated into these terms by reference.
+            </p>
 
-            {/* AI Disclaimer */}
-            <section>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                5. AI Disclaimer and Limitations
-              </h2>
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-4">
-                <h3 className="text-lg font-semibold text-yellow-800 mb-2">
-                  Important AI Disclaimer
-                </h3>
-                <p className="text-yellow-700 leading-relaxed">
-                  BlocIQ uses artificial intelligence to assist with property management tasks. While our AI is trained on property management best practices and UK regulations, it is not a substitute for professional legal, financial, or property management advice.
-                </p>
-              </div>
-              <p className="text-gray-700 leading-relaxed mb-4">
-                You acknowledge and agree that:
-              </p>
-              <ul className="list-disc pl-6 text-gray-700 space-y-2">
-                <li>AI-generated content should be reviewed by qualified professionals before implementation</li>
-                <li>AI responses may not always be accurate or complete</li>
-                <li>You remain responsible for all decisions made based on AI-generated content</li>
-                <li>AI features are provided "as is" without warranty of accuracy or completeness</li>
-                <li>We are not liable for any losses arising from reliance on AI-generated content</li>
-              </ul>
-            </section>
+            <h2 className="text-xl font-semibold text-[#0F5D5D] mt-8 mb-4">5. Limitations of Liability</h2>
+            <ul className="list-disc ml-6 mt-4 space-y-2 text-gray-700">
+              <li>BlocIQ is not liable for any loss resulting from reliance on AI-generated content.</li>
+              <li>We are not responsible for missed compliance actions or deadlines.</li>
+              <li>We do not guarantee the accuracy of third-party integrations.</li>
+              <li>Our liability is limited to the amount paid for the service in the 12 months preceding any claim.</li>
+            </ul>
 
-            {/* Intellectual Property */}
-            <section>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                6. Intellectual Property and Content Rights
-              </h2>
-              <p className="text-gray-700 leading-relaxed mb-4">
-                <strong>Our Rights:</strong> BlocIQ and its original content, features, and functionality are owned by BlocIQ Ltd and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws.
-              </p>
-              <p className="text-gray-700 leading-relaxed mb-4">
-                <strong>Your Rights:</strong> You retain ownership of any content you upload to our platform. By using our service, you grant us a limited, non-exclusive license to process and store your data for the purpose of providing our services.
-              </p>
-              <p className="text-gray-700 leading-relaxed">
-                <strong>AI-Generated Content:</strong> AI-generated content created using our platform is provided for your use, but we retain the right to use anonymised data to improve our AI models.
-              </p>
-            </section>
+            <h2 className="text-xl font-semibold text-[#0F5D5D] mt-8 mb-4">6. Intellectual Property</h2>
+            <p className="text-gray-700 mb-4">
+              The BlocIQ platform, including its design, code, and content, is protected by intellectual property rights. 
+              You retain ownership of your data but grant us a licence to process it for service provision.
+            </p>
 
-            {/* Privacy and Data Protection */}
-            <section>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                7. Privacy and Data Protection
-              </h2>
-              <p className="text-gray-700 leading-relaxed mb-4">
-                Your privacy is important to us. Our collection and use of personal information is governed by our Privacy Policy, which is incorporated into these Terms by reference.
-              </p>
-              <p className="text-gray-700 leading-relaxed">
-                We are committed to GDPR compliance and will process your data in accordance with UK data protection laws. You have the right to access, rectify, and delete your personal data as outlined in our Privacy Policy.
-              </p>
-            </section>
+            <h2 className="text-xl font-semibold text-[#0F5D5D] mt-8 mb-4">7. Termination</h2>
+            <p className="text-gray-700 mb-4">
+              We may terminate or suspend your access to BlocIQ at any time for violation of these terms. 
+              You may cancel your account at any time through the platform settings.
+            </p>
 
-            {/* Liability */}
-            <section>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                8. Limitation of Liability
-              </h2>
-              <p className="text-gray-700 leading-relaxed mb-4">
-                To the maximum extent permitted by law, BlocIQ Ltd shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to:
-              </p>
-              <ul className="list-disc pl-6 text-gray-700 space-y-2">
-                <li>Loss of profits, data, or business opportunities</li>
-                <li>Damages arising from use of AI-generated content</li>
-                <li>Service interruptions or technical issues</li>
-                <li>Third-party actions or content</li>
-              </ul>
-              <p className="text-gray-700 leading-relaxed mt-4">
-                Our total liability to you for any claims arising from these Terms shall not exceed the amount you paid for our service in the 12 months preceding the claim.
-              </p>
-            </section>
+            <h2 className="text-xl font-semibold text-[#0F5D5D] mt-8 mb-4">8. Governing Law</h2>
+            <p className="text-gray-700 mb-4">
+              These terms are governed by English law. Any disputes will be subject to the exclusive jurisdiction 
+              of the courts of England and Wales.
+            </p>
 
-            {/* Termination */}
-            <section>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                9. Termination
-              </h2>
-              <p className="text-gray-700 leading-relaxed mb-4">
-                You may terminate your account at any time by contacting us. We may terminate or suspend your access immediately, without prior notice, for any reason, including breach of these Terms.
-              </p>
-              <p className="text-gray-700 leading-relaxed">
-                Upon termination, your right to use the service will cease immediately. We will retain your data for 30 days following termination, after which it will be permanently deleted unless required by law to retain it longer.
-              </p>
-            </section>
+            <h2 className="text-xl font-semibold text-[#0F5D5D] mt-8 mb-4">9. Changes to Terms</h2>
+            <p className="text-gray-700 mb-4">
+              We may update these terms from time to time. We will notify you of any material changes via email 
+              or through the platform. Continued use constitutes acceptance of updated terms.
+            </p>
 
-            {/* Governing Law */}
-            <section>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                10. Governing Law and Jurisdiction
-              </h2>
-              <p className="text-gray-700 leading-relaxed">
-                These Terms shall be governed by and construed in accordance with the laws of England and Wales. Any disputes arising from these Terms shall be subject to the exclusive jurisdiction of the courts of England and Wales.
+            <div className="bg-gray-50 rounded-lg p-4 mt-8">
+              <p className="text-sm text-gray-600">
+                <strong>By using BlocIQ, you acknowledge that you have read, understood, and agree to these terms.</strong> 
+                If you have any questions about these terms, please contact us at{' '}
+                <a href="mailto:legal@blociq.co.uk" className="text-teal-600 hover:text-teal-700 underline">
+                  legal@blociq.co.uk
+                </a>
               </p>
-            </section>
+            </div>
 
-            {/* Contact Information */}
-            <section>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                11. Contact Information
-              </h2>
-              <p className="text-gray-700 leading-relaxed">
-                If you have any questions about these Terms of Service, please contact us at:
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <p className="text-sm text-gray-500">
+                Last updated: {new Date().toLocaleDateString('en-GB')}
               </p>
-              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                <p className="text-gray-700">
-                  <strong>Sample Company Ltd</strong><br />
-                  Registered in England & Wales: Company No. 12345678<br />
-                  Registered Office: 123 Business Street, London SW1 1AA<br />
-                  Email: <a href="mailto:contact@samplecompany.co.uk" className="text-teal-600 hover:text-teal-700">contact@samplecompany.co.uk</a>
-                </p>
-              </div>
-            </section>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </LayoutWithSidebar>
   )
 } 
