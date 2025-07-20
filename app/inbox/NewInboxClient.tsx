@@ -22,6 +22,7 @@ import EmailListItem from './components/EmailListItem'
 import EmailDetail from './components/EmailDetail'
 import AIActionBar from './components/AIActionBar'
 import ComposeEmailModal from './components/ComposeEmailModal'
+import FolderSidebar from './components/FolderSidebar'
 import { toast } from 'sonner'
 
 interface Email {
@@ -67,18 +68,6 @@ export default function NewInboxClient({
   const [loadingEmails, setLoadingEmails] = useState(false)
   const [isComposeModalOpen, setIsComposeModalOpen] = useState(false)
 
-  // Fetch buildings for sidebar
-  useEffect(() => {
-    const fetchBuildings = async () => {
-      const { data, error } = await supabase
-        .from('buildings')
-        .select('id, name')
-        .order('name', { ascending: true })
-      if (!error && data) setBuildings(data)
-    }
-    fetchBuildings()
-  }, [supabase])
-
   // Fetch emails based on filter
   useEffect(() => {
     const fetchEmails = async () => {
@@ -91,6 +80,7 @@ export default function NewInboxClient({
         .order('received_at', { ascending: false })
         .limit(50)
 
+      // Apply filters based on current filter state
       if (filter === 'inbox') {
         query = query.eq('is_handled', false)
       } else if (filter === 'handled') {
@@ -98,8 +88,11 @@ export default function NewInboxClient({
       } else if (filter.startsWith('building-')) {
         const buildingId = filter.replace('building-', '')
         query = query.eq('building_id', buildingId)
+      } else if (filter.startsWith('tag-')) {
+        const tag = filter.replace('tag-', '')
+        query = query.contains('tags', [tag])
       }
-      // 'all' shows all
+      // 'all' shows all emails (no additional filter)
 
       const { data, error } = await query
       if (!error && data) {
@@ -162,20 +155,6 @@ export default function NewInboxClient({
     }
   }
 
-  // Format last sync time
-  const formatLastSync = (timestamp: string | null) => {
-    if (!timestamp) return 'Never'
-    const now = new Date()
-    const syncTime = new Date(timestamp)
-    const diffInMinutes = Math.floor((now.getTime() - syncTime.getTime()) / (1000 * 60))
-    if (diffInMinutes < 1) return 'Just now'
-    if (diffInMinutes < 60) return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`
-    const diffInHours = Math.floor(diffInMinutes / 60)
-    if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`
-    const diffInDays = Math.floor(diffInHours / 24)
-    return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`
-  }
-
   // Handle email selection
   const handleEmailSelect = (email: Email) => {
     setSelectedEmail(email)
@@ -188,48 +167,52 @@ export default function NewInboxClient({
     }
   }
 
+  // Get current filter display name
+  const getCurrentFilterName = () => {
+    switch (filter) {
+      case 'inbox':
+        return 'Inbox'
+      case 'handled':
+        return 'Handled'
+      case 'all':
+        return 'All Emails'
+      default:
+        if (filter.startsWith('building-')) {
+          const buildingId = filter.replace('building-', '')
+          const building = buildings.find(b => b.id === buildingId)
+          return building?.name || 'Building'
+        }
+        if (filter.startsWith('tag-')) {
+          const tag = filter.replace('tag-', '')
+          return `Tag: ${tag}`
+        }
+        return 'Unknown'
+    }
+  }
+
   return (
     <div className="h-screen flex">
-      {/* Sidebar */}
-      <div className="w-72 border-r bg-white flex flex-col p-4">
-        <Card className="w-full p-4 mb-6">
-          <h2 className="text-lg font-semibold mb-2">Folders</h2>
-          <ul className="space-y-2">
-            <li><Button variant={filter === 'inbox' ? 'default' : 'ghost'} onClick={() => setFilter('inbox')} className="w-full justify-start"><InboxIcon className="h-4 w-4 mr-2" />Inbox</Button></li>
-            <li><Button variant={filter === 'handled' ? 'default' : 'ghost'} onClick={() => setFilter('handled')} className="w-full justify-start"><CheckCircle className="h-4 w-4 mr-2" />Handled</Button></li>
-            <li><Button variant={filter === 'all' ? 'default' : 'ghost'} onClick={() => setFilter('all')} className="w-full justify-start"><Folder className="h-4 w-4 mr-2" />All Emails</Button></li>
-            <li className="mt-4 font-semibold text-gray-700">By Building</li>
-            {buildings.map((b) => (
-              <li key={b.id}><Button variant={filter === `building-${b.id}` ? 'default' : 'ghost'} onClick={() => setFilter(`building-${b.id}`)} className="w-full justify-start"><BuildingIcon className="h-4 w-4 mr-2" />{b.name}</Button></li>
-            ))}
-          </ul>
-        </Card>
-        <div className="mt-auto">
-          <Button
-            onClick={handleSync}
-            disabled={isSyncing}
-            variant="outline"
-            size="sm"
-            className="w-full flex items-center gap-2"
-          >
-            {isSyncing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
-            {isSyncing ? 'Syncing...' : 'Sync Now'}
-          </Button>
-          <div className="text-xs text-gray-500 mt-2 text-center">
-            Last synced: {formatLastSync(lastSync)}
-          </div>
-        </div>
-      </div>
+      {/* Enhanced Folder Sidebar */}
+      <FolderSidebar
+        currentFilter={filter}
+        onFilterChange={setFilter}
+        onSync={handleSync}
+        isSyncing={isSyncing}
+        lastSync={lastSync}
+      />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <div className="border-b bg-white px-6 py-4 flex items-center gap-4">
-          <h1 className="text-2xl font-bold text-gray-900">Inbox</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900">{getCurrentFilterName()}</h1>
+            {filter !== 'inbox' && filter !== 'handled' && filter !== 'all' && (
+              <Badge variant="outline" className="text-xs">
+                {filteredEmails.length} emails
+              </Badge>
+            )}
+          </div>
           <div className="flex-1" />
           <Button
             onClick={() => setIsComposeModalOpen(true)}
@@ -263,7 +246,7 @@ export default function NewInboxClient({
                 <div className="text-center py-12">
                   <Mail className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    {searchTerm ? 'No emails found' : 'No new messages'}
+                    {searchTerm ? 'No emails found' : `No emails in ${getCurrentFilterName()}`}
                   </h3>
                   <p className="text-gray-500">
                     {searchTerm
