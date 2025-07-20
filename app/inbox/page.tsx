@@ -14,7 +14,7 @@ export default async function InboxPage() {
     redirect('/login')
   }
 
-  // Fetch real emails from Supabase
+  // Fetch all emails from Supabase (no limit)
   const { data: emails, error } = await supabase
     .from('incoming_emails')
     .select(`
@@ -33,7 +33,6 @@ export default async function InboxPage() {
       buildings(name)
     `)
     .order('received_at', { ascending: false })
-    .limit(50)
 
   if (error) {
     console.error('Error fetching emails:', error)

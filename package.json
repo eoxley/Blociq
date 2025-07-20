@@ -6,7 +6,10 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "clear-cache": "node scripts/clear-cache.js",
+    "seed:compliance": "tsx scripts/seedComplianceAssets.ts",
+    "check:compliance": "tsx scripts/checkComplianceAssets.ts"
   },
   "dependencies": {
     "@azure/msal-node": "^3.6.2",
@@ -37,6 +40,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "docxtemplater": "^3.65.2",
+    "dotenv": "^17.2.0",
     "file-saver": "^2.0.5",
     "isomorphic-fetch": "^3.0.0",
     "jszip": "^3.10.1",

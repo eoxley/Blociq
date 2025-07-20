@@ -39,6 +39,7 @@ interface ComplianceAsset {
   name: string
   description: string | null
   category: string | null
+  [key: string]: any // Allow additional fields from select('*')
 }
 
 interface ComplianceSetupWizardProps {
@@ -65,13 +66,48 @@ export default function ComplianceSetupWizard({
   const [submittedCount, setSubmittedCount] = useState(0)
   const [setupResult, setSetupResult] = useState<any>(null)
 
-  // Group compliance assets by category
+  // Define category priority order for sorting
+  const categoryPriority = [
+    'Safety',
+    'Legal & Safety', 
+    'Lease & Documentation',
+    'Operational & Contracts',
+    'Environmental',
+    'Smart Records',
+    'Other'
+  ]
+
+  // Group compliance assets by category with priority sorting
   const assetsByCategory = complianceAssets.reduce((acc, asset) => {
     const category = asset.category || 'Other'
     if (!acc[category]) {
       acc[category] = []
     }
     acc[category].push(asset)
+    return acc
+  }, {} as Record<string, ComplianceAsset[]>)
+
+  // Sort categories by priority, then alphabetically
+  const sortedCategories = Object.keys(assetsByCategory).sort((a, b) => {
+    const aIndex = categoryPriority.indexOf(a)
+    const bIndex = categoryPriority.indexOf(b)
+    
+    // If both categories are in priority list, sort by priority
+    if (aIndex !== -1 && bIndex !== -1) {
+      return aIndex - bIndex
+    }
+    
+    // If only one is in priority list, prioritize it
+    if (aIndex !== -1) return -1
+    if (bIndex !== -1) return 1
+    
+    // Otherwise sort alphabetically
+    return a.localeCompare(b)
+  })
+
+  // Create sorted assets by category
+  const sortedAssetsByCategory = sortedCategories.reduce((acc, category) => {
+    acc[category] = assetsByCategory[category]
     return acc
   }, {} as Record<string, ComplianceAsset[]>)
 
@@ -85,7 +121,7 @@ export default function ComplianceSetupWizard({
   })
 
   // Filter assets based on search
-  const filteredAssetsByCategory = Object.entries(assetsByCategory).reduce((acc, [category, assets]) => {
+  const filteredAssetsByCategory = Object.entries(sortedAssetsByCategory).reduce((acc, [category, assets]) => {
     const filteredAssets = assets.filter(asset => {
       const searchTerm = assetSearchTerm.toLowerCase()
       return (
@@ -248,6 +284,16 @@ export default function ComplianceSetupWizard({
       default:
         return ''
     }
+  }
+
+  // Get category summary for selected assets
+  const getCategorySummary = () => {
+    const categoryCounts = Object.entries(filteredAssetsByCategory).map(([category, assets]) => {
+      const selectedCount = assets.filter(asset => selectedAssets.includes(asset.id)).length
+      return { category, selectedCount, totalCount: assets.length }
+    }).filter(item => item.selectedCount > 0)
+
+    return categoryCounts
   }
 
   // Success state with navigation options
@@ -513,6 +559,23 @@ export default function ComplianceSetupWizard({
                 />
               </div>
 
+              {/* Category Summary */}
+              {selectedAssets.length > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="font-medium text-blue-900 mb-2">Selected by Category:</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {getCategorySummary().map(({ category, selectedCount, totalCount }) => (
+                      <Badge key={category} variant="secondary" className="text-xs">
+                        {category} ({selectedCount}/{totalCount})
+                      </Badge>
+                    ))}
+                  </div>
+                  <p className="text-sm text-blue-800 mt-2">
+                    <strong>Total:</strong> {selectedAssets.length} compliance asset{selectedAssets.length !== 1 ? 's' : ''} selected
+                  </p>
+                </div>
+              )}
+
               {/* Select All/Deselect All */}
               <div className="flex gap-2">
                 <Button
@@ -541,64 +604,65 @@ export default function ComplianceSetupWizard({
                     <p>No compliance assets found matching your search.</p>
                   </div>
                 ) : (
-                  Object.entries(filteredAssetsByCategory).map(([category, assets]) => (
-                    <div key={category} className="space-y-3">
-                      <h3 className="font-medium text-gray-900 border-b pb-2">{category}</h3>
-                      <div className="space-y-2">
-                        {assets.map((asset) => {
-                          const isSelected = selectedAssets.includes(asset.id)
-                          
-                          return (
-                            <div
-                              key={asset.id}
-                              className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                                isSelected 
-                                  ? 'bg-teal-50 border-teal-200' 
-                                  : 'bg-white border-gray-200 hover:bg-gray-50'
-                              }`}
-                              onClick={() => toggleAsset(asset.id)}
-                            >
-                              <Checkbox
-                                id={`asset-${asset.id}`}
-                                checked={isSelected}
-                                onCheckedChange={() => toggleAsset(asset.id)}
-                              />
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">{asset.name}</span>
+                  Object.entries(filteredAssetsByCategory).map(([category, assets]) => {
+                    const selectedCount = assets.filter(asset => selectedAssets.includes(asset.id)).length
+                    
+                    return (
+                      <div key={category} className="space-y-3">
+                        <div className="flex items-center justify-between border-b pb-2">
+                          <h3 className="text-lg font-semibold text-gray-900">{category}</h3>
+                          <Badge variant="outline" className="text-xs">
+                            {selectedCount}/{assets.length} selected
+                          </Badge>
+                        </div>
+                        <Card className="p-4 space-y-2">
+                          {assets.map((asset) => {
+                            const isSelected = selectedAssets.includes(asset.id)
+                            
+                            return (
+                              <div
+                                key={asset.id}
+                                className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
+                                  isSelected 
+                                    ? 'bg-teal-50 border-teal-200' 
+                                    : 'bg-white border-gray-200 hover:bg-gray-50'
+                                }`}
+                                onClick={() => toggleAsset(asset.id)}
+                              >
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">{asset.name}</span>
+                                    {asset.description && (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger>
+                                            <Info className="h-4 w-4 text-gray-400" />
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p className="max-w-xs">{asset.description}</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    )}
+                                  </div>
                                   {asset.description && (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger>
-                                          <Info className="h-4 w-4 text-gray-400" />
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p className="max-w-xs">{asset.description}</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
+                                    <p className="text-sm text-muted-foreground mt-1">{asset.description}</p>
                                   )}
                                 </div>
-                                {asset.description && (
-                                  <p className="text-sm text-gray-600 mt-1">{asset.description}</p>
-                                )}
+                                <Checkbox
+                                  id={`asset-${asset.id}`}
+                                  checked={isSelected}
+                                  onCheckedChange={() => toggleAsset(asset.id)}
+                                />
                               </div>
-                            </div>
-                          )
-                        })}
+                            )
+                          })}
+                        </Card>
                       </div>
-                    </div>
-                  ))
+                    )
+                  })
                 )}
               </div>
-
-              {selectedAssets.length > 0 && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <p className="text-sm text-blue-800">
-                    <strong>{selectedAssets.length}</strong> compliance asset{selectedAssets.length !== 1 ? 's' : ''} selected
-                  </p>
-                </div>
-              )}
             </CardContent>
           </Card>
         </TabsContent>
