@@ -13,7 +13,17 @@ interface Building {
   address: string | null
   unit_count: number | null
   created_at: string | null
-  units?: any[]
+  units?: {
+    id: number
+    unit_number: string
+    building_id: number
+    leaseholders?: {
+      id: number
+      name: string
+      email: string
+      phone: string
+    }[]
+  }[]
 }
 
 export default async function BuildingsPage() {
@@ -36,7 +46,7 @@ export default async function BuildingsPage() {
   console.log('Simple buildings query result:', simpleBuildings)
   console.log('Simple buildings error:', simpleError)
 
-  // Then try the complex query with units
+  // Then try the complex query with units and leaseholders
   const { data: buildings, error } = await supabase
     .from('buildings')
     .select(`
@@ -48,7 +58,13 @@ export default async function BuildingsPage() {
       units (
         id,
         unit_number,
-        building_id
+        building_id,
+        leaseholders (
+          id,
+          name,
+          email,
+          phone
+        )
       )
     `)
     .order('name')

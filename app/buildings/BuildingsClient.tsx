@@ -13,13 +13,14 @@ import {
   Wrench, 
   Calendar,
   TrendingUp,
-  AlertCircle,
   CheckCircle,
-  Clock,
-  Star,
-  Filter,
   Grid,
-  List
+  List,
+  Filter,
+  Home,
+  User,
+  Mail,
+  Phone
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -33,7 +34,17 @@ type Building = {
   unit_count: number | null
   created_at: string | null
   demo_ready?: boolean
-  units?: any[]
+  units?: {
+    id: number
+    unit_number: string
+    building_id: number
+    leaseholders?: {
+      id: number
+      name: string
+      email: string
+      phone: string
+    }[]
+  }[]
 }
 
 interface BuildingsClientProps {
@@ -70,10 +81,10 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
 
   // Calculate building stats
   const totalUnits = buildings.reduce((sum, building) => sum + (building.unit_count || 0), 0)
-  const occupiedUnits = buildings.reduce((sum, building) => {
-    return sum + (building.leases?.length || 0)
+  const totalLeaseholders = buildings.reduce((sum, building) => {
+    return sum + (building.units?.reduce((unitSum, unit) => 
+      unitSum + (unit.leaseholders?.length || 0), 0) || 0)
   }, 0)
-  const occupancyRate = totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0
 
   if (buildings.length === 0) {
     return (
@@ -89,7 +100,7 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
           </div>
           <h3 className="text-3xl font-bold text-gray-900 mb-4">No buildings yet</h3>
           <p className="text-lg text-gray-600 mb-8 leading-relaxed">
-            Get started by adding your first building to begin managing your property portfolio with our comprehensive tools.
+            Get started by adding your first building to begin managing your property portfolio.
           </p>
           <Button size="lg" className="bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white px-8 py-4 rounded-xl text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
             <Plus className="h-6 w-6 mr-2" />
@@ -101,97 +112,52 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="bg-gradient-to-br from-teal-50 to-teal-100 border-teal-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      {/* Compact Stats Bar */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-8">
+            <div className="flex items-center space-x-2">
+              <div className="bg-teal-100 rounded-lg p-2">
+                <Building2 className="h-5 w-5 text-teal-600" />
+              </div>
               <div>
-                <p className="text-sm font-medium text-teal-700">Total Buildings</p>
-                <p className="text-3xl font-bold text-teal-900">{buildings.length}</p>
-              </div>
-              <div className="bg-teal-500 rounded-full p-3">
-                <Building2 className="h-6 w-6 text-white" />
+                <p className="text-sm text-gray-500">Buildings</p>
+                <p className="text-2xl font-bold text-gray-900">{buildings.length}</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="bg-blue-100 rounded-lg p-2">
+                <Home className="h-5 w-5 text-blue-600" />
+              </div>
               <div>
-                <p className="text-sm font-medium text-blue-700">Total Units</p>
-                <p className="text-3xl font-bold text-blue-900">{totalUnits}</p>
-              </div>
-              <div className="bg-blue-500 rounded-full p-3">
-                <Users className="h-6 w-6 text-white" />
+                <p className="text-sm text-gray-500">Units</p>
+                <p className="text-2xl font-bold text-gray-900">{totalUnits}</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="bg-green-100 rounded-lg p-2">
+                <User className="h-5 w-5 text-green-600" />
+              </div>
               <div>
-                <p className="text-sm font-medium text-green-700">Occupancy Rate</p>
-                <p className="text-3xl font-bold text-green-900">{occupancyRate}%</p>
-              </div>
-              <div className="bg-green-500 rounded-full p-3">
-                <TrendingUp className="h-6 w-6 text-white" />
+                <p className="text-sm text-gray-500">Leaseholders</p>
+                <p className="text-2xl font-bold text-gray-900">{totalLeaseholders}</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-purple-700">Active Leases</p>
-                <p className="text-3xl font-bold text-purple-900">{occupiedUnits}</p>
-              </div>
-              <div className="bg-purple-500 rounded-full p-3">
-                <CheckCircle className="h-6 w-6 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search and Controls */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-        <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-          {/* Search Bar */}
-          <div className="relative flex-1 max-w-2xl">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              placeholder="Search buildings by name or address..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="block w-full pl-12 pr-4 py-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white shadow-sm text-lg transition-all duration-200"
-            />
           </div>
-
+          
           {/* Controls */}
-          <div className="flex items-center gap-3">
-            {/* Sort Dropdown */}
+          <div className="flex items-center space-x-3">
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white text-sm font-medium"
+              className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white text-sm font-medium"
             >
               <option value="name">Sort by Name</option>
               <option value="units">Sort by Units</option>
               <option value="date">Sort by Date</option>
             </select>
 
-            {/* View Mode Toggle */}
             <div className="flex bg-gray-100 rounded-lg p-1">
               <button
                 onClick={() => setViewMode('grid')}
@@ -216,24 +182,38 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
             </div>
           </div>
         </div>
-
-        {/* Search Results Info */}
-        {searchTerm && (
-          <div className="mt-4 text-center">
-            <Badge variant="outline" className="px-4 py-2 text-sm">
-              {filteredBuildings.length === 0 ? (
-                <span>No buildings found matching "{searchTerm}"</span>
-              ) : (
-                <span>Showing {filteredBuildings.length} of {buildings.length} buildings</span>
-              )}
-            </Badge>
-          </div>
-        )}
       </div>
+
+      {/* Search Bar */}
+      <div className="relative">
+        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+          <Search className="h-5 w-5 text-gray-400" />
+        </div>
+        <input
+          type="text"
+          placeholder="Search buildings by name or address..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="block w-full pl-12 pr-4 py-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white shadow-sm text-lg transition-all duration-200"
+        />
+      </div>
+
+      {/* Search Results Info */}
+      {searchTerm && (
+        <div className="text-center">
+          <Badge variant="outline" className="px-4 py-2 text-sm">
+            {filteredBuildings.length === 0 ? (
+              <span>No buildings found matching "{searchTerm}"</span>
+            ) : (
+              <span>Showing {filteredBuildings.length} of {buildings.length} buildings</span>
+            )}
+          </Badge>
+        </div>
+      )}
 
       {/* Buildings Display */}
       {viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sortedBuildings.map((building) => (
             <BuildingCard key={building.id} building={building} />
           ))}
@@ -279,7 +259,7 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">Add Another Building</h3>
             <p className="text-gray-600 mb-6 max-w-md mx-auto">
-              Expand your property portfolio and manage more buildings efficiently with our comprehensive tools.
+              Expand your property portfolio and manage more buildings efficiently.
             </p>
             <Button size="lg" className="bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white px-8 py-4 rounded-xl text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
               <Plus className="h-5 w-5 mr-2" />
@@ -292,66 +272,99 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
   )
 }
 
-// Building Card Component
+// Modern Building Card Component
 function BuildingCard({ building }: { building: Building }) {
+  const occupiedUnits = building.units?.filter(unit => unit.leaseholders && unit.leaseholders.length > 0).length || 0
+  const occupancyRate = building.unit_count ? Math.round((occupiedUnits / building.unit_count) * 100) : 0
 
   return (
     <Link href={`/buildings/${building.id}`} className="group block">
-      <Card className="h-full bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 overflow-hidden transform hover:scale-105 group-hover:border-teal-200">
-        {/* Header with Gradient */}
-        <div className="relative">
-          <div className="bg-gradient-to-br from-teal-500 via-teal-600 to-blue-600 p-6 text-white">
-            {/* Coming Soon Badge */}
-            {building.demo_ready === false && (
-              <div className="absolute top-4 right-4 z-10">
-                <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-0">
-                  🚧 Coming Soon
-                </Badge>
-              </div>
-            )}
-            
-            <div className="flex items-center justify-center w-16 h-16 bg-white/20 rounded-2xl mb-4 mx-auto backdrop-blur-sm">
-              <Building2 className="h-8 w-8 text-white" />
+      <Card className="h-full bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 overflow-hidden transform hover:scale-105 group-hover:border-teal-200">
+        {/* Header */}
+        <div className="bg-gradient-to-br from-teal-500 to-blue-600 p-4 text-white relative">
+          {building.demo_ready === false && (
+            <Badge className="absolute top-3 right-3 bg-amber-500 hover:bg-amber-600 text-white border-0">
+              🚧 Coming Soon
+            </Badge>
+          )}
+          
+          <div className="flex items-center space-x-3">
+            <div className="bg-white/20 rounded-lg p-2 backdrop-blur-sm">
+              <Building2 className="h-6 w-6 text-white" />
             </div>
-            <h3 className="text-xl font-bold text-center group-hover:text-teal-100 transition-colors duration-200">
-              {building.name}
-            </h3>
+            <div>
+              <h3 className="text-lg font-bold group-hover:text-teal-100 transition-colors duration-200">
+                {building.name}
+              </h3>
+              {building.address && (
+                <p className="text-sm text-teal-100 opacity-90 truncate">
+                  {building.address}
+                </p>
+              )}
+            </div>
           </div>
         </div>
         
         {/* Content */}
-        <CardContent className="p-6">
-          {/* Address */}
-          {building.address && (
-            <div className="flex items-start space-x-3 mb-4">
-              <MapPin className="h-5 w-5 text-teal-500 mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-gray-600 leading-relaxed">
-                {building.address}
-              </p>
+        <CardContent className="p-4">
+          {/* Quick Stats */}
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <div className="text-center p-2 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-center mb-1">
+                <Home className="h-4 w-4 text-teal-500 mr-1" />
+                <span className="text-lg font-bold text-gray-900">{building.unit_count || 0}</span>
+              </div>
+              <p className="text-xs text-gray-500">Units</p>
             </div>
-          )}
-          
-          {/* Stats Row */}
-          <div className="text-center p-4 bg-gray-50 rounded-lg mb-6">
-            <div className="flex items-center justify-center mb-1">
-              <Users className="h-5 w-5 text-teal-500 mr-2" />
-              <span className="text-xl font-bold text-gray-900">{building.unit_count || 0}</span>
+            <div className="text-center p-2 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-center mb-1">
+                <User className="h-4 w-4 text-green-500 mr-1" />
+                <span className="text-lg font-bold text-gray-900">{occupiedUnits}</span>
+              </div>
+              <p className="text-xs text-gray-500">Occupied</p>
             </div>
-            <p className="text-sm text-gray-500">Total Units</p>
+            <div className="text-center p-2 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-center mb-1">
+                <TrendingUp className="h-4 w-4 text-blue-500 mr-1" />
+                <span className="text-lg font-bold text-gray-900">{occupancyRate}%</span>
+              </div>
+              <p className="text-xs text-gray-500">Rate</p>
+            </div>
           </div>
           
-          {/* Sample Units */}
+          {/* Sample Units with Leaseholders */}
           {building.units && building.units.length > 0 && (
-            <div className="mb-6">
-              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Sample Units</h4>
+            <div className="mb-4">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Recent Units</h4>
               <div className="space-y-2">
                 {building.units.slice(0, 3).map((unit) => (
-                  <div key={unit.id} className="flex items-center justify-between text-sm p-2 bg-gray-50 rounded-lg">
-                    <span className="text-gray-700 font-medium">{unit.unit_number}</span>
+                  <div key={unit.id} className="p-2 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-gray-700">{unit.unit_number}</span>
+                      {unit.leaseholders && unit.leaseholders.length > 0 ? (
+                        <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">Occupied</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-gray-500 text-xs">Vacant</Badge>
+                      )}
+                    </div>
+                    {unit.leaseholders && unit.leaseholders.length > 0 && (
+                      <div className="text-xs text-gray-600">
+                        <div className="flex items-center space-x-1">
+                          <User className="h-3 w-3" />
+                          <span>{unit.leaseholders[0].name}</span>
+                        </div>
+                        {unit.leaseholders[0].email && (
+                          <div className="flex items-center space-x-1">
+                            <Mail className="h-3 w-3" />
+                            <span className="truncate">{unit.leaseholders[0].email}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
                 {building.units.length > 3 && (
-                  <div className="text-xs text-gray-400 italic text-center pt-2">
+                  <div className="text-xs text-gray-400 italic text-center pt-1">
                     +{building.units.length - 3} more units
                   </div>
                 )}
@@ -360,8 +373,8 @@ function BuildingCard({ building }: { building: Building }) {
           )}
           
           {/* Action Buttons */}
-          <div className="space-y-3">
-            <Button className="w-full bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white rounded-xl transition-all duration-200 transform group-hover:scale-105 shadow-md">
+          <div className="space-y-2">
+            <Button className="w-full bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white rounded-lg transition-all duration-200 transform group-hover:scale-105 shadow-sm">
               <span className="text-sm font-semibold">View Details</span>
               <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform duration-200" />
             </Button>
@@ -371,7 +384,7 @@ function BuildingCard({ building }: { building: Building }) {
               className="block"
               onClick={(e) => e.stopPropagation()}
             >
-              <Button variant="outline" className="w-full border-teal-200 text-teal-700 hover:bg-teal-50 rounded-xl transition-all duration-200">
+              <Button variant="outline" className="w-full border-teal-200 text-teal-700 hover:bg-teal-50 rounded-lg transition-all duration-200">
                 <Shield className="h-4 w-4 mr-2" />
                 <span className="text-sm font-semibold">Compliance</span>
               </Button>
@@ -383,25 +396,27 @@ function BuildingCard({ building }: { building: Building }) {
   )
 }
 
-// Building List Item Component
+// Modern Building List Item Component
 function BuildingListItem({ building }: { building: Building }) {
+  const occupiedUnits = building.units?.filter(unit => unit.leaseholders && unit.leaseholders.length > 0).length || 0
+  const occupancyRate = building.unit_count ? Math.round((occupiedUnits / building.unit_count) * 100) : 0
 
   return (
     <Link href={`/buildings/${building.id}`} className="group block">
       <Card className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 hover:border-teal-200">
-        <CardContent className="p-6">
+        <CardContent className="p-4">
           <div className="flex items-center justify-between">
             {/* Left side - Building info */}
-            <div className="flex items-center space-x-6 flex-1">
+            <div className="flex items-center space-x-4 flex-1">
               {/* Building Icon */}
-              <div className="bg-gradient-to-br from-teal-500 to-blue-600 rounded-xl p-4">
-                <Building2 className="h-8 w-8 text-white" />
+              <div className="bg-gradient-to-br from-teal-500 to-blue-600 rounded-lg p-3">
+                <Building2 className="h-6 w-6 text-white" />
               </div>
               
               {/* Building Details */}
               <div className="flex-1">
                 <div className="flex items-center space-x-3 mb-2">
-                  <h3 className="text-xl font-bold text-gray-900 group-hover:text-teal-700 transition-colors duration-200">
+                  <h3 className="text-lg font-bold text-gray-900 group-hover:text-teal-700 transition-colors duration-200">
                     {building.name}
                   </h3>
                   {building.demo_ready === false && (
@@ -414,14 +429,22 @@ function BuildingListItem({ building }: { building: Building }) {
                 {building.address && (
                   <div className="flex items-center space-x-2 mb-2">
                     <MapPin className="h-4 w-4 text-gray-400" />
-                    <p className="text-gray-600">{building.address}</p>
+                    <p className="text-gray-600 text-sm">{building.address}</p>
                   </div>
                 )}
                 
                 <div className="flex items-center space-x-6 text-sm text-gray-500">
                   <div className="flex items-center space-x-1">
-                    <Users className="h-4 w-4" />
+                    <Home className="h-4 w-4" />
                     <span>{building.unit_count || 0} units</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <User className="h-4 w-4" />
+                    <span>{occupiedUnits} occupied</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <TrendingUp className="h-4 w-4" />
+                    <span>{occupancyRate}% rate</span>
                   </div>
                   <div className="flex items-center space-x-1">
                     <Calendar className="h-4 w-4" />
