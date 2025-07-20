@@ -1,6 +1,32 @@
 import LayoutWithSidebar from '@/components/LayoutWithSidebar';
 import Link from 'next/link';
-import { ArrowLeft, Mail, FileText, Send, Clock, Search, Filter, Plus, MessageSquare, Phone, Calendar, Users, Building } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  Mail, 
+  FileText, 
+  Send, 
+  Clock, 
+  Search, 
+  Filter, 
+  Plus, 
+  MessageSquare, 
+  Phone, 
+  Calendar, 
+  Users, 
+  Building, 
+  TrendingUp, 
+  Eye, 
+  Edit3, 
+  Copy,
+  BarChart3,
+  PieChart,
+  Activity,
+  Zap,
+  Target,
+  CheckCircle,
+  AlertCircle,
+  Info
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,7 +44,8 @@ export default function CommunicationsPage() {
       date: "2024-03-15T10:30:00Z",
       status: "sent",
       building: "Test Property",
-      type: "service_charge"
+      type: "service_charge",
+      priority: "high"
     },
     {
       id: 2,
@@ -28,7 +55,8 @@ export default function CommunicationsPage() {
       date: "2024-03-14T14:15:00Z",
       status: "sent",
       building: "XX Building",
-      type: "safety"
+      type: "safety",
+      priority: "urgent"
     },
     {
       id: 3,
@@ -38,7 +66,8 @@ export default function CommunicationsPage() {
       date: "2024-03-13T09:45:00Z",
       status: "draft",
       building: "Sample Complex",
-      type: "maintenance"
+      type: "maintenance",
+      priority: "medium"
     },
     {
       id: 4,
@@ -48,7 +77,8 @@ export default function CommunicationsPage() {
       date: "2024-03-12T16:20:00Z",
       status: "sent",
       building: "Test Property",
-      type: "meeting"
+      type: "meeting",
+      priority: "normal"
     },
     {
       id: 5,
@@ -58,7 +88,8 @@ export default function CommunicationsPage() {
       date: "2024-03-11T11:00:00Z",
       status: "sent",
       building: "XX Building",
-      type: "welcome"
+      type: "welcome",
+      priority: "normal"
     }
   ];
 
@@ -69,7 +100,8 @@ export default function CommunicationsPage() {
       category: "Financial",
       lastUsed: "2024-03-15",
       usageCount: 45,
-      description: "Standard reminder for outstanding service charges"
+      description: "Standard reminder for outstanding service charges",
+      color: "green"
     },
     {
       id: 2,
@@ -77,7 +109,8 @@ export default function CommunicationsPage() {
       category: "Safety",
       lastUsed: "2024-03-14",
       usageCount: 12,
-      description: "Notification about fire safety inspections"
+      description: "Notification about fire safety inspections",
+      color: "red"
     },
     {
       id: 3,
@@ -85,7 +118,8 @@ export default function CommunicationsPage() {
       category: "Maintenance",
       lastUsed: "2024-03-13",
       usageCount: 28,
-      description: "Update residents about ongoing maintenance work"
+      description: "Update residents about ongoing maintenance work",
+      color: "blue"
     },
     {
       id: 4,
@@ -93,7 +127,8 @@ export default function CommunicationsPage() {
       category: "Meetings",
       lastUsed: "2024-03-12",
       usageCount: 8,
-      description: "Invitation to Annual General Meeting"
+      description: "Invitation to Annual General Meeting",
+      color: "purple"
     },
     {
       id: 5,
@@ -101,7 +136,8 @@ export default function CommunicationsPage() {
       category: "Resident",
       lastUsed: "2024-03-11",
       usageCount: 15,
-      description: "Welcome new residents to the building"
+      description: "Welcome new residents to the building",
+      color: "orange"
     }
   ];
 
@@ -109,37 +145,93 @@ export default function CommunicationsPage() {
     totalSent: 156,
     thisMonth: 23,
     pendingDrafts: 5,
-    responseRate: 78
+    responseRate: 78,
+    avgResponseTime: "2.3h",
+    openRate: 89
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'sent':
-        return <Badge className="bg-green-100 text-green-800">Sent</Badge>;
+        return <Badge className="bg-gradient-to-r from-green-500 to-green-600 text-white border-0 shadow-sm">
+          <CheckCircle className="h-3 w-3 mr-1" />
+          Sent
+        </Badge>;
       case 'draft':
-        return <Badge className="bg-yellow-100 text-yellow-800">Draft</Badge>;
+        return <Badge className="bg-gradient-to-r from-amber-500 to-amber-600 text-white border-0 shadow-sm">
+          <Edit3 className="h-3 w-3 mr-1" />
+          Draft
+        </Badge>;
       case 'pending':
-        return <Badge className="bg-blue-100 text-blue-800">Pending</Badge>;
+        return <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white border-0 shadow-sm">
+          <Clock className="h-3 w-3 mr-1" />
+          Pending
+        </Badge>;
       default:
-        return <Badge className="bg-gray-100 text-gray-800">{status}</Badge>;
+        return <Badge className="bg-gray-100 text-gray-800 border-0">{status}</Badge>;
+    }
+  };
+
+  const getPriorityBadge = (priority: string) => {
+    switch (priority) {
+      case 'urgent':
+        return <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white border-0 shadow-sm text-xs">
+          <AlertCircle className="h-3 w-3 mr-1" />
+          Urgent
+        </Badge>;
+      case 'high':
+        return <Badge className="bg-gradient-to-r from-orange-500 to-orange-600 text-white border-0 shadow-sm text-xs">
+          <Target className="h-3 w-3 mr-1" />
+          High
+        </Badge>;
+      case 'medium':
+        return <Badge className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white border-0 shadow-sm text-xs">
+          <Info className="h-3 w-3 mr-1" />
+          Medium
+        </Badge>;
+      default:
+        return <Badge className="bg-gray-100 text-gray-800 border-0 text-xs">Normal</Badge>;
     }
   };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'service_charge':
-        return <span className="text-green-600">💰</span>;
+        return <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+          💰
+        </div>;
       case 'safety':
-        return <span className="text-red-600">🚨</span>;
+        return <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+          🚨
+        </div>;
       case 'maintenance':
-        return <span className="text-blue-600">🔧</span>;
+        return <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+          🔧
+        </div>;
       case 'meeting':
-        return <span className="text-purple-600">📅</span>;
+        return <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+          📅
+        </div>;
       case 'welcome':
-        return <span className="text-orange-600">👋</span>;
+        return <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+          👋
+        </div>;
       default:
-        return <span className="text-gray-600">📧</span>;
+        return <div className="w-10 h-10 bg-gradient-to-br from-gray-500 to-gray-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+          📧
+        </div>;
     }
+  };
+
+  const getCategoryColor = (color: string) => {
+    const colors = {
+      green: "bg-gradient-to-r from-green-500 to-green-600",
+      red: "bg-gradient-to-r from-red-500 to-red-600",
+      blue: "bg-gradient-to-r from-blue-500 to-blue-600",
+      purple: "bg-gradient-to-r from-purple-500 to-purple-600",
+      orange: "bg-gradient-to-r from-orange-500 to-orange-600"
+    };
+    return colors[color as keyof typeof colors] || "bg-gray-500";
   };
 
   const formatDate = (dateString: string) => {
@@ -154,144 +246,238 @@ export default function CommunicationsPage() {
 
   return (
     <LayoutWithSidebar>
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <h1 className="text-3xl font-bold text-[#0F5D5D]">Communications</h1>
+      <div className="p-6 space-y-8">
+        {/* Enhanced Header with Gradient Background */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-2xl p-8 text-white shadow-2xl">
+          <div className="absolute inset-0 bg-black/10"></div>
+          <div className="relative z-10">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <h1 className="text-4xl font-bold">Communications Hub</h1>
+                <p className="text-teal-100 text-lg">Manage all your building communications in one place</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <Button className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Communication
+                </Button>
+                <Button variant="outline" className="border-white/30 text-white hover:bg-white/10">
+                  <Zap className="h-4 w-4 mr-2" />
+                  Quick Send
+                </Button>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Button className="bg-teal-600 hover:bg-teal-700">
-              <Plus className="h-4 w-4 mr-2" />
-              New Communication
-            </Button>
-          </div>
+          {/* Decorative elements */}
+          <div className="absolute top-4 right-4 w-20 h-20 bg-white/10 rounded-full"></div>
+          <div className="absolute bottom-4 left-4 w-16 h-16 bg-white/5 rounded-full"></div>
         </div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="border-0 shadow-soft">
-            <CardContent className="p-4">
+        {/* Enhanced Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+          <Card className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-gradient-to-br from-teal-50 to-teal-100">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-2xl font-bold text-teal-600">{communicationStats.totalSent}</div>
-                  <div className="text-sm text-gray-600">Total Sent</div>
+                  <div className="text-3xl font-bold text-teal-700 group-hover:scale-110 transition-transform duration-300">
+                    {communicationStats.totalSent}
+                  </div>
+                  <div className="text-sm text-teal-600 font-medium">Total Sent</div>
                 </div>
-                <Send className="h-8 w-8 text-teal-600" />
+                <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <Send className="h-6 w-6 text-white" />
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="border-0 shadow-soft">
-            <CardContent className="p-4">
+
+          <Card className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-gradient-to-br from-blue-50 to-blue-100">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-2xl font-bold text-blue-600">{communicationStats.thisMonth}</div>
-                  <div className="text-sm text-gray-600">This Month</div>
+                  <div className="text-3xl font-bold text-blue-700 group-hover:scale-110 transition-transform duration-300">
+                    {communicationStats.thisMonth}
+                  </div>
+                  <div className="text-sm text-blue-600 font-medium">This Month</div>
                 </div>
-                <Calendar className="h-8 w-8 text-blue-600" />
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <Calendar className="h-6 w-6 text-white" />
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="border-0 shadow-soft">
-            <CardContent className="p-4">
+
+          <Card className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-gradient-to-br from-amber-50 to-amber-100">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-2xl font-bold text-yellow-600">{communicationStats.pendingDrafts}</div>
-                  <div className="text-sm text-gray-600">Drafts</div>
+                  <div className="text-3xl font-bold text-amber-700 group-hover:scale-110 transition-transform duration-300">
+                    {communicationStats.pendingDrafts}
+                  </div>
+                  <div className="text-sm text-amber-600 font-medium">Drafts</div>
                 </div>
-                <FileText className="h-8 w-8 text-yellow-600" />
+                <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <FileText className="h-6 w-6 text-white" />
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="border-0 shadow-soft">
-            <CardContent className="p-4">
+
+          <Card className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-gradient-to-br from-green-50 to-green-100">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-2xl font-bold text-green-600">{communicationStats.responseRate}%</div>
-                  <div className="text-sm text-gray-600">Response Rate</div>
+                  <div className="text-3xl font-bold text-green-700 group-hover:scale-110 transition-transform duration-300">
+                    {communicationStats.responseRate}%
+                  </div>
+                  <div className="text-sm text-green-600 font-medium">Response Rate</div>
                 </div>
-                <MessageSquare className="h-8 w-8 text-green-600" />
+                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <MessageSquare className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-gradient-to-br from-purple-50 to-purple-100">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-3xl font-bold text-purple-700 group-hover:scale-110 transition-transform duration-300">
+                    {communicationStats.avgResponseTime}
+                  </div>
+                  <div className="text-sm text-purple-600 font-medium">Avg Response</div>
+                </div>
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <Activity className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-gradient-to-br from-indigo-50 to-indigo-100">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-3xl font-bold text-indigo-700 group-hover:scale-110 transition-transform duration-300">
+                    {communicationStats.openRate}%
+                  </div>
+                  <div className="text-sm text-indigo-600 font-medium">Open Rate</div>
+                </div>
+                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <Eye className="h-6 w-6 text-white" />
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Main Content Tabs */}
-        <Tabs defaultValue="recent" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4 bg-gray-100 border-0">
-            <TabsTrigger value="recent" className="data-[state=active]:bg-teal-600 data-[state=active]:text-white">
+        {/* Enhanced Main Content Tabs */}
+        <Tabs defaultValue="recent" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4 bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-1 shadow-sm">
+            <TabsTrigger value="recent" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-teal-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg transition-all duration-300">
+              <Mail className="h-4 w-4 mr-2" />
               Recent Communications
             </TabsTrigger>
-            <TabsTrigger value="templates" className="data-[state=active]:bg-teal-600 data-[state=active]:text-white">
+            <TabsTrigger value="templates" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg transition-all duration-300">
+              <FileText className="h-4 w-4 mr-2" />
               Letter Templates
             </TabsTrigger>
-            <TabsTrigger value="buildings" className="data-[state=active]:bg-teal-600 data-[state=active]:text-white">
+            <TabsTrigger value="buildings" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg transition-all duration-300">
+              <Building className="h-4 w-4 mr-2" />
               Building Communications
             </TabsTrigger>
-            <TabsTrigger value="analytics" className="data-[state=active]:bg-teal-600 data-[state=active]:text-white">
+            <TabsTrigger value="analytics" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-orange-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg transition-all duration-300">
+              <BarChart3 className="h-4 w-4 mr-2" />
               Analytics
             </TabsTrigger>
           </TabsList>
 
-          {/* Recent Communications Tab */}
-          <TabsContent value="recent" className="space-y-4">
+          {/* Enhanced Recent Communications Tab */}
+          <TabsContent value="recent" className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input 
                     placeholder="Search communications..." 
-                    className="pl-10 w-64"
+                    className="pl-12 w-80 border-gray-200 focus:border-teal-500 focus:ring-teal-500 rounded-xl"
                   />
                 </div>
-                <Button variant="outline" className="flex items-center gap-2">
+                <Button variant="outline" className="flex items-center gap-2 border-gray-200 hover:bg-gray-50 rounded-xl">
                   <Filter className="h-4 w-4" />
                   Filter
                 </Button>
               </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  All Sent
+                </Badge>
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                  <TrendingUp className="h-3 w-3 mr-1" />
+                  +12% this week
+                </Badge>
+              </div>
             </div>
 
-            <Card className="border-0 shadow-soft">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold">Recent Communications</CardTitle>
+            <Card className="border-0 shadow-lg bg-white rounded-2xl overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+                <CardTitle className="text-xl font-bold text-gray-900 flex items-center">
+                  <Mail className="h-5 w-5 mr-2 text-teal-600" />
+                  Recent Communications
+                </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {recentEmails.map((email) => (
-                    <div key={email.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                      <div className="flex items-center gap-4 flex-1">
-                        <div className="text-2xl">
-                          {getTypeIcon(email.type)}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-medium text-gray-900">{email.subject}</h3>
-                            {getStatusBadge(email.status)}
+              <CardContent className="p-0">
+                <div className="divide-y divide-gray-100">
+                  {recentEmails.map((email, index) => (
+                    <div key={email.id} className="group p-6 hover:bg-gradient-to-r hover:from-teal-50 hover:to-blue-50 transition-all duration-300 cursor-pointer">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4 flex-1">
+                          <div className="transform group-hover:scale-110 transition-transform duration-300">
+                            {getTypeIcon(email.type)}
                           </div>
-                          <div className="text-sm text-gray-600 space-y-1">
-                            <div>From: {email.from} → To: {email.to}</div>
-                            <div className="flex items-center gap-4">
-                              <span className="flex items-center gap-1">
-                                <Building className="h-3 w-3" />
-                                {email.building}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {formatDate(email.date)}
-                              </span>
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-center gap-3">
+                              <h3 className="font-semibold text-gray-900 group-hover:text-teal-700 transition-colors duration-300">
+                                {email.subject}
+                              </h3>
+                              {getStatusBadge(email.status)}
+                              {getPriorityBadge(email.priority)}
+                            </div>
+                            <div className="text-sm text-gray-600 space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">From:</span> {email.from}
+                                <span className="text-gray-400">→</span>
+                                <span className="font-medium">To:</span> {email.to}
+                              </div>
+                              <div className="flex items-center gap-6">
+                                <span className="flex items-center gap-2 text-gray-500">
+                                  <Building className="h-3 w-3" />
+                                  {email.building}
+                                </span>
+                                <span className="flex items-center gap-2 text-gray-500">
+                                  <Clock className="h-3 w-3" />
+                                  {formatDate(email.date)}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm">
-                          <Mail className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <Send className="h-4 w-4 mr-1" />
-                          Resend
-                        </Button>
+                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                          <Button variant="outline" size="sm" className="border-teal-200 text-teal-700 hover:bg-teal-50 rounded-lg">
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                          <Button variant="outline" size="sm" className="border-blue-200 text-blue-700 hover:bg-blue-50 rounded-lg">
+                            <Send className="h-4 w-4 mr-1" />
+                            Resend
+                          </Button>
+                          <Button variant="outline" size="sm" className="border-gray-200 text-gray-700 hover:bg-gray-50 rounded-lg">
+                            <Copy className="h-4 w-4 mr-1" />
+                            Copy
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -300,37 +486,51 @@ export default function CommunicationsPage() {
             </Card>
           </TabsContent>
 
-          {/* Letter Templates Tab */}
-          <TabsContent value="templates" className="space-y-4">
+          {/* Enhanced Letter Templates Tab */}
+          <TabsContent value="templates" className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Letter Templates</h2>
-              <Button className="bg-teal-600 hover:bg-teal-700">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Letter Templates</h2>
+                <p className="text-gray-600 mt-1">Pre-built templates for common communications</p>
+              </div>
+              <Button className="bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white shadow-lg rounded-xl">
                 <Plus className="h-4 w-4 mr-2" />
                 Create Template
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {letterTemplates.map((template) => (
-                <Card key={template.id} className="border-0 shadow-soft hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-3">
+                <Card key={template.id} className="group hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border-0 bg-white rounded-2xl overflow-hidden">
+                  <div className={`h-2 ${getCategoryColor(template.color)}`}></div>
+                  <CardHeader className="pb-4">
                     <div className="flex items-start justify-between">
-                      <CardTitle className="text-base">{template.name}</CardTitle>
-                      <Badge className="bg-blue-100 text-blue-800">{template.category}</Badge>
+                      <CardTitle className="text-lg font-bold text-gray-900 group-hover:text-teal-700 transition-colors duration-300">
+                        {template.name}
+                      </CardTitle>
+                      <Badge className={`${getCategoryColor(template.color)} text-white border-0 shadow-sm`}>
+                        {template.category}
+                      </Badge>
                     </div>
                   </CardHeader>
-                  <CardContent className="pt-0">
-                    <p className="text-sm text-gray-600 mb-3">{template.description}</p>
-                    <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
-                      <span>Used {template.usageCount} times</span>
-                      <span>Last: {template.lastUsed}</span>
+                  <CardContent className="pt-0 space-y-4">
+                    <p className="text-sm text-gray-600 leading-relaxed">{template.description}</p>
+                    <div className="flex items-center justify-between text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
+                      <span className="flex items-center gap-1">
+                        <TrendingUp className="h-3 w-3" />
+                        Used {template.usageCount} times
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        Last: {template.lastUsed}
+                      </span>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="flex-1">
-                        <FileText className="h-4 w-4 mr-1" />
+                      <Button variant="outline" size="sm" className="flex-1 border-gray-200 text-gray-700 hover:bg-gray-50 rounded-lg">
+                        <Edit3 className="h-4 w-4 mr-1" />
                         Edit
                       </Button>
-                      <Button variant="outline" size="sm" className="flex-1">
+                      <Button size="sm" className={`flex-1 ${getCategoryColor(template.color)} text-white border-0 shadow-sm rounded-lg`}>
                         <Send className="h-4 w-4 mr-1" />
                         Use
                       </Button>
@@ -341,51 +541,87 @@ export default function CommunicationsPage() {
             </div>
           </TabsContent>
 
-          {/* Building Communications Tab */}
-          <TabsContent value="buildings" className="space-y-4">
-            <h2 className="text-xl font-semibold">Building-Specific Communications</h2>
+          {/* Enhanced Building Communications Tab */}
+          <TabsContent value="buildings" className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Building-Specific Communications</h2>
+              <p className="text-gray-600 mt-1">Manage communications for individual buildings</p>
+            </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="border-0 shadow-soft hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="p-6 text-center">
-                  <Building className="h-12 w-12 text-teal-600 mx-auto mb-3" />
-                  <h3 className="font-semibold text-lg mb-2">Test Property</h3>
-                  <div className="text-sm text-gray-600 space-y-1">
-                    <div>📧 12 communications</div>
-                    <div>📅 Last: 2 days ago</div>
-                    <div>👥 45 residents</div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="group hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border-0 bg-gradient-to-br from-teal-50 to-teal-100 rounded-2xl overflow-hidden cursor-pointer">
+                <CardContent className="p-8 text-center">
+                  <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <Building className="h-8 w-8 text-white" />
                   </div>
-                  <Button className="mt-4 w-full bg-teal-600 hover:bg-teal-700">
+                  <h3 className="font-bold text-xl text-gray-900 mb-3">Test Property</h3>
+                  <div className="space-y-2 text-sm text-gray-600 mb-6">
+                    <div className="flex items-center justify-center gap-2">
+                      <Mail className="h-4 w-4 text-teal-600" />
+                      12 communications
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                      <Clock className="h-4 w-4 text-teal-600" />
+                      Last: 2 days ago
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                      <Users className="h-4 w-4 text-teal-600" />
+                      45 residents
+                    </div>
+                  </div>
+                  <Button className="w-full bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white shadow-lg rounded-xl">
                     Manage Communications
                   </Button>
                 </CardContent>
               </Card>
 
-              <Card className="border-0 shadow-soft hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="p-6 text-center">
-                  <Building className="h-12 w-12 text-blue-600 mx-auto mb-3" />
-                  <h3 className="font-semibold text-lg mb-2">XX Building</h3>
-                  <div className="text-sm text-gray-600 space-y-1">
-                    <div>📧 8 communications</div>
-                    <div>📅 Last: 1 week ago</div>
-                    <div>👥 23 residents</div>
+              <Card className="group hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border-0 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl overflow-hidden cursor-pointer">
+                <CardContent className="p-8 text-center">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <Building className="h-8 w-8 text-white" />
                   </div>
-                  <Button className="mt-4 w-full bg-blue-600 hover:bg-blue-700">
+                  <h3 className="font-bold text-xl text-gray-900 mb-3">XX Building</h3>
+                  <div className="space-y-2 text-sm text-gray-600 mb-6">
+                    <div className="flex items-center justify-center gap-2">
+                      <Mail className="h-4 w-4 text-blue-600" />
+                      8 communications
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                      <Clock className="h-4 w-4 text-blue-600" />
+                      Last: 1 week ago
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                      <Users className="h-4 w-4 text-blue-600" />
+                      23 residents
+                    </div>
+                  </div>
+                  <Button className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg rounded-xl">
                     Manage Communications
                   </Button>
                 </CardContent>
               </Card>
 
-              <Card className="border-0 shadow-soft hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="p-6 text-center">
-                  <Building className="h-12 w-12 text-purple-600 mx-auto mb-3" />
-                  <h3 className="font-semibold text-lg mb-2">Sample Complex</h3>
-                  <div className="text-sm text-gray-600 space-y-1">
-                    <div>📧 15 communications</div>
-                    <div>📅 Last: 3 days ago</div>
-                    <div>👥 67 residents</div>
+              <Card className="group hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border-0 bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl overflow-hidden cursor-pointer">
+                <CardContent className="p-8 text-center">
+                  <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <Building className="h-8 w-8 text-white" />
                   </div>
-                  <Button className="mt-4 w-full bg-purple-600 hover:bg-purple-700">
+                  <h3 className="font-bold text-xl text-gray-900 mb-3">Sample Complex</h3>
+                  <div className="space-y-2 text-sm text-gray-600 mb-6">
+                    <div className="flex items-center justify-center gap-2">
+                      <Mail className="h-4 w-4 text-purple-600" />
+                      15 communications
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                      <Clock className="h-4 w-4 text-purple-600" />
+                      Last: 3 days ago
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                      <Users className="h-4 w-4 text-purple-600" />
+                      67 residents
+                    </div>
+                  </div>
+                  <Button className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg rounded-xl">
                     Manage Communications
                   </Button>
                 </CardContent>
@@ -393,69 +629,107 @@ export default function CommunicationsPage() {
             </div>
           </TabsContent>
 
-          {/* Analytics Tab */}
-          <TabsContent value="analytics" className="space-y-4">
-            <h2 className="text-xl font-semibold">Communication Analytics</h2>
+          {/* Enhanced Analytics Tab */}
+          <TabsContent value="analytics" className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Communication Analytics</h2>
+              <p className="text-gray-600 mt-1">Track performance and engagement metrics</p>
+            </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="border-0 shadow-soft">
-                <CardHeader>
-                  <CardTitle>Communication Volume</CardTitle>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <Card className="border-0 shadow-lg bg-white rounded-2xl overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+                  <CardTitle className="flex items-center text-lg font-bold text-gray-900">
+                    <PieChart className="h-5 w-5 mr-2 text-teal-600" />
+                    Communication Volume
+                  </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-6 space-y-6">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Service Charge</span>
-                      <div className="flex items-center gap-2">
-                        <div className="w-32 bg-gray-200 rounded-full h-2">
-                          <div className="bg-green-600 h-2 rounded-full" style={{ width: '75%' }}></div>
+                      <span className="text-sm font-medium text-gray-700">Service Charge</span>
+                      <div className="flex items-center gap-3">
+                        <div className="w-32 bg-gray-200 rounded-full h-3 shadow-inner">
+                          <div className="bg-gradient-to-r from-green-500 to-green-600 h-3 rounded-full shadow-sm transition-all duration-1000" style={{ width: '75%' }}></div>
                         </div>
-                        <span className="text-sm font-medium">75%</span>
+                        <span className="text-sm font-bold text-green-600">75%</span>
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Safety Notices</span>
-                      <div className="flex items-center gap-2">
-                        <div className="w-32 bg-gray-200 rounded-full h-2">
-                          <div className="bg-blue-600 h-2 rounded-full" style={{ width: '60%' }}></div>
+                      <span className="text-sm font-medium text-gray-700">Safety Notices</span>
+                      <div className="flex items-center gap-3">
+                        <div className="w-32 bg-gray-200 rounded-full h-3 shadow-inner">
+                          <div className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full shadow-sm transition-all duration-1000" style={{ width: '60%' }}></div>
                         </div>
-                        <span className="text-sm font-medium">60%</span>
+                        <span className="text-sm font-bold text-blue-600">60%</span>
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Maintenance</span>
-                      <div className="flex items-center gap-2">
-                        <div className="w-32 bg-gray-200 rounded-full h-2">
-                          <div className="bg-yellow-600 h-2 rounded-full" style={{ width: '45%' }}></div>
+                      <span className="text-sm font-medium text-gray-700">Maintenance</span>
+                      <div className="flex items-center gap-3">
+                        <div className="w-32 bg-gray-200 rounded-full h-3 shadow-inner">
+                          <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 h-3 rounded-full shadow-sm transition-all duration-1000" style={{ width: '45%' }}></div>
                         </div>
-                        <span className="text-sm font-medium">45%</span>
+                        <span className="text-sm font-bold text-yellow-600">45%</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">Meetings</span>
+                      <div className="flex items-center gap-3">
+                        <div className="w-32 bg-gray-200 rounded-full h-3 shadow-inner">
+                          <div className="bg-gradient-to-r from-purple-500 to-purple-600 h-3 rounded-full shadow-sm transition-all duration-1000" style={{ width: '30%' }}></div>
+                        </div>
+                        <span className="text-sm font-bold text-purple-600">30%</span>
                       </div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-0 shadow-soft">
-                <CardHeader>
-                  <CardTitle>Response Rates</CardTitle>
+              <Card className="border-0 shadow-lg bg-white rounded-2xl overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+                  <CardTitle className="flex items-center text-lg font-bold text-gray-900">
+                    <BarChart3 className="h-5 w-5 mr-2 text-blue-600" />
+                    Response Rates
+                  </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Email</span>
-                      <span className="text-sm font-medium">78%</span>
+                <CardContent className="p-6">
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                          <Mail className="h-5 w-5 text-white" />
+                        </div>
+                        <span className="font-medium text-gray-900">Email</span>
+                      </div>
+                      <span className="text-2xl font-bold text-green-600">78%</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Letters</span>
-                      <span className="text-sm font-medium">45%</span>
+                    <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                          <FileText className="h-5 w-5 text-white" />
+                        </div>
+                        <span className="font-medium text-gray-900">Letters</span>
+                      </div>
+                      <span className="text-2xl font-bold text-blue-600">45%</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">SMS</span>
-                      <span className="text-sm font-medium">92%</span>
+                    <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                          <Phone className="h-5 w-5 text-white" />
+                        </div>
+                        <span className="font-medium text-gray-900">SMS</span>
+                      </div>
+                      <span className="text-2xl font-bold text-purple-600">92%</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Portal</span>
-                      <span className="text-sm font-medium">65%</span>
+                    <div className="flex items-center justify-between p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+                          <Activity className="h-5 w-5 text-white" />
+                        </div>
+                        <span className="font-medium text-gray-900">Portal</span>
+                      </div>
+                      <span className="text-2xl font-bold text-orange-600">65%</span>
                     </div>
                   </div>
                 </CardContent>
