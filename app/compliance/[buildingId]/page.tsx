@@ -381,7 +381,7 @@ export default async function CompliancePage({ params }: { params: Promise<{ bui
                                 </Badge>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {formatDate(asset.last_updated)}
+                                {asset.last_updated ? formatDate(asset.last_updated) : 'Not set'}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {formatDate(asset.next_due_date)}

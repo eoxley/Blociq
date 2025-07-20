@@ -22,7 +22,6 @@ export default async function ComplianceReportsPage() {
           id,
           status,
           next_due_date,
-          last_updated,
           compliance_assets (
             id,
             name,

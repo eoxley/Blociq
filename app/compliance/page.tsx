@@ -22,8 +22,7 @@ export default async function CompliancePage() {
         building_compliance_assets (
           id,
           status,
-          next_due_date,
-          last_updated
+          next_due_date
         )
       `)
       .order('name', { ascending: true })
