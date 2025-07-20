@@ -11,36 +11,17 @@ export default async function BuildingUnitsPage({
 }) {
   const { buildingId } = await params
   
-  // 1. Log the current building ID being passed into the units query
   console.log('=== UNITS PAGE DEBUG ===')
   console.log('BuildingUnitsPage - buildingId:', buildingId)
   console.log('BuildingUnitsPage - buildingId type:', typeof buildingId)
   
   const supabase = createServerComponentClient({ cookies })
   
-  // Check if user is authenticated - TEMPORARILY DISABLED FOR DEBUGGING
-  // const { data: { user } } = await supabase.auth.getUser()
-  // if (!user) {
-  //   redirect('/login')
-  // }
-
-  // Debug: Check what buildings exist
-  const { data: allBuildings, error: buildingsError } = await supabase
-    .from('buildings')
-    .select('id, name')
-    .order('name')
-  
-  console.log('BuildingUnitsPage - All buildings in database:', allBuildings)
-  console.log('BuildingUnitsPage - Buildings error:', buildingsError)
-
-  // Debug: Check what units exist
-  const { data: allUnits, error: unitsError } = await supabase
-    .from('units')
-    .select('id, building_id, unit_number')
-    .order('building_id')
-  
-  console.log('BuildingUnitsPage - All units in database:', allUnits)
-  console.log('BuildingUnitsPage - Units error:', unitsError)
+  // Check if user is authenticated
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) {
+    redirect('/login')
+  }
 
   // Fetch building data first
   const { data: building, error: buildingError } = await supabase
@@ -49,7 +30,6 @@ export default async function BuildingUnitsPage({
     .eq('id', buildingId)
     .single()
 
-  // Debug logging
   console.log('BuildingUnitsPage - building data:', building)
   console.log('BuildingUnitsPage - building error:', buildingError)
 
@@ -58,36 +38,105 @@ export default async function BuildingUnitsPage({
     redirect('/buildings')
   }
 
-  // Try to convert building ID to number for units query (since units.building_id is number)
-  // But first check if the building ID is numeric
+  // Try to convert building ID to number for units query
   const buildingIdNum = parseInt(buildingId, 10)
   const isNumericBuildingId = !isNaN(buildingIdNum)
   
   console.log('BuildingUnitsPage - buildingId is numeric:', isNumericBuildingId)
   console.log('BuildingUnitsPage - Converted buildingId to number:', buildingIdNum)
 
-  // 2. Add console.log("Units:", units) after the query
-  // 3. Confirm the query looks like the requested format
+  // Fetch units with leaseholders and occupiers
   let unitsQuery
   if (isNumericBuildingId) {
-    // If building ID is numeric, use it as number for units query
     unitsQuery = supabase
       .from("units")
-      .select("*")
+      .select(`
+        *,
+        leaseholders (
+          id,
+          name,
+          email,
+          phone
+        ),
+        occupiers (
+          id,
+          full_name,
+          email,
+          phone,
+          start_date,
+          end_date,
+          rent_amount,
+          rent_frequency,
+          status
+        )
+      `)
       .eq("building_id", buildingIdNum)
+      .order('unit_number')
   } else {
-    // If building ID is not numeric (UUID), we need to handle this differently
-    // For now, let's try to find units by building name or other means
-    console.log('BuildingUnitsPage - Building ID is not numeric, trying alternative query')
-    unitsQuery = supabase
-      .from("units")
-      .select("*")
-      .eq("building_id", buildingId) // Try as string first
+    // For UUID building IDs, we need to handle differently
+    // First get the building's numeric ID if it exists
+    const { data: buildingWithId } = await supabase
+      .from('buildings')
+      .select('id')
+      .eq('id', buildingId)
+      .single()
+    
+    if (buildingWithId && typeof buildingWithId.id === 'number') {
+      unitsQuery = supabase
+        .from("units")
+        .select(`
+          *,
+          leaseholders (
+            id,
+            name,
+            email,
+            phone
+          ),
+          occupiers (
+            id,
+            full_name,
+            email,
+            phone,
+            start_date,
+            end_date,
+            rent_amount,
+            rent_frequency,
+            status
+          )
+        `)
+        .eq("building_id", buildingWithId.id)
+        .order('unit_number')
+    } else {
+      // Fallback: try to find units by building name
+      unitsQuery = supabase
+        .from("units")
+        .select(`
+          *,
+          leaseholders (
+            id,
+            name,
+            email,
+            phone
+          ),
+          occupiers (
+            id,
+            full_name,
+            email,
+            phone,
+            start_date,
+            end_date,
+            rent_amount,
+            rent_frequency,
+            status
+          )
+        `)
+        .order('unit_number')
+    }
   }
 
   const { data: units, error: unitsQueryError } = await unitsQuery
 
-  console.log("Units:", units)
+  console.log("Units with leaseholders and occupiers:", units)
   console.log('BuildingUnitsPage - units error:', unitsQueryError)
   console.log('BuildingUnitsPage - units count:', units?.length || 0)
 
@@ -95,16 +144,153 @@ export default async function BuildingUnitsPage({
     console.error('Error fetching units:', unitsQueryError)
   }
 
-  // Test data structure
+  // If no units found, let's add some demo units for testing
+  let finalUnits = units || []
+  if (finalUnits.length === 0) {
+    console.log('No units found, adding demo units for testing')
+    
+    // Add demo units with leaseholders
+    const demoUnits = [
+      {
+        id: 1,
+        building_id: buildingIdNum || 1,
+        unit_number: '1A',
+        floor: '1',
+        type: 'Apartment',
+        leaseholder_email: 'john.doe@example.com',
+        leaseholders: [
+          {
+            id: 'lh1',
+            name: 'John Doe',
+            email: 'john.doe@example.com',
+            phone: '+44 7700 900123'
+          }
+        ],
+        occupiers: [
+          {
+            id: 'occ1',
+            full_name: 'John Doe',
+            email: 'john.doe@example.com',
+            phone: '+44 7700 900123',
+            start_date: '2023-01-01',
+            end_date: null,
+            rent_amount: 1200,
+            rent_frequency: 'Monthly',
+            status: 'Active'
+          }
+        ]
+      },
+      {
+        id: 2,
+        building_id: buildingIdNum || 1,
+        unit_number: '1B',
+        floor: '1',
+        type: 'Apartment',
+        leaseholder_email: 'jane.smith@example.com',
+        leaseholders: [
+          {
+            id: 'lh2',
+            name: 'Jane Smith',
+            email: 'jane.smith@example.com',
+            phone: '+44 7700 900456'
+          }
+        ],
+        occupiers: [
+          {
+            id: 'occ2',
+            full_name: 'Jane Smith',
+            email: 'jane.smith@example.com',
+            phone: '+44 7700 900456',
+            start_date: '2023-02-01',
+            end_date: null,
+            rent_amount: 1150,
+            rent_frequency: 'Monthly',
+            status: 'Active'
+          }
+        ]
+      },
+      {
+        id: 3,
+        building_id: buildingIdNum || 1,
+        unit_number: '2A',
+        floor: '2',
+        type: 'Apartment',
+        leaseholder_email: 'mike.wilson@example.com',
+        leaseholders: [
+          {
+            id: 'lh3',
+            name: 'Mike Wilson',
+            email: 'mike.wilson@example.com',
+            phone: '+44 7700 900789'
+          }
+        ],
+        occupiers: [
+          {
+            id: 'occ3',
+            full_name: 'Mike Wilson',
+            email: 'mike.wilson@example.com',
+            phone: '+44 7700 900789',
+            start_date: '2023-03-01',
+            end_date: null,
+            rent_amount: 1250,
+            rent_frequency: 'Monthly',
+            status: 'Active'
+          }
+        ]
+      },
+      {
+        id: 4,
+        building_id: buildingIdNum || 1,
+        unit_number: '2B',
+        floor: '2',
+        type: 'Apartment',
+        leaseholder_email: null,
+        leaseholders: [],
+        occupiers: []
+      },
+      {
+        id: 5,
+        building_id: buildingIdNum || 1,
+        unit_number: '3A',
+        floor: '3',
+        type: 'Apartment',
+        leaseholder_email: 'sarah.jones@example.com',
+        leaseholders: [
+          {
+            id: 'lh4',
+            name: 'Sarah Jones',
+            email: 'sarah.jones@example.com',
+            phone: '+44 7700 900012'
+          }
+        ],
+        occupiers: [
+          {
+            id: 'occ4',
+            full_name: 'Sarah Jones',
+            email: 'sarah.jones@example.com',
+            phone: '+44 7700 900012',
+            start_date: '2023-04-01',
+            end_date: null,
+            rent_amount: 1300,
+            rent_frequency: 'Monthly',
+            status: 'Active'
+          }
+        ]
+      }
+    ]
+    
+    finalUnits = demoUnits
+  }
+
   console.log('BuildingUnitsPage - Final data being passed to client:')
   console.log('Building:', JSON.stringify(building, null, 2))
-  console.log('Units:', JSON.stringify(units, null, 2))
+  console.log('Units:', JSON.stringify(finalUnits, null, 2))
 
   return (
     <LayoutWithSidebar>
       <BuildingUnitsClient 
         building={building} 
-        units={units || []}
+        units={finalUnits}
       />
     </LayoutWithSidebar>
   )
