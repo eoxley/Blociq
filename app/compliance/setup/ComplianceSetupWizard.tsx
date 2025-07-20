@@ -68,13 +68,13 @@ export default function ComplianceSetupWizard({
 
   // Define category priority order for sorting
   const categoryPriority = [
-    'Safety',
-    'Legal & Safety', 
-    'Lease & Documentation',
-    'Operational & Contracts',
-    'Environmental',
-    'Smart Records',
-    'Other'
+    "Safety",
+    "Electrical", 
+    "Water & Legionella",
+    "Building",
+    "Security",
+    "Administrative & Legal",
+    "Smart"
   ]
 
   // Group compliance assets by category with priority sorting
@@ -644,7 +644,7 @@ export default function ComplianceSetupWizard({
                 </Button>
               </div>
 
-              {/* Assets by Category */}
+              {/* Assets by Category - Grouped Layout */}
               <div className="space-y-6 max-h-96 overflow-y-auto">
                 {Object.keys(filteredAssetsByCategory).length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
@@ -658,7 +658,9 @@ export default function ComplianceSetupWizard({
                     return (
                       <div key={category} className="space-y-3">
                         <div className="flex items-center justify-between border-b pb-2">
-                          <h3 className="text-lg font-semibold text-gray-900">{category}</h3>
+                          <h3 className="text-xl font-semibold text-gray-900">
+                            🔹 {category}
+                          </h3>
                           <Badge variant="outline" className="text-xs">
                             {selectedCount}/{assets.length} selected
                           </Badge>
@@ -670,7 +672,7 @@ export default function ComplianceSetupWizard({
                             return (
                               <div
                                 key={asset.id}
-                                className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
+                                className={`flex justify-between items-start p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
                                   isSelected 
                                     ? 'bg-gradient-to-r from-teal-50 to-blue-50 border-teal-300 shadow-sm' 
                                     : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
@@ -678,28 +680,11 @@ export default function ComplianceSetupWizard({
                                 onClick={() => toggleAsset(asset.id)}
                               >
                                 <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className={`font-medium ${isSelected ? 'text-teal-800' : 'text-gray-900'}`}>
-                                      {asset.name}
-                                    </span>
-                                    {asset.description && (
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger>
-                                            <Info className="h-4 w-4 text-gray-400" />
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            <p className="max-w-xs">{asset.description}</p>
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
-                                    )}
-                                    {isSelected && (
-                                      <CheckCircle className="h-4 w-4 text-teal-600" />
-                                    )}
-                                  </div>
+                                  <p className={`font-medium ${isSelected ? 'text-teal-800' : 'text-gray-900'}`}>
+                                    {asset.name}
+                                  </p>
                                   {asset.description && (
-                                    <p className={`text-sm mt-1 ${isSelected ? 'text-teal-600' : 'text-muted-foreground'}`}>
+                                    <p className={`text-sm ${isSelected ? 'text-teal-600' : 'text-muted-foreground'}`}>
                                       {asset.description}
                                     </p>
                                   )}
