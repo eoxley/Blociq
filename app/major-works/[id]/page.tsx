@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import MajorWorksTimeline from '@/components/MajorWorksTimeline'
 import DocumentUpload from '@/components/DocumentUpload'
+import MajorWorksAIButton from '@/components/MajorWorksAIButton'
 
 interface PageProps {
   params: {
@@ -10,70 +11,133 @@ interface PageProps {
   }
 }
 
-export default async function MajorWorksProjectPage({ params }: PageProps) {
-  try {
-    console.log('🔍 [MajorWorks] Starting page load with params:', params)
-    
-    const projectId = params.id
-    console.log('🔍 [MajorWorks] Project ID:', projectId)
+'use client'
 
-    if (!projectId) {
-      console.log('❌ [MajorWorks] No project ID provided')
-      return (
-        <div className="container mx-auto px-4 py-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">No project found</h1>
-          <p className="text-gray-600">No project ID was provided.</p>
-        </div>
-      )
+import React, { useEffect, useState } from 'react'
+
+export default function MajorWorksProjectPage({ params }: PageProps) {
+  const [project, setProject] = useState<any>(null)
+  const [logs, setLogs] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function fetchProjectData() {
+      try {
+        const projectId = params.id
+        console.log('🔍 [MajorWorks] Starting page load with params:', params)
+        console.log('🔍 [MajorWorks] Project ID:', projectId)
+
+        if (!projectId) {
+          console.log('❌ [MajorWorks] No project ID provided')
+          setError('No project ID was provided.')
+          setLoading(false)
+          return
+        }
+
+        // Create Supabase client
+        const supabase = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        )
+
+        console.log('🔍 [MajorWorks] Fetching project from database...')
+        
+        const { data: projectData, error: projectError } = await supabase
+          .from('major_works')
+          .select('*')
+          .eq('id', projectId)
+          .single()
+
+        console.log('🔍 [MajorWorks] Database response:', { project: projectData ? 'found' : 'null', error: projectError })
+
+        if (projectError) {
+          console.error('❌ [MajorWorks] Database error:', projectError)
+          setError('Unable to load the requested project.')
+          setLoading(false)
+          return
+        }
+
+        if (!projectData) {
+          console.log('❌ [MajorWorks] No project found for ID:', projectId)
+          setError('The requested project could not be found.')
+          setLoading(false)
+          return
+        }
+
+        // Fetch logs for this project
+        const { data: logsData, error: logsError } = await supabase
+          .from('major_works_logs')
+          .select('*')
+          .eq('project_id', projectId)
+          .order('timestamp', { ascending: false })
+
+        console.log('🔍 [MajorWorks] Project logs:', logsData?.length || 0)
+        console.log('✅ [MajorWorks] Project loaded successfully:', { id: projectData.id, title: projectData.title })
+
+        setProject(projectData)
+        setLogs(logsData || [])
+        setLoading(false)
+      } catch (error) {
+        console.error('💥 [MajorWorks] Unexpected error in page component:', error)
+        setError('An error occurred while loading the project.')
+        setLoading(false)
+      }
     }
 
-    // Create Supabase client
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    fetchProjectData()
+  }, [params.id])
+
+  const handleAskAI = async (question: string): Promise<string> => {
+    try {
+      const response = await fetch('/api/generate-answer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          question: `${question} about the major works project "${project?.title}". Use the project data and timeline information to provide a detailed response.`,
+          buildingId: project?.building_id || '1' // Default building ID if not set
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to get AI response')
+      }
+
+      const data = await response.json()
+      return data.answer || 'Sorry, I could not generate a response.'
+    } catch (error) {
+      console.error('AI request failed:', error)
+      return 'Sorry, I encountered an error. Please try again.'
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+            <span className="ml-3 text-gray-600">Loading project...</span>
+          </div>
+        </div>
+      </div>
     )
+  }
 
-    console.log('🔍 [MajorWorks] Fetching project from database...')
-    
-    const { data: project, error } = await supabase
-      .from('major_works')
-      .select('*')
-      .eq('id', projectId)
-      .single()
-
-    console.log('🔍 [MajorWorks] Database response:', { project: project ? 'found' : 'null', error })
-
-    if (error) {
-      console.error('❌ [MajorWorks] Database error:', error)
-      return (
-        <div className="container mx-auto px-4 py-8">
+  if (error || !project) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">No project found</h1>
-          <p className="text-gray-600">Unable to load the requested project.</p>
+          <p className="text-gray-600">{error || 'The requested project could not be found.'}</p>
         </div>
-      )
-    }
+      </div>
+    )
+  }
 
-    if (!project) {
-      console.log('❌ [MajorWorks] No project found for ID:', projectId)
-      return (
-        <div className="container mx-auto px-4 py-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">No project found</h1>
-          <p className="text-gray-600">The requested project could not be found.</p>
-        </div>
-      )
-    }
-
-    // Fetch logs for this project
-    const { data: logs, error: logsError } = await supabase
-      .from('major_works_logs')
-      .select('*')
-      .eq('project_id', projectId)
-      .order('timestamp', { ascending: false })
-
-    console.log('🔍 [MajorWorks] Project logs:', logs?.length || 0)
-    console.log('✅ [MajorWorks] Project loaded successfully:', { id: project.id, title: project.title })
-
-      return (
+  return (
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-4xl mx-auto">
             {/* Back to Projects */}
@@ -94,14 +158,22 @@ export default async function MajorWorksProjectPage({ params }: PageProps) {
                   <h1 className="text-3xl font-bold text-gray-900 mb-2">{project.title}</h1>
                   <p className="text-gray-600">Project ID: {project.id}</p>
                 </div>
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                  project.status === 'planned' ? 'bg-blue-100 text-blue-800' :
-                  project.status === 'ongoing' ? 'bg-yellow-100 text-yellow-800' :
-                  project.status === 'completed' ? 'bg-green-100 text-green-800' :
-                  'bg-gray-100 text-gray-800'
-                }`}>
-                  {project.status?.charAt(0).toUpperCase() + project.status?.slice(1) || 'Unknown'}
-                </span>
+                <div className="flex items-center gap-3">
+                  <MajorWorksAIButton 
+                    projectId={project.id}
+                    projectTitle={project.title}
+                    buildingId={project.building_id}
+                    onAskAI={handleAskAI}
+                  />
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                    project.status === 'planned' ? 'bg-blue-100 text-blue-800' :
+                    project.status === 'ongoing' ? 'bg-yellow-100 text-yellow-800' :
+                    project.status === 'completed' ? 'bg-green-100 text-green-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {project.status?.charAt(0).toUpperCase() + project.status?.slice(1) || 'Unknown'}
+                  </span>
+                </div>
               </div>
               
               <p className="text-gray-700 text-lg leading-relaxed">
@@ -170,19 +242,9 @@ export default async function MajorWorksProjectPage({ params }: PageProps) {
 
             {/* Documents */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
-              <DocumentUpload projectId={projectId} />
+              <DocumentUpload projectId={params.id} />
             </div>
           </div>
         </div>
       )
-
-  } catch (error) {
-    console.error('💥 [MajorWorks] Unexpected error in page component:', error)
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">No project found</h1>
-        <p className="text-gray-600">An error occurred while loading the project.</p>
-      </div>
-    )
-  }
 } 
