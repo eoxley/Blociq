@@ -32,9 +32,8 @@ export default function Sidebar() {
     { href: '/inbox', icon: Inbox, label: 'Inbox' },
     { href: '/buildings', icon: Building2, label: 'Buildings' },
     { href: '/communications', icon: MessageSquare, label: 'Communications' },
-    { href: '/documents', icon: FileText, label: 'Documents' },
+    { href: '/ai-documents', icon: Brain, label: 'AI Documents' },
     { href: '/major-works', icon: Wrench, label: 'Major Works' },
-    { href: '/ai-assistant', icon: Brain, label: 'AI Assistant' },
   ]
 
   return (

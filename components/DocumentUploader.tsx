@@ -168,7 +168,7 @@ export default function DocumentUploader({
       if (result.building_id) {
         router.push(`/buildings/${result.building_id}/documents`);
       } else {
-        router.push('/documents');
+        router.push('/ai-documents');
       }
 
     } catch (error: any) {

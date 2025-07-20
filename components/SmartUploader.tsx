@@ -52,13 +52,13 @@ export default function SmartUploader({
     if (res.ok) {
       setToastVisible(true);
       const { building_id } = await res.json();
-      setTimeout(() => {
-        if (building_id) {
-          router.push(`/buildings/${building_id}/documents`);
-        } else {
-          router.push('/documents');
-        }
-      }, 1500);
+              setTimeout(() => {
+          if (building_id) {
+            router.push(`/buildings/${building_id}/documents`);
+          } else {
+            router.push('/ai-documents');
+          }
+        }, 1500);
     } else {
       alert('Failed to save document. Please try again.');
     }
