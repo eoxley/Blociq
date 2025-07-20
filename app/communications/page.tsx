@@ -152,16 +152,20 @@ export default function CommunicationsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-2">
                 <h1 className="text-4xl font-bold">Communications Hub</h1>
-                <p className="text-teal-100 text-lg">Manage all your building communications in one place</p>
+                <p className="text-teal-100 text-lg">Send emails, letters, and updates to your leaseholders</p>
               </div>
               <div className="flex items-center gap-4">
                 <Button className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Communication
+                  <Mail className="h-4 w-4 mr-2" />
+                  Send Email
+                </Button>
+                <Button className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Send Letter
                 </Button>
                 <Button variant="outline" className="border-white/30 text-white hover:bg-white/10">
-                  <Zap className="h-4 w-4 mr-2" />
-                  Quick Send
+                  <Users className="h-4 w-4 mr-2" />
+                  Bulk Send
                 </Button>
               </div>
             </div>
@@ -171,128 +175,72 @@ export default function CommunicationsPage() {
           <div className="absolute bottom-4 left-4 w-16 h-16 bg-white/5 rounded-full"></div>
         </div>
 
-        {/* Enhanced Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
-          <Card className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-gradient-to-br from-teal-50 to-teal-100">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-3xl font-bold text-teal-700 group-hover:scale-110 transition-transform duration-300">
-                    {communicationStats.totalSent}
-                  </div>
-                  <div className="text-sm text-teal-600 font-medium">Total Sent</div>
-                </div>
-                <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  <Send className="h-6 w-6 text-white" />
-                </div>
+        {/* Quick Actions Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-gradient-to-br from-green-50 to-green-100 cursor-pointer">
+            <CardContent className="p-6 text-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <Mail className="h-6 w-6 text-white" />
               </div>
+              <h3 className="font-bold text-green-700 mb-2">Send Email</h3>
+              <p className="text-sm text-green-600">Quick email to leaseholders</p>
             </CardContent>
           </Card>
 
-          <Card className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-gradient-to-br from-blue-50 to-blue-100">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-3xl font-bold text-blue-700 group-hover:scale-110 transition-transform duration-300">
-                    {communicationStats.thisMonth}
-                  </div>
-                  <div className="text-sm text-blue-600 font-medium">This Month</div>
-                </div>
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  <Calendar className="h-6 w-6 text-white" />
-                </div>
+          <Card className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-gradient-to-br from-blue-50 to-blue-100 cursor-pointer">
+            <CardContent className="p-6 text-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <FileText className="h-6 w-6 text-white" />
               </div>
+              <h3 className="font-bold text-blue-700 mb-2">Send Letter</h3>
+              <p className="text-sm text-blue-600">Formal letter with template</p>
             </CardContent>
           </Card>
 
-          <Card className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-gradient-to-br from-amber-50 to-amber-100">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-3xl font-bold text-amber-700 group-hover:scale-110 transition-transform duration-300">
-                    {communicationStats.pendingDrafts}
-                  </div>
-                  <div className="text-sm text-amber-600 font-medium">Drafts</div>
-                </div>
-                <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  <FileText className="h-6 w-6 text-white" />
-                </div>
+          <Card className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-gradient-to-br from-purple-50 to-purple-100 cursor-pointer">
+            <CardContent className="p-6 text-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <Users className="h-6 w-6 text-white" />
               </div>
+              <h3 className="font-bold text-purple-700 mb-2">Bulk Send</h3>
+              <p className="text-sm text-purple-600">Send to multiple leaseholders</p>
             </CardContent>
           </Card>
 
-          <Card className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-gradient-to-br from-green-50 to-green-100">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-3xl font-bold text-green-700 group-hover:scale-110 transition-transform duration-300">
-                    {communicationStats.responseRate}%
-                  </div>
-                  <div className="text-sm text-green-600 font-medium">Response Rate</div>
-                </div>
-                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  <MessageSquare className="h-6 w-6 text-white" />
-                </div>
+          <Card className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-gradient-to-br from-orange-50 to-orange-100 cursor-pointer">
+            <CardContent className="p-6 text-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <Plus className="h-6 w-6 text-white" />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-gradient-to-br from-purple-50 to-purple-100">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-3xl font-bold text-purple-700 group-hover:scale-110 transition-transform duration-300">
-                    {communicationStats.avgResponseTime}
-                  </div>
-                  <div className="text-sm text-purple-600 font-medium">Avg Response</div>
-                </div>
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  <Activity className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-gradient-to-br from-indigo-50 to-indigo-100">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-3xl font-bold text-indigo-700 group-hover:scale-110 transition-transform duration-300">
-                    {communicationStats.openRate}%
-                  </div>
-                  <div className="text-sm text-indigo-600 font-medium">Open Rate</div>
-                </div>
-                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  <Eye className="h-6 w-6 text-white" />
-                </div>
-              </div>
+              <h3 className="font-bold text-orange-700 mb-2">Create Template</h3>
+              <p className="text-sm text-orange-600">Save reusable templates</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Enhanced Main Content Tabs */}
-        <Tabs defaultValue="recent" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-1 shadow-sm">
-            <TabsTrigger value="recent" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-teal-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg transition-all duration-300">
+        {/* Enhanced Tabs */}
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4 bg-gray-100 p-1 rounded-xl">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-white data-[state=active]:text-teal-700 data-[state=active]:shadow-sm rounded-lg">
               <Mail className="h-4 w-4 mr-2" />
-              Recent Communications
+              Recent
             </TabsTrigger>
-            <TabsTrigger value="templates" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg transition-all duration-300">
+            <TabsTrigger value="templates" className="data-[state=active]:bg-white data-[state=active]:text-teal-700 data-[state=active]:shadow-sm rounded-lg">
               <FileText className="h-4 w-4 mr-2" />
-              Letter Templates
+              Templates
             </TabsTrigger>
-            <TabsTrigger value="buildings" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg transition-all duration-300">
+            <TabsTrigger value="buildings" className="data-[state=active]:bg-white data-[state=active]:text-teal-700 data-[state=active]:shadow-sm rounded-lg">
               <Building className="h-4 w-4 mr-2" />
-              Building Communications
+              By Building
             </TabsTrigger>
-            <TabsTrigger value="analytics" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-orange-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg transition-all duration-300">
+            <TabsTrigger value="analytics" className="data-[state=active]:bg-white data-[state=active]:text-teal-700 data-[state=active]:shadow-sm rounded-lg">
               <BarChart3 className="h-4 w-4 mr-2" />
               Analytics
             </TabsTrigger>
           </TabsList>
 
           {/* Enhanced Recent Communications Tab */}
-          <TabsContent value="recent" className="space-y-6">
+          <TabsContent value="overview" className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="relative">
@@ -402,13 +350,58 @@ export default function CommunicationsPage() {
           <TabsContent value="templates" className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">Letter Templates</h2>
-                <p className="text-gray-600 mt-1">Pre-built templates for common communications</p>
+                <h2 className="text-2xl font-bold text-gray-900">Communication Templates</h2>
+                <p className="text-gray-600 mt-1">Pre-built templates for leaseholder communications</p>
               </div>
               <Button className="bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white shadow-lg rounded-xl">
                 <Plus className="h-4 w-4 mr-2" />
                 Create Template
               </Button>
+            </div>
+
+            {/* Template Categories */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="border-0 bg-gradient-to-br from-green-50 to-green-100 rounded-2xl cursor-pointer hover:shadow-lg transition-all duration-300">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
+                      <Mail className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-green-700">Email Templates</h3>
+                      <p className="text-sm text-green-600">Quick emails for updates</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl cursor-pointer hover:shadow-lg transition-all duration-300">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                      <FileText className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-blue-700">Letter Templates</h3>
+                      <p className="text-sm text-blue-600">Formal letters & notices</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl cursor-pointer hover:shadow-lg transition-all duration-300">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center">
+                      <Users className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-purple-700">Bulk Templates</h3>
+                      <p className="text-sm text-purple-600">Mass communication</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -458,8 +451,8 @@ export default function CommunicationsPage() {
                       <div className="w-16 h-16 bg-gradient-to-br from-gray-400 to-gray-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
                         <FileText className="h-8 w-8 text-white" />
                       </div>
-                      <h3 className="text-xl font-bold text-gray-900 mb-2">No Letter Templates</h3>
-                      <p className="text-gray-600 mb-6">Create your first letter template to get started with communications</p>
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">No Templates Yet</h3>
+                      <p className="text-gray-600 mb-6">Create your first template to speed up leaseholder communications</p>
                       <Button className="bg-teal-600 hover:bg-teal-700 text-white">
                         <Plus className="h-4 w-4 mr-2" />
                         Create Template
@@ -474,8 +467,8 @@ export default function CommunicationsPage() {
           {/* Enhanced Building Communications Tab */}
           <TabsContent value="buildings" className="space-y-6">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Building-Specific Communications</h2>
-              <p className="text-gray-600 mt-1">Manage communications for individual buildings</p>
+              <h2 className="text-2xl font-bold text-gray-900">Building Communications</h2>
+              <p className="text-gray-600 mt-1">Manage communications for each building and its leaseholders</p>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -486,11 +479,17 @@ export default function CommunicationsPage() {
                       <Building className="h-8 w-8 text-white" />
                     </div>
                     <h3 className="text-xl font-bold text-gray-900 mb-2">No Buildings Found</h3>
-                    <p className="text-gray-600 mb-6">Add buildings to your portfolio to start managing communications</p>
-                    <Button className="bg-teal-600 hover:bg-teal-700 text-white">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Building
-                    </Button>
+                    <p className="text-gray-600 mb-6">Add buildings to your portfolio to start managing leaseholder communications</p>
+                    <div className="flex gap-4 justify-center">
+                      <Button className="bg-teal-600 hover:bg-teal-700 text-white">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Building
+                      </Button>
+                      <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50">
+                        <Users className="h-4 w-4 mr-2" />
+                        Import Leaseholders
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
@@ -501,7 +500,7 @@ export default function CommunicationsPage() {
           <TabsContent value="analytics" className="space-y-6">
             <div>
               <h2 className="text-2xl font-bold text-gray-900">Communication Analytics</h2>
-              <p className="text-gray-600 mt-1">Track performance and engagement metrics</p>
+              <p className="text-gray-600 mt-1">Track leaseholder engagement and communication performance</p>
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -509,7 +508,7 @@ export default function CommunicationsPage() {
                 <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
                   <CardTitle className="flex items-center text-lg font-bold text-gray-900">
                     <PieChart className="h-5 w-5 mr-2 text-teal-600" />
-                    Communication Volume
+                    Communication Types
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
@@ -518,7 +517,7 @@ export default function CommunicationsPage() {
                       <PieChart className="h-8 w-8 text-white" />
                     </div>
                     <h3 className="text-lg font-bold text-gray-900 mb-2">No Data Available</h3>
-                    <p className="text-gray-600">Start sending communications to see analytics</p>
+                    <p className="text-gray-600">Start sending communications to see engagement analytics</p>
                   </div>
                 </CardContent>
               </Card>
@@ -527,7 +526,7 @@ export default function CommunicationsPage() {
                 <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
                   <CardTitle className="flex items-center text-lg font-bold text-gray-900">
                     <BarChart3 className="h-5 w-5 mr-2 text-blue-600" />
-                    Response Rates
+                    Leaseholder Engagement
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
@@ -536,8 +535,36 @@ export default function CommunicationsPage() {
                       <BarChart3 className="h-8 w-8 text-white" />
                     </div>
                     <h3 className="text-lg font-bold text-gray-900 mb-2">No Data Available</h3>
-                    <p className="text-gray-600">Response rates will appear once communications are sent</p>
+                    <p className="text-gray-600">Response rates will appear once leaseholders engage</p>
                   </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <Card className="border-0 bg-gradient-to-br from-teal-50 to-teal-100 rounded-2xl">
+                <CardContent className="p-6 text-center">
+                  <div className="text-3xl font-bold text-teal-700 mb-2">0</div>
+                  <div className="text-sm text-teal-600">Total Sent</div>
+                </CardContent>
+              </Card>
+              <Card className="border-0 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl">
+                <CardContent className="p-6 text-center">
+                  <div className="text-3xl font-bold text-blue-700 mb-2">0%</div>
+                  <div className="text-sm text-blue-600">Response Rate</div>
+                </CardContent>
+              </Card>
+              <Card className="border-0 bg-gradient-to-br from-green-50 to-green-100 rounded-2xl">
+                <CardContent className="p-6 text-center">
+                  <div className="text-3xl font-bold text-green-700 mb-2">0</div>
+                  <div className="text-sm text-green-600">Active Leaseholders</div>
+                </CardContent>
+              </Card>
+              <Card className="border-0 bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl">
+                <CardContent className="p-6 text-center">
+                  <div className="text-3xl font-bold text-purple-700 mb-2">0</div>
+                  <div className="text-sm text-purple-600">Templates Used</div>
                 </CardContent>
               </Card>
             </div>
