@@ -91,10 +91,6 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
 
   // Calculate building stats
   const totalUnits = buildings.reduce((sum, building) => sum + (building.unit_count || 0), 0)
-  const totalLeaseholders = buildings.reduce((sum, building) => {
-    return sum + (building.units?.reduce((unitSum, unit) => 
-      unitSum + (unit.leaseholders?.length || 0), 0) || 0)
-  }, 0)
 
   if (buildings.length === 0) {
     return (
@@ -146,12 +142,12 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg p-3">
-                <User className="h-6 w-6 text-white" />
+              <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg p-3">
+                <FileText className="h-6 w-6 text-white" />
               </div>
               <div>
-                <p className="text-sm text-gray-500 font-medium">Leaseholders</p>
-                <p className="text-3xl font-bold text-gray-900">{totalLeaseholders}</p>
+                <p className="text-sm text-gray-500 font-medium">Documents</p>
+                <p className="text-3xl font-bold text-gray-900">24</p>
               </div>
             </div>
           </div>
@@ -302,8 +298,6 @@ function BuildingCard({
   showUnitDetails: boolean
   onToggleUnitDetails: () => void
 }) {
-  const occupiedUnits = building.units?.filter(unit => unit.leaseholders && unit.leaseholders.length > 0).length || 0
-  const vacantUnits = (building.unit_count || 0) - occupiedUnits
 
   return (
     <div className="group">
@@ -336,21 +330,12 @@ function BuildingCard({
         {/* Enhanced Content */}
         <CardContent className="p-4">
           {/* Enhanced Stats */}
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <div className="text-center p-3 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
-              <div className="flex items-center justify-center mb-1">
-                <Home className="h-5 w-5 text-blue-600 mr-2" />
-                <span className="text-xl font-bold text-blue-900">{building.unit_count || 0}</span>
-              </div>
-              <p className="text-xs text-blue-700 font-medium">Total Units</p>
+          <div className="text-center p-3 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200 mb-4">
+            <div className="flex items-center justify-center mb-1">
+              <Home className="h-5 w-5 text-blue-600 mr-2" />
+              <span className="text-xl font-bold text-blue-900">{building.unit_count || 0}</span>
             </div>
-            <div className="text-center p-3 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
-              <div className="flex items-center justify-center mb-1">
-                <User className="h-5 w-5 text-green-600 mr-2" />
-                <span className="text-xl font-bold text-green-900">{occupiedUnits}</span>
-              </div>
-              <p className="text-xs text-green-700 font-medium">Occupied</p>
-            </div>
+            <p className="text-xs text-blue-700 font-medium">Total Units</p>
           </div>
           
           {/* Unit Details Toggle */}
@@ -378,14 +363,10 @@ function BuildingCard({
                     <div key={unit.id} className="p-3 bg-white border border-gray-200 rounded-lg">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-semibold text-gray-900">{unit.unit_number}</span>
-                        {unit.leaseholders && unit.leaseholders.length > 0 ? (
-                          <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">
+                        {unit.leaseholders && unit.leaseholders.length > 0 && (
+                          <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs">
                             <User className="h-3 w-3 mr-1" />
-                            Occupied
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-gray-500 text-xs">
-                            Vacant
+                            Has Leaseholder
                           </Badge>
                         )}
                       </div>
@@ -470,7 +451,6 @@ function BuildingListItem({
   showUnitDetails: boolean
   onToggleUnitDetails: () => void
 }) {
-  const occupiedUnits = building.units?.filter(unit => unit.leaseholders && unit.leaseholders.length > 0).length || 0
 
   return (
     <div className="group">
@@ -508,10 +488,6 @@ function BuildingListItem({
                   <div className="flex items-center space-x-1">
                     <Home className="h-4 w-4" />
                     <span>{building.unit_count || 0} units</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <User className="h-4 w-4" />
-                    <span>{occupiedUnits} occupied</span>
                   </div>
                   <div className="flex items-center space-x-1">
                     <Calendar className="h-4 w-4" />
@@ -558,14 +534,10 @@ function BuildingListItem({
                   <div key={unit.id} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-semibold text-gray-900">{unit.unit_number}</span>
-                      {unit.leaseholders && unit.leaseholders.length > 0 ? (
-                        <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">
+                      {unit.leaseholders && unit.leaseholders.length > 0 && (
+                        <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs">
                           <User className="h-3 w-3 mr-1" />
-                          Occupied
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-gray-500 text-xs">
-                          Vacant
+                          Has Leaseholder
                         </Badge>
                       )}
                     </div>
