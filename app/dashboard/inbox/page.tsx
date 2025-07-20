@@ -3,7 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { Suspense } from "react";
-import InboxInner from "./InboxInner";
+import InboxInner from "../../inbox/InboxInner";
 import LayoutWithSidebar from "@/components/LayoutWithSidebar";
 
 export default function InboxPage() {
