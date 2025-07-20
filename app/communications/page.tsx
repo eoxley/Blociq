@@ -34,120 +34,18 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function CommunicationsPage() {
-  // Example communications data
-  const recentEmails = [
-    {
-      id: 1,
-      subject: "Service Charge Reminder - Q1 2024",
-      from: "finance@blociq.co.uk",
-      to: "residents@testproperty.com",
-      date: "2024-03-15T10:30:00Z",
-      status: "sent",
-      building: "Test Property",
-      type: "service_charge",
-      priority: "high"
-    },
-    {
-      id: 2,
-      subject: "Fire Safety Inspection Notice",
-      from: "safety@blociq.co.uk",
-      to: "all-residents@xxbuilding.com",
-      date: "2024-03-14T14:15:00Z",
-      status: "sent",
-      building: "XX Building",
-      type: "safety",
-      priority: "urgent"
-    },
-    {
-      id: 3,
-      subject: "Maintenance Update - Lift Repairs",
-      from: "maintenance@blociq.co.uk",
-      to: "residents@samplecomplex.com",
-      date: "2024-03-13T09:45:00Z",
-      status: "draft",
-      building: "Sample Complex",
-      type: "maintenance",
-      priority: "medium"
-    },
-    {
-      id: 4,
-      subject: "AGM Meeting Invitation",
-      from: "admin@blociq.co.uk",
-      to: "leaseholders@testproperty.com",
-      date: "2024-03-12T16:20:00Z",
-      status: "sent",
-      building: "Test Property",
-      type: "meeting",
-      priority: "normal"
-    },
-    {
-      id: 5,
-      subject: "Welcome to Your New Home",
-      from: "welcome@blociq.co.uk",
-      to: "newresident@xxbuilding.com",
-      date: "2024-03-11T11:00:00Z",
-      status: "sent",
-      building: "XX Building",
-      type: "welcome",
-      priority: "normal"
-    }
-  ];
+  // Real communications data - empty arrays for now
+  const recentEmails: any[] = [];
 
-  const letterTemplates = [
-    {
-      id: 1,
-      name: "Service Charge Reminder",
-      category: "Financial",
-      lastUsed: "2024-03-15",
-      usageCount: 45,
-      description: "Standard reminder for outstanding service charges",
-      color: "green"
-    },
-    {
-      id: 2,
-      name: "Fire Safety Notice",
-      category: "Safety",
-      lastUsed: "2024-03-14",
-      usageCount: 12,
-      description: "Notification about fire safety inspections",
-      color: "red"
-    },
-    {
-      id: 3,
-      name: "Maintenance Update",
-      category: "Maintenance",
-      lastUsed: "2024-03-13",
-      usageCount: 28,
-      description: "Update residents about ongoing maintenance work",
-      color: "blue"
-    },
-    {
-      id: 4,
-      name: "AGM Invitation",
-      category: "Meetings",
-      lastUsed: "2024-03-12",
-      usageCount: 8,
-      description: "Invitation to Annual General Meeting",
-      color: "purple"
-    },
-    {
-      id: 5,
-      name: "Welcome Letter",
-      category: "Resident",
-      lastUsed: "2024-03-11",
-      usageCount: 15,
-      description: "Welcome new residents to the building",
-      color: "orange"
-    }
-  ];
+  const letterTemplates: any[] = [];
 
   const communicationStats = {
-    totalSent: 156,
-    thisMonth: 23,
-    pendingDrafts: 5,
-    responseRate: 78,
-    avgResponseTime: "2.3h",
-    openRate: 89
+    totalSent: 0,
+    thisMonth: 0,
+    pendingDrafts: 0,
+    responseRate: 0,
+    avgResponseTime: "0h",
+    openRate: 0
   };
 
   const getStatusBadge = (status: string) => {
@@ -430,57 +328,71 @@ export default function CommunicationsPage() {
               </CardHeader>
               <CardContent className="p-0">
                 <div className="divide-y divide-gray-100">
-                  {recentEmails.map((email, index) => (
-                    <div key={email.id} className="group p-6 hover:bg-gradient-to-r hover:from-teal-50 hover:to-blue-50 transition-all duration-300 cursor-pointer">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4 flex-1">
-                          <div className="transform group-hover:scale-110 transition-transform duration-300">
-                            {getTypeIcon(email.type)}
-                          </div>
-                          <div className="flex-1 space-y-2">
-                            <div className="flex items-center gap-3">
-                              <h3 className="font-semibold text-gray-900 group-hover:text-teal-700 transition-colors duration-300">
-                                {email.subject}
-                              </h3>
-                              {getStatusBadge(email.status)}
-                              {getPriorityBadge(email.priority)}
+                  {recentEmails.length > 0 ? (
+                    recentEmails.map((email, index) => (
+                      <div key={email.id} className="group p-6 hover:bg-gradient-to-r hover:from-teal-50 hover:to-blue-50 transition-all duration-300 cursor-pointer">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4 flex-1">
+                            <div className="transform group-hover:scale-110 transition-transform duration-300">
+                              {getTypeIcon(email.type)}
                             </div>
-                            <div className="text-sm text-gray-600 space-y-1">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">From:</span> {email.from}
-                                <span className="text-gray-400">→</span>
-                                <span className="font-medium">To:</span> {email.to}
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-center gap-3">
+                                <h3 className="font-semibold text-gray-900 group-hover:text-teal-700 transition-colors duration-300">
+                                  {email.subject}
+                                </h3>
+                                {getStatusBadge(email.status)}
+                                {getPriorityBadge(email.priority)}
                               </div>
-                              <div className="flex items-center gap-6">
-                                <span className="flex items-center gap-2 text-gray-500">
-                                  <Building className="h-3 w-3" />
-                                  {email.building}
-                                </span>
-                                <span className="flex items-center gap-2 text-gray-500">
-                                  <Clock className="h-3 w-3" />
-                                  {formatDate(email.date)}
-                                </span>
+                              <div className="text-sm text-gray-600 space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">From:</span> {email.from}
+                                  <span className="text-gray-400">→</span>
+                                  <span className="font-medium">To:</span> {email.to}
+                                </div>
+                                <div className="flex items-center gap-6">
+                                  <span className="flex items-center gap-2 text-gray-500">
+                                    <Building className="h-3 w-3" />
+                                    {email.building}
+                                  </span>
+                                  <span className="flex items-center gap-2 text-gray-500">
+                                    <Clock className="h-3 w-3" />
+                                    {formatDate(email.date)}
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                          <Button variant="outline" size="sm" className="border-teal-200 text-teal-700 hover:bg-teal-50 rounded-lg">
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
-                          </Button>
-                          <Button variant="outline" size="sm" className="border-blue-200 text-blue-700 hover:bg-blue-50 rounded-lg">
-                            <Send className="h-4 w-4 mr-1" />
-                            Resend
-                          </Button>
-                          <Button variant="outline" size="sm" className="border-gray-200 text-gray-700 hover:bg-gray-50 rounded-lg">
-                            <Copy className="h-4 w-4 mr-1" />
-                            Copy
-                          </Button>
+                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            <Button variant="outline" size="sm" className="border-teal-200 text-teal-700 hover:bg-teal-50 rounded-lg">
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                            <Button variant="outline" size="sm" className="border-blue-200 text-blue-700 hover:bg-blue-50 rounded-lg">
+                              <Send className="h-4 w-4 mr-1" />
+                              Resend
+                            </Button>
+                            <Button variant="outline" size="sm" className="border-gray-200 text-gray-700 hover:bg-gray-50 rounded-lg">
+                              <Copy className="h-4 w-4 mr-1" />
+                              Copy
+                            </Button>
+                          </div>
                         </div>
                       </div>
+                    ))
+                  ) : (
+                    <div className="p-12 text-center">
+                      <div className="w-16 h-16 bg-gradient-to-br from-gray-400 to-gray-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <Mail className="h-8 w-8 text-white" />
+                      </div>
+                      <h3 className="text-lg font-bold text-gray-900 mb-2">No Communications Yet</h3>
+                      <p className="text-gray-600 mb-6">Start sending communications to see them here</p>
+                      <Button className="bg-teal-600 hover:bg-teal-700 text-white">
+                        <Send className="h-4 w-4 mr-2" />
+                        Send First Communication
+                      </Button>
                     </div>
-                  ))}
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -500,44 +412,62 @@ export default function CommunicationsPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {letterTemplates.map((template) => (
-                <Card key={template.id} className="group hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border-0 bg-white rounded-2xl overflow-hidden">
-                  <div className={`h-2 ${getCategoryColor(template.color)}`}></div>
-                  <CardHeader className="pb-4">
-                    <div className="flex items-start justify-between">
-                      <CardTitle className="text-lg font-bold text-gray-900 group-hover:text-teal-700 transition-colors duration-300">
-                        {template.name}
-                      </CardTitle>
-                      <Badge className={`${getCategoryColor(template.color)} text-white border-0 shadow-sm`}>
-                        {template.category}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0 space-y-4">
-                    <p className="text-sm text-gray-600 leading-relaxed">{template.description}</p>
-                    <div className="flex items-center justify-between text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
-                      <span className="flex items-center gap-1">
-                        <TrendingUp className="h-3 w-3" />
-                        Used {template.usageCount} times
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        Last: {template.lastUsed}
-                      </span>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="flex-1 border-gray-200 text-gray-700 hover:bg-gray-50 rounded-lg">
-                        <Edit3 className="h-4 w-4 mr-1" />
-                        Edit
+              {letterTemplates.length > 0 ? (
+                letterTemplates.map((template) => (
+                  <Card key={template.id} className="group hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border-0 bg-white rounded-2xl overflow-hidden">
+                    <div className={`h-2 ${getCategoryColor(template.color)}`}></div>
+                    <CardHeader className="pb-4">
+                      <div className="flex items-start justify-between">
+                        <CardTitle className="text-lg font-bold text-gray-900 group-hover:text-teal-700 transition-colors duration-300">
+                          {template.name}
+                        </CardTitle>
+                        <Badge className={`${getCategoryColor(template.color)} text-white border-0 shadow-sm`}>
+                          {template.category}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0 space-y-4">
+                      <p className="text-sm text-gray-600 leading-relaxed">{template.description}</p>
+                      <div className="flex items-center justify-between text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
+                        <span className="flex items-center gap-1">
+                          <TrendingUp className="h-3 w-3" />
+                          Used {template.usageCount} times
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          Last: {template.lastUsed}
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" className="flex-1 border-gray-200 text-gray-700 hover:bg-gray-50 rounded-lg">
+                          <Edit3 className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button size="sm" className={`flex-1 ${getCategoryColor(template.color)} text-white border-0 shadow-sm rounded-lg`}>
+                          <Send className="h-4 w-4 mr-1" />
+                          Use
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <div className="col-span-full">
+                  <Card className="border-0 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl">
+                    <CardContent className="p-12 text-center">
+                      <div className="w-16 h-16 bg-gradient-to-br from-gray-400 to-gray-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <FileText className="h-8 w-8 text-white" />
+                      </div>
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">No Letter Templates</h3>
+                      <p className="text-gray-600 mb-6">Create your first letter template to get started with communications</p>
+                      <Button className="bg-teal-600 hover:bg-teal-700 text-white">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create Template
                       </Button>
-                      <Button size="sm" className={`flex-1 ${getCategoryColor(template.color)} text-white border-0 shadow-sm rounded-lg`}>
-                        <Send className="h-4 w-4 mr-1" />
-                        Use
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
             </div>
           </TabsContent>
 
@@ -549,83 +479,21 @@ export default function CommunicationsPage() {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="group hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border-0 bg-gradient-to-br from-teal-50 to-teal-100 rounded-2xl overflow-hidden cursor-pointer">
-                <CardContent className="p-8 text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                    <Building className="h-8 w-8 text-white" />
-                  </div>
-                  <h3 className="font-bold text-xl text-gray-900 mb-3">Test Property</h3>
-                  <div className="space-y-2 text-sm text-gray-600 mb-6">
-                    <div className="flex items-center justify-center gap-2">
-                      <Mail className="h-4 w-4 text-teal-600" />
-                      12 communications
+              <div className="col-span-full">
+                <Card className="border-0 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl">
+                  <CardContent className="p-12 text-center">
+                    <div className="w-16 h-16 bg-gradient-to-br from-gray-400 to-gray-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <Building className="h-8 w-8 text-white" />
                     </div>
-                    <div className="flex items-center justify-center gap-2">
-                      <Clock className="h-4 w-4 text-teal-600" />
-                      Last: 2 days ago
-                    </div>
-                    <div className="flex items-center justify-center gap-2">
-                      <Users className="h-4 w-4 text-teal-600" />
-                      45 residents
-                    </div>
-                  </div>
-                  <Button className="w-full bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white shadow-lg rounded-xl">
-                    Manage Communications
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card className="group hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border-0 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl overflow-hidden cursor-pointer">
-                <CardContent className="p-8 text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                    <Building className="h-8 w-8 text-white" />
-                  </div>
-                  <h3 className="font-bold text-xl text-gray-900 mb-3">XX Building</h3>
-                  <div className="space-y-2 text-sm text-gray-600 mb-6">
-                    <div className="flex items-center justify-center gap-2">
-                      <Mail className="h-4 w-4 text-blue-600" />
-                      8 communications
-                    </div>
-                    <div className="flex items-center justify-center gap-2">
-                      <Clock className="h-4 w-4 text-blue-600" />
-                      Last: 1 week ago
-                    </div>
-                    <div className="flex items-center justify-center gap-2">
-                      <Users className="h-4 w-4 text-blue-600" />
-                      23 residents
-                    </div>
-                  </div>
-                  <Button className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg rounded-xl">
-                    Manage Communications
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card className="group hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border-0 bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl overflow-hidden cursor-pointer">
-                <CardContent className="p-8 text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                    <Building className="h-8 w-8 text-white" />
-                  </div>
-                  <h3 className="font-bold text-xl text-gray-900 mb-3">Sample Complex</h3>
-                  <div className="space-y-2 text-sm text-gray-600 mb-6">
-                    <div className="flex items-center justify-center gap-2">
-                      <Mail className="h-4 w-4 text-purple-600" />
-                      15 communications
-                    </div>
-                    <div className="flex items-center justify-center gap-2">
-                      <Clock className="h-4 w-4 text-purple-600" />
-                      Last: 3 days ago
-                    </div>
-                    <div className="flex items-center justify-center gap-2">
-                      <Users className="h-4 w-4 text-purple-600" />
-                      67 residents
-                    </div>
-                  </div>
-                  <Button className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg rounded-xl">
-                    Manage Communications
-                  </Button>
-                </CardContent>
-              </Card>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">No Buildings Found</h3>
+                    <p className="text-gray-600 mb-6">Add buildings to your portfolio to start managing communications</p>
+                    <Button className="bg-teal-600 hover:bg-teal-700 text-white">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Building
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </TabsContent>
 
@@ -644,44 +512,13 @@ export default function CommunicationsPage() {
                     Communication Volume
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-6 space-y-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700">Service Charge</span>
-                      <div className="flex items-center gap-3">
-                        <div className="w-32 bg-gray-200 rounded-full h-3 shadow-inner">
-                          <div className="bg-gradient-to-r from-green-500 to-green-600 h-3 rounded-full shadow-sm transition-all duration-1000" style={{ width: '75%' }}></div>
-                        </div>
-                        <span className="text-sm font-bold text-green-600">75%</span>
-                      </div>
+                <CardContent className="p-6">
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 bg-gradient-to-br from-gray-400 to-gray-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <PieChart className="h-8 w-8 text-white" />
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700">Safety Notices</span>
-                      <div className="flex items-center gap-3">
-                        <div className="w-32 bg-gray-200 rounded-full h-3 shadow-inner">
-                          <div className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full shadow-sm transition-all duration-1000" style={{ width: '60%' }}></div>
-                        </div>
-                        <span className="text-sm font-bold text-blue-600">60%</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700">Maintenance</span>
-                      <div className="flex items-center gap-3">
-                        <div className="w-32 bg-gray-200 rounded-full h-3 shadow-inner">
-                          <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 h-3 rounded-full shadow-sm transition-all duration-1000" style={{ width: '45%' }}></div>
-                        </div>
-                        <span className="text-sm font-bold text-yellow-600">45%</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700">Meetings</span>
-                      <div className="flex items-center gap-3">
-                        <div className="w-32 bg-gray-200 rounded-full h-3 shadow-inner">
-                          <div className="bg-gradient-to-r from-purple-500 to-purple-600 h-3 rounded-full shadow-sm transition-all duration-1000" style={{ width: '30%' }}></div>
-                        </div>
-                        <span className="text-sm font-bold text-purple-600">30%</span>
-                      </div>
-                    </div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">No Data Available</h3>
+                    <p className="text-gray-600">Start sending communications to see analytics</p>
                   </div>
                 </CardContent>
               </Card>
@@ -694,43 +531,12 @@ export default function CommunicationsPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
-                          <Mail className="h-5 w-5 text-white" />
-                        </div>
-                        <span className="font-medium text-gray-900">Email</span>
-                      </div>
-                      <span className="text-2xl font-bold text-green-600">78%</span>
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 bg-gradient-to-br from-gray-400 to-gray-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <BarChart3 className="h-8 w-8 text-white" />
                     </div>
-                    <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                          <FileText className="h-5 w-5 text-white" />
-                        </div>
-                        <span className="font-medium text-gray-900">Letters</span>
-                      </div>
-                      <span className="text-2xl font-bold text-blue-600">45%</span>
-                    </div>
-                    <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
-                          <Phone className="h-5 w-5 text-white" />
-                        </div>
-                        <span className="font-medium text-gray-900">SMS</span>
-                      </div>
-                      <span className="text-2xl font-bold text-purple-600">92%</span>
-                    </div>
-                    <div className="flex items-center justify-between p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
-                          <Activity className="h-5 w-5 text-white" />
-                        </div>
-                        <span className="font-medium text-gray-900">Portal</span>
-                      </div>
-                      <span className="text-2xl font-bold text-orange-600">65%</span>
-                    </div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">No Data Available</h3>
+                    <p className="text-gray-600">Response rates will appear once communications are sent</p>
                   </div>
                 </CardContent>
               </Card>
