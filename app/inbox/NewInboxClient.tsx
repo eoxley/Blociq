@@ -259,15 +259,94 @@ export default function NewInboxClient({
   }, [searchParams])
 
   return (
-    <div className="h-screen flex">
-      {/* Enhanced Folder Sidebar */}
-      <FolderSidebar
-        currentFilter={filter}
-        onFilterChange={setFilter}
-        onSync={handleSync}
-        isSyncing={isSyncing}
-        lastSync={lastSync}
-      />
+    <div className="h-screen flex flex-col">
+      {/* Enhanced Header with Gradient Background */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 p-6 text-white shadow-2xl">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="relative z-10">
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold">Email Inbox</h1>
+              <p className="text-teal-100 text-lg">Manage and respond to property-related emails</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <Button 
+                onClick={handleSync}
+                disabled={isSyncing}
+                className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
+              >
+                {isSyncing ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                {isSyncing ? 'Syncing...' : 'Sync Emails'}
+              </Button>
+              <Button 
+                onClick={() => setIsComposeModalOpen(true)}
+                className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Compose
+              </Button>
+              <Button 
+                onClick={startTriageMode}
+                variant="outline" 
+                className="border-white/30 text-white hover:bg-white/10"
+              >
+                <Brain className="h-4 w-4 mr-2" />
+                AI Triage
+              </Button>
+            </div>
+          </div>
+          
+          {/* Email Stats */}
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold">{emails.length}</div>
+                  <div className="text-sm text-teal-100">Total Emails</div>
+                </div>
+                <InboxIcon className="h-8 w-8 text-white/80" />
+              </div>
+            </div>
+            
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold">{emails.filter(e => !e.is_read).length}</div>
+                  <div className="text-sm text-teal-100">Unread</div>
+                </div>
+                <Mail className="h-8 w-8 text-white/80" />
+              </div>
+            </div>
+            
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold">{emails.filter(e => !e.is_handled).length}</div>
+                  <div className="text-sm text-teal-100">Pending</div>
+                </div>
+                <Clock className="h-8 w-8 text-white/80" />
+              </div>
+            </div>
+            
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold">{emails.filter(e => e.is_handled).length}</div>
+                  <div className="text-sm text-teal-100">Handled</div>
+                </div>
+                <CheckCircle className="h-8 w-8 text-white/80" />
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Decorative elements */}
+        <div className="absolute top-4 right-4 w-16 h-16 bg-white/10 rounded-full"></div>
+        <div className="absolute bottom-4 left-4 w-12 h-12 bg-white/5 rounded-full"></div>
+      </div>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
