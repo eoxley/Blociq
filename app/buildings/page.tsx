@@ -90,58 +90,16 @@ export default async function BuildingsPage() {
         created_at: new Date().toISOString(),
         demo_ready: true,
         units: [
-          { 
-            id: 1, 
-            unit_number: "Flat 1", 
-            building_id: 1,
-            leaseholders: [
-              { id: 1, name: "John Smith", email: "john.smith@email.com", phone: "07700 900123" }
-            ]
-          },
-          { 
-            id: 2, 
-            unit_number: "Flat 2", 
-            building_id: 1,
-            leaseholders: [
-              { id: 2, name: "Sarah Johnson", email: "sarah.j@email.com", phone: "07700 900124" }
-            ]
-          },
-          { 
-            id: 3, 
-            unit_number: "Flat 3", 
-            building_id: 1,
-            leaseholders: [
-              { id: 3, name: "Michael Brown", email: "michael.brown@email.com", phone: "07700 900125" }
-            ]
-          },
+          { id: 1, unit_number: "Flat 1", building_id: 1 },
+          { id: 2, unit_number: "Flat 2", building_id: 1 },
+          { id: 3, unit_number: "Flat 3", building_id: 1 },
           { id: 4, unit_number: "Flat 4", building_id: 1 },
-          { 
-            id: 5, 
-            unit_number: "Flat 5", 
-            building_id: 1,
-            leaseholders: [
-              { id: 4, name: "Emma Wilson", email: "emma.wilson@email.com", phone: "07700 900126" }
-            ]
-          },
+          { id: 5, unit_number: "Flat 5", building_id: 1 },
           { id: 6, unit_number: "Flat 6", building_id: 1 },
-          { 
-            id: 7, 
-            unit_number: "Flat 7", 
-            building_id: 1,
-            leaseholders: [
-              { id: 5, name: "David Taylor", email: "david.taylor@email.com", phone: "07700 900127" }
-            ]
-          },
+          { id: 7, unit_number: "Flat 7", building_id: 1 },
           { id: 8, unit_number: "Flat 8", building_id: 1 },
           { id: 9, unit_number: "Flat 9", building_id: 1 },
-          { 
-            id: 10, 
-            unit_number: "Flat 10", 
-            building_id: 1,
-            leaseholders: [
-              { id: 6, name: "Lisa Anderson", email: "lisa.anderson@email.com", phone: "07700 900128" }
-            ]
-          },
+          { id: 10, unit_number: "Flat 10", building_id: 1 },
           { id: 11, unit_number: "Flat 11", building_id: 1 },
           { id: 12, unit_number: "Flat 12", building_id: 1 },
           { id: 13, unit_number: "Flat 13", building_id: 1 },
@@ -166,41 +124,13 @@ export default async function BuildingsPage() {
         created_at: new Date().toISOString(),
         demo_ready: true,
         units: [
-          { 
-            id: 25, 
-            unit_number: "Apartment A", 
-            building_id: 2,
-            leaseholders: [
-              { id: 7, name: "Robert Davis", email: "robert.davis@email.com", phone: "07700 900129" }
-            ]
-          },
-          { 
-            id: 26, 
-            unit_number: "Apartment B", 
-            building_id: 2,
-            leaseholders: [
-              { id: 8, name: "Jennifer White", email: "jennifer.white@email.com", phone: "07700 900130" }
-            ]
-          },
+          { id: 25, unit_number: "Apartment A", building_id: 2 },
+          { id: 26, unit_number: "Apartment B", building_id: 2 },
           { id: 27, unit_number: "Apartment C", building_id: 2 },
-          { 
-            id: 28, 
-            unit_number: "Apartment D", 
-            building_id: 2,
-            leaseholders: [
-              { id: 9, name: "Christopher Lee", email: "chris.lee@email.com", phone: "07700 900131" }
-            ]
-          },
+          { id: 28, unit_number: "Apartment D", building_id: 2 },
           { id: 29, unit_number: "Apartment E", building_id: 2 },
           { id: 30, unit_number: "Apartment F", building_id: 2 },
-          { 
-            id: 31, 
-            unit_number: "Apartment G", 
-            building_id: 2,
-            leaseholders: [
-              { id: 10, name: "Amanda Garcia", email: "amanda.garcia@email.com", phone: "07700 900132" }
-            ]
-          },
+          { id: 31, unit_number: "Apartment G", building_id: 2 },
           { id: 32, unit_number: "Apartment H", building_id: 2 },
           { id: 33, unit_number: "Apartment I", building_id: 2 },
           { id: 34, unit_number: "Apartment J", building_id: 2 },
