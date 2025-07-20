@@ -6,9 +6,8 @@ import FloatingBlocIQ from './FloatingBlocIQ';
 export default function ConditionalFloatingButtons() {
   const pathname = usePathname();
 
-  // Show floating chat on all pages except login/logout
-  // Temporarily show on all pages for demonstration
-  if (pathname === '/login' || pathname === '/logout') {
+  // Hide floating chat on login/logout and homepage
+  if (pathname === '/login' || pathname === '/logout' || pathname === '/home') {
     return null;
   }
 

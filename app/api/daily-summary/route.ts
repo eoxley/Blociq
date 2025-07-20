@@ -1,0 +1,216 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/utils/supabase/server';
+import { cookies } from 'next/headers';
+
+export async function GET(req: NextRequest) {
+  try {
+    const supabase = createClient(cookies());
+    
+    // Get the current user's session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !session) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+
+    // Get today's date in ISO format
+    const today = new Date().toISOString().split('T')[0];
+
+    // 1. Query overdue and due today tasks
+    const { data: tasks, error: tasksError } = await supabase
+      .from('building_todos')
+      .select(`
+        *,
+        buildings(name)
+      `)
+      .eq('is_complete', false)
+      .lte('due_date', today)
+      .order('due_date', { ascending: true });
+
+    if (tasksError) {
+      console.error('Error fetching tasks:', tasksError);
+    }
+
+    // 2. Query unread emails
+    const { data: unreadEmails, error: emailsError } = await supabase
+      .from('incoming_emails')
+      .select(`
+        *,
+        buildings(name)
+      `)
+      .eq('is_read', false)
+      .order('received_at', { ascending: false });
+
+    if (emailsError) {
+      console.error('Error fetching emails:', emailsError);
+    }
+
+    // 3. Query compliance documents expiring soon (next 7 days)
+    const sevenDaysFromNow = new Date();
+    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+    const sevenDaysFromNowStr = sevenDaysFromNow.toISOString().split('T')[0];
+
+    const { data: complianceAlerts, error: complianceError } = await supabase
+      .from('compliance_documents')
+      .select(`
+        *,
+        buildings(name)
+      `)
+      .lte('expiry_date', sevenDaysFromNowStr)
+      .gte('expiry_date', today)
+      .order('expiry_date', { ascending: true });
+
+    if (complianceError) {
+      console.error('Error fetching compliance documents:', complianceError);
+    }
+
+    // Group data by building
+    const buildingData: { [key: string]: any } = {};
+
+    // Group tasks by building
+    if (tasks) {
+      tasks.forEach(task => {
+        const buildingName = task.buildings?.name || 'Unknown Building';
+        if (!buildingData[buildingName]) {
+          buildingData[buildingName] = { tasks: [], emails: [], compliance: [] };
+        }
+        buildingData[buildingName].tasks.push(task);
+      });
+    }
+
+    // Group emails by building
+    if (unreadEmails) {
+      unreadEmails.forEach(email => {
+        const buildingName = email.buildings?.name || 'Unknown Building';
+        if (!buildingData[buildingName]) {
+          buildingData[buildingName] = { tasks: [], emails: [], compliance: [] };
+        }
+        buildingData[buildingName].emails.push(email);
+      });
+    }
+
+    // Group compliance alerts by building
+    if (complianceAlerts) {
+      complianceAlerts.forEach(doc => {
+        const buildingName = doc.buildings?.name || 'Unknown Building';
+        if (!buildingData[buildingName]) {
+          buildingData[buildingName] = { tasks: [], emails: [], compliance: [] };
+        }
+        buildingData[buildingName].compliance.push(doc);
+      });
+    }
+
+    // Check if we have any data to summarize
+    const hasData = Object.keys(buildingData).length > 0 && 
+      Object.values(buildingData).some(building => 
+        building.tasks.length > 0 || building.emails.length > 0 || building.compliance.length > 0
+      );
+
+    if (!hasData) {
+      return NextResponse.json({
+        summary: "Good morning! You're all caught up today. No urgent tasks, unread emails, or compliance alerts to address. Enjoy your day! 🌟"
+      });
+    }
+
+    // Construct the prompt for OpenAI
+    let prompt = "You are a helpful assistant to a property manager. Create a morning summary based on this data:\n\n";
+
+    // Add tasks section
+    const overdueTasks = tasks?.filter(task => new Date(task.due_date) < new Date(today)) || [];
+    const dueTodayTasks = tasks?.filter(task => task.due_date === today) || [];
+
+    if (overdueTasks.length > 0 || dueTodayTasks.length > 0) {
+      prompt += "Tasks Due Today or Overdue:\n";
+      
+      if (overdueTasks.length > 0) {
+        overdueTasks.forEach(task => {
+          const daysOverdue = Math.floor((new Date(today).getTime() - new Date(task.due_date).getTime()) / (1000 * 60 * 60 * 24));
+          const buildingName = task.buildings?.name || 'Unknown Building';
+          prompt += `- ${buildingName}: ${task.title} (overdue by ${daysOverdue} day${daysOverdue > 1 ? 's' : ''})\n`;
+        });
+      }
+      
+      if (dueTodayTasks.length > 0) {
+        dueTodayTasks.forEach(task => {
+          const buildingName = task.buildings?.name || 'Unknown Building';
+          prompt += `- ${buildingName}: ${task.title} (due today)\n`;
+        });
+      }
+      prompt += "\n";
+    }
+
+    // Add emails section
+    if (unreadEmails && unreadEmails.length > 0) {
+      prompt += "Unread Emails:\n";
+      Object.entries(buildingData).forEach(([buildingName, data]) => {
+        if (data.emails.length > 0) {
+          prompt += `- ${buildingName}: ${data.emails.length} unread message${data.emails.length > 1 ? 's' : ''}\n`;
+        }
+      });
+      prompt += "\n";
+    }
+
+    // Add compliance section
+    if (complianceAlerts && complianceAlerts.length > 0) {
+      prompt += "Compliance Alerts:\n";
+      complianceAlerts.forEach(doc => {
+        const buildingName = doc.buildings?.name || 'Unknown Building';
+        const daysUntilExpiry = Math.floor((new Date(doc.expiry_date).getTime() - new Date(today).getTime()) / (1000 * 60 * 60 * 24));
+        prompt += `- ${buildingName}: ${doc.document_type || 'Document'} expires in ${daysUntilExpiry} day${daysUntilExpiry > 1 ? 's' : ''}\n`;
+      });
+      prompt += "\n";
+    }
+
+    prompt += "Return a clear, friendly summary using bullet points. Keep it concise but informative. Start with a greeting and organize the information logically.";
+
+    // Call OpenAI API
+    const openaiApiKey = process.env.OPENAI_API_KEY;
+    if (!openaiApiKey) {
+      console.error('OpenAI API key not found');
+      return NextResponse.json({
+        summary: "Good morning! I'm having trouble accessing the AI service right now, but you can check your tasks and emails manually. Have a great day! 🌅"
+      });
+    }
+
+    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a helpful property management assistant. Provide clear, actionable summaries in a friendly tone.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: 500,
+        temperature: 0.7,
+      }),
+    });
+
+    if (!openaiResponse.ok) {
+      console.error('OpenAI API error:', await openaiResponse.text());
+      return NextResponse.json({
+        summary: "Good morning! I'm having trouble generating your summary right now, but you can check your tasks and emails manually. Have a productive day! 🌅"
+      });
+    }
+
+    const openaiData = await openaiResponse.json();
+    const summary = openaiData.choices?.[0]?.message?.content || "No summary available at the moment.";
+
+    return NextResponse.json({ summary });
+
+  } catch (error) {
+    console.error('Error generating daily summary:', error);
+    return NextResponse.json({
+      summary: "Good morning! I'm having trouble generating your summary right now, but you can check your tasks and emails manually. Have a productive day! 🌅"
+    });
+  }
+} 
