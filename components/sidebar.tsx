@@ -3,6 +3,7 @@
 import React from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter, usePathname } from 'next/navigation'
+import Link from 'next/link'
 import {
   Home,
   Inbox,
@@ -41,7 +42,7 @@ export default function Sidebar() {
     <aside className="min-h-screen w-64 bg-gradient-to-b from-secondary to-secondary/90 text-white flex flex-col py-6 px-4 shadow-xl">
       {/* Logo Section */}
       <div className="mb-8 px-4">
-        <div className="flex items-center gap-3 mb-2">
+        <Link href="/home" className="flex items-center gap-3 mb-2 hover:opacity-80 transition-opacity">
           <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
             <BlocIQLogo className="h-6 w-6 text-white" />
           </div>
@@ -49,7 +50,7 @@ export default function Sidebar() {
             <h1 className="text-xl font-bold font-serif">BlocIQ</h1>
             <p className="text-xs text-white/75">Property Intelligence</p>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* Navigation */}
