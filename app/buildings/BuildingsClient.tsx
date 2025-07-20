@@ -20,7 +20,6 @@ import {
   Mail,
   Phone,
   Eye,
-  Settings,
   Home
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -378,26 +377,15 @@ function BuildingCard({
               </Button>
             </Link>
             
-            <div className="grid grid-cols-2 gap-2">
+            <div className="flex gap-2">
               <Link
                 href={`/compliance/${building.id}`}
-                className="block"
+                className="block flex-1"
                 onClick={(e) => e.stopPropagation()}
               >
                 <Button variant="outline" className="w-full border-teal-200 text-teal-700 hover:bg-teal-50 rounded-lg transition-all duration-200">
                   <Shield className="h-4 w-4 mr-1" />
                   <span className="text-xs font-semibold">Compliance</span>
-                </Button>
-              </Link>
-              
-              <Link
-                href={`/buildings/${building.id}/units`}
-                className="block"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Button variant="outline" className="w-full border-blue-200 text-blue-700 hover:bg-blue-50 rounded-lg transition-all duration-200">
-                  <Settings className="h-4 w-4 mr-1" />
-                  <span className="text-xs font-semibold">Units</span>
                 </Button>
               </Link>
             </div>
