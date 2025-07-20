@@ -40,11 +40,13 @@ import {
   Info,
   Building2,
   Gavel,
-  Handshake
+  Handshake,
+  Edit3
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatDistanceToNow, format } from 'date-fns'
 import AddTaskModal from './AddTaskModal'
+import EditBuildingModal from './EditBuildingModal'
 
 interface BuildingCommandCentreProps {
   buildingData: {
@@ -73,6 +75,8 @@ export default function BuildingCommandCentre({ buildingData }: BuildingCommandC
   const [isAiLoading, setIsAiLoading] = useState(false)
   const [buildingSummary, setBuildingSummary] = useState('')
   const [isSummaryLoading, setIsSummaryLoading] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [updatedBuildingData, setUpdatedBuildingData] = useState(buildingData)
 
   const { 
     building, 
@@ -85,7 +89,7 @@ export default function BuildingCommandCentre({ buildingData }: BuildingCommandC
     buildingDocs, 
     events,
     todos
-  } = buildingData
+  } = updatedBuildingData
 
   // Filter units based on search
   const filteredUnits = units.filter(unit => 
@@ -151,10 +155,45 @@ export default function BuildingCommandCentre({ buildingData }: BuildingCommandC
     window.location.reload()
   }
 
+  // Handle building information update
+  const handleBuildingUpdate = async (buildingData: any, setupData: any) => {
+    try {
+      const response = await fetch(`/api/buildings/${building.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ buildingData, setupData })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update building')
+      }
+
+      // Update local state with new data
+      setUpdatedBuildingData({
+        ...updatedBuildingData,
+        building: { ...updatedBuildingData.building, ...buildingData },
+        buildingSetup: { ...updatedBuildingData.buildingSetup, ...setupData }
+      })
+
+      return true
+    } catch (error) {
+      console.error('Error updating building:', error)
+      throw error
+    }
+  }
+
   return (
     <div className="space-y-6">
-      {/* AI Summary Button */}
-      <div className="flex justify-end">
+      {/* Action Buttons */}
+      <div className="flex justify-between items-center">
+        <Button 
+          onClick={() => setIsEditModalOpen(true)} 
+          className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700"
+        >
+          <Edit3 className="h-4 w-4" />
+          Edit Building Information
+        </Button>
+        
         <Button onClick={handleSummarise} disabled={isSummaryLoading} className="flex items-center gap-2">
           {isSummaryLoading ? (
             <RefreshCw className="h-4 w-4 animate-spin" />
@@ -807,6 +846,15 @@ export default function BuildingCommandCentre({ buildingData }: BuildingCommandC
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit Building Modal */}
+      <EditBuildingModal
+        building={building}
+        buildingSetup={buildingSetup}
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSave={handleBuildingUpdate}
+      />
     </div>
   )
 } 
