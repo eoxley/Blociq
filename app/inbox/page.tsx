@@ -98,15 +98,8 @@ export default async function InboxPage() {
   return (
     <LayoutWithSidebar>
       <div className="p-6 space-y-6">
-        {/* Header with Back to Home navigation */}
+        {/* Header */}
         <div className="flex items-center gap-4 mb-6">
-          <Link 
-            href="/home" 
-            className="inline-flex items-center gap-2 px-4 py-2 bg-teal-50 text-teal-700 rounded-lg hover:bg-teal-100 transition-colors border border-teal-200"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Home
-          </Link>
           <h1 className="text-3xl font-bold text-[#0F5D5D]">Inbox</h1>
         </div>
         
