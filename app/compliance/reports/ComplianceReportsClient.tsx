@@ -35,7 +35,7 @@ interface Building {
     id: string
     status: string
     next_due_date: string | null
-    last_updated: string
+    last_updated?: string
     compliance_assets: {
       id: string
       name: string
@@ -200,7 +200,7 @@ export default function ComplianceReportsClient({
         const category = asset.compliance_assets?.category || 'Unknown'
         const status = asset.status || 'Not Started'
         const nextDue = asset.next_due_date ? new Date(asset.next_due_date).toLocaleDateString() : 'Not Set'
-        const lastUpdated = asset.last_updated ? new Date(asset.last_updated).toLocaleDateString() : 'Unknown'
+        const lastUpdated = asset.last_updated ? new Date(asset.last_updated).toLocaleDateString() : 'Not set'
 
         rows.push([
           stat.building.name,
