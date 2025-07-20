@@ -13,6 +13,7 @@ import {
   CheckCircle,
   Folder,
   Plus,
+  Brain,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -23,6 +24,7 @@ import EmailDetail from './components/EmailDetail'
 import AIActionBar from './components/AIActionBar'
 import ComposeEmailModal from './components/ComposeEmailModal'
 import FolderSidebar from './components/FolderSidebar'
+import TriageAssistant from './components/TriageAssistant'
 import { toast } from 'sonner'
 
 interface Email {
@@ -67,6 +69,7 @@ export default function NewInboxClient({
   const [buildings, setBuildings] = useState<Building[]>([])
   const [loadingEmails, setLoadingEmails] = useState(false)
   const [isComposeModalOpen, setIsComposeModalOpen] = useState(false)
+  const [isTriageAssistantOpen, setIsTriageAssistantOpen] = useState(false)
 
   // Fetch emails based on filter
   useEffect(() => {
@@ -190,6 +193,17 @@ export default function NewInboxClient({
     }
   }
 
+  // Start triage mode
+  const startTriageMode = () => {
+    setIsTriageAssistantOpen(true)
+  }
+
+  // Handle email processed in triage
+  const handleEmailProcessed = () => {
+    // Refresh the email list to reflect changes
+    setFilter('inbox')
+  }
+
   return (
     <div className="h-screen flex">
       {/* Enhanced Folder Sidebar */}
@@ -214,6 +228,14 @@ export default function NewInboxClient({
             )}
           </div>
           <div className="flex-1" />
+          <Button
+            onClick={startTriageMode}
+            variant="outline"
+            className="flex items-center gap-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 hover:bg-blue-100"
+          >
+            <Brain className="h-4 w-4" />
+            🧠 Start Triage Assistant
+          </Button>
           <Button
             onClick={() => setIsComposeModalOpen(true)}
             className="flex items-center gap-2"
@@ -305,6 +327,13 @@ export default function NewInboxClient({
           // Optionally refresh the inbox after sending
           setFilter('inbox')
         }}
+      />
+
+      {/* Triage Assistant */}
+      <TriageAssistant
+        isOpen={isTriageAssistantOpen}
+        onClose={() => setIsTriageAssistantOpen(false)}
+        onEmailProcessed={handleEmailProcessed}
       />
     </div>
   )
