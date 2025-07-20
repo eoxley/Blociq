@@ -57,6 +57,7 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null)
   const [filter, setFilter] = useState<FilterType>('All')
+  const [deleteConfirmTodo, setDeleteConfirmTodo] = useState<Todo | null>(null)
   const [newTodo, setNewTodo] = useState({
     title: '',
     due_date: '',
@@ -248,6 +249,7 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
       }
 
       setTodos(prev => prev.filter(t => t.id !== id))
+      setDeleteConfirmTodo(null)
       fetchSummary()
     } catch (error) {
       console.error('Error deleting todo:', error)
@@ -423,7 +425,7 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
                         <Edit className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => deleteTodo(todo.id)}
+                        onClick={() => setDeleteConfirmTodo(todo)}
                         className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -589,6 +591,40 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
                 className="flex-1 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
               >
                 Add Task
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmTodo && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Confirm Deletion</h3>
+              <button
+                onClick={() => setDeleteConfirmTodo(null)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-gray-700 mb-4">
+              Are you sure you want to delete the task "{deleteConfirmTodo.title}"? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteConfirmTodo(null)}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => deleteTodo(deleteConfirmTodo.id)}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Delete
               </button>
             </div>
           </div>
