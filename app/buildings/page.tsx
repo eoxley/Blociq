@@ -13,6 +13,7 @@ interface Building {
   address: string | null
   unit_count: number | null
   created_at: string | null
+  demo_ready?: boolean
   units?: {
     id: number
     unit_number: string
@@ -37,47 +38,53 @@ export default async function BuildingsPage() {
   //   redirect('/login')
   // }
 
-  // First, try a simple query to get just buildings
-  const { data: simpleBuildings, error: simpleError } = await supabase
-    .from('buildings')
-    .select('*')
-    .order('name')
+  let finalBuildings: Building[] = []
 
-  console.log('Simple buildings query result:', simpleBuildings)
-  console.log('Simple buildings error:', simpleError)
+  try {
+    // First, try a simple query to get just buildings
+    const { data: simpleBuildings, error: simpleError } = await supabase
+      .from('buildings')
+      .select('*')
+      .order('name')
 
-  // Then try the complex query with units and leaseholders
-  const { data: buildings, error } = await supabase
-    .from('buildings')
-    .select(`
-      id,
-      name,
-      address,
-      unit_count,
-      created_at,
-      units (
+    console.log('Simple buildings query result:', simpleBuildings)
+    console.log('Simple buildings error:', simpleError)
+
+    if (simpleError) {
+      console.error('Simple query error:', simpleError)
+    }
+
+    // Then try the complex query with units and leaseholders
+    const { data: buildings, error } = await supabase
+      .from('buildings')
+      .select(`
         id,
-        unit_number,
-        building_id,
-        leaseholders (
+        name,
+        address,
+        unit_count,
+        created_at,
+        units (
           id,
-          name,
-          email,
-          phone
+          unit_number,
+          building_id
         )
-      )
-    `)
-    .order('name')
+      `)
+      .order('name')
 
-  console.log('Complex buildings query result:', buildings)
-  console.log('Complex buildings error:', error)
+    console.log('Complex buildings query result:', buildings)
+    console.log('Complex buildings error:', error)
 
-  if (error) {
-    console.error('Error fetching buildings:', error)
+    if (error) {
+      console.error('Error fetching buildings:', error)
+    }
+
+    // Use simple buildings if complex query fails, or example data for demonstration
+    finalBuildings = buildings || simpleBuildings || []
+    
+  } catch (error) {
+    console.error('Unexpected error in buildings page:', error)
+    finalBuildings = []
   }
-
-  // Use simple buildings if complex query fails, or example data for demonstration
-  let finalBuildings = buildings || simpleBuildings || []
   
   // If no buildings found, show example data for demonstration
   if (finalBuildings.length === 0) {
@@ -193,9 +200,7 @@ export default async function BuildingsPage() {
         {finalBuildings.length === 0 && (
           <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-yellow-800 text-sm">
-              <strong>Debug:</strong> No buildings found in database. 
-              {simpleBuildings && simpleBuildings.length > 0 && ' Simple query found buildings but complex query failed.'}
-              {error && ` Error: ${error.message}`}
+              <strong>Debug:</strong> No buildings found in database. Using demo data.
             </p>
           </div>
         )}

@@ -20,7 +20,8 @@ import {
   Mail,
   Phone,
   Eye,
-  Settings
+  Settings,
+  Home
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -65,10 +66,10 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
       (building.address && building.address.toLowerCase().includes(searchLower)) ||
       (building.units && building.units.some(unit => 
         unit.unit_number.toLowerCase().includes(searchLower) ||
-        unit.leaseholders?.some(leaseholder => 
+        (unit.leaseholders && unit.leaseholders.some(leaseholder => 
           leaseholder.name.toLowerCase().includes(searchLower) ||
           leaseholder.email.toLowerCase().includes(searchLower)
-        )
+        ))
       ))
     )
   })
@@ -343,7 +344,7 @@ function BuildingCard({
                             <div key={leaseholder.id} className="text-xs text-gray-600 space-y-1">
                               <div className="flex items-center space-x-1">
                                 <User className="h-3 w-3" />
-                                <span className="font-medium">{leaseholder.name}</span>
+                                <span className="font-medium">{leaseholder.name || 'Unknown'}</span>
                               </div>
                               {leaseholder.email && (
                                 <div className="flex items-center space-x-1">
@@ -512,7 +513,7 @@ function BuildingListItem({
                       <div className="space-y-1">
                         {unit.leaseholders.map((leaseholder) => (
                           <div key={leaseholder.id} className="text-xs text-gray-600">
-                            <div className="font-medium">{leaseholder.name}</div>
+                            <div className="font-medium">{leaseholder.name || 'Unknown'}</div>
                             {leaseholder.email && (
                               <div className="truncate">{leaseholder.email}</div>
                             )}
