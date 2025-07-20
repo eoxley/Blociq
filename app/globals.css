@@ -49,37 +49,56 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.141 0.005 285.823);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.21 0.006 285.885);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.705 0.015 286.067);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.21 0.006 285.885);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.705 0.015 286.067);
+  
+  /* BlocIQ Brand Colors */
+  --background: #FAFAFA;
+  --foreground: #333333;
+  --card: #FFFFFF;
+  --card-foreground: #333333;
+  --popover: #FFFFFF;
+  --popover-foreground: #333333;
+  
+  /* Primary Colors */
+  --primary: #2BBEB4;
+  --primary-foreground: #FFFFFF;
+  --secondary: #0F5D5D;
+  --secondary-foreground: #FFFFFF;
+  
+  /* Support Colors */
+  --muted: #F3F4F6;
+  --muted-foreground: #64748B;
+  --accent: #F0FDFA;
+  --accent-foreground: #0F5D5D;
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  
+  /* UI Colors */
+  --border: #E2E8F0;
+  --input: #E2E8F0;
+  --ring: #2BBEB4;
+  
+  /* Status Colors */
+  --success: #10B981;
+  --warning: #FBBF24;
+  --info: #6366F1;
+  --error: #EF4444;
+  
+  /* Chart Colors */
+  --chart-1: #2BBEB4;
+  --chart-2: #0F5D5D;
+  --chart-3: #10B981;
+  --chart-4: #FBBF24;
+  --chart-5: #6366F1;
+  
+  /* Sidebar Colors */
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #333333;
+  --sidebar-primary: #2BBEB4;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F0FDFA;
+  --sidebar-accent-foreground: #0F5D5D;
+  --sidebar-border: #E2E8F0;
+  --sidebar-ring: #2BBEB4;
 }
 
 .dark {
@@ -127,7 +146,7 @@
 
 @layer base {
   body {
-    @apply font-brand;
+   @apply font-serif;
   }
 
   a {

@@ -1,0 +1,31 @@
+{
+	"folders": [
+		{
+			"path": "../.git"
+		},
+		{
+			"path": "../.vercel"
+		},
+		{
+			"path": "."
+		},
+		{
+			"path": "../components"
+		},
+		{
+			"path": "../hooks"
+		},
+		{
+			"path": "../lib"
+		},
+		{
+			"path": "../pages"
+		},
+		{
+			"path": "../public"
+		},
+		{
+			"path": "../utils"
+		}
+	]
+}

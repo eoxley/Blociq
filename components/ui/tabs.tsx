@@ -2,7 +2,10 @@
 
 import * as React from "react"
 import * as TabsPrimitive from "@radix-ui/react-tabs"
+<<<<<<< HEAD
 
+=======
+>>>>>>> locked-ui-baseline
 import { cn } from "@/lib/utils"
 
 const Tabs = TabsPrimitive.Root

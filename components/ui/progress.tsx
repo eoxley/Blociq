@@ -3,7 +3,26 @@
 import * as React from "react"
 import * as ProgressPrimitive from "@radix-ui/react-progress"
 
+<<<<<<< HEAD
 import { cn } from "@/lib/utils"
+=======
+const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
+  ({ className, value, ...props }, ref) => {
+    return (
+      <div
+        ref={ref}
+        className={cn("w-full h-2 bg-muted rounded", className)}
+        {...props}
+      >
+        <div
+          className="h-2 bg-primary rounded transition-all"
+          style={{ width: `${value ?? 0}%` }}
+        />
+      </div>
+    );
+  }
+);
+>>>>>>> locked-ui-baseline
 
 const Progress = React.forwardRef<
   React.ElementRef<typeof ProgressPrimitive.Root>,
