@@ -56,7 +56,10 @@ export default async function MajorWorksProjectPage({ params }: PageProps) {
     }
     
     try {
-      const { data: project, error } = await supabase
+      console.log('🔍 [MajorWorks] Starting database query...');
+      
+      // Add timeout to prevent hanging
+      const queryPromise = supabase
         .from('major_works')
         .select(`
           *,
@@ -68,6 +71,12 @@ export default async function MajorWorksProjectPage({ params }: PageProps) {
         `)
         .eq('id', projectId)
         .single();
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database query timeout')), 10000)
+      );
+      
+      const { data: project, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
       console.log('🔍 [MajorWorks] Database response - project:', project ? 'found' : 'null', 'error:', error);
       
@@ -89,7 +98,19 @@ export default async function MajorWorksProjectPage({ params }: PageProps) {
 
       console.log('✅ [MajorWorks] Project loaded successfully:', { id: project.id, title: project.title });
 
-      return <MajorWorksProjectClient project={project} />
+      // Test with a simple component first
+      return (
+        <div className="container mx-auto px-4 py-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">Project Loaded Successfully</h1>
+          <p className="text-gray-600 mb-4">Project ID: {project.id}</p>
+          <p className="text-gray-600 mb-4">Project Title: {project.title}</p>
+          <p className="text-gray-600 mb-4">Status: {project.status}</p>
+          <p className="text-gray-600 mb-4">Building: {project.buildings?.name || 'No building'}</p>
+          <div className="mt-8">
+            <MajorWorksProjectClient project={project} />
+          </div>
+        </div>
+      )
       
     } catch (dbError) {
       console.error('💥 [MajorWorks] Database query error:', dbError);
