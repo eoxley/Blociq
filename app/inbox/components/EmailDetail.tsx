@@ -1,0 +1,167 @@
+'use client'
+
+import React from 'react'
+import { Clock, User, Building, Mail } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+
+interface Email {
+  id: string
+  subject: string | null
+  from_name: string | null
+  from_email: string | null
+  received_at: string | null
+  body_preview: string | null
+  body_full: string | null
+  building_id: string | null
+  is_read: boolean | null
+  is_handled: boolean | null
+  tags: string[] | null
+  outlook_id: string | null
+  buildings?: { name: string } | null
+}
+
+interface EmailDetailProps {
+  email: Email
+}
+
+export default function EmailDetail({ email }: EmailDetailProps) {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'Unknown date'
+    
+    const date = new Date(dateString)
+    return date.toLocaleString('en-GB', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  const getSenderInitials = (name: string | null, email: string | null) => {
+    if (name) {
+      return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    }
+    if (email) {
+      return email.split('@')[0].slice(0, 2).toUpperCase()
+    }
+    return '??'
+  }
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Email Header */}
+      <div className="p-6 border-b bg-gray-50">
+        <div className="flex items-start gap-4">
+          {/* Sender Avatar */}
+          <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-lg font-medium">
+            {getSenderInitials(email.from_name, email.from_email)}
+          </div>
+
+          {/* Email Info */}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-semibold text-gray-900 mb-2">
+              {email.subject || 'No Subject'}
+            </h1>
+            
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <User className="h-4 w-4" />
+                <span className="font-medium">
+                  {email.from_name || 'Unknown Sender'}
+                </span>
+                {email.from_email && (
+                  <>
+                    <span>•</span>
+                    <span className="text-gray-500">{email.from_email}</span>
+                  </>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Clock className="h-4 w-4" />
+                <span>{formatDate(email.received_at)}</span>
+              </div>
+
+              {email.buildings?.name && (
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Building className="h-4 w-4" />
+                  <span>{email.buildings.name}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Status Badges */}
+          <div className="flex flex-col gap-2">
+            {!email.is_read && (
+              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                Unread
+              </Badge>
+            )}
+            
+            {email.is_handled && (
+              <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                Handled
+              </Badge>
+            )}
+            
+            {email.tags && email.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {email.tags.slice(0, 3).map((tag, index) => (
+                  <Badge key={index} variant="outline" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+                {email.tags.length > 3 && (
+                  <Badge variant="outline" className="text-xs">
+                    +{email.tags.length - 3}
+                  </Badge>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Email Body */}
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="prose prose-sm max-w-none">
+          {email.body_full ? (
+            <div 
+              className="text-gray-700 leading-relaxed"
+              dangerouslySetInnerHTML={{ 
+                __html: email.body_full.replace(/\n/g, '<br>') 
+              }}
+            />
+          ) : (
+            <div className="text-gray-700 leading-relaxed whitespace-pre-line">
+              {email.body_preview || 'No content available'}
+            </div>
+          )}
+        </div>
+
+        {/* Email Metadata */}
+        <Separator className="my-6" />
+        
+        <div className="text-xs text-gray-500 space-y-1">
+          <div className="flex items-center gap-2">
+            <Mail className="h-3 w-3" />
+            <span>Outlook ID: {email.outlook_id || 'Not available'}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span>Email ID: {email.id}</span>
+          </div>
+          {email.building_id && (
+            <div className="flex items-center gap-2">
+              <Building className="h-3 w-3" />
+              <span>Building ID: {email.building_id}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+} 
