@@ -3,7 +3,7 @@ import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import LayoutWithSidebar from '@/components/LayoutWithSidebar'
-import BuildingDetailClient from './BuildingDetailClient'
+import BuildingCommandCentre from './BuildingCommandCentre'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 
@@ -20,219 +20,126 @@ export default async function BuildingDetailPage({
     data: { session },
   } = await supabase.auth.getSession()
 
-  // Temporarily allow access for demonstration purposes
-  // if (!session) {
-  //   redirect('/login')
-  // }
-
-  // Example building data for demonstration
-  const exampleBuildings = {
-    "1": {
-      id: 1,
-      name: "Test Property",
-      address: "123 Test Street, London, SW1A 1AA",
-      unit_count: 12,
-      created_at: new Date().toISOString(),
-      demo_ready: true,
-      units: [
-        { id: 1, unit_number: "Flat 1", building_id: 1 },
-        { id: 2, unit_number: "Flat 2", building_id: 1 },
-        { id: 3, unit_number: "Flat 3", building_id: 1 },
-        { id: 4, unit_number: "Flat 4", building_id: 1 },
-        { id: 5, unit_number: "Flat 5", building_id: 1 },
-        { id: 6, unit_number: "Flat 6", building_id: 1 },
-        { id: 7, unit_number: "Flat 7", building_id: 1 },
-        { id: 8, unit_number: "Flat 8", building_id: 1 },
-        { id: 9, unit_number: "Flat 9", building_id: 1 },
-        { id: 10, unit_number: "Flat 10", building_id: 1 },
-        { id: 11, unit_number: "Flat 11", building_id: 1 },
-        { id: 12, unit_number: "Flat 12", building_id: 1 }
-      ],
-      leases: [
-        { id: 1, leaseholder_name: "John Smith", unit: 1 },
-        { id: 2, leaseholder_name: "Sarah Johnson", unit: 2 },
-        { id: 3, leaseholder_name: "Michael Brown", unit: 3 },
-        { id: 4, leaseholder_name: "Emma Davis", unit: 4 },
-        { id: 5, leaseholder_name: "David Wilson", unit: 5 },
-        { id: 6, leaseholder_name: "Lisa Anderson", unit: 6 },
-        { id: 7, leaseholder_name: "Robert Taylor", unit: 7 },
-        { id: 8, leaseholder_name: "Jennifer Garcia", unit: 8 },
-        { id: 9, leaseholder_name: "Christopher Martinez", unit: 9 },
-        { id: 10, leaseholder_name: "Amanda Rodriguez", unit: 10 },
-        { id: 11, leaseholder_name: "James Lopez", unit: 11 },
-        { id: 12, leaseholder_name: "Michelle Gonzalez", unit: 12 }
-      ]
-    },
-    "2": {
-      id: 2,
-      name: "XX Building",
-      address: "456 Example Road, Manchester, M1 1AA",
-      unit_count: 8,
-      created_at: new Date().toISOString(),
-      demo_ready: true,
-      units: [
-        { id: 13, unit_number: "Apartment A", building_id: 2 },
-        { id: 14, unit_number: "Apartment B", building_id: 2 },
-        { id: 15, unit_number: "Apartment C", building_id: 2 },
-        { id: 16, unit_number: "Apartment D", building_id: 2 },
-        { id: 17, unit_number: "Apartment E", building_id: 2 },
-        { id: 18, unit_number: "Apartment F", building_id: 2 },
-        { id: 19, unit_number: "Apartment G", building_id: 2 },
-        { id: 20, unit_number: "Apartment H", building_id: 2 }
-      ],
-      leases: [
-        { id: 13, leaseholder_name: "Thomas Moore", unit: 13 },
-        { id: 14, leaseholder_name: "Jessica Lee", unit: 14 },
-        { id: 15, leaseholder_name: "Daniel White", unit: 15 },
-        { id: 16, leaseholder_name: "Nicole Clark", unit: 16 },
-        { id: 17, leaseholder_name: "Kevin Hall", unit: 17 },
-        { id: 18, leaseholder_name: "Rachel Lewis", unit: 18 },
-        { id: 19, leaseholder_name: "Steven Walker", unit: 19 },
-        { id: 20, leaseholder_name: "Laura Allen", unit: 20 }
-      ]
-    },
-    "3": {
-      id: 3,
-      name: "Sample Complex",
-      address: "789 Demo Avenue, Birmingham, B1 1AA",
-      unit_count: 24,
-      created_at: new Date().toISOString(),
-      demo_ready: false,
-      units: [
-        { id: 21, unit_number: "Unit 1A", building_id: 3 },
-        { id: 22, unit_number: "Unit 1B", building_id: 3 },
-        { id: 23, unit_number: "Unit 2A", building_id: 3 },
-        { id: 24, unit_number: "Unit 2B", building_id: 3 },
-        { id: 25, unit_number: "Unit 3A", building_id: 3 },
-        { id: 26, unit_number: "Unit 3B", building_id: 3 },
-        { id: 27, unit_number: "Unit 4A", building_id: 3 },
-        { id: 28, unit_number: "Unit 4B", building_id: 3 },
-        { id: 29, unit_number: "Unit 5A", building_id: 3 },
-        { id: 30, unit_number: "Unit 5B", building_id: 3 },
-        { id: 31, unit_number: "Unit 6A", building_id: 3 },
-        { id: 32, unit_number: "Unit 6B", building_id: 3 },
-        { id: 33, unit_number: "Unit 7A", building_id: 3 },
-        { id: 34, unit_number: "Unit 7B", building_id: 3 },
-        { id: 35, unit_number: "Unit 8A", building_id: 3 },
-        { id: 36, unit_number: "Unit 8B", building_id: 3 },
-        { id: 37, unit_number: "Unit 9A", building_id: 3 },
-        { id: 38, unit_number: "Unit 9B", building_id: 3 },
-        { id: 39, unit_number: "Unit 10A", building_id: 3 },
-        { id: 40, unit_number: "Unit 10B", building_id: 3 },
-        { id: 41, unit_number: "Unit 11A", building_id: 3 },
-        { id: 42, unit_number: "Unit 11B", building_id: 3 },
-        { id: 43, unit_number: "Unit 12A", building_id: 3 },
-        { id: 44, unit_number: "Unit 12B", building_id: 3 }
-      ],
-      leases: [
-        { id: 21, leaseholder_name: "Mark Young", unit: 21 },
-        { id: 22, leaseholder_name: "Stephanie King", unit: 22 },
-        { id: 23, leaseholder_name: "Andrew Wright", unit: 23 },
-        { id: 24, leaseholder_name: "Melissa Green", unit: 24 },
-        { id: 25, leaseholder_name: "Ryan Baker", unit: 25 },
-        { id: 26, leaseholder_name: "Heather Adams", unit: 26 },
-        { id: 27, leaseholder_name: "Jason Nelson", unit: 27 },
-        { id: 28, leaseholder_name: "Amber Carter", unit: 28 },
-        { id: 29, leaseholder_name: "Eric Mitchell", unit: 29 },
-        { id: 30, leaseholder_name: "Danielle Perez", unit: 30 },
-        { id: 31, leaseholder_name: "Timothy Roberts", unit: 31 },
-        { id: 32, leaseholder_name: "Brittany Turner", unit: 32 },
-        { id: 33, leaseholder_name: "Nathan Phillips", unit: 33 },
-        { id: 34, leaseholder_name: "Megan Campbell", unit: 34 },
-        { id: 35, leaseholder_name: "Gregory Parker", unit: 35 },
-        { id: 36, leaseholder_name: "Christine Evans", unit: 36 },
-        { id: 37, leaseholder_name: "Brandon Edwards", unit: 37 },
-        { id: 38, leaseholder_name: "Samantha Collins", unit: 38 },
-        { id: 39, leaseholder_name: "Tyler Stewart", unit: 39 },
-        { id: 40, leaseholder_name: "Natalie Morris", unit: 40 },
-        { id: 41, leaseholder_name: "Kyle Rogers", unit: 41 },
-        { id: 42, leaseholder_name: "Vanessa Reed", unit: 42 },
-        { id: 43, leaseholder_name: "Jeffrey Cook", unit: 43 },
-        { id: 44, leaseholder_name: "Tiffany Morgan", unit: 44 }
-      ]
-    },
-    "4": {
-      id: 4,
-      name: "Ashwood House",
-      address: "Ashwood Lane, London, SW15 2AB",
-      unit_count: 16,
-      created_at: new Date().toISOString(),
-      demo_ready: true,
-      units: [
-        { id: 45, unit_number: "Flat 1", building_id: 4 },
-        { id: 46, unit_number: "Flat 2", building_id: 4 },
-        { id: 47, unit_number: "Flat 3", building_id: 4 },
-        { id: 48, unit_number: "Flat 4", building_id: 4 },
-        { id: 49, unit_number: "Flat 5", building_id: 4 },
-        { id: 50, unit_number: "Flat 6", building_id: 4 },
-        { id: 51, unit_number: "Flat 7", building_id: 4 },
-        { id: 52, unit_number: "Flat 8", building_id: 4 },
-        { id: 53, unit_number: "Flat 9", building_id: 4 },
-        { id: 54, unit_number: "Flat 10", building_id: 4 },
-        { id: 55, unit_number: "Flat 11", building_id: 4 },
-        { id: 56, unit_number: "Flat 12", building_id: 4 },
-        { id: 57, unit_number: "Flat 13", building_id: 4 },
-        { id: 58, unit_number: "Flat 14", building_id: 4 },
-        { id: 59, unit_number: "Flat 15", building_id: 4 },
-        { id: 60, unit_number: "Flat 16", building_id: 4 }
-      ],
-      leases: [
-        { id: 45, leaseholder_name: "Eleanor Oxley", unit: 45 },
-        { id: 46, leaseholder_name: "James Thompson", unit: 46 },
-        { id: 47, leaseholder_name: "Sarah Williams", unit: 47 },
-        { id: 48, leaseholder_name: "Michael Davis", unit: 48 },
-        { id: 49, leaseholder_name: "Emma Wilson", unit: 49 },
-        { id: 50, leaseholder_name: "David Brown", unit: 50 },
-        { id: 51, leaseholder_name: "Lisa Johnson", unit: 51 },
-        { id: 52, leaseholder_name: "Robert Miller", unit: 52 },
-        { id: 53, leaseholder_name: "Jennifer Garcia", unit: 53 },
-        { id: 54, leaseholder_name: "Christopher Martinez", unit: 54 },
-        { id: 55, leaseholder_name: "Amanda Rodriguez", unit: 55 },
-        { id: 56, leaseholder_name: "James Lopez", unit: 56 },
-        { id: 57, leaseholder_name: "Michelle Gonzalez", unit: 57 },
-        { id: 58, leaseholder_name: "Thomas Anderson", unit: 58 },
-        { id: 59, leaseholder_name: "Jessica Taylor", unit: 59 },
-        { id: 60, leaseholder_name: "Daniel Moore", unit: 60 }
-      ]
-    }
+  if (!session) {
+    redirect('/login')
   }
 
-  // Try to get building from database first, then fall back to example data
-  let building = null
-  let buildingError = null
+  // Fetch building data
+  const { data: building, error: buildingError } = await supabase
+    .from('buildings')
+    .select('*')
+    .eq('id', buildingId)
+    .single()
 
-  try {
-    const { data: dbBuilding, error } = await supabase
-      .from('buildings')
-      .select('*')
-      .eq('id', buildingId)
-      .single()
-    
-    building = dbBuilding
-    buildingError = error
-  } catch (error) {
-    buildingError = error
-  }
-
-  // If no building found in database, try example data
   if (buildingError || !building) {
-    building = exampleBuildings[buildingId as keyof typeof exampleBuildings]
-  }
-
-  if (!building) {
     redirect('/buildings')
   }
 
-  // Fetch recent emails for this building
-  const { data: recentEmails, error: emailsError } = await supabase
+  // Fetch building setup data
+  const { data: buildingSetup } = await supabase
+    .from('building_setup')
+    .select('*')
+    .eq('building_id', buildingId)
+    .single()
+
+  // Fetch compliance summary
+  const { data: complianceAssets } = await supabase
+    .from('building_compliance_assets')
+    .select(`
+      *,
+      compliance_assets (
+        name,
+        category
+      )
+    `)
+    .eq('building_id', buildingId)
+
+  // Fetch units and leaseholders
+  const { data: units } = await supabase
+    .from('units')
+    .select(`
+      *,
+      leaseholders (
+        id,
+        name,
+        email,
+        phone
+      )
+    `)
+    .eq('building_id', buildingId)
+    .order('unit_number')
+
+  // Fetch recent emails
+  const { data: recentEmails } = await supabase
     .from('incoming_emails')
+    .select('*')
+    .eq('building_id', buildingId)
+    .order('received_at', { ascending: false })
+    .limit(5)
+
+  // Fetch compliance documents
+  const { data: complianceDocs } = await supabase
+    .from('compliance_docs')
     .select('*')
     .eq('building_id', buildingId)
     .order('created_at', { ascending: false })
     .limit(5)
 
-  if (emailsError) {
-    console.error('Error fetching emails:', emailsError)
+  // Fetch building documents
+  const { data: buildingDocs } = await supabase
+    .from('building_documents')
+    .select('*')
+    .eq('building_id', buildingId)
+    .order('created_at', { ascending: false })
+    .limit(5)
+
+  // Fetch property events
+  const { data: events } = await supabase
+    .from('property_events')
+    .select('*')
+    .eq('building_id', buildingId)
+    .gte('start_time', new Date().toISOString())
+    .order('start_time', { ascending: true })
+    .limit(5)
+
+  // Fetch building todos
+  const { data: todos } = await supabase
+    .from('building_todos')
+    .select('*')
+    .eq('building_id', buildingId)
+    .order('due_date', { ascending: true })
+    .limit(10)
+
+  // Calculate compliance summary
+  const now = new Date()
+  const complianceSummary = {
+    total: complianceAssets?.length || 0,
+    compliant: complianceAssets?.filter(asset => asset.status === 'compliant').length || 0,
+    dueSoon: complianceAssets?.filter(asset => {
+      if (!asset.next_due_date) return false
+      const dueDate = new Date(asset.next_due_date)
+      const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+      return daysUntilDue <= 30 && daysUntilDue > 0
+    }).length || 0,
+    overdue: complianceAssets?.filter(asset => {
+      if (!asset.next_due_date) return false
+      const dueDate = new Date(asset.next_due_date)
+      return dueDate < now
+    }).length || 0
+  }
+
+  // Prepare data for the client component
+  const buildingData = {
+    building,
+    buildingSetup,
+    complianceSummary,
+    complianceAssets: complianceAssets || [],
+    units: units || [],
+    recentEmails: recentEmails || [],
+    complianceDocs: complianceDocs || [],
+    buildingDocs: buildingDocs || [],
+    events: events || [],
+    todos: todos || []
   }
 
   return (
@@ -248,15 +155,15 @@ export default async function BuildingDetailPage({
             Back to Buildings
           </Link>
           <div>
-            <h1 className="text-3xl font-bold text-[#0F5D5D] mb-2">{building.name}</h1>
-            <p className="text-gray-600">Building details and management</p>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {building.name} - Command Centre
+            </h1>
+            <p className="text-gray-600">{building.address}</p>
           </div>
         </div>
 
-        <BuildingDetailClient 
-          building={building} 
-          recentEmails={recentEmails || []}
-        />
+        {/* Building Command Centre Component */}
+        <BuildingCommandCentre buildingData={buildingData} />
       </div>
     </LayoutWithSidebar>
   )

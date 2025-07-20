@@ -1,371 +1,162 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import OpenAI from 'openai';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+import { NextResponse } from 'next/server'
 
-type SuggestedAction = {
-  type: 'todo';
-  title: string;
-  priority: 'High' | 'Medium' | 'Low';
-  due_date?: string | null;
-  description?: string;
-} | null;
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
-
-export async function POST(req: NextRequest) {
+export async function POST(request: Request) {
   try {
-    console.log("🤖 AI Assistant processing request...");
+    const supabase = createRouteHandlerClient({ cookies })
     
-    const body = await req.json();
-    const { prompt, buildingId, templateId, action } = body;
-
-    if (!prompt) {
-      return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
+    // Check authentication
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    console.log("✅ Valid request received:", { prompt, buildingId, templateId, action });
+    const body = await request.json()
+    const { building_id, prompt } = body
 
-    let contextData: Record<string, unknown> = {};
-    let templateData = null;
-
-    // 1. Load building data if buildingId provided
-    if (buildingId) {
-      const { data: building, error: buildingError } = await supabase
-        .from('buildings')
-        .select(`
-          *,
-          units (
-            id,
-            unit_number,
-            leaseholders (
-              id,
-              name,
-              email,
-              phone
-            )
-          )
-        `)
-        .eq('id', buildingId)
-        .single();
-
-      if (!buildingError && building) {
-        contextData = {
-          ...contextData,
-          building_name: building.name,
-          building_address: building.address,
-          total_units: building.units?.length || 0,
-          leaseholders: building.units?.map((unit: Record<string, unknown>) => ({
-            unit_number: unit.unit_number,
-            leaseholders: unit.leaseholders
-          })) || []
-        };
-      }
+    if (!building_id) {
+      return NextResponse.json({ error: 'Building ID is required' }, { status: 400 })
     }
 
-    // 2. Load template data if templateId provided
-    if (templateId) {
-      const { data: template, error: templateError } = await supabase
-        .from('templates')
-        .select('*')
-        .eq('id', templateId)
-        .single();
+    // Fetch building data for context
+    const { data: building } = await supabase
+      .from('buildings')
+      .select('*')
+      .eq('id', building_id)
+      .single()
 
-      if (!templateError && template) {
-        templateData = template;
-        contextData = {
-          ...contextData,
-          template_name: template.name,
-          template_type: template.type,
-          template_content: template.content_text,
-          available_placeholders: template.placeholders
-        };
-      }
+    // Fetch compliance data
+    const { data: complianceAssets } = await supabase
+      .from('building_compliance_assets')
+      .select(`
+        *,
+        compliance_assets (
+          name,
+          category
+        )
+      `)
+      .eq('building_id', building_id)
+
+    // Fetch recent tasks
+    const { data: tasks } = await supabase
+      .from('building_todos')
+      .select('*')
+      .eq('building_id', building_id)
+      .order('due_date', { ascending: true })
+      .limit(10)
+
+    // Fetch recent emails
+    const { data: emails } = await supabase
+      .from('incoming_emails')
+      .select('*')
+      .eq('building_id', building_id)
+      .order('received_at', { ascending: false })
+      .limit(5)
+
+    // Calculate compliance summary
+    const now = new Date()
+    const complianceSummary = {
+      total: complianceAssets?.length || 0,
+      compliant: complianceAssets?.filter(asset => asset.status === 'compliant').length || 0,
+      dueSoon: complianceAssets?.filter(asset => {
+        if (!asset.next_due_date) return false
+        const dueDate = new Date(asset.next_due_date)
+        const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+        return daysUntilDue <= 30 && daysUntilDue > 0
+      }).length || 0,
+      overdue: complianceAssets?.filter(asset => {
+        if (!asset.next_due_date) return false
+        const dueDate = new Date(asset.next_due_date)
+        return dueDate < now
+      }).length || 0
     }
 
-    // 3. If no specific template provided, search for relevant templates using semantic search
-    if (!templateId && action !== 'create_new') {
-      // First try semantic search if embeddings are available
-      let templates: Record<string, unknown>[] = [];
-      
-      try {
-        // Generate embedding for the search query
-        const embeddingResponse = await openai.embeddings.create({
-          model: "text-embedding-3-small",
-          input: prompt,
-          encoding_format: "float"
-        });
-
-        const queryEmbedding = embeddingResponse.data[0].embedding;
-
-        if (queryEmbedding) {
-          // Try vector similarity search
-          const { data: vectorResults, error: vectorError } = await supabase.rpc(
-            'match_templates',
-            {
-              query_embedding: queryEmbedding,
-              match_threshold: 0.7,
-              match_count: 5
-            }
-          );
-
-          if (!vectorError && vectorResults && vectorResults.length > 0) {
-            templates = vectorResults;
-          }
-        }
-      } catch (embeddingError) {
-        console.warn('Semantic search failed, falling back to text search:', embeddingError);
-      }
-
-      // Fallback to text search if semantic search didn't work
-      if (templates.length === 0) {
-        const { data: textResults, error: searchError } = await supabase
-          .from('templates')
-          .select('*')
-          .or(`content_text.ilike.%${prompt.split(' ').slice(0, 3).join(' ')}%,name.ilike.%${prompt.split(' ').slice(0, 3).join(' ')}%`)
-          .limit(5);
-
-        if (!searchError && textResults) {
-          templates = textResults;
-        }
-      }
-
-      if (templates.length > 0) {
-        contextData = {
-          ...contextData,
-          relevant_templates: templates.map((t: Record<string, unknown>) => ({
-            id: t.id,
-            name: t.name,
-            type: t.type,
-            content: t.content_text,
-            placeholders: t.placeholders,
-            similarity_score: t.similarity_score || null
-          }))
-        };
-      }
+    // Prepare context for AI
+    const context = {
+      building: building,
+      compliance: {
+        summary: complianceSummary,
+        assets: complianceAssets || []
+      },
+      tasks: tasks || [],
+      emails: emails || []
     }
 
-    // 4. Build the AI prompt based on the action
-    let systemPrompt = '';
-    let userPrompt = '';
+    // For now, return a structured summary
+    // In a real implementation, you would send this to an AI service
+    const summary = generateBuildingSummary(context, prompt)
 
-    // Check if this is a Section 20 threshold query
-    const isSection20Query = prompt.toLowerCase().includes('section 20') || 
-                            prompt.toLowerCase().includes('s20') ||
-                            prompt.toLowerCase().includes('threshold') ||
-                            prompt.toLowerCase().includes('consultation') ||
-                            prompt.toLowerCase().includes('apportionment');
-
-    if (isSection20Query) {
-      systemPrompt = `You are a property management expert specializing in Section 20 consultation requirements for UK leasehold properties. You can calculate thresholds and provide guidance on consultation requirements. You can also analyze Excel data with multiple leaseholders.`;
-      
-      userPrompt = `The user is asking about Section 20 consultation thresholds: "${prompt}"
-
-Building Context:
-${JSON.stringify(contextData, null, 2)}
-
-Please:
-1. If apportionment data is provided (single or multiple leaseholders), calculate the Section 20 threshold using the correct formula
-2. For residential-only buildings: threshold = 250 / (highest_apportionment / 100)
-3. For mixed-use buildings: threshold = (250 / (highest_apportionment / 100)) × (residential_pct / 100)
-4. If multiple leaseholders are provided, analyze each one and identify which trigger consultation
-5. Provide clear guidance on whether consultation is required
-6. Suggest next steps if consultation is needed
-7. If Excel data is mentioned, suggest using the bulk upload feature at /tools/section-20-threshold
-
-If no apportionment data is provided, ask the user to provide:
-- Highest residential apportionment percentage, OR
-- Upload an Excel file with columns: Unit, Leaseholder Name, Apportionment %
-
-For bulk analysis, explain that they can:
-- Download a template from the calculator page
-- Upload their Excel file for instant analysis
-- Get individual thresholds for each leaseholder
-- See which units require consultation
-- Download results as Excel
-
-Format your response clearly with calculations, practical advice, and next steps.`;
-
-    } else {
-      switch (action) {
-        case 'rewrite':
-          if (!templateData) {
-            return NextResponse.json({ error: 'Template ID required for rewrite action' }, { status: 400 });
-          }
-          systemPrompt = `You are a professional block manager drafting legally compliant letters and notices for UK leasehold properties. You have access to building data and template content.`;
-          userPrompt = `Please rewrite the following template content to address this specific request: "${prompt}"
-
-Template Content:
-${templateData.content_text}
-
-Available Placeholders: ${templateData.placeholders?.join(', ')}
-
-Building Context:
-${JSON.stringify(contextData, null, 2)}
-
-Please provide a rewritten version that:
-1. Maintains the same structure and placeholders
-2. Addresses the specific request
-3. Remains legally compliant
-4. Is professional and clear
-
-Return only the rewritten content with placeholders intact.`;
-
-          break;
-
-        case 'search':
-          systemPrompt = `You are an AI assistant helping to find the most relevant communication templates for UK leasehold block management.`;
-          userPrompt = `Based on this request: "${prompt}"
-
-Available Templates:
-${contextData.relevant_templates ? JSON.stringify(contextData.relevant_templates, null, 2) : 'No templates found'}
-
-Building Context:
-${JSON.stringify(contextData, null, 2)}
-
-Please provide:
-1. The best matching template(s) for this request
-2. Why each template is suitable
-3. Any modifications needed
-4. A direct link to the template (format: /communications/templates/[template_id])
-5. Suggested placeholder values based on the building context
-
-Format your response as a structured recommendation.`;
-
-          break;
-
-        case 'create_new':
-          systemPrompt = `You are a professional block manager creating new communication templates for UK leasehold properties.`;
-          userPrompt = `Create a new template based on this request: "${prompt}"
-
-Building Context:
-${JSON.stringify(contextData, null, 2)}
-
-Please create a professional template that:
-1. Uses appropriate placeholders in {{placeholder_name}} format
-2. Is legally compliant for UK leasehold
-3. Includes all necessary sections
-4. Is clear and professional
-5. Suggests a template name and type
-
-Return the template content with placeholders and metadata.`;
-
-          break;
-
-        default:
-          systemPrompt = `You are a professional block manager assistant helping with UK leasehold communications.`;
-          userPrompt = `Request: "${prompt}"
-
-Available Context:
-${JSON.stringify(contextData, null, 2)}
-
-Please provide helpful guidance on how to handle this request, including:
-1. Recommended templates to use (with links)
-2. Key information needed
-3. Legal considerations
-4. Best practices for UK leasehold management
-5. Next steps for document generation`;
-
-          break;
-      }
-    }
-
-    // 5. Call OpenAI with enhanced prompt for smart actions
-    const enhancedSystemPrompt = `${systemPrompt}
-
-IMPORTANT: After providing your main response, analyze if the user's request suggests creating a task or action item. If so, include a JSON object with suggested_action in your response.
-
-For task suggestions, consider:
-- Maintenance requests
-- Inspections needed
-- Follow-up actions
-- Deadlines mentioned
-- Compliance requirements
-- Safety checks
-
-If a task is suggested, format your response like this:
-[Your main response text]
-
-SUGGESTED_ACTION:
-{
-  "type": "todo",
-  "title": "Clear, actionable task title",
-  "priority": "High|Medium|Low",
-  "due_date": "YYYY-MM-DD" (if specific date mentioned, otherwise null),
-  "description": "Brief description of the task"
+    return NextResponse.json({ 
+      success: true, 
+      summary,
+      context 
+    })
+  } catch (error) {
+    console.error('Error in ask-ai API:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 }
 
-If no task is suggested, don't include the SUGGESTED_ACTION section.`;
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        { role: "system", content: enhancedSystemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      temperature: 0.7,
-      max_tokens: 2000
-    });
-
-    const aiResponse = completion.choices[0]?.message?.content;
-
-    if (!aiResponse) {
-      throw new Error('No response from AI');
+function generateBuildingSummary(context: any, prompt?: string) {
+  const { building, compliance, tasks, emails } = context
+  
+  let summary = `# Building Summary: ${building?.name}\n\n`
+  
+  if (prompt?.toLowerCase().includes('compliance')) {
+    summary += `## Compliance Status\n`
+    summary += `- Total items: ${compliance.summary.total}\n`
+    summary += `- Compliant: ${compliance.summary.compliant}\n`
+    summary += `- Due soon: ${compliance.summary.dueSoon}\n`
+    summary += `- Overdue: ${compliance.summary.overdue}\n\n`
+    
+    if (compliance.summary.overdue > 0) {
+      summary += `⚠️ **Action Required**: ${compliance.summary.overdue} compliance items are overdue.\n\n`
     }
-
-    console.log("✅ AI response generated successfully");
-
-    // Parse the response to extract suggested_action if present
-    let suggestedAction: SuggestedAction = null;
-    let cleanResponse = aiResponse;
-
-    // Check if there's a SUGGESTED_ACTION section
-    const suggestedActionMatch = aiResponse.match(/SUGGESTED_ACTION:\s*(\{[\s\S]*?\})/);
-    if (suggestedActionMatch) {
-      try {
-        suggestedAction = JSON.parse(suggestedActionMatch[1]);
-        // Remove the SUGGESTED_ACTION section from the main response
-        cleanResponse = aiResponse.replace(/SUGGESTED_ACTION:\s*\{[\s\S]*?\}/, '').trim();
-      } catch (parseError) {
-        console.warn('Failed to parse suggested_action JSON:', parseError);
-      }
-    }
-
-    // Validate suggested_action structure
-    if (suggestedAction) {
-      const requiredFields = ['type', 'title'] as const;
-      const hasRequiredFields = requiredFields.every(field => 
-        suggestedAction && field in suggestedAction && suggestedAction[field]
-      );
-      
-      if (!hasRequiredFields || suggestedAction.type !== 'todo') {
-        console.warn('Invalid suggested_action structure, ignoring:', suggestedAction);
-        suggestedAction = null;
-      }
-    }
-
-    return NextResponse.json({
-      success: true,
-      response: cleanResponse,
-      suggested_action: suggestedAction,
-      context: contextData,
-      action: action,
-      templateId: templateId,
-      buildingId: buildingId,
-      suggestedTemplates: contextData.relevant_templates || []
-    });
-
-  } catch (error) {
-    console.error('❌ AI Assistant error:', error);
-    return NextResponse.json({ 
-      error: 'Failed to process AI request',
-      details: process.env.NODE_ENV === 'development' ? error instanceof Error ? error.message : 'Unknown error' : undefined
-    }, { status: 500 });
   }
+  
+  if (prompt?.toLowerCase().includes('task') || tasks.length > 0) {
+    summary += `## Recent Tasks\n`
+    const incompleteTasks = tasks.filter((task: any) => !task.is_complete)
+    const overdueTasks = incompleteTasks.filter((task: any) => {
+      if (!task.due_date) return false
+      return new Date(task.due_date) < new Date()
+    })
+    
+    summary += `- Incomplete tasks: ${incompleteTasks.length}\n`
+    summary += `- Overdue tasks: ${overdueTasks.length}\n`
+    
+    if (overdueTasks.length > 0) {
+      summary += `\n**Overdue Tasks:**\n`
+      overdueTasks.slice(0, 3).forEach((task: any) => {
+        summary += `- ${task.title} (${task.priority} priority)\n`
+      })
+    }
+    summary += `\n`
+  }
+  
+  if (prompt?.toLowerCase().includes('email') || emails.length > 0) {
+    summary += `## Recent Communications\n`
+    summary += `- Recent emails: ${emails.length}\n`
+    const unreadEmails = emails.filter((email: any) => email.unread)
+    if (unreadEmails.length > 0) {
+      summary += `- Unread emails: ${unreadEmails.length}\n`
+    }
+    summary += `\n`
+  }
+  
+  if (prompt?.toLowerCase().includes('draft')) {
+    summary += `## Suggested Actions\n`
+    if (compliance.summary.overdue > 0) {
+      summary += `1. Address overdue compliance items immediately\n`
+    }
+    if (tasks.filter((t: any) => !t.is_complete && t.priority === 'High').length > 0) {
+      summary += `2. Prioritize high-priority tasks\n`
+    }
+    if (emails.filter((e: any) => e.unread).length > 0) {
+      summary += `3. Review unread emails for urgent matters\n`
+    }
+  }
+  
+  return summary
 } 
