@@ -14,7 +14,6 @@ interface Building {
   unit_count: number | null
   created_at: string | null
   units?: any[]
-  leases?: any[]
 }
 
 export default async function BuildingsPage() {
@@ -37,7 +36,7 @@ export default async function BuildingsPage() {
   console.log('Simple buildings query result:', simpleBuildings)
   console.log('Simple buildings error:', simpleError)
 
-  // Then try the complex query with units and leases
+  // Then try the complex query with units
   const { data: buildings, error } = await supabase
     .from('buildings')
     .select(`
@@ -50,11 +49,6 @@ export default async function BuildingsPage() {
         id,
         unit_number,
         building_id
-      ),
-      leases (
-        id,
-        leaseholder_name,
-        unit
       )
     `)
     .order('name')
@@ -104,32 +98,6 @@ export default async function BuildingsPage() {
           { id: 22, unit_number: "Flat 22", building_id: 1 },
           { id: 23, unit_number: "Flat 23", building_id: 1 },
           { id: 24, unit_number: "Flat 24", building_id: 1 }
-        ],
-        leases: [
-          { id: 1, leaseholder_name: "Mrs. Sarah Patel", unit: 1 },
-          { id: 2, leaseholder_name: "Mr. David Thompson", unit: 2 },
-          { id: 3, leaseholder_name: "Ms. Emma Williams", unit: 3 },
-          { id: 4, leaseholder_name: "Dr. Michael Brown", unit: 4 },
-          { id: 5, leaseholder_name: "Mrs. Lisa Anderson", unit: 5 },
-          { id: 6, leaseholder_name: "Mr. James Wilson", unit: 6 },
-          { id: 7, leaseholder_name: "Ms. Rachel Davis", unit: 7 },
-          { id: 8, leaseholder_name: "Mr. Christopher Garcia", unit: 8 },
-          { id: 9, leaseholder_name: "Mrs. Jennifer Martinez", unit: 9 },
-          { id: 10, leaseholder_name: "Mr. Robert Johnson", unit: 10 },
-          { id: 11, leaseholder_name: "Ms. Amanda Taylor", unit: 11 },
-          { id: 12, leaseholder_name: "Mr. Kevin Lee", unit: 12 },
-          { id: 13, leaseholder_name: "Mrs. Nicole White", unit: 13 },
-          { id: 14, leaseholder_name: "Mr. Daniel Clark", unit: 14 },
-          { id: 15, leaseholder_name: "Ms. Stephanie Lewis", unit: 15 },
-          { id: 16, leaseholder_name: "Mr. Andrew Walker", unit: 16 },
-          { id: 17, leaseholder_name: "Mrs. Melissa Hall", unit: 17 },
-          { id: 18, leaseholder_name: "Mr. Ryan Allen", unit: 18 },
-          { id: 19, leaseholder_name: "Ms. Heather Young", unit: 19 },
-          { id: 20, leaseholder_name: "Mr. Jason King", unit: 20 },
-          { id: 21, leaseholder_name: "Mrs. Amber Wright", unit: 21 },
-          { id: 22, leaseholder_name: "Mr. Eric Green", unit: 22 },
-          { id: 23, leaseholder_name: "Ms. Danielle Baker", unit: 23 },
-          { id: 24, leaseholder_name: "Mr. Timothy Adams", unit: 24 }
         ]
       },
       {
@@ -156,24 +124,6 @@ export default async function BuildingsPage() {
           { id: 38, unit_number: "Apartment N", building_id: 2 },
           { id: 39, unit_number: "Apartment O", building_id: 2 },
           { id: 40, unit_number: "Apartment P", building_id: 2 }
-        ],
-        leases: [
-          { id: 25, leaseholder_name: "Mr. Thomas Moore", unit: 25 },
-          { id: 26, leaseholder_name: "Ms. Jessica Lee", unit: 26 },
-          { id: 27, leaseholder_name: "Mr. Steven Rogers", unit: 27 },
-          { id: 28, leaseholder_name: "Mrs. Laura Reed", unit: 28 },
-          { id: 29, leaseholder_name: "Mr. Mark Cook", unit: 29 },
-          { id: 30, leaseholder_name: "Ms. Vanessa Morgan", unit: 30 },
-          { id: 31, leaseholder_name: "Mr. Jeffrey Bell", unit: 31 },
-          { id: 32, leaseholder_name: "Mrs. Tiffany Murphy", unit: 32 },
-          { id: 33, leaseholder_name: "Mr. Kyle Bailey", unit: 33 },
-          { id: 34, leaseholder_name: "Ms. Natalie Rivera", unit: 34 },
-          { id: 35, leaseholder_name: "Mr. Brandon Cooper", unit: 35 },
-          { id: 36, leaseholder_name: "Mrs. Samantha Richardson", unit: 36 },
-          { id: 37, leaseholder_name: "Mr. Tyler Cox", unit: 37 },
-          { id: 38, leaseholder_name: "Ms. Christine Howard", unit: 38 },
-          { id: 39, leaseholder_name: "Mr. Gregory Ward", unit: 39 },
-          { id: 40, leaseholder_name: "Mrs. Megan Torres", unit: 40 }
         ]
       },
       {
@@ -216,40 +166,6 @@ export default async function BuildingsPage() {
           { id: 70, unit_number: "Unit 15B", building_id: 3 },
           { id: 71, unit_number: "Unit 16A", building_id: 3 },
           { id: 72, unit_number: "Unit 16B", building_id: 3 }
-        ],
-        leases: [
-          { id: 41, leaseholder_name: "Mr. Mark Peterson", unit: 41 },
-          { id: 42, leaseholder_name: "Ms. Stephanie Gray", unit: 42 },
-          { id: 43, leaseholder_name: "Mr. Andrew James", unit: 43 },
-          { id: 44, leaseholder_name: "Mrs. Melissa Watson", unit: 44 },
-          { id: 45, leaseholder_name: "Mr. Ryan Brooks", unit: 45 },
-          { id: 46, leaseholder_name: "Ms. Heather Kelly", unit: 46 },
-          { id: 47, leaseholder_name: "Mr. Jason Sanders", unit: 47 },
-          { id: 48, leaseholder_name: "Mrs. Amber Price", unit: 48 },
-          { id: 49, leaseholder_name: "Mr. Eric Bennett", unit: 49 },
-          { id: 50, leaseholder_name: "Ms. Danielle Wood", unit: 50 },
-          { id: 51, leaseholder_name: "Mr. Timothy Barnes", unit: 51 },
-          { id: 52, leaseholder_name: "Mrs. Brittany Ross", unit: 52 },
-          { id: 53, leaseholder_name: "Mr. Nathan Henderson", unit: 53 },
-          { id: 54, leaseholder_name: "Ms. Megan Coleman", unit: 54 },
-          { id: 55, leaseholder_name: "Mr. Gregory Jenkins", unit: 55 },
-          { id: 56, leaseholder_name: "Mrs. Christine Perry", unit: 56 },
-          { id: 57, leaseholder_name: "Mr. Brandon Powell", unit: 57 },
-          { id: 58, leaseholder_name: "Ms. Samantha Long", unit: 58 },
-          { id: 59, leaseholder_name: "Mr. Tyler Patterson", unit: 59 },
-          { id: 60, leaseholder_name: "Mrs. Natalie Hughes", unit: 60 },
-          { id: 61, leaseholder_name: "Mr. Kyle Flores", unit: 61 },
-          { id: 62, leaseholder_name: "Ms. Vanessa Butler", unit: 62 },
-          { id: 63, leaseholder_name: "Mr. Jeffrey Simmons", unit: 63 },
-          { id: 64, leaseholder_name: "Mrs. Tiffany Foster", unit: 64 },
-          { id: 65, leaseholder_name: "Mr. Kyle Gonzales", unit: 65 },
-          { id: 66, leaseholder_name: "Ms. Natalie Bryant", unit: 66 },
-          { id: 67, leaseholder_name: "Mr. Brandon Alexander", unit: 67 },
-          { id: 68, leaseholder_name: "Mrs. Samantha Russell", unit: 68 },
-          { id: 69, leaseholder_name: "Mr. Tyler Griffin", unit: 69 },
-          { id: 70, leaseholder_name: "Ms. Christine Diaz", unit: 70 },
-          { id: 71, leaseholder_name: "Mr. Gregory Hayes", unit: 71 },
-          { id: 72, leaseholder_name: "Mrs. Megan Myers", unit: 72 }
         ]
       }
     ]
