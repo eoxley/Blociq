@@ -81,6 +81,19 @@ export default async function BuildingsPage() {
     // Use simple buildings if complex query fails, or example data for demonstration
     finalBuildings = buildings || simpleBuildings || []
     
+    // Remove duplicate buildings by name (keep the first one)
+    const uniqueBuildings = finalBuildings.reduce((acc: Building[], building) => {
+      const existingBuilding = acc.find(b => b.name === building.name)
+      if (!existingBuilding) {
+        acc.push(building)
+      } else {
+        console.log(`🔄 Removing duplicate building: ${building.name} (ID: ${building.id})`)
+      }
+      return acc
+    }, [])
+    
+    finalBuildings = uniqueBuildings
+    
   } catch (error) {
     console.error('Unexpected error in buildings page:', error)
     finalBuildings = []
