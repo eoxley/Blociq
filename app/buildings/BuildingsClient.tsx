@@ -16,13 +16,11 @@ import {
   Grid,
   List,
   Filter,
-  Home,
   User,
   Mail,
   Phone,
   Eye,
-  Settings,
-  FileText
+  Settings
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -89,8 +87,7 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
     }
   })
 
-  // Calculate building stats
-  const totalUnits = buildings.reduce((sum, building) => sum + (building.unit_count || 0), 0)
+
 
   if (buildings.length === 0) {
     return (
@@ -119,40 +116,9 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
 
   return (
     <div className="space-y-6">
-      {/* Enhanced Stats Bar */}
+      {/* Enhanced Controls */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-8">
-            <div className="flex items-center space-x-3">
-              <div className="bg-gradient-to-br from-teal-500 to-blue-600 rounded-lg p-3">
-                <Building2 className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500 font-medium">Buildings</p>
-                <p className="text-3xl font-bold text-gray-900">{buildings.length}</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg p-3">
-                <Home className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500 font-medium">Total Units</p>
-                <p className="text-3xl font-bold text-gray-900">{totalUnits}</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg p-3">
-                <FileText className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500 font-medium">Documents</p>
-                <p className="text-3xl font-bold text-gray-900">24</p>
-              </div>
-            </div>
-          </div>
-          
-          {/* Enhanced Controls */}
           <div className="flex items-center space-x-4">
             <select
               value={sortBy}
