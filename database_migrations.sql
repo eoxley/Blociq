@@ -690,14 +690,7 @@ CREATE TABLE IF NOT EXISTS property_events (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 13. Insert sample property events
-INSERT INTO property_events (building_id, title, description, start_time, end_time, event_type, category) VALUES
-(1, 'Annual General Meeting', 'RMC Annual General Meeting for all leaseholders', '2024-03-15 18:00:00', '2024-03-15 20:00:00', 'Meeting', 'RMC'),
-(1, 'Fire Safety Inspection', 'Annual fire safety inspection by qualified inspector', '2024-03-20 09:00:00', '2024-03-20 17:00:00', 'Inspection', 'Compliance'),
-(1, 'Window Replacement Project', 'Replacement of all windows in the building', '2024-04-01 08:00:00', '2024-04-30 17:00:00', 'Maintenance', 'Major Works'),
-(1, 'Service Charge Review', 'Annual service charge review and budget planning', '2024-02-28 14:00:00', '2024-02-28 16:00:00', 'Meeting', 'Financial'),
-(1, 'Building Insurance Renewal', 'Annual building insurance renewal process', '2024-01-15 10:00:00', '2024-01-15 12:00:00', 'Administrative', 'Insurance')
-ON CONFLICT DO NOTHING;
+-- 13. Property events table created (no dummy data inserted)
 
 -- 14. Create communications table
 CREATE TABLE IF NOT EXISTS communications (
