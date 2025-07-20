@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,54 +12,135 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // For now, we'll use a placeholder implementation
-    // In a full implementation, you would:
-    // 1. Store user's Microsoft Graph tokens in a database
-    // 2. Handle token refresh
-    // 3. Make actual API calls to Microsoft Graph
+    const cookieStore = await cookies();
+    const accessToken = cookieStore.get('outlook_access_token')?.value;
+    const refreshToken = cookieStore.get('outlook_refresh_token')?.value;
 
-    // Create the calendar event data structure
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: 'Outlook not connected. Please connect your Outlook account first.' },
+        { status: 400 }
+      );
+    }
+
+    // Create the calendar event
     const eventDate = new Date(date);
     const startTime = new Date(eventDate);
     startTime.setHours(10, 0, 0, 0); // 10:00 AM
     const endTime = new Date(startTime);
     endTime.setMinutes(endTime.getMinutes() + 30); // 30 minutes duration
 
-    // Mock successful response for now
-    const mockEventData = {
-      id: `event_${Date.now()}`,
-      subject: `${title} – ${building}`,
-      start: {
-        dateTime: startTime.toISOString(),
-        timeZone: 'Europe/London',
+    const calendarResponse = await fetch('https://graph.microsoft.com/v1.0/me/events', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
       },
-      end: {
-        dateTime: endTime.toISOString(),
-        timeZone: 'Europe/London',
-      },
-      body: {
-        contentType: 'HTML',
-        content: 'Auto-generated from BlocIQ AI Assistant',
-      },
-    };
+      body: JSON.stringify({
+        subject: `${title} – ${building}`,
+        start: {
+          dateTime: startTime.toISOString(),
+          timeZone: 'Europe/London',
+        },
+        end: {
+          dateTime: endTime.toISOString(),
+          timeZone: 'Europe/London',
+        },
+        body: {
+          contentType: 'HTML',
+          content: 'Auto-generated from BlocIQ AI Assistant',
+        },
+        reminderMinutesBeforeStart: 15, // 15 minutes reminder
+      }),
+    });
 
-    // TODO: Implement actual Microsoft Graph API call
-    // const calendarResponse = await fetch('https://graph.microsoft.com/v1.0/me/events', {
-    //   method: 'POST',
-    //   headers: {
-    //     'Authorization': `Bearer ${accessToken}`,
-    //     'Content-Type': 'application/json',
-    //   },
-    //   body: JSON.stringify(mockEventData),
-    // });
+    if (!calendarResponse.ok) {
+      const errorData = await calendarResponse.json();
+      console.error('Microsoft Graph API error:', errorData);
+      
+      // If token is expired and we have a refresh token, try to refresh
+      if (calendarResponse.status === 401 && refreshToken) {
+        const refreshResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            client_id: process.env.OUTLOOK_CLIENT_ID!,
+            client_secret: process.env.OUTLOOK_CLIENT_SECRET!,
+            grant_type: 'refresh_token',
+            refresh_token: refreshToken,
+          }),
+        });
 
-    console.log('Calendar event would be created:', mockEventData);
+        if (refreshResponse.ok) {
+          const refreshData = await refreshResponse.json();
+          
+          // Update cookies with new tokens
+          cookieStore.set('outlook_access_token', refreshData.access_token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: refreshData.expires_in
+          });
+
+          if (refreshData.refresh_token) {
+            cookieStore.set('outlook_refresh_token', refreshData.refresh_token, {
+              httpOnly: true,
+              secure: process.env.NODE_ENV === 'production',
+              sameSite: 'lax',
+              maxAge: 30 * 24 * 60 * 60
+            });
+          }
+
+          // Retry the calendar request with new token
+          const retryResponse = await fetch('https://graph.microsoft.com/v1.0/me/events', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${refreshData.access_token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              subject: `${title} – ${building}`,
+              start: {
+                dateTime: startTime.toISOString(),
+                timeZone: 'Europe/London',
+              },
+              end: {
+                dateTime: endTime.toISOString(),
+                timeZone: 'Europe/London',
+              },
+              body: {
+                contentType: 'HTML',
+                content: 'Auto-generated from BlocIQ AI Assistant',
+              },
+              reminderMinutesBeforeStart: 15,
+            }),
+          });
+
+          if (retryResponse.ok) {
+            const eventData = await retryResponse.json();
+            return NextResponse.json({
+              success: true,
+              event: eventData,
+              message: 'Event added to Outlook calendar successfully',
+            });
+          }
+        }
+      }
+      
+      return NextResponse.json(
+        { error: 'Failed to create calendar event' },
+        { status: 500 }
+      );
+    }
+
+    const eventData = await calendarResponse.json();
 
     return NextResponse.json({
       success: true,
-      event: mockEventData,
-      message: 'Event added to Outlook calendar successfully (mock implementation)',
-      note: 'This is a mock implementation. Full Microsoft Graph integration requires user token storage and management.',
+      event: eventData,
+      message: 'Event added to Outlook calendar successfully',
     });
 
   } catch (error) {

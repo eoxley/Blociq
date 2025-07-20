@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createClient } from "@supabase/supabase-js";
+import OutlookConnectButton from "@/components/OutlookConnectButton";
 
 type Email = {
   message_id: string;
@@ -254,6 +255,11 @@ export default function InboxInner() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Outlook Integration */}
+      <div className="mb-8">
+        <OutlookConnectButton />
       </div>
 
       {/* Controls */}
