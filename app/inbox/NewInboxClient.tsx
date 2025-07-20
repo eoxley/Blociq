@@ -12,6 +12,7 @@ import {
   Inbox as InboxIcon,
   CheckCircle,
   Folder,
+  Plus,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -20,6 +21,7 @@ import { Badge } from '@/components/ui/badge'
 import EmailListItem from './components/EmailListItem'
 import EmailDetail from './components/EmailDetail'
 import AIActionBar from './components/AIActionBar'
+import ComposeEmailModal from './components/ComposeEmailModal'
 import { toast } from 'sonner'
 
 interface Email {
@@ -63,6 +65,7 @@ export default function NewInboxClient({
   const [lastSync, setLastSync] = useState<string | null>(lastSyncTime)
   const [buildings, setBuildings] = useState<Building[]>([])
   const [loadingEmails, setLoadingEmails] = useState(false)
+  const [isComposeModalOpen, setIsComposeModalOpen] = useState(false)
 
   // Fetch buildings for sidebar
   useEffect(() => {
@@ -228,6 +231,13 @@ export default function NewInboxClient({
         <div className="border-b bg-white px-6 py-4 flex items-center gap-4">
           <h1 className="text-2xl font-bold text-gray-900">Inbox</h1>
           <div className="flex-1" />
+          <Button
+            onClick={() => setIsComposeModalOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            New Email
+          </Button>
           <div className="relative max-w-md flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
@@ -303,6 +313,16 @@ export default function NewInboxClient({
           </div>
         </div>
       </div>
+
+      {/* Compose Email Modal */}
+      <ComposeEmailModal
+        isOpen={isComposeModalOpen}
+        onClose={() => setIsComposeModalOpen(false)}
+        onEmailSent={() => {
+          // Optionally refresh the inbox after sending
+          setFilter('inbox')
+        }}
+      />
     </div>
   )
 } 
