@@ -9,17 +9,25 @@ import {
   CheckCircle, 
   XCircle, 
   Loader2,
-  ExternalLink
+  ExternalLink,
+  RefreshCw,
+  Mail
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 interface OutlookConnectButtonProps {
   className?: string;
+  onSyncComplete?: () => void;
 }
 
-export default function OutlookConnectButton({ className = "" }: OutlookConnectButtonProps) {
+export default function OutlookConnectButton({ 
+  className = "", 
+  onSyncComplete 
+}: OutlookConnectButtonProps) {
   const [isConnecting, setIsConnecting] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connected' | 'checking'>('checking')
+  const [syncStatus, setSyncStatus] = useState<string>('')
   const router = useRouter()
 
   // Check connection status on mount
@@ -67,6 +75,44 @@ export default function OutlookConnectButton({ className = "" }: OutlookConnectB
     }
   }
 
+  const handleSyncInbox = async () => {
+    setIsSyncing(true)
+    setSyncStatus('syncing')
+    
+    try {
+      const response = await fetch('/api/sync-outlook-inbox', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setSyncStatus('success')
+        setTimeout(() => setSyncStatus(''), 3000)
+        
+        // Call the callback to refresh the inbox
+        if (onSyncComplete) {
+          onSyncComplete()
+        }
+        
+        console.log('Sync completed:', data)
+      } else {
+        const errorData = await response.json()
+        setSyncStatus('error')
+        setTimeout(() => setSyncStatus(''), 3000)
+        console.error('Sync failed:', errorData)
+      }
+    } catch (error) {
+      console.error('Error syncing inbox:', error)
+      setSyncStatus('error')
+      setTimeout(() => setSyncStatus(''), 3000)
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   const getStatusIcon = () => {
     switch (connectionStatus) {
       case 'connected':
@@ -100,6 +146,19 @@ export default function OutlookConnectButton({ className = "" }: OutlookConnectB
     }
   }
 
+  const getSyncStatusText = () => {
+    switch (syncStatus) {
+      case 'syncing':
+        return 'Syncing...'
+      case 'success':
+        return '✓ Synced'
+      case 'error':
+        return '✗ Error'
+      default:
+        return 'Sync Inbox'
+    }
+  }
+
   return (
     <Card className={className}>
       <CardHeader className="pb-3">
@@ -118,10 +177,27 @@ export default function OutlookConnectButton({ className = "" }: OutlookConnectB
         </div>
 
         {connectionStatus === 'connected' ? (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <p className="text-sm text-gray-600">
               Your Outlook calendar is connected. You can now add events directly from BlocIQ.
             </p>
+            
+            {/* Sync Inbox Button */}
+            <Button 
+              onClick={handleSyncInbox}
+              disabled={isSyncing}
+              variant="outline"
+              size="sm"
+              className="w-full flex items-center gap-2"
+            >
+              {isSyncing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Mail className="h-4 w-4" />
+              )}
+              {getSyncStatusText()}
+            </Button>
+            
             <Button 
               onClick={handleDisconnect}
               variant="outline"
@@ -134,7 +210,7 @@ export default function OutlookConnectButton({ className = "" }: OutlookConnectB
         ) : (
           <div className="space-y-2">
             <p className="text-sm text-gray-600">
-              Connect your Outlook calendar to automatically add events from AI suggestions.
+              Connect your Outlook calendar to automatically add events from AI suggestions and sync your inbox.
             </p>
             <Button 
               onClick={handleConnect}
@@ -158,6 +234,7 @@ export default function OutlookConnectButton({ className = "" }: OutlookConnectB
 
         <div className="text-xs text-gray-500">
           <p>• Add calendar events from AI suggestions</p>
+          <p>• Sync emails from Outlook inbox</p>
           <p>• Automatic reminders and notifications</p>
           <p>• Sync with your existing Outlook calendar</p>
         </div>
