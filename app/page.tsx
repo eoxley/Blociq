@@ -1,6 +1,6 @@
 import React from 'react'
 import Link from 'next/link'
-import { ArrowRight, Brain, FileText, Calendar, Shield, Zap } from 'lucide-react'
+import { ArrowRight, Brain, FileText, Calendar, Shield, Zap, Building2, Users } from 'lucide-react'
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -182,6 +182,138 @@ export default function LandingPage() {
                 </h3>
                 <p className="text-gray-600">
                   Manage inspections, maintenance schedules, and important deadlines across your entire property portfolio.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Building Summary Showcase */}
+      <section className="py-20 bg-gradient-to-br from-slate-50 to-blue-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-6">
+              Complete Building Intelligence
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Get a comprehensive overview of every building in your portfolio with AI-powered insights and real-time data
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            {/* Left: Building Summary Card */}
+            <div className="space-y-6">
+              <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+                {/* Building Header */}
+                <div className="bg-gradient-to-r from-teal-600 to-teal-700 p-6 text-white">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-2xl font-bold">Ashwood House</h3>
+                      <p className="text-teal-100">123 Ashwood Street, London, SW1A 1AA</p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold">5</div>
+                      <div className="text-teal-100 text-sm">Units</div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Building Stats */}
+                <div className="p-6">
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="text-center p-4 bg-green-50 rounded-lg">
+                      <div className="text-2xl font-bold text-green-600">4</div>
+                      <div className="text-sm text-green-700">With Leaseholders</div>
+                    </div>
+                    <div className="text-center p-4 bg-blue-50 rounded-lg">
+                      <div className="text-2xl font-bold text-blue-600">4</div>
+                      <div className="text-sm text-blue-700">Occupied</div>
+                    </div>
+                  </div>
+                  
+                  {/* Compliance Status */}
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                      <Shield className="h-5 w-5 text-teal-600" />
+                      Compliance Status
+                    </h4>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <span className="text-sm text-gray-700">Fire Safety</span>
+                        <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">Compliant</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <span className="text-sm text-gray-700">Asbestos Status</span>
+                        <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">Clear</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <span className="text-sm text-gray-700">Energy Rating</span>
+                        <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">C</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Right: Features List */}
+            <div className="space-y-8">
+              <div className="space-y-6">
+                <h3 className="text-2xl font-bold text-gray-900">
+                  Everything You Need to Know
+                </h3>
+                <p className="text-lg text-gray-600">
+                  BlocIQ provides comprehensive building intelligence with real-time data, compliance tracking, and AI-powered insights.
+                </p>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Building2 className="h-6 w-6 text-teal-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-1">Building Structure & Legal Setup</h4>
+                    <p className="text-gray-600">Complete freeholder/RMC tripartite lease information with client details and operational notes</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Users className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-1">Unit & Leaseholder Management</h4>
+                    <p className="text-gray-600">Detailed unit information with leaseholder contacts, occupier details, and rent information</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Shield className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-1">Compliance & Safety Tracking</h4>
+                    <p className="text-gray-600">Real-time compliance status, safety certificates, and automated deadline tracking</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Calendar className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-1">Events & Maintenance</h4>
+                    <p className="text-gray-600">Scheduled inspections, maintenance events, and important deadlines across your portfolio</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-r from-teal-50 to-blue-50 p-6 rounded-xl border border-teal-200">
+                <h4 className="font-semibold text-gray-900 mb-2">AI-Powered Insights</h4>
+                <p className="text-gray-700">
+                  Get instant summaries, compliance alerts, and intelligent recommendations for every building in your portfolio.
                 </p>
               </div>
             </div>
