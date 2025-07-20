@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 
+type SuggestedAction = {
+  type: 'todo';
+  title: string;
+  priority: 'High' | 'Medium' | 'Low';
+  due_date?: string | null;
+  description?: string;
+} | null;
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -268,11 +276,37 @@ Please provide helpful guidance on how to handle this request, including:
       }
     }
 
-    // 5. Call OpenAI
+    // 5. Call OpenAI with enhanced prompt for smart actions
+    const enhancedSystemPrompt = `${systemPrompt}
+
+IMPORTANT: After providing your main response, analyze if the user's request suggests creating a task or action item. If so, include a JSON object with suggested_action in your response.
+
+For task suggestions, consider:
+- Maintenance requests
+- Inspections needed
+- Follow-up actions
+- Deadlines mentioned
+- Compliance requirements
+- Safety checks
+
+If a task is suggested, format your response like this:
+[Your main response text]
+
+SUGGESTED_ACTION:
+{
+  "type": "todo",
+  "title": "Clear, actionable task title",
+  "priority": "High|Medium|Low",
+  "due_date": "YYYY-MM-DD" (if specific date mentioned, otherwise null),
+  "description": "Brief description of the task"
+}
+
+If no task is suggested, don't include the SUGGESTED_ACTION section.`;
+
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
-        { role: "system", content: systemPrompt },
+        { role: "system", content: enhancedSystemPrompt },
         { role: "user", content: userPrompt }
       ],
       temperature: 0.7,
@@ -287,9 +321,39 @@ Please provide helpful guidance on how to handle this request, including:
 
     console.log("✅ AI response generated successfully");
 
+    // Parse the response to extract suggested_action if present
+    let suggestedAction: SuggestedAction = null;
+    let cleanResponse = aiResponse;
+
+    // Check if there's a SUGGESTED_ACTION section
+    const suggestedActionMatch = aiResponse.match(/SUGGESTED_ACTION:\s*(\{[\s\S]*?\})/);
+    if (suggestedActionMatch) {
+      try {
+        suggestedAction = JSON.parse(suggestedActionMatch[1]);
+        // Remove the SUGGESTED_ACTION section from the main response
+        cleanResponse = aiResponse.replace(/SUGGESTED_ACTION:\s*\{[\s\S]*?\}/, '').trim();
+      } catch (parseError) {
+        console.warn('Failed to parse suggested_action JSON:', parseError);
+      }
+    }
+
+    // Validate suggested_action structure
+    if (suggestedAction) {
+      const requiredFields = ['type', 'title'] as const;
+      const hasRequiredFields = requiredFields.every(field => 
+        suggestedAction && field in suggestedAction && suggestedAction[field]
+      );
+      
+      if (!hasRequiredFields || suggestedAction.type !== 'todo') {
+        console.warn('Invalid suggested_action structure, ignoring:', suggestedAction);
+        suggestedAction = null;
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      response: aiResponse,
+      response: cleanResponse,
+      suggested_action: suggestedAction,
       context: contextData,
       action: action,
       templateId: templateId,
