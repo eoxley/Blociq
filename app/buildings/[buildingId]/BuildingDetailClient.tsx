@@ -169,13 +169,6 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
       {/* Building Overview Header */}
       <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
         <div className="flex items-center gap-4 mb-4">
-          <Link 
-            href="/home" 
-            className="flex items-center gap-2 text-[#0F5D5D] hover:text-teal-700 transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            Back to Home
-          </Link>
         </div>
         
         <div className="border-b border-gray-200 pb-4">

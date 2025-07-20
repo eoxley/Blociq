@@ -17,8 +17,6 @@ export default function UnitDetailHeader({ unitName, buildingName }: { unitName:
 
       {/* 🧭 Breadcrumb Trail */}
       <div className="text-sm text-gray-500">
-        <Link href="/home" className="hover:underline">Home</Link>
-        {' / '}
         <Link href={`/buildings/${buildingId}`} className="hover:underline">{buildingName}</Link>
         {' / '}
         <span className="text-gray-700 font-medium">{unitName}</span>
