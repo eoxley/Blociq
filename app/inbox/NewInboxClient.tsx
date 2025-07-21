@@ -461,14 +461,14 @@ export default function NewInboxClient({
                   placeholder="Search emails..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-[#FAFAFA] border-[#E2E8F0] focus:border-[#2BBEB4]"
+                  className="pl-10 bg-[#FAFAFA] border-[#E2E8F0] focus:border-[#008C8F]"
                 />
               </div>
               <BlocIQButton
                 variant="outline"
                 size="sm"
                 onClick={() => setFilter('inbox')}
-                className={filter === 'inbox' ? 'bg-[#F0FDFA] border-[#2BBEB4] text-[#0F5D5D]' : ''}
+                className={filter === 'inbox' ? 'bg-[#F0FDFA] border-[#008C8F] text-[#0F5D5D]' : ''}
               >
                 All
               </BlocIQButton>
@@ -476,7 +476,7 @@ export default function NewInboxClient({
                 variant="outline"
                 size="sm"
                 onClick={() => setFilter('unread')}
-                className={filter === 'unread' ? 'bg-[#F0FDFA] border-[#2BBEB4] text-[#0F5D5D]' : ''}
+                className={filter === 'unread' ? 'bg-[#F0FDFA] border-[#008C8F] text-[#0F5D5D]' : ''}
               >
                 Unread
               </BlocIQButton>
@@ -484,7 +484,7 @@ export default function NewInboxClient({
                 variant="outline"
                 size="sm"
                 onClick={() => setFilter('unhandled')}
-                className={filter === 'unhandled' ? 'bg-[#F0FDFA] border-[#2BBEB4] text-[#0F5D5D]' : ''}
+                className={filter === 'unhandled' ? 'bg-[#F0FDFA] border-[#008C8F] text-[#0F5D5D]' : ''}
               >
                 Pending
               </BlocIQButton>
@@ -513,7 +513,7 @@ export default function NewInboxClient({
                       variant={selectedTags.includes(tag) ? "primary" : "outline"}
                       size="sm"
                       className={`text-xs h-7 px-3 ${
-                        selectedTags.includes(tag) ? 'bg-[#2BBEB4] text-white' : ''
+                        selectedTags.includes(tag) ? 'bg-[#008C8F] text-white' : ''
                       }`}
                       onClick={() => {
                         setSelectedTags(prev => 
@@ -535,13 +535,32 @@ export default function NewInboxClient({
           <div className="flex-1 overflow-y-auto">
             {loadingEmails ? (
               <div className="flex items-center justify-center h-32">
-                <Loader2 className="h-6 w-6 animate-spin text-[#2BBEB4]" />
+                <Loader2 className="h-6 w-6 animate-spin text-[#008C8F]" />
               </div>
             ) : filteredEmails.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-32 text-[#64748B]">
                 <Mail className="h-12 w-12 mb-4 opacity-50" />
                 <p className="text-lg font-medium">No emails found</p>
-                <p className="text-sm">Try adjusting your search or filters</p>
+                {emails.length === 0 ? (
+                  <div className="text-center">
+                    <p className="text-sm mb-4">Your inbox is empty. Sync with Outlook to get started.</p>
+                    <BlocIQButton
+                      onClick={handleSync}
+                      disabled={isSyncing}
+                      size="sm"
+                      className="flex items-center gap-2"
+                    >
+                      {isSyncing ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" />
+                      )}
+                      {isSyncing ? 'Syncing...' : 'Sync Emails'}
+                    </BlocIQButton>
+                  </div>
+                ) : (
+                  <p className="text-sm">Try adjusting your search or filters</p>
+                )}
               </div>
             ) : (
               filteredEmails.map((email) => (
