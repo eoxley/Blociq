@@ -16,7 +16,10 @@ import {
   User,
   File,
   Download,
-  Eye
+  Eye,
+  Link,
+  Unlink,
+  MessageSquare
 } from "lucide-react";
 import { BlocIQButton } from "@/components/ui/blociq-button";
 import { BlocIQBadge } from "@/components/ui/blociq-badge";
@@ -34,6 +37,7 @@ interface SmartUploaderProps {
   showPreview?: boolean;
   autoClassify?: boolean;
   customStoragePath?: string;
+  allowUnlinked?: boolean; // New prop to allow unlinked uploads
 }
 
 interface UploadedFile {
@@ -46,7 +50,10 @@ interface UploadedFile {
   uploaded_at: string;
   classification?: string;
   extracted_text?: string;
+  summary?: string;
   metadata?: any;
+  is_unlinked?: boolean;
+  building_id?: string | null;
 }
 
 export default function SmartUploader({
@@ -56,11 +63,12 @@ export default function SmartUploader({
   onUploadError,
   className = "",
   multiple = false,
-  acceptedFileTypes = ['.pdf', '.doc', '.docx', '.txt', '.jpg', '.jpeg', '.png'],
+  acceptedFileTypes = ['.pdf', '.doc', '.docx', '.txt'],
   maxFileSize = 10, // 10MB default
   showPreview = true,
   autoClassify = true,
-  customStoragePath
+  customStoragePath,
+  allowUnlinked = true // Default to allowing unlinked uploads
 }: SmartUploaderProps) {
   const supabase = createClientComponentClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -108,14 +116,17 @@ export default function SmartUploader({
           throw new Error(validationError);
         }
 
+        // Determine if this is an unlinked upload
+        const isUnlinked = !buildingId || !allowUnlinked;
+
         // Generate file path
         const timestamp = Date.now();
         const fileName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
         const filePath = customStoragePath 
           ? `${customStoragePath}/${fileName}`
-          : buildingId 
-            ? `${documentType}/${buildingId}/${fileName}`
-            : `${documentType}/${fileName}`;
+          : isUnlinked
+            ? `unlinked/${documentType}/${fileName}`
+            : `${documentType}/${buildingId}/${fileName}`;
 
         // Upload to Supabase storage
         const { data: uploadData, error: uploadError } = await supabase.storage
@@ -141,14 +152,15 @@ export default function SmartUploader({
           file_size: file.size,
           file_type: file.type,
           file_url: publicUrl,
-          building_id: buildingId || null,
+          building_id: isUnlinked ? null : buildingId,
           document_type: documentType,
           uploaded_by: user.id,
           uploaded_at: new Date().toISOString(),
-          status: 'uploaded'
+          status: 'uploaded',
+          is_unlinked: isUnlinked
         };
 
-        let tableName = 'building_documents';
+        let tableName = 'building_documents'; // Always use building_documents for consistency
         if (documentType === 'compliance') {
           tableName = 'compliance_documents';
         } else if (documentType === 'general') {
@@ -168,6 +180,7 @@ export default function SmartUploader({
         // AI Classification and extraction
         let classification = null;
         let extractedText = null;
+        let summary = null;
 
         if (autoClassify && (file.type === 'application/pdf' || file.type.includes('text'))) {
           try {
@@ -177,7 +190,9 @@ export default function SmartUploader({
               body: JSON.stringify({ 
                 documentId: savedDocument.id,
                 filePath: filePath,
-                documentType: documentType
+                documentType: documentType,
+                isUnlinked: isUnlinked,
+                buildingId: buildingId || null
               }),
             });
 
@@ -185,6 +200,7 @@ export default function SmartUploader({
               const aiData = await aiResponse.json();
               classification = aiData.classification;
               extractedText = aiData.extracted_text;
+              summary = aiData.summary;
 
               // Update document with AI results
               await supabase
@@ -192,6 +208,7 @@ export default function SmartUploader({
                 .update({
                   classification: classification,
                   extracted_text: extractedText,
+                  summary: summary,
                   ai_processed_at: new Date().toISOString(),
                   status: 'processed'
                 })
@@ -213,7 +230,10 @@ export default function SmartUploader({
           uploaded_at: savedDocument.uploaded_at,
           classification: classification,
           extracted_text: extractedText,
-          metadata: savedDocument
+          summary: summary,
+          metadata: savedDocument,
+          is_unlinked: isUnlinked,
+          building_id: savedDocument.building_id
         };
 
         return uploadedFile;
@@ -228,12 +248,28 @@ export default function SmartUploader({
         onUploadComplete?.(file);
       });
 
-      // Show success message
-      if (results.length === 1) {
-        toast.success(`File uploaded successfully${classification ? ` and classified as: ${classification}` : ''}`);
-      } else {
-        toast.success(`${results.length} files uploaded successfully`);
-      }
+      // Show success message with unlinked status
+      results.forEach(file => {
+        if (file.is_unlinked) {
+          toast.success(
+            `Document uploaded successfully! This document is not linked to a specific building but can still be processed and accessed.`,
+            {
+              duration: 5000,
+              action: {
+                label: "View",
+                onClick: () => window.open(file.url, '_blank')
+              }
+            }
+          );
+        } else {
+          toast.success(
+            `Document uploaded successfully${file.classification ? ` and classified as: ${file.classification}` : ''}`,
+            {
+              duration: 3000
+            }
+          );
+        }
+      });
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Upload failed";
@@ -245,7 +281,7 @@ export default function SmartUploader({
       setUploading(false);
       setUploadProgress({});
     }
-  }, [buildingId, documentType, acceptedFileTypes, maxFileSize, customStoragePath, autoClassify, onUploadComplete, onUploadError, supabase]);
+  }, [buildingId, documentType, acceptedFileTypes, maxFileSize, customStoragePath, autoClassify, allowUnlinked, onUploadComplete, onUploadError, supabase]);
 
   // Handle drag and drop
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -353,6 +389,14 @@ export default function SmartUploader({
             <p>Supported formats: {acceptedFileTypes.join(', ')}</p>
             <p>Maximum file size: {maxFileSize}MB</p>
             {buildingId && <p>Building: {buildingId}</p>}
+            {allowUnlinked && (
+              <div className="flex items-center justify-center gap-2 mt-2 p-2 bg-[#F0FDFA] rounded-lg border border-[#2BBEB4]">
+                <Unlink className="h-4 w-4 text-[#2BBEB4]" />
+                <span className="text-[#0F5D5D] text-xs">
+                  Documents can be uploaded without building association
+                </span>
+              </div>
+            )}
           </div>
 
           {uploading && (
@@ -386,6 +430,12 @@ export default function SmartUploader({
                         <BlocIQBadge variant="secondary" size="sm">
                           {formatFileSize(file.size)}
                         </BlocIQBadge>
+                        {file.is_unlinked && (
+                          <BlocIQBadge variant="warning" size="sm" className="flex items-center gap-1">
+                            <Unlink className="h-3 w-3" />
+                            Unlinked
+                          </BlocIQBadge>
+                        )}
                       </div>
                       
                       <div className="flex items-center gap-4 text-sm text-[#64748B] mb-2">
@@ -395,7 +445,7 @@ export default function SmartUploader({
                         </div>
                         <div className="flex items-center gap-1">
                           <Building className="h-3 w-3" />
-                          {documentType}
+                          {file.building_id ? documentType : 'Unlinked Document'}
                         </div>
                       </div>
 
@@ -408,10 +458,29 @@ export default function SmartUploader({
                         </div>
                       )}
 
+                      {file.summary && (
+                        <div className="bg-white p-3 rounded-lg border border-[#E2E8F0] mb-2">
+                          <div className="flex items-center gap-2 mb-1">
+                            <MessageSquare className="h-3 w-3 text-[#008C8F]" />
+                            <span className="text-xs font-medium text-[#333333]">AI Summary:</span>
+                          </div>
+                          <p className="text-xs text-[#64748B] line-clamp-3">{file.summary}</p>
+                        </div>
+                      )}
+
                       {file.extracted_text && (
                         <div className="text-xs text-[#64748B] bg-white p-2 rounded border">
                           <p className="font-medium mb-1">Extracted Text Preview:</p>
                           <p className="line-clamp-2">{file.extracted_text}</p>
+                        </div>
+                      )}
+
+                      {file.is_unlinked && (
+                        <div className="mt-2 p-2 bg-gradient-to-r from-[#F0FDFA] to-blue-50 rounded-lg border border-[#2BBEB4]">
+                          <div className="flex items-center gap-2 text-xs text-[#0F5D5D]">
+                            <Unlink className="h-3 w-3" />
+                            <span>This document is not linked to a building but can be accessed via AI chat or document viewer</span>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -459,6 +528,11 @@ export default function SmartUploader({
             <Paperclip className="h-6 w-6 text-[#64748B]" />
           </div>
           <p className="text-[#64748B] text-sm">No files uploaded yet</p>
+          {allowUnlinked && (
+            <p className="text-[#64748B] text-xs mt-1">
+              You can upload documents with or without building association
+            </p>
+          )}
         </div>
       )}
     </div>
