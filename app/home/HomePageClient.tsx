@@ -318,7 +318,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 <Plus className="h-4 w-4 mr-2" />
                 Add Event
               </Button>
-              <Button variant="outline" className="border-white/30 text-white hover:bg-white/10">
+              <Button className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm">
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Sync Emails
               </Button>
