@@ -40,25 +40,6 @@ export default async function DashboardLayout({ children }: { children: ReactNod
             </div>
             
             <div className="flex items-center gap-4">
-              {/* User Info */}
-              {user && (
-                <div className="hidden md:flex items-center gap-3 bg-white/10 rounded-xl px-4 py-2 backdrop-blur-sm">
-                  <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                    <span className="text-sm font-semibold text-white">
-                      {user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
-                    </span>
-                  </div>
-                  <div className="text-sm">
-                    <p className="font-medium text-white">
-                      {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
-                    </p>
-                    <p className="text-white/70 text-xs">
-                      {user.email}
-                    </p>
-                  </div>
-                </div>
-              )}
-              
               {/* Status Indicator */}
               <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1 backdrop-blur-sm">
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
