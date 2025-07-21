@@ -2,21 +2,43 @@
 
 import React, { useState, useEffect } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import {
-  Mail,
-  RefreshCw,
-  Clock,
-  Search,
+import { useRouter } from 'next/navigation'
+import { 
+  Mail, 
+  Search, 
+  Filter, 
+  RefreshCw, 
+  Plus, 
+  Brain, 
+  Eye, 
+  EyeOff, 
+  CheckCircle, 
+  XCircle, 
+  Clock, 
+  Building, 
+  User, 
+  Calendar,
   Loader2,
-  Building as BuildingIcon,
-  Inbox as InboxIcon,
-  CheckCircle,
-  Folder,
-  Plus,
-  Brain,
+  Settings,
+  Trash2,
+  Archive,
+  Tag,
+  Star,
+  StarOff,
+  Reply,
+  Forward,
+  Send,
+  MoreHorizontal,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  AlertCircle,
+  Info,
+  Check,
+  X
 } from 'lucide-react'
-import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
 import { BlocIQButton } from '@/components/ui/blociq-button'
+import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
 import { BlocIQBadge } from '@/components/ui/blociq-badge'
 import { Input } from '@/components/ui/input'
 import EmailListItem from './components/EmailListItem'
@@ -28,6 +50,7 @@ import TriageAssistant from './components/TriageAssistant'
 import PostSendTriageModal from './components/PostSendTriageModal'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
+import OutlookConnectButton from '@/components/OutlookConnectButton'
 
 interface Email {
   id: string
@@ -313,8 +336,8 @@ export default function NewInboxClient({
   }
 
   const handleConnectOutlook = () => {
-    // This would typically redirect to Outlook OAuth
-    toast.info('Outlook connection feature coming soon')
+    // Redirect to Outlook OAuth endpoint
+    window.location.href = '/api/auth/outlook'
   }
 
   const handleResetInbox = () => {
@@ -412,7 +435,7 @@ export default function NewInboxClient({
                 <div className="text-3xl font-bold">{emails.length}</div>
                 <div className="text-sm text-white/80">Total Emails</div>
               </div>
-              <InboxIcon className="h-10 w-10 text-white/80" />
+              <Building className="h-10 w-10 text-white/80" />
             </div>
           </div>
           
@@ -446,6 +469,11 @@ export default function NewInboxClient({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Outlook Integration */}
+      <div className="mb-6">
+        <OutlookConnectButton onSyncComplete={fetchEmails} />
       </div>
 
       <div className="flex h-[600px]">

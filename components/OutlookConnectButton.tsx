@@ -164,7 +164,7 @@ export default function OutlookConnectButton({
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
           <Calendar className="h-5 w-5" />
-          Outlook Calendar
+          Outlook Integration
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
