@@ -55,7 +55,7 @@ export default function AIActionBar({ email, onMarkHandled }: AIActionBarProps) 
     setError(null)
     
     try {
-      const response = await fetch('/api/generate-draft', {
+      const response = await fetch('/api/generate-email-draft', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -64,6 +64,8 @@ export default function AIActionBar({ email, onMarkHandled }: AIActionBarProps) 
           emailId: email.id,
           subject: email.subject,
           body: email.body_full || email.body_preview,
+          buildingContext: email.buildings?.name,
+          tags: email.tags || []
         }),
       })
 
