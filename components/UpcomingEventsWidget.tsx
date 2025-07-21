@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { Calendar, MapPin, Clock, Building, Loader2, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Calendar, MapPin, Clock, Building, Loader2, RefreshCw, Plus } from "lucide-react";
+import { BlocIQButton } from "@/components/ui/blociq-button";
+import { BlocIQBadge } from "@/components/ui/blociq-badge";
+import ManualDiaryInput from "./ManualDiaryInput";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,15 +14,23 @@ const supabase = createClient(
 
 type Event = {
   id: string;
-  subject: string;
+  subject?: string;
+  title?: string;
   location: string | null;
   start_time: string;
   end_time: string;
-  outlook_id: string;
+  outlook_id?: string;
   is_all_day: boolean;
   organiser_name: string | null;
   description: string | null;
   online_meeting: any | null;
+  category?: string;
+  priority?: string;
+  notes?: string;
+  user_id?: string;
+  created_at?: string;
+  updated_at?: string;
+  event_type?: 'outlook' | 'manual';
 };
 
 type AIMatch = {
@@ -47,10 +57,16 @@ export default function UpcomingEventsWidget() {
     setLoading(true);
     try {
       // Load buildings and events in parallel
-      const [buildingsResponse, eventsResponse] = await Promise.all([
+      const [buildingsResponse, outlookEventsResponse, manualEventsResponse] = await Promise.all([
         supabase.from("buildings").select("id, name, address"),
         supabase
           .from("calendar_events")
+          .select("*")
+          .gte("start_time", new Date().toISOString())
+          .order("start_time", { ascending: true })
+          .limit(10),
+        supabase
+          .from("manual_events")
           .select("*")
           .gte("start_time", new Date().toISOString())
           .order("start_time", { ascending: true })
@@ -58,11 +74,26 @@ export default function UpcomingEventsWidget() {
       ]);
 
       setBuildings(buildingsResponse.data || []);
-      setEvents(eventsResponse.data || []);
+      
+      // Combine and sort events
+      const outlookEvents = (outlookEventsResponse.data || []).map(event => ({
+        ...event,
+        event_type: 'outlook' as const
+      }));
+      const manualEvents = (manualEventsResponse.data || []).map(event => ({
+        ...event,
+        event_type: 'manual' as const,
+        subject: event.title // Map title to subject for consistency
+      }));
+      
+      const allEvents = [...outlookEvents, ...manualEvents].sort((a, b) => 
+        new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+      );
+      
+      setEvents(allEvents);
 
-      // Trigger AI matching for unmatched events
-      const eventsData = eventsResponse.data || [];
-      for (const event of eventsData) {
+      // Trigger AI matching for unmatched outlook events
+      for (const event of outlookEvents) {
         const matchedBuilding = matchBuilding(event);
         if (!matchedBuilding) {
           matchWithAI(event);
@@ -110,9 +141,9 @@ export default function UpcomingEventsWidget() {
   };
 
   const matchBuilding = (event: Event): Building | null => {
-    if (!event.subject && !event.location) return null;
+    if (!event.subject && !event.title && !event.location) return null;
     
-    const searchText = `${event.subject || ''} ${event.location || ''}`.toLowerCase();
+    const searchText = `${event.subject || event.title || ''} ${event.location || ''}`.toLowerCase();
     
     // Try exact matches first
     const exactMatch = buildings.find((building) => 
@@ -143,7 +174,7 @@ export default function UpcomingEventsWidget() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          subject: event.subject,
+          subject: event.subject || event.title,
           location: event.location,
           description: event.description
         })
@@ -207,6 +238,12 @@ export default function UpcomingEventsWidget() {
   };
 
   const getEventPriority = (event: Event) => {
+    // For manual events, use the stored priority
+    if (event.event_type === 'manual' && event.priority) {
+      return event.priority;
+    }
+    
+    // For outlook events, calculate based on time
     const startTime = new Date(event.start_time);
     const now = new Date();
     const hoursUntilEvent = (startTime.getTime() - now.getTime()) / (1000 * 60 * 60);
@@ -237,23 +274,29 @@ export default function UpcomingEventsWidget() {
     <div className="bg-white rounded-xl shadow-lg p-6 border">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-blue-600" />
+          <Calendar className="h-5 w-5 text-[#2BBEB4]" />
           Upcoming Events
         </h2>
-        <Button
-          onClick={syncCalendar}
-          disabled={syncing}
-          variant="outline"
-          size="sm"
-          className="text-blue-600 border-blue-200 hover:bg-blue-50"
-        >
-          {syncing ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-          ) : (
-            <RefreshCw className="h-4 w-4 mr-2" />
-          )}
-          {syncing ? 'Syncing...' : 'Sync'}
-        </Button>
+        <div className="flex items-center gap-3">
+          <ManualDiaryInput 
+            onEventCreated={loadData}
+            buildings={buildings}
+          />
+          <BlocIQButton
+            onClick={syncCalendar}
+            disabled={syncing}
+            variant="outline"
+            size="sm"
+            className="text-[#2BBEB4] border-[#2BBEB4] hover:bg-[#F0FDFA]"
+          >
+            {syncing ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            {syncing ? 'Syncing...' : 'Sync'}
+          </BlocIQButton>
+        </div>
       </div>
 
       {events.length === 0 ? (
@@ -261,10 +304,10 @@ export default function UpcomingEventsWidget() {
           <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-3" />
           <p className="text-gray-500 text-sm mb-2">No upcoming events found</p>
           <p className="text-gray-400 text-xs">Sync your Outlook calendar to see events here</p>
-          <Button
+          <BlocIQButton
             onClick={syncCalendar}
             disabled={syncing}
-            className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
+            className="mt-4"
           >
             {syncing ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -272,7 +315,7 @@ export default function UpcomingEventsWidget() {
               <Calendar className="h-4 w-4 mr-2" />
             )}
             {syncing ? 'Syncing...' : 'Sync Calendar'}
-          </Button>
+          </BlocIQButton>
         </div>
       ) : (
         <div className="space-y-4">
@@ -286,23 +329,34 @@ export default function UpcomingEventsWidget() {
               <div
                 key={event.id}
                 className={`p-4 rounded-lg border-l-4 transition-all hover:shadow-md ${
-                  priority === 'high' 
-                    ? 'border-red-500 bg-red-50' 
-                    : priority === 'medium'
-                    ? 'border-orange-500 bg-orange-50'
-                    : 'border-blue-500 bg-blue-50'
+                  event.event_type === 'manual'
+                    ? priority === 'high'
+                      ? 'border-[#EF4444] bg-red-50'
+                      : priority === 'medium'
+                      ? 'border-[#F59E0B] bg-yellow-50'
+                      : 'border-[#2BBEB4] bg-[#F0FDFA]'
+                    : priority === 'high' 
+                      ? 'border-red-500 bg-red-50' 
+                      : priority === 'medium'
+                      ? 'border-orange-500 bg-orange-50'
+                      : 'border-blue-500 bg-blue-50'
                 }`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="font-semibold text-gray-900 text-sm">
-                        {event.subject}
+                        {event.subject || event.title}
                       </h3>
+                      {event.event_type === 'manual' && (
+                        <BlocIQBadge variant="secondary" size="sm">
+                          Manual
+                        </BlocIQBadge>
+                      )}
                       {priority === 'high' && (
-                        <span className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded-full">
+                        <BlocIQBadge variant="warning" size="sm">
                           Soon
-                        </span>
+                        </BlocIQBadge>
                       )}
                     </div>
                     
