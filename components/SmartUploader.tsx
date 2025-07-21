@@ -1,409 +1,464 @@
 "use client";
 
-import React, { useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { v4 as uuidv4 } from "uuid";
+import React, { useState, useRef, useCallback } from "react";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { 
+  Upload, 
+  FileText, 
+  X, 
+  CheckCircle, 
+  AlertCircle, 
+  Loader2, 
+  Paperclip,
+  Brain,
+  Building,
+  Calendar,
+  User,
+  File,
+  Download,
+  Eye
+} from "lucide-react";
+import { BlocIQButton } from "@/components/ui/blociq-button";
+import { BlocIQBadge } from "@/components/ui/blociq-badge";
 import { toast } from "sonner";
-import DocumentTypeSelector from "./DocumentTypeSelector";
-import { useRouter } from 'next/navigation';
 
-type SavedDocument = {
-  id: number;
-  doc_type: string | null;
-  start_date: string | null;
-  expiry_date: string | null;
-  reminder_days: number | null;
-  doc_url: string;
-  uploaded_by: string | null;
-  building_id: number | null;
-  unit_id: number | null;
-  is_headlease: boolean;
-  created_at: string;
-  updated_at: string;
-};
+interface SmartUploaderProps {
+  buildingId?: string;
+  documentType?: 'building' | 'compliance' | 'general';
+  onUploadComplete?: (document: any) => void;
+  onUploadError?: (error: string) => void;
+  className?: string;
+  multiple?: boolean;
+  acceptedFileTypes?: string[];
+  maxFileSize?: number; // in MB
+  showPreview?: boolean;
+  autoClassify?: boolean;
+  customStoragePath?: string;
+}
 
-type Props = {
-  table: "leases" | "compliance_docs";
-  docTypePreset?: string;
-  buildingId?: number;
-  unitId?: number;
-  uploadedBy?: string;
-  onSaveSuccess?: (saved: SavedDocument) => void;
-};
+interface UploadedFile {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  url: string;
+  path: string;
+  uploaded_at: string;
+  classification?: string;
+  extracted_text?: string;
+  metadata?: any;
+}
 
 export default function SmartUploader({
-  table,
-  docTypePreset,
   buildingId,
-  unitId,
-  uploadedBy,
-  onSaveSuccess,
-}: Props) {
-  const [file, setFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [metadata, setMetadata] = useState<{
-    doc_type: string | undefined;
-    building_name: string;
-    start_date: string;
-    expiry_date: string;
-    reminder_days: number;
-    doc_url: string;
-  } | null>(null);
-  const [saved, setSaved] = useState(false);
-  const [showTypeSelector, setShowTypeSelector] = useState(false);
-  const [currentDocumentId, setCurrentDocumentId] = useState<string>("");
-  const [aiResult, setAiResult] = useState<any>(null);
-  const [uploadedFileUrl, setUploadedFileUrl] = useState<string>("");
-  const [showModal, setShowModal] = useState(false);
-  const [toastVisible, setToastVisible] = useState(false);
-  const router = useRouter();
+  documentType = 'general',
+  onUploadComplete,
+  onUploadError,
+  className = "",
+  multiple = false,
+  acceptedFileTypes = ['.pdf', '.doc', '.docx', '.txt', '.jpg', '.jpeg', '.png'],
+  maxFileSize = 10, // 10MB default
+  showPreview = true,
+  autoClassify = true,
+  customStoragePath
+}: SmartUploaderProps) {
+  const supabase = createClientComponentClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
 
-  async function handleConfirm(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-
-    const form = new FormData(e.currentTarget);
-    const res = await fetch('/api/documents/confirm-file', {
-      method: 'POST',
-      body: form,
-    });
-
-    if (res.ok) {
-      setToastVisible(true);
-      const { building_id } = await res.json();
-              setTimeout(() => {
-          if (building_id) {
-            router.push(`/buildings/${building_id}/documents`);
-          } else {
-            router.push('/ai-documents');
-          }
-        }, 1500);
-    } else {
-      alert('Failed to save document. Please try again.');
-    }
-  }
-
-  const handleExtract = async () => {
-    if (!file) return;
-    setLoading(true);
-
-    try {
-      // Use the new upload-and-analyse endpoint
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const res = await fetch('/api/upload-and-analyse', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`Upload and analysis failed: ${errorText.slice(0, 200)}`);
-      }
-
-      const data = await res.json();
-      console.log("🧠 AI Analysis Result:", data);
-
-      // Set AI result for display
-      setAiResult(data.ai);
-      setUploadedFileUrl(data.file_url);
-
-      // Set metadata for saving
-      setMetadata({
-        doc_type: docTypePreset || data.ai.type || "",
-        building_name: data.ai.building_name || "",
-        start_date: "", // Will be extracted from document content
-        expiry_date: "", // Will be extracted from document content
-        reminder_days: 30,
-        doc_url: data.file_url,
-      });
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      console.error("❌ Extraction error:", errorMessage);
-      toast.error(`Extraction error: ${errorMessage}`);
+  // Validate file
+  const validateFile = (file: File): string | null => {
+    // Check file size
+    if (file.size > maxFileSize * 1024 * 1024) {
+      return `File size must be less than ${maxFileSize}MB`;
     }
 
-    setLoading(false);
+    // Check file type
+    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+    if (!acceptedFileTypes.includes(fileExtension)) {
+      return `File type not supported. Accepted types: ${acceptedFileTypes.join(', ')}`;
+    }
+
+    return null;
   };
 
-  const handleSave = async () => {
-    if (!metadata) return;
-    setLoading(true);
+  // Handle file upload
+  const handleFileUpload = useCallback(async (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    
+    if (fileArray.length === 0) return;
 
-    const insertPayload = {
-      doc_type: metadata.doc_type,
-      start_date: metadata.start_date || null,
-      expiry_date: metadata.expiry_date || null,
-      reminder_days: metadata.reminder_days || null,
-      doc_url: metadata.doc_url,
-      uploaded_by: uploadedBy || null,
-      building_id: buildingId || null,
-      unit_id: unitId || null,
-      is_headlease: unitId ? false : true,
-    };
+    setUploading(true);
+    setUploadProgress({});
 
-    const { data, error } = await supabase.from(table).insert([insertPayload]).select();
+    try {
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error("User not authenticated");
+      }
 
-    if (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      console.error("❌ Save error:", errorMessage);
-      toast.error("Failed to save document");
-    } else {
-      setSaved(true);
-      
-      // For compliance documents, trigger the new extract-summary analysis
-      if (table === "compliance_docs" && data?.[0]?.id) {
-        try {
-          console.log("🤖 Triggering compliance document analysis...");
-          toast.info("Analyzing document with AI...");
-          
-          const res = await fetch('/api/extract-summary', {
-            method: 'POST',
-            body: JSON.stringify({ documentId: data[0].id }),
-            headers: { 'Content-Type': 'application/json' }
+      const uploadPromises = fileArray.map(async (file, index) => {
+        // Validate file
+        const validationError = validateFile(file);
+        if (validationError) {
+          throw new Error(validationError);
+        }
+
+        // Generate file path
+        const timestamp = Date.now();
+        const fileName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+        const filePath = customStoragePath 
+          ? `${customStoragePath}/${fileName}`
+          : buildingId 
+            ? `${documentType}/${buildingId}/${fileName}`
+            : `${documentType}/${fileName}`;
+
+        // Upload to Supabase storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from("documents")
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false
           });
 
-          if (res.ok) {
-            const analysisResult = await res.json();
-            console.log("✅ Compliance analysis complete:", analysisResult);
-            
-            // Check if AI couldn't detect the document type
-            if (!analysisResult.doc_type || analysisResult.doc_type === 'Unknown' || analysisResult.doc_type === 'null') {
-              console.log("⚠️ AI couldn't detect document type, showing manual selector");
-              setCurrentDocumentId(data[0].id);
-              setShowTypeSelector(true);
-              return; // Don't update the database yet, wait for user selection
-            }
-            
-            // Update with AI-extracted data if it's better than what we have
-            const updateData: any = {};
-            if (analysisResult.doc_type && analysisResult.doc_type !== 'Unknown') {
-              updateData.doc_type = analysisResult.doc_type;
-            }
-            if (analysisResult.issue_date && analysisResult.issue_date !== 'Not found') {
-              updateData.start_date = analysisResult.issue_date;
-            }
-            if (analysisResult.expiry_date && analysisResult.expiry_date !== 'Not found') {
-              updateData.expiry_date = analysisResult.expiry_date;
-            }
-            
-            if (Object.keys(updateData).length > 0) {
-              const { error: updateError } = await supabase
-                .from('compliance_docs')
-                .update(updateData)
-                .eq('id', data[0].id);
-                
-              if (!updateError) {
-                console.log("✅ Document updated with AI analysis results");
-                toast.success(`Document analyzed! Type: ${analysisResult.doc_type || 'Unknown'}`);
-              }
-            } else {
-              toast.success("Document saved successfully");
-            }
-          } else {
-            console.warn("⚠️ Compliance analysis failed, but document was saved");
-            toast.warning("Document saved, but AI analysis failed");
-          }
-        } catch (aiError) {
-          console.error("❌ Compliance analysis error:", aiError);
-          toast.error("Document saved, but AI analysis failed");
+        if (uploadError) {
+          throw new Error(`Upload failed: ${uploadError.message}`);
         }
-      } else {
-        toast.success("Document saved successfully");
-      }
-      
-      onSaveSuccess?.(data[0]);
-    }
 
-    setLoading(false);
-  };
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from("documents")
+          .getPublicUrl(filePath);
 
-  const handleTypeSelected = (docType: string) => {
-    console.log("✅ User selected document type:", docType);
-    toast.success(`Document type updated to ${docType}`);
-    onSaveSuccess?.({ id: currentDocumentId, doc_type: docType });
-  };
+        // Save metadata to database
+        const documentData = {
+          file_name: file.name,
+          file_path: filePath,
+          file_size: file.size,
+          file_type: file.type,
+          file_url: publicUrl,
+          building_id: buildingId || null,
+          document_type: documentType,
+          uploaded_by: user.id,
+          uploaded_at: new Date().toISOString(),
+          status: 'uploaded'
+        };
 
-  const handleReanalyze = async () => {
-    if (!currentDocumentId) return;
-    
-    try {
-      toast.info("Re-analyzing document with AI...");
-      
-      const res = await fetch('/api/extract-summary', {
-        method: 'POST',
-        body: JSON.stringify({ documentId: currentDocumentId }),
-        headers: { 'Content-Type': 'application/json' }
+        let tableName = 'building_documents';
+        if (documentType === 'compliance') {
+          tableName = 'compliance_documents';
+        } else if (documentType === 'general') {
+          tableName = 'general_documents';
+        }
+
+        const { data: savedDocument, error: saveError } = await supabase
+          .from(tableName)
+          .insert(documentData)
+          .select()
+          .single();
+
+        if (saveError) {
+          throw new Error(`Failed to save metadata: ${saveError.message}`);
+        }
+
+        // AI Classification and extraction
+        let classification = null;
+        let extractedText = null;
+
+        if (autoClassify && (file.type === 'application/pdf' || file.type.includes('text'))) {
+          try {
+            const aiResponse = await fetch("/api/classify-document", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ 
+                documentId: savedDocument.id,
+                filePath: filePath,
+                documentType: documentType
+              }),
+            });
+
+            if (aiResponse.ok) {
+              const aiData = await aiResponse.json();
+              classification = aiData.classification;
+              extractedText = aiData.extracted_text;
+
+              // Update document with AI results
+              await supabase
+                .from(tableName)
+                .update({
+                  classification: classification,
+                  extracted_text: extractedText,
+                  ai_processed_at: new Date().toISOString(),
+                  status: 'processed'
+                })
+                .eq('id', savedDocument.id);
+            }
+          } catch (aiError) {
+            console.warn("AI processing failed:", aiError);
+            // Continue without AI processing
+          }
+        }
+
+        const uploadedFile: UploadedFile = {
+          id: savedDocument.id,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          url: publicUrl,
+          path: filePath,
+          uploaded_at: savedDocument.uploaded_at,
+          classification: classification,
+          extracted_text: extractedText,
+          metadata: savedDocument
+        };
+
+        return uploadedFile;
       });
 
-      if (res.ok) {
-        const analysisResult = await res.json();
-        
-        if (analysisResult.doc_type && analysisResult.doc_type !== 'Unknown' && analysisResult.doc_type !== 'null') {
-          // AI found a type, update the database
-          const { error: updateError } = await supabase
-            .from('compliance_docs')
-            .update({ doc_type: analysisResult.doc_type })
-            .eq('id', currentDocumentId);
-            
-          if (!updateError) {
-            toast.success(`AI re-analysis successful! Type: ${analysisResult.doc_type}`);
-            onSaveSuccess?.({ id: currentDocumentId, doc_type: analysisResult.doc_type });
-          }
-        } else {
-          // AI still couldn't detect, show selector again
-          setShowTypeSelector(true);
-        }
+      const results = await Promise.all(uploadPromises);
+      
+      setUploadedFiles(prev => [...prev, ...results]);
+      
+      // Call success callback
+      results.forEach(file => {
+        onUploadComplete?.(file);
+      });
+
+      // Show success message
+      if (results.length === 1) {
+        toast.success(`File uploaded successfully${classification ? ` and classified as: ${classification}` : ''}`);
       } else {
-        toast.error("Re-analysis failed");
+        toast.success(`${results.length} files uploaded successfully`);
       }
+
     } catch (error) {
-      console.error("Re-analysis error:", error);
-      toast.error("Re-analysis failed");
+      const errorMessage = error instanceof Error ? error.message : "Upload failed";
+      console.error("Upload error:", error);
+      
+      onUploadError?.(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setUploading(false);
+      setUploadProgress({});
     }
+  }, [buildingId, documentType, acceptedFileTypes, maxFileSize, customStoragePath, autoClassify, onUploadComplete, onUploadError, supabase]);
+
+  // Handle drag and drop
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      handleFileUpload(files);
+    }
+  }, [handleFileUpload]);
+
+  // Handle file input change
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleFileUpload(files);
+    }
+    // Reset input value to allow same file selection
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // Remove uploaded file
+  const removeFile = (fileId: string) => {
+    setUploadedFiles(prev => prev.filter(file => file.id !== fileId));
+  };
+
+  // Format file size
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  // Get file icon
+  const getFileIcon = (fileType: string) => {
+    if (fileType.includes('pdf')) return <FileText className="h-5 w-5 text-red-500" />;
+    if (fileType.includes('word') || fileType.includes('document')) return <FileText className="h-5 w-5 text-blue-500" />;
+    if (fileType.includes('image')) return <FileText className="h-5 w-5 text-green-500" />;
+    return <File className="h-5 w-5 text-gray-500" />;
   };
 
   return (
-    <div className="space-y-4">
-      <div>
-        <Label>Upload PDF</Label>
-        <Input
+    <div className={`space-y-4 ${className}`}>
+      {/* Upload Area */}
+      <div
+        className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 ${
+          isDragOver
+            ? 'border-[#008C8F] bg-gradient-to-br from-[#F0FDFA] to-blue-50'
+            : 'border-[#E2E8F0] bg-white hover:border-[#008C8F] hover:bg-[#FAFAFA]'
+        } ${uploading ? 'opacity-50 pointer-events-none' : ''}`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <input
+          ref={fileInputRef}
           type="file"
-          accept="application/pdf"
-          onChange={(e) => {
-            const selectedFile = e.target.files?.[0] || null;
-            setFile(selectedFile);
-            setSaved(false);
-            setMetadata(null);
-          }}
+          onChange={handleFileInputChange}
+          className="hidden"
+          multiple={multiple}
+          accept={acceptedFileTypes.join(',')}
         />
+
+        <div className="space-y-4">
+          <div className="w-16 h-16 bg-gradient-to-br from-[#008C8F] to-[#007BDB] rounded-xl flex items-center justify-center mx-auto shadow-lg">
+            {uploading ? (
+              <Loader2 className="h-8 w-8 text-white animate-spin" />
+            ) : (
+              <Upload className="h-8 w-8 text-white" />
+            )}
+          </div>
+
+          <div>
+            <h3 className="text-lg font-semibold text-[#333333] mb-2">
+              {uploading ? 'Uploading Files...' : 'Upload Documents'}
+            </h3>
+            <p className="text-[#64748B] mb-4">
+              Drag and drop files here, or{' '}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="text-[#008C8F] hover:text-[#007BDB] font-medium underline"
+              >
+                click to browse
+              </button>
+            </p>
+          </div>
+
+          <div className="text-xs text-[#64748B] space-y-1">
+            <p>Supported formats: {acceptedFileTypes.join(', ')}</p>
+            <p>Maximum file size: {maxFileSize}MB</p>
+            {buildingId && <p>Building: {buildingId}</p>}
+          </div>
+
+          {uploading && (
+            <div className="mt-4">
+              <div className="w-full bg-[#E2E8F0] rounded-full h-2">
+                <div className="bg-gradient-to-r from-[#008C8F] to-[#007BDB] h-2 rounded-full transition-all duration-300" />
+              </div>
+              <p className="text-sm text-[#64748B] mt-2">Processing files...</p>
+            </div>
+          )}
+        </div>
       </div>
 
-      {file && !metadata && (
-        <Button onClick={handleExtract} disabled={loading}>
-          {loading ? "Extracting..." : "Extract Metadata"}
-        </Button>
-      )}
+      {/* Uploaded Files Preview */}
+      {showPreview && uploadedFiles.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="text-lg font-semibold text-[#333333] flex items-center gap-2">
+            <CheckCircle className="h-5 w-5 text-green-500" />
+            Uploaded Files ({uploadedFiles.length})
+          </h4>
+          
+          <div className="space-y-3">
+            {uploadedFiles.map((file) => (
+              <div key={file.id} className="bg-[#FAFAFA] rounded-xl p-4 border border-[#E2E8F0]">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3 flex-1">
+                    {getFileIcon(file.type)}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h5 className="font-medium text-[#333333] truncate">{file.name}</h5>
+                        <BlocIQBadge variant="secondary" size="sm">
+                          {formatFileSize(file.size)}
+                        </BlocIQBadge>
+                      </div>
+                      
+                      <div className="flex items-center gap-4 text-sm text-[#64748B] mb-2">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {new Date(file.uploaded_at).toLocaleDateString()}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Building className="h-3 w-3" />
+                          {documentType}
+                        </div>
+                      </div>
 
-      {metadata && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-lg bg-gray-50">
-          <div>
-            <Label>Document Type</Label>
-            <Input
-              value={metadata.doc_type ?? ''}
-              onChange={(e) => setMetadata({ ...metadata, doc_type: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label>Start Date</Label>
-            <Input
-              type="date"
-              value={metadata.start_date}
-              onChange={(e) => setMetadata({ ...metadata, start_date: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label>Expiry Date</Label>
-            <Input
-              type="date"
-              value={metadata.expiry_date}
-              onChange={(e) => setMetadata({ ...metadata, expiry_date: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label>Reminder Days</Label>
-            <Input
-              type="number"
-              value={metadata.reminder_days.toString()}
-              onChange={(e) =>
-                setMetadata({ ...metadata, reminder_days: parseInt(e.target.value) })
-              }
-            />
+                      {file.classification && (
+                        <div className="flex items-center gap-2 mb-2">
+                          <Brain className="h-3 w-3 text-[#008C8F]" />
+                          <BlocIQBadge variant="default" size="sm">
+                            {file.classification}
+                          </BlocIQBadge>
+                        </div>
+                      )}
+
+                      {file.extracted_text && (
+                        <div className="text-xs text-[#64748B] bg-white p-2 rounded border">
+                          <p className="font-medium mb-1">Extracted Text Preview:</p>
+                          <p className="line-clamp-2">{file.extracted_text}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <BlocIQButton
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(file.url, '_blank')}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </BlocIQButton>
+                    <BlocIQButton
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const link = document.createElement('a');
+                        link.href = file.url;
+                        link.download = file.name;
+                        link.click();
+                      }}
+                    >
+                      <Download className="h-4 w-4" />
+                    </BlocIQButton>
+                    <BlocIQButton
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeFile(file.id)}
+                    >
+                      <X className="h-4 w-4" />
+                    </BlocIQButton>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {aiResult && (
-        <div className="bg-muted p-4 mt-4 rounded-lg shadow-sm space-y-2">
-          <h3 className="text-lg font-semibold">AI Document Summary</h3>
-          <p><strong>Type:</strong> {aiResult.type}</p>
-          <p><strong>Building:</strong> {aiResult.building_name || 'Not identified'}</p>
-          <p><strong>Confidence:</strong> {aiResult.confidence}</p>
-          <p><strong>Suggested Action:</strong> {aiResult.suggested_action}</p>
-
-          <Button 
-            onClick={() => setShowModal(true)}
-            className="mt-2 bg-blue-600 hover:bg-blue-700"
-          >
-            Review & File
-          </Button>
-        </div>
-      )}
-
-      {metadata && (
-        <Button onClick={handleSave} disabled={loading}>
-          {loading ? "Saving..." : "Save to Supabase"}
-        </Button>
-      )}
-
-      {saved && <p className="text-green-600 text-sm">✅ Document saved successfully.</p>}
-
-      {/* Document Type Selector Modal */}
-      <DocumentTypeSelector
-        isOpen={showTypeSelector}
-        onClose={() => setShowTypeSelector(false)}
-        documentId={currentDocumentId}
-        onTypeSelected={handleTypeSelected}
-        onReanalyze={handleReanalyze}
-      />
-
-      {/* AI Review Modal */}
-      {aiResult && (
-        <Dialog open={showModal} onOpenChange={setShowModal}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Review AI Classification</DialogTitle>
-            </DialogHeader>
-
-            <form onSubmit={handleConfirm} className="space-y-4">
-              <div>
-                <Label>Document Type</Label>
-                <Input name="type" defaultValue={aiResult.type} />
-              </div>
-              
-              <div>
-                <Label>Building Name</Label>
-                <Input name="building_name" defaultValue={aiResult.building_name || ''} />
-              </div>
-
-              <div>
-                <Label>Suggested Action</Label>
-                <Input name="suggested_action" defaultValue={aiResult.suggested_action} />
-              </div>
-
-              <input type="hidden" name="confidence" value={aiResult.confidence} />
-              <input type="hidden" name="file_url" value={uploadedFileUrl} />
-
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setShowModal(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  Accept & File
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {toastVisible && (
-        <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded shadow z-50">
-          Document saved successfully! Redirecting...
+      {/* Error Display */}
+      {uploadedFiles.length === 0 && !uploading && (
+        <div className="text-center py-8">
+          <div className="w-12 h-12 bg-gradient-to-br from-[#F3F4F6] to-gray-200 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <Paperclip className="h-6 w-6 text-[#64748B]" />
+          </div>
+          <p className="text-[#64748B] text-sm">No files uploaded yet</p>
         </div>
       )}
     </div>
