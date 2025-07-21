@@ -18,6 +18,8 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
     redirect('/login')
   }
 
+  console.log('🔍 Inbox page - User authenticated:', user.id)
+
   // Fetch all emails from Supabase (no limit)
   const { data: emails, error } = await supabase
     .from('incoming_emails')
@@ -38,8 +40,11 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
     `)
     .order('received_at', { ascending: false })
 
+  console.log('📧 Inbox page - Emails fetched:', emails?.length || 0)
+  console.log('📧 Inbox page - First email:', emails?.[0])
+
   if (error) {
-    console.error('Error fetching emails:', error)
+    console.error('❌ Error fetching emails:', error)
   }
 
   // Get last sync time
@@ -51,6 +56,9 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
 
   const lastSyncTime = lastSync?.[0]?.received_at || null
   const params = await searchParams
+
+  console.log('🕐 Inbox page - Last sync time:', lastSyncTime)
+  console.log('🔗 Inbox page - Search params:', params)
 
   return (
     <LayoutWithSidebar>

@@ -78,6 +78,8 @@ export default function NewInboxClient({
   useEffect(() => {
     const fetchEmails = async () => {
       setLoadingEmails(true)
+      console.log('🔄 NewInboxClient - Fetching emails with filter:', filter)
+      
       let query = supabase
         .from('incoming_emails')
         .select(`
@@ -88,24 +90,36 @@ export default function NewInboxClient({
       // Apply filters based on current filter state
       if (filter === 'inbox') {
         query = query.eq('is_handled', false)
+        console.log('📧 NewInboxClient - Filtering for inbox (unhandled emails)')
       } else if (filter === 'handled') {
         query = query.eq('is_handled', true)
+        console.log('📧 NewInboxClient - Filtering for handled emails')
       } else if (filter.startsWith('building-')) {
         const buildingId = filter.replace('building-', '')
         query = query.eq('building_id', buildingId)
+        console.log('📧 NewInboxClient - Filtering for building:', buildingId)
       } else if (filter.startsWith('tag-')) {
         const tag = filter.replace('tag-', '')
         query = query.contains('tags', [tag])
+        console.log('📧 NewInboxClient - Filtering for tag:', tag)
+      } else {
+        console.log('📧 NewInboxClient - Showing all emails (no filter)')
       }
-      // 'all' shows all emails (no additional filter)
 
       const { data, error } = await query
+      console.log('📧 NewInboxClient - Query result:', { dataCount: data?.length || 0, error })
+      
       if (!error && data) {
         // Fix buildings property: flatten if array
-        setEmails(data.map((email: any) => ({
+        const processedEmails = data.map((email: any) => ({
           ...email,
           buildings: Array.isArray(email.buildings) ? email.buildings[0] : email.buildings
-        })))
+        }))
+        setEmails(processedEmails)
+        console.log('📧 NewInboxClient - Processed emails:', processedEmails.length)
+        console.log('📧 NewInboxClient - First email:', processedEmails[0])
+      } else if (error) {
+        console.error('❌ NewInboxClient - Query error:', error)
       }
       setLoadingEmails(false)
     }
