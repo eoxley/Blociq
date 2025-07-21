@@ -20,7 +20,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-background`}>
+      <body className={`${inter.className} bg-[#FAFAFA] antialiased`}>
         <BlocIQProvider>
           <SupabaseProvider>
             <div className="min-h-screen flex flex-col">
@@ -30,7 +30,18 @@ export default function RootLayout({
               <Footer />
             </div>
           </SupabaseProvider>
-          <Toaster position="top-right" />
+          <Toaster 
+            position="top-right" 
+            toastOptions={{
+              style: {
+                background: '#FFFFFF',
+                color: '#333333',
+                border: '1px solid #E2E8F0',
+                borderRadius: '12px',
+                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
+              },
+            }}
+          />
         </BlocIQProvider>
       </body>
     </html>
