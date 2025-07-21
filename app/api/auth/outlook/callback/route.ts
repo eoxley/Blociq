@@ -96,22 +96,25 @@ export async function GET(req: NextRequest) {
     // Verify state parameter from cookie
     const cookieStore = await cookies();
     const storedState = cookieStore.get('outlook_oauth_state')?.value;
+    console.log('[Outlook Callback] Cookie store:', JSON.stringify(cookieStore.getAll()));
+    console.log('[Outlook Callback] Received state:', state, 'Stored state:', storedState);
 
     if (!storedState || storedState !== state) {
       console.error('[Outlook Callback] Invalid state parameter');
       return NextResponse.redirect(new URL('/inbox?error=outlook_invalid_state', req.url));
     }
 
-    // Get authenticated user session
+    // Get authenticated user session (try getUser instead of getSession)
     const supabase = createClient();
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    console.log('[Outlook Callback] getUser result:', user, userError);
     
-    if (sessionError || !session) {
-      console.error('[Outlook Callback] User not authenticated:', sessionError);
+    if (userError || !user) {
+      console.error('[Outlook Callback] User not authenticated:', userError);
       return NextResponse.redirect(new URL('/inbox?error=user_not_authenticated', req.url));
     }
 
-    console.log('[Outlook Callback] User authenticated:', session.user.id);
+    console.log('[Outlook Callback] User authenticated:', user.id);
 
     // ✅ 1. Exchange the `code` from Outlook OAuth for an access and refresh token
     console.log('[Outlook Callback] Exchanging authorization code for tokens...');
@@ -131,7 +134,7 @@ export async function GET(req: NextRequest) {
     const { error: insertError } = await supabase
       .from('outlook_tokens')
       .upsert({
-        user_id: session.user.id,
+        user_id: user.id,
         email: userInfo.email,
         access_token: tokenData.access_token,
         refresh_token: tokenData.refresh_token,
@@ -148,7 +151,7 @@ export async function GET(req: NextRequest) {
     // Clean up the OAuth state cookie
     cookieStore.delete('outlook_oauth_state');
 
-    console.log('[Outlook Callback] Token stored successfully for user:', session.user.id, 'email:', userInfo.email);
+    console.log('[Outlook Callback] Token stored successfully for user:', user.id, 'email:', userInfo.email);
     
     // ✅ 6. Redirect to `/inbox` on success (updated from /dashboard/inbox)
     return NextResponse.redirect(new URL(`/inbox?success=outlook_connected&email=${encodeURIComponent(userInfo.email)}`, req.url));
