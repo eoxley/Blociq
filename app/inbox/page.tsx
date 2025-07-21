@@ -2,7 +2,7 @@ import LayoutWithSidebar from '@/components/LayoutWithSidebar'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import NewInboxClient from './NewInboxClient'
+import ModernInboxLayout from './ModernInboxLayout'
 
 interface InboxPageProps {
   searchParams: Promise<{ success?: string; email?: string; error?: string }>
@@ -62,7 +62,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
 
   return (
     <LayoutWithSidebar>
-      <NewInboxClient 
+      <ModernInboxLayout 
         initialEmails={[]} // Start with empty emails to reflect fresh Outlook inbox
         lastSyncTime={lastSyncTime}
         userId={user.id}
