@@ -121,19 +121,17 @@ export default function DailySummary({ className = "" }: DailySummaryProps) {
           <div className="space-y-6">
             {/* Summary Content */}
             <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-              <div className="flex items-start gap-4 mb-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-blue-500 rounded-xl flex items-center justify-center flex-shrink-0">
+              <div className="text-center mb-4">
+                <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-blue-500 rounded-xl flex items-center justify-center mx-auto mb-3">
                   <TrendingUp className="h-5 w-5 text-white" />
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-gray-900 mb-2">Today's Overview</h3>
-                  <div 
-                    className="text-gray-700 leading-relaxed prose prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{ 
-                      __html: summary.replace(/\n/g, '<br>') 
-                    }}
-                  />
-                </div>
+                <h3 className="font-bold text-gray-900 mb-2">Today's Overview</h3>
+                <div 
+                  className="text-gray-700 leading-relaxed prose prose-sm max-w-none text-center"
+                  dangerouslySetInnerHTML={{ 
+                    __html: summary.replace(/\n/g, '<br>') 
+                  }}
+                />
               </div>
             </div>
             
