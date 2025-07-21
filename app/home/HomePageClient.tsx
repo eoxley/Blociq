@@ -303,15 +303,15 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   return (
     <div className="space-y-8">
       {/* Enhanced Header with Gradient Background - Connected to Sidebar */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-2xl p-8 text-white shadow-2xl -ml-4 border-l-0">
+      <div className="relative overflow-hidden bg-gradient-to-r from-slate-800 via-slate-900 to-slate-800 rounded-2xl p-8 text-white shadow-2xl -ml-4 border-l-0">
         {/* Connection line to sidebar */}
-        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-teal-400 via-blue-400 to-purple-400"></div>
-        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-slate-400 to-slate-300"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 via-blue-500/5 to-purple-500/5"></div>
         <div className="relative z-10">
           <div className="flex items-center justify-between">
             <div className="space-y-2">
               <h1 className="text-4xl font-bold">Welcome back, {userData.name}!</h1>
-              <p className="text-teal-100 text-lg">{getWelcomeMessage()}</p>
+              <p className="text-slate-200 text-lg">{getWelcomeMessage()}</p>
             </div>
             <div className="flex items-center gap-4">
               <Button className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm">
@@ -326,8 +326,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           </div>
         </div>
         {/* Decorative elements */}
-        <div className="absolute top-4 right-4 w-20 h-20 bg-white/10 rounded-full"></div>
-        <div className="absolute bottom-4 left-4 w-16 h-16 bg-white/5 rounded-full"></div>
+        <div className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-teal-500/10 to-blue-500/10 rounded-full blur-sm"></div>
+        <div className="absolute bottom-4 left-4 w-16 h-16 bg-gradient-to-br from-purple-500/10 to-teal-500/10 rounded-full blur-sm"></div>
       </div>
 
       {/* Quick Stats */}
