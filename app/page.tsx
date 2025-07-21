@@ -173,8 +173,8 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* AI Inbox Assistant */}
-            <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
-              <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+            <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg mx-auto">
                 <Brain className="h-8 w-8 text-white" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-4">
@@ -184,15 +184,15 @@ export default function LandingPage() {
                 Automatically categorize, prioritize, and draft responses to resident emails using AI trained on property management best practices.
               </p>
               <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
                   <CheckCircle className="h-4 w-4 text-green-500" />
                   <span>Smart email categorization</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
                   <CheckCircle className="h-4 w-4 text-green-500" />
                   <span>Auto-draft responses</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
                   <CheckCircle className="h-4 w-4 text-green-500" />
                   <span>Priority flagging</span>
                 </div>
@@ -200,8 +200,8 @@ export default function LandingPage() {
             </div>
 
             {/* Compliance & Documents */}
-            <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+            <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg mx-auto">
                 <FileText className="h-8 w-8 text-white" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-4">
@@ -211,19 +211,19 @@ export default function LandingPage() {
                 Track compliance deadlines, store documents securely, and maintain audit trails for all your property requirements.
               </p>
               <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
                   <CheckCircle className="h-4 w-4 text-green-500" />
                   <span>Automated deadline tracking</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
                   <CheckCircle className="h-4 w-4 text-green-500" />
                   <span>Secure document storage</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
                   <CheckCircle className="h-4 w-4 text-green-500" />
                   <span>Instant AI document location</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
                   <CheckCircle className="h-4 w-4 text-green-500" />
                   <span>Audit trail maintenance</span>
                 </div>
@@ -231,8 +231,8 @@ export default function LandingPage() {
             </div>
 
             {/* Portfolio Calendar & Events */}
-            <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
-              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+            <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg mx-auto">
                 <Calendar className="h-8 w-8 text-white" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-4">
@@ -242,15 +242,15 @@ export default function LandingPage() {
                 Manage inspections, maintenance schedules, and property events with intelligent scheduling and automated reminders.
               </p>
               <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
                   <CheckCircle className="h-4 w-4 text-green-500" />
                   <span>Intelligent scheduling</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
                   <CheckCircle className="h-4 w-4 text-green-500" />
                   <span>Automated reminders</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
                   <CheckCircle className="h-4 w-4 text-green-500" />
                   <span>Event management</span>
                 </div>
