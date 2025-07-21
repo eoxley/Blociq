@@ -221,13 +221,13 @@
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(15, 93, 93, 0.8) 0%, rgba(43, 190, 180, 0.8) 100%);
+  background: linear-gradient(180deg, rgba(30, 58, 138, 0.8) 0%, rgba(59, 130, 246, 0.8) 100%);
   border-radius: 3px;
   transition: background 0.2s ease;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, rgba(15, 93, 93, 0.9) 0%, rgba(43, 190, 180, 0.9) 100%);
+  background: linear-gradient(180deg, rgba(30, 58, 138, 0.9) 0%, rgba(59, 130, 246, 0.9) 100%);
 }
 
 .scrollbar-thin::-webkit-scrollbar-corner {
