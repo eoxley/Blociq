@@ -13,7 +13,7 @@ export default function Footer() {
               </div>
               <span className="ml-2 font-semibold text-gray-900">BlocIQ</span>
             </div>
-            <span>&copy; {new Date().getFullYear()} BlocIQ Ltd. All rights reserved.</span>
+            <span>&copy; BlocIQ Ltd. All rights reserved.</span>
           </div>
           
           <div className="flex items-center space-x-6 text-sm">
