@@ -6,6 +6,7 @@ import { MessageCircle, Calendar, ExternalLink, Send, Loader2, Plus, Mail, FileT
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import DailySummary from '@/components/DailySummary'
 import UpcomingEventsWidget from '@/components/UpcomingEventsWidget'
+import BreadcrumbNavigation from '@/components/BreadcrumbNavigation'
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
 import { BlocIQBadge } from '@/components/ui/blociq-badge'
