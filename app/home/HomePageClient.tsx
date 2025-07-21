@@ -16,6 +16,25 @@ type PropertyEvent = {
   category: string
 }
 
+type CalendarEvent = {
+  id: string
+  outlook_id: string
+  subject: string
+  description: string
+  location: string | null
+  start_time: string
+  end_time: string
+  is_all_day: boolean
+  organiser: string | null
+  organiser_name: string | null
+  attendees: any[]
+  importance: string
+  show_as: string
+  categories: string[]
+  web_link: string | null
+  online_meeting: any | null
+}
+
 type UserData = {
   name: string
   email: string
@@ -62,6 +81,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const [recentEmails, setRecentEmails] = useState<Email[]>([])
   const [loadingEmails, setLoadingEmails] = useState(true)
   const [syncingEmails, setSyncingEmails] = useState(false)
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([])
+  const [loadingCalendar, setLoadingCalendar] = useState(true)
+  const [syncingCalendar, setSyncingCalendar] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClientComponentClient()
 
@@ -176,6 +198,32 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     fetchEmails();
   }, [supabase]);
 
+  // Fetch calendar events
+  useEffect(() => {
+    const fetchCalendarEvents = async () => {
+      try {
+        const { data: events, error } = await supabase
+          .from('calendar_events')
+          .select('*')
+          .gte('start_time', new Date().toISOString())
+          .order('start_time', { ascending: true })
+          .limit(10);
+
+        if (error) {
+          console.error('Error fetching calendar events:', error);
+        } else {
+          setCalendarEvents(events || []);
+        }
+      } catch (error) {
+        console.error('Error fetching calendar events:', error);
+      } finally {
+        setLoadingCalendar(false);
+      }
+    };
+
+    fetchCalendarEvents();
+  }, [supabase]);
+
   // Sync emails function
   const syncEmails = async () => {
     setSyncingEmails(true);
@@ -197,6 +245,34 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       console.error('Error syncing emails:', error);
     } finally {
       setSyncingEmails(false);
+    }
+  };
+
+  // Sync calendar function
+  const syncCalendar = async () => {
+    setSyncingCalendar(true);
+    try {
+      const response = await fetch('/api/sync-calendar');
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Calendar sync response:', data);
+        
+        // Refresh the calendar events list
+        const { data: events, error } = await supabase
+          .from('calendar_events')
+          .select('*')
+          .gte('start_time', new Date().toISOString())
+          .order('start_time', { ascending: true })
+          .limit(10);
+
+        if (!error) {
+          setCalendarEvents(events || []);
+        }
+      }
+    } catch (error) {
+      console.error('Error syncing calendar:', error);
+    } finally {
+      setSyncingCalendar(false);
     }
   };
 
@@ -336,13 +412,33 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               <p className="text-slate-200 text-lg">{currentWelcomeMessage}</p>
             </div>
             <div className="flex items-center gap-4">
+              <Button 
+                onClick={syncCalendar}
+                disabled={syncingCalendar}
+                className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
+              >
+                {syncingCalendar ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Calendar className="h-4 w-4 mr-2" />
+                )}
+                {syncingCalendar ? 'Syncing...' : 'Sync Calendar'}
+              </Button>
+              <Button 
+                onClick={syncEmails}
+                disabled={syncingEmails}
+                className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
+              >
+                {syncingEmails ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                {syncingEmails ? 'Syncing...' : 'Sync Emails'}
+              </Button>
               <Button className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Event
-              </Button>
-              <Button className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Sync Emails
               </Button>
             </div>
           </div>
@@ -479,80 +575,179 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           </form>
         </div>
 
-        {/* Upcoming Property Events Section */}
+        {/* Upcoming Events Section */}
         <div className="bg-white rounded-2xl shadow-lg p-6 border">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <Calendar className="h-6 w-6 text-teal-600" />
               <div>
-                <h2 className="text-2xl font-semibold text-gray-900">Upcoming Property Events</h2>
-                <p className="text-sm text-gray-500">Real events from your property portfolio</p>
+                <h2 className="text-2xl font-semibold text-gray-900">Upcoming Events</h2>
+                <p className="text-sm text-gray-500">Property events & Outlook calendar</p>
               </div>
             </div>
-            <button
-              onClick={() => setIsAddingEvent(true)}
-              className="inline-flex items-center gap-2 text-teal-600 hover:text-teal-700 font-medium transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              Add Event
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={syncCalendar}
+                disabled={syncingCalendar}
+                className="inline-flex items-center gap-2 text-teal-600 hover:text-teal-700 font-medium transition-colors disabled:opacity-50"
+              >
+                {syncingCalendar ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                {syncingCalendar ? 'Syncing...' : 'Sync Calendar'}
+              </button>
+              <button
+                onClick={() => setIsAddingEvent(true)}
+                className="inline-flex items-center gap-2 text-teal-600 hover:text-teal-700 font-medium transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                Add Event
+              </button>
+            </div>
           </div>
           
           <div className="space-y-4">
-            {loadingEvents ? (
+            {loadingEvents && loadingCalendar ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto mb-2"></div>
                 <p className="text-gray-500 text-sm">Loading events...</p>
               </div>
-            ) : upcomingEvents.length > 0 ? (
-              upcomingEvents.map((event, index) => {
-                const { date, time } = formatEventDate(event.date)
-                const eventDate = new Date(event.date)
-                const isToday = eventDate.toDateString() === new Date().toDateString()
-                const isTomorrow = eventDate.toDateString() === new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString()
-                
-                return (
-                  <div key={index} className="bg-white shadow rounded-2xl p-4 hover:shadow-lg text-sm border-l-4 border-teal-500">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <div className="font-bold text-gray-900">
-                            {event.category}
+            ) : (upcomingEvents.length > 0 || calendarEvents.length > 0) ? (
+              <>
+                {/* Calendar Events */}
+                {calendarEvents.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                      <Calendar className="h-5 w-5 text-blue-600" />
+                      Outlook Calendar
+                    </h3>
+                    <div className="space-y-3">
+                      {calendarEvents.map((event, index) => {
+                        const { date, time } = formatEventDate(event.start_time)
+                        const eventDate = new Date(event.start_time)
+                        const isToday = eventDate.toDateString() === new Date().toDateString()
+                        const isTomorrow = eventDate.toDateString() === new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString()
+                        
+                        return (
+                          <div key={`calendar-${index}`} className="bg-gradient-to-r from-blue-50 to-indigo-50 shadow rounded-2xl p-4 hover:shadow-lg text-sm border-l-4 border-blue-500">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <div className="font-bold text-gray-900">
+                                    📅 {event.subject}
+                                  </div>
+                                  {(isToday || isTomorrow) && (
+                                    <span className={`px-2 py-1 text-xs rounded-full ${
+                                      isToday ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                                    }`}>
+                                      {isToday ? 'Today' : 'Tomorrow'}
+                                    </span>
+                                  )}
+                                </div>
+                                {event.location && (
+                                  <div className="text-gray-600 mb-1">
+                                    📍 {event.location}
+                                  </div>
+                                )}
+                                {event.organiser_name && (
+                                  <div className="text-gray-600 mb-1">
+                                    👤 {event.organiser_name}
+                                  </div>
+                                )}
+                                <div className="text-gray-500">
+                                  🕒 {date} at {time}
+                                  {event.is_all_day && ' (All day)'}
+                                </div>
+                                {event.online_meeting && (
+                                  <div className="text-blue-600 text-xs mt-1">
+                                    🎥 Online meeting available
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          {(isToday || isTomorrow) && (
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              isToday ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
-                            }`}>
-                              {isToday ? 'Today' : 'Tomorrow'}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-gray-800 mb-1 font-medium">
-                          {event.title}
-                        </div>
-                        <div className="text-gray-600 mb-1">
-                          📍 {event.building}
-                        </div>
-                        <div className="text-gray-500">
-                          🕒 {date} at {time}
-                        </div>
-                      </div>
+                        )
+                      })}
                     </div>
                   </div>
-                )
-              })
+                )}
+
+                {/* Property Events */}
+                {upcomingEvents.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                      <Home className="h-5 w-5 text-teal-600" />
+                      Property Events
+                    </h3>
+                    <div className="space-y-3">
+                      {upcomingEvents.map((event, index) => {
+                        const { date, time } = formatEventDate(event.date)
+                        const eventDate = new Date(event.date)
+                        const isToday = eventDate.toDateString() === new Date().toDateString()
+                        const isTomorrow = eventDate.toDateString() === new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString()
+                        
+                        return (
+                          <div key={`property-${index}`} className="bg-gradient-to-r from-teal-50 to-emerald-50 shadow rounded-2xl p-4 hover:shadow-lg text-sm border-l-4 border-teal-500">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <div className="font-bold text-gray-900">
+                                    {event.category}
+                                  </div>
+                                  {(isToday || isTomorrow) && (
+                                    <span className={`px-2 py-1 text-xs rounded-full ${
+                                      isToday ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                                    }`}>
+                                      {isToday ? 'Today' : 'Tomorrow'}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-gray-800 mb-1 font-medium">
+                                  {event.title}
+                                </div>
+                                <div className="text-gray-600 mb-1">
+                                  📍 {event.building}
+                                </div>
+                                <div className="text-gray-500">
+                                  🕒 {date} at {time}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="text-center py-8">
                 <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-3" />
                 <p className="text-gray-500 text-sm">No upcoming events</p>
-                <p className="text-gray-400 text-xs mt-1">Add events to your property calendar to see them here</p>
-                <button
-                  onClick={() => setIsAddingEvent(true)}
-                  className="mt-4 inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-primary to-primary/80 text-white rounded-xl hover:from-primary/90 hover:to-primary/70 transition-all duration-200 text-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                >
-                  <Plus className="h-6 w-6" />
-                  Add Your First Event
-                </button>
+                <p className="text-gray-400 text-xs mt-1">Sync your Outlook calendar or add property events to see them here</p>
+                <div className="flex gap-3 justify-center mt-4">
+                  <button
+                    onClick={syncCalendar}
+                    disabled={syncingCalendar}
+                    className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50"
+                  >
+                    {syncingCalendar ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <Calendar className="h-5 w-5" />
+                    )}
+                    {syncingCalendar ? 'Syncing...' : 'Sync Calendar'}
+                  </button>
+                  <button
+                    onClick={() => setIsAddingEvent(true)}
+                    className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-primary to-primary/80 text-white rounded-xl hover:from-primary/90 hover:to-primary/70 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                  >
+                    <Plus className="h-5 w-5" />
+                    Add Event
+                  </button>
+                </div>
               </div>
             )}
           </div>
