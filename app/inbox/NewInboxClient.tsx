@@ -313,8 +313,12 @@ export default function NewInboxClient({
 
   const handleEmailProcessed = () => {
     // Refresh the email list after processing
-    const fetchEmails = async () => {
-      const { data, error } = await supabase
+    // Use the main fetchEmails function from useEffect
+    const refreshEmails = async () => {
+      setLoadingEmails(true)
+      console.log('🔄 NewInboxClient - Refreshing emails after processing')
+      
+      let query = supabase
         .from('incoming_emails')
         .select(`
           id, subject, from_name, from_email, received_at, body_preview, body_full, building_id, is_read, is_handled, tags, outlook_id, buildings(name)
@@ -322,17 +326,38 @@ export default function NewInboxClient({
         .eq('is_deleted', false)
         .order('received_at', { ascending: false })
 
-      if (!error && data) {
-        // Process buildings property: flatten if array
-        const processedEmails = data.map((email: any) => ({
-          ...email,
-          buildings: Array.isArray(email.buildings) ? email.buildings[0] : email.buildings
-        }))
-        setEmails(processedEmails)
+      // Apply current filter
+      if (filter === 'handled') {
+        query = query.eq('is_handled', true)
+      } else if (filter === 'unhandled') {
+        query = query.eq('is_handled', false)
+      } else if (filter === 'unread') {
+        query = query.eq('is_read', false)
+      }
+
+      try {
+        const { data, error } = await query
+        
+        if (error) {
+          console.error('Error refreshing emails:', error)
+          return
+        }
+
+        if (data) {
+          const processedEmails = data.map((email: any) => ({
+            ...email,
+            buildings: Array.isArray(email.buildings) ? email.buildings[0] : email.buildings
+          }))
+          setEmails(processedEmails)
+        }
+      } catch (error) {
+        console.error('Error refreshing emails:', error)
+      } finally {
+        setLoadingEmails(false)
       }
     }
 
-    fetchEmails()
+    refreshEmails()
   }
 
   const handleConnectOutlook = () => {
