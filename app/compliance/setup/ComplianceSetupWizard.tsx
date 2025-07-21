@@ -1,31 +1,14 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { 
-  Shield, 
-  Building, 
-  CheckCircle, 
-  ArrowRight, 
-  ArrowLeft, 
-  Plus, 
-  Settings, 
-  Calendar, 
-  AlertTriangle,
-  Clock,
-  FileText,
-  Users,
-  CheckSquare,
-  Square,
-  ChevronDown,
-  ChevronRight,
-  Save,
-  Loader2
-} from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { useRouter } from 'next/navigation'
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
 import { BlocIQBadge } from '@/components/ui/blociq-badge'
+import { CheckCircle, ChevronRight, ChevronLeft, Building, Shield, Settings, CheckSquare, Square, AlertCircle, Loader2, Save, ArrowRight, ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
+import Link from 'next/link'
 
 interface Building {
   id: string
@@ -61,14 +44,11 @@ interface SetupData {
   existingCompliance: BuildingComplianceAsset[]
 }
 
-interface ComplianceSetupWizardProps {
-  setupData: SetupData
-}
-
 type SetupStep = 'buildings' | 'assets' | 'configuration' | 'review' | 'complete'
 
-export default function ComplianceSetupWizard({ setupData }: ComplianceSetupWizardProps) {
+export default function ComplianceSetupWizard() {
   const supabase = createClientComponentClient()
+  const router = useRouter()
   const [currentStep, setCurrentStep] = useState<SetupStep>('buildings')
   const [selectedBuildings, setSelectedBuildings] = useState<Set<string>>(new Set())
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set())
@@ -78,7 +58,80 @@ export default function ComplianceSetupWizard({ setupData }: ComplianceSetupWiza
     notes: Record<string, string>
   }>>({})
   const [loading, setLoading] = useState(false)
+  const [dataLoading, setDataLoading] = useState(true)
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
+  const [setupData, setSetupData] = useState<SetupData>({
+    buildings: [],
+    assets: [],
+    existingCompliance: []
+  })
+
+  // Fetch data on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setDataLoading(true)
+        
+        // Fetch all buildings
+        const { data: buildings, error: buildingsError } = await supabase
+          .from('buildings')
+          .select('id, name, address, unit_count')
+          .order('name', { ascending: true })
+
+        if (buildingsError) {
+          console.error('Error fetching buildings:', buildingsError)
+          toast.error('Could not load buildings')
+          return
+        }
+
+        // Fetch all compliance assets
+        const { data: assets, error: assetsError } = await supabase
+          .from('compliance_assets')
+          .select('*')
+          .order('category', { ascending: true })
+
+        if (assetsError) {
+          console.error('Error fetching compliance assets:', assetsError)
+          toast.error('Could not load compliance assets')
+          return
+        }
+
+        // Fetch existing building compliance data
+        const { data: existingCompliance, error: complianceError } = await supabase
+          .from('building_compliance_assets')
+          .select('*')
+
+        if (complianceError) {
+          console.error('Error fetching existing compliance:', complianceError)
+        }
+
+        setSetupData({
+          buildings: buildings || [],
+          assets: assets || [],
+          existingCompliance: existingCompliance || []
+        })
+      } catch (error) {
+        console.error('Error fetching setup data:', error)
+        toast.error('Failed to load setup data')
+      } finally {
+        setDataLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [supabase])
+
+  // Show loading state while fetching data
+  if (dataLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-[#008C8F] mx-auto" />
+          <p className="text-[#64748B]">Loading compliance setup data...</p>
+        </div>
+      </div>
+    )
+  }
 
   // Group assets by category
   const groupedAssets = setupData.assets.reduce((acc, asset) => {
@@ -706,15 +759,17 @@ export default function ComplianceSetupWizard({ setupData }: ComplianceSetupWiza
                 </p>
                 
                 <div className="flex gap-3 justify-center">
-                  <BlocIQButton asChild>
-                    <a href="/compliance">
-                      View Compliance Dashboard
-                    </a>
+                  <BlocIQButton variant="secondary" asChild>
+                    <Link href="/compliance">
+                      <ArrowLeft className="h-4 w-4 mr-2" />
+                      Back to Compliance
+                    </Link>
                   </BlocIQButton>
-                  <BlocIQButton variant="outline" asChild>
-                    <a href="/buildings">
-                      Manage Buildings
-                    </a>
+                  <BlocIQButton variant="secondary" asChild>
+                    <Link href="/home">
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                      Go to Dashboard
+                    </Link>
                   </BlocIQButton>
                 </div>
               </div>

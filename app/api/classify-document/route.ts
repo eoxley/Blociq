@@ -144,7 +144,7 @@ Content: ${extractedText.substring(0, 2000)}`,
           const lines = aiText.split('\n').filter((line: string) => line.trim());
           
           // Extract classification (look for category in first few lines)
-          for (const line: string of lines.slice(0, 5)) {
+          for (const line of lines.slice(0, 5)) {
             if (line.toLowerCase().includes('classification') || line.toLowerCase().includes('category')) {
               const match = line.match(/:\s*(.+)/i);
               if (match) {
