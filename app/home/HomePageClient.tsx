@@ -302,8 +302,10 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
   return (
     <div className="space-y-8">
-      {/* Enhanced Header with Gradient Background */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-2xl p-8 text-white shadow-2xl">
+      {/* Enhanced Header with Gradient Background - Connected to Sidebar */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-2xl p-8 text-white shadow-2xl -ml-4 border-l-0">
+        {/* Connection line to sidebar */}
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-teal-400 via-blue-400 to-purple-400"></div>
         <div className="absolute inset-0 bg-black/10"></div>
         <div className="relative z-10">
           <div className="flex items-center justify-between">

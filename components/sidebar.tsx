@@ -42,6 +42,8 @@ export default function Sidebar() {
 
   return (
     <aside className="min-h-screen w-64 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 text-white flex flex-col py-6 px-4 shadow-2xl relative overflow-hidden border-r border-slate-700/50">
+      {/* Extended gradient connection to welcome block */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 opacity-20 blur-xl"></div>
       {/* Background decorative elements */}
       <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 via-blue-500/5 to-purple-500/5"></div>
       <div className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-teal-500/10 to-blue-500/10 rounded-full blur-sm"></div>
@@ -55,7 +57,7 @@ export default function Sidebar() {
               <BlocIQLogo className="h-9 w-9 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-extrabold bg-gradient-to-r from-[#0d9488] to-[#14b8a6] bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>BlocIQ</h1>
+              <h1 className="text-3xl font-extrabold text-white drop-shadow-lg">BlocIQ</h1>
               <p className="text-xs text-slate-300 font-medium">Property Intelligence</p>
             </div>
           </Link>
