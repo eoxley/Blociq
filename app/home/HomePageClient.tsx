@@ -454,14 +454,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               )}
               {syncingEmails ? 'Syncing...' : 'Sync Emails'}
             </BlocIQButton>
-            <BlocIQButton 
-              variant="outline"
-              size="sm"
-              className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Event
-            </BlocIQButton>
           </div>
         </div>
       </div>
@@ -642,6 +634,29 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           
           <BlocIQCardContent>
             <div className="space-y-4">
+              {/* Add New Event Section */}
+              <div className="bg-gradient-to-r from-[#F0FDFA] to-emerald-50 rounded-xl p-4 border border-[#2BBEB4]/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-[#008C8F] to-[#2BBEB4] rounded-lg flex items-center justify-center">
+                      <Plus className="h-4 w-4 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-[#0F5D5D]">Add New Event</h3>
+                      <p className="text-sm text-[#64748B]">Create a new property event or meeting</p>
+                    </div>
+                  </div>
+                  <BlocIQButton
+                    onClick={() => setIsAddingEvent(true)}
+                    size="sm"
+                    className="bg-gradient-to-r from-[#008C8F] to-[#2BBEB4] hover:from-[#007B8A] hover:to-[#2BBEB4] text-white"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Event
+                  </BlocIQButton>
+                </div>
+              </div>
+
               {loadingEvents && loadingCalendar ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#008C8F] mx-auto mb-2"></div>
