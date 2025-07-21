@@ -33,17 +33,17 @@ export default function DashboardSidebar() {
   return (
     <aside className="w-64 bg-white text-[#333333] h-full flex flex-col py-6 px-4 shadow-xl border-r border-[#E2E8F0] relative">
       {/* Logo Section */}
-                        <div className="mb-8 px-4">
-                    <Link href="/home" className="flex items-center gap-3 mb-2 hover:opacity-90 transition-all duration-300 group">
-                      <div className="w-12 h-12 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform duration-300">
-                        <BlocIQLogo className="h-7 w-7 text-white" />
-                      </div>
-                      <div>
-                        <h1 className="text-2xl font-extrabold text-[#333333]">BlocIQ</h1>
-                        <p className="text-xs text-[#64748B] font-medium">Property Intelligence</p>
-                      </div>
-                    </Link>
-                  </div>
+      <div className="mb-8 px-4">
+        <Link href="/home" className="flex items-center gap-3 mb-2 hover:opacity-90 transition-all duration-300 group">
+          <div className="w-12 h-12 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform duration-300">
+            <BlocIQLogo className="h-7 w-7 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-extrabold text-[#333333]">BlocIQ</h1>
+            <p className="text-xs text-[#64748B] font-medium">Property Intelligence</p>
+          </div>
+        </Link>
+      </div>
 
       {/* Navigation */}
       <nav className="flex-1 space-y-2 pb-4">
@@ -76,22 +76,22 @@ export default function DashboardSidebar() {
             <div key={label} className="w-full">
               <Link
                 href={href}
-                                            className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-300 group relative ${
-                              isActive
-                                ? 'bg-gradient-to-r from-[#2078F4]/10 to-[#7645ED]/10 text-[#0F5D5D] font-semibold shadow-sm border border-[#2078F4]/20'
-                                : 'hover:bg-[#F0FDFA] text-[#333333] hover:text-[#0F5D5D]'
-                            }`}
+                className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-300 group relative ${
+                  isActive
+                    ? 'bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white font-semibold shadow-lg'
+                    : 'hover:bg-[#F0FDFA] text-[#333333] hover:text-[#0F5D5D]'
+                }`}
               >
-                                            {/* Active indicator */}
-                            {isActive && (
-                              <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#2078F4] to-[#7645ED] rounded-r-full"></div>
-                            )}
+                {/* Active indicator */}
+                {isActive && (
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-white rounded-r-full opacity-80"></div>
+                )}
                 
-                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${
-                              isActive
-                                ? 'bg-gradient-to-br from-[#2078F4] to-[#7645ED] shadow-md'
-                                : 'bg-[#F3F4F6] group-hover:bg-[#E2E8F0]'
-                            }`}>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${
+                  isActive
+                    ? 'bg-white/20 shadow-md'
+                    : 'bg-[#F3F4F6] group-hover:bg-[#E2E8F0]'
+                }`}>
                   <span
                     className={`text-lg transition-all duration-300 ${
                       isActive ? 'text-white scale-110' : 'group-hover:scale-110'
