@@ -43,16 +43,14 @@ export default function LandingPage() {
         <div className="absolute inset-0 bg-black/10"></div>
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center text-white">
-            <div className="flex items-center justify-center gap-3 mb-6">
-              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm shadow-lg">
+            <div className="mb-6">
+              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm shadow-lg mx-auto mb-6">
                 <Brain className="h-8 w-8 text-white" />
               </div>
-              <div className="text-left">
-                <h1 className="text-5xl md:text-7xl font-bold mb-2 animate-fade-in">
-                  AI-Powered Property Management,{' '}
-                  <span className="text-teal-200">Reimagined</span>
-                </h1>
-              </div>
+              <h1 className="text-5xl md:text-7xl font-bold mb-2 animate-fade-in text-center">
+                AI-Powered Property Management,{' '}
+                <span className="text-teal-200">Reimagined</span>
+              </h1>
             </div>
             <p className="text-xl md:text-2xl text-teal-100 mb-10 max-w-4xl mx-auto leading-relaxed">
               BlocIQ helps you stay compliant, work faster, and manage smarter — from inbox to inspection.
@@ -84,7 +82,7 @@ export default function LandingPage() {
 
       {/* Enhanced Vision Statement */}
       <section className="py-20 bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <div className="w-20 h-20 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
               <Star className="h-10 w-10 text-white" />
@@ -101,7 +99,7 @@ export default function LandingPage() {
 
       {/* Enhanced Why BlocIQ */}
       <section className="py-20 bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-6">
               Why BlocIQ?
@@ -119,7 +117,7 @@ export default function LandingPage() {
               At BlocIQ, we do things differently:
             </p>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               <div className="flex items-start gap-4 p-6 bg-white/50 rounded-xl hover:bg-white/70 transition-colors">
                 <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
                   <Shield className="h-6 w-6 text-white" />
@@ -149,11 +147,11 @@ export default function LandingPage() {
               </div>
               <div className="flex items-start gap-4 p-6 bg-white/50 rounded-xl hover:bg-white/70 transition-colors">
                 <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <Settings className="h-6 w-6 text-white" />
+                  <Shield className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-2 text-lg">Enterprise security</h3>
-                  <p className="text-gray-600">Bank-grade security with SOC 2 compliance and regular audits.</p>
+                  <h3 className="font-semibold text-gray-900 mb-2 text-lg">AI you can trust</h3>
+                  <p className="text-gray-600">Regulation-aware, data-secure, and never shared outside BlocIQ.</p>
                 </div>
               </div>
             </div>
@@ -260,7 +258,7 @@ export default function LandingPage() {
 
       {/* Enhanced CTA Section */}
       <section className="py-20 bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-white">
           <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-8 backdrop-blur-sm shadow-lg">
             <Zap className="h-10 w-10 text-white" />
           </div>
