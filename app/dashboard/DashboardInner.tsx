@@ -12,11 +12,14 @@ import {
   CheckCircle,
   XCircle,
   ExternalLink,
-  RefreshCw
+  RefreshCw,
+  Calendar,
+  MessageCircle,
+  TrendingUp
 } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
+import { BlocIQButton } from '@/components/ui/blociq-button'
+import { BlocIQBadge } from '@/components/ui/blociq-badge'
 import { toast } from 'sonner'
 
 interface DashboardStats {
@@ -99,15 +102,15 @@ export default function DashboardInner() {
   const disconnectOutlook = async () => {
     setDisconnecting(true)
     try {
-      const response = await fetch('/api/outlook/connect', {
-        method: 'DELETE'
+      const response = await fetch('/api/outlook/disconnect', {
+        method: 'POST'
       })
-
+      
       if (response.ok) {
+        setOutlookConnection({ connected: false, email: null })
         toast.success('Outlook disconnected successfully')
-        fetchOutlookStatus()
       } else {
-        throw new Error('Failed to disconnect Outlook')
+        throw new Error('Failed to disconnect')
       }
     } catch (error) {
       console.error('Error disconnecting Outlook:', error)
@@ -119,243 +122,222 @@ export default function DashboardInner() {
 
   const refreshOutlookStatus = () => {
     fetchOutlookStatus()
-    toast.success('Outlook status refreshed')
   }
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[...Array(4)].map((_, i) => (
-          <Card key={i}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Loading...</CardTitle>
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">--</div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2BBEB4]"></div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Stats Cards */}
+    <div className="space-y-8">
+      {/* Welcome Header */}
+      <div className="bg-gradient-to-r from-[#2BBEB4] to-[#0F5D5D] rounded-2xl p-8 text-white shadow-xl">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold">Welcome to BlocIQ</h1>
+            <p className="text-xl text-white/90">Your property management dashboard</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <BlocIQButton 
+              variant="secondary"
+              onClick={() => router.push('/inbox')}
+              className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+            >
+              <Mail className="h-4 w-4 mr-2" />
+              View Inbox
+            </BlocIQButton>
+            <BlocIQButton 
+              variant="secondary"
+              onClick={() => router.push('/buildings')}
+              className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+            >
+              <Building2 className="h-4 w-4 mr-2" />
+              Manage Buildings
+            </BlocIQButton>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Buildings</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalBuildings || 0}</div>
-          </CardContent>
-        </Card>
+        <BlocIQCard variant="elevated" className="hover:scale-105 transition-transform duration-300">
+          <BlocIQCardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <h3 className="text-sm font-medium text-[#64748B]">Total Buildings</h3>
+            <div className="w-8 h-8 bg-gradient-to-br from-[#2BBEB4] to-[#0F5D5D] rounded-lg flex items-center justify-center">
+              <Building2 className="h-4 w-4 text-white" />
+            </div>
+          </BlocIQCardHeader>
+          <BlocIQCardContent>
+            <div className="text-3xl font-bold text-[#333333]">{stats?.totalBuildings || 0}</div>
+            <p className="text-xs text-[#64748B] mt-1">Active properties</p>
+          </BlocIQCardContent>
+        </BlocIQCard>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Emails</CardTitle>
-            <Mail className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalEmails || 0}</div>
-          </CardContent>
-        </Card>
+        <BlocIQCard variant="elevated" className="hover:scale-105 transition-transform duration-300">
+          <BlocIQCardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <h3 className="text-sm font-medium text-[#64748B]">Total Emails</h3>
+            <div className="w-8 h-8 bg-gradient-to-br from-[#2BBEB4] to-[#0F5D5D] rounded-lg flex items-center justify-center">
+              <Mail className="h-4 w-4 text-white" />
+            </div>
+          </BlocIQCardHeader>
+          <BlocIQCardContent>
+            <div className="text-3xl font-bold text-[#333333]">{stats?.totalEmails || 0}</div>
+            <p className="text-xs text-[#64748B] mt-1">Messages processed</p>
+          </BlocIQCardContent>
+        </BlocIQCard>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Documents</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalDocuments || 0}</div>
-          </CardContent>
-        </Card>
+        <BlocIQCard variant="elevated" className="hover:scale-105 transition-transform duration-300">
+          <BlocIQCardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <h3 className="text-sm font-medium text-[#64748B]">Total Documents</h3>
+            <div className="w-8 h-8 bg-gradient-to-br from-[#2BBEB4] to-[#0F5D5D] rounded-lg flex items-center justify-center">
+              <FileText className="h-4 w-4 text-white" />
+            </div>
+          </BlocIQCardHeader>
+          <BlocIQCardContent>
+            <div className="text-3xl font-bold text-[#333333]">{stats?.totalDocuments || 0}</div>
+            <p className="text-xs text-[#64748B] mt-1">Files uploaded</p>
+          </BlocIQCardContent>
+        </BlocIQCard>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalUsers || 0}</div>
-          </CardContent>
-        </Card>
+        <BlocIQCard variant="elevated" className="hover:scale-105 transition-transform duration-300">
+          <BlocIQCardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <h3 className="text-sm font-medium text-[#64748B]">Total Users</h3>
+            <div className="w-8 h-8 bg-gradient-to-br from-[#2BBEB4] to-[#0F5D5D] rounded-lg flex items-center justify-center">
+              <Users className="h-4 w-4 text-white" />
+            </div>
+          </BlocIQCardHeader>
+          <BlocIQCardContent>
+            <div className="text-3xl font-bold text-[#333333]">{stats?.totalUsers || 0}</div>
+            <p className="text-xs text-[#64748B] mt-1">Active users</p>
+          </BlocIQCardContent>
+        </BlocIQCard>
       </div>
 
       {/* Outlook Connection Status */}
-      <Card>
-        <CardHeader>
+      <BlocIQCard variant="elevated">
+        <BlocIQCardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
+            <h2 className="text-xl font-semibold text-[#333333] flex items-center gap-2">
+              <Mail className="h-5 w-5 text-[#2BBEB4]" />
               Outlook Integration
-            </CardTitle>
-            <Button
+            </h2>
+            <BlocIQButton
               variant="ghost"
               size="sm"
               onClick={refreshOutlookStatus}
               disabled={connecting || disconnecting}
             >
               <RefreshCw className="h-4 w-4" />
-            </Button>
+            </BlocIQButton>
           </div>
-        </CardHeader>
-        <CardContent>
+        </BlocIQCardHeader>
+        <BlocIQCardContent>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               {outlookConnection?.connected ? (
                 <>
-                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                    <CheckCircle className="h-6 w-6 text-green-600" />
+                  </div>
                   <div>
-                    <div className="font-medium text-green-600">Connected</div>
-                    <div className="text-sm text-gray-500">
+                    <div className="font-semibold text-[#333333]">Connected</div>
+                    <div className="text-sm text-[#64748B]">
                       {outlookConnection.email}
                     </div>
                   </div>
-                  <Badge variant="secondary" className="bg-green-100 text-green-800">
-                    Active
-                  </Badge>
+                  <BlocIQBadge variant="success">Active</BlocIQBadge>
                 </>
               ) : (
                 <>
-                  <XCircle className="h-5 w-5 text-gray-400" />
+                  <div className="w-12 h-12 bg-[#F3F4F6] rounded-xl flex items-center justify-center">
+                    <XCircle className="h-6 w-6 text-[#64748B]" />
+                  </div>
                   <div>
-                    <div className="font-medium text-gray-600">Not Connected</div>
-                    <div className="text-sm text-gray-500">
+                    <div className="font-semibold text-[#333333]">Not Connected</div>
+                    <div className="text-sm text-[#64748B]">
                       Connect your Outlook account to sync emails
                     </div>
                   </div>
-                  <Badge variant="secondary" className="bg-gray-100 text-gray-600">
-                    Inactive
-                  </Badge>
+                  <BlocIQBadge variant="default">Inactive</BlocIQBadge>
                 </>
               )}
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               {outlookConnection?.connected ? (
                 <>
-                  <Button
+                  <BlocIQButton
                     variant="outline"
                     size="sm"
-                    onClick={() => router.push('/dashboard/inbox')}
+                    onClick={() => router.push('/inbox')}
                     className="flex items-center gap-2"
                   >
                     <Mail className="h-4 w-4" />
                     View Inbox
-                  </Button>
-                  <Button
+                  </BlocIQButton>
+                  <BlocIQButton
                     variant="destructive"
                     size="sm"
                     onClick={disconnectOutlook}
                     disabled={disconnecting}
-                    className="flex items-center gap-2"
                   >
-                    {disconnecting ? (
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                    ) : (
-                      <XCircle className="h-4 w-4" />
-                    )}
-                    Disconnect
-                  </Button>
+                    {disconnecting ? 'Disconnecting...' : 'Disconnect'}
+                  </BlocIQButton>
                 </>
               ) : (
-                <Button
+                <BlocIQButton
                   onClick={connectOutlook}
                   disabled={connecting}
                   className="flex items-center gap-2"
                 >
-                  {connecting ? (
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                  ) : (
-                    <ExternalLink className="h-4 w-4" />
+                  {connecting ? 'Connecting...' : (
+                    <>
+                      <ExternalLink className="h-4 w-4" />
+                      Connect Outlook
+                    </>
                   )}
-                  Connect Outlook
-                </Button>
+                </BlocIQButton>
               )}
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </BlocIQCardContent>
+      </BlocIQCard>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
-              Buildings
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button 
-              onClick={() => router.push('/buildings')}
-              className="w-full"
-            >
-              View All Buildings
-            </Button>
-            <Button 
-              variant="outline"
-              onClick={() => router.push('/buildings/add')}
-              className="w-full"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Building
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <BlocIQCard variant="outlined" className="hover:shadow-lg transition-shadow duration-300 cursor-pointer" onClick={() => router.push('/communications')}>
+          <BlocIQCardContent className="text-center py-8">
+            <div className="w-16 h-16 bg-gradient-to-br from-[#2BBEB4] to-[#0F5D5D] rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <MessageCircle className="h-8 w-8 text-white" />
+            </div>
+            <h3 className="text-lg font-semibold text-[#333333] mb-2">Communications</h3>
+            <p className="text-sm text-[#64748B]">Send letters and emails to residents</p>
+          </BlocIQCardContent>
+        </BlocIQCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
-              Communications
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button 
-              onClick={() => router.push('/dashboard/inbox')}
-              className="w-full"
-              disabled={!outlookConnection?.connected}
-            >
-              View Inbox
-            </Button>
-            <Button 
-              variant="outline"
-              onClick={() => router.push('/communications')}
-              className="w-full"
-            >
-              Communication Log
-            </Button>
-          </CardContent>
-        </Card>
+        <BlocIQCard variant="outlined" className="hover:shadow-lg transition-shadow duration-300 cursor-pointer" onClick={() => router.push('/compliance')}>
+          <BlocIQCardContent className="text-center py-8">
+            <div className="w-16 h-16 bg-gradient-to-br from-[#2BBEB4] to-[#0F5D5D] rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <TrendingUp className="h-8 w-8 text-white" />
+            </div>
+            <h3 className="text-lg font-semibold text-[#333333] mb-2">Compliance</h3>
+            <p className="text-sm text-[#64748B]">Track building compliance and safety</p>
+          </BlocIQCardContent>
+        </BlocIQCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Documents
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button 
-              onClick={() => router.push('/documents')}
-              className="w-full"
-            >
-              View Documents
-            </Button>
-            <Button 
-              variant="outline"
-              onClick={() => router.push('/compliance')}
-              className="w-full"
-            >
-              Compliance
-            </Button>
-          </CardContent>
-        </Card>
+        <BlocIQCard variant="outlined" className="hover:shadow-lg transition-shadow duration-300 cursor-pointer" onClick={() => router.push('/major-works')}>
+          <BlocIQCardContent className="text-center py-8">
+            <div className="w-16 h-16 bg-gradient-to-br from-[#2BBEB4] to-[#0F5D5D] rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Calendar className="h-8 w-8 text-white" />
+            </div>
+            <h3 className="text-lg font-semibold text-[#333333] mb-2">Major Works</h3>
+            <p className="text-sm text-[#64748B]">Manage major works projects</p>
+          </BlocIQCardContent>
+        </BlocIQCard>
       </div>
     </div>
   )
