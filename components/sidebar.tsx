@@ -41,28 +41,28 @@ export default function Sidebar() {
   ]
 
   return (
-    <aside className="min-h-screen w-64 bg-gradient-to-br from-teal-600 via-blue-600 to-purple-600 text-white flex flex-col py-6 px-4 shadow-2xl relative overflow-hidden">
+    <aside className="min-h-screen w-64 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 text-white flex flex-col py-6 px-4 shadow-2xl relative overflow-hidden border-r border-slate-700/50">
       {/* Background decorative elements */}
-      <div className="absolute inset-0 bg-black/10"></div>
-      <div className="absolute top-4 right-4 w-20 h-20 bg-white/10 rounded-full"></div>
-      <div className="absolute bottom-4 left-4 w-16 h-16 bg-white/5 rounded-full"></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 via-blue-500/5 to-purple-500/5"></div>
+      <div className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-teal-500/10 to-blue-500/10 rounded-full blur-sm"></div>
+      <div className="absolute bottom-4 left-4 w-16 h-16 bg-gradient-to-br from-purple-500/10 to-teal-500/10 rounded-full blur-sm"></div>
       
       <div className="relative z-10 flex flex-col h-full">
         {/* Logo Section */}
-        <div className="mb-8 px-4">
-          <Link href="/home" className="flex items-center gap-3 mb-2 hover:opacity-80 transition-all duration-300 group">
-            <div className="w-16 h-16 bg-gradient-to-br from-white/20 to-white/30 rounded-2xl flex items-center justify-center backdrop-blur-sm shadow-lg group-hover:scale-110 transition-transform duration-300">
+        <div className="mb-10 px-4">
+          <Link href="/home" className="flex items-center gap-4 mb-3 hover:opacity-90 transition-all duration-300 group">
+            <div className="w-16 h-16 bg-gradient-to-br from-teal-500/20 to-blue-500/20 rounded-2xl flex items-center justify-center backdrop-blur-sm shadow-lg group-hover:scale-105 transition-transform duration-300 border border-white/10">
               <BlocIQLogo className="h-9 w-9 text-white" />
             </div>
             <div>
               <h1 className="text-3xl font-extrabold bg-gradient-to-r from-[#0d9488] to-[#14b8a6] bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>BlocIQ</h1>
-              <p className="text-xs text-white/80">Property Intelligence</p>
+              <p className="text-xs text-slate-300 font-medium">Property Intelligence</p>
             </div>
           </Link>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 space-y-3">
+        <nav className="flex-1 space-y-2">
           {navigationItems.map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href || (pathname && pathname.startsWith(item.href + '/'))
@@ -72,22 +72,22 @@ export default function Sidebar() {
                 href={item.href}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 group relative overflow-hidden ${
                   isActive 
-                    ? 'bg-gradient-to-r from-white/25 to-white/15 text-white font-semibold shadow-lg backdrop-blur-sm border border-white/20' 
-                    : 'hover:bg-white/15 text-white/90 hover:text-white hover:shadow-md backdrop-blur-sm'
+                    ? 'bg-gradient-to-r from-teal-500/20 to-blue-500/20 text-white font-semibold shadow-lg backdrop-blur-sm border border-teal-500/30' 
+                    : 'hover:bg-slate-700/50 text-slate-200 hover:text-white hover:shadow-md backdrop-blur-sm'
                 }`}
               >
                 {/* Active indicator */}
                 {isActive && (
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-white to-white/50 rounded-r-full"></div>
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-teal-400 to-blue-400 rounded-r-full"></div>
                 )}
                 
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-300 ${
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
                   isActive 
-                    ? 'bg-gradient-to-br from-white/30 to-white/20 shadow-lg' 
-                    : 'bg-white/10 group-hover:bg-white/20 group-hover:shadow-md'
+                    ? 'bg-gradient-to-br from-teal-500/30 to-blue-500/30 shadow-lg' 
+                    : 'bg-slate-700/50 group-hover:bg-slate-600/50 group-hover:shadow-md'
                 }`}>
                   <Icon className={`h-5 w-5 transition-all duration-300 ${
-                    isActive ? 'scale-110 text-white' : 'group-hover:scale-110 text-white/90 group-hover:text-white'
+                    isActive ? 'scale-110 text-white' : 'group-hover:scale-110 text-slate-300 group-hover:text-white'
                   }`} />
                 </div>
                 <span className="font-medium">{item.label}</span>
@@ -99,48 +99,48 @@ export default function Sidebar() {
           })}
 
           {/* Coming Soon Section */}
-          <div className="pt-6 border-t border-white/20 mt-6">
+          <div className="pt-6 border-t border-slate-600/50 mt-6">
             <div className="px-4 py-2">
-              <p className="text-xs text-white/75 mb-3 font-medium">Coming Soon</p>
+              <p className="text-xs text-slate-400 mb-3 font-medium">Coming Soon</p>
             </div>
             
             {/* Finances Parent */}
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium opacity-60 cursor-not-allowed bg-white/5 backdrop-blur-sm">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-lg flex items-center justify-center">
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium opacity-60 cursor-not-allowed bg-slate-700/30 backdrop-blur-sm">
+              <div className="w-10 h-10 bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-xl flex items-center justify-center">
                 <span className="text-lg font-bold text-green-300">£</span>
               </div>
-              <span>Finances</span>
-              <Clock className="h-4 w-4 ml-auto text-white/50" />
+              <span className="text-slate-400">Finances</span>
+              <Clock className="h-4 w-4 ml-auto text-slate-500" />
             </div>
             
             {/* Finances Subitems */}
             <div className="ml-8 space-y-1 mt-2">
               <a
                 href="/finances/service-charges"
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs opacity-60 cursor-not-allowed hover:bg-white/5 transition-colors"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs opacity-60 cursor-not-allowed hover:bg-slate-700/30 transition-colors"
                 tabIndex={-1}
                 aria-disabled="true"
               >
-                <ChevronRight className="h-3 w-3 text-white/50" /> 
-                <span>Service Charges</span>
+                <ChevronRight className="h-3 w-3 text-slate-500" /> 
+                <span className="text-slate-400">Service Charges</span>
               </a>
               <a
                 href="/finances/budgeting"
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs opacity-60 cursor-not-allowed hover:bg-white/5 transition-colors"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs opacity-60 cursor-not-allowed hover:bg-slate-700/30 transition-colors"
                 tabIndex={-1}
                 aria-disabled="true"
               >
-                <ChevronRight className="h-3 w-3 text-white/50" /> 
-                <span>Budgeting</span>
+                <ChevronRight className="h-3 w-3 text-slate-500" /> 
+                <span className="text-slate-400">Budgeting</span>
               </a>
               <a
                 href="/finances/accounts"
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs opacity-60 cursor-not-allowed hover:bg-white/5 transition-colors"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs opacity-60 cursor-not-allowed hover:bg-slate-700/30 transition-colors"
                 tabIndex={-1}
                 aria-disabled="true"
               >
-                <ChevronRight className="h-3 w-3 text-white/50" /> 
-                <span>Accounts</span>
+                <ChevronRight className="h-3 w-3 text-slate-500" /> 
+                <span className="text-slate-400">Accounts</span>
               </a>
             </div>
             
