@@ -26,18 +26,19 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
     .select(`
       id,
       subject,
-      from_name,
       from_email,
       received_at,
       body_preview,
-      body_full,
       building_id,
-      is_read,
-      is_handled,
-      tags,
-      outlook_id
+      unread,
+      handled,
+      tag,
+      message_id,
+      thread_id,
+      unit,
+      user_id,
+      created_at
     `)
-    .eq('is_deleted', false) // Filter out deleted emails
     .eq('user_id', user.id) // Only get emails for this user
     .order('received_at', { ascending: false })
 
@@ -58,17 +59,17 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
   const emails = rawEmails?.map((email: any) => ({
     ...email,
     buildings: null, // Set to null since we're not joining buildings table
-    // Ensure all required fields have fallback values
+    // Map database fields to expected interface fields
     subject: email.subject || 'No Subject',
-    from_name: email.from_name || email.from_email || 'Unknown Sender',
+    from_name: email.from_email || 'Unknown Sender', // Use from_email as from_name
     from_email: email.from_email || 'unknown@example.com',
     body_preview: email.body_preview || 'No preview available',
-    body_full: email.body_full || email.body_preview || 'No content available',
-    is_read: email.is_read || false,
-    is_handled: email.is_handled || false,
-    tags: email.tags || [],
+    body_full: email.body_preview || 'No content available', // Use body_preview as body_full
+    is_read: !email.unread, // Convert unread to is_read (inverted)
+    is_handled: email.handled || false,
+    tags: email.tag ? [email.tag] : [], // Convert single tag to array
     building_id: email.building_id || null,
-    outlook_id: email.outlook_id || null
+    outlook_id: email.message_id || null // Use message_id as outlook_id
   })) || []
 
   // Get last sync time
