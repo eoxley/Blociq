@@ -1,72 +1,130 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { NextRequest, NextResponse } from "next/server";
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { cookies } from "next/headers";
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    console.log("📅 Setting compliance asset due date...");
     
-    // Check authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const supabase = createRouteHandlerClient({ cookies });
+    
+    // Get the current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      console.error("❌ User authentication failed:", userError);
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const formData = await request.formData()
-    const buildingId = formData.get('building_id') as string
-    const assetId = formData.get('asset_id') as string
-    const nextDueDate = formData.get('next_due_date') as string
+    console.log("✅ User authenticated:", user.id);
 
+    const formData = await req.formData();
+    const buildingId = formData.get('building_id') as string;
+    const assetId = formData.get('asset_id') as string;
+    const nextDueDate = formData.get('next_due_date') as string;
+    const status = formData.get('status') as string || 'Due Soon';
+    const notes = formData.get('notes') as string || '';
+
+    console.log("📋 Received data:", {
+      buildingId,
+      assetId,
+      nextDueDate,
+      status,
+      notes: notes.substring(0, 50) + (notes.length > 50 ? '...' : '')
+    });
+
+    // Validation
     if (!buildingId || !assetId) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+      console.error("❌ Validation failed: Missing required fields");
+      return NextResponse.json({ error: "Building ID and Asset ID are required" }, { status: 400 });
     }
 
-    // Check if the building compliance asset exists
-    const { data: existingAsset, error: fetchError } = await supabase
+    // Validate building exists
+    const { data: building, error: buildingError } = await supabase
+      .from('buildings')
+      .select('id, name')
+      .eq('id', buildingId)
+      .single();
+
+    if (buildingError || !building) {
+      console.error("❌ Building not found:", buildingError);
+      return NextResponse.json({ error: "Building not found" }, { status: 404 });
+    }
+
+    console.log("✅ Building found:", building.name);
+
+    // Validate asset exists
+    const { data: asset, error: assetError } = await supabase
+      .from('compliance_assets')
+      .select('id, name')
+      .eq('id', assetId)
+      .single();
+
+    if (assetError || !asset) {
+      console.error("❌ Compliance asset not found:", assetError);
+      return NextResponse.json({ error: "Compliance asset not found" }, { status: 404 });
+    }
+
+    console.log("✅ Compliance asset found:", asset.name);
+
+    // Prepare data for upsert
+    const complianceData = {
+      building_id: parseInt(buildingId, 10),
+      asset_id: assetId,
+      status: status,
+      next_due_date: nextDueDate || null,
+      notes: notes || null,
+      last_updated: new Date().toISOString()
+    };
+
+    console.log("💾 Upserting compliance data...");
+
+    // Upsert the compliance asset record
+    const { data: upsertData, error: upsertError } = await supabase
       .from('building_compliance_assets')
-      .select('*')
-      .eq('building_id', parseInt(buildingId, 10))
-      .eq('asset_id', assetId)
-      .single()
+      .upsert(complianceData, { 
+        onConflict: 'building_id,asset_id',
+        ignoreDuplicates: false 
+      })
+      .select()
+      .single();
 
-    if (fetchError && fetchError.code !== 'PGRST116') {
-      return NextResponse.json({ error: 'Error fetching asset' }, { status: 500 })
+    if (upsertError) {
+      console.error("❌ Database upsert error:", upsertError);
+      return NextResponse.json({ 
+        error: "Failed to save compliance data",
+        details: upsertError.message
+      }, { status: 500 });
     }
 
-    if (existingAsset) {
-      // Update existing record
-      const { error: updateError } = await supabase
-        .from('building_compliance_assets')
-        .update({ 
-          next_due_date: nextDueDate || null,
-          last_updated: new Date().toISOString()
-        })
-        .eq('building_id', parseInt(buildingId, 10))
-        .eq('asset_id', assetId)
+    console.log("✅ Compliance data saved successfully");
 
-      if (updateError) {
-        return NextResponse.json({ error: 'Error updating due date' }, { status: 500 })
+    const responseData = {
+      message: "Compliance due date set successfully",
+      data: {
+        building_id: buildingId,
+        asset_id: assetId,
+        status: status,
+        next_due_date: nextDueDate,
+        notes: notes,
+        last_updated: complianceData.last_updated
+      },
+      debug_info: {
+        user_id: user.id,
+        timestamp: new Date().toISOString(),
+        building_name: building.name,
+        asset_name: asset.name
       }
-    } else {
-      // Create new record
-      const { error: insertError } = await supabase
-        .from('building_compliance_assets')
-        .insert({
-          building_id: parseInt(buildingId, 10),
-          asset_id: assetId,
-          status: 'Not Tracked',
-          next_due_date: nextDueDate || null,
-          last_updated: new Date().toISOString()
-        })
+    };
 
-      if (insertError) {
-        return NextResponse.json({ error: 'Error creating asset record' }, { status: 500 })
-      }
-    }
+    console.log("🎉 Compliance due date set successfully");
+    return NextResponse.json(responseData);
 
-    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error setting due date:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error("❌ Set due date error:", error);
+    return NextResponse.json({ 
+      error: "Internal server error while setting due date",
+      details: error instanceof Error ? error.message : "Unknown error"
+    }, { status: 500 });
   }
 } 
