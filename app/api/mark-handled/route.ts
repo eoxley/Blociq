@@ -112,11 +112,9 @@ export async function POST(req: NextRequest) {
 
     // Update database record
     const updateData = {
-      is_handled: true,
-      handled_at: new Date().toISOString(),
-      handled_by: userId,
-      folder: moveToFolder === "handled" ? "handled" : customFolderName || "processed",
-      sync_status: "handled"
+      handled: true,
+      // Note: Using tag field to store additional info since handled_at, handled_by don't exist
+      tag: moveToFolder === "handled" ? "handled" : customFolderName || "processed"
     };
 
     const { error: updateError } = await supabase
@@ -156,8 +154,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       messageId,
-      folder: updateData.folder,
-      handledAt: updateData.handled_at
+      folder: updateData.tag,
+      handledAt: new Date().toISOString()
     });
 
   } catch (error) {
