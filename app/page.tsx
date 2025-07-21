@@ -2,6 +2,7 @@ import React from 'react'
 import Link from 'next/link'
 import { ArrowRight, Brain, FileText, Calendar, Shield, Zap, Building2, Users, Home, CheckCircle, Star, MessageSquare, Settings, BarChart3 } from 'lucide-react'
 import { Metadata } from 'next'
+import BlocIQLogo from '@/components/BlocIQLogo'
 
 export const metadata: Metadata = {
   title: 'BlocIQ | AI-Powered Property Management',
@@ -23,7 +24,7 @@ export default function LandingPage() {
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center">
               <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
-                <span className="text-white font-bold text-lg">B</span>
+                <BlocIQLogo className="text-white" size={24} />
               </div>
               <span className="ml-3 text-2xl font-bold text-gray-900">BlocIQ</span>
             </div>
@@ -285,7 +286,7 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center mb-4 md:mb-0">
               <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center">
-                <span className="text-white font-bold text-lg">B</span>
+                <BlocIQLogo className="text-white" size={24} />
               </div>
               <span className="ml-3 text-2xl font-bold">BlocIQ</span>
             </div>
