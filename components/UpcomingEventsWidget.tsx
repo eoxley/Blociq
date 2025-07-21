@@ -23,6 +23,12 @@ type Event = {
   online_meeting: any | null;
 };
 
+type AIMatch = {
+  buildingName: string;
+  confidence: number;
+  reasoning: string;
+};
+
 type Building = {
   id: string;
   name: string;
@@ -34,6 +40,8 @@ export default function UpcomingEventsWidget() {
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [aiMatches, setAiMatches] = useState<Record<string, AIMatch>>({});
+  const [matchingInProgress, setMatchingInProgress] = useState<Record<string, boolean>>({});
 
   const loadData = async () => {
     setLoading(true);
@@ -51,6 +59,15 @@ export default function UpcomingEventsWidget() {
 
       setBuildings(buildingsResponse.data || []);
       setEvents(eventsResponse.data || []);
+
+      // Trigger AI matching for unmatched events
+      const eventsData = eventsResponse.data || [];
+      for (const event of eventsData) {
+        const matchedBuilding = matchBuilding(event);
+        if (!matchedBuilding) {
+          matchWithAI(event);
+        }
+      }
     } catch (error) {
       console.error("Error loading events widget data:", error);
     } finally {
@@ -76,6 +93,14 @@ export default function UpcomingEventsWidget() {
           .limit(10);
         
         setEvents(eventsData || []);
+
+        // Trigger AI matching for new unmatched events
+        for (const event of eventsData || []) {
+          const matchedBuilding = matchBuilding(event);
+          if (!matchedBuilding) {
+            matchWithAI(event);
+          }
+        }
       }
     } catch (error) {
       console.error("Error syncing calendar:", error);
@@ -105,6 +130,43 @@ export default function UpcomingEventsWidget() {
     });
     
     return partialMatch || null;
+  };
+
+  const matchWithAI = async (event: Event) => {
+    // Skip if already matching or matched
+    if (matchingInProgress[event.id] || aiMatches[event.id]) return;
+    
+    setMatchingInProgress(prev => ({ ...prev, [event.id]: true }));
+    
+    try {
+      const response = await fetch('/api/match-building', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: event.subject,
+          location: event.location,
+          description: event.description
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.match && data.match !== 'Unknown') {
+          setAiMatches(prev => ({
+            ...prev,
+            [event.id]: {
+              buildingName: data.match,
+              confidence: data.confidence || 0.5,
+              reasoning: data.reasoning || 'AI analysis of event details'
+            }
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error matching with AI:', error);
+    } finally {
+      setMatchingInProgress(prev => ({ ...prev, [event.id]: false }));
+    }
   };
 
   const formatEventTime = (startTime: string, endTime: string, isAllDay: boolean) => {
@@ -260,12 +322,42 @@ export default function UpcomingEventsWidget() {
                       </div>
                     )}
 
-                    {matchedBuilding && (
-                      <div className="flex items-center gap-1 text-xs text-blue-600 font-medium">
-                        <Building className="h-3 w-3" />
-                        <span>📍 {matchedBuilding.name}</span>
-                      </div>
-                    )}
+                                         {matchedBuilding && (
+                       <div className="flex items-center gap-1 text-xs text-blue-600 font-medium">
+                         <Building className="h-3 w-3" />
+                         <span>📍 {matchedBuilding.name}</span>
+                       </div>
+                     )}
+
+                     {!matchedBuilding && aiMatches[event.id] && (
+                       <div className="flex items-center gap-1 text-xs text-purple-600 font-medium">
+                         <Building className="h-3 w-3" />
+                         <span>🤖 AI: {aiMatches[event.id].buildingName}</span>
+                         <span className="text-purple-400">
+                           ({Math.round(aiMatches[event.id].confidence * 100)}% confidence)
+                         </span>
+                       </div>
+                     )}
+
+                     {!matchedBuilding && !aiMatches[event.id] && matchingInProgress[event.id] && (
+                       <div className="flex items-center gap-1 text-xs text-gray-500">
+                         <Loader2 className="h-3 w-3 animate-spin" />
+                         <span>🤖 AI matching...</span>
+                       </div>
+                     )}
+
+                     {!matchedBuilding && !aiMatches[event.id] && !matchingInProgress[event.id] && (
+                       <div className="flex items-center gap-1 text-xs text-gray-500">
+                         <Building className="h-3 w-3" />
+                         <span>❓ No building match</span>
+                         <button
+                           onClick={() => matchWithAI(event)}
+                           className="text-blue-600 hover:text-blue-800 underline text-xs"
+                         >
+                           Try AI match
+                         </button>
+                       </div>
+                     )}
 
                     {event.organiser_name && (
                       <div className="text-xs text-gray-500 mt-1">
@@ -290,7 +382,17 @@ export default function UpcomingEventsWidget() {
         <div className="mt-4 pt-4 border-t border-gray-200">
           <div className="flex items-center justify-between text-xs text-gray-500">
             <span>{events.length} upcoming event{events.length !== 1 ? 's' : ''}</span>
-            <span>Building matching: {events.filter(e => matchBuilding(e)).length}/{events.length}</span>
+            <div className="flex items-center gap-4">
+              <span>
+                Manual matches: {events.filter(e => matchBuilding(e)).length}
+              </span>
+              <span>
+                AI matches: {Object.keys(aiMatches).length}
+              </span>
+              <span>
+                Unmatched: {events.filter(e => !matchBuilding(e) && !aiMatches[e.id]).length}
+              </span>
+            </div>
           </div>
         </div>
       )}
