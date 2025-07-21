@@ -1,317 +1,178 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/utils/supabase/server';
 
-interface OutlookToken {
-  id: string
-  user_id: string
-  email: string
-  access_token: string
-  refresh_token: string
-  expires_at: string
-  created_at: string
-  updated_at: string
-}
-
-interface TokenResponse {
-  access_token: string
-  refresh_token: string
-  expires_in: number
-  token_type: string
-}
-
-interface GraphMessage {
-  id: string
-  subject: string
-  bodyPreview: string
-  internetMessageId: string
-  from: {
-    emailAddress: {
-      address: string
-      name: string
-    }
-  }
-  receivedDateTime: string
-  isRead: boolean
-  hasAttachments: boolean
-  importance: string
-  conversationId: string
-}
-
-export async function POST(req: NextRequest) {
-  console.log("🚀 Starting secure inbox sync process...")
-  
-  const supabase = createRouteHandlerClient({ cookies: () => cookies() })
-  
+export async function GET(req: NextRequest) {
   try {
-    // ✅ 1. Get Supabase Session and User ID
-    console.log("📋 Getting Supabase user session...")
-    const { data: { user }, error: sessionError } = await supabase.auth.getUser()
+    // ✅ 1. Supabase Auth Session
+    const supabase = createClient();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
     
-    if (sessionError || !user) {
-      console.error("❌ Authentication failed:", sessionError?.message || "No user found")
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    if (userError || !user) {
+      console.error('User not authenticated:', userError);
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const userId = user.id
-    console.log("✅ Supabase user ID:", userId)
-    console.log("✅ User email:", user.email)
+    const userId = user.id;
+    console.log('✅ User authenticated:', userId);
 
-    // 🔐 2. Lookup Access Token
-    console.log("🔍 Looking up Outlook tokens for user...")
+    // ✅ 2. Get Token From outlook_tokens
     const { data: token, error: tokenError } = await supabase
       .from("outlook_tokens")
       .select("*")
       .eq("user_id", userId)
-      .single()
+      .single();
 
     if (tokenError || !token) {
-      console.error("❌ No Outlook tokens found:", tokenError?.message || "No tokens")
+      console.error('No Outlook token found for user:', userId);
       return NextResponse.json({ 
         error: 'Outlook not connected', 
         message: 'Please connect your Outlook account first' 
-      }, { status: 400 })
+      }, { status: 400 });
     }
 
-    console.log("✅ Found Outlook tokens for:", token.email)
-    console.log("📅 Token expires at:", token.expires_at)
+    console.log('✅ Found Outlook token for user:', token.email);
 
-    // ⏳ 3. Refresh Token If Expired
-    let accessToken = token.access_token
-    let refreshedToken = false
-    
-    const now = new Date()
-    const expiresAt = new Date(token.expires_at)
-    
-    if (expiresAt <= new Date(now.getTime() + 5 * 60 * 1000)) {
-      console.log("🔄 Token expired or expiring soon, refreshing...")
+    // Check if token is expired
+    const now = new Date();
+    const expiresAt = new Date(token.expires_at);
+    let refreshedToken = false;
+
+    if (expiresAt <= now) {
+      console.log('🔄 Token expired, refreshing...');
       
-      const clientId = process.env.MICROSOFT_CLIENT_ID
-      const clientSecret = process.env.MICROSOFT_CLIENT_SECRET
-      const redirectUri = process.env.MICROSOFT_REDIRECT_URI
-      const tenantId = process.env.MICROSOFT_TENANT_ID || 'common'
-
-      if (!clientId || !clientSecret || !redirectUri) {
-        console.error("❌ Microsoft OAuth configuration missing")
-        return NextResponse.json({ error: 'OAuth configuration missing' }, { status: 500 })
-      }
-
+      // Refresh token
+      const tenantId = process.env.OUTLOOK_TENANT_ID || 'common';
       const refreshResponse = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: new URLSearchParams({
+          client_id: process.env.OUTLOOK_CLIENT_ID!,
+          client_secret: process.env.OUTLOOK_CLIENT_SECRET!,
           grant_type: 'refresh_token',
-          client_id: clientId,
-          client_secret: clientSecret,
           refresh_token: token.refresh_token,
-          redirect_uri: redirectUri,
+          redirect_uri: process.env.OUTLOOK_REDIRECT_URI!,
         }),
-      })
+      });
 
       if (!refreshResponse.ok) {
-        const errorText = await refreshResponse.text()
-        console.error("❌ Token refresh failed:", refreshResponse.status, errorText)
-        return NextResponse.json({ error: 'Failed to refresh token' }, { status: 500 })
+        console.error('Failed to refresh token');
+        return NextResponse.json({ error: 'Failed to refresh Outlook token' }, { status: 500 });
       }
 
-      const tokenData: TokenResponse = await refreshResponse.json()
-      console.log("✅ Token refreshed successfully")
-      
-      // Store the new token + expiry back to outlook_tokens
-      const newExpiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
-      
+      const refreshData = await refreshResponse.json();
+      const newExpiresAt = new Date(Date.now() + refreshData.expires_in * 1000).toISOString();
+
+      // Update the stored access_token + expires_at
       const { error: updateError } = await supabase
         .from("outlook_tokens")
         .update({
-          access_token: tokenData.access_token,
-          refresh_token: tokenData.refresh_token,
-          expires_at: newExpiresAt,
-          updated_at: new Date().toISOString()
+          access_token: refreshData.access_token,
+          refresh_token: refreshData.refresh_token,
+          expires_at: newExpiresAt
         })
-        .eq("user_id", userId)
+        .eq("user_id", userId);
 
       if (updateError) {
-        console.error("❌ Failed to update tokens:", updateError)
-        return NextResponse.json({ error: 'Failed to update tokens' }, { status: 500 })
+        console.error('Failed to update token:', updateError);
+        return NextResponse.json({ error: 'Failed to update token' }, { status: 500 });
       }
 
-      accessToken = tokenData.access_token
-      refreshedToken = true
-      console.log("✅ Tokens updated in database")
+      token.access_token = refreshData.access_token;
+      refreshedToken = true;
+      console.log('✅ Token refreshed successfully');
     }
 
-    // 📥 4. Fetch Outlook Emails
-    console.log("📧 Fetching emails from Microsoft Graph...")
-    const graphResponse = await fetch('https://graph.microsoft.com/v1.0/me/messages?$top=20&$orderby=receivedDateTime desc&$select=id,subject,bodyPreview,internetMessageId,from,receivedDateTime,isRead,hasAttachments,importance,conversationId', {
+    // ✅ 3. Call Microsoft Graph /me/messages
+    const graphResponse = await fetch('https://graph.microsoft.com/v1.0/me/messages?$top=20&$orderby=receivedDateTime desc', {
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
+        'Authorization': `Bearer ${token.access_token}`,
         'Content-Type': 'application/json',
       },
-    })
-
-    console.log("📡 Graph API response status:", graphResponse.status, graphResponse.statusText)
+    });
 
     if (!graphResponse.ok) {
-      const errorText = await graphResponse.text()
-      console.error("❌ Graph API error response:", errorText)
-      console.error("❌ Graph API status:", graphResponse.status, graphResponse.statusText)
-      return NextResponse.json({ error: `Graph API error: ${graphResponse.statusText}` }, { status: 500 })
+      console.error('Failed to fetch emails from Microsoft Graph');
+      return NextResponse.json({ error: 'Failed to fetch emails from Outlook' }, { status: 500 });
     }
 
-    const graphData = await graphResponse.json()
-    const messages: GraphMessage[] = graphData.value || []
-    
-    console.log(`✅ Fetched ${messages.length} emails from Outlook`)
-    console.log("📧 Email subjects found:", messages.map(email => email.subject).slice(0, 5))
+    const graphData = await graphResponse.json();
+    const messages = graphData.value || [];
+    console.log(`✅ Fetched ${messages.length} messages from Outlook`);
 
-    // 🗃 5. Insert Into incoming_emails
-    console.log("💾 Processing emails for database insertion...")
-    let insertedCount = 0
-    let skippedCount = 0
-    const errors: any[] = []
+    // ✅ 4. Insert Into incoming_emails (if not already inserted)
+    let insertedCount = 0;
 
     for (const message of messages) {
-      try {
-        // Check if email already exists via outlook_id
-        const { data: existingEmail } = await supabase
-          .from('incoming_emails')
-          .select('id')
-          .eq('outlook_id', message.internetMessageId)
-          .single()
+      const {
+        subject,
+        bodyPreview,
+        receivedDateTime,
+        from,
+        internetMessageId
+      } = message;
 
-        if (existingEmail) {
-          console.log(`⏭️ Email already exists, skipping: ${message.subject}`)
-          skippedCount++
-          continue
-        }
-
-        // Insert new email
-        const { data: savedEmail, error: insertError } = await supabase
-          .from('incoming_emails')
-          .insert({
-            subject: message.subject || 'No Subject',
-            body_preview: message.bodyPreview || '',
-            outlook_id: message.internetMessageId,
-            received_at: message.receivedDateTime,
-            from_email: message.from.emailAddress.address,
-            from_name: message.from.emailAddress.name,
-            is_read: message.isRead || false,
-            has_attachments: message.hasAttachments || false,
-            importance: message.importance || 'normal',
-            conversation_id: message.conversationId,
-            user_id: userId,
-            handled: false
-          })
-          .select()
-          .single()
-
-        if (insertError) {
-          console.error('❌ Error inserting email:', insertError)
-          errors.push({ 
-            emailId: message.internetMessageId, 
-            error: insertError.message,
-            subject: message.subject 
-          })
-        } else {
-          console.log(`✅ Successfully inserted email: ${message.subject}`)
-          insertedCount++
-        }
-
-      } catch (error) {
-        console.error('❌ Error processing email:', error)
-        errors.push({ 
-          emailId: message.internetMessageId, 
-          error: error instanceof Error ? error.message : 'Unknown error',
-          subject: message.subject 
-        })
+      const fromEmail = from?.emailAddress?.address;
+      
+      if (!fromEmail || !internetMessageId) {
+        console.warn('Skipping message without required fields:', { subject, fromEmail, internetMessageId });
+        continue;
       }
+
+      // Check for existing row with same outlook_id (using internetMessageId)
+      const { data: existingEmail } = await supabase
+        .from("incoming_emails")
+        .select("id")
+        .eq("outlook_id", internetMessageId)
+        .single();
+
+      if (existingEmail) {
+        console.log('Email already exists, skipping:', subject);
+        continue;
+      }
+
+      // Insert new email
+      const { error: insertError } = await supabase
+        .from("incoming_emails")
+        .insert({
+          outlook_id: internetMessageId,
+          subject: subject || '(No Subject)',
+          body_preview: bodyPreview || '',
+          from_email: fromEmail,
+          received_at: receivedDateTime,
+          handled: false,
+          user_id: userId,
+          unread: true
+        });
+
+      if (insertError) {
+        console.error('Failed to insert email:', insertError);
+        continue;
+      }
+
+      insertedCount++;
+      console.log('✅ Inserted email:', subject);
     }
 
-    // 🧪 6. Return a Clear Response
+    // ✅ 5. Return a Clean JSON Response
     const response = {
       success: true,
       fetched: messages.length,
       inserted: insertedCount,
-      skipped: skippedCount,
-      refreshedToken,
-      errors: errors.length > 0 ? errors : undefined,
-      message: `Synced ${insertedCount} new emails from Outlook`,
-      timestamp: new Date().toISOString()
-    }
+      refreshedToken: refreshedToken,
+      userEmail: token.email
+    };
 
-    console.log("📊 Sync Summary:")
-    console.log(`   - Total emails fetched: ${messages.length}`)
-    console.log(`   - Emails inserted: ${insertedCount}`)
-    console.log(`   - Emails skipped: ${skippedCount}`)
-    console.log(`   - Token refreshed: ${refreshedToken}`)
-    console.log(`   - Errors: ${errors.length}`)
+    console.log('📊 Sync completed:', response);
 
-    console.log("🎉 Sync completed successfully!")
-    return NextResponse.json(response)
+    return NextResponse.json(response);
 
   } catch (error) {
-    console.error('❌ Sync inbox error:', error)
-    console.error('❌ Error type:', typeof error)
-    console.error('❌ Error message:', error instanceof Error ? error.message : 'Unknown error')
-    console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace')
-    
+    console.error('❌ Sync inbox error:', error);
     return NextResponse.json({ 
-      success: false,
       error: 'Failed to sync inbox',
-      message: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString()
-    }, { status: 500 })
-  }
-}
-
-export async function GET(req: NextRequest) {
-  console.log("🔍 Checking Outlook connection status...")
-  
-  const supabase = createRouteHandlerClient({ cookies: () => cookies() })
-  
-  try {
-    // Get the current user's session
-    const { data: { user }, error: sessionError } = await supabase.auth.getUser()
-    
-    if (sessionError || !user) {
-      console.error("❌ Authentication failed:", sessionError?.message || "No user found")
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
-    }
-
-    // Check if user has Outlook tokens
-    const { data: token, error: tokenError } = await supabase
-      .from("outlook_tokens")
-      .select("email, expires_at")
-      .eq("user_id", user.id)
-      .single()
-
-    const hasConnection = !tokenError && token !== null
-    const isExpired = hasConnection ? new Date(token.expires_at) <= new Date() : false
-    
-    const response = {
-      connected: hasConnection,
-      email: hasConnection ? token.email : null,
-      tokenExpired: isExpired,
-      message: hasConnection 
-        ? (isExpired ? 'Outlook connected but token expired' : 'Outlook is connected')
-        : 'Outlook is not connected',
-      user_id: user.id,
-      timestamp: new Date().toISOString()
-    }
-    
-    console.log("📤 Connection check response:", response)
-    return NextResponse.json(response)
-
-  } catch (error) {
-    console.error('❌ Check connection error:', error)
-    
-    return NextResponse.json({ 
-      success: false,
-      error: 'Failed to check connection',
-      message: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString()
-    }, { status: 500 })
+      details: process.env.NODE_ENV === 'development' ? error instanceof Error ? error.message : 'Unknown error' : undefined
+    }, { status: 500 });
   }
 } 
