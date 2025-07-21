@@ -2,13 +2,15 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { MessageCircle, Calendar, ExternalLink, Send, Loader2, Plus, Mail, FileText, Pin, RefreshCw, Paperclip, Home, X, Building } from 'lucide-react'
+import { MessageCircle, Calendar, ExternalLink, Send, Loader2, Plus, Mail, FileText, Pin, RefreshCw, Paperclip, Home, X, Building, Brain, Clock, AlertCircle, CheckCircle } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import DailySummary from '@/components/DailySummary'
 import UpcomingEventsWidget from '@/components/UpcomingEventsWidget'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { BlocIQButton } from '@/components/ui/blociq-button'
+import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
+import { BlocIQBadge } from '@/components/ui/blociq-badge'
 import BlocIQLogo from '@/components/BlocIQLogo'
+import { toast } from 'sonner'
 
 type PropertyEvent = {
   building: string
@@ -231,6 +233,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     try {
       const response = await fetch('/api/sync-emails');
       if (response.ok) {
+        toast.success('Emails synced successfully');
         // Refresh the emails list
         const { data: emails, error } = await supabase
           .from('incoming_emails')
@@ -241,9 +244,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         if (!error) {
           setRecentEmails(emails || []);
         }
+      } else {
+        toast.error('Failed to sync emails');
       }
     } catch (error) {
       console.error('Error syncing emails:', error);
+      toast.error('Error syncing emails');
     } finally {
       setSyncingEmails(false);
     }
@@ -253,10 +259,11 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const syncCalendar = async () => {
     setSyncingCalendar(true);
     try {
-      const response = await fetch('/api/sync-calendar');
+      const response = await fetch('/api/cron/sync-calendar');
       if (response.ok) {
         const data = await response.json();
         console.log('Calendar sync response:', data);
+        toast.success(`Calendar synced successfully! ${data.count} events processed.`);
         
         // Refresh the calendar events list
         const { data: events, error } = await supabase
@@ -269,9 +276,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         if (!error) {
           setCalendarEvents(events || []);
         }
+      } else {
+        toast.error('Failed to sync calendar');
       }
     } catch (error) {
       console.error('Error syncing calendar:', error);
+      toast.error('Error syncing calendar');
     } finally {
       setSyncingCalendar(false);
     }
@@ -401,358 +411,380 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
   return (
     <div className="space-y-8">
-      {/* Enhanced Header with Gradient Background - Connected to Sidebar */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-slate-800 via-slate-900 to-slate-800 rounded-2xl p-8 text-white shadow-2xl -ml-4 border-l-0">
-        {/* Connection line to sidebar */}
-        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-slate-400 to-slate-300"></div>
-        <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 via-blue-500/5 to-purple-500/5"></div>
-        <div className="relative z-10">
-          <div className="flex items-center justify-between">
-            <div className="space-y-2">
-              <h1 className="text-4xl font-bold">Welcome back, {userData.name}!</h1>
-              <p className="text-slate-200 text-lg">{currentWelcomeMessage}</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <Button 
-                onClick={syncCalendar}
-                disabled={syncingCalendar}
-                className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
-              >
-                {syncingCalendar ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <Calendar className="h-4 w-4 mr-2" />
-                )}
-                {syncingCalendar ? 'Syncing...' : 'Sync Calendar'}
-              </Button>
-              <Button 
-                onClick={syncEmails}
-                disabled={syncingEmails}
-                className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
-              >
-                {syncingEmails ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                )}
-                {syncingEmails ? 'Syncing...' : 'Sync Emails'}
-              </Button>
-              <Button className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Event
-              </Button>
+      {/* Enhanced Header with BlocIQ Gradient Background */}
+      <div className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] rounded-2xl p-8 text-white shadow-xl">
+        <div className="flex items-center justify-between">
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                <BlocIQLogo className="h-7 w-7 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold">Welcome back, {userData.name}!</h1>
+                <p className="text-white/90 text-lg">{currentWelcomeMessage}</p>
+              </div>
             </div>
           </div>
+          <div className="flex items-center gap-3">
+            <BlocIQButton 
+              onClick={syncCalendar}
+              disabled={syncingCalendar}
+              variant="outline"
+              size="sm"
+              className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
+            >
+              {syncingCalendar ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Calendar className="h-4 w-4 mr-2" />
+              )}
+              {syncingCalendar ? 'Syncing...' : 'Sync Calendar'}
+            </BlocIQButton>
+            <BlocIQButton 
+              onClick={syncEmails}
+              disabled={syncingEmails}
+              variant="outline"
+              size="sm"
+              className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
+            >
+              {syncingEmails ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              {syncingEmails ? 'Syncing...' : 'Sync Emails'}
+            </BlocIQButton>
+            <BlocIQButton 
+              variant="outline"
+              size="sm"
+              className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Event
+            </BlocIQButton>
+          </div>
         </div>
-        {/* Decorative elements */}
-        <div className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-teal-500/10 to-blue-500/10 rounded-full blur-sm"></div>
-        <div className="absolute bottom-4 left-4 w-16 h-16 bg-gradient-to-br from-purple-500/10 to-teal-500/10 rounded-full blur-sm"></div>
       </div>
-
-
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* BlocIQ Chat Assistant Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 border flex flex-col h-[600px]">
-          <div className="flex items-center gap-3 mb-6 bg-gradient-to-r from-primary to-primary/80 text-white p-4 rounded-lg -m-6 mb-6">
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-              <MessageCircle className="h-6 w-6 text-white" />
+        <BlocIQCard variant="elevated" className="flex flex-col h-[600px]">
+          <BlocIQCardHeader className="bg-gradient-to-r from-[#008C8F] to-[#007BDB] text-white rounded-t-xl">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                <Brain className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-semibold text-white">BlocIQ Assistant</h2>
+                <p className="text-white/80 text-sm">Your AI property management companion</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-2xl font-semibold text-white">BlocIQ Assistant</h2>
-              <p className="text-white/80 text-sm">Your AI property management companion</p>
-            </div>
-          </div>
+          </BlocIQCardHeader>
           
-          {/* Chat Messages */}
-          <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2">
-            {messages.map((message) => (
-              <div key={message.id} className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                  message.isUser 
-                    ? 'bg-primary text-white shadow-lg' 
-                    : 'bg-gray-50 text-gray-900 border border-gray-200'
-                }`}>
-                  <div className="text-sm whitespace-pre-line">{message.content}</div>
-                  <div className={`text-xs mt-1 ${
-                    message.isUser ? 'text-white/70' : 'text-gray-500'
+          <BlocIQCardContent className="flex-1 flex flex-col p-6">
+            {/* Chat Messages */}
+            <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2">
+              {messages.map((message) => (
+                <div key={message.id} className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[80%] rounded-xl px-4 py-3 ${
+                    message.isUser 
+                      ? 'bg-gradient-to-r from-[#008C8F] to-[#007BDB] text-white shadow-lg' 
+                      : 'bg-[#FAFAFA] text-[#333333] border border-[#E2E8F0]'
                   }`}>
-                    {formatMessageTime(message.timestamp)}
-                  </div>
-                </div>
-              </div>
-            ))}
-            
-            {/* Loading indicator */}
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3">
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <Loader2 className="animate-spin h-4 w-4" />
-                    <span className="text-sm">Thinking...</span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Action buttons for last AI message */}
-          {messages.length > 1 && !messages[messages.length - 1].isUser && !isLoading && (
-            <div className="flex gap-2 mb-4">
-              <button className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm border border-blue-200">
-                <Mail className="h-4 w-4" />
-                📧 Turn into email
-              </button>
-              <button className="flex items-center gap-2 px-3 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm border border-green-200">
-                <FileText className="h-4 w-4" />
-                📝 Save as advice note
-              </button>
-              <button className="flex items-center gap-2 px-3 py-2 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors text-sm border border-orange-200">
-                <Pin className="h-4 w-4" />
-                📌 Attach to building diary
-              </button>
-            </div>
-          )}
-
-          {/* Input form */}
-          <form onSubmit={handleSubmit} className="space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
-            {/* Attachments Display */}
-            {attachments.length > 0 && (
-              <div className="p-2 bg-white rounded-xl border border-gray-200">
-                <div className="text-xs text-gray-600 mb-2">📎 Attachments:</div>
-                <div className="space-y-1">
-                  {attachments.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between text-xs bg-gray-50 p-2 rounded border">
-                      <span className="truncate flex-1">{file.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeAttachment(index)}
-                        className="text-red-500 hover:text-red-700 ml-2"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
+                    <div className="text-sm whitespace-pre-line">{message.content}</div>
+                    <div className={`text-xs mt-1 ${
+                      message.isUser ? 'text-white/70' : 'text-[#64748B]'
+                    }`}>
+                      {formatMessageTime(message.timestamp)}
                     </div>
-                  ))}
+                  </div>
                 </div>
+              ))}
+              
+              {/* Loading indicator */}
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl px-4 py-3">
+                    <div className="flex items-center gap-2 text-[#64748B]">
+                      <Loader2 className="animate-spin h-4 w-4" />
+                      <span className="text-sm">Thinking...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Action buttons for last AI message */}
+            {messages.length > 1 && !messages[messages.length - 1].isUser && !isLoading && (
+              <div className="flex gap-2 mb-4">
+                <BlocIQButton variant="outline" size="sm" className="flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  📧 Turn into email
+                </BlocIQButton>
+                <BlocIQButton variant="outline" size="sm" className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  📝 Save as advice note
+                </BlocIQButton>
+                <BlocIQButton variant="outline" size="sm" className="flex items-center gap-2">
+                  <Pin className="h-4 w-4" />
+                  📌 Attach to building diary
+                </BlocIQButton>
               </div>
             )}
-            
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="px-4 py-3 border border-gray-300 rounded-xl hover:bg-gray-100 transition-colors text-gray-600 bg-white"
-                disabled={isLoading}
-              >
-                <Paperclip className="h-5 w-5" />
-              </button>
+
+            {/* Input form */}
+            <div className="space-y-3 bg-[#FAFAFA] p-4 rounded-xl border border-[#E2E8F0]">
+              {/* Attachments Display */}
+              {attachments.length > 0 && (
+                <div className="p-2 bg-white rounded-xl border border-[#E2E8F0]">
+                  <div className="text-xs text-[#64748B] mb-2">📎 Attachments:</div>
+                  <div className="space-y-1">
+                    {attachments.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between text-xs bg-[#F3F4F6] p-2 rounded border">
+                        <span className="truncate flex-1">{file.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeAttachment(index)}
+                          className="text-[#EF4444] hover:text-red-700 ml-2"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex gap-3">
+                <BlocIQButton
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  variant="outline"
+                  size="sm"
+                  className="px-4 py-3"
+                  disabled={isLoading}
+                >
+                  <Paperclip className="h-5 w-5" />
+                </BlocIQButton>
+                <input
+                  type="text"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  placeholder="Ask about your buildings, compliance, or recent emails…"
+                  className="flex-1 px-4 py-3 border border-[#E2E8F0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent bg-white text-[#333333]"
+                  disabled={isLoading}
+                />
+                <BlocIQButton 
+                  type="submit"
+                  disabled={isLoading || (!inputValue.trim() && attachments.length === 0)}
+                  size="sm"
+                  className="px-6 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleSubmit}
+                >
+                  <Send className="h-5 w-5" />
+                  Send
+                </BlocIQButton>
+              </div>
+              
+              {/* Hidden file input */}
               <input
-                type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Ask about your buildings, compliance, or recent emails…"
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white"
-                disabled={isLoading}
+                ref={fileInputRef}
+                type="file"
+                multiple
+                onChange={handleFileAttachment}
+                className="hidden"
+                accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
               />
-              <button 
-                type="submit"
-                disabled={isLoading || (!inputValue.trim() && attachments.length === 0)}
-                className="bg-primary text-white px-6 py-3 rounded-xl hover:bg-primary/90 transition-colors font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-              >
-                <Home className="h-5 w-5" />
-                Send
-              </button>
             </div>
-            
-            {/* Hidden file input */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              onChange={handleFileAttachment}
-              className="hidden"
-              accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
-            />
-          </form>
-        </div>
+          </BlocIQCardContent>
+        </BlocIQCard>
 
         {/* Upcoming Events Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 border">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <Calendar className="h-6 w-6 text-teal-600" />
-              <div>
-                <h2 className="text-2xl font-semibold text-gray-900">Upcoming Events</h2>
-                <p className="text-sm text-gray-500">Property events & Outlook calendar</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={syncCalendar}
-                disabled={syncingCalendar}
-                className="inline-flex items-center gap-2 text-teal-600 hover:text-teal-700 font-medium transition-colors disabled:opacity-50"
-              >
-                {syncingCalendar ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4" />
-                )}
-                {syncingCalendar ? 'Syncing...' : 'Sync Calendar'}
-              </button>
-              <button
-                onClick={() => setIsAddingEvent(true)}
-                className="inline-flex items-center gap-2 text-teal-600 hover:text-teal-700 font-medium transition-colors"
-              >
-                <Plus className="h-4 w-4" />
-                Add Event
-              </button>
-            </div>
-          </div>
-          
-          <div className="space-y-4">
-            {loadingEvents && loadingCalendar ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto mb-2"></div>
-                <p className="text-gray-500 text-sm">Loading events...</p>
-              </div>
-            ) : (upcomingEvents.length > 0 || calendarEvents.length > 0) ? (
-              <>
-                {/* Calendar Events */}
-                {calendarEvents.length > 0 && (
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                      <Calendar className="h-5 w-5 text-blue-600" />
-                      Outlook Calendar
-                    </h3>
-                    <div className="space-y-3">
-                      {calendarEvents.map((event, index) => {
-                        const { date, time } = formatEventDate(event.start_time)
-                        const eventDate = new Date(event.start_time)
-                        const isToday = eventDate.toDateString() === new Date().toDateString()
-                        const isTomorrow = eventDate.toDateString() === new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString()
-                        
-                        return (
-                          <div key={`calendar-${index}`} className="bg-gradient-to-r from-blue-50 to-indigo-50 shadow rounded-2xl p-4 hover:shadow-lg text-sm border-l-4 border-blue-500">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <div className="font-bold text-gray-900">
-                                    📅 {event.subject}
-                                  </div>
-                                  {(isToday || isTomorrow) && (
-                                    <span className={`px-2 py-1 text-xs rounded-full ${
-                                      isToday ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
-                                    }`}>
-                                      {isToday ? 'Today' : 'Tomorrow'}
-                                    </span>
-                                  )}
-                                </div>
-                                {event.location && (
-                                  <div className="text-gray-600 mb-1">
-                                    📍 {event.location}
-                                  </div>
-                                )}
-                                {event.organiser_name && (
-                                  <div className="text-gray-600 mb-1">
-                                    👤 {event.organiser_name}
-                                  </div>
-                                )}
-                                <div className="text-gray-500">
-                                  🕒 {date} at {time}
-                                  {event.is_all_day && ' (All day)'}
-                                </div>
-                                {event.online_meeting && (
-                                  <div className="text-blue-600 text-xs mt-1">
-                                    🎥 Online meeting available
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Property Events */}
-                {upcomingEvents.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                      <Home className="h-5 w-5 text-teal-600" />
-                      Property Events
-                    </h3>
-                    <div className="space-y-3">
-                      {upcomingEvents.map((event, index) => {
-                        const { date, time } = formatEventDate(event.date)
-                        const eventDate = new Date(event.date)
-                        const isToday = eventDate.toDateString() === new Date().toDateString()
-                        const isTomorrow = eventDate.toDateString() === new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString()
-                        
-                        return (
-                          <div key={`property-${index}`} className="bg-gradient-to-r from-teal-50 to-emerald-50 shadow rounded-2xl p-4 hover:shadow-lg text-sm border-l-4 border-teal-500">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <div className="font-bold text-gray-900">
-                                    {event.category}
-                                  </div>
-                                  {(isToday || isTomorrow) && (
-                                    <span className={`px-2 py-1 text-xs rounded-full ${
-                                      isToday ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
-                                    }`}>
-                                      {isToday ? 'Today' : 'Tomorrow'}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="text-gray-800 mb-1 font-medium">
-                                  {event.title}
-                                </div>
-                                <div className="text-gray-600 mb-1">
-                                  📍 {event.building}
-                                </div>
-                                <div className="text-gray-500">
-                                  🕒 {date} at {time}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="text-center py-8">
-                <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-500 text-sm">No upcoming events</p>
-                <p className="text-gray-400 text-xs mt-1">Sync your Outlook calendar or add property events to see them here</p>
-                <div className="flex gap-3 justify-center mt-4">
-                  <button
-                    onClick={syncCalendar}
-                    disabled={syncingCalendar}
-                    className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50"
-                  >
-                    {syncingCalendar ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      <Calendar className="h-5 w-5" />
-                    )}
-                    {syncingCalendar ? 'Syncing...' : 'Sync Calendar'}
-                  </button>
-                  <button
-                    onClick={() => setIsAddingEvent(true)}
-                    className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-primary to-primary/80 text-white rounded-xl hover:from-primary/90 hover:to-primary/70 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                  >
-                    <Plus className="h-5 w-5" />
-                    Add Event
-                  </button>
+        <BlocIQCard variant="elevated">
+          <BlocIQCardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center">
+                  <Calendar className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-semibold text-[#333333]">Upcoming Events</h2>
+                  <p className="text-sm text-[#64748B]">Property events & Outlook calendar</p>
                 </div>
               </div>
-            )}
-          </div>
-        </div>
+              <div className="flex items-center gap-2">
+                <BlocIQButton
+                  onClick={syncCalendar}
+                  disabled={syncingCalendar}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  {syncingCalendar ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  {syncingCalendar ? 'Syncing...' : 'Sync Calendar'}
+                </BlocIQButton>
+                <BlocIQButton
+                  onClick={() => setIsAddingEvent(true)}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Event
+                </BlocIQButton>
+              </div>
+            </div>
+          </BlocIQCardHeader>
+          
+          <BlocIQCardContent>
+            <div className="space-y-4">
+              {loadingEvents && loadingCalendar ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#008C8F] mx-auto mb-2"></div>
+                  <p className="text-[#64748B] text-sm">Loading events...</p>
+                </div>
+              ) : (upcomingEvents.length > 0 || calendarEvents.length > 0) ? (
+                <>
+                  {/* Calendar Events */}
+                  {calendarEvents.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="text-lg font-semibold text-[#333333] mb-3 flex items-center gap-2">
+                        <Calendar className="h-5 w-5 text-[#2078F4]" />
+                        Outlook Calendar
+                      </h3>
+                      <div className="space-y-3">
+                        {calendarEvents.map((event, index) => {
+                          const { date, time } = formatEventDate(event.start_time)
+                          const eventDate = new Date(event.start_time)
+                          const isToday = eventDate.toDateString() === new Date().toDateString()
+                          const isTomorrow = eventDate.toDateString() === new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString()
+                          
+                          return (
+                            <div key={`calendar-${index}`} className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 hover:shadow-lg text-sm border-l-4 border-[#2078F4] transition-all duration-200">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <div className="font-bold text-[#333333]">
+                                      📅 {event.subject}
+                                    </div>
+                                    {(isToday || isTomorrow) && (
+                                      <BlocIQBadge variant={isToday ? "destructive" : "warning"} size="sm">
+                                        {isToday ? 'Today' : 'Tomorrow'}
+                                      </BlocIQBadge>
+                                    )}
+                                  </div>
+                                  {event.location && (
+                                    <div className="text-[#64748B] mb-1">
+                                      📍 {event.location}
+                                    </div>
+                                  )}
+                                  {event.organiser_name && (
+                                    <div className="text-[#64748B] mb-1">
+                                      👤 {event.organiser_name}
+                                    </div>
+                                  )}
+                                  <div className="text-[#64748B]">
+                                    🕒 {date} at {time}
+                                    {event.is_all_day && ' (All day)'}
+                                  </div>
+                                  {event.online_meeting && (
+                                    <div className="text-[#2078F4] text-xs mt-1">
+                                      🎥 Online meeting available
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Property Events */}
+                  {upcomingEvents.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-[#333333] mb-3 flex items-center gap-2">
+                        <Home className="h-5 w-5 text-[#2BBEB4]" />
+                        Property Events
+                      </h3>
+                      <div className="space-y-3">
+                        {upcomingEvents.map((event, index) => {
+                          const { date, time } = formatEventDate(event.date)
+                          const eventDate = new Date(event.date)
+                          const isToday = eventDate.toDateString() === new Date().toDateString()
+                          const isTomorrow = eventDate.toDateString() === new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString()
+                          
+                          return (
+                            <div key={`property-${index}`} className="bg-gradient-to-r from-[#F0FDFA] to-emerald-50 rounded-xl p-4 hover:shadow-lg text-sm border-l-4 border-[#2BBEB4] transition-all duration-200">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <div className="font-bold text-[#333333]">
+                                      {event.category}
+                                    </div>
+                                    {(isToday || isTomorrow) && (
+                                      <BlocIQBadge variant={isToday ? "destructive" : "warning"} size="sm">
+                                        {isToday ? 'Today' : 'Tomorrow'}
+                                      </BlocIQBadge>
+                                    )}
+                                  </div>
+                                  <div className="text-[#333333] mb-1 font-medium">
+                                    {event.title}
+                                  </div>
+                                  <div className="text-[#64748B] mb-1">
+                                    📍 {event.building}
+                                  </div>
+                                  <div className="text-[#64748B]">
+                                    🕒 {date} at {time}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <Calendar className="h-12 w-12 text-[#64748B] mx-auto mb-3" />
+                  <p className="text-[#64748B] text-sm">No upcoming events</p>
+                  <p className="text-[#64748B] text-xs mt-1">Sync your Outlook calendar or add property events to see them here</p>
+                  <div className="flex gap-3 justify-center mt-4">
+                    <BlocIQButton
+                      onClick={syncCalendar}
+                      disabled={syncingCalendar}
+                      size="sm"
+                      className="flex items-center gap-2"
+                    >
+                      {syncingCalendar ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        <Calendar className="h-5 w-5" />
+                      )}
+                      {syncingCalendar ? 'Syncing...' : 'Sync Calendar'}
+                    </BlocIQButton>
+                    <BlocIQButton
+                      onClick={() => setIsAddingEvent(true)}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2"
+                    >
+                      <Plus className="h-5 w-5" />
+                      Add Event
+                    </BlocIQButton>
+                  </div>
+                </div>
+              )}
+            </div>
+          </BlocIQCardContent>
+        </BlocIQCard>
       </div>
 
       {/* Daily Summary Section */}
@@ -762,26 +794,41 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <UpcomingEventsWidget />
         
-        <div className="bg-white rounded-2xl shadow-lg p-6 border">
-          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <Building className="h-5 w-5 text-teal-600" />
-            Building Matching Stats
-          </h2>
-          <div className="space-y-4">
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-blue-900 mb-2">How it works</h3>
-              <p className="text-sm text-blue-700">
-                The widget automatically matches Outlook calendar events to your buildings by scanning event titles and locations for building names.
-              </p>
+        <BlocIQCard variant="elevated">
+          <BlocIQCardHeader>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center">
+                <Building className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-[#333333]">Building Matching Stats</h2>
+                <p className="text-sm text-[#64748B]">Smart event-to-building correlation</p>
+              </div>
             </div>
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-green-900 mb-2">Smart Matching</h3>
-              <p className="text-sm text-green-700">
-                Uses both exact and partial matching to find building references in event details, helping you quickly identify property-related meetings.
-              </p>
+          </BlocIQCardHeader>
+          <BlocIQCardContent>
+            <div className="space-y-4">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
+                <h3 className="font-semibold text-[#0F5D5D] mb-2 flex items-center gap-2">
+                  <Brain className="h-4 w-4" />
+                  How it works
+                </h3>
+                <p className="text-sm text-[#0F5D5D]">
+                  The widget automatically matches Outlook calendar events to your buildings by scanning event titles and locations for building names.
+                </p>
+              </div>
+              <div className="bg-gradient-to-r from-[#F0FDFA] to-emerald-50 p-4 rounded-xl border border-[#2BBEB4]">
+                <h3 className="font-semibold text-[#0F5D5D] mb-2 flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4" />
+                  Smart Matching
+                </h3>
+                <p className="text-sm text-[#0F5D5D]">
+                  Uses both exact and partial matching to find building references in event details, helping you quickly identify property-related meetings.
+                </p>
+              </div>
             </div>
-          </div>
-        </div>
+          </BlocIQCardContent>
+        </BlocIQCard>
       </div>
     </div>
   )
