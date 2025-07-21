@@ -25,6 +25,7 @@ import {
 import { BlocIQBadge } from '@/components/ui/blociq-badge'
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
+import { Input } from '@/components/ui/input'
 
 // Define the Building type based on the database schema
 type Building = {
@@ -93,23 +94,18 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
         <div className="text-center max-w-md mx-auto">
           <div className="relative mb-8">
             <div className="bg-gradient-to-br from-[#F0FDFA] to-[#E2E8F0] rounded-full w-32 h-32 flex items-center justify-center mx-auto">
-              <Building2 className="h-16 w-16 text-[#2BBEB4]" />
+              <Building2 className="h-16 w-16 text-[#008C8F]" />
             </div>
-            <div className="absolute -top-2 -right-2 bg-[#2BBEB4] rounded-full p-2">
+            <div className="absolute -top-2 -right-2 bg-gradient-to-br from-[#008C8F] to-[#007BDB] rounded-full p-2">
               <Plus className="h-4 w-4 text-white" />
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-[#333333] mb-4">No Buildings Found</h2>
-          <p className="text-[#64748B] mb-8">Get started by adding your first building to your property portfolio.</p>
-          <div className="space-y-4">
-            <BlocIQButton className="px-8 py-3">
-              <Plus className="h-5 w-5 mr-2" />
-              Add Your First Building
-            </BlocIQButton>
-            <div className="text-sm text-[#64748B]">
-              <p>Need help? Check out our <Link href="/help" className="text-[#2BBEB4] hover:text-[#0F5D5D] underline">setup guide</Link></p>
-            </div>
-          </div>
+          <h2 className="text-2xl font-bold text-[#333333] mb-4">No Buildings Yet</h2>
+          <p className="text-[#64748B] mb-8">Get started by adding your first building to the portfolio</p>
+          <BlocIQButton className="bg-gradient-to-r from-[#008C8F] to-[#007BDB] text-white shadow-lg">
+            <Plus className="h-4 w-4 mr-2" />
+            Add First Building
+          </BlocIQButton>
         </div>
       </div>
     )
@@ -117,25 +113,19 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
 
   return (
     <div className="space-y-8">
-      {/* Enhanced Header with BlocIQ Branding */}
-      <div className="bg-gradient-to-r from-[#2BBEB4] to-[#0F5D5D] rounded-2xl p-8 text-white shadow-xl">
+      {/* Header Section */}
+      <div className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] rounded-2xl p-8 text-white shadow-xl">
         <div className="flex items-center justify-between">
-          <div className="space-y-2">
-            <h1 className="text-4xl font-bold">Property Portfolio</h1>
-            <p className="text-xl text-white/90">Manage all your buildings and leaseholders in one place</p>
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Buildings Portfolio</h1>
+            <p className="text-white/80">Manage your property portfolio and leaseholder information</p>
           </div>
           <div className="flex items-center gap-4">
-            <BlocIQButton 
-              variant="secondary"
-              className="bg-white/20 hover:bg-white/30 text-white border-white/30"
-            >
+            <BlocIQButton className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm">
               <Plus className="h-4 w-4 mr-2" />
               Add Building
             </BlocIQButton>
-            <BlocIQButton 
-              variant="secondary"
-              className="bg-white/20 hover:bg-white/30 text-white border-white/30"
-            >
+            <BlocIQButton variant="outline" className="border-white/30 text-white hover:bg-white/10">
               <Users className="h-4 w-4 mr-2" />
               Import Data
             </BlocIQButton>
@@ -143,61 +133,117 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
         </div>
       </div>
 
-      {/* Enhanced Controls */}
-      <BlocIQCard variant="elevated" className="p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-4 py-2 border border-[#E2E8F0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2BBEB4] focus:border-transparent bg-white text-sm font-medium shadow-sm"
-            >
-              <option value="name">Sort by Name</option>
-              <option value="units">Sort by Units</option>
-              <option value="date">Sort by Date</option>
-            </select>
-
-            <div className="flex bg-[#F3F4F6] rounded-xl p-1">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-lg transition-all duration-200 ${
-                  viewMode === 'grid' 
-                    ? 'bg-white text-[#2BBEB4] shadow-sm' 
-                    : 'text-[#64748B] hover:text-[#333333]'
-                }`}
-              >
-                <Grid className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-2 rounded-lg transition-all duration-200 ${
-                  viewMode === 'list' 
-                    ? 'bg-white text-[#2BBEB4] shadow-sm' 
-                    : 'text-[#64748B] hover:text-[#333333]'
-                }`}
-              >
-                <List className="h-4 w-4" />
-              </button>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <BlocIQCard className="bg-gradient-to-br from-[#F0FDFA] to-[#E2E8F0] border-0">
+          <BlocIQCardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold text-[#0F5D5D]">{buildings.length}</div>
+                <div className="text-sm text-[#64748B]">Total Buildings</div>
+              </div>
+              <div className="w-12 h-12 bg-gradient-to-br from-[#008C8F] to-[#007BDB] rounded-xl flex items-center justify-center">
+                <Building2 className="h-6 w-6 text-white" />
+              </div>
             </div>
-          </div>
-        </div>
-      </BlocIQCard>
+          </BlocIQCardContent>
+        </BlocIQCard>
 
-      {/* Enhanced Search Bar */}
-      <div className="relative">
-        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-          <Search className="h-5 w-5 text-[#64748B]" />
-        </div>
-        <input
-          type="text"
-          placeholder="Search buildings, units, or leaseholders..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="block w-full pl-12 pr-4 py-4 border border-[#E2E8F0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2BBEB4] focus:border-transparent bg-white shadow-sm text-lg transition-all duration-200"
-        />
+        <BlocIQCard className="bg-gradient-to-br from-[#F0FDFA] to-[#E2E8F0] border-0">
+          <BlocIQCardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold text-[#0F5D5D]">
+                  {buildings.reduce((total, building) => total + (building.unit_count || 0), 0)}
+                </div>
+                <div className="text-sm text-[#64748B]">Total Units</div>
+              </div>
+              <div className="w-12 h-12 bg-gradient-to-br from-[#2078F4] to-[#1D4ED8] rounded-xl flex items-center justify-center">
+                <Home className="h-6 w-6 text-white" />
+              </div>
+            </div>
+          </BlocIQCardContent>
+        </BlocIQCard>
+
+        <BlocIQCard className="bg-gradient-to-br from-[#F0FDFA] to-[#E2E8F0] border-0">
+          <BlocIQCardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold text-[#0F5D5D]">
+                  {buildings.filter(b => b.demo_ready).length}
+                </div>
+                <div className="text-sm text-[#64748B]">Demo Ready</div>
+              </div>
+              <div className="w-12 h-12 bg-gradient-to-br from-[#10B981] to-[#059669] rounded-xl flex items-center justify-center">
+                <CheckCircle className="h-6 w-6 text-white" />
+              </div>
+            </div>
+          </BlocIQCardContent>
+        </BlocIQCard>
+
+        <BlocIQCard className="bg-gradient-to-br from-[#F0FDFA] to-[#E2E8F0] border-0">
+          <BlocIQCardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold text-[#0F5D5D]">
+                  {buildings.filter(b => !b.demo_ready).length}
+                </div>
+                <div className="text-sm text-[#64748B]">In Setup</div>
+              </div>
+              <div className="w-12 h-12 bg-gradient-to-br from-[#F59E0B] to-[#D97706] rounded-xl flex items-center justify-center">
+                <Wrench className="h-6 w-6 text-white" />
+              </div>
+            </div>
+          </BlocIQCardContent>
+        </BlocIQCard>
       </div>
 
-      {/* Buildings Grid/List */}
+      {/* Controls */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#64748B] h-4 w-4" />
+            <Input
+              type="text"
+              placeholder="Search buildings..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 w-80 border-[#E2E8F0] focus:border-[#008C8F] focus:ring-[#008C8F] rounded-xl"
+            />
+          </div>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as 'name' | 'units' | 'date')}
+            className="border border-[#E2E8F0] rounded-xl px-4 py-2 text-sm focus:border-[#008C8F] focus:ring-[#008C8F] outline-none"
+          >
+            <option value="name">Sort by Name</option>
+            <option value="units">Sort by Units</option>
+            <option value="date">Sort by Date</option>
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <BlocIQButton
+            variant={viewMode === 'grid' ? 'primary' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('grid')}
+            className="flex items-center gap-2"
+          >
+            <Grid className="h-4 w-4" />
+            Grid
+          </BlocIQButton>
+          <BlocIQButton
+            variant={viewMode === 'list' ? 'primary' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('list')}
+            className="flex items-center gap-2"
+          >
+            <List className="h-4 w-4" />
+            List
+          </BlocIQButton>
+        </div>
+      </div>
+
+      {/* Buildings Display */}
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sortedBuildings.map((building) => (
@@ -205,9 +251,7 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
               key={building.id}
               building={building}
               showUnitDetails={showUnitDetails === building.id}
-              onToggleUnitDetails={() => setShowUnitDetails(
-                showUnitDetails === building.id ? null : building.id
-              )}
+              onToggleUnitDetails={() => setShowUnitDetails(showUnitDetails === building.id ? null : building.id)}
             />
           ))}
         </div>
@@ -218,9 +262,7 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
               key={building.id}
               building={building}
               showUnitDetails={showUnitDetails === building.id}
-              onToggleUnitDetails={() => setShowUnitDetails(
-                showUnitDetails === building.id ? null : building.id
-              )}
+              onToggleUnitDetails={() => setShowUnitDetails(showUnitDetails === building.id ? null : building.id)}
             />
           ))}
         </div>
@@ -239,83 +281,113 @@ function BuildingCard({
   onToggleUnitDetails: () => void
 }) {
   return (
-    <BlocIQCard variant="elevated" className="hover:shadow-lg transition-all duration-300 hover:scale-105">
+    <BlocIQCard className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-white">
       <BlocIQCardHeader className="pb-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-[#008C8F] to-[#007BDB] rounded-xl flex items-center justify-center">
               <Building2 className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-[#333333]">{building.name}</h3>
+              <h3 className="text-lg font-bold text-[#333333] group-hover:text-[#008C8F] transition-colors duration-300">
+                {building.name}
+              </h3>
               {building.address && (
-                <div className="flex items-center gap-1 text-sm text-[#64748B] mt-1">
+                <p className="text-sm text-[#64748B] flex items-center gap-1">
                   <MapPin className="h-3 w-3" />
                   {building.address}
-                </div>
+                </p>
               )}
             </div>
           </div>
-          <BlocIQBadge variant="primary" size="sm">
-            {building.unit_count || 0} Units
-          </BlocIQBadge>
+          <div className="flex items-center gap-2">
+            {building.demo_ready ? (
+              <BlocIQBadge variant="success" size="sm">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Demo Ready
+              </BlocIQBadge>
+            ) : (
+              <BlocIQBadge variant="warning" size="sm">
+                <Wrench className="h-3 w-3 mr-1" />
+                In Setup
+              </BlocIQBadge>
+            )}
+          </div>
         </div>
       </BlocIQCardHeader>
       
-      <BlocIQCardContent>
+      <BlocIQCardContent className="pt-0">
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div className="flex items-center gap-2 text-[#64748B]">
-              <Users className="h-4 w-4" />
-              <span>{building.unit_count || 0} Units</span>
-            </div>
-            <div className="flex items-center gap-2 text-[#64748B]">
-              <Calendar className="h-4 w-4" />
-              <span>{building.created_at ? new Date(building.created_at).toLocaleDateString() : 'N/A'}</span>
-            </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-[#64748B]">Units:</span>
+            <span className="font-semibold text-[#333333]">{building.unit_count || 0}</span>
           </div>
           
-          <div className="flex items-center justify-between pt-4 border-t border-[#E2E8F0]">
-            <BlocIQButton
-              onClick={onToggleUnitDetails}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <Eye className="h-4 w-4" />
-              {showUnitDetails ? 'Hide' : 'View'} Units
-            </BlocIQButton>
-            
-            <Link href={`/buildings/${building.id}`}>
-              <BlocIQButton size="sm" className="flex items-center gap-2">
-                <ArrowRight className="h-4 w-4" />
-                Details
-              </BlocIQButton>
-            </Link>
-          </div>
-          
-          {showUnitDetails && building.units && building.units.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-[#E2E8F0]">
-              <h4 className="font-medium text-[#333333] mb-3">Units</h4>
-              <div className="space-y-2">
-                {building.units.slice(0, 3).map((unit) => (
-                  <div key={unit.id} className="flex items-center justify-between p-2 bg-[#FAFAFA] rounded-lg">
-                    <span className="text-sm font-medium text-[#333333]">{unit.unit_number}</span>
-                    {unit.leaseholders && unit.leaseholders.length > 0 && (
-                      <BlocIQBadge variant="secondary" size="sm">
-                        Occupied
-                      </BlocIQBadge>
-                    )}
-                  </div>
-                ))}
-                {building.units.length > 3 && (
-                  <div className="text-sm text-[#64748B] text-center">
-                    +{building.units.length - 3} more units
-                  </div>
-                )}
+          {building.units && building.units.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-[#333333]">Recent Units</span>
+                <BlocIQButton
+                  variant="ghost"
+                  size="sm"
+                  onClick={onToggleUnitDetails}
+                  className="text-[#008C8F] hover:text-[#0F5D5D]"
+                >
+                  {showUnitDetails ? 'Hide' : 'Show'} Details
+                </BlocIQButton>
               </div>
+              
+              {showUnitDetails && (
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {building.units.slice(0, 5).map((unit) => (
+                    <div key={unit.id} className="bg-[#F3F4F6] rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-[#333333]">{unit.unit_number}</span>
+                        {unit.leaseholders && unit.leaseholders.length > 0 && (
+                          <div className="flex items-center gap-1">
+                            <User className="h-3 w-3 text-[#64748B]" />
+                            <span className="text-xs text-[#64748B]">{unit.leaseholders.length}</span>
+                          </div>
+                        )}
+                      </div>
+                      {unit.leaseholders && unit.leaseholders.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {unit.leaseholders.slice(0, 2).map((leaseholder) => (
+                            <div key={leaseholder.id} className="text-xs text-[#64748B]">
+                              {leaseholder.name}
+                            </div>
+                          ))}
+                          {unit.leaseholders.length > 2 && (
+                            <div className="text-xs text-[#64748B]">
+                              +{unit.leaseholders.length - 2} more
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
+          
+          <div className="flex gap-2 pt-2">
+            <BlocIQButton
+              variant="outline"
+              size="sm"
+              className="flex-1 border-[#E2E8F0] text-[#64748B] hover:bg-[#F0FDFA]"
+            >
+              <Eye className="h-4 w-4 mr-1" />
+              View
+            </BlocIQButton>
+            <BlocIQButton
+              size="sm"
+              className="flex-1 bg-gradient-to-r from-[#008C8F] to-[#007BDB] text-white"
+            >
+              <Users className="h-4 w-4 mr-1" />
+              Manage
+            </BlocIQButton>
+          </div>
         </div>
       </BlocIQCardContent>
     </BlocIQCard>
@@ -332,65 +404,100 @@ function BuildingListItem({
   onToggleUnitDetails: () => void
 }) {
   return (
-    <BlocIQCard variant="elevated" className="hover:shadow-lg transition-all duration-300">
+    <BlocIQCard className="group hover:shadow-lg transition-all duration-300 border-0 bg-white">
       <BlocIQCardContent className="p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-[#008C8F] to-[#007BDB] rounded-xl flex items-center justify-center">
               <Building2 className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-[#333333]">{building.name}</h3>
+              <h3 className="text-lg font-bold text-[#333333] group-hover:text-[#008C8F] transition-colors duration-300">
+                {building.name}
+              </h3>
               {building.address && (
-                <div className="flex items-center gap-1 text-sm text-[#64748B] mt-1">
+                <p className="text-sm text-[#64748B] flex items-center gap-1">
                   <MapPin className="h-3 w-3" />
                   {building.address}
-                </div>
+                </p>
               )}
             </div>
           </div>
           
           <div className="flex items-center gap-4">
             <div className="text-right">
+              <div className="text-lg font-bold text-[#333333]">{building.unit_count || 0}</div>
               <div className="text-sm text-[#64748B]">Units</div>
-              <div className="text-lg font-semibold text-[#333333]">{building.unit_count || 0}</div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              {building.demo_ready ? (
+                <BlocIQBadge variant="success" size="sm">
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  Demo Ready
+                </BlocIQBadge>
+              ) : (
+                <BlocIQBadge variant="warning" size="sm">
+                  <Wrench className="h-3 w-3 mr-1" />
+                  In Setup
+                </BlocIQBadge>
+              )}
             </div>
             
             <div className="flex items-center gap-2">
               <BlocIQButton
-                onClick={onToggleUnitDetails}
                 variant="outline"
                 size="sm"
-                className="flex items-center gap-2"
+                className="border-[#E2E8F0] text-[#64748B] hover:bg-[#F0FDFA]"
               >
-                <Eye className="h-4 w-4" />
-                {showUnitDetails ? 'Hide' : 'View'} Units
+                <Eye className="h-4 w-4 mr-1" />
+                View
               </BlocIQButton>
-              
-              <Link href={`/buildings/${building.id}`}>
-                <BlocIQButton size="sm" className="flex items-center gap-2">
-                  <ArrowRight className="h-4 w-4" />
-                  Details
-                </BlocIQButton>
-              </Link>
+              <BlocIQButton
+                size="sm"
+                className="bg-gradient-to-r from-[#008C8F] to-[#007BDB] text-white"
+              >
+                <Users className="h-4 w-4 mr-1" />
+                Manage
+              </BlocIQButton>
+              <BlocIQButton
+                variant="ghost"
+                size="sm"
+                onClick={onToggleUnitDetails}
+                className="text-[#008C8F] hover:text-[#0F5D5D]"
+              >
+                {showUnitDetails ? 'Hide' : 'Show'} Details
+              </BlocIQButton>
             </div>
           </div>
         </div>
         
         {showUnitDetails && building.units && building.units.length > 0 && (
           <div className="mt-6 pt-6 border-t border-[#E2E8F0]">
-            <h4 className="font-medium text-[#333333] mb-4">Units</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {building.units.map((unit) => (
-                <div key={unit.id} className="flex items-center justify-between p-3 bg-[#FAFAFA] rounded-xl">
-                  <div className="flex items-center gap-2">
-                    <Home className="h-4 w-4 text-[#64748B]" />
-                    <span className="text-sm font-medium text-[#333333]">{unit.unit_number}</span>
+            <h4 className="font-semibold text-[#333333] mb-4">Units & Leaseholders</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {building.units.slice(0, 6).map((unit) => (
+                <div key={unit.id} className="bg-[#F3F4F6] rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-[#333333]">{unit.unit_number}</span>
+                    {unit.leaseholders && unit.leaseholders.length > 0 && (
+                      <BlocIQBadge variant="primary" size="sm">
+                        {unit.leaseholders.length} leaseholder{unit.leaseholders.length !== 1 ? 's' : ''}
+                      </BlocIQBadge>
+                    )}
                   </div>
                   {unit.leaseholders && unit.leaseholders.length > 0 && (
-                    <BlocIQBadge variant="secondary" size="sm">
-                      Occupied
-                    </BlocIQBadge>
+                    <div className="space-y-2">
+                      {unit.leaseholders.map((leaseholder) => (
+                        <div key={leaseholder.id} className="text-sm">
+                          <div className="font-medium text-[#333333]">{leaseholder.name}</div>
+                          <div className="text-[#64748B]">{leaseholder.email}</div>
+                          {leaseholder.phone && (
+                            <div className="text-[#64748B]">{leaseholder.phone}</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               ))}
