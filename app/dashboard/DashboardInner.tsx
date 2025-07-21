@@ -20,6 +20,7 @@ import {
 import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import { BlocIQBadge } from '@/components/ui/blociq-badge'
+import SyncCalendarButton from '@/components/SyncCalendarButton'
 import { toast } from 'sonner'
 
 interface DashboardStats {
@@ -141,24 +142,27 @@ export default function DashboardInner() {
             <h1 className="text-4xl font-bold">Welcome to BlocIQ</h1>
             <p className="text-xl text-white/90">Your property management dashboard</p>
           </div>
-          <div className="flex items-center gap-4">
-            <BlocIQButton 
-              variant="secondary"
-              onClick={() => router.push('/inbox')}
-              className="bg-white/20 hover:bg-white/30 text-white border-white/30"
-            >
-              <Mail className="h-4 w-4 mr-2" />
-              View Inbox
-            </BlocIQButton>
-            <BlocIQButton 
-              variant="secondary"
-              onClick={() => router.push('/buildings')}
-              className="bg-white/20 hover:bg-white/30 text-white border-white/30"
-            >
-              <Building2 className="h-4 w-4 mr-2" />
-              Manage Buildings
-            </BlocIQButton>
-          </div>
+                      <div className="flex items-center gap-4">
+              <BlocIQButton 
+                variant="secondary"
+                onClick={() => router.push('/inbox')}
+                className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                View Inbox
+              </BlocIQButton>
+              <BlocIQButton 
+                variant="secondary"
+                onClick={() => router.push('/buildings')}
+                className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+              >
+                <Building2 className="h-4 w-4 mr-2" />
+                Manage Buildings
+              </BlocIQButton>
+              <div className="bg-white/20 rounded-xl p-2">
+                <SyncCalendarButton />
+              </div>
+            </div>
         </div>
       </div>
 
@@ -279,6 +283,7 @@ export default function DashboardInner() {
                     <Mail className="h-4 w-4" />
                     View Inbox
                   </BlocIQButton>
+                  <SyncCalendarButton />
                   <BlocIQButton
                     variant="destructive"
                     size="sm"
