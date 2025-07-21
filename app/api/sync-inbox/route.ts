@@ -57,8 +57,13 @@ export async function GET(req: NextRequest) {
       });
 
       if (!refreshResponse.ok) {
-        console.error('Failed to refresh token');
-        return NextResponse.json({ error: 'Failed to refresh Outlook token' }, { status: 500 });
+        const errorText = await refreshResponse.text();
+        console.error('❌ Failed to refresh token:', errorText);
+        console.error('❌ Refresh response status:', refreshResponse.status, refreshResponse.statusText);
+        return NextResponse.json({ 
+          error: 'Failed to refresh Outlook token',
+          details: process.env.NODE_ENV === 'development' ? errorText : undefined
+        }, { status: 500 });
       }
 
       const refreshData = await refreshResponse.json();
@@ -85,6 +90,7 @@ export async function GET(req: NextRequest) {
     }
 
     // ✅ 3. Call Microsoft Graph /me/messages
+    console.log('🔄 Fetching emails from Microsoft Graph...');
     const graphResponse = await fetch('https://graph.microsoft.com/v1.0/me/messages?$top=20&$orderby=receivedDateTime desc', {
       headers: {
         'Authorization': `Bearer ${token.access_token}`,
@@ -92,9 +98,16 @@ export async function GET(req: NextRequest) {
       },
     });
 
+    console.log('📡 Graph API response status:', graphResponse.status, graphResponse.statusText);
+
     if (!graphResponse.ok) {
-      console.error('Failed to fetch emails from Microsoft Graph');
-      return NextResponse.json({ error: 'Failed to fetch emails from Outlook' }, { status: 500 });
+      const errorText = await graphResponse.text();
+      console.error('❌ Failed to fetch emails from Microsoft Graph:', errorText);
+      console.error('❌ Response status:', graphResponse.status, graphResponse.statusText);
+      return NextResponse.json({ 
+        error: 'Failed to fetch emails from Outlook',
+        details: process.env.NODE_ENV === 'development' ? errorText : undefined
+      }, { status: 500 });
     }
 
     const graphData = await graphResponse.json();
@@ -120,11 +133,11 @@ export async function GET(req: NextRequest) {
         continue;
       }
 
-      // Check for existing row with same outlook_id (using internetMessageId)
+      // Check for existing row with same message_id (using internetMessageId)
       const { data: existingEmail } = await supabase
         .from("incoming_emails")
         .select("id")
-        .eq("outlook_id", internetMessageId)
+        .eq("message_id", internetMessageId)
         .single();
 
       if (existingEmail) {
@@ -136,7 +149,7 @@ export async function GET(req: NextRequest) {
       const { error: insertError } = await supabase
         .from("incoming_emails")
         .insert({
-          outlook_id: internetMessageId,
+          message_id: internetMessageId,
           subject: subject || '(No Subject)',
           body_preview: bodyPreview || '',
           from_email: fromEmail,
