@@ -21,7 +21,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
   console.log('🔍 Inbox page - User authenticated:', user.id)
 
   // Fetch all emails from Supabase (no limit)
-  const { data: emails, error } = await supabase
+  const { data: rawEmails, error } = await supabase
     .from('incoming_emails')
     .select(`
       id,
@@ -38,14 +38,21 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
       outlook_id,
       buildings(name)
     `)
+    .eq('is_deleted', false) // Filter out deleted emails
     .order('received_at', { ascending: false })
 
-  console.log('📧 Inbox page - Emails fetched:', emails?.length || 0)
-  console.log('📧 Inbox page - First email:', emails?.[0])
+  console.log('📧 Inbox page - Emails fetched:', rawEmails?.length || 0)
+  console.log('📧 Inbox page - First email:', rawEmails?.[0])
 
   if (error) {
     console.error('❌ Error fetching emails:', error)
   }
+
+  // Process emails to match the Email interface
+  const emails = rawEmails?.map((email: any) => ({
+    ...email,
+    buildings: Array.isArray(email.buildings) ? email.buildings[0] : email.buildings
+  })) || []
 
   // Get last sync time
   const { data: lastSync } = await supabase
@@ -63,7 +70,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
     return (
     <LayoutWithSidebar>
       <NewInboxClient
-        initialEmails={[]} // Start with empty emails to reflect fresh Outlook inbox
+        initialEmails={emails || []} // Pass fetched emails to show immediately
         lastSyncTime={lastSyncTime}
         userId={user.id}
         searchParams={params}
