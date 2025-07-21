@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import EmailListItem from './components/EmailListItem'
-import EmailDetail from './components/EmailDetail'
+import EmailDetailPanel from './components/EmailDetailPanel'
 import AIActionBar from './components/AIActionBar'
 import ComposeEmailModal from './components/ComposeEmailModal'
 import FolderSidebar from './components/FolderSidebar'
@@ -586,20 +586,18 @@ export default function NewInboxClient({
           {/* Email Detail */}
           <div className="w-1/2 flex flex-col">
             {selectedEmail ? (
-              <>
-                <EmailDetail
-                  email={selectedEmail}
-                  onEmailDeleted={() => {
-                    // Remove the deleted email from the list and clear selection
-                    setEmails(prev => prev.filter(e => e.id !== selectedEmail.id))
-                    setSelectedEmail(null)
-                  }}
-                />
-                <AIActionBar
-                  email={selectedEmail}
-                  onMarkHandled={() => markAsHandled(selectedEmail.id)}
-                />
-              </>
+              <EmailDetailPanel
+                email={selectedEmail}
+                onEmailDeleted={() => {
+                  // Remove the deleted email from the list and clear selection
+                  setEmails(prev => prev.filter(e => e.id !== selectedEmail.id))
+                  setSelectedEmail(null)
+                }}
+                onEmailSent={() => {
+                  // Refresh the email list after sending
+                  // You could add additional logic here if needed
+                }}
+              />
             ) : (
               <div className="flex-1 flex items-center justify-center text-gray-500">
                 <div className="text-center">
