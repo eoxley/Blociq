@@ -19,6 +19,11 @@ type PropertyEvent = {
   category: string
 }
 
+type Building = {
+  id: number
+  name: string
+}
+
 type CalendarEvent = {
   id: string
   outlook_id: string
@@ -84,9 +89,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const [recentEmails, setRecentEmails] = useState<Email[]>([])
   const [loadingEmails, setLoadingEmails] = useState(true)
   const [syncingEmails, setSyncingEmails] = useState(false)
-  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([])
-  const [loadingCalendar, setLoadingCalendar] = useState(true)
-  const [syncingCalendar, setSyncingCalendar] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClientComponentClient()
 
@@ -140,6 +142,29 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   // Real upcoming events from database
   const [upcomingEvents, setUpcomingEvents] = useState<PropertyEvent[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
+  const [buildings, setBuildings] = useState<Building[]>([]);
+
+  // Fetch buildings for event form
+  useEffect(() => {
+    const fetchBuildings = async () => {
+      try {
+        const { data: buildingsData, error } = await supabase
+          .from('buildings')
+          .select('id, name')
+          .order('name');
+
+        if (error) {
+          console.error('Error fetching buildings:', error);
+        } else {
+          setBuildings(buildingsData || []);
+        }
+      } catch (error) {
+        console.error('Error fetching buildings:', error);
+      }
+    };
+
+    fetchBuildings();
+  }, [supabase]);
 
   // Fetch real property events from database
   useEffect(() => {
@@ -183,16 +208,30 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         const { data: emails, error } = await supabase
           .from('incoming_emails')
           .select('*')
+          .eq('is_deleted', false)
           .order('received_at', { ascending: false })
           .limit(5);
 
         if (error) {
           console.error('Error fetching emails:', error);
+          setRecentEmails([]);
         } else {
-          setRecentEmails(emails || []);
+          const transformedEmails: Email[] = (emails || []).map(email => ({
+            id: email.id,
+            subject: email.subject,
+            from_email: email.from_email,
+            body_preview: email.body_preview,
+            received_at: email.received_at,
+            handled: email.is_handled,
+            unread: !email.is_read,
+            flag_status: email.flag_status || 'none',
+            categories: email.categories || []
+          }));
+          setRecentEmails(transformedEmails);
         }
       } catch (error) {
         console.error('Error fetching emails:', error);
+        setRecentEmails([]);
       } finally {
         setLoadingEmails(false);
       }
@@ -201,91 +240,48 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     fetchEmails();
   }, [supabase]);
 
-  // Fetch calendar events
-  useEffect(() => {
-    const fetchCalendarEvents = async () => {
-      try {
-        const { data: events, error } = await supabase
-          .from('calendar_events')
-          .select('*')
-          .gte('start_time', new Date().toISOString())
-          .order('start_time', { ascending: true })
-          .limit(10);
-
-        if (error) {
-          console.error('Error fetching calendar events:', error);
-        } else {
-          setCalendarEvents(events || []);
-        }
-      } catch (error) {
-        console.error('Error fetching calendar events:', error);
-      } finally {
-        setLoadingCalendar(false);
-      }
-    };
-
-    fetchCalendarEvents();
-  }, [supabase]);
-
   // Sync emails function
   const syncEmails = async () => {
-    setSyncingEmails(true);
+    setSyncingEmails(true)
     try {
-      const response = await fetch('/api/sync-emails');
+      const response = await fetch('/api/sync-emails', {
+        method: 'POST',
+      })
+
       if (response.ok) {
-        toast.success('Emails synced successfully');
-        // Refresh the emails list
+        toast.success('Emails synced successfully!')
+        // Refresh emails list
         const { data: emails, error } = await supabase
           .from('incoming_emails')
           .select('*')
+          .eq('is_deleted', false)
           .order('received_at', { ascending: false })
           .limit(5);
 
-        if (!error) {
-          setRecentEmails(emails || []);
+        if (!error && emails) {
+          const transformedEmails: Email[] = emails.map(email => ({
+            id: email.id,
+            subject: email.subject,
+            from_email: email.from_email,
+            body_preview: email.body_preview,
+            received_at: email.received_at,
+            handled: email.is_handled,
+            unread: !email.is_read,
+            flag_status: email.flag_status || 'none',
+            categories: email.categories || []
+          }));
+          setRecentEmails(transformedEmails);
         }
       } else {
-        toast.error('Failed to sync emails');
+        toast.error('Failed to sync emails')
       }
     } catch (error) {
-      console.error('Error syncing emails:', error);
-      toast.error('Error syncing emails');
+      console.error('Error syncing emails:', error)
+      toast.error('Failed to sync emails')
     } finally {
-      setSyncingEmails(false);
+      setSyncingEmails(false)
     }
-  };
-
-  // Sync calendar function
-  const syncCalendar = async () => {
-    setSyncingCalendar(true);
-    try {
-      const response = await fetch('/api/cron/sync-calendar');
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Calendar sync response:', data);
-        toast.success(`Calendar synced successfully! ${data.count} events processed.`);
-        
-        // Refresh the calendar events list
-        const { data: events, error } = await supabase
-          .from('calendar_events')
-          .select('*')
-          .gte('start_time', new Date().toISOString())
-          .order('start_time', { ascending: true })
-          .limit(10);
-
-        if (!error) {
-          setCalendarEvents(events || []);
-        }
-      } else {
-        toast.error('Failed to sync calendar');
-      }
-    } catch (error) {
-      console.error('Error syncing calendar:', error);
-      toast.error('Error syncing calendar');
-    } finally {
-      setSyncingCalendar(false);
-    }
-  };
+  }
 
   const handleFileAttachment = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || [])
@@ -374,17 +370,59 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
   const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault()
-    const formData = new FormData(e.target as HTMLFormElement)
-    const eventData = {
-      title: formData.get('title') as string,
-      category: formData.get('category') as string,
-      date: formData.get('date') as string,
-      building: formData.get('building') as string,
-    }
+    setIsAddingEvent(true)
+    
+    try {
+      const formData = new FormData(e.target as HTMLFormElement)
+      const eventData = {
+        title: formData.get('title') as string,
+        date: formData.get('date') as string,
+        building: formData.get('building') as string,
+        description: formData.get('description') as string,
+      }
 
-    // Here you would typically save to database
-    console.log('Adding event:', eventData)
-    setIsAddingEvent(false)
+      console.log('Adding event:', eventData)
+
+      const response = await fetch('/api/create-event', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(eventData),
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        toast.success('Event created successfully!')
+        // Reset form
+        ;(e.target as HTMLFormElement).reset()
+        // Refresh events list
+        const { data: events, error } = await supabase
+          .from('property_events')
+          .select('*')
+          .gte('start_time', new Date().toISOString())
+          .order('start_time', { ascending: true })
+          .limit(10);
+
+        if (!error && events) {
+          const transformedEvents: PropertyEvent[] = events.map(event => ({
+            building: event.building_id ? `Building ${event.building_id}` : 'General',
+            date: event.start_time,
+            title: event.title,
+            category: event.category || event.event_type || '📅 Event'
+          }));
+          setUpcomingEvents(transformedEvents);
+        }
+      } else {
+        toast.error(result.error || 'Failed to create event')
+      }
+    } catch (error) {
+      console.error('Error creating event:', error)
+      toast.error('Failed to create event')
+    } finally {
+      setIsAddingEvent(false)
+    }
   }
 
   const formatEventDate = (dateString: string) => {
@@ -426,20 +464,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <BlocIQButton 
-              onClick={syncCalendar}
-              disabled={syncingCalendar}
-              variant="outline"
-              size="sm"
-              className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
-            >
-              {syncingCalendar ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Calendar className="h-4 w-4 mr-2" />
-              )}
-              {syncingCalendar ? 'Syncing...' : 'Sync Calendar'}
-            </BlocIQButton>
             <BlocIQButton 
               onClick={syncEmails}
               disabled={syncingEmails}
@@ -594,207 +618,140 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         {/* Upcoming Events Section */}
         <BlocIQCard variant="elevated">
           <BlocIQCardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center">
-                  <Calendar className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-semibold text-[#333333]">Upcoming Events</h2>
-                  <p className="text-sm text-[#64748B]">Property events & Outlook calendar</p>
-                </div>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center">
+                <Calendar className="h-6 w-6 text-white" />
               </div>
-              <div className="flex items-center gap-2">
-                <BlocIQButton
-                  onClick={syncCalendar}
-                  disabled={syncingCalendar}
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-2"
-                >
-                  {syncingCalendar ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" />
-                  )}
-                  {syncingCalendar ? 'Syncing...' : 'Sync Calendar'}
-                </BlocIQButton>
-                <BlocIQButton
-                  onClick={() => setIsAddingEvent(true)}
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add Event
-                </BlocIQButton>
+              <div>
+                <h2 className="text-2xl font-semibold text-[#333333]">Property Events</h2>
+                <p className="text-sm text-[#64748B]">Manage your property events</p>
               </div>
             </div>
           </BlocIQCardHeader>
           
           <BlocIQCardContent>
             <div className="space-y-4">
-              {/* Add New Event Section */}
+              {/* Manual Event Input Form */}
               <div className="bg-gradient-to-r from-[#F0FDFA] to-emerald-50 rounded-xl p-4 border border-[#2BBEB4]/20">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-[#008C8F] to-[#2BBEB4] rounded-lg flex items-center justify-center">
-                      <Plus className="h-4 w-4 text-white" />
+                <h3 className="font-semibold text-[#0F5D5D] mb-3">Add New Event</h3>
+                <form onSubmit={handleAddEvent} className="space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-[#333333] mb-1">Event Title</label>
+                      <input
+                        type="text"
+                        name="title"
+                        required
+                        className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
+                        placeholder="Enter event title"
+                      />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-[#0F5D5D]">Add New Event</h3>
-                      <p className="text-sm text-[#64748B]">Create a new property event or meeting</p>
+                      <label className="block text-sm font-medium text-[#333333] mb-1">Date & Time</label>
+                      <input
+                        type="datetime-local"
+                        name="date"
+                        required
+                        className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
+                      />
                     </div>
                   </div>
-                  <BlocIQButton
-                    onClick={() => setIsAddingEvent(true)}
-                    size="sm"
-                    className="bg-gradient-to-r from-[#008C8F] to-[#2BBEB4] hover:from-[#007B8A] hover:to-[#2BBEB4] text-white"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Event
-                  </BlocIQButton>
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#333333] mb-1">Building (Optional)</label>
+                    <select
+                      name="building"
+                      className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
+                    >
+                      <option value="">Select a building</option>
+                      {/* Assuming 'buildings' is defined elsewhere or passed as a prop */}
+                      {/* For now, a placeholder or a dummy list */}
+                      {buildings.map(building => (
+                        <option key={building.id} value={building.name}>{building.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#333333] mb-1">Description (Optional)</label>
+                    <textarea
+                      name="description"
+                      rows={3}
+                      className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
+                      placeholder="Enter event description"
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <BlocIQButton
+                      type="submit"
+                      disabled={isAddingEvent}
+                      size="sm"
+                      className="bg-gradient-to-r from-[#008C8F] to-[#2BBEB4] hover:from-[#007B8A] hover:to-[#2BBEB4] text-white"
+                    >
+                      {isAddingEvent ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Adding...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Event
+                        </>
+                      )}
+                    </BlocIQButton>
+                  </div>
+                </form>
               </div>
 
-              {loadingEvents && loadingCalendar ? (
+              {/* Events List */}
+              {loadingEvents ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#008C8F] mx-auto mb-2"></div>
                   <p className="text-[#64748B] text-sm">Loading events...</p>
                 </div>
-              ) : (upcomingEvents.length > 0 || calendarEvents.length > 0) ? (
-                <>
-                  {/* Calendar Events */}
-                  {calendarEvents.length > 0 && (
-                    <div className="mb-6">
-                      <h3 className="text-lg font-semibold text-[#333333] mb-3 flex items-center gap-2">
-                        <Calendar className="h-5 w-5 text-[#2078F4]" />
-                        Outlook Calendar
-                      </h3>
-                      <div className="space-y-3">
-                        {calendarEvents.map((event, index) => {
-                          const { date, time } = formatEventDate(event.start_time)
-                          const eventDate = new Date(event.start_time)
-                          const isToday = eventDate.toDateString() === new Date().toDateString()
-                          const isTomorrow = eventDate.toDateString() === new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString()
-                          
-                          return (
-                            <div key={`calendar-${index}`} className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 hover:shadow-lg text-sm border-l-4 border-[#2078F4] transition-all duration-200">
-                              <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <div className="font-bold text-[#333333]">
-                                      📅 {event.subject}
-                                    </div>
-                                    {(isToday || isTomorrow) && (
-                                      <BlocIQBadge variant={isToday ? "destructive" : "warning"} size="sm">
-                                        {isToday ? 'Today' : 'Tomorrow'}
-                                      </BlocIQBadge>
-                                    )}
-                                  </div>
-                                  {event.location && (
-                                    <div className="text-[#64748B] mb-1">
-                                      📍 {event.location}
-                                    </div>
-                                  )}
-                                  {event.organiser_name && (
-                                    <div className="text-[#64748B] mb-1">
-                                      👤 {event.organiser_name}
-                                    </div>
-                                  )}
-                                  <div className="text-[#64748B]">
-                                    🕒 {date} at {time}
-                                    {event.is_all_day && ' (All day)'}
-                                  </div>
-                                  {event.online_meeting && (
-                                    <div className="text-[#2078F4] text-xs mt-1">
-                                      🎥 Online meeting available
-                                    </div>
-                                  )}
-                                </div>
+              ) : upcomingEvents.length > 0 ? (
+                <div className="space-y-3">
+                  {upcomingEvents.map((event, index) => {
+                    const { date, time } = formatEventDate(event.date)
+                    const eventDate = new Date(event.date)
+                    const isToday = eventDate.toDateString() === new Date().toDateString()
+                    const isTomorrow = eventDate.toDateString() === new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString()
+                    
+                    return (
+                      <div key={`property-${index}`} className="bg-gradient-to-r from-[#F0FDFA] to-emerald-50 rounded-xl p-4 hover:shadow-lg text-sm border-l-4 border-[#2BBEB4] transition-all duration-200">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="font-bold text-[#333333]">
+                                {event.title}
                               </div>
+                              {(isToday || isTomorrow) && (
+                                <BlocIQBadge variant={isToday ? "destructive" : "warning"} size="sm">
+                                  {isToday ? 'Today' : 'Tomorrow'}
+                                </BlocIQBadge>
+                              )}
                             </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Property Events */}
-                  {upcomingEvents.length > 0 && (
-                    <div>
-                      <h3 className="text-lg font-semibold text-[#333333] mb-3 flex items-center gap-2">
-                        <Home className="h-5 w-5 text-[#2BBEB4]" />
-                        Property Events
-                      </h3>
-                      <div className="space-y-3">
-                        {upcomingEvents.map((event, index) => {
-                          const { date, time } = formatEventDate(event.date)
-                          const eventDate = new Date(event.date)
-                          const isToday = eventDate.toDateString() === new Date().toDateString()
-                          const isTomorrow = eventDate.toDateString() === new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString()
-                          
-                          return (
-                            <div key={`property-${index}`} className="bg-gradient-to-r from-[#F0FDFA] to-emerald-50 rounded-xl p-4 hover:shadow-lg text-sm border-l-4 border-[#2BBEB4] transition-all duration-200">
-                              <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <div className="font-bold text-[#333333]">
-                                      {event.category}
-                                    </div>
-                                    {(isToday || isTomorrow) && (
-                                      <BlocIQBadge variant={isToday ? "destructive" : "warning"} size="sm">
-                                        {isToday ? 'Today' : 'Tomorrow'}
-                                      </BlocIQBadge>
-                                    )}
-                                  </div>
-                                  <div className="text-[#333333] mb-1 font-medium">
-                                    {event.title}
-                                  </div>
-                                  <div className="text-[#64748B] mb-1">
-                                    📍 {event.building}
-                                  </div>
-                                  <div className="text-[#64748B]">
-                                    🕒 {date} at {time}
-                                  </div>
-                                </div>
+                            {event.category && (
+                              <div className="text-[#64748B] mb-1">
+                                📋 {event.category}
                               </div>
+                            )}
+                            <div className="text-[#64748B] mb-1">
+                              📍 {event.building}
                             </div>
-                          )
-                        })}
+                            <div className="text-[#64748B]">
+                              🕒 {date} at {time}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </>
+                    )
+                  })}
+                </div>
               ) : (
                 <div className="text-center py-8">
                   <Calendar className="h-12 w-12 text-[#64748B] mx-auto mb-3" />
-                  <p className="text-[#64748B] text-sm">No upcoming events</p>
-                  <p className="text-[#64748B] text-xs mt-1">Sync your Outlook calendar or add property events to see them here</p>
-                  <div className="flex gap-3 justify-center mt-4">
-                    <BlocIQButton
-                      onClick={syncCalendar}
-                      disabled={syncingCalendar}
-                      size="sm"
-                      className="flex items-center gap-2"
-                    >
-                      {syncingCalendar ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                      ) : (
-                        <Calendar className="h-5 w-5" />
-                      )}
-                      {syncingCalendar ? 'Syncing...' : 'Sync Calendar'}
-                    </BlocIQButton>
-                    <BlocIQButton
-                      onClick={() => setIsAddingEvent(true)}
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-2"
-                    >
-                      <Plus className="h-5 w-5" />
-                      Add Event
-                    </BlocIQButton>
-                  </div>
+                  <p className="text-[#64748B] text-sm">No events yet</p>
+                  <p className="text-[#64748B] text-xs mt-1">Add your first property event above</p>
                 </div>
               )}
             </div>
