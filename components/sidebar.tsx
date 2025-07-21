@@ -135,6 +135,33 @@ export default function Sidebar() {
                 <ChevronRight className="h-3 w-3 text-slate-500" /> 
                 <span className="text-slate-400">Service Charge Arrears</span>
               </a>
+              <a
+                href="/finances/budgeting"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs opacity-60 cursor-not-allowed hover:bg-slate-700/30 transition-colors"
+                tabIndex={-1}
+                aria-disabled="true"
+              >
+                <ChevronRight className="h-3 w-3 text-slate-500" /> 
+                <span className="text-slate-400">Budgeting</span>
+              </a>
+            </div>
+            
+            {/* Contractors */}
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium opacity-60 cursor-not-allowed bg-slate-700/30 backdrop-blur-sm mt-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-orange-500/20 to-orange-600/20 rounded-xl flex items-center justify-center">
+                <span className="text-lg font-bold text-orange-300">🔧</span>
+              </div>
+              <span className="text-slate-400">Contractors</span>
+              <Clock className="h-4 w-4 ml-auto text-slate-500" />
+            </div>
+            
+            {/* Work Orders */}
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium opacity-60 cursor-not-allowed bg-slate-700/30 backdrop-blur-sm mt-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-purple-500/20 to-purple-600/20 rounded-xl flex items-center justify-center">
+                <span className="text-lg font-bold text-purple-300">📋</span>
+              </div>
+              <span className="text-slate-400">Work Orders</span>
+              <Clock className="h-4 w-4 ml-auto text-slate-500" />
             </div>
             
             {/* Client Portal */}
