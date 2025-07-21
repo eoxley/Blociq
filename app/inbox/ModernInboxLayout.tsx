@@ -19,10 +19,12 @@ import {
   Filter,
   MoreVertical,
   Star,
-  StarOff
+  StarOff,
+  Brain
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import TriageAssistant from './components/TriageAssistant'
 
 type Email = {
   id: string
@@ -73,6 +75,7 @@ export default function ModernInboxLayout({
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(false)
   const [syncing, setSyncing] = useState(false)
+  const [isTriageAssistantOpen, setIsTriageAssistantOpen] = useState(false)
   const [folderCounts, setFolderCounts] = useState({
     inbox: 0,
     handled: 0,
@@ -193,6 +196,15 @@ export default function ModernInboxLayout({
     ))
   }
 
+  const startTriageMode = () => {
+    setIsTriageAssistantOpen(true)
+  }
+
+  const handleEmailProcessed = () => {
+    // Refresh the email list to reflect changes
+    setCurrentFilter('inbox')
+  }
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -281,6 +293,13 @@ export default function ModernInboxLayout({
                 <RefreshCw className="h-4 w-4 mr-2" />
               )}
               {syncing ? 'Syncing...' : 'Sync Emails'}
+            </Button>
+            <Button
+              onClick={startTriageMode}
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+            >
+              <Brain className="h-4 w-4 mr-2" />
+              AI Triage
             </Button>
           </div>
         </div>
@@ -523,6 +542,13 @@ export default function ModernInboxLayout({
           )}
         </div>
       </div>
+
+      {/* Triage Assistant Modal */}
+      <TriageAssistant
+        isOpen={isTriageAssistantOpen}
+        onClose={() => setIsTriageAssistantOpen(false)}
+        onEmailProcessed={handleEmailProcessed}
+      />
     </div>
   )
 } 
