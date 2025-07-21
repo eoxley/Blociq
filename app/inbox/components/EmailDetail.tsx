@@ -1,12 +1,13 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Clock, User, Building, Mail, Brain, PenTool, Loader2 } from 'lucide-react'
+import { Clock, User, Building, Mail, Brain, PenTool, Loader2, Reply, ReplyAll, Forward, Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import ReplyEditor from './ReplyEditor'
+import ReplyModal from './ReplyModal'
 import { toast } from 'sonner'
 
 interface Email {
@@ -27,15 +28,21 @@ interface Email {
 
 interface EmailDetailProps {
   email: Email
+  onEmailDeleted?: () => void
 }
 
-export default function EmailDetail({ email }: EmailDetailProps) {
+export default function EmailDetail({ email, onEmailDeleted }: EmailDetailProps) {
   const [summary, setSummary] = useState<string | null>(null)
   const [isSummarizing, setIsSummarizing] = useState(false)
   const [isDraftingReply, setIsDraftingReply] = useState(false)
   const [showReplyEditor, setShowReplyEditor] = useState(false)
   const [draftReply, setDraftReply] = useState<string>('')
   const [isSendingReply, setIsSendingReply] = useState(false)
+  const [replyModalState, setReplyModalState] = useState<{
+    isOpen: boolean
+    action: 'reply' | 'replyAll' | 'forward'
+  }>({ isOpen: false, action: 'reply' })
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Unknown date'
@@ -159,6 +166,55 @@ export default function EmailDetail({ email }: EmailDetailProps) {
     setDraftReply('')
   }
 
+  // Email action handlers
+  const handleReply = () => {
+    setReplyModalState({ isOpen: true, action: 'reply' })
+  }
+
+  const handleReplyAll = () => {
+    setReplyModalState({ isOpen: true, action: 'replyAll' })
+  }
+
+  const handleForward = () => {
+    setReplyModalState({ isOpen: true, action: 'forward' })
+  }
+
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this email? This action cannot be undone.')) {
+      return
+    }
+
+    setIsDeleting(true)
+    try {
+      const response = await fetch('/api/mark-deleted', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          emailId: email.id
+        }),
+      })
+
+      if (response.ok) {
+        toast.success('Email deleted successfully')
+        onEmailDeleted?.()
+      } else {
+        toast.error('Failed to delete email')
+      }
+    } catch (error) {
+      console.error('Error deleting email:', error)
+      toast.error('Failed to delete email')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const handleEmailSent = () => {
+    // Refresh or update the email list
+    onEmailDeleted?.() // Reuse the same callback to refresh
+  }
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Email Header */}
@@ -171,9 +227,56 @@ export default function EmailDetail({ email }: EmailDetailProps) {
 
           {/* Email Info */}
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-semibold text-gray-900 mb-2">
-              {email.subject || 'No Subject'}
-            </h1>
+            <div className="flex items-start justify-between mb-2">
+              <h1 className="text-xl font-semibold text-gray-900">
+                {email.subject || 'No Subject'}
+              </h1>
+              
+              {/* Email Action Buttons */}
+              <div className="flex items-center gap-1">
+                <Button
+                  onClick={handleReply}
+                  variant="ghost"
+                  size="sm"
+                  className="p-2 hover:bg-blue-100 rounded-full"
+                  title="Reply"
+                >
+                  <Reply className="w-4 h-4 text-gray-600" />
+                </Button>
+                <Button
+                  onClick={handleReplyAll}
+                  variant="ghost"
+                  size="sm"
+                  className="p-2 hover:bg-blue-100 rounded-full"
+                  title="Reply All"
+                >
+                  <ReplyAll className="w-4 h-4 text-gray-600" />
+                </Button>
+                <Button
+                  onClick={handleForward}
+                  variant="ghost"
+                  size="sm"
+                  className="p-2 hover:bg-blue-100 rounded-full"
+                  title="Forward"
+                >
+                  <Forward className="w-4 h-4 text-gray-600" />
+                </Button>
+                <Button
+                  onClick={handleDelete}
+                  variant="ghost"
+                  size="sm"
+                  className="p-2 hover:bg-red-100 rounded-full"
+                  title="Delete"
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <Loader2 className="w-4 h-4 text-red-600 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4 text-red-600" />
+                  )}
+                </Button>
+              </div>
+            </div>
             
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -329,6 +432,15 @@ export default function EmailDetail({ email }: EmailDetailProps) {
           )}
         </div>
       </div>
+
+      {/* Reply Modal */}
+      <ReplyModal
+        isOpen={replyModalState.isOpen}
+        onClose={() => setReplyModalState({ isOpen: false, action: 'reply' })}
+        email={email}
+        action={replyModalState.action}
+        onEmailSent={handleEmailSent}
+      />
     </div>
   )
 } 
