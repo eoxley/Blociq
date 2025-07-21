@@ -5,12 +5,17 @@ export async function GET(req: NextRequest) {
   try {
     // Microsoft OAuth 2.0 configuration
     const clientId = process.env.OUTLOOK_CLIENT_ID;
-    const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/outlook/callback`;
+    const redirectUri = process.env.OUTLOOK_REDIRECT_URI;
     const scope = 'Calendars.ReadWrite offline_access';
     
     if (!clientId) {
       console.error('OUTLOOK_CLIENT_ID not configured');
       return NextResponse.json({ error: 'Outlook integration not configured' }, { status: 500 });
+    }
+
+    if (!redirectUri) {
+      console.error('OUTLOOK_REDIRECT_URI not configured');
+      return NextResponse.json({ error: 'Outlook redirect URI not configured' }, { status: 500 });
     }
 
     // Generate state parameter for security
