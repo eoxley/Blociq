@@ -76,9 +76,28 @@ export async function GET(req: NextRequest) {
       console.log("✅ Token refreshed successfully");
     }
 
-    // 2. Use Microsoft Graph to pull emails
-    console.log("📧 Fetching emails from Microsoft Graph...");
-    const response = await fetch("https://graph.microsoft.com/v1.0/me/mailfolders/inbox/messages?$top=50&$orderby=receivedDateTime desc", {
+    // 2. Use Microsoft Graph to pull emails from main inbox only
+    console.log("📧 Fetching emails from main inbox only...");
+    
+    // First, get the main inbox folder ID to ensure we're targeting the correct folder
+    const inboxResponse = await fetch("https://graph.microsoft.com/v1.0/me/mailfolders/inbox", {
+      headers: {
+        Authorization: `Bearer ${tokens.access_token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!inboxResponse.ok) {
+      const errorText = await inboxResponse.text();
+      console.error("❌ Failed to get inbox folder:", errorText);
+      return NextResponse.json({ error: "Failed to get inbox folder" }, { status: 500 });
+    }
+
+    const inboxData = await inboxResponse.json();
+    console.log("✅ Found main inbox folder:", inboxData.displayName);
+
+    // Fetch emails from the main inbox only, excluding deleted items and subfolders
+    const response = await fetch(`https://graph.microsoft.com/v1.0/me/mailfolders/inbox/messages?$top=50&$orderby=receivedDateTime desc&$filter=isRead eq false or receivedDateTime ge ${new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()}`, {
       headers: {
         Authorization: `Bearer ${tokens.access_token}`,
         "Content-Type": "application/json",
@@ -99,9 +118,23 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ message: "No emails found", count: 0 });
     }
 
-    // 3. Save emails into Supabase
-    console.log("💾 Processing and saving emails to Supabase...");
-    const inserts = emails.map((msg: any) => ({
+    // 3. Filter and save emails into Supabase
+    console.log("💾 Processing and filtering emails...");
+    
+    // Filter out emails that might be from subfolders or deleted items
+    const filteredEmails = emails.filter((msg: any) => {
+      // Only include emails that are in the main inbox
+      // Exclude emails that might be in subfolders or deleted items
+      const isInMainInbox = !msg.parentFolderId || msg.parentFolderId === inboxData.id;
+      const isNotDeleted = !msg.isDeleted;
+      const hasValidSender = msg.from?.emailAddress?.address;
+      
+      return isInMainInbox && isNotDeleted && hasValidSender;
+    });
+
+    console.log(`📧 Filtered to ${filteredEmails.length} valid emails from main inbox`);
+
+    const inserts = filteredEmails.map((msg: any) => ({
       subject: msg.subject || "(No Subject)",
       from_email: msg.from?.emailAddress?.address || "",
       from_name: msg.from?.emailAddress?.name || "",
