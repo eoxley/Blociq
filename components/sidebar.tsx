@@ -108,7 +108,7 @@ export default function Sidebar() {
             
             {/* Finances Parent */}
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium opacity-80 cursor-not-allowed bg-slate-700/50 backdrop-blur-sm">
-              <div className="w-10 h-10 bg-gradient-to-br from-teal-500/30 to-blue-500/30 rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 bg-slate-700/50 rounded-xl flex items-center justify-center shadow-lg border border-white/20">
                 <span className="text-lg font-bold text-white">£</span>
               </div>
               <span className="text-slate-200">Finances</span>
@@ -148,7 +148,7 @@ export default function Sidebar() {
             
             {/* Contractors */}
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium opacity-80 cursor-not-allowed bg-slate-700/50 backdrop-blur-sm mt-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-teal-500/30 to-blue-500/30 rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 bg-slate-700/50 rounded-xl flex items-center justify-center shadow-lg border border-white/20">
                 <span className="text-lg font-bold text-white">🔧</span>
               </div>
               <span className="text-slate-200">Contractors</span>
@@ -157,7 +157,7 @@ export default function Sidebar() {
             
             {/* Work Orders */}
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium opacity-80 cursor-not-allowed bg-slate-700/50 backdrop-blur-sm mt-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-teal-500/30 to-blue-500/30 rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 bg-slate-700/50 rounded-xl flex items-center justify-center shadow-lg border border-white/20">
                 <span className="text-lg font-bold text-white">📋</span>
               </div>
               <span className="text-slate-200">Work Orders</span>
@@ -166,7 +166,7 @@ export default function Sidebar() {
             
             {/* Client Portal */}
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium opacity-80 cursor-not-allowed bg-slate-700/50 backdrop-blur-sm mt-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-teal-500/30 to-blue-500/30 rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 bg-slate-700/50 rounded-xl flex items-center justify-center shadow-lg border border-white/20">
                 <span className="text-lg text-white">👥</span>
               </div>
               <span className="text-slate-200">Client Portal</span>
@@ -179,12 +179,12 @@ export default function Sidebar() {
         <div className="border-t border-white/20 pt-4 mt-6">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium hover:bg-red-500/30 transition-all duration-300 w-full text-left group backdrop-blur-sm bg-red-500/10"
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium hover:bg-red-500/50 transition-all duration-300 w-full text-left group backdrop-blur-sm bg-red-500/20 border border-red-400/30 hover:border-red-400/50"
           >
-            <div className="w-10 h-10 bg-gradient-to-br from-red-500/30 to-red-600/30 rounded-xl flex items-center justify-center group-hover:from-red-500/40 group-hover:to-red-600/40 transition-all duration-300 shadow-lg">
-              <LogOut className="h-5 w-5 group-hover:scale-110 transition-transform text-red-100 group-hover:text-white" />
+            <div className="w-10 h-10 bg-gradient-to-br from-red-500/50 to-red-600/50 rounded-xl flex items-center justify-center group-hover:from-red-500/60 group-hover:to-red-600/60 transition-all duration-300 shadow-lg border border-red-400/30 group-hover:border-red-400/50">
+              <LogOut className="h-5 w-5 group-hover:scale-110 transition-transform text-white" />
             </div>
-            <span className="text-red-100 group-hover:text-white font-medium">Logout</span>
+            <span className="text-white font-semibold">Logout</span>
           </button>
         </div>
       </div>
