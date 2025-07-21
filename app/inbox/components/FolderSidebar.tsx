@@ -159,13 +159,13 @@ export default function FolderSidebar({
     try {
       // Get counts for static folders
       const [inboxCount, handledCount, allCount] = await Promise.all([
-        supabase.from('incoming_emails').select('id', { count: 'exact', head: true }).eq('is_handled', false),
+        supabase.from('incoming_emails').select('id', { count: 'exact', head: true }), // All emails for inbox
         supabase.from('incoming_emails').select('id', { count: 'exact', head: true }).eq('is_handled', true),
         supabase.from('incoming_emails').select('id', { count: 'exact', head: true }),
       ])
 
       setFolderCounts({
-        inbox: inboxCount.count || 0,
+        inbox: inboxCount.count || 0, // All emails in inbox
         handled: handledCount.count || 0,
         all: allCount.count || 0,
       })
@@ -231,7 +231,7 @@ export default function FolderSidebar({
   const getFilterCount = (filterType: string) => {
     switch (filterType) {
       case 'inbox':
-        return folderCounts.inbox
+        return folderCounts.inbox // All emails in inbox
       case 'handled':
         return folderCounts.handled
       case 'all':
