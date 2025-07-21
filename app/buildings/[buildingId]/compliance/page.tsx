@@ -1,98 +1,94 @@
 import { cookies } from 'next/headers'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import LayoutWithSidebar from '@/components/LayoutWithSidebar'
-import Link from 'next/link'
-import { groupBy } from 'lodash'
-import { Shield, Settings } from 'lucide-react'
+import BuildingComplianceClient from './BuildingComplianceClient'
 
-interface ComplianceAsset {
-  id: string
-  name: string
-  description: string
-  category: string
-  required_if: string
-  default_frequency: string
-}
-
-export default async function CompliancePage({ params }: { params: Promise<{ buildingId: string }> }) {
+export default async function BuildingCompliancePage({ 
+  params 
+}: { 
+  params: Promise<{ buildingId: string }> 
+}) {
   try {
     const { buildingId } = await params
     const supabase = createClient(cookies())
 
     if (!buildingId) {
       return (
-        <LayoutWithSidebar>
-          <div className="p-6 space-y-4">
-            <h1 className="text-2xl font-semibold text-dark">Compliance</h1>
-            <div className="bg-error/10 border border-error/20 rounded-lg p-4">
-              <p className="text-error">Missing building ID.</p>
-              <p className="text-error/80 text-sm mt-2">Please provide a valid building ID in the URL.</p>
-            </div>
+        <div className="p-6 space-y-4">
+          <h1 className="text-2xl font-semibold text-[#333333]">Compliance</h1>
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+            <p className="text-red-600">Missing building ID.</p>
+            <p className="text-red-500 text-sm mt-2">Please provide a valid building ID in the URL.</p>
           </div>
-        </LayoutWithSidebar>
+        </div>
       )
     }
 
     const { data: sessionData } = await supabase.auth.getSession()
     if (!sessionData?.session) redirect('/login')
 
-    // Fetch building data
+    // Fetch building data with enhanced information
     const { data: building, error: buildingError } = await supabase
       .from('buildings')
-      .select('id, name')
+      .select(`
+        id, 
+        name, 
+        address,
+        unit_count,
+        building_age,
+        construction_type,
+        total_floors,
+        lift_available,
+        fire_safety_status,
+        asbestos_status,
+        energy_rating,
+        building_insurance_provider,
+        building_insurance_expiry
+      `)
       .eq('id', buildingId)
       .maybeSingle()
 
     if (buildingError) {
       console.error('Building fetch error:', buildingError.message)
       return (
-        <LayoutWithSidebar>
-          <div className="p-6 space-y-4">
-            <h1 className="text-2xl font-semibold text-dark">Compliance</h1>
-            <div className="bg-error/10 border border-error/20 rounded-lg p-4">
-              <p className="text-error">Could not load building information.</p>
-              <p className="text-error/80 text-sm mt-2">Error: {buildingError.message}</p>
-            </div>
+        <div className="p-6 space-y-4">
+          <h1 className="text-2xl font-semibold text-[#333333]">Compliance</h1>
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+            <p className="text-red-600">Could not load building information.</p>
+            <p className="text-red-500 text-sm mt-2">Error: {buildingError.message}</p>
           </div>
-        </LayoutWithSidebar>
+        </div>
       )
     }
 
     if (!building) {
       return (
-        <LayoutWithSidebar>
-          <div className="p-6 space-y-4">
-            <h1 className="text-2xl font-semibold text-dark">Compliance</h1>
-            <div className="bg-error/10 border border-error/20 rounded-lg p-4">
-              <p className="text-error">Building not found.</p>
-              <p className="text-error/80 text-sm mt-2">Building ID: {buildingId}</p>
-            </div>
+        <div className="p-6 space-y-4">
+          <h1 className="text-2xl font-semibold text-[#333333]">Compliance</h1>
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+            <p className="text-red-600">Building not found.</p>
+            <p className="text-red-500 text-sm mt-2">Building ID: {buildingId}</p>
           </div>
-        </LayoutWithSidebar>
+        </div>
       )
     }
 
-    // Fetch all compliance assets
+    // Fetch all compliance assets with enhanced data
     const { data: assets, error: assetsError } = await supabase
       .from('compliance_assets')
       .select('*')
-      .order('category', { ascending: true }) as { data: ComplianceAsset[] | null, error: any }
+      .order('category', { ascending: true })
 
     if (assetsError) {
       console.error('Compliance assets fetch error:', assetsError.message)
       return (
-        <LayoutWithSidebar>
-          <div className="p-6 space-y-4">
-            <h1 className="text-2xl font-semibold text-dark">Compliance</h1>
-            <div className="bg-error/10 border border-error/20 rounded-lg p-4">
-              <p className="text-error">Could not load compliance assets.</p>
-              <p className="text-error/80 text-sm mt-2">Error: {assetsError.message}</p>
-            </div>
+        <div className="p-6 space-y-4">
+          <h1 className="text-2xl font-semibold text-[#333333]">Compliance</h1>
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+            <p className="text-red-600">Could not load compliance assets.</p>
+            <p className="text-red-500 text-sm mt-2">Error: {assetsError.message}</p>
           </div>
-        </LayoutWithSidebar>
+        </div>
       )
     }
 
@@ -106,115 +102,85 @@ export default async function CompliancePage({ params }: { params: Promise<{ bui
       console.error('Building compliance assets fetch error:', buildingAssetsError.message)
     }
 
+    // Fetch compliance documents for this building
+    const { data: complianceDocuments, error: documentsError } = await supabase
+      .from('building_documents')
+      .select(`
+        id,
+        file_name,
+        file_url,
+        type,
+        created_at,
+        classification,
+        summary,
+        extracted_text
+      `)
+      .eq('building_id', parseInt(buildingId, 10))
+      .order('created_at', { ascending: false })
+
+    if (documentsError) {
+      console.error('Compliance documents fetch error:', documentsError.message)
+    }
+
     // Create status map and dates map
     const statusMap: Record<string, string> = {}
     const statusDatesMap: Record<string, string> = {}
+    const notesMap: Record<string, string> = {}
+    
     buildingAssets?.forEach((buildingAsset) => {
       statusMap[buildingAsset.asset_id] = buildingAsset.status || 'Not Tracked'
       statusDatesMap[buildingAsset.asset_id] = buildingAsset.next_due_date || ''
+      notesMap[buildingAsset.asset_id] = buildingAsset.notes || ''
     })
 
-    // Group compliance assets by category
-    const groupedAssets = groupBy(assets, 'category')
+    // Calculate compliance statistics
+    const totalAssets = assets?.length || 0
+    const trackedAssets = buildingAssets?.length || 0
+    const compliantAssets = buildingAssets?.filter(asset => 
+      asset.status === 'Compliant' || 
+      (asset.next_due_date && new Date(asset.next_due_date) > new Date())
+    ).length || 0
+    const overdueAssets = buildingAssets?.filter(asset => 
+      asset.status === 'Overdue' || 
+      (asset.next_due_date && new Date(asset.next_due_date) < new Date())
+    ).length || 0
+    const dueSoonAssets = buildingAssets?.filter(asset => {
+      if (!asset.next_due_date) return false
+      const dueDate = new Date(asset.next_due_date)
+      const today = new Date()
+      const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+      return daysUntilDue <= 30 && daysUntilDue > 0
+    }).length || 0
 
-    // Check if building has any compliance assets set up
-    const hasComplianceAssets = buildingAssets && buildingAssets.length > 0
+    const complianceData = {
+      building,
+      assets: assets || [],
+      buildingAssets: buildingAssets || [],
+      complianceDocuments: complianceDocuments || [],
+      statusMap,
+      statusDatesMap,
+      notesMap,
+      statistics: {
+        total: totalAssets,
+        tracked: trackedAssets,
+        compliant: compliantAssets,
+        overdue: overdueAssets,
+        dueSoon: dueSoonAssets
+      }
+    }
 
-    return (
-      <LayoutWithSidebar>
-        <div className="p-6 space-y-6">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-dark">Compliance</h1>
-            <p className="text-lg text-neutral">Building: <strong className="text-dark">{building.name}</strong></p>
-          </div>
+    return <BuildingComplianceClient complianceData={complianceData} />
 
-          {/* Show setup wizard link if no compliance assets are configured */}
-          {!hasComplianceAssets && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
-              <div className="flex items-center justify-center mb-4">
-                <Shield className="h-12 w-12 text-blue-600" />
-              </div>
-              <h2 className="text-xl font-semibold text-blue-900 mb-2">No Compliance Setup Found</h2>
-              <p className="text-blue-700 mb-4">
-                This building has no compliance assets set up. Set up compliance tracking to monitor requirements and deadlines.
-              </p>
-              <Button asChild className="bg-blue-600 hover:bg-blue-700">
-                <Link href="/compliance/setup">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Go to Setup Wizard
-                </Link>
-              </Button>
-            </div>
-          )}
-
-          {/* Show compliance assets if they exist */}
-          {hasComplianceAssets && Object.entries(groupedAssets).map(([category, items]) => (
-            <div key={category} className="space-y-4">
-              <h2 className="text-xl font-semibold border-b pb-1">{category}</h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {(items as ComplianceAsset[]).map((asset: ComplianceAsset) => {
-                  const status = statusMap[asset.id] || 'Not Tracked'
-                  const badgeVariant =
-                    status === 'Compliant'
-                      ? 'default'
-                      : status === 'Overdue'
-                      ? 'destructive'
-                      : status === 'Missing'
-                      ? 'outline'
-                      : 'outline'
-
-                  return (
-                    <div
-                      key={asset.id}
-                      className="bg-white border p-4 rounded-xl space-y-2 shadow-sm"
-                    >
-                      <div className="font-medium">{asset.name}</div>
-                      <Badge variant={badgeVariant}>{status}</Badge>
-                      <p className="text-xs text-muted-foreground">{asset.description}</p>
-                      
-                      <form
-                        action="/api/compliance-assets/set-due-date"
-                        method="post"
-                        className="space-y-1 text-xs"
-                      >
-                        <input type="hidden" name="building_id" value={buildingId} />
-                        <input type="hidden" name="asset_id" value={asset.id} />
-                        <label className="block font-medium">Next Due Date</label>
-                        <input
-                          type="date"
-                          name="next_due_date"
-                          defaultValue={statusDatesMap[asset.id] || ''}
-                          className="border rounded px-2 py-1 text-sm w-full"
-                        />
-                        <button
-                          type="submit"
-                          className="text-blue-600 hover:underline mt-1"
-                        >
-                          Save Date
-                        </button>
-                      </form>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      </LayoutWithSidebar>
-    )
   } catch (err) {
     console.error('Compliance page crash:', err)
     return (
-      <LayoutWithSidebar>
-        <div className="p-6 space-y-4">
-          <h1 className="text-2xl font-semibold text-dark">Compliance</h1>
-          <div className="bg-error/10 border border-error/20 rounded-lg p-4">
-            <p className="text-error">An unexpected error occurred.</p>
-            <p className="text-error/80 text-sm mt-2">Error details: {err instanceof Error ? err.message : String(err)}</p>
-          </div>
+      <div className="p-6 space-y-4">
+        <h1 className="text-2xl font-semibold text-[#333333]">Compliance</h1>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+          <p className="text-red-600">An unexpected error occurred.</p>
+          <p className="text-red-500 text-sm mt-2">Error details: {err instanceof Error ? err.message : String(err)}</p>
         </div>
-      </LayoutWithSidebar>
+      </div>
     )
   }
 } 
