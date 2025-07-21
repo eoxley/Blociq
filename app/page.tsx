@@ -110,10 +110,10 @@ export default function LandingPage() {
           </div>
           
           <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-10 shadow-xl border border-gray-100 mb-12">
-            <p className="text-xl text-gray-600 leading-relaxed mb-8">
+            <p className="text-xl text-gray-600 leading-relaxed mb-8 text-center">
               While AI is being rapidly adopted across industries, most property firms are using generic tools like ChatGPT without oversight, data safeguards, or regulatory alignment. That&apos;s a risk — for firms, for clients, and for residents.
             </p>
-            <p className="text-xl text-gray-600 leading-relaxed mb-8">
+            <p className="text-xl text-gray-600 leading-relaxed mb-8 text-center">
               At BlocIQ, we do things differently:
             </p>
             
