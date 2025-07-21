@@ -101,6 +101,25 @@ export default function NewInboxClient({
   const [availableTags, setAvailableTags] = useState<string[]>([])
   const [selectedTags, setSelectedTags] = useState<string[]>([])
 
+  // Debug logging for initial data
+  console.log('🚀 NewInboxClient - Initialized with:', {
+    initialEmailsCount: initialEmails?.length || 0,
+    lastSyncTime,
+    userId,
+    searchParams
+  })
+
+  // Initialize available tags from initial emails
+  useEffect(() => {
+    if (initialEmails && initialEmails.length > 0) {
+      const allTags = initialEmails
+        .flatMap(email => email.tags || [])
+        .filter((tag, index, arr) => arr.indexOf(tag) === index)
+      console.log('🏷️ NewInboxClient - Initial tags from server:', allTags)
+      setAvailableTags(allTags)
+    }
+  }, [initialEmails])
+
   // Create a reusable fetchEmails function
   const fetchEmails = async () => {
     setLoadingEmails(true)
@@ -167,21 +186,37 @@ export default function NewInboxClient({
         return
       }
 
-      console.log('📧 NewInboxClient - Fetched emails:', data?.length || 0)
+      console.log('📧 NewInboxClient - Raw data from Supabase:', data)
+      console.log('📧 NewInboxClient - Number of emails fetched:', data?.length || 0)
       
-      if (data) {
-        // Process emails without buildings join for now
+      if (data && data.length > 0) {
+        console.log('📧 NewInboxClient - First email sample:', data[0])
+        
+        // Process emails with proper structure
         const processedEmails = data.map((email: any) => ({
           ...email,
-          buildings: null // Set to null since we're not joining buildings table
+          buildings: null, // Set to null since we're not joining buildings table
+          // Ensure all required fields have fallback values
+          subject: email.subject || 'No Subject',
+          from_name: email.from_name || email.from_email || 'Unknown Sender',
+          from_email: email.from_email || 'unknown@example.com',
+          body_preview: email.body_preview || 'No preview available',
+          body_full: email.body_full || email.body_preview || 'No content available',
+          is_read: email.is_read || false,
+          is_handled: email.is_handled || false,
+          tags: email.tags || [],
+          building_id: email.building_id || null,
+          outlook_id: email.outlook_id || null
         }))
         
+        console.log('📧 NewInboxClient - Processed emails:', processedEmails)
         setEmails(processedEmails)
         
         // Extract unique tags from fetched emails
         const allTags = processedEmails
           .flatMap(email => email.tags || [])
           .filter((tag, index, arr) => arr.indexOf(tag) === index)
+        console.log('🏷️ NewInboxClient - Available tags:', allTags)
         setAvailableTags(allTags)
         
         // Temporarily disable AI analysis to prevent errors
@@ -225,6 +260,15 @@ export default function NewInboxClient({
       selectedTags.some(tag => email.tags?.includes(tag))
     
     return matchesSearch && matchesTags
+  })
+
+  // Debug logging for filtered emails
+  console.log('🔍 NewInboxClient - Filtering emails:', {
+    totalEmails: emails.length,
+    searchTerm,
+    selectedTags,
+    filteredCount: filteredEmails.length,
+    loadingEmails
   })
 
   const handleSync = async () => {
@@ -581,45 +625,69 @@ export default function NewInboxClient({
           
           {/* Email List */}
           <div className="flex-1 overflow-y-auto">
+            {console.log('🎨 NewInboxClient - Rendering email list:', {
+              loadingEmails,
+              emailsLength: emails.length,
+              filteredEmailsLength: filteredEmails.length,
+              searchTerm,
+              selectedTags
+            })}
             {loadingEmails ? (
               <div className="flex items-center justify-center h-32">
                 <Loader2 className="h-6 w-6 animate-spin text-[#008C8F]" />
+                <span className="ml-2 text-sm text-[#64748B]">Loading emails...</span>
+              </div>
+            ) : emails.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-32 text-[#64748B]">
+                <Mail className="h-12 w-12 mb-4 opacity-50" />
+                <p className="text-lg font-medium">No emails found</p>
+                <div className="text-center">
+                  <p className="text-sm mb-4">Your inbox is empty. Sync with Outlook to get started.</p>
+                  <BlocIQButton
+                    onClick={handleSync}
+                    disabled={isSyncing}
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    {isSyncing ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" />
+                    )}
+                    {isSyncing ? 'Syncing...' : 'Sync Emails'}
+                  </BlocIQButton>
+                </div>
               </div>
             ) : filteredEmails.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-32 text-[#64748B]">
                 <Mail className="h-12 w-12 mb-4 opacity-50" />
-                <p className="text-lg font-medium">No emails found</p>
-                {emails.length === 0 ? (
-                  <div className="text-center">
-                    <p className="text-sm mb-4">Your inbox is empty. Sync with Outlook to get started.</p>
-                    <BlocIQButton
-                      onClick={handleSync}
-                      disabled={isSyncing}
-                      size="sm"
-                      className="flex items-center gap-2"
-                    >
-                      {isSyncing ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <RefreshCw className="h-4 w-4" />
-                      )}
-                      {isSyncing ? 'Syncing...' : 'Sync Emails'}
-                    </BlocIQButton>
-                  </div>
-                ) : (
-                  <p className="text-sm">Try adjusting your search or filters</p>
-                )}
+                <p className="text-lg font-medium">No emails match your filters</p>
+                <p className="text-sm">Try adjusting your search or filters</p>
+                <BlocIQButton
+                  onClick={() => {
+                    setSearchTerm('')
+                    setSelectedTags([])
+                    setFilter('inbox')
+                  }}
+                  size="sm"
+                  className="mt-2"
+                >
+                  Clear Filters
+                </BlocIQButton>
               </div>
             ) : (
-              filteredEmails.map((email) => (
-                <EmailListItem
-                  key={email.id}
-                  email={email}
-                  isSelected={selectedEmail?.id === email.id}
-                  onSelect={() => handleEmailSelect(email)}
-                  dimmed={email.is_handled || false}
-                />
-              ))
+              <div className="space-y-2 p-4">
+                {console.log('📧 NewInboxClient - Rendering email items:', filteredEmails.length)}
+                {filteredEmails.map((email) => (
+                  <EmailListItem
+                    key={email.id}
+                    email={email}
+                    isSelected={selectedEmail?.id === email.id}
+                    onSelect={() => handleEmailSelect(email)}
+                    dimmed={email.is_handled || false}
+                  />
+                ))}
+              </div>
             )}
           </div>
         </div>

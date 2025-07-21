@@ -35,8 +35,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
       is_read,
       is_handled,
       tags,
-      outlook_id,
-      buildings(name)
+      outlook_id
     `)
     .eq('is_deleted', false) // Filter out deleted emails
     .order('received_at', { ascending: false })
@@ -51,7 +50,18 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
   // Process emails to match the Email interface
   const emails = rawEmails?.map((email: any) => ({
     ...email,
-    buildings: Array.isArray(email.buildings) ? email.buildings[0] : email.buildings
+    buildings: null, // Set to null since we're not joining buildings table
+    // Ensure all required fields have fallback values
+    subject: email.subject || 'No Subject',
+    from_name: email.from_name || email.from_email || 'Unknown Sender',
+    from_email: email.from_email || 'unknown@example.com',
+    body_preview: email.body_preview || 'No preview available',
+    body_full: email.body_full || email.body_preview || 'No content available',
+    is_read: email.is_read || false,
+    is_handled: email.is_handled || false,
+    tags: email.tags || [],
+    building_id: email.building_id || null,
+    outlook_id: email.outlook_id || null
   })) || []
 
   // Get last sync time
