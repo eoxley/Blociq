@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { MessageCircle, Calendar, ExternalLink, Send, Loader2, Plus, Mail, FileText, Pin, RefreshCw, Paperclip, Home, X } from 'lucide-react'
+import { MessageCircle, Calendar, ExternalLink, Send, Loader2, Plus, Mail, FileText, Pin, RefreshCw, Paperclip, Home, X, Building } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import DailySummary from '@/components/DailySummary'
+import UpcomingEventsWidget from '@/components/UpcomingEventsWidget'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import BlocIQLogo from '@/components/BlocIQLogo'
@@ -756,6 +757,32 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
       {/* Daily Summary Section */}
       <DailySummary />
+
+      {/* Upcoming Events Widget Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <UpcomingEventsWidget />
+        
+        <div className="bg-white rounded-2xl shadow-lg p-6 border">
+          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <Building className="h-5 w-5 text-teal-600" />
+            Building Matching Stats
+          </h2>
+          <div className="space-y-4">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-blue-900 mb-2">How it works</h3>
+              <p className="text-sm text-blue-700">
+                The widget automatically matches Outlook calendar events to your buildings by scanning event titles and locations for building names.
+              </p>
+            </div>
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-green-900 mb-2">Smart Matching</h3>
+              <p className="text-sm text-green-700">
+                Uses both exact and partial matching to find building references in event details, helping you quickly identify property-related meetings.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 } 
