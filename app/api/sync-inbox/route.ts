@@ -89,9 +89,28 @@ export async function POST(req: NextRequest) {
       console.log('✅ Token refreshed successfully');
     }
 
-    // ✅ 3. Call Microsoft Graph /me/messages
-    console.log('🔄 Fetching emails from Microsoft Graph...');
-    const graphResponse = await fetch('https://graph.microsoft.com/v1.0/me/messages?$top=50&$orderby=receivedDateTime desc', {
+    // ✅ 3. Call Microsoft Graph for main inbox only
+    console.log('🔄 Fetching emails from main inbox only...');
+    
+    // First, get the main inbox folder to ensure we're targeting the correct folder
+    const inboxResponse = await fetch('https://graph.microsoft.com/v1.0/me/mailfolders/inbox', {
+      headers: {
+        'Authorization': `Bearer ${token.access_token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!inboxResponse.ok) {
+      const errorText = await inboxResponse.text();
+      console.error('❌ Failed to get inbox folder:', errorText);
+      return NextResponse.json({ error: 'Failed to get inbox folder' }, { status: 500 });
+    }
+
+    const inboxData = await inboxResponse.json();
+    console.log('✅ Found main inbox folder:', inboxData.displayName);
+
+    // Fetch emails from the main inbox only, excluding deleted items and subfolders
+    const graphResponse = await fetch(`https://graph.microsoft.com/v1.0/me/mailfolders/inbox/messages?$top=50&$orderby=receivedDateTime desc&$filter=isRead eq false or receivedDateTime ge ${new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()}`, {
       headers: {
         'Authorization': `Bearer ${token.access_token}`,
         'Content-Type': 'application/json',
@@ -114,11 +133,24 @@ export async function POST(req: NextRequest) {
     const messages = graphData.value || [];
     console.log(`✅ Fetched ${messages.length} messages from Outlook`);
 
-    // ✅ 4. Insert Into incoming_emails (if not already inserted)
+    // ✅ 4. Filter messages to ensure they're from main inbox only
+    const filteredMessages = messages.filter((message: any) => {
+      // Only include emails that are in the main inbox
+      // Exclude emails that might be in subfolders or deleted items
+      const isInMainInbox = !message.parentFolderId || message.parentFolderId === inboxData.id;
+      const isNotDeleted = !message.isDeleted;
+      const hasValidSender = message.from?.emailAddress?.address;
+      
+      return isInMainInbox && isNotDeleted && hasValidSender;
+    });
+
+    console.log(`📧 Filtered to ${filteredMessages.length} valid messages from main inbox`);
+
+    // ✅ 5. Insert Into incoming_emails (if not already inserted)
     let insertedCount = 0;
     let totalProcessed = 0;
 
-    for (const message of messages) {
+    for (const message of filteredMessages) {
       totalProcessed++;
       const {
         subject,
