@@ -89,6 +89,7 @@ export default function NewInboxClient({
         .select(`
           id, subject, from_name, from_email, received_at, body_preview, body_full, building_id, is_read, is_handled, tags, outlook_id, buildings(name)
         `)
+        .eq('is_deleted', false) // Filter out deleted emails
         .order('received_at', { ascending: false })
 
       // Apply filters based on current filter state
@@ -190,6 +191,7 @@ export default function NewInboxClient({
           .select(`
             id, subject, from_name, from_email, received_at, body_preview, body_full, building_id, is_read, is_handled, tags, outlook_id, buildings(name)
           `)
+          .eq('is_deleted', false) // Filter out deleted emails
           .order('received_at', { ascending: false })
         
         if (refreshedEmails) {
@@ -587,6 +589,11 @@ export default function NewInboxClient({
               <>
                 <EmailDetail
                   email={selectedEmail}
+                  onEmailDeleted={() => {
+                    // Remove the deleted email from the list and clear selection
+                    setEmails(prev => prev.filter(e => e.id !== selectedEmail.id))
+                    setSelectedEmail(null)
+                  }}
                 />
                 <AIActionBar
                   email={selectedEmail}
