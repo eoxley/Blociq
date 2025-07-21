@@ -4,34 +4,21 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
-import { 
-  Home, 
-  Inbox, 
-  Building, 
-  ShieldCheck, 
-  Megaphone, 
-  BrainCircuit, 
-  Wrench, 
-  PoundSterling, 
-  HardHat, 
-  ClipboardList, 
-  UserRound,
-  LogOut
-} from "lucide-react";
+
 import BlocIQLogo from './BlocIQLogo';
 
 const navItems = [
-  { label: "Home", icon: Home, href: "/home", comingSoon: false },
-  { label: "Inbox", icon: Inbox, href: "/inbox", comingSoon: false },
-  { label: "Buildings", icon: Building, href: "/buildings", comingSoon: false },
-  { label: "Compliance", icon: ShieldCheck, href: "/compliance", comingSoon: false },
-  { label: "Communications", icon: Megaphone, href: "/communications", comingSoon: false },
-  { label: "AI Documents", icon: BrainCircuit, href: "/ai-documents", comingSoon: false },
-  { label: "Major Works", icon: Wrench, href: "/major-works", comingSoon: false },
-  { label: "Finances", icon: PoundSterling, href: "#", comingSoon: true },
-  { label: "Contractors", icon: HardHat, href: "#", comingSoon: true },
-  { label: "Work Orders", icon: ClipboardList, href: "#", comingSoon: true },
-  { label: "Client Portal", icon: UserRound, href: "#", comingSoon: true },
+  { label: "Home", icon: "🏠", href: "/home", comingSoon: false },
+  { label: "Inbox", icon: "📥", href: "/inbox", comingSoon: false },
+  { label: "Buildings", icon: "🏢", href: "/buildings", comingSoon: false },
+  { label: "Compliance", icon: "🛡️", href: "/compliance", comingSoon: false },
+  { label: "Communications", icon: "📣", href: "/communications", comingSoon: false },
+  { label: "AI Documents", icon: "🤖", href: "/ai-documents", comingSoon: false },
+  { label: "Major Works", icon: "🔧", href: "/major-works", comingSoon: false },
+  { label: "Finances", icon: "💷", href: "#", comingSoon: true },
+  { label: "Contractors", icon: "👷", href: "#", comingSoon: true },
+  { label: "Work Orders", icon: "📋", href: "#", comingSoon: true },
+  { label: "Client Portal", icon: "🧑‍💻", href: "#", comingSoon: true },
 ];
 
 export default function DashboardSidebar() {
@@ -69,7 +56,7 @@ export default function DashboardSidebar() {
 
         {/* Navigation */}
         <nav className="flex-1 space-y-1 pb-2">
-          {navItems.map(({ label, icon: IconComponent, href, comingSoon }) => {
+          {navItems.map(({ label, icon, href, comingSoon }) => {
             const isActive = !comingSoon && (pathname === href || (pathname && pathname.startsWith(href + '/')));
             
             if (comingSoon) {
@@ -83,7 +70,12 @@ export default function DashboardSidebar() {
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 bg-slate-700/50 group-hover:bg-slate-600/50 group-hover:shadow-md">
-                      <IconComponent className="h-4 w-4 text-white" />
+                      <span
+                        className="text-lg"
+                        style={{ fontFamily: "'Apple Color Emoji', 'Segoe UI Emoji', sans-serif", filter: 'brightness(0) invert(1)' }}
+                      >
+                        {icon}
+                      </span>
                     </div>
                     <span className="flex-1 text-left font-medium text-gray-300">{label}</span>
                     <span className="text-xs bg-gray-700 text-white px-2 py-0.5 rounded-full">Coming Soon</span>
@@ -112,9 +104,14 @@ export default function DashboardSidebar() {
                       ? 'bg-gradient-to-br from-teal-500/30 to-blue-500/30 shadow-lg' 
                       : 'bg-slate-700/50 group-hover:bg-slate-600/50 group-hover:shadow-md'
                   }`}>
-                    <IconComponent className={`h-4 w-4 transition-all duration-300 ${
-                      isActive ? 'scale-110 text-white' : 'group-hover:scale-110 text-slate-300 group-hover:text-white'
-                    }`} />
+                    <span
+                      className={`text-lg transition-all duration-300 ${
+                        isActive ? 'scale-110' : 'group-hover:scale-110'
+                      }`}
+                      style={{ fontFamily: "'Apple Color Emoji', 'Segoe UI Emoji', sans-serif", filter: 'brightness(0) invert(1)' }}
+                    >
+                      {icon}
+                    </span>
                   </div>
                   <span className="font-medium">{label}</span>
                   
@@ -133,7 +130,12 @@ export default function DashboardSidebar() {
             className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium hover:bg-red-500/50 transition-all duration-300 w-full text-left group backdrop-blur-sm bg-red-500/20 border border-red-400/30 hover:border-red-400/50"
           >
             <div className="w-8 h-8 bg-gradient-to-br from-red-500/50 to-red-600/50 rounded-lg flex items-center justify-center group-hover:from-red-500/60 group-hover:to-red-600/60 transition-all duration-300 shadow-lg border border-red-400/30 group-hover:border-red-400/50">
-              <LogOut className="h-4 w-4 group-hover:scale-110 transition-transform text-white" />
+              <span
+                className="text-lg group-hover:scale-110 transition-transform"
+                style={{ fontFamily: "'Apple Color Emoji', 'Segoe UI Emoji', sans-serif", filter: 'brightness(0) invert(1)' }}
+              >
+                🔓
+              </span>
             </div>
             <span className="text-white font-semibold">Logout</span>
           </button>
