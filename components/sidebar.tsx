@@ -53,7 +53,7 @@ export default function Sidebar() {
         {/* Logo Section */}
         <div className="mb-10 px-4">
           <Link href="/home" className="flex items-center gap-4 mb-3 hover:opacity-90 transition-all duration-300 group">
-            <div className="w-16 h-16 bg-gradient-to-br from-teal-500/20 to-blue-500/20 rounded-2xl flex items-center justify-center backdrop-blur-sm shadow-lg group-hover:scale-105 transition-transform duration-300 border border-white/10">
+            <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center backdrop-blur-sm shadow-lg group-hover:scale-105 transition-transform duration-300 border border-teal-400/30">
               <BlocIQLogo className="h-9 w-9 text-white" />
             </div>
             <div>
