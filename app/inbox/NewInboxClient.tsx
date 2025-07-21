@@ -107,10 +107,33 @@ export default function NewInboxClient({
     console.log('🔄 NewInboxClient - Fetching emails with filter:', filter)
     
     try {
+      // Check if Supabase client is properly initialized
+      if (!supabase) {
+        console.error('❌ Supabase client is not initialized')
+        toast.error('Database connection not available')
+        return
+      }
+
+      // Check authentication status
+      const { data: { session }, error: authError } = await supabase.auth.getSession()
+      if (authError) {
+        console.error('❌ Authentication error:', authError)
+        toast.error('Authentication error')
+        return
+      }
+
+      if (!session) {
+        console.error('❌ No active session')
+        toast.error('Please log in to access emails')
+        return
+      }
+
+      console.log('✅ User authenticated:', session.user.id)
+      
       let query = supabase
         .from('incoming_emails')
         .select(`
-          id, subject, from_name, from_email, received_at, body_preview, body_full, building_id, is_read, is_handled, tags, outlook_id, buildings(name)
+          id, subject, from_name, from_email, received_at, body_preview, body_full, building_id, is_read, is_handled, tags, outlook_id
         `)
         .eq('is_deleted', false) // Filter out deleted emails
         .order('received_at', { ascending: false })
@@ -130,21 +153,27 @@ export default function NewInboxClient({
         console.log('📬 NewInboxClient - Showing unread emails')
       }
 
+      console.log('🔍 NewInboxClient - Executing query...')
       const { data, error } = await query
       
       if (error) {
-        console.error('Error fetching emails:', error)
-        toast.error('Failed to fetch emails')
+        console.error('❌ Supabase error fetching emails:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        })
+        toast.error(`Failed to fetch emails: ${error.message}`)
         return
       }
 
       console.log('📧 NewInboxClient - Fetched emails:', data?.length || 0)
       
       if (data) {
-        // Process buildings property: flatten if array
+        // Process emails without buildings join for now
         const processedEmails = data.map((email: any) => ({
           ...email,
-          buildings: Array.isArray(email.buildings) ? email.buildings[0] : email.buildings
+          buildings: null // Set to null since we're not joining buildings table
         }))
         
         setEmails(processedEmails)
@@ -162,10 +191,18 @@ export default function NewInboxClient({
         // for (const email of unanalyzedEmails.slice(0, 5)) { // Limit to 5 at a time
         //   await analyzeEmailWithAI(email)
         // }
+      } else {
+        console.log('📧 NewInboxClient - No emails found')
+        setEmails([])
+        setAvailableTags([])
       }
     } catch (error) {
-      console.error('Error in fetchEmails:', error)
-      toast.error('Failed to fetch emails')
+      console.error('❌ Unexpected error in fetchEmails:', {
+        error: error,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      })
+      toast.error('Failed to fetch emails: Unexpected error')
     } finally {
       setLoadingEmails(false)
     }
