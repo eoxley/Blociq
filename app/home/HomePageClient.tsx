@@ -65,23 +65,45 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClientComponentClient()
 
-  // Dynamic welcome messages
+  // Dynamic welcome messages - rotating pool of positive, motivational, humorous, and informative messages
   const welcomeMessages = [
-    'Let\'s chase some contractors and close some budgets 💼',
-    'The lifts are stuck again — but not your motivation 🚀',
-    'Time to inspect fire doors like legends 🚪🔥',
-    'Let\'s make leaseholders smile (or at least not shout) 😅',
-    'Your property empire awaits 👑',
-    'Another day, another service charge query 📊',
-    'Ready to tackle those compliance deadlines? ⚡',
-    'Property management: where every day is an adventure 🏢',
-    'Let\'s make today\'s to-do list yesterday\'s problem ✅',
-    'Channeling your inner property superhero today 🦸‍♂️',
-    'Time to turn chaos into organized chaos 🎯',
-    'Your buildings are lucky to have you managing them 🍀',
-    'Let\'s make some magic happen in the property world ✨',
-    'Ready to be the hero your buildings deserve 🦸‍♀️',
-    'Another opportunity to excel in property management 🌟'
+    // 🔁 Motivational Messages
+    "You've already survived worse than a passive-aggressive leaseholder. Keep going.",
+    "Coffee in one hand, compliance in the other — classic BlocIQ move.",
+    "You're the reason building meetings *almost* run on time.",
+    "You've dodged Section 20 bullets all week — gold star ⭐",
+    "Risk assessed. Stress suppressed.",
+    "Your building doesn't need a hero. It has you.",
+    "You know the alarm panel code. You *are* the alarm panel code.",
+    "Property managers don't crack under pressure. They schedule it.",
+    "There's calm in your chaos. BlocIQ just makes it prettier.",
+    "That building doesn't run on vibes — it runs on your last 14 emails.",
+
+    // 😅 Humorous Management Quotes
+    "Today's forecast: 80% chance of leaseholder emails before lunch.",
+    "Another invoice, another mystery charge to decode. You've trained for this.",
+    "Yes, you still remember the gate code from six buildings ago. 🧠",
+    "You've explained 'communal areas' three times this week. That's law now.",
+    "Someone's going to mention 'right to manage' today — take a breath.",
+    "Your service charge breakdowns are more accurate than the Met Office.",
+    "If someone says 'I pay your salary' — congrats, you're in mid-season form.",
+
+    // 🤓 "Did You Know?" Facts
+    "Did you know? The world's tallest residential building is over 1,500 feet high.",
+    "Did you know? UK property law dates back over 800 years — and still confuses everyone.",
+    "Did you know? Pigeons can identify themselves in mirrors. Some residents can't.",
+    "Did you know? London has over 70 fire stations — and you've probably emailed half of them.",
+    "Did you know? The first lease ever recorded in England was in 1066. Still no communal cleaning.",
+    "Did you know? The average person spends 87% of their time indoors — that includes your inbox.",
+    "Did you know? Ancient Romans had property managers. They were called *curatores domus*.",
+    "Did you know? More than 20% of UK homes are flats — and every single one comes with questions.",
+
+    // 🧠 Bonus inspiration
+    "Order, calm, and coffee. You're 2 out of 3 already.",
+    "Excellence is quiet. So is successful block management.",
+    "You don't need to chase perfection — just service charge reconciliation.",
+    "Trust the process. And the fire alarm service provider (mostly).",
+    "One task at a time. One leaseholder at a time. BlocIQ's got your back."
   ]
 
   // Get random welcome message on every render
