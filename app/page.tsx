@@ -23,10 +23,10 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center">
-              <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
-                <BlocIQLogo className="text-white" size={24} />
+              <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center shadow-lg">
+                <BlocIQLogo className="text-white" size={40} />
               </div>
-              <span className="ml-3 text-2xl font-bold text-gray-900">BlocIQ</span>
+              <span className="ml-4 text-4xl font-extrabold bg-gradient-to-r from-[#0a2540] to-[#274472] bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>BlocIQ</span>
             </div>
             <Link 
               href="/login"
@@ -285,10 +285,10 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center mb-4 md:mb-0">
-              <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center">
-                <BlocIQLogo className="text-white" size={24} />
+              <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center">
+                <BlocIQLogo className="text-white" size={40} />
               </div>
-              <span className="ml-3 text-2xl font-bold">BlocIQ</span>
+              <span className="ml-4 text-4xl font-extrabold bg-gradient-to-r from-[#0a2540] to-[#274472] bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>BlocIQ</span>
             </div>
             <div className="text-gray-400 text-sm">
               © 2024 BlocIQ. All rights reserved.
