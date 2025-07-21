@@ -34,18 +34,13 @@ export default function BlocIQLogo({ className = '', size = 24 }: BlocIQLogoProp
         strokeWidth="2"
         fill="none"
       />
-      {/* Chimney - "i" */}
-      <text
-        x="17"
-        y="9"
-        textAnchor="middle"
-        fontSize="4"
-        fontWeight="bold"
+      {/* Chimney dot */}
+      <circle
+        cx="17"
+        cy="7"
+        r="1.5"
         fill="currentColor"
-        fontFamily="Arial, sans-serif"
-      >
-        i
-      </text>
+      />
     </svg>
   )
 } 
