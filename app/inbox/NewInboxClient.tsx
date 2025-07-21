@@ -101,77 +101,78 @@ export default function NewInboxClient({
   const [availableTags, setAvailableTags] = useState<string[]>([])
   const [selectedTags, setSelectedTags] = useState<string[]>([])
 
+  // Create a reusable fetchEmails function
+  const fetchEmails = async () => {
+    setLoadingEmails(true)
+    console.log('🔄 NewInboxClient - Fetching emails with filter:', filter)
+    
+    try {
+      let query = supabase
+        .from('incoming_emails')
+        .select(`
+          id, subject, from_name, from_email, received_at, body_preview, body_full, building_id, is_read, is_handled, tags, outlook_id, buildings(name)
+        `)
+        .eq('is_deleted', false) // Filter out deleted emails
+        .order('received_at', { ascending: false })
+
+      // Apply filters based on current filter state
+      if (filter === 'inbox') {
+        // Show all emails in inbox (not just unhandled ones)
+        console.log('📧 NewInboxClient - Showing all emails in inbox')
+      } else if (filter === 'handled') {
+        query = query.eq('is_handled', true)
+        console.log('✅ NewInboxClient - Showing handled emails')
+      } else if (filter === 'unhandled') {
+        query = query.eq('is_handled', false)
+        console.log('⏳ NewInboxClient - Showing unhandled emails')
+      } else if (filter === 'unread') {
+        query = query.eq('is_read', false)
+        console.log('📬 NewInboxClient - Showing unread emails')
+      }
+
+      const { data, error } = await query
+      
+      if (error) {
+        console.error('Error fetching emails:', error)
+        toast.error('Failed to fetch emails')
+        return
+      }
+
+      console.log('📧 NewInboxClient - Fetched emails:', data?.length || 0)
+      
+      if (data) {
+        // Process buildings property: flatten if array
+        const processedEmails = data.map((email: any) => ({
+          ...email,
+          buildings: Array.isArray(email.buildings) ? email.buildings[0] : email.buildings
+        }))
+        
+        setEmails(processedEmails)
+        
+        // Extract unique tags from fetched emails
+        const allTags = processedEmails
+          .flatMap(email => email.tags || [])
+          .filter((tag, index, arr) => arr.indexOf(tag) === index)
+        setAvailableTags(allTags)
+        
+        // Temporarily disable AI analysis to prevent errors
+        // const unanalyzedEmails = processedEmails.filter(email => !email.tags || email.tags.length === 0)
+        // console.log('🤖 NewInboxClient - Found unanalyzed emails:', unanalyzedEmails.length)
+        
+        // for (const email of unanalyzedEmails.slice(0, 5)) { // Limit to 5 at a time
+        //   await analyzeEmailWithAI(email)
+        // }
+      }
+    } catch (error) {
+      console.error('Error in fetchEmails:', error)
+      toast.error('Failed to fetch emails')
+    } finally {
+      setLoadingEmails(false)
+    }
+  }
+
   // Fetch emails based on filter
   useEffect(() => {
-    const fetchEmails = async () => {
-      setLoadingEmails(true)
-      console.log('🔄 NewInboxClient - Fetching emails with filter:', filter)
-      
-      try {
-        let query = supabase
-          .from('incoming_emails')
-          .select(`
-            id, subject, from_name, from_email, received_at, body_preview, body_full, building_id, is_read, is_handled, tags, outlook_id, buildings(name)
-          `)
-          .eq('is_deleted', false) // Filter out deleted emails
-          .order('received_at', { ascending: false })
-
-        // Apply filters based on current filter state
-        if (filter === 'inbox') {
-          // Show all emails in inbox (not just unhandled ones)
-          console.log('📧 NewInboxClient - Showing all emails in inbox')
-        } else if (filter === 'handled') {
-          query = query.eq('is_handled', true)
-          console.log('✅ NewInboxClient - Showing handled emails')
-        } else if (filter === 'unhandled') {
-          query = query.eq('is_handled', false)
-          console.log('⏳ NewInboxClient - Showing unhandled emails')
-        } else if (filter === 'unread') {
-          query = query.eq('is_read', false)
-          console.log('📬 NewInboxClient - Showing unread emails')
-        }
-
-        const { data, error } = await query
-        
-        if (error) {
-          console.error('Error fetching emails:', error)
-          toast.error('Failed to fetch emails')
-          return
-        }
-
-        console.log('📧 NewInboxClient - Fetched emails:', data?.length || 0)
-        
-        if (data) {
-          // Process buildings property: flatten if array
-          const processedEmails = data.map((email: any) => ({
-            ...email,
-            buildings: Array.isArray(email.buildings) ? email.buildings[0] : email.buildings
-          }))
-          
-          setEmails(processedEmails)
-          
-          // Extract unique tags from fetched emails
-          const allTags = processedEmails
-            .flatMap(email => email.tags || [])
-            .filter((tag, index, arr) => arr.indexOf(tag) === index)
-          setAvailableTags(allTags)
-          
-          // Temporarily disable AI analysis to prevent errors
-          // const unanalyzedEmails = processedEmails.filter(email => !email.tags || email.tags.length === 0)
-          // console.log('🤖 NewInboxClient - Found unanalyzed emails:', unanalyzedEmails.length)
-          
-          // for (const email of unanalyzedEmails.slice(0, 5)) { // Limit to 5 at a time
-          //   await analyzeEmailWithAI(email)
-          // }
-        }
-      } catch (error) {
-        console.error('Error in fetchEmails:', error)
-        toast.error('Failed to fetch emails')
-      } finally {
-        setLoadingEmails(false)
-      }
-    }
-
     fetchEmails()
   }, [filter, supabase])
 
@@ -313,51 +314,8 @@ export default function NewInboxClient({
 
   const handleEmailProcessed = () => {
     // Refresh the email list after processing
-    // Use the main fetchEmails function from useEffect
-    const refreshEmails = async () => {
-      setLoadingEmails(true)
-      console.log('🔄 NewInboxClient - Refreshing emails after processing')
-      
-      let query = supabase
-        .from('incoming_emails')
-        .select(`
-          id, subject, from_name, from_email, received_at, body_preview, body_full, building_id, is_read, is_handled, tags, outlook_id, buildings(name)
-        `)
-        .eq('is_deleted', false)
-        .order('received_at', { ascending: false })
-
-      // Apply current filter
-      if (filter === 'handled') {
-        query = query.eq('is_handled', true)
-      } else if (filter === 'unhandled') {
-        query = query.eq('is_handled', false)
-      } else if (filter === 'unread') {
-        query = query.eq('is_read', false)
-      }
-
-      try {
-        const { data, error } = await query
-        
-        if (error) {
-          console.error('Error refreshing emails:', error)
-          return
-        }
-
-        if (data) {
-          const processedEmails = data.map((email: any) => ({
-            ...email,
-            buildings: Array.isArray(email.buildings) ? email.buildings[0] : email.buildings
-          }))
-          setEmails(processedEmails)
-        }
-      } catch (error) {
-        console.error('Error refreshing emails:', error)
-      } finally {
-        setLoadingEmails(false)
-      }
-    }
-
-    refreshEmails()
+    console.log('🔄 NewInboxClient - Refreshing emails after processing')
+    fetchEmails()
   }
 
   const handleConnectOutlook = () => {
