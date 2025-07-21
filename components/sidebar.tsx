@@ -108,8 +108,8 @@ export default function Sidebar() {
             
             {/* Finances Parent */}
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium opacity-80 cursor-not-allowed bg-slate-700/50 backdrop-blur-sm">
-              <div className="w-10 h-10 bg-slate-700/50 rounded-xl flex items-center justify-center">
-                <span className="text-lg font-bold text-slate-300">£</span>
+              <div className="w-10 h-10 bg-gradient-to-br from-teal-500/30 to-blue-500/30 rounded-xl flex items-center justify-center shadow-lg">
+                <span className="text-lg font-bold text-white">£</span>
               </div>
               <span className="text-slate-200">Finances</span>
               <Clock className="h-4 w-4 ml-auto text-slate-400" />
@@ -148,8 +148,8 @@ export default function Sidebar() {
             
             {/* Contractors */}
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium opacity-80 cursor-not-allowed bg-slate-700/50 backdrop-blur-sm mt-3">
-              <div className="w-10 h-10 bg-slate-700/50 rounded-xl flex items-center justify-center">
-                <span className="text-lg font-bold text-slate-300">🔧</span>
+              <div className="w-10 h-10 bg-gradient-to-br from-teal-500/30 to-blue-500/30 rounded-xl flex items-center justify-center shadow-lg">
+                <span className="text-lg font-bold text-white">🔧</span>
               </div>
               <span className="text-slate-200">Contractors</span>
               <Clock className="h-4 w-4 ml-auto text-slate-400" />
@@ -157,8 +157,8 @@ export default function Sidebar() {
             
             {/* Work Orders */}
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium opacity-80 cursor-not-allowed bg-slate-700/50 backdrop-blur-sm mt-3">
-              <div className="w-10 h-10 bg-slate-700/50 rounded-xl flex items-center justify-center">
-                <span className="text-lg font-bold text-slate-300">📋</span>
+              <div className="w-10 h-10 bg-gradient-to-br from-teal-500/30 to-blue-500/30 rounded-xl flex items-center justify-center shadow-lg">
+                <span className="text-lg font-bold text-white">📋</span>
               </div>
               <span className="text-slate-200">Work Orders</span>
               <Clock className="h-4 w-4 ml-auto text-slate-400" />
@@ -166,8 +166,8 @@ export default function Sidebar() {
             
             {/* Client Portal */}
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium opacity-80 cursor-not-allowed bg-slate-700/50 backdrop-blur-sm mt-3">
-              <div className="w-10 h-10 bg-slate-700/50 rounded-xl flex items-center justify-center">
-                <span className="text-lg text-slate-300">👥</span>
+              <div className="w-10 h-10 bg-gradient-to-br from-teal-500/30 to-blue-500/30 rounded-xl flex items-center justify-center shadow-lg">
+                <span className="text-lg text-white">👥</span>
               </div>
               <span className="text-slate-200">Client Portal</span>
               <Clock className="h-4 w-4 ml-auto text-slate-400" />
