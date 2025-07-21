@@ -1,17 +1,15 @@
 'use client'
 
-import Sidebar from './sidebar'
+import DashboardSidebar from './DashboardSidebar'
 import { ReactNode } from 'react'
 
 export default function LayoutWithSidebar({ children }: { children: ReactNode }) {
   return (
-    <div className="flex h-screen bg-gray-50">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50">
-          {children}
-        </main>
-      </div>
+    <div className="flex h-screen overflow-hidden">
+      <DashboardSidebar />
+      <main className="flex-1 overflow-y-auto bg-[#FAFAFA] p-6">
+        {children}
+      </main>
     </div>
   )
 }
