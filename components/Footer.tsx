@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import BlocIQLogo from '@/components/BlocIQLogo'
 
 export default function Footer() {
   return (
@@ -6,6 +7,12 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
           <div className="flex items-center space-x-6 text-sm text-gray-600">
+            <div className="flex items-center">
+              <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg flex items-center justify-center shadow-md">
+                <BlocIQLogo className="text-white" size={18} />
+              </div>
+              <span className="ml-2 font-semibold text-gray-900">BlocIQ</span>
+            </div>
             <span>&copy; {new Date().getFullYear()} BlocIQ Ltd. All rights reserved.</span>
           </div>
           

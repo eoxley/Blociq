@@ -7,6 +7,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import DailySummary from '@/components/DailySummary'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import BlocIQLogo from '@/components/BlocIQLogo'
 
 type PropertyEvent = {
   building: string
@@ -307,6 +308,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         <div className="relative z-10">
           <div className="flex items-center justify-between">
             <div className="space-y-2">
+              <div className="flex items-center mb-4">
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm shadow-lg">
+                  <BlocIQLogo className="text-white" size={24} />
+                </div>
+                <span className="ml-3 text-2xl font-bold text-white">BlocIQ</span>
+              </div>
               <h1 className="text-4xl font-bold">Welcome back, {userData.name}!</h1>
               <p className="text-teal-100 text-lg">{getWelcomeMessage()}</p>
             </div>
