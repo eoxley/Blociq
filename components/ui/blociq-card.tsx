@@ -12,11 +12,11 @@ export function BlocIQCard({
   children, 
   ...props 
 }: BlocIQCardProps) {
-  const variants = {
-    default: "bg-white border border-[#E2E8F0] shadow-sm hover:shadow-md",
-    elevated: "bg-white border border-[#E2E8F0] shadow-lg hover:shadow-xl",
-    outlined: "bg-white border-2 border-[#2BBEB4]/20 shadow-sm"
-  };
+                const variants = {
+                default: "bg-white border border-[#E2E8F0] shadow-sm hover:shadow-md",
+                elevated: "bg-white border border-[#E2E8F0] shadow-lg hover:shadow-xl",
+                outlined: "bg-white border-2 border-[#008C8F]/20 shadow-sm"
+              };
 
   return (
     <div

@@ -124,7 +124,7 @@ export default function ManualDiaryInput({ onEventCreated, buildings = [] }: Man
                 value={formData.title}
                 onChange={(e) => handleInputChange("title", e.target.value)}
                 placeholder="Enter event title"
-                className="w-full border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-[#2BBEB4] focus:ring-2 focus:ring-[#2BBEB4]/20 outline-none transition-colors"
+                className="w-full border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-[#008C8F] focus:ring-2 focus:ring-[#008C8F]/20 outline-none transition-colors"
                 required
               />
             </div>
@@ -135,26 +135,26 @@ export default function ManualDiaryInput({ onEventCreated, buildings = [] }: Man
                 <label className="block text-sm font-medium text-[#333333] mb-2">
                   Start Date & Time *
                 </label>
-                <input
-                  type="datetime-local"
-                  value={formData.start_time}
-                  onChange={(e) => handleInputChange("start_time", e.target.value)}
-                  min={getMinDateTime()}
-                  className="w-full border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-[#2BBEB4] focus:ring-2 focus:ring-[#2BBEB4]/20 outline-none transition-colors"
-                  required
-                />
+                                  <input
+                    type="datetime-local"
+                    value={formData.start_time}
+                    onChange={(e) => handleInputChange("start_time", e.target.value)}
+                    min={getMinDateTime()}
+                    className="w-full border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-[#008C8F] focus:ring-2 focus:ring-[#008C8F]/20 outline-none transition-colors"
+                    required
+                  />
               </div>
               <div>
                 <label className="block text-sm font-medium text-[#333333] mb-2">
                   End Date & Time
                 </label>
-                <input
-                  type="datetime-local"
-                  value={formData.end_time}
-                  onChange={(e) => handleInputChange("end_time", e.target.value)}
-                  min={formData.start_time || getMinDateTime()}
-                  className="w-full border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-[#2BBEB4] focus:ring-2 focus:ring-[#2BBEB4]/20 outline-none transition-colors"
-                />
+                                        <input
+                          type="datetime-local"
+                          value={formData.end_time}
+                          onChange={(e) => handleInputChange("end_time", e.target.value)}
+                          min={formData.start_time || getMinDateTime()}
+                          className="w-full border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-[#008C8F] focus:ring-2 focus:ring-[#008C8F]/20 outline-none transition-colors"
+                        />
               </div>
             </div>
 
@@ -184,7 +184,7 @@ export default function ManualDiaryInput({ onEventCreated, buildings = [] }: Man
                   value={formData.location}
                   onChange={(e) => handleInputChange("location", e.target.value)}
                   placeholder="Enter location"
-                  className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm focus:border-[#2BBEB4] focus:ring-2 focus:ring-[#2BBEB4]/20 outline-none transition-colors"
+                  className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm focus:border-[#008C8F] focus:ring-2 focus:ring-[#008C8F]/20 outline-none transition-colors"
                 />
               </div>
             </div>
@@ -200,7 +200,7 @@ export default function ManualDiaryInput({ onEventCreated, buildings = [] }: Man
                   <select
                     value={formData.building_id}
                     onChange={(e) => handleInputChange("building_id", e.target.value)}
-                    className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm focus:border-[#2BBEB4] focus:ring-2 focus:ring-[#2BBEB4]/20 outline-none transition-colors"
+                    className="w-full border border-[#E2E8F0] rounded-xl pl-10 pr-4 py-3 text-sm focus:border-[#008C8F] focus:ring-2 focus:ring-[#008C8F]/20 outline-none transition-colors"
                   >
                     <option value="">Select a building (optional)</option>
                     {buildings.map((building) => (
@@ -221,7 +221,7 @@ export default function ManualDiaryInput({ onEventCreated, buildings = [] }: Man
               <select
                 value={formData.category}
                 onChange={(e) => handleInputChange("category", e.target.value)}
-                className="w-full border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-[#2BBEB4] focus:ring-2 focus:ring-[#2BBEB4]/20 outline-none transition-colors"
+                className="w-full border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-[#008C8F] focus:ring-2 focus:ring-[#008C8F]/20 outline-none transition-colors"
               >
                 <option value="Manual Entry">Manual Entry</option>
                 <option value="Meeting">Meeting</option>
@@ -248,7 +248,7 @@ export default function ManualDiaryInput({ onEventCreated, buildings = [] }: Man
                     onClick={() => handleInputChange("priority", priority)}
                     className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                       formData.priority === priority
-                        ? "bg-[#2BBEB4] text-white"
+                        ? "bg-[#008C8F] text-white"
                         : "bg-[#F3F4F6] text-[#64748B] hover:bg-[#E2E8F0]"
                     }`}
                   >
@@ -263,13 +263,13 @@ export default function ManualDiaryInput({ onEventCreated, buildings = [] }: Man
               <label className="block text-sm font-medium text-[#333333] mb-2">
                 Description
               </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => handleInputChange("description", e.target.value)}
-                placeholder="Enter event description"
-                rows={3}
-                className="w-full border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-[#2BBEB4] focus:ring-2 focus:ring-[#2BBEB4]/20 outline-none transition-colors resize-none"
-              />
+                              <textarea
+                  value={formData.description}
+                  onChange={(e) => handleInputChange("description", e.target.value)}
+                  placeholder="Enter event description"
+                  rows={3}
+                  className="w-full border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-[#008C8F] focus:ring-2 focus:ring-[#008C8F]/20 outline-none transition-colors resize-none"
+                />
             </div>
 
             {/* Notes */}
@@ -277,13 +277,13 @@ export default function ManualDiaryInput({ onEventCreated, buildings = [] }: Man
               <label className="block text-sm font-medium text-[#333333] mb-2">
                 Notes
               </label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => handleInputChange("notes", e.target.value)}
-                placeholder="Additional notes"
-                rows={2}
-                className="w-full border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-[#2BBEB4] focus:ring-2 focus:ring-[#2BBEB4]/20 outline-none transition-colors resize-none"
-              />
+                              <textarea
+                  value={formData.notes}
+                  onChange={(e) => handleInputChange("notes", e.target.value)}
+                  placeholder="Additional notes"
+                  rows={2}
+                  className="w-full border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-[#008C8F] focus:ring-2 focus:ring-[#008C8F]/20 outline-none transition-colors resize-none"
+                />
             </div>
 
             {/* Action Buttons */}

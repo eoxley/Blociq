@@ -364,8 +364,8 @@ export default function NewInboxClient({
 
   return (
     <div className="space-y-8">
-      {/* Enhanced Header with BlocIQ Branding */}
-      <div className="bg-gradient-to-r from-[#2BBEB4] to-[#0F5D5D] rounded-2xl p-8 text-white shadow-xl">
+                        {/* Enhanced Header with BlocIQ Branding */}
+                  <div className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] rounded-2xl p-8 text-white shadow-xl">
         <div className="flex items-center justify-between">
           <div className="space-y-2">
             <h1 className="text-4xl font-bold">Email Inbox</h1>

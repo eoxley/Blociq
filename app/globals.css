@@ -48,9 +48,9 @@
 }
 
 :root {
-  --radius: 0.625rem;
+  --radius: 0.75rem; /* Increased for rounded-xl */
   
-  /* BlocIQ Brand Colors */
+  /* BlocIQ Brand Colors - Updated to match landing page */
   --background: #FAFAFA;
   --foreground: #333333;
   --card: #FFFFFF;
@@ -58,11 +58,24 @@
   --popover: #FFFFFF;
   --popover-foreground: #333333;
   
-  /* Primary Colors */
-  --primary: #2BBEB4;
+  /* Primary Colors - Updated to match landing page */
+  --primary: #008C8F; /* Aqua Teal */
   --primary-foreground: #FFFFFF;
-  --secondary: #0F5D5D;
+  --secondary: #0F5D5D; /* Deep Teal */
   --secondary-foreground: #FFFFFF;
+  
+  /* Gradient Colors */
+  --gradient-primary: linear-gradient(135deg, #008C8F 0%, #7645ED 100%);
+  --gradient-action: linear-gradient(135deg, #008C8F 0%, #007BDB 100%);
+  --gradient-sidebar-active: linear-gradient(135deg, #2078F4 0%, #7645ED 100%);
+  
+  /* Brand Colors */
+  --blociq-green: #2BBEB4;
+  --deep-teal: #0F5D5D;
+  --soft-white: #FAFAFA;
+  --charcoal: #333333;
+  --accent-blue: #2078F4;
+  --purple: #7645ED;
   
   /* Support Colors */
   --muted: #F3F4F6;
@@ -75,7 +88,7 @@
   /* UI Colors */
   --border: #E2E8F0;
   --input: #E2E8F0;
-  --ring: #2BBEB4;
+  --ring: #008C8F;
   
   /* Status Colors */
   --success: #10B981;
@@ -84,7 +97,7 @@
   --error: #EF4444;
   
   /* Chart Colors */
-  --chart-1: #2BBEB4;
+  --chart-1: #008C8F;
   --chart-2: #0F5D5D;
   --chart-3: #10B981;
   --chart-4: #FBBF24;
@@ -93,12 +106,12 @@
   /* Sidebar Colors */
   --sidebar: #FFFFFF;
   --sidebar-foreground: #333333;
-  --sidebar-primary: #2BBEB4;
+  --sidebar-primary: #008C8F;
   --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: #F0FDFA;
   --sidebar-accent-foreground: #0F5D5D;
   --sidebar-border: #E2E8F0;
-  --sidebar-ring: #2BBEB4;
+  --sidebar-ring: #008C8F;
 }
 
 .dark {
