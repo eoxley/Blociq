@@ -41,7 +41,7 @@ export default function Sidebar() {
   ]
 
   return (
-    <aside className="min-h-screen w-64 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 text-white flex flex-col py-6 px-4 shadow-2xl relative overflow-hidden border-r border-slate-700/50">
+    <aside className="min-h-screen w-64 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 text-white flex flex-col py-6 px-4 shadow-2xl relative border-r border-slate-700/50">
       {/* Extended gradient connection to welcome block */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 opacity-20 blur-xl"></div>
       {/* Background decorative elements */}
@@ -49,7 +49,7 @@ export default function Sidebar() {
       <div className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-teal-500/10 to-blue-500/10 rounded-full blur-sm"></div>
       <div className="absolute bottom-4 left-4 w-16 h-16 bg-gradient-to-br from-purple-500/10 to-teal-500/10 rounded-full blur-sm"></div>
       
-      <div className="relative z-10 flex flex-col h-full">
+      <div className="relative z-10 flex flex-col h-full overflow-y-auto">
         {/* Logo Section */}
         <div className="mb-10 px-4">
           <Link href="/home" className="flex items-center gap-4 mb-3 hover:opacity-90 transition-all duration-300 group">
@@ -64,7 +64,7 @@ export default function Sidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 space-y-2">
+        <nav className="flex-1 space-y-2 pb-4">
           {navigationItems.map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href || (pathname && pathname.startsWith(item.href + '/'))
@@ -101,7 +101,7 @@ export default function Sidebar() {
           })}
 
           {/* Coming Soon Section */}
-          <div className="pt-6 border-t border-slate-600/50 mt-6">
+          <div className="pt-6 border-t border-slate-600/50 mt-6 mb-4">
             <div className="px-4 py-2">
               <p className="text-xs text-slate-300 mb-3 font-medium">Coming Soon</p>
             </div>
