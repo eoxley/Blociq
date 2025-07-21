@@ -309,18 +309,28 @@ export default function NewInboxClient({
         const { data: newEmails, error } = await supabase
           .from('incoming_emails')
           .select(`
-            id, subject, from_name, from_email, received_at, body_preview, body_full, building_id, is_read, is_handled, tags, outlook_id, buildings(name)
+            id, subject, from_email, received_at, body_preview, building_id, unread, handled, tag, message_id, thread_id, unit, user_id, created_at
           `)
-          .eq('is_deleted', false)
           .order('received_at', { ascending: false })
 
         if (error) {
           console.error('Error refreshing emails:', error)
         } else if (newEmails) {
-          // Process buildings property: flatten if array
+          // Process emails with proper structure
           const processedEmails = newEmails.map((email: any) => ({
             ...email,
-            buildings: Array.isArray(email.buildings) ? email.buildings[0] : email.buildings
+            buildings: null, // Set to null since we're not joining buildings table
+            // Map database fields to expected interface fields
+            subject: email.subject || 'No Subject',
+            from_name: email.from_email || 'Unknown Sender', // Use from_email as from_name
+            from_email: email.from_email || 'unknown@example.com',
+            body_preview: email.body_preview || 'No preview available',
+            body_full: email.body_preview || 'No content available', // Use body_preview as body_full
+            is_read: !email.unread, // Convert unread to is_read (inverted)
+            is_handled: email.handled || false,
+            tags: email.tag ? [email.tag] : [], // Convert single tag to array
+            building_id: email.building_id || null,
+            outlook_id: email.message_id || null // Use message_id as outlook_id
           }))
           
           setEmails(processedEmails)
@@ -330,6 +340,7 @@ export default function NewInboxClient({
           const allTags = processedEmails
             .flatMap(email => email.tags || [])
             .filter((tag, index, arr) => arr.indexOf(tag) === index)
+            .filter(tag => tag && tag.trim() !== '') // Filter out empty tags
           setAvailableTags(allTags)
         }
 
@@ -352,8 +363,7 @@ export default function NewInboxClient({
       const { error } = await supabase
         .from('incoming_emails')
         .update({ 
-          is_handled: true, 
-          handled_at: new Date().toISOString() 
+          handled: true
         })
         .eq('id', emailId)
 
@@ -366,7 +376,7 @@ export default function NewInboxClient({
       // Update local state
       setEmails(prev => prev.map(email => 
         email.id === emailId 
-          ? { ...email, is_handled: true, handled_at: new Date().toISOString() }
+          ? { ...email, is_handled: true }
           : email
       ))
 
@@ -384,7 +394,7 @@ export default function NewInboxClient({
     if (!email.is_read) {
       supabase
         .from('incoming_emails')
-        .update({ is_read: true })
+        .update({ unread: false })
         .eq('id', email.id)
         .then(() => {
           setEmails(prev => prev.map(e => 
