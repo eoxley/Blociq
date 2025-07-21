@@ -57,25 +57,6 @@ export default function DashboardSidebar() {
             <p className="text-xs text-[#64748B] font-medium">Property Intelligence Platform</p>
           </div>
         </Link>
-        
-        {/* User Welcome */}
-        {user && (
-          <div className="bg-gradient-to-r from-[#F0FDFA] to-emerald-50 rounded-xl p-3 border border-[#2BBEB4]/20">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-[#008C8F] to-[#2BBEB4] rounded-lg flex items-center justify-center">
-                <User className="h-4 w-4 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-[#0F5D5D] truncate">
-                  {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
-                </p>
-                <p className="text-xs text-[#64748B] truncate">
-                  {user.email}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Enhanced Navigation */}
