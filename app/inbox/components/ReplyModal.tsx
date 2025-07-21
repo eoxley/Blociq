@@ -1,8 +1,8 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { toast } from "sonner";
+import { BlocIQButton } from "@/components/ui/blociq-button";
 
 interface Email {
   id: string;
@@ -18,7 +18,7 @@ interface Email {
   tags: string[] | null;
   outlook_id: string | null;
   buildings?: { name: string } | null;
-  cc_email?: string | null;
+  cc_email?: string | null; // Added for replyAll
 }
 
 interface ReplyModalProps {
@@ -55,7 +55,7 @@ export default function ReplyModal({ mode, email, onClose, onEmailSent }: ReplyM
 
     const generateDraft = async () => {
       try {
-        const res = await fetch("/api/generate-email-draft", {
+        const res = await fetch("/api/generate-email-draft", { // Corrected API endpoint
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ 
@@ -108,7 +108,6 @@ export default function ReplyModal({ mode, email, onClose, onEmailSent }: ReplyM
       });
 
       if (response.ok) {
-        // Mark email as handled
         await supabase
           .from("incoming_emails")
           .update({ is_handled: true, handled_at: new Date().toISOString() })
@@ -129,53 +128,92 @@ export default function ReplyModal({ mode, email, onClose, onEmailSent }: ReplyM
 
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow p-6 w-full max-w-2xl">
-        <h2 className="text-lg font-semibold mb-4 capitalize">{mode.replace("All", " All")}</h2>
-
-        <div className="space-y-2">
-          <input
-            type="text"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            placeholder="To"
-            className="w-full border rounded px-3 py-2 text-sm"
-          />
-          {mode === "replyAll" && (
-            <input
-              type="text"
-              value={cc}
-              onChange={(e) => setCc(e.target.value)}
-              placeholder="CC"
-              className="w-full border rounded px-3 py-2 text-sm"
-            />
-          )}
-          <input
-            type="text"
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            placeholder="Subject"
-            className="w-full border rounded px-3 py-2 text-sm"
-          />
-          <textarea
-            rows={10}
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            className="w-full border rounded px-3 py-2 text-sm"
-            placeholder="Type your message..."
-          />
+      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-[#333333] capitalize">
+            {mode.replace("All", " All")}
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-[#64748B] hover:text-[#333333] transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
-        <div className="mt-4 flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:text-black">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-[#333333] mb-2">
+              To
+            </label>
+            <input
+              type="text"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              placeholder="Recipient email addresses"
+              className="w-full border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-[#2BBEB4] focus:ring-2 focus:ring-[#2BBEB4]/20 outline-none transition-colors"
+            />
+          </div>
+          
+          {mode === "replyAll" && (
+            <div>
+              <label className="block text-sm font-medium text-[#333333] mb-2">
+                CC
+              </label>
+              <input
+                type="text"
+                value={cc}
+                onChange={(e) => setCc(e.target.value)}
+                placeholder="CC email addresses"
+                className="w-full border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-[#2BBEB4] focus:ring-2 focus:ring-[#2BBEB4]/20 outline-none transition-colors"
+              />
+            </div>
+          )}
+          
+          <div>
+            <label className="block text-sm font-medium text-[#333333] mb-2">
+              Subject
+            </label>
+            <input
+              type="text"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder="Email subject"
+              className="w-full border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-[#2BBEB4] focus:ring-2 focus:ring-[#2BBEB4]/20 outline-none transition-colors"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-[#333333] mb-2">
+              Message
+            </label>
+            <textarea
+              rows={12}
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              className="w-full border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-[#2BBEB4] focus:ring-2 focus:ring-[#2BBEB4]/20 outline-none transition-colors resize-none"
+              placeholder="Type your message..."
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-[#E2E8F0]">
+          <BlocIQButton
+            onClick={onClose}
+            variant="outline"
+            className="px-6 py-3"
+          >
             Cancel
-          </button>
-          <button
+          </BlocIQButton>
+          <BlocIQButton
             onClick={handleSend}
             disabled={loading}
-            className="px-4 py-2 text-sm bg-[#0F5D5D] text-white rounded hover:bg-teal-700 disabled:opacity-50"
+            className="px-6 py-3 disabled:opacity-50"
           >
-            {loading ? "Loading..." : "Send"}
-          </button>
+            {loading ? "Loading..." : "Send Email"}
+          </BlocIQButton>
         </div>
       </div>
     </div>

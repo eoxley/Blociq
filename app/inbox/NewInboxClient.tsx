@@ -15,10 +15,10 @@ import {
   Plus,
   Brain,
 } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
+import { BlocIQButton } from '@/components/ui/blociq-button'
+import { BlocIQBadge } from '@/components/ui/blociq-badge'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import EmailListItem from './components/EmailListItem'
 import EmailDetailPanel from './components/EmailDetailPanel'
 import AIActionBar from './components/AIActionBar'
@@ -98,51 +98,57 @@ export default function NewInboxClient({
         console.log('📧 NewInboxClient - Showing all emails in inbox')
       } else if (filter === 'handled') {
         query = query.eq('is_handled', true)
-        console.log('📧 NewInboxClient - Filtering for handled emails')
+        console.log('✅ NewInboxClient - Showing handled emails')
       } else if (filter === 'unhandled') {
         query = query.eq('is_handled', false)
-        console.log('📧 NewInboxClient - Filtering for unhandled emails')
-      } else if (filter.startsWith('building-')) {
-        const buildingId = filter.replace('building-', '')
-        query = query.eq('building_id', buildingId)
-        console.log('📧 NewInboxClient - Filtering for building:', buildingId)
-      } else if (filter.startsWith('tag-')) {
-        const tag = filter.replace('tag-', '')
-        query = query.contains('tags', [tag])
-        console.log('📧 NewInboxClient - Filtering for tag:', tag)
-      } else {
-        console.log('📧 NewInboxClient - Showing all emails (no filter)')
+        console.log('⏳ NewInboxClient - Showing unhandled emails')
+      } else if (filter === 'unread') {
+        query = query.eq('is_read', false)
+        console.log('📬 NewInboxClient - Showing unread emails')
       }
 
-      const { data, error } = await query
-      console.log('📧 NewInboxClient - Query result:', { dataCount: data?.length || 0, error })
-      
-      if (!error && data) {
-        // Fix buildings property: flatten if array
-        const processedEmails = data.map((email: any) => ({
-          ...email,
-          buildings: Array.isArray(email.buildings) ? email.buildings[0] : email.buildings
-        }))
-        setEmails(processedEmails)
-        console.log('📧 NewInboxClient - Processed emails:', processedEmails.length)
-        console.log('📧 NewInboxClient - First email:', processedEmails[0])
+      try {
+        const { data, error } = await query
         
-        // Extract unique tags for filtering
-        const allTags = processedEmails
-          .flatMap(email => email.tags || [])
-          .filter((tag, index, arr) => arr.indexOf(tag) === index)
-        setAvailableTags(allTags)
-
-        // Analyze unanalyzed emails with AI
-        const unanalyzedEmails = processedEmails.filter(email => !email.analyzed_at)
-        for (const email of unanalyzedEmails) {
-          analyzeEmailWithAI(email)
+        if (error) {
+          console.error('Error fetching emails:', error)
+          toast.error('Failed to fetch emails')
+          return
         }
-      } else if (error) {
-        console.error('❌ NewInboxClient - Query error:', error)
+
+        console.log('📧 NewInboxClient - Fetched emails:', data?.length || 0)
+        
+        if (data) {
+          // Process buildings property: flatten if array
+          const processedEmails = data.map((email: any) => ({
+            ...email,
+            buildings: Array.isArray(email.buildings) ? email.buildings[0] : email.buildings
+          }))
+          
+          setEmails(processedEmails)
+          
+          // Extract unique tags from fetched emails
+          const allTags = processedEmails
+            .flatMap(email => email.tags || [])
+            .filter((tag, index, arr) => arr.indexOf(tag) === index)
+          setAvailableTags(allTags)
+          
+          // Analyze unanalyzed emails with AI
+          const unanalyzedEmails = processedEmails.filter(email => !email.tags || email.tags.length === 0)
+          console.log('🤖 NewInboxClient - Found unanalyzed emails:', unanalyzedEmails.length)
+          
+          for (const email of unanalyzedEmails.slice(0, 5)) { // Limit to 5 at a time
+            await analyzeEmailWithAI(email)
+          }
+        }
+      } catch (error) {
+        console.error('Error in fetchEmails:', error)
+        toast.error('Failed to fetch emails')
+      } finally {
+        setLoadingEmails(false)
       }
-      setLoadingEmails(false)
     }
+
     fetchEmails()
   }, [filter, supabase])
 
@@ -160,176 +166,165 @@ export default function NewInboxClient({
     return matchesSearch && matchesTags
   })
 
-  // Sync emails from Outlook
   const handleSync = async () => {
     setIsSyncing(true)
     try {
-      console.log('🔄 Starting inbox sync...')
       const response = await fetch('/api/sync-inbox', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
       })
-      
-      const data = await response.json()
-      console.log('📊 Sync response:', data)
-      
+
       if (response.ok) {
-        setFilter('inbox') // Always show inbox after sync
-        setLastSync(new Date().toISOString())
+        const result = await response.json()
+        console.log('Sync result:', result)
         
-        if (data.synced_count > 0) {
-          toast.success(`✅ Synced ${data.synced_count} new emails`)
-        } else if (data.total_processed > 0) {
-          toast.info(`📧 No new emails to sync (${data.total_processed} emails checked)`)
-        } else {
-          toast.info('📧 No emails found to sync')
-        }
-        
-        // Refresh the email list to show new emails
-        const { data: refreshedEmails } = await supabase
+        // Refresh the email list
+        const { data: newEmails, error } = await supabase
           .from('incoming_emails')
           .select(`
             id, subject, from_name, from_email, received_at, body_preview, body_full, building_id, is_read, is_handled, tags, outlook_id, buildings(name)
           `)
-          .eq('is_deleted', false) // Filter out deleted emails
+          .eq('is_deleted', false)
           .order('received_at', { ascending: false })
-        
-        if (refreshedEmails) {
-          setEmails(refreshedEmails.map((email: any) => ({
+
+        if (error) {
+          console.error('Error refreshing emails:', error)
+        } else if (newEmails) {
+          // Process buildings property: flatten if array
+          const processedEmails = newEmails.map((email: any) => ({
             ...email,
             buildings: Array.isArray(email.buildings) ? email.buildings[0] : email.buildings
-          })))
+          }))
+          
+          setEmails(processedEmails)
+          setLastSync(new Date().toISOString())
+          
+          // Extract unique tags
+          const allTags = processedEmails
+            .flatMap(email => email.tags || [])
+            .filter((tag, index, arr) => arr.indexOf(tag) === index)
+          setAvailableTags(allTags)
         }
+
+        toast.success(`Synced ${result.syncedCount || 0} new emails`)
       } else {
-        console.error('❌ Sync failed:', data)
-        toast.error(`❌ Sync failed: ${data.message || 'Unknown error'}`)
+        const error = await response.json()
+        console.error('Sync error:', error)
+        toast.error(error.message || 'Failed to sync emails')
       }
     } catch (error) {
-      console.error('❌ Sync error:', error)
-      toast.error('❌ Sync failed: Network error')
+      console.error('Error syncing emails:', error)
+      toast.error('Failed to sync emails')
     } finally {
       setIsSyncing(false)
     }
   }
 
-  // Mark email as handled
   const markAsHandled = async (emailId: string) => {
     try {
       const { error } = await supabase
         .from('incoming_emails')
-        .update({ is_handled: true, handled_at: new Date().toISOString() })
+        .update({ 
+          is_handled: true, 
+          handled_at: new Date().toISOString() 
+        })
         .eq('id', emailId)
-      if (!error) {
-        setEmails(prev => prev.map(email =>
-          email.id === emailId ? { ...email, is_handled: true } : email
-        ))
-        toast.success('Email marked as handled')
-        setFilter('inbox') // Return to inbox after handling
+
+      if (error) {
+        console.error('Error marking email as handled:', error)
+        toast.error('Failed to mark email as handled')
+        return
       }
+
+      // Update local state
+      setEmails(prev => prev.map(email => 
+        email.id === emailId 
+          ? { ...email, is_handled: true, handled_at: new Date().toISOString() }
+          : email
+      ))
+
+      toast.success('Email marked as handled')
     } catch (error) {
-      toast.error('Error marking as handled')
+      console.error('Error marking email as handled:', error)
+      toast.error('Failed to mark email as handled')
     }
   }
 
-  // Handle email selection
   const handleEmailSelect = (email: Email) => {
     setSelectedEmail(email)
+    
+    // Mark as read if not already read
     if (!email.is_read) {
       supabase
         .from('incoming_emails')
         .update({ is_read: true })
         .eq('id', email.id)
-      setEmails(prev => prev.map(e => e.id === email.id ? { ...e, is_read: true } : e))
+        .then(() => {
+          setEmails(prev => prev.map(e => 
+            e.id === email.id ? { ...e, is_read: true } : e
+          ))
+        })
     }
   }
 
-  // Get current filter display name
   const getCurrentFilterName = () => {
     switch (filter) {
       case 'inbox':
-        return 'Inbox (All)'
+        return 'All Emails'
+      case 'unread':
+        return 'Unread'
+      case 'unhandled':
+        return 'Pending'
       case 'handled':
         return 'Handled'
-      case 'unhandled':
-        return 'Unhandled'
-      case 'all':
-        return 'All Emails'
       default:
-        if (filter.startsWith('building-')) {
-          const buildingId = filter.replace('building-', '')
-          const building = buildings.find(b => b.id === buildingId)
-          return building?.name || 'Building'
-        }
-        if (filter.startsWith('tag-')) {
-          const tag = filter.replace('tag-', '')
-          return `Tag: ${tag}`
-        }
-        return 'Unknown'
+        return 'All Emails'
     }
   }
 
-  // Start triage mode
   const startTriageMode = () => {
     setIsTriageAssistantOpen(true)
   }
 
-  // Handle email processed in triage
   const handleEmailProcessed = () => {
-    // Refresh the email list to reflect changes
-    setFilter('inbox')
+    // Refresh the email list after processing
+    const fetchEmails = async () => {
+      const { data, error } = await supabase
+        .from('incoming_emails')
+        .select(`
+          id, subject, from_name, from_email, received_at, body_preview, body_full, building_id, is_read, is_handled, tags, outlook_id, buildings(name)
+        `)
+        .eq('is_deleted', false)
+        .order('received_at', { ascending: false })
+
+      if (!error && data) {
+        // Process buildings property: flatten if array
+        const processedEmails = data.map((email: any) => ({
+          ...email,
+          buildings: Array.isArray(email.buildings) ? email.buildings[0] : email.buildings
+        }))
+        setEmails(processedEmails)
+      }
+    }
+
+    fetchEmails()
   }
 
-  // Handle success/error messages from URL params and auto-reset on login
-  useEffect(() => {
-    if (searchParams?.success === 'outlook_connected' && searchParams?.email) {
-      toast.success(`✅ Outlook connected as ${searchParams.email}`)
-      // Clear emails and refresh on successful connection
+  const handleConnectOutlook = () => {
+    // This would typically redirect to Outlook OAuth
+    toast.info('Outlook connection feature coming soon')
+  }
+
+  const handleResetInbox = () => {
+    if (confirm('Are you sure you want to reset the inbox? This will clear all emails.')) {
       setEmails([])
       setSelectedEmail(null)
-      setFilter('inbox')
-      // Clear the URL params
-      const url = new URL(window.location.href)
-      url.searchParams.delete('success')
-      url.searchParams.delete('email')
-      window.history.replaceState({}, '', url.toString())
+      toast.success('Inbox reset successfully')
     }
-    
-    if (searchParams?.error) {
-      toast.error(`❌ ${searchParams.error}`)
-      // Clear the URL params
-      const url = new URL(window.location.href)
-      url.searchParams.delete('error')
-      window.history.replaceState({}, '', url.toString())
-    }
-  }, [searchParams])
+  }
 
-  // Auto-reset emails on component mount (login)
-  useEffect(() => {
-    console.log('🔄 Auto-resetting emails on login...')
-    setEmails([])
-    setSelectedEmail(null)
-    setFilter('inbox')
-    setSearchTerm('')
-    setLastSync(null)
-  }, [])
-
-  // Add this function inside the NewInboxClient component
-  const handleConnectOutlook = () => {
-    window.location.href = '/api/auth/outlook';
-  };
-
-  // Reset inbox function
-  const handleResetInbox = () => {
-    console.log('🔄 Manually resetting inbox...')
-    setEmails([])
-    setSelectedEmail(null)
-    setFilter('inbox')
-    setSearchTerm('')
-    setLastSync(null)
-    toast.success('Inbox reset successfully')
-  };
-
-  // Analyze email with AI for tagging and building matching
   const analyzeEmailWithAI = async (email: Email) => {
     try {
       const response = await fetch('/api/analyze-email', {
@@ -342,7 +337,7 @@ export default function NewInboxClient({
           subject: email.subject,
           body: email.body_full || email.body_preview,
           fromEmail: email.from_email,
-          fromName: email.from_name
+          fromName: email.from_name,
         }),
       })
 
@@ -368,261 +363,240 @@ export default function NewInboxClient({
   }
 
   return (
-    <div className="h-screen flex flex-col">
-      {/* Enhanced Header with Gradient Background */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 p-6 text-white shadow-2xl">
-        <div className="absolute inset-0 bg-black/10"></div>
-        <div className="relative z-10">
-          <div className="flex items-center justify-between">
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold">Email Inbox</h1>
-              <p className="text-teal-100 text-lg">Manage and respond to property-related emails</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <Button 
-                onClick={handleSync}
-                disabled={isSyncing}
-                className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
-              >
-                {isSyncing ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                )}
-                {isSyncing ? 'Syncing...' : 'Sync Emails'}
-              </Button>
-              <Button 
-                onClick={handleResetInbox}
-                variant="outline" 
-                className="border-white/30 text-white hover:bg-white/10"
-              >
+    <div className="space-y-8">
+      {/* Enhanced Header with BlocIQ Branding */}
+      <div className="bg-gradient-to-r from-[#2BBEB4] to-[#0F5D5D] rounded-2xl p-8 text-white shadow-xl">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold">Email Inbox</h1>
+            <p className="text-xl text-white/90">Manage and respond to property-related emails</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <BlocIQButton 
+              onClick={handleSync}
+              disabled={isSyncing}
+              variant="secondary"
+              className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+            >
+              {isSyncing ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Reset Inbox
-              </Button>
-              <Button 
-                onClick={() => setIsComposeModalOpen(true)}
-                className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Compose
-              </Button>
-              <Button 
-                onClick={startTriageMode}
-                variant="outline" 
-                className="border-white/30 text-white hover:bg-white/10"
-              >
-                <Brain className="h-4 w-4 mr-2" />
-                AI Triage
-              </Button>
+              )}
+              {isSyncing ? 'Syncing...' : 'Sync Emails'}
+            </BlocIQButton>
+            <BlocIQButton 
+              onClick={() => setIsComposeModalOpen(true)}
+              variant="secondary"
+              className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Compose
+            </BlocIQButton>
+            <BlocIQButton 
+              onClick={startTriageMode}
+              variant="secondary"
+              className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+            >
+              <Brain className="h-4 w-4 mr-2" />
+              AI Triage
+            </BlocIQButton>
+          </div>
+        </div>
+        
+        {/* Email Stats */}
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold">{emails.length}</div>
+                <div className="text-sm text-white/80">Total Emails</div>
+              </div>
+              <InboxIcon className="h-10 w-10 text-white/80" />
             </div>
           </div>
           
-          {/* Email Stats */}
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold">{emails.length}</div>
-                  <div className="text-sm text-teal-100">Total Emails</div>
-                </div>
-                <InboxIcon className="h-8 w-8 text-white/80" />
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold">{emails.filter(e => !e.is_read).length}</div>
+                <div className="text-sm text-white/80">Unread</div>
               </div>
+              <Mail className="h-10 w-10 text-white/80" />
             </div>
-            
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold">{emails.filter(e => !e.is_read).length}</div>
-                  <div className="text-sm text-teal-100">Unread</div>
-                </div>
-                <Mail className="h-8 w-8 text-white/80" />
+          </div>
+          
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold">{emails.filter(e => !e.is_handled).length}</div>
+                <div className="text-sm text-white/80">Pending</div>
               </div>
+              <Clock className="h-10 w-10 text-white/80" />
             </div>
-            
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold">{emails.filter(e => !e.is_handled).length}</div>
-                  <div className="text-sm text-teal-100">Pending</div>
-                </div>
-                <Clock className="h-8 w-8 text-white/80" />
+          </div>
+          
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold">{emails.filter(e => e.is_handled).length}</div>
+                <div className="text-sm text-white/80">Handled</div>
               </div>
-            </div>
-            
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold">{emails.filter(e => e.is_handled).length}</div>
-                  <div className="text-sm text-teal-100">Handled</div>
-                </div>
-                <CheckCircle className="h-8 w-8 text-white/80" />
-              </div>
+              <CheckCircle className="h-10 w-10 text-white/80" />
             </div>
           </div>
         </div>
-        {/* Decorative elements */}
-        <div className="absolute top-4 right-4 w-16 h-16 bg-white/10 rounded-full"></div>
-        <div className="absolute bottom-4 left-4 w-12 h-12 bg-white/5 rounded-full"></div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex">
-        {/* Enhanced Folder Sidebar */}
-        <FolderSidebar
-          currentFilter={filter}
-          onFilterChange={setFilter}
-          onSync={handleSync}
-          isSyncing={isSyncing}
-          lastSync={lastSync}
-        />
-
-        {/* Email List and Detail */}
-        <div className="flex-1 flex">
-          {/* Email List */}
-          <div className="w-1/2 border-r border-gray-200 flex flex-col">
-            {/* Search and Filter Bar */}
-            <div className="p-4 border-b border-gray-200 bg-white">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+      <div className="flex h-[600px]">
+        {/* Email List */}
+        <div className="w-1/2 border-r border-[#E2E8F0] flex flex-col">
+          {/* Search and Filter Bar */}
+          <div className="p-6 border-b border-[#E2E8F0] bg-white">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#64748B] h-4 w-4" />
                 <Input
+                  type="text"
                   placeholder="Search emails..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 bg-[#FAFAFA] border-[#E2E8F0] focus:border-[#2BBEB4]"
                 />
               </div>
-              <div className="mt-2 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-xs">
-                    {getCurrentFilterName()}
-                  </Badge>
-                  <span className="text-sm text-gray-500">
-                    {filteredEmails.length} emails
-                  </span>
-                </div>
-                {lastSync && (
-                  <span className="text-xs text-gray-400">
-                    Last sync: {formatDistanceToNow(new Date(lastSync), { addSuffix: true })}
-                  </span>
-                )}
-              </div>
-              
-              {/* Tag Filters */}
-              {availableTags.length > 0 && (
-                <div className="mt-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs font-medium text-gray-700">Filter by tags:</span>
-                    {selectedTags.length > 0 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedTags([])}
-                        className="text-xs text-gray-500 hover:text-gray-700"
-                      >
-                        Clear all
-                      </Button>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {availableTags.map((tag) => (
-                      <Button
-                        key={tag}
-                        variant={selectedTags.includes(tag) ? "default" : "outline"}
-                        size="sm"
-                        className={`text-xs h-6 px-2 ${
-                          selectedTags.includes(tag) ? 'bg-blue-100 text-blue-800 border-blue-200' : ''
-                        }`}
-                        onClick={() => {
-                          setSelectedTags(prev => 
-                            prev.includes(tag) 
-                              ? prev.filter(t => t !== tag)
-                              : [...prev, tag]
-                          )
-                        }}
-                      >
-                        {tag}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <BlocIQButton
+                variant="outline"
+                size="sm"
+                onClick={() => setFilter('inbox')}
+                className={filter === 'inbox' ? 'bg-[#F0FDFA] border-[#2BBEB4] text-[#0F5D5D]' : ''}
+              >
+                All
+              </BlocIQButton>
+              <BlocIQButton
+                variant="outline"
+                size="sm"
+                onClick={() => setFilter('unread')}
+                className={filter === 'unread' ? 'bg-[#F0FDFA] border-[#2BBEB4] text-[#0F5D5D]' : ''}
+              >
+                Unread
+              </BlocIQButton>
+              <BlocIQButton
+                variant="outline"
+                size="sm"
+                onClick={() => setFilter('unhandled')}
+                className={filter === 'unhandled' ? 'bg-[#F0FDFA] border-[#2BBEB4] text-[#0F5D5D]' : ''}
+              >
+                Pending
+              </BlocIQButton>
             </div>
-
-            {/* Email List */}
-            <div className="flex-1 overflow-y-auto">
-              {loadingEmails ? (
-                <div className="flex items-center justify-center h-32">
-                  <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+            
+            {/* Tag Filters */}
+            {availableTags.length > 0 && (
+              <div className="mt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm font-medium text-[#64748B]">Filter by tags:</span>
+                  {selectedTags.length > 0 && (
+                    <BlocIQButton
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedTags([])}
+                      className="text-xs text-[#64748B] hover:text-[#0F5D5D]"
+                    >
+                      Clear all
+                    </BlocIQButton>
+                  )}
                 </div>
-              ) : filteredEmails.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-40 text-gray-500">
-                  <InboxIcon className="h-12 w-12 mb-2 text-gray-300" />
-                  <p className="mb-4">No emails found</p>
-                  <div className="flex gap-3">
-                    <Button onClick={handleConnectOutlook} className="bg-blue-600 text-white hover:bg-blue-700">
-                      <Mail className="h-4 w-4 mr-2" /> Connect Outlook
-                    </Button>
-                    <Button onClick={handleSync} disabled={isSyncing} className="bg-teal-600 text-white hover:bg-teal-700">
-                      {isSyncing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-                      {isSyncing ? 'Syncing...' : 'Sync Emails'}
-                    </Button>
-                  </div>
-                  <p className="text-xs text-gray-400 mt-2">Connect your Outlook account first, then sync to see your emails here.</p>
-                </div>
-              ) : (
-                filteredEmails.map((email) => (
-                  <EmailListItem
-                    key={email.id}
-                    email={email}
-                    isSelected={selectedEmail?.id === email.id}
-                    onSelect={() => handleEmailSelect(email)}
-                    dimmed={email.is_handled || false}
-                  />
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Email Detail */}
-          <div className="w-1/2 flex flex-col">
-            {selectedEmail ? (
-              <EmailDetailPanel
-                email={selectedEmail}
-                onEmailDeleted={() => {
-                  // Remove the deleted email from the list and clear selection
-                  setEmails(prev => prev.filter(e => e.id !== selectedEmail.id))
-                  setSelectedEmail(null)
-                }}
-                onEmailSent={() => {
-                  // Refresh the email list after sending
-                  // You could add additional logic here if needed
-                }}
-              />
-            ) : (
-              <div className="flex-1 flex items-center justify-center text-gray-500">
-                <div className="text-center">
-                  <Mail className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-                  <p>Select an email to view details</p>
+                <div className="flex flex-wrap gap-2">
+                  {availableTags.map((tag) => (
+                    <BlocIQButton
+                      key={tag}
+                      variant={selectedTags.includes(tag) ? "primary" : "outline"}
+                      size="sm"
+                      className={`text-xs h-7 px-3 ${
+                        selectedTags.includes(tag) ? 'bg-[#2BBEB4] text-white' : ''
+                      }`}
+                      onClick={() => {
+                        setSelectedTags(prev => 
+                          prev.includes(tag) 
+                            ? prev.filter(t => t !== tag)
+                            : [...prev, tag]
+                        )
+                      }}
+                    >
+                      {tag}
+                    </BlocIQButton>
+                  ))}
                 </div>
               </div>
             )}
           </div>
+          
+          {/* Email List */}
+          <div className="flex-1 overflow-y-auto">
+            {loadingEmails ? (
+              <div className="flex items-center justify-center h-32">
+                <Loader2 className="h-6 w-6 animate-spin text-[#2BBEB4]" />
+              </div>
+            ) : filteredEmails.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-32 text-[#64748B]">
+                <Mail className="h-12 w-12 mb-4 opacity-50" />
+                <p className="text-lg font-medium">No emails found</p>
+                <p className="text-sm">Try adjusting your search or filters</p>
+              </div>
+            ) : (
+              filteredEmails.map((email) => (
+                <EmailListItem
+                  key={email.id}
+                  email={email}
+                  isSelected={selectedEmail?.id === email.id}
+                  onSelect={() => handleEmailSelect(email)}
+                  dimmed={email.is_handled || false}
+                />
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Email Detail Panel */}
+        <div className="w-1/2 flex flex-col">
+          {selectedEmail ? (
+            <EmailDetailPanel
+              email={selectedEmail}
+              onEmailDeleted={() => {
+                setEmails(prev => prev.filter(e => e.id !== selectedEmail.id))
+                setSelectedEmail(null)
+              }}
+              onEmailSent={() => {
+                // Refresh the email list after sending
+              }}
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-[#64748B]">
+              <div className="text-center">
+                <Mail className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                <p className="text-lg font-medium">Select an email to view details</p>
+                <p className="text-sm">Choose an email from the list to see its content and take action</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Modals */}
+      {/* Compose Email Modal */}
       <ComposeEmailModal
         isOpen={isComposeModalOpen}
         onClose={() => setIsComposeModalOpen(false)}
         onEmailSent={handleEmailProcessed}
       />
 
+      {/* AI Triage Assistant */}
       <TriageAssistant
         isOpen={isTriageAssistantOpen}
         onClose={() => setIsTriageAssistantOpen(false)}
         onEmailProcessed={handleEmailProcessed}
       />
 
+      {/* Post-Send Triage Modal */}
       <PostSendTriageModal
         isOpen={isPostSendTriageOpen}
         onClose={() => setIsPostSendTriageOpen(false)}
