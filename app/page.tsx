@@ -26,7 +26,7 @@ export default function LandingPage() {
               <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center shadow-lg">
                 <BlocIQLogo className="text-white" size={40} />
               </div>
-              <span className="ml-4 text-4xl font-extrabold bg-gradient-to-r from-[#2563eb] to-[#3b82f6] bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>BlocIQ</span>
+              <span className="ml-4 text-4xl font-extrabold bg-gradient-to-r from-[#0d9488] to-[#14b8a6] bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>BlocIQ</span>
             </div>
             <Link 
               href="/login"
@@ -288,7 +288,7 @@ export default function LandingPage() {
               <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center">
                 <BlocIQLogo className="text-white" size={40} />
               </div>
-              <span className="ml-4 text-4xl font-extrabold bg-gradient-to-r from-[#2563eb] to-[#3b82f6] bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>BlocIQ</span>
+              <span className="ml-4 text-4xl font-extrabold bg-gradient-to-r from-[#0d9488] to-[#14b8a6] bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>BlocIQ</span>
             </div>
             <div className="text-gray-400 text-sm">
               © 2024 BlocIQ. All rights reserved.
