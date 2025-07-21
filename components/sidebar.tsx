@@ -49,7 +49,7 @@ export default function Sidebar() {
       <div className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-teal-500/10 to-blue-500/10 rounded-full blur-sm"></div>
       <div className="absolute bottom-4 left-4 w-16 h-16 bg-gradient-to-br from-purple-500/10 to-teal-500/10 rounded-full blur-sm"></div>
       
-      <div className="relative z-10 flex flex-col h-full overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800 hover:scrollbar-thumb-slate-500">
+      <div className="relative z-10 flex flex-col h-full overflow-y-auto scrollbar-thin">
         {/* Logo Section */}
         <div className="mb-10 px-4">
           <Link href="/home" className="flex items-center gap-4 mb-3 hover:opacity-90 transition-all duration-300 group">
