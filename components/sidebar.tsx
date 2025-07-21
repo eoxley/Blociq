@@ -51,11 +51,11 @@ export default function Sidebar() {
         {/* Logo Section */}
         <div className="mb-8 px-4">
           <Link href="/home" className="flex items-center gap-3 mb-2 hover:opacity-80 transition-all duration-300 group">
-            <div className="w-12 h-12 bg-gradient-to-br from-white/20 to-white/30 rounded-xl flex items-center justify-center backdrop-blur-sm shadow-lg group-hover:scale-110 transition-transform duration-300">
-              <BlocIQLogo className="h-7 w-7 text-white" />
+            <div className="w-16 h-16 bg-gradient-to-br from-white/20 to-white/30 rounded-2xl flex items-center justify-center backdrop-blur-sm shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <BlocIQLogo className="h-9 w-9 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold font-serif text-white">BlocIQ</h1>
+              <h1 className="text-3xl font-extrabold bg-gradient-to-r from-[#0d9488] to-[#14b8a6] bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>BlocIQ</h1>
               <p className="text-xs text-white/80">Property Intelligence</p>
             </div>
           </Link>
