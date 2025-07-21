@@ -106,11 +106,11 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     "One task at a time. One leaseholder at a time. BlocIQ's got your back."
   ]
 
-  // Get random welcome message on every render
-  const getWelcomeMessage = () => {
+  // Get random welcome message once on component mount
+  const [currentWelcomeMessage] = useState(() => {
     const randomIndex = Math.floor(Math.random() * welcomeMessages.length)
     return welcomeMessages[randomIndex]
-  }
+  })
 
   // Real upcoming events from database
   const [upcomingEvents, setUpcomingEvents] = useState<PropertyEvent[]>([]);
@@ -333,7 +333,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           <div className="flex items-center justify-between">
             <div className="space-y-2">
               <h1 className="text-4xl font-bold">Welcome back, {userData.name}!</h1>
-              <p className="text-slate-200 text-lg">{getWelcomeMessage()}</p>
+              <p className="text-slate-200 text-lg">{currentWelcomeMessage}</p>
             </div>
             <div className="flex items-center gap-4">
               <Button className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm">
