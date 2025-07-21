@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Trash2, Reply, ReplyAll, Forward, Brain, Loader2, User, Clock, Building, Mail, Sparkles } from "lucide-react";
+import { Trash2, Reply, ReplyAll, Forward, Brain, Loader2, User, Clock, Building, Mail, Sparkles, CheckCircle } from "lucide-react";
 import ReplyModal from "./ReplyModal";
 import AIEmailAnalysis from "./AIEmailAnalysis";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
@@ -224,6 +224,35 @@ export default function EmailDetailPanel({ email, onEmailDeleted, onEmailSent }:
               <Brain className="h-4 w-4" />
             )}
             {isSummarizing ? "Summarizing..." : "AI Summary"}
+          </BlocIQButton>
+          <BlocIQButton
+            onClick={async () => {
+              try {
+                const response = await fetch('/api/mark-handled', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ 
+                    messageId: email.outlook_id || email.id,
+                    moveToFolder: 'handled'
+                  }),
+                });
+                if (response.ok) {
+                  toast.success('Email marked as handled');
+                  // Refresh the email list or update local state
+                } else {
+                  throw new Error('Failed to mark as handled');
+                }
+              } catch (error) {
+                console.error('Error marking as handled:', error);
+                toast.error('Failed to mark as handled');
+              }
+            }}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <CheckCircle className="h-4 w-4" />
+            Mark Handled
           </BlocIQButton>
           <BlocIQButton
             onClick={handleDelete}

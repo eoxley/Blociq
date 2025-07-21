@@ -19,12 +19,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Soft delete the email by marking it as deleted
+    // Note: Since is_deleted field doesn't exist in current schema, we'll use handled field as a workaround
     const { error } = await supabase
       .from('incoming_emails')
       .update({ 
-        is_deleted: true,
-        deleted_at: new Date().toISOString(),
-        deleted_by: user.id
+        handled: true,
+        // Add a note in the tag field to indicate deletion
+        tag: 'deleted'
       })
       .eq('id', emailId)
 
