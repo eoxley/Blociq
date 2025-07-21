@@ -108,8 +108,8 @@ export default function Sidebar() {
             
             {/* Finances Parent */}
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium opacity-80 cursor-not-allowed bg-slate-700/50 backdrop-blur-sm">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-500/30 to-green-600/30 rounded-xl flex items-center justify-center">
-                <span className="text-lg font-bold text-green-200">£</span>
+              <div className="w-10 h-10 bg-slate-700/50 rounded-xl flex items-center justify-center">
+                <span className="text-lg font-bold text-slate-300">£</span>
               </div>
               <span className="text-slate-200">Finances</span>
               <Clock className="h-4 w-4 ml-auto text-slate-400" />
@@ -148,8 +148,8 @@ export default function Sidebar() {
             
             {/* Contractors */}
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium opacity-80 cursor-not-allowed bg-slate-700/50 backdrop-blur-sm mt-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-500/30 to-orange-600/30 rounded-xl flex items-center justify-center">
-                <span className="text-lg font-bold text-orange-200">🔧</span>
+              <div className="w-10 h-10 bg-slate-700/50 rounded-xl flex items-center justify-center">
+                <span className="text-lg font-bold text-slate-300">🔧</span>
               </div>
               <span className="text-slate-200">Contractors</span>
               <Clock className="h-4 w-4 ml-auto text-slate-400" />
@@ -157,8 +157,8 @@ export default function Sidebar() {
             
             {/* Work Orders */}
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium opacity-80 cursor-not-allowed bg-slate-700/50 backdrop-blur-sm mt-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-500/30 to-purple-600/30 rounded-xl flex items-center justify-center">
-                <span className="text-lg font-bold text-purple-200">📋</span>
+              <div className="w-10 h-10 bg-slate-700/50 rounded-xl flex items-center justify-center">
+                <span className="text-lg font-bold text-slate-300">📋</span>
               </div>
               <span className="text-slate-200">Work Orders</span>
               <Clock className="h-4 w-4 ml-auto text-slate-400" />
@@ -166,8 +166,8 @@ export default function Sidebar() {
             
             {/* Client Portal */}
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium opacity-80 cursor-not-allowed bg-slate-700/50 backdrop-blur-sm mt-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500/30 to-blue-600/30 rounded-lg flex items-center justify-center">
-                <span className="text-lg">👥</span>
+              <div className="w-10 h-10 bg-slate-700/50 rounded-xl flex items-center justify-center">
+                <span className="text-lg text-slate-300">👥</span>
               </div>
               <span className="text-slate-200">Client Portal</span>
               <Clock className="h-4 w-4 ml-auto text-slate-400" />
@@ -179,12 +179,12 @@ export default function Sidebar() {
         <div className="border-t border-white/20 pt-4 mt-6">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium hover:bg-red-500/20 transition-all duration-300 w-full text-left group backdrop-blur-sm"
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium hover:bg-red-500/30 transition-all duration-300 w-full text-left group backdrop-blur-sm bg-red-500/10"
           >
-            <div className="w-10 h-10 bg-gradient-to-br from-red-500/20 to-red-600/20 rounded-lg flex items-center justify-center group-hover:from-red-500/30 group-hover:to-red-600/30 transition-all duration-300">
-              <LogOut className="h-5 w-5 group-hover:scale-110 transition-transform text-red-200 group-hover:text-red-100" />
+            <div className="w-10 h-10 bg-gradient-to-br from-red-500/30 to-red-600/30 rounded-xl flex items-center justify-center group-hover:from-red-500/40 group-hover:to-red-600/40 transition-all duration-300 shadow-lg">
+              <LogOut className="h-5 w-5 group-hover:scale-110 transition-transform text-red-100 group-hover:text-white" />
             </div>
-            <span className="text-white/90 group-hover:text-white">Logout</span>
+            <span className="text-red-100 group-hover:text-white font-medium">Logout</span>
           </button>
         </div>
       </div>
