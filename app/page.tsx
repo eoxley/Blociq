@@ -44,7 +44,7 @@ export default function LandingPage() {
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center text-white">
             <div className="mb-6">
-              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm shadow-lg mx-auto mb-6">
+              <div className="w-16 h-16 flex items-center justify-center mx-auto mb-6">
                 <Brain className="h-8 w-8 text-white" />
               </div>
               <h1 className="text-5xl md:text-7xl font-bold mb-2 animate-fade-in text-center">
