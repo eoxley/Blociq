@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 
-export async function GET(req: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
     // ✅ 1. Supabase Auth Session
     const supabase = createClient();
@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
 
     // ✅ 3. Call Microsoft Graph /me/messages
     console.log('🔄 Fetching emails from Microsoft Graph...');
-    const graphResponse = await fetch('https://graph.microsoft.com/v1.0/me/messages?$top=20&$orderby=receivedDateTime desc', {
+    const graphResponse = await fetch('https://graph.microsoft.com/v1.0/me/messages?$top=50&$orderby=receivedDateTime desc', {
       headers: {
         'Authorization': `Bearer ${token.access_token}`,
         'Content-Type': 'application/json',
@@ -116,28 +116,32 @@ export async function GET(req: NextRequest) {
 
     // ✅ 4. Insert Into incoming_emails (if not already inserted)
     let insertedCount = 0;
+    let totalProcessed = 0;
 
     for (const message of messages) {
+      totalProcessed++;
       const {
         subject,
         bodyPreview,
         receivedDateTime,
         from,
-        internetMessageId
+        internetMessageId,
+        body
       } = message;
 
       const fromEmail = from?.emailAddress?.address;
+      const fromName = from?.emailAddress?.name;
       
       if (!fromEmail || !internetMessageId) {
         console.warn('Skipping message without required fields:', { subject, fromEmail, internetMessageId });
         continue;
       }
 
-      // Check for existing row with same message_id (using internetMessageId)
+      // Check for existing row with same outlook_message_id
       const { data: existingEmail } = await supabase
         .from("incoming_emails")
         .select("id")
-        .eq("message_id", internetMessageId)
+        .eq("outlook_message_id", internetMessageId)
         .single();
 
       if (existingEmail) {
@@ -145,18 +149,23 @@ export async function GET(req: NextRequest) {
         continue;
       }
 
-      // Insert new email
+      // Insert new email with correct field names
       const { error: insertError } = await supabase
         .from("incoming_emails")
         .insert({
-          message_id: internetMessageId,
+          outlook_message_id: internetMessageId,
           subject: subject || '(No Subject)',
           body_preview: bodyPreview || '',
+          body_full: body?.content || '',
           from_email: fromEmail,
+          from_name: fromName || '',
           received_at: receivedDateTime,
-          handled: false,
+          is_handled: false,
+          is_read: false,
           user_id: userId,
-          unread: true
+          folder: 'inbox',
+          sync_status: 'synced',
+          last_sync_at: new Date().toISOString()
         });
 
       if (insertError) {
@@ -171,8 +180,8 @@ export async function GET(req: NextRequest) {
     // ✅ 5. Return a Clean JSON Response
     const response = {
       success: true,
-      fetched: messages.length,
-      inserted: insertedCount,
+      synced_count: insertedCount,
+      total_processed: totalProcessed,
       refreshedToken: refreshedToken,
       userEmail: token.email
     };
