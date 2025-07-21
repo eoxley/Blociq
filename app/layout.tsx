@@ -3,8 +3,6 @@ import { Inter } from 'next/font/google';
 import type { Metadata } from 'next';
 import SupabaseProvider from '@/components/SupabaseProvider';
 import { BlocIQProvider } from '@/components/BlocIQContext';
-import ConditionalFloatingButtons from '@/components/ConditionalFloatingButtons';
-import GlobalNavigation from '@/components/GlobalNavigation';
 import Footer from '@/components/Footer';
 import { Toaster } from 'sonner';
 
@@ -31,9 +29,7 @@ export default function RootLayout({
               </main>
               <Footer />
             </div>
-            <GlobalNavigation />
           </SupabaseProvider>
-          <ConditionalFloatingButtons />
           <Toaster position="top-right" />
         </BlocIQProvider>
       </body>
