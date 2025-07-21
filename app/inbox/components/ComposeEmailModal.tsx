@@ -115,7 +115,7 @@ export default function ComposeEmailModal({
 
     setIsGeneratingDraft(true)
     try {
-      const response = await fetch('/api/generate-email-draft', {
+      const response = await fetch('/api/generate-new-email-draft', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -124,7 +124,8 @@ export default function ComposeEmailModal({
           subject: subject.trim(),
           recipient: to.trim() || null,
           building_id: selectedBuilding || null,
-          context: null
+          context: null,
+          purpose: subject.trim()
         }),
       })
 
