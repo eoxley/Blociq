@@ -63,10 +63,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
   return (
     <LayoutWithSidebar>
       <NewInboxClient 
-        initialEmails={emails?.map((email: any) => ({
-          ...email,
-          buildings: Array.isArray(email.buildings) ? email.buildings[0] : email.buildings
-        })) || []} 
+        initialEmails={[]} // Start with empty emails to reflect fresh Outlook inbox
         lastSyncTime={lastSyncTime}
         userId={user.id}
         searchParams={params}
