@@ -548,9 +548,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 <p className="text-gray-400 text-xs mt-1">Add events to your property calendar to see them here</p>
                 <button
                   onClick={() => setIsAddingEvent(true)}
-                  className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm"
+                  className="mt-4 inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-primary to-primary/80 text-white rounded-xl hover:from-primary/90 hover:to-primary/70 transition-all duration-200 text-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-6 w-6" />
                   Add Your First Event
                 </button>
               </div>
