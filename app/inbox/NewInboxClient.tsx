@@ -25,6 +25,7 @@ import AIActionBar from './components/AIActionBar'
 import ComposeEmailModal from './components/ComposeEmailModal'
 import FolderSidebar from './components/FolderSidebar'
 import TriageAssistant from './components/TriageAssistant'
+import PostSendTriageModal from './components/PostSendTriageModal'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -73,6 +74,9 @@ export default function NewInboxClient({
   const [loadingEmails, setLoadingEmails] = useState(false)
   const [isComposeModalOpen, setIsComposeModalOpen] = useState(false)
   const [isTriageAssistantOpen, setIsTriageAssistantOpen] = useState(false)
+  const [isPostSendTriageOpen, setIsPostSendTriageOpen] = useState(false)
+  const [availableTags, setAvailableTags] = useState<string[]>([])
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
 
   // Fetch emails based on filter
   useEffect(() => {
@@ -121,6 +125,18 @@ export default function NewInboxClient({
         setEmails(processedEmails)
         console.log('📧 NewInboxClient - Processed emails:', processedEmails.length)
         console.log('📧 NewInboxClient - First email:', processedEmails[0])
+        
+        // Extract unique tags for filtering
+        const allTags = processedEmails
+          .flatMap(email => email.tags || [])
+          .filter((tag, index, arr) => arr.indexOf(tag) === index)
+        setAvailableTags(allTags)
+
+        // Analyze unanalyzed emails with AI
+        const unanalyzedEmails = processedEmails.filter(email => !email.analyzed_at)
+        for (const email of unanalyzedEmails) {
+          analyzeEmailWithAI(email)
+        }
       } else if (error) {
         console.error('❌ NewInboxClient - Query error:', error)
       }
@@ -129,14 +145,18 @@ export default function NewInboxClient({
     fetchEmails()
   }, [filter, supabase])
 
-  // Filter emails by search
+  // Filter emails by search and tags
   const filteredEmails = emails.filter(email => {
     const matchesSearch = searchTerm === '' ||
       email.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       email.from_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       email.from_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       email.body_preview?.toLowerCase().includes(searchTerm.toLowerCase())
-    return matchesSearch
+    
+    const matchesTags = selectedTags.length === 0 ||
+      selectedTags.some(tag => email.tags?.includes(tag))
+    
+    return matchesSearch && matchesTags
   })
 
   // Sync emails from Outlook
@@ -307,6 +327,44 @@ export default function NewInboxClient({
     toast.success('Inbox reset successfully')
   };
 
+  // Analyze email with AI for tagging and building matching
+  const analyzeEmailWithAI = async (email: Email) => {
+    try {
+      const response = await fetch('/api/analyze-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          emailId: email.id,
+          subject: email.subject,
+          body: email.body_full || email.body_preview,
+          fromEmail: email.from_email,
+          fromName: email.from_name
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        console.log('AI analysis result:', data)
+        
+        // Update the email in the local state with new tags and building_id
+        setEmails(prev => prev.map(e => 
+          e.id === email.id 
+            ? { 
+                ...e, 
+                tags: data.analysis.tags,
+                building_id: data.analysis.buildingMatch.buildingId || e.building_id,
+                analyzed_at: new Date().toISOString()
+              }
+            : e
+        ))
+      }
+    } catch (error) {
+      console.error('Error analyzing email with AI:', error)
+    }
+  }
+
   return (
     <div className="h-screen flex flex-col">
       {/* Enhanced Header with Gradient Background */}
@@ -446,6 +504,46 @@ export default function NewInboxClient({
                   </span>
                 )}
               </div>
+              
+              {/* Tag Filters */}
+              {availableTags.length > 0 && (
+                <div className="mt-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs font-medium text-gray-700">Filter by tags:</span>
+                    {selectedTags.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedTags([])}
+                        className="text-xs text-gray-500 hover:text-gray-700"
+                      >
+                        Clear all
+                      </Button>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {availableTags.map((tag) => (
+                      <Button
+                        key={tag}
+                        variant={selectedTags.includes(tag) ? "default" : "outline"}
+                        size="sm"
+                        className={`text-xs h-6 px-2 ${
+                          selectedTags.includes(tag) ? 'bg-blue-100 text-blue-800 border-blue-200' : ''
+                        }`}
+                        onClick={() => {
+                          setSelectedTags(prev => 
+                            prev.includes(tag) 
+                              ? prev.filter(t => t !== tag)
+                              : [...prev, tag]
+                          )
+                        }}
+                      >
+                        {tag}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Email List */}
@@ -476,7 +574,7 @@ export default function NewInboxClient({
                     email={email}
                     isSelected={selectedEmail?.id === email.id}
                     onSelect={() => handleEmailSelect(email)}
-                    onMarkAsHandled={() => markAsHandled(email.id)}
+                    dimmed={email.is_handled || false}
                   />
                 ))
               )}
@@ -489,11 +587,10 @@ export default function NewInboxClient({
               <>
                 <EmailDetail
                   email={selectedEmail}
-                  onMarkAsHandled={() => markAsHandled(selectedEmail.id)}
                 />
                 <AIActionBar
                   email={selectedEmail}
-                  onEmailProcessed={handleEmailProcessed}
+                  onMarkHandled={() => markAsHandled(selectedEmail.id)}
                 />
               </>
             ) : (
@@ -518,8 +615,23 @@ export default function NewInboxClient({
       <TriageAssistant
         isOpen={isTriageAssistantOpen}
         onClose={() => setIsTriageAssistantOpen(false)}
-        emails={emails.filter(e => !e.is_handled)}
         onEmailProcessed={handleEmailProcessed}
+      />
+
+      <PostSendTriageModal
+        isOpen={isPostSendTriageOpen}
+        onClose={() => setIsPostSendTriageOpen(false)}
+        emailId={selectedEmail?.id || ''}
+        originalEmail={selectedEmail || {
+          id: '',
+          subject: null,
+          from_name: null,
+          from_email: null,
+          body_full: null,
+          tags: null,
+          building_id: null
+        }}
+        onActionComplete={handleEmailProcessed}
       />
     </div>
   )

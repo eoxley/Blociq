@@ -3,127 +3,120 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+interface GenerateEmailDraftRequest {
+  emailId: string;
+  subject: string | null;
+  body: string | null;
+  buildingContext?: string;
+  tags?: string[];
+}
 
 export async function POST(req: NextRequest) {
-  const supabase = createRouteHandlerClient({ cookies: () => cookies() });
-  const { subject, recipient, building_id, context } = await req.json();
-
-  // Get the current user's session
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-  
-  if (sessionError || !session) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-  }
-
-  if (!subject) {
-    return NextResponse.json({ error: 'Subject is required' }, { status: 400 });
-  }
-
   try {
-    // Get building context if available
-    let buildingContext = '';
-    if (building_id) {
-      const { data: building, error: buildingError } = await supabase
-        .from('buildings')
-        .select('name, building_type, age')
-        .eq('id', building_id)
-        .single();
-
-      if (!buildingError && building) {
-        buildingContext = `
-Building: ${building.name}
-${building.building_type ? `Building Type: ${building.building_type}` : ''}
-${building.age ? `Building Age: ${building.age}` : ''}
-        `.trim();
-      }
+    const { emailId, subject, body, buildingContext, tags = [] }: GenerateEmailDraftRequest = await req.json();
+    
+    if (!emailId || !subject || !body) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Create the prompt for OpenAI
-    const systemPrompt = `You are a professional property management assistant. Generate a professional, clear, and helpful email message based on the subject and context provided.
+    const supabase = createRouteHandlerClient({ cookies });
+
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Get email details and building context
+    const { data: email } = await supabase
+      .from('incoming_emails')
+      .select(`
+        *,
+        buildings(name, address)
+      `)
+      .eq('id', emailId)
+      .single();
+
+    if (!email) {
+      return NextResponse.json({ error: 'Email not found' }, { status: 404 });
+    }
+
+    // Initialize OpenAI client
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+
+    // Build context for AI
+    const buildingName = email.buildings?.name || buildingContext || 'Unknown Building';
+    const buildingAddress = email.buildings?.address || '';
+    const senderName = email.from_name || email.from_email || 'Unknown Sender';
+    const emailTags = email.tags || tags;
+
+    const systemPrompt = `You are a professional property management assistant helping to draft email replies. 
+    
+Context:
+- Building: ${buildingName}${buildingAddress ? ` (${buildingAddress})` : ''}
+- Sender: ${senderName}
+- Email Tags: ${emailTags.length > 0 ? emailTags.join(', ') : 'None'}
+- Original Subject: ${subject}
 
 Guidelines:
-- Use a professional but friendly tone appropriate for property management
-- Be clear, concise, and actionable
-- Include relevant building context if provided
-- Structure the message logically with proper paragraphs
+- Be professional, courteous, and helpful
+- Address the specific concerns in the original email
+- Provide clear, actionable responses
+- Use appropriate tone based on the email content and tags
+- Include relevant building-specific information when applicable
+- Keep responses concise but comprehensive
 - End with a professional closing
-- If it's about maintenance, provide clear timelines and next steps
-- If it's about compliance, reference relevant regulations
-- If it's about financial matters, be precise with numbers and terms
-- If it's about emergencies, prioritize safety and immediate action
-- Make the message personal and relevant to the recipient`;
+- If the email requires follow-up action, clearly state what will happen next`;
 
-    const userPrompt = `Draft a professional message from a property manager to the recipient based on the subject:
+    const userPrompt = `Please draft a professional reply to this email:
 
-Subject: "${subject}"
-${recipient ? `Recipient: ${recipient}` : ''}
-${buildingContext ? `Building Context:\n${buildingContext}` : ''}
-${context ? `Additional Context: ${context}` : ''}
+Original Email:
+Subject: ${subject}
+From: ${senderName}
+Content: ${body}
 
-Please create a message that:
-1. Addresses the subject appropriately
-2. Uses a professional but approachable tone
-3. Provides clear, actionable information
+Please generate a professional reply that:
+1. Acknowledges the sender's concerns
+2. Provides a helpful and actionable response
+3. Uses appropriate tone and language
 4. Includes relevant building context if applicable
-5. Has a proper greeting and closing
-6. Is structured with clear paragraphs
-7. Provides specific next steps or timelines when relevant
+5. Ends with a professional closing
 
-Return only the message content, formatted as a proper email body.`;
+Return only the reply content, no additional formatting or explanations.`;
 
-    // Call OpenAI for draft generation
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4",
       messages: [
-        {
-          role: "system",
-          content: systemPrompt
-        },
-        {
-          role: "user",
-          content: userPrompt
-        }
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
       ],
-      max_tokens: 600,
+      max_tokens: 800,
       temperature: 0.7,
     });
 
-    const draftContent = completion.choices[0]?.message?.content || 'Unable to generate draft content';
+    const generatedDraft = completion.choices[0]?.message?.content || '';
 
-    // Log the draft generation for analytics
-    try {
-      await supabase.from('email_drafts').insert({
-        user_id: session.user.id,
-        subject: subject,
-        recipient: recipient || null,
-        building_id: building_id || null,
-        draft_content: draftContent,
-        context: context || null,
-        created_at: new Date().toISOString()
-      });
-    } catch (logError) {
-      console.error('Error logging email draft:', logError);
-      // Don't fail the request if logging fails
+    if (!generatedDraft) {
+      return NextResponse.json({ error: 'Failed to generate draft' }, { status: 500 });
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      draft: draftContent,
+      draft: generatedDraft,
       context: {
-        subject,
-        recipient,
-        building_context: buildingContext
+        buildingName,
+        senderName,
+        tags: emailTags
       }
     });
 
-  } catch (error) {
-    console.error('Error generating email draft:', error);
-    return NextResponse.json({ 
-      error: 'Failed to generate email draft',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+  } catch (error: any) {
+    console.error('Error in generate-email-draft:', error);
+    return NextResponse.json(
+      { error: 'Internal server error', details: error.message },
+      { status: 500 }
+    );
   }
 } 
