@@ -72,9 +72,8 @@ export default function DailySummary({ className = "" }: DailySummaryProps) {
             <Button 
               onClick={handleRefresh}
               disabled={refreshing || loading}
-              variant="outline"
               size="sm"
-              className="border-white/30 text-white hover:bg-white/20 backdrop-blur-sm"
+              className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm shadow-lg"
             >
               {refreshing ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
