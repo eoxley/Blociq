@@ -59,7 +59,7 @@ export default function InboxClient({ emails }: InboxClientProps) {
   const handleRefresh = async () => {
     setIsRefreshing(true)
     try {
-      const response = await fetch('/api/sync-emails')
+      const response = await fetch('/api/sync-inbox')
       if (response.ok) {
         window.location.reload()
       } else {
@@ -194,7 +194,7 @@ export default function InboxClient({ emails }: InboxClientProps) {
       return
     }
 
-    const replyContent = replyResponses[emailId] || editedReplies[emailId] || ''
+    const replyContent = replyResponses[emailId] || editedReplies[email.id] || ''
     if (!replyContent.trim()) {
       setSendResults(prev => ({
         ...prev,
