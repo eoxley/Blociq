@@ -118,31 +118,22 @@ export default function Sidebar() {
             {/* Finances Subitems */}
             <div className="ml-8 space-y-1 mt-2">
               <a
-                href="/finances/service-charges"
+                href="/finances/service-charge-accounts"
                 className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs opacity-60 cursor-not-allowed hover:bg-slate-700/30 transition-colors"
                 tabIndex={-1}
                 aria-disabled="true"
               >
                 <ChevronRight className="h-3 w-3 text-slate-500" /> 
-                <span className="text-slate-400">Service Charges</span>
+                <span className="text-slate-400">Service Charge Accounts</span>
               </a>
               <a
-                href="/finances/budgeting"
+                href="/finances/service-charge-arrears"
                 className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs opacity-60 cursor-not-allowed hover:bg-slate-700/30 transition-colors"
                 tabIndex={-1}
                 aria-disabled="true"
               >
                 <ChevronRight className="h-3 w-3 text-slate-500" /> 
-                <span className="text-slate-400">Budgeting</span>
-              </a>
-              <a
-                href="/finances/accounts"
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs opacity-60 cursor-not-allowed hover:bg-slate-700/30 transition-colors"
-                tabIndex={-1}
-                aria-disabled="true"
-              >
-                <ChevronRight className="h-3 w-3 text-slate-500" /> 
-                <span className="text-slate-400">Accounts</span>
+                <span className="text-slate-400">Service Charge Arrears</span>
               </a>
             </div>
             
