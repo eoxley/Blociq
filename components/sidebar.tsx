@@ -103,74 +103,74 @@ export default function Sidebar() {
           {/* Coming Soon Section */}
           <div className="pt-6 border-t border-slate-600/50 mt-6">
             <div className="px-4 py-2">
-              <p className="text-xs text-slate-400 mb-3 font-medium">Coming Soon</p>
+              <p className="text-xs text-slate-300 mb-3 font-medium">Coming Soon</p>
             </div>
             
             {/* Finances Parent */}
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium opacity-60 cursor-not-allowed bg-slate-700/30 backdrop-blur-sm">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-xl flex items-center justify-center">
-                <span className="text-lg font-bold text-green-300">£</span>
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium opacity-80 cursor-not-allowed bg-slate-700/50 backdrop-blur-sm">
+              <div className="w-10 h-10 bg-gradient-to-br from-green-500/30 to-green-600/30 rounded-xl flex items-center justify-center">
+                <span className="text-lg font-bold text-green-200">£</span>
               </div>
-              <span className="text-slate-400">Finances</span>
-              <Clock className="h-4 w-4 ml-auto text-slate-500" />
+              <span className="text-slate-200">Finances</span>
+              <Clock className="h-4 w-4 ml-auto text-slate-400" />
             </div>
             
             {/* Finances Subitems */}
             <div className="ml-8 space-y-1 mt-2">
               <a
                 href="/finances/service-charge-accounts"
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs opacity-60 cursor-not-allowed hover:bg-slate-700/30 transition-colors"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs opacity-80 cursor-not-allowed hover:bg-slate-700/50 transition-colors"
                 tabIndex={-1}
                 aria-disabled="true"
               >
-                <ChevronRight className="h-3 w-3 text-slate-500" /> 
-                <span className="text-slate-400">Service Charge Accounts</span>
+                <ChevronRight className="h-3 w-3 text-slate-400" /> 
+                <span className="text-slate-200">Service Charge Accounts</span>
               </a>
               <a
                 href="/finances/service-charge-arrears"
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs opacity-60 cursor-not-allowed hover:bg-slate-700/30 transition-colors"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs opacity-80 cursor-not-allowed hover:bg-slate-700/50 transition-colors"
                 tabIndex={-1}
                 aria-disabled="true"
               >
-                <ChevronRight className="h-3 w-3 text-slate-500" /> 
-                <span className="text-slate-400">Service Charge Arrears</span>
+                <ChevronRight className="h-3 w-3 text-slate-400" /> 
+                <span className="text-slate-200">Service Charge Arrears</span>
               </a>
               <a
                 href="/finances/budgeting"
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs opacity-60 cursor-not-allowed hover:bg-slate-700/30 transition-colors"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs opacity-80 cursor-not-allowed hover:bg-slate-700/50 transition-colors"
                 tabIndex={-1}
                 aria-disabled="true"
               >
-                <ChevronRight className="h-3 w-3 text-slate-500" /> 
-                <span className="text-slate-400">Budgeting</span>
+                <ChevronRight className="h-3 w-3 text-slate-400" /> 
+                <span className="text-slate-200">Budgeting</span>
               </a>
             </div>
             
             {/* Contractors */}
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium opacity-60 cursor-not-allowed bg-slate-700/30 backdrop-blur-sm mt-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-500/20 to-orange-600/20 rounded-xl flex items-center justify-center">
-                <span className="text-lg font-bold text-orange-300">🔧</span>
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium opacity-80 cursor-not-allowed bg-slate-700/50 backdrop-blur-sm mt-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-orange-500/30 to-orange-600/30 rounded-xl flex items-center justify-center">
+                <span className="text-lg font-bold text-orange-200">🔧</span>
               </div>
-              <span className="text-slate-400">Contractors</span>
-              <Clock className="h-4 w-4 ml-auto text-slate-500" />
+              <span className="text-slate-200">Contractors</span>
+              <Clock className="h-4 w-4 ml-auto text-slate-400" />
             </div>
             
             {/* Work Orders */}
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium opacity-60 cursor-not-allowed bg-slate-700/30 backdrop-blur-sm mt-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-500/20 to-purple-600/20 rounded-xl flex items-center justify-center">
-                <span className="text-lg font-bold text-purple-300">📋</span>
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium opacity-80 cursor-not-allowed bg-slate-700/50 backdrop-blur-sm mt-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-purple-500/30 to-purple-600/30 rounded-xl flex items-center justify-center">
+                <span className="text-lg font-bold text-purple-200">📋</span>
               </div>
-              <span className="text-slate-400">Work Orders</span>
-              <Clock className="h-4 w-4 ml-auto text-slate-500" />
+              <span className="text-slate-200">Work Orders</span>
+              <Clock className="h-4 w-4 ml-auto text-slate-400" />
             </div>
             
             {/* Client Portal */}
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium opacity-60 cursor-not-allowed bg-white/5 backdrop-blur-sm mt-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-lg flex items-center justify-center">
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium opacity-80 cursor-not-allowed bg-slate-700/50 backdrop-blur-sm mt-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500/30 to-blue-600/30 rounded-lg flex items-center justify-center">
                 <span className="text-lg">👥</span>
               </div>
-              <span>Client Portal</span>
-              <Clock className="h-4 w-4 ml-auto text-white/50" />
+              <span className="text-slate-200">Client Portal</span>
+              <Clock className="h-4 w-4 ml-auto text-slate-400" />
             </div>
           </div>
         </nav>
