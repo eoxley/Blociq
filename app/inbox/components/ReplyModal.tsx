@@ -1,324 +1,183 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { 
-  X, 
-  Send, 
-  Loader2, 
-  Reply, 
-  ReplyAll, 
-  Forward,
-  User,
-  Users,
-  ArrowRight
-} from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { toast } from 'sonner'
+import { useEffect, useState } from "react";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { toast } from "sonner";
 
 interface Email {
-  id: string
-  subject: string | null
-  from_name: string | null
-  from_email: string | null
-  received_at: string | null
-  body_preview: string | null
-  body_full: string | null
-  building_id: string | null
-  is_read: boolean | null
-  is_handled: boolean | null
-  tags: string[] | null
-  outlook_id: string | null
-  buildings?: { name: string } | null
+  id: string;
+  subject: string | null;
+  from_name: string | null;
+  from_email: string | null;
+  received_at: string | null;
+  body_preview: string | null;
+  body_full: string | null;
+  building_id: string | null;
+  is_read: boolean | null;
+  is_handled: boolean | null;
+  tags: string[] | null;
+  outlook_id: string | null;
+  buildings?: { name: string } | null;
+  cc_email?: string | null;
 }
-
-type ReplyAction = 'reply' | 'replyAll' | 'forward'
 
 interface ReplyModalProps {
-  isOpen: boolean
-  onClose: () => void
-  email: Email
-  action: ReplyAction
-  onEmailSent?: () => void
+  mode: "reply" | "replyAll" | "forward";
+  email: Email;
+  onClose: () => void;
+  onEmailSent?: () => void;
 }
 
-export default function ReplyModal({
-  isOpen,
-  onClose,
-  email,
-  action,
-  onEmailSent
-}: ReplyModalProps) {
-  const [to, setTo] = useState('')
-  const [cc, setCc] = useState('')
-  const [subject, setSubject] = useState('')
-  const [body, setBody] = useState('')
-  const [isGeneratingDraft, setIsGeneratingDraft] = useState(false)
-  const [isSending, setIsSending] = useState(false)
+export default function ReplyModal({ mode, email, onClose, onEmailSent }: ReplyModalProps) {
+  const supabase = createClientComponentClient();
+  const [to, setTo] = useState("");
+  const [cc, setCc] = useState("");
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("Generating draft...");
+  const [loading, setLoading] = useState(true);
 
-  // Initialize form based on action type
   useEffect(() => {
-    if (!isOpen) return
+    const toList = [email.from_email];
+    const ccList = email.cc_email ? email.cc_email.split(",") : [];
 
-    const originalSubject = email.subject || 'No Subject'
-    const originalBody = email.body_full || email.body_preview || ''
-    const senderEmail = email.from_email || ''
-    const senderName = email.from_name || ''
-
-    switch (action) {
-      case 'reply':
-        setTo(senderEmail)
-        setCc('')
-        setSubject(`Re: ${originalSubject}`)
-        setBody('')
-        break
-      
-      case 'replyAll':
-        setTo(senderEmail)
-        setCc('') // In a real implementation, you'd get CC from the original email
-        setSubject(`Re: ${originalSubject}`)
-        setBody('')
-        break
-      
-      case 'forward':
-        setTo('')
-        setCc('')
-        setSubject(`Fwd: ${originalSubject}`)
-        setBody(`\n\n---------- Forwarded message ----------\nFrom: ${senderName} <${senderEmail}>\nDate: ${new Date(email.received_at || '').toLocaleString()}\nSubject: ${originalSubject}\n\n${originalBody}`)
-        break
+    if (mode === "reply") setTo(toList.join(", "));
+    if (mode === "replyAll") {
+      setTo(toList.join(", "));
+      setCc(ccList.join(", "));
     }
-  }, [isOpen, action, email])
+    if (mode === "forward") {
+      setTo("");
+      setSubject(`FWD: ${email.subject}`);
+      setBody(`\n\n---------- Forwarded message ----------\nFrom: ${email.from_name || email.from_email}\nSubject: ${email.subject}\n\n${email.body_full || email.body_preview}`);
+      setLoading(false);
+      return;
+    }
 
-  const handleGenerateDraft = async () => {
-    if (action === 'forward') return // Don't generate draft for forwards
-    
-    setIsGeneratingDraft(true)
-    try {
-      const response = await fetch('/api/generate-email-draft', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          emailId: email.id,
-          subject: email.subject,
-          body: email.body_full || email.body_preview,
-          buildingContext: email.buildings?.name,
-          tags: email.tags || []
-        }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setBody(data.draft || '')
-        toast.success('AI draft generated successfully')
-      } else {
-        toast.error('Failed to generate draft')
+    const generateDraft = async () => {
+      try {
+        const res = await fetch("/api/generate-email-draft", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            emailId: email.id,
+            subject: email.subject,
+            body: email.body_full || email.body_preview,
+            buildingContext: email.buildings?.name,
+            tags: email.tags || []
+          }),
+        });
+        
+        if (res.ok) {
+          const { draft } = await res.json();
+          setSubject(`RE: ${email.subject}`);
+          setBody(draft);
+          toast.success("AI draft generated successfully");
+        } else {
+          setBody("Failed to generate draft. Please write your reply manually.");
+          toast.error("Failed to generate draft");
+        }
+      } catch (error) {
+        console.error("Error generating draft:", error);
+        setBody("Failed to generate draft. Please write your reply manually.");
+        toast.error("Failed to generate draft");
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error generating draft:', error)
-      toast.error('Failed to generate draft')
-    } finally {
-      setIsGeneratingDraft(false)
-    }
-  }
+    };
+
+    generateDraft();
+  }, [mode, email]);
 
   const handleSend = async () => {
     if (!to.trim() || !subject.trim() || !body.trim()) {
-      toast.error('Please fill in all required fields')
-      return
+      toast.error("Please fill in all required fields");
+      return;
     }
 
-    setIsSending(true)
     try {
-      const response = await fetch('/api/send-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const response = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
           to: to.split(',').map(email => email.trim()),
           cc: cc ? cc.split(',').map(email => email.trim()) : [],
-          subject,
-          body,
-          replyTo: email.from_email
+          subject, 
+          body, 
+          replyTo: email.from_email 
         }),
-      })
+      });
 
       if (response.ok) {
-        toast.success('Email sent successfully')
-        onEmailSent?.()
-        onClose()
+        // Mark email as handled
+        await supabase
+          .from("incoming_emails")
+          .update({ is_handled: true, handled_at: new Date().toISOString() })
+          .eq("id", email.id);
+
+        toast.success("Email sent successfully");
+        onEmailSent?.();
+        onClose();
       } else {
-        const error = await response.json()
-        toast.error(error.message || 'Failed to send email')
+        const error = await response.json();
+        toast.error(error.message || "Failed to send email");
       }
     } catch (error) {
-      console.error('Error sending email:', error)
-      toast.error('Failed to send email')
-    } finally {
-      setIsSending(false)
+      console.error("Error sending email:", error);
+      toast.error("Failed to send email");
     }
-  }
-
-  const getActionIcon = () => {
-    switch (action) {
-      case 'reply':
-        return <Reply className="h-4 w-4" />
-      case 'replyAll':
-        return <ReplyAll className="h-4 w-4" />
-      case 'forward':
-        return <Forward className="h-4 w-4" />
-    }
-  }
-
-  const getActionTitle = () => {
-    switch (action) {
-      case 'reply':
-        return 'Reply'
-      case 'replyAll':
-        return 'Reply All'
-      case 'forward':
-        return 'Forward'
-    }
-  }
-
-  if (!isOpen) return null
+  };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <Card className="w-full max-w-4xl mx-4 max-h-[90vh] flex flex-col">
-        <CardHeader className="flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              {getActionIcon()}
-              {getActionTitle()}
-            </CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              disabled={isSending}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-          
-          {/* Original Email Context */}
-          <div className="bg-gray-50 rounded-lg p-3 mt-3">
-            <div className="text-sm text-gray-600">
-              <strong>Original:</strong> {email.subject || 'No Subject'}
-            </div>
-            <div className="text-sm text-gray-600">
-              <strong>From:</strong> {email.from_name || email.from_email}
-            </div>
-            {email.buildings?.name && (
-              <div className="text-sm text-gray-600">
-                <strong>Building:</strong> {email.buildings.name}
-              </div>
-            )}
-          </div>
-        </CardHeader>
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl shadow p-6 w-full max-w-2xl">
+        <h2 className="text-lg font-semibold mb-4 capitalize">{mode.replace("All", " All")}</h2>
 
-        <CardContent className="flex-1 overflow-y-auto space-y-4">
-          {/* To Field */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              To <span className="text-red-500">*</span>
-            </label>
-            <Input
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              placeholder="recipient@example.com"
-              disabled={isSending}
-            />
-          </div>
-
-          {/* CC Field */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              CC
-            </label>
-            <Input
+        <div className="space-y-2">
+          <input
+            type="text"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            placeholder="To"
+            className="w-full border rounded px-3 py-2 text-sm"
+          />
+          {mode === "replyAll" && (
+            <input
+              type="text"
               value={cc}
               onChange={(e) => setCc(e.target.value)}
-              placeholder="cc@example.com (optional)"
-              disabled={isSending}
+              placeholder="CC"
+              className="w-full border rounded px-3 py-2 text-sm"
             />
-          </div>
+          )}
+          <input
+            type="text"
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            placeholder="Subject"
+            className="w-full border rounded px-3 py-2 text-sm"
+          />
+          <textarea
+            rows={10}
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            className="w-full border rounded px-3 py-2 text-sm"
+            placeholder="Type your message..."
+          />
+        </div>
 
-          {/* Subject Field */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Subject <span className="text-red-500">*</span>
-            </label>
-            <Input
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              placeholder="Email subject"
-              disabled={isSending}
-            />
-          </div>
-
-          {/* Body Field */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-sm font-medium text-gray-700">
-                Message <span className="text-red-500">*</span>
-              </label>
-              {action !== 'forward' && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleGenerateDraft}
-                  disabled={isGeneratingDraft || isSending}
-                  className="text-xs"
-                >
-                  {isGeneratingDraft ? (
-                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                  ) : (
-                    <span className="mr-1">🧠</span>
-                  )}
-                  {isGeneratingDraft ? 'Generating...' : 'AI Draft'}
-                </Button>
-              )}
-            </div>
-            <Textarea
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              placeholder="Type your message..."
-              className="min-h-[200px] resize-none"
-              disabled={isSending}
-            />
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t">
-            <Button
-              variant="outline"
-              onClick={onClose}
-              disabled={isSending}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSend}
-              disabled={isSending || !to.trim() || !subject.trim() || !body.trim()}
-              className="flex items-center gap-2"
-            >
-              {isSending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-              {isSending ? 'Sending...' : 'Send'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        <div className="mt-4 flex justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:text-black">
+            Cancel
+          </button>
+          <button
+            onClick={handleSend}
+            disabled={loading}
+            className="px-4 py-2 text-sm bg-[#0F5D5D] text-white rounded hover:bg-teal-700 disabled:opacity-50"
+          >
+            {loading ? "Loading..." : "Send"}
+          </button>
+        </div>
+      </div>
     </div>
-  )
+  );
 } 

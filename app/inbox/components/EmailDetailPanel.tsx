@@ -323,10 +323,9 @@ export default function EmailDetailPanel({ email, onEmailDeleted, onEmailSent }:
       {/* Reply Modal */}
       {showReplyModal && (
         <ReplyModal
-          isOpen={true}
-          onClose={() => setShowReplyModal(null)}
+          mode={showReplyModal}
           email={email}
-          action={showReplyModal}
+          onClose={() => setShowReplyModal(null)}
           onEmailSent={handleEmailSent}
         />
       )}
