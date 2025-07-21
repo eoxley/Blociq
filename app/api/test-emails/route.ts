@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     // Test 2: Try to get actual emails for the user
     const { data: userEmails, error: userEmailsError } = await supabase
       .from("incoming_emails")
-      .select("id, subject, from_email, received_at")
+      .select("id, subject, from_email, received_at, handled, unread, tag")
       .eq("user_id", user.id)
       .limit(5);
 

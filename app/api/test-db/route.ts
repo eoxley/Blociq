@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
     // Test 4: Get sample emails
     const { data: sampleEmails, error: sampleError } = await supabase
       .from('incoming_emails')
-      .select('id, subject, from_email, user_id, received_at')
+      .select('id, subject, from_email, user_id, received_at, handled, unread, tag')
       .limit(5);
 
     return NextResponse.json({
