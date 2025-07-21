@@ -257,10 +257,14 @@ export default function NewInboxClient({
     setFilter('inbox')
   }
 
-  // Handle success/error messages from URL params
+  // Handle success/error messages from URL params and auto-reset on login
   useEffect(() => {
     if (searchParams?.success === 'outlook_connected' && searchParams?.email) {
       toast.success(`✅ Outlook connected as ${searchParams.email}`)
+      // Clear emails and refresh on successful connection
+      setEmails([])
+      setSelectedEmail(null)
+      setFilter('inbox')
       // Clear the URL params
       const url = new URL(window.location.href)
       url.searchParams.delete('success')
@@ -277,9 +281,30 @@ export default function NewInboxClient({
     }
   }, [searchParams])
 
+  // Auto-reset emails on component mount (login)
+  useEffect(() => {
+    console.log('🔄 Auto-resetting emails on login...')
+    setEmails([])
+    setSelectedEmail(null)
+    setFilter('inbox')
+    setSearchTerm('')
+    setLastSync(null)
+  }, [])
+
   // Add this function inside the NewInboxClient component
   const handleConnectOutlook = () => {
     window.location.href = '/api/auth/outlook';
+  };
+
+  // Reset inbox function
+  const handleResetInbox = () => {
+    console.log('🔄 Manually resetting inbox...')
+    setEmails([])
+    setSelectedEmail(null)
+    setFilter('inbox')
+    setSearchTerm('')
+    setLastSync(null)
+    toast.success('Inbox reset successfully')
   };
 
   return (
@@ -305,6 +330,14 @@ export default function NewInboxClient({
                   <RefreshCw className="h-4 w-4 mr-2" />
                 )}
                 {isSyncing ? 'Syncing...' : 'Sync Emails'}
+              </Button>
+              <Button 
+                onClick={handleResetInbox}
+                variant="outline" 
+                className="border-white/30 text-white hover:bg-white/10"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Reset Inbox
               </Button>
               <Button 
                 onClick={() => setIsComposeModalOpen(true)}
