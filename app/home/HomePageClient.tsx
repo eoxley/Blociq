@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { MessageCircle, Calendar, ExternalLink, Send, Loader2, Plus, Mail, FileText, Pin, RefreshCw, Paperclip, Home, X, Building, Brain, Clock, AlertCircle, CheckCircle } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import DailySummary from '@/components/DailySummary'
-import UpcomingEventsWidget from '@/components/UpcomingEventsWidget'
 import BreadcrumbNavigation from '@/components/BreadcrumbNavigation'
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
@@ -790,47 +789,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
       {/* Daily Summary Section */}
       <DailySummary />
-
-      {/* Upcoming Events Widget Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <UpcomingEventsWidget />
-        
-        <BlocIQCard variant="elevated">
-          <BlocIQCardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center">
-                <Building className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-[#333333]">Building Matching Stats</h2>
-                <p className="text-sm text-[#64748B]">Smart event-to-building correlation</p>
-              </div>
-            </div>
-          </BlocIQCardHeader>
-          <BlocIQCardContent>
-            <div className="space-y-4">
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
-                <h3 className="font-semibold text-[#0F5D5D] mb-2 flex items-center gap-2">
-                  <Brain className="h-4 w-4" />
-                  How it works
-                </h3>
-                <p className="text-sm text-[#0F5D5D]">
-                  The widget automatically matches Outlook calendar events to your buildings by scanning event titles and locations for building names.
-                </p>
-              </div>
-              <div className="bg-gradient-to-r from-[#F0FDFA] to-emerald-50 p-4 rounded-xl border border-[#2BBEB4]">
-                <h3 className="font-semibold text-[#0F5D5D] mb-2 flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4" />
-                  Smart Matching
-                </h3>
-                <p className="text-sm text-[#0F5D5D]">
-                  Uses both exact and partial matching to find building references in event details, helping you quickly identify property-related meetings.
-                </p>
-              </div>
-            </div>
-          </BlocIQCardContent>
-        </BlocIQCard>
-      </div>
     </div>
   )
 } 
