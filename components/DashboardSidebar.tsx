@@ -53,7 +53,7 @@ export default function DashboardSidebar() {
             <BlocIQLogo className="h-8 w-8 text-white relative z-10" />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold text-[#333333] tracking-tight">BlocIQ</h1>
+            <h1 className="text-2xl font-extrabold bg-gradient-to-r from-[#008C8F] to-[#2BBEB4] bg-clip-text text-transparent tracking-tight">BlocIQ</h1>
             <p className="text-xs text-[#64748B] font-medium">Property Intelligence Platform</p>
           </div>
         </Link>
