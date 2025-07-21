@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
-import { Trash2, Reply, ReplyAll, Forward, Brain, Loader2, User, Clock, Building, Mail } from "lucide-react";
+import { Trash2, Reply, ReplyAll, Forward, Brain, Loader2, User, Clock, Building, Mail, Sparkles } from "lucide-react";
 import ReplyModal from "./ReplyModal";
+import AIEmailAnalysis from "./AIEmailAnalysis";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { BlocIQButton } from "@/components/ui/blociq-button";
 import { BlocIQBadge } from "@/components/ui/blociq-badge";
@@ -251,6 +252,22 @@ export default function EmailDetailPanel({ email, onEmailDeleted, onEmailSent }:
           <p className="text-[#333333] text-sm leading-relaxed">{summary}</p>
         </div>
       )}
+
+      {/* AI Email Analysis */}
+      <div className="p-6 border-b border-[#E2E8F0]">
+        <AIEmailAnalysis 
+          email={email}
+          onAnalysisComplete={(analysis) => {
+            console.log('AI Analysis completed:', analysis);
+            toast.success('Email analysis completed');
+          }}
+          onDraftGenerated={(draft) => {
+            console.log('AI Draft generated:', draft);
+            // You could open a reply modal with the generated draft
+            toast.success('AI draft generated - ready to use');
+          }}
+        />
+      </div>
 
       {/* Email Body */}
       <div className="flex-1 p-6 overflow-y-auto">
