@@ -41,6 +41,16 @@ export default function BlocIQLogo({ className = '', size = 24 }: BlocIQLogoProp
         r="2"
         fill="currentColor"
       />
+      {/* Small chimney */}
+      <rect
+        x="18"
+        y="6"
+        width="2"
+        height="2"
+        stroke="currentColor"
+        strokeWidth="1"
+        fill="none"
+      />
     </svg>
   )
 } 
