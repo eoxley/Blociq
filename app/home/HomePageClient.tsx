@@ -356,7 +356,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* BlocIQ Chat Assistant Section */}
-        <div className="bg-white rounded-xl shadow-lg p-6 border flex flex-col h-[600px]">
+        <div className="bg-white rounded-2xl shadow-lg p-6 border flex flex-col h-[600px]">
           <div className="flex items-center gap-3 mb-6 bg-gradient-to-r from-primary to-primary/80 text-white p-4 rounded-lg -m-6 mb-6">
             <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
               <MessageCircle className="h-6 w-6 text-white" />
@@ -418,10 +418,10 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           )}
 
           {/* Input form */}
-          <form onSubmit={handleSubmit} className="space-y-3 bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <form onSubmit={handleSubmit} className="space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
             {/* Attachments Display */}
             {attachments.length > 0 && (
-              <div className="p-2 bg-white rounded-lg border border-gray-200">
+              <div className="p-2 bg-white rounded-xl border border-gray-200">
                 <div className="text-xs text-gray-600 mb-2">📎 Attachments:</div>
                 <div className="space-y-1">
                   {attachments.map((file, index) => (
@@ -444,7 +444,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors text-gray-600 bg-white"
+                className="px-4 py-3 border border-gray-300 rounded-xl hover:bg-gray-100 transition-colors text-gray-600 bg-white"
                 disabled={isLoading}
               >
                 <Paperclip className="h-5 w-5" />
@@ -454,13 +454,13 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder="Ask about your buildings, compliance, or recent emails…"
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white"
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white"
                 disabled={isLoading}
               />
               <button 
                 type="submit"
                 disabled={isLoading || (!inputValue.trim() && attachments.length === 0)}
-                className="bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                className="bg-primary text-white px-6 py-3 rounded-xl hover:bg-primary/90 transition-colors font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
               >
                 <Home className="h-5 w-5" />
                 Send
@@ -480,7 +480,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         </div>
 
         {/* Upcoming Property Events Section */}
-        <div className="bg-white rounded-xl shadow-lg p-6 border">
+        <div className="bg-white rounded-2xl shadow-lg p-6 border">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <Calendar className="h-6 w-6 text-teal-600" />
@@ -512,7 +512,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 const isTomorrow = eventDate.toDateString() === new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString()
                 
                 return (
-                  <div key={index} className="bg-white shadow rounded-xl p-4 hover:shadow-lg text-sm border-l-4 border-teal-500">
+                  <div key={index} className="bg-white shadow rounded-2xl p-4 hover:shadow-lg text-sm border-l-4 border-teal-500">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
