@@ -72,6 +72,15 @@ export default function InboxClient({ emails }: InboxClientProps) {
     }
   }
 
+  const handleConnectOutlook = async () => {
+    try {
+      // Redirect to the Outlook OAuth endpoint
+      window.location.href = '/api/auth/outlook'
+    } catch (error) {
+      console.error('Error connecting Outlook:', error)
+    }
+  }
+
   const toggleEmailSelection = async (emailId: string, fromEmail: string | null) => {
     if (selectedEmail === emailId) {
       setSelectedEmail(null)
@@ -194,7 +203,7 @@ export default function InboxClient({ emails }: InboxClientProps) {
       return
     }
 
-    const replyContent = replyResponses[emailId] || editedReplies[email.id] || ''
+    const replyContent = replyResponses[emailId] || editedReplies[emailId] || ''
     if (!replyContent.trim()) {
       setSendResults(prev => ({
         ...prev,
@@ -468,17 +477,30 @@ export default function InboxClient({ emails }: InboxClientProps) {
       <div className="text-center py-12">
         <Mail className="mx-auto h-12 w-12 text-gray-400 mb-4" />
         <h3 className="text-lg font-medium text-gray-900 mb-2">No emails found</h3>
-        <p className="text-gray-500 mb-4">Your inbox is empty. Try syncing emails from Outlook.</p>
-        <button
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 relative group"
-          title="Sync Emails (Under Construction)"
-        >
-          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          {isRefreshing ? 'Syncing...' : 'Sync Emails'}
-          <Construction className="h-3 w-3 absolute -top-1 -right-1 text-orange-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-        </button>
+        <p className="text-gray-500 mb-4">Connect your Outlook account to sync emails.</p>
+        
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <button
+            onClick={handleConnectOutlook}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          >
+            <Mail className="h-4 w-4" />
+            Connect Outlook
+          </button>
+          
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 font-medium"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Syncing...' : 'Sync Emails'}
+          </button>
+        </div>
+        
+        <p className="text-sm text-gray-400 mt-4">
+          Connect your Outlook account first, then sync to see your emails here.
+        </p>
       </div>
     )
   }
