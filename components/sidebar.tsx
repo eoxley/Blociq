@@ -106,72 +106,73 @@ export default function Sidebar() {
               <p className="text-xs text-slate-300 mb-2 font-medium">Coming Soon</p>
             </div>
             
-            {/* Finances Parent */}
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium opacity-80 cursor-not-allowed bg-slate-700/50 backdrop-blur-sm">
-              <div className="w-8 h-8 bg-slate-700/50 rounded-lg flex items-center justify-center shadow-lg border border-white/20">
-                <span className="text-sm font-bold text-white">£</span>
-              </div>
-              <span className="text-slate-200">Finances</span>
-              <Clock className="h-3 w-3 ml-auto text-slate-400" />
-            </div>
-            
-            {/* Finances Subitems */}
-            <div className="ml-6 space-y-0.5 mt-1">
-              <a
-                href="/finances/service-charge-accounts"
-                className="flex items-center gap-1 px-2 py-1 rounded text-xs opacity-80 cursor-not-allowed hover:bg-slate-700/50 transition-colors"
-                tabIndex={-1}
-                aria-disabled="true"
+            {/* Finances */}
+            <li className="w-full">
+              <button
+                className="flex w-full items-center gap-3 rounded-xl px-4 py-2 text-sm font-medium text-gray-300 hover:bg-teal-700/50 transition-all group relative overflow-hidden"
+                disabled
               >
-                <ChevronRight className="h-2 w-2 text-slate-400" /> 
-                <span className="text-slate-200">Service Charge Accounts</span>
-              </a>
-              <a
-                href="/finances/service-charge-arrears"
-                className="flex items-center gap-1 px-2 py-1 rounded text-xs opacity-80 cursor-not-allowed hover:bg-slate-700/50 transition-colors"
-                tabIndex={-1}
-                aria-disabled="true"
-              >
-                <ChevronRight className="h-2 w-2 text-slate-400" /> 
-                <span className="text-slate-200">Service Charge Arrears</span>
-              </a>
-              <a
-                href="/finances/budgeting"
-                className="flex items-center gap-1 px-2 py-1 rounded text-xs opacity-80 cursor-not-allowed hover:bg-slate-700/50 transition-colors"
-                tabIndex={-1}
-                aria-disabled="true"
-              >
-                <ChevronRight className="h-2 w-2 text-slate-400" /> 
-                <span className="text-slate-200">Budgeting</span>
-              </a>
-            </div>
+                {/* Hover effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 bg-slate-700/50 group-hover:bg-slate-600/50 group-hover:shadow-md">
+                  <span className="text-lg">💷</span>
+                </div>
+                <span className="flex-1 text-left font-medium">Finances</span>
+                <span className="text-xs bg-gray-700 text-white px-2 py-0.5 rounded-full">Coming Soon</span>
+              </button>
+            </li>
             
             {/* Contractors */}
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium opacity-80 cursor-not-allowed bg-slate-700/50 backdrop-blur-sm mt-2">
-              <div className="w-8 h-8 bg-slate-700/50 rounded-lg flex items-center justify-center shadow-lg border border-white/20">
-                <span className="text-sm font-bold text-white">🔧</span>
-              </div>
-              <span className="text-slate-200">Contractors</span>
-              <Clock className="h-3 w-3 ml-auto text-slate-400" />
-            </div>
+            <li className="w-full">
+              <button
+                className="flex w-full items-center gap-3 rounded-xl px-4 py-2 text-sm font-medium text-gray-300 hover:bg-teal-700/50 transition-all group relative overflow-hidden"
+                disabled
+              >
+                {/* Hover effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 bg-slate-700/50 group-hover:bg-slate-600/50 group-hover:shadow-md">
+                  <span className="text-lg">👷</span>
+                </div>
+                <span className="flex-1 text-left font-medium">Contractors</span>
+                <span className="text-xs bg-gray-700 text-white px-2 py-0.5 rounded-full">Coming Soon</span>
+              </button>
+            </li>
             
             {/* Work Orders */}
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium opacity-80 cursor-not-allowed bg-slate-700/50 backdrop-blur-sm mt-2">
-              <div className="w-8 h-8 bg-slate-700/50 rounded-lg flex items-center justify-center shadow-lg border border-white/20">
-                <span className="text-sm font-bold text-white">📋</span>
-              </div>
-              <span className="text-slate-200">Work Orders</span>
-              <Clock className="h-3 w-3 ml-auto text-slate-400" />
-            </div>
+            <li className="w-full">
+              <button
+                className="flex w-full items-center gap-3 rounded-xl px-4 py-2 text-sm font-medium text-gray-300 hover:bg-teal-700/50 transition-all group relative overflow-hidden"
+                disabled
+              >
+                {/* Hover effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 bg-slate-700/50 group-hover:bg-slate-600/50 group-hover:shadow-md">
+                  <span className="text-lg">📋</span>
+                </div>
+                <span className="flex-1 text-left font-medium">Work Orders</span>
+                <span className="text-xs bg-gray-700 text-white px-2 py-0.5 rounded-full">Coming Soon</span>
+              </button>
+            </li>
             
             {/* Client Portal */}
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium opacity-80 cursor-not-allowed bg-slate-700/50 backdrop-blur-sm mt-2">
-              <div className="w-8 h-8 bg-slate-700/50 rounded-lg flex items-center justify-center shadow-lg border border-white/20">
-                <span className="text-sm text-white">👥</span>
-              </div>
-              <span className="text-slate-200">Client Portal</span>
-              <Clock className="h-3 w-3 ml-auto text-slate-400" />
-            </div>
+            <li className="w-full">
+              <button
+                className="flex w-full items-center gap-3 rounded-xl px-4 py-2 text-sm font-medium text-gray-300 hover:bg-teal-700/50 transition-all group relative overflow-hidden"
+                disabled
+              >
+                {/* Hover effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 bg-slate-700/50 group-hover:bg-slate-600/50 group-hover:shadow-md">
+                  <span className="text-lg">🧑‍💻</span>
+                </div>
+                <span className="flex-1 text-left font-medium">Client Portal</span>
+                <span className="text-xs bg-gray-700 text-white px-2 py-0.5 rounded-full">Coming Soon</span>
+              </button>
+            </li>
           </div>
         </nav>
 
