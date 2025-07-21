@@ -89,6 +89,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const [recentEmails, setRecentEmails] = useState<Email[]>([])
   const [loadingEmails, setLoadingEmails] = useState(true)
   const [syncingEmails, setSyncingEmails] = useState(false)
+  const [syncingCalendar, setSyncingCalendar] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClientComponentClient()
 
@@ -283,6 +284,31 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     }
   }
 
+  const syncCalendar = async () => {
+    setSyncingCalendar(true)
+    try {
+      const response = await fetch('/api/sync-calendar', {
+        method: 'POST',
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success) {
+          toast.success('Calendar synced successfully!')
+        } else {
+          toast.error(result.error || 'Failed to sync calendar')
+        }
+      } else {
+        toast.error('Failed to sync calendar')
+      }
+    } catch (error) {
+      console.error('Error syncing calendar:', error)
+      toast.error('Failed to sync calendar')
+    } finally {
+      setSyncingCalendar(false)
+    }
+  }
+
   const handleFileAttachment = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || [])
     if (files.length > 0) {
@@ -464,6 +490,20 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <BlocIQButton 
+              onClick={syncCalendar}
+              disabled={syncingCalendar}
+              variant="outline"
+              size="sm"
+              className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
+            >
+              {syncingCalendar ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Calendar className="h-4 w-4 mr-2" />
+              )}
+              {syncingCalendar ? 'Syncing...' : 'Sync Calendar'}
+            </BlocIQButton>
             <BlocIQButton 
               onClick={syncEmails}
               disabled={syncingEmails}
