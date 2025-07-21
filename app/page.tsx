@@ -267,11 +267,8 @@ export default function LandingPage() {
           <h2 className="text-4xl font-bold mb-6">
             Ready to Transform Your Property Management?
           </h2>
-          <p className="text-xl text-teal-100 mb-10 max-w-2xl mx-auto">
-            Join hundreds of property professionals who are already using BlocIQ to work smarter, not harder.
-          </p>
           <Link 
-            href="/login"
+            href="/enquiry"
             className="inline-flex items-center gap-3 bg-white/20 hover:bg-white/30 text-white px-10 py-4 rounded-xl transition-all duration-200 font-semibold text-lg backdrop-blur-sm border border-white/30 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
           >
             Get Started Today
