@@ -37,8 +37,8 @@ export default function BlocIQLogo({ className = '', size = 24 }: BlocIQLogoProp
       {/* Chimney dot */}
       <circle
         cx="19"
-        cy="4"
-        r="2"
+        cy="2"
+        r="2.5"
         fill="currentColor"
       />
       {/* Small chimney */}
