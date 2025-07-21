@@ -258,6 +258,11 @@ export default function NewInboxClient({
     }
   }, [searchParams])
 
+  // Add this function inside the NewInboxClient component
+  const handleConnectOutlook = () => {
+    window.location.href = '/api/auth/outlook';
+  };
+
   return (
     <div className="h-screen flex flex-col">
       {/* Enhanced Header with Gradient Background */}
@@ -398,9 +403,19 @@ export default function NewInboxClient({
                   <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
                 </div>
               ) : filteredEmails.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-32 text-gray-500">
+                <div className="flex flex-col items-center justify-center h-40 text-gray-500">
                   <InboxIcon className="h-12 w-12 mb-2 text-gray-300" />
-                  <p>No emails found</p>
+                  <p className="mb-4">No emails found</p>
+                  <div className="flex gap-3">
+                    <Button onClick={handleConnectOutlook} className="bg-blue-600 text-white hover:bg-blue-700">
+                      <Mail className="h-4 w-4 mr-2" /> Connect Outlook
+                    </Button>
+                    <Button onClick={handleSync} disabled={isSyncing} className="bg-teal-600 text-white hover:bg-teal-700">
+                      {isSyncing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                      {isSyncing ? 'Syncing...' : 'Sync Emails'}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">Connect your Outlook account first, then sync to see your emails here.</p>
                 </div>
               ) : (
                 filteredEmails.map((email) => (
