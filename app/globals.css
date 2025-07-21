@@ -216,18 +216,18 @@
 }
 
 .scrollbar-thin::-webkit-scrollbar-track {
-  background: rgba(30, 41, 59, 0.5);
+  background: transparent;
   border-radius: 3px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: rgba(71, 85, 105, 0.8);
+  background: linear-gradient(180deg, rgba(15, 93, 93, 0.8) 0%, rgba(43, 190, 180, 0.8) 100%);
   border-radius: 3px;
   transition: background 0.2s ease;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.9);
+  background: linear-gradient(180deg, rgba(15, 93, 93, 0.9) 0%, rgba(43, 190, 180, 0.9) 100%);
 }
 
 .scrollbar-thin::-webkit-scrollbar-corner {
