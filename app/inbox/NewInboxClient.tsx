@@ -35,7 +35,8 @@ import {
   AlertCircle,
   Info,
   Check,
-  X
+  X,
+  Database
 } from 'lucide-react'
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
@@ -106,12 +107,16 @@ export default function NewInboxClient({
     initialEmailsCount: initialEmails?.length || 0,
     lastSyncTime,
     userId,
-    searchParams
+    searchParams,
+    hasInitialEmails: initialEmails && initialEmails.length > 0
   })
 
-  // Initialize available tags from initial emails
+  // Initialize emails and tags from initial emails
   useEffect(() => {
     if (initialEmails && initialEmails.length > 0) {
+      console.log('📧 NewInboxClient - Setting initial emails:', initialEmails.length)
+      setEmails(initialEmails)
+      
       const allTags = initialEmails
         .flatMap(email => email.tags || [])
         .filter((tag, index, arr) => arr.indexOf(tag) === index)
@@ -119,6 +124,14 @@ export default function NewInboxClient({
       setAvailableTags(allTags)
     }
   }, [initialEmails])
+
+  // Fetch emails if we don't have any after initialization
+  useEffect(() => {
+    if (emails.length === 0 && initialEmails.length === 0) {
+      console.log('📧 NewInboxClient - No emails available, fetching from client')
+      fetchEmails()
+    }
+  }, [emails.length, initialEmails.length])
 
   // Create a reusable fetchEmails function
   const fetchEmails = async () => {
@@ -132,6 +145,8 @@ export default function NewInboxClient({
         toast.error('Database connection not available')
         return
       }
+
+      console.log('🔍 NewInboxClient - Supabase client initialized, checking auth...')
 
       // Check authentication status
       const { data: { session }, error: authError } = await supabase.auth.getSession()
@@ -180,7 +195,9 @@ export default function NewInboxClient({
           message: error.message,
           details: error.details,
           hint: error.hint,
-          code: error.code
+          code: error.code,
+          user_id: session.user.id,
+          filter: filter
         })
         toast.error(`Failed to fetch emails: ${error.message}`)
         return
@@ -245,7 +262,10 @@ export default function NewInboxClient({
 
   // Fetch emails based on filter
   useEffect(() => {
-    fetchEmails()
+    // Always fetch when filter changes, or if we don't have emails
+    if (emails.length === 0 || filter !== 'inbox') {
+      fetchEmails()
+    }
   }, [filter, supabase])
 
   // Filter emails by search and tags
@@ -488,6 +508,42 @@ export default function NewInboxClient({
               <Brain className="h-4 w-4 mr-2" />
               AI Triage
             </BlocIQButton>
+            <BlocIQButton 
+              onClick={async () => {
+                try {
+                  const response = await fetch('/api/test-emails')
+                  const data = await response.json()
+                  console.log('🔍 Test emails result:', data)
+                  toast.success(`Test completed: ${data.user_emails_count} emails found`)
+                } catch (error) {
+                  console.error('Test failed:', error)
+                  toast.error('Test failed')
+                }
+              }}
+              variant="secondary"
+              className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Test Emails
+            </BlocIQButton>
+            <BlocIQButton 
+              onClick={async () => {
+                try {
+                  const response = await fetch('/api/test-db')
+                  const data = await response.json()
+                  console.log('🔍 Test DB result:', data)
+                  toast.success(`DB Test: ${data.total_emails} total emails, ${data.emails_with_user_id} with user_id`)
+                } catch (error) {
+                  console.error('DB Test failed:', error)
+                  toast.error('DB Test failed')
+                }
+              }}
+              variant="secondary"
+              className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+            >
+              <Database className="h-4 w-4 mr-2" />
+              Test DB
+            </BlocIQButton>
           </div>
         </div>
         
@@ -625,13 +681,6 @@ export default function NewInboxClient({
           
           {/* Email List */}
           <div className="flex-1 overflow-y-auto">
-            {console.log('🎨 NewInboxClient - Rendering email list:', {
-              loadingEmails,
-              emailsLength: emails.length,
-              filteredEmailsLength: filteredEmails.length,
-              searchTerm,
-              selectedTags
-            })}
             {loadingEmails ? (
               <div className="flex items-center justify-center h-32">
                 <Loader2 className="h-6 w-6 animate-spin text-[#008C8F]" />
@@ -677,7 +726,6 @@ export default function NewInboxClient({
               </div>
             ) : (
               <div className="space-y-2 p-4">
-                {console.log('📧 NewInboxClient - Rendering email items:', filteredEmails.length)}
                 {filteredEmails.map((email) => (
                   <EmailListItem
                     key={email.id}

@@ -38,13 +38,20 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
       outlook_id
     `)
     .eq('is_deleted', false) // Filter out deleted emails
+    .eq('user_id', user.id) // Only get emails for this user
     .order('received_at', { ascending: false })
 
   console.log('📧 Inbox page - Emails fetched:', rawEmails?.length || 0)
   console.log('📧 Inbox page - First email:', rawEmails?.[0])
 
   if (error) {
-    console.error('❌ Error fetching emails:', error)
+    console.error('❌ Error fetching emails:', {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+      user_id: user.id
+    })
   }
 
   // Process emails to match the Email interface
