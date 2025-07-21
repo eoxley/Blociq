@@ -89,11 +89,14 @@ export default function NewInboxClient({
 
       // Apply filters based on current filter state
       if (filter === 'inbox') {
-        query = query.eq('is_handled', false)
-        console.log('📧 NewInboxClient - Filtering for inbox (unhandled emails)')
+        // Show all emails in inbox (not just unhandled ones)
+        console.log('📧 NewInboxClient - Showing all emails in inbox')
       } else if (filter === 'handled') {
         query = query.eq('is_handled', true)
         console.log('📧 NewInboxClient - Filtering for handled emails')
+      } else if (filter === 'unhandled') {
+        query = query.eq('is_handled', false)
+        console.log('📧 NewInboxClient - Filtering for unhandled emails')
       } else if (filter.startsWith('building-')) {
         const buildingId = filter.replace('building-', '')
         query = query.eq('building_id', buildingId)
@@ -222,9 +225,11 @@ export default function NewInboxClient({
   const getCurrentFilterName = () => {
     switch (filter) {
       case 'inbox':
-        return 'Inbox'
+        return 'Inbox (All)'
       case 'handled':
         return 'Handled'
+      case 'unhandled':
+        return 'Unhandled'
       case 'all':
         return 'All Emails'
       default:
