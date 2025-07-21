@@ -127,7 +127,7 @@ export default function EmailDetailPanel({ email, onEmailDeleted, onEmailSent }:
       <div className="p-6 border-b border-[#E2E8F0] bg-[#FAFAFA]">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-[#2BBEB4] to-[#0F5D5D] rounded-xl flex items-center justify-center text-white font-semibold">
+                                    <div className="w-12 h-12 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center text-white font-semibold">
               {getSenderInitials(email.from_name, email.from_email)}
             </div>
             <div>

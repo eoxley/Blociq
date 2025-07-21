@@ -16,14 +16,14 @@ export function BlocIQBadge({
 }: BlocIQBadgeProps) {
   const baseClasses = "inline-flex items-center justify-center rounded-full font-medium transition-all duration-300";
   
-  const variants = {
-    default: "bg-[#F3F4F6] text-[#64748B]",
-    primary: "bg-gradient-to-r from-[#2BBEB4] to-[#0F5D5D] text-white",
-    secondary: "bg-[#F0FDFA] text-[#0F5D5D] border border-[#2BBEB4]",
-    success: "bg-green-100 text-green-800",
-    warning: "bg-yellow-100 text-yellow-800",
-    destructive: "bg-red-100 text-red-800"
-  };
+                const variants = {
+                default: "bg-[#F3F4F6] text-[#64748B]",
+                primary: "bg-gradient-to-r from-[#008C8F] to-[#007BDB] text-white",
+                secondary: "bg-[#F0FDFA] text-[#0F5D5D] border border-[#008C8F]",
+                success: "bg-green-100 text-green-800",
+                warning: "bg-yellow-100 text-yellow-800",
+                destructive: "bg-red-100 text-red-800"
+              };
   
   const sizes = {
     sm: "px-2 py-0.5 text-xs",

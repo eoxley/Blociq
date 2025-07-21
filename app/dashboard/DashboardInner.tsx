@@ -135,8 +135,8 @@ export default function DashboardInner() {
 
   return (
     <div className="space-y-8">
-      {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-[#2BBEB4] to-[#0F5D5D] rounded-2xl p-8 text-white shadow-xl">
+                        {/* Welcome Header */}
+                  <div className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] rounded-2xl p-8 text-white shadow-xl">
         <div className="flex items-center justify-between">
           <div className="space-y-2">
             <h1 className="text-4xl font-bold">Welcome to BlocIQ</h1>
@@ -171,7 +171,7 @@ export default function DashboardInner() {
         <BlocIQCard variant="elevated" className="hover:scale-105 transition-transform duration-300">
           <BlocIQCardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <h3 className="text-sm font-medium text-[#64748B]">Total Buildings</h3>
-            <div className="w-8 h-8 bg-gradient-to-br from-[#2BBEB4] to-[#0F5D5D] rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-lg flex items-center justify-center">
               <Building2 className="h-4 w-4 text-white" />
             </div>
           </BlocIQCardHeader>
@@ -184,7 +184,7 @@ export default function DashboardInner() {
         <BlocIQCard variant="elevated" className="hover:scale-105 transition-transform duration-300">
           <BlocIQCardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <h3 className="text-sm font-medium text-[#64748B]">Total Emails</h3>
-            <div className="w-8 h-8 bg-gradient-to-br from-[#2BBEB4] to-[#0F5D5D] rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-lg flex items-center justify-center">
               <Mail className="h-4 w-4 text-white" />
             </div>
           </BlocIQCardHeader>
@@ -197,7 +197,7 @@ export default function DashboardInner() {
         <BlocIQCard variant="elevated" className="hover:scale-105 transition-transform duration-300">
           <BlocIQCardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <h3 className="text-sm font-medium text-[#64748B]">Total Documents</h3>
-            <div className="w-8 h-8 bg-gradient-to-br from-[#2BBEB4] to-[#0F5D5D] rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-lg flex items-center justify-center">
               <FileText className="h-4 w-4 text-white" />
             </div>
           </BlocIQCardHeader>
@@ -210,7 +210,7 @@ export default function DashboardInner() {
         <BlocIQCard variant="elevated" className="hover:scale-105 transition-transform duration-300">
           <BlocIQCardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <h3 className="text-sm font-medium text-[#64748B]">Total Users</h3>
-            <div className="w-8 h-8 bg-gradient-to-br from-[#2BBEB4] to-[#0F5D5D] rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-lg flex items-center justify-center">
               <Users className="h-4 w-4 text-white" />
             </div>
           </BlocIQCardHeader>
@@ -316,7 +316,7 @@ export default function DashboardInner() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <BlocIQCard variant="outlined" className="hover:shadow-lg transition-shadow duration-300 cursor-pointer" onClick={() => router.push('/communications')}>
           <BlocIQCardContent className="text-center py-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-[#2BBEB4] to-[#0F5D5D] rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-2xl flex items-center justify-center mx-auto mb-4">
               <MessageCircle className="h-8 w-8 text-white" />
             </div>
             <h3 className="text-lg font-semibold text-[#333333] mb-2">Communications</h3>
@@ -326,7 +326,7 @@ export default function DashboardInner() {
 
         <BlocIQCard variant="outlined" className="hover:shadow-lg transition-shadow duration-300 cursor-pointer" onClick={() => router.push('/compliance')}>
           <BlocIQCardContent className="text-center py-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-[#2BBEB4] to-[#0F5D5D] rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-2xl flex items-center justify-center mx-auto mb-4">
               <TrendingUp className="h-8 w-8 text-white" />
             </div>
             <h3 className="text-lg font-semibold text-[#333333] mb-2">Compliance</h3>
@@ -336,7 +336,7 @@ export default function DashboardInner() {
 
         <BlocIQCard variant="outlined" className="hover:shadow-lg transition-shadow duration-300 cursor-pointer" onClick={() => router.push('/major-works')}>
           <BlocIQCardContent className="text-center py-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-[#2BBEB4] to-[#0F5D5D] rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Calendar className="h-8 w-8 text-white" />
             </div>
             <h3 className="text-lg font-semibold text-[#333333] mb-2">Major Works</h3>

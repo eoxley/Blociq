@@ -274,7 +274,7 @@ export default function UpcomingEventsWidget() {
     <div className="bg-white rounded-xl shadow-lg p-6 border">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-[#2BBEB4]" />
+          <Calendar className="h-5 w-5 text-[#008C8F]" />
           Upcoming Events
         </h2>
         <div className="flex items-center gap-3">
@@ -287,7 +287,7 @@ export default function UpcomingEventsWidget() {
             disabled={syncing}
             variant="outline"
             size="sm"
-            className="text-[#2BBEB4] border-[#2BBEB4] hover:bg-[#F0FDFA]"
+            className="text-[#008C8F] border-[#008C8F] hover:bg-[#F0FDFA]"
           >
             {syncing ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />

@@ -243,7 +243,7 @@ function BuildingCard({
       <BlocIQCardHeader className="pb-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-[#2BBEB4] to-[#0F5D5D] rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center">
               <Building2 className="h-6 w-6 text-white" />
             </div>
             <div>
@@ -336,7 +336,7 @@ function BuildingListItem({
       <BlocIQCardContent className="p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-[#2BBEB4] to-[#0F5D5D] rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center">
               <Building2 className="h-6 w-6 text-white" />
             </div>
             <div>
