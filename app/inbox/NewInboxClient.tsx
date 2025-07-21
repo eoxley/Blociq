@@ -107,30 +107,30 @@ export default function NewInboxClient({
       setLoadingEmails(true)
       console.log('🔄 NewInboxClient - Fetching emails with filter:', filter)
       
-      let query = supabase
-        .from('incoming_emails')
-        .select(`
-          id, subject, from_name, from_email, received_at, body_preview, body_full, building_id, is_read, is_handled, tags, outlook_id, buildings(name)
-        `)
-        .eq('is_deleted', false) // Filter out deleted emails
-        .order('received_at', { ascending: false })
-
-      // Apply filters based on current filter state
-      if (filter === 'inbox') {
-        // Show all emails in inbox (not just unhandled ones)
-        console.log('📧 NewInboxClient - Showing all emails in inbox')
-      } else if (filter === 'handled') {
-        query = query.eq('is_handled', true)
-        console.log('✅ NewInboxClient - Showing handled emails')
-      } else if (filter === 'unhandled') {
-        query = query.eq('is_handled', false)
-        console.log('⏳ NewInboxClient - Showing unhandled emails')
-      } else if (filter === 'unread') {
-        query = query.eq('is_read', false)
-        console.log('📬 NewInboxClient - Showing unread emails')
-      }
-
       try {
+        let query = supabase
+          .from('incoming_emails')
+          .select(`
+            id, subject, from_name, from_email, received_at, body_preview, body_full, building_id, is_read, is_handled, tags, outlook_id, buildings(name)
+          `)
+          .eq('is_deleted', false) // Filter out deleted emails
+          .order('received_at', { ascending: false })
+
+        // Apply filters based on current filter state
+        if (filter === 'inbox') {
+          // Show all emails in inbox (not just unhandled ones)
+          console.log('📧 NewInboxClient - Showing all emails in inbox')
+        } else if (filter === 'handled') {
+          query = query.eq('is_handled', true)
+          console.log('✅ NewInboxClient - Showing handled emails')
+        } else if (filter === 'unhandled') {
+          query = query.eq('is_handled', false)
+          console.log('⏳ NewInboxClient - Showing unhandled emails')
+        } else if (filter === 'unread') {
+          query = query.eq('is_read', false)
+          console.log('📬 NewInboxClient - Showing unread emails')
+        }
+
         const { data, error } = await query
         
         if (error) {
@@ -156,13 +156,13 @@ export default function NewInboxClient({
             .filter((tag, index, arr) => arr.indexOf(tag) === index)
           setAvailableTags(allTags)
           
-          // Analyze unanalyzed emails with AI
-          const unanalyzedEmails = processedEmails.filter(email => !email.tags || email.tags.length === 0)
-          console.log('🤖 NewInboxClient - Found unanalyzed emails:', unanalyzedEmails.length)
+          // Temporarily disable AI analysis to prevent errors
+          // const unanalyzedEmails = processedEmails.filter(email => !email.tags || email.tags.length === 0)
+          // console.log('🤖 NewInboxClient - Found unanalyzed emails:', unanalyzedEmails.length)
           
-          for (const email of unanalyzedEmails.slice(0, 5)) { // Limit to 5 at a time
-            await analyzeEmailWithAI(email)
-          }
+          // for (const email of unanalyzedEmails.slice(0, 5)) { // Limit to 5 at a time
+          //   await analyzeEmailWithAI(email)
+          // }
         }
       } catch (error) {
         console.error('Error in fetchEmails:', error)
@@ -412,8 +412,8 @@ export default function NewInboxClient({
 
   return (
     <div className="space-y-8">
-                        {/* Enhanced Header with BlocIQ Branding */}
-                  <div className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] rounded-2xl p-8 text-white shadow-xl">
+      {/* Enhanced Header with BlocIQ Branding */}
+      <div className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] rounded-2xl p-8 text-white shadow-xl">
         <div className="flex items-center justify-between">
           <div className="space-y-2">
             <h1 className="text-4xl font-bold">Email Inbox</h1>
@@ -457,7 +457,7 @@ export default function NewInboxClient({
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-3xl font-bold">{emails.length}</div>
+                <div className="text-3xl font-bold">{emails?.length || 0}</div>
                 <div className="text-sm text-white/80">Total Emails</div>
               </div>
               <Building className="h-10 w-10 text-white/80" />
@@ -467,7 +467,7 @@ export default function NewInboxClient({
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-3xl font-bold">{emails.filter(e => !e.is_read).length}</div>
+                <div className="text-3xl font-bold">{emails?.filter(e => !e.is_read).length || 0}</div>
                 <div className="text-sm text-white/80">Unread</div>
               </div>
               <Mail className="h-10 w-10 text-white/80" />
@@ -477,7 +477,7 @@ export default function NewInboxClient({
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-3xl font-bold">{emails.filter(e => !e.is_handled).length}</div>
+                <div className="text-3xl font-bold">{emails?.filter(e => !e.is_handled).length || 0}</div>
                 <div className="text-sm text-white/80">Pending</div>
               </div>
               <Clock className="h-10 w-10 text-white/80" />
@@ -487,7 +487,7 @@ export default function NewInboxClient({
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-3xl font-bold">{emails.filter(e => e.is_handled).length}</div>
+                <div className="text-3xl font-bold">{emails?.filter(e => e.is_handled).length || 0}</div>
                 <div className="text-sm text-white/80">Handled</div>
               </div>
               <CheckCircle className="h-10 w-10 text-white/80" />
