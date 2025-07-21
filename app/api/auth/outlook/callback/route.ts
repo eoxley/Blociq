@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { createClient } from '@/utils/supabase/server';
 
 export async function GET(req: NextRequest) {
   try {
@@ -28,6 +29,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(new URL('/dashboard/inbox?error=outlook_invalid_state', req.url));
     }
 
+    // Get authenticated user session
+    const supabase = createClient(cookieStore);
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !session) {
+      console.error('User not authenticated');
+      return NextResponse.redirect(new URL('/dashboard/inbox?error=user_not_authenticated', req.url));
+    }
+
     // Exchange authorization code for access token
     const tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
       method: 'POST',
@@ -51,28 +61,52 @@ export async function GET(req: NextRequest) {
 
     const tokenData = await tokenResponse.json();
 
-    // For now, store tokens in cookies (in production, use database)
-    // This is a temporary solution until the user_tokens table is set up
-    cookieStore.set('outlook_access_token', tokenData.access_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: tokenData.expires_in // Use the actual expiry time
+    // Get user's email from Microsoft Graph API
+    const userResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
+      headers: {
+        'Authorization': `Bearer ${tokenData.access_token}`,
+        'Content-Type': 'application/json',
+      },
     });
 
-    if (tokenData.refresh_token) {
-      cookieStore.set('outlook_refresh_token', tokenData.refresh_token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 30 * 24 * 60 * 60 // 30 days for refresh token
+    if (!userResponse.ok) {
+      console.error('Failed to get user info from Microsoft Graph');
+      return NextResponse.redirect(new URL('/dashboard/inbox?error=outlook_user_info_failed', req.url));
+    }
+
+    const userData = await userResponse.json();
+    const userEmail = userData.mail || userData.userPrincipalName;
+
+    if (!userEmail) {
+      console.error('No email found in user data');
+      return NextResponse.redirect(new URL('/dashboard/inbox?error=outlook_no_email', req.url));
+    }
+
+    // Calculate token expiry
+    const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
+
+    // Store tokens securely in Supabase
+    const { error: insertError } = await supabase
+      .from('outlook_tokens')
+      .upsert({
+        user_id: session.user.id,
+        email: userEmail,
+        access_token: tokenData.access_token,
+        refresh_token: tokenData.refresh_token,
+        expires_at: expiresAt
+      }, {
+        onConflict: 'user_id,email'
       });
+
+    if (insertError) {
+      console.error('Failed to store tokens in database:', insertError);
+      return NextResponse.redirect(new URL('/dashboard/inbox?error=outlook_token_storage_failed', req.url));
     }
 
     // Clean up the OAuth state cookie
     cookieStore.delete('outlook_oauth_state');
 
-    console.log('Outlook OAuth completed successfully');
+    console.log('Outlook OAuth completed successfully for user:', session.user.id);
     
     // Redirect back to inbox with success message
     return NextResponse.redirect(new URL('/dashboard/inbox?success=outlook_connected', req.url));
