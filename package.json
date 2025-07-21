@@ -11,7 +11,9 @@
     "seed:compliance": "tsx scripts/seedComplianceAssets.ts",
     "check:compliance": "tsx scripts/checkComplianceAssets.ts",
     "cleanup:audit": "tsx scripts/cleanupTestData.ts audit",
-    "cleanup:cleanup": "tsx scripts/cleanupTestData.ts cleanup"
+    "cleanup:cleanup": "tsx scripts/cleanupTestData.ts cleanup",
+    "fix:emails": "node scripts/fix_sample_emails.js",
+    "fix:emails:simple": "node scripts/fix_sample_emails_simple.js"
   },
   "dependencies": {
     "@azure/msal-node": "^3.6.2",

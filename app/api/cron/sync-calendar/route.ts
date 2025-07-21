@@ -208,7 +208,7 @@ export async function GET(req: NextRequest) {
 
     console.log("✅ Database upsert completed successfully");
     console.log("📊 Upsert result summary:", {
-      inserted: upsertData?.length || 0,
+      inserted: inserts.length, // upsertData is typically null/undefined, so use inserts.length
       total_processed: inserts.length
     });
 
