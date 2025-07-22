@@ -157,7 +157,10 @@ export default function TriageAssistant({
       const bulkTriageResponse = await fetch('/api/bulk-triage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ emails: emailsForAnalysis })
+        body: JSON.stringify({ 
+          emails: emailsForAnalysis,
+          performActions: true // Enable automatic actions
+        })
       })
 
       if (!bulkTriageResponse.ok) {
@@ -216,11 +219,7 @@ export default function TriageAssistant({
 
           resultsWithDrafts.push(enhancedResult)
 
-          // Mark email as read
-          await supabase
-            .from('incoming_emails')
-            .update({ unread: false })
-            .eq('id', email?.id)
+          // Note: Email actions (marking as read, categorizing, etc.) are now handled by the bulk-triage API
 
         } catch (error) {
           console.error(`Error generating draft for email ${result.emailId}:`, error)
