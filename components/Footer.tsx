@@ -1,7 +1,31 @@
+'use client'
+
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { useRouter } from 'next/navigation'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { LogOut, Settings } from 'lucide-react'
 import BlocIQLogo from '@/components/BlocIQLogo'
 
 export default function Footer() {
+  const pathname = usePathname()
+  const router = useRouter()
+  const supabase = createClientComponentClient()
+
+  // Check if we should show the account/logout links
+  const shouldShowAccountLinks = pathname && 
+    pathname !== '/' && 
+    !pathname.startsWith('/inbox')
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut()
+      router.push('/login')
+    } catch (error) {
+      console.error('Error signing out:', error)
+    }
+  }
+
   return (
     <footer className="w-full bg-gray-50 border-t border-gray-200">
       <div className="max-w-7xl mx-auto px-4 py-3">
@@ -41,6 +65,27 @@ export default function Footer() {
             >
               Accessibility
             </Link>
+            
+            {/* Account and Logout Links - Only show on non-landing, non-inbox pages */}
+            {shouldShowAccountLinks && (
+              <>
+                <span className="text-gray-300">|</span>
+                <Link 
+                  href="/account" 
+                  className="text-gray-600 hover:text-[#0F5D5D] transition-colors flex items-center gap-1"
+                >
+                  <Settings className="h-3 w-3" />
+                  Account
+                </Link>
+                <button 
+                  onClick={handleLogout}
+                  className="text-gray-600 hover:text-[#0F5D5D] transition-colors flex items-center gap-1"
+                >
+                  <LogOut className="h-3 w-3" />
+                  Logout
+                </button>
+              </>
+            )}
           </div>
         </div>
         
