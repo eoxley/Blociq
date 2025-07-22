@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -11,9 +11,12 @@ import {
   Loader2,
   ExternalLink,
   RefreshCw,
-  Mail
+  Mail,
+  Shield,
+  Building
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 interface OutlookConnectButtonProps {
   className?: string;
@@ -24,54 +27,50 @@ export default function OutlookConnectButton({
   className = "", 
   onSyncComplete 
 }: OutlookConnectButtonProps) {
-  const [isConnecting, setIsConnecting] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
-  const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connected' | 'checking'>('checking')
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'checking'>('checking')
   const [syncStatus, setSyncStatus] = useState<string>('')
+  const [userEmail, setUserEmail] = useState<string>('')
   const router = useRouter()
+  const supabase = createClientComponentClient()
 
   // Check connection status on mount
-  React.useEffect(() => {
+  useEffect(() => {
     checkConnectionStatus()
   }, [])
 
   const checkConnectionStatus = async () => {
     try {
-      const response = await fetch('/api/outlook/status')
-      if (response.ok) {
-        const data = await response.json()
-        setConnectionStatus(data.connected ? 'connected' : 'disconnected')
-      } else {
-        setConnectionStatus('disconnected')
+      // Check if user has Microsoft OAuth tokens
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        setConnectionStatus('checking')
+        return
       }
+
+      const { data: tokens, error } = await supabase
+        .from('outlook_tokens')
+        .select('email, expires_at')
+        .eq('user_id', user.id)
+        .single()
+
+      if (error || !tokens) {
+        setConnectionStatus('checking')
+        return
+      }
+
+      // Check if token is expired
+      const isExpired = new Date(tokens.expires_at) < new Date()
+      if (isExpired) {
+        setConnectionStatus('checking')
+        return
+      }
+
+      setConnectionStatus('connected')
+      setUserEmail(tokens.email)
     } catch (error) {
       console.error('Error checking Outlook connection:', error)
-      setConnectionStatus('disconnected')
-    }
-  }
-
-  const handleConnect = async () => {
-    setIsConnecting(true)
-    try {
-      // Redirect to OAuth endpoint
-      window.location.href = '/api/auth/outlook'
-    } catch (error) {
-      console.error('Error connecting to Outlook:', error)
-      setIsConnecting(false)
-    }
-  }
-
-  const handleDisconnect = async () => {
-    try {
-      const response = await fetch('/api/outlook/disconnect', {
-        method: 'POST'
-      })
-      
-      if (response.ok) {
-        setConnectionStatus('disconnected')
-      }
-    } catch (error) {
-      console.error('Error disconnecting from Outlook:', error)
+      setConnectionStatus('checking')
     }
   }
 
@@ -99,10 +98,9 @@ export default function OutlookConnectButton({
         
         console.log('Sync completed:', data)
       } else {
-        const errorData = await response.json()
         setSyncStatus('error')
         setTimeout(() => setSyncStatus(''), 3000)
-        console.error('Sync failed:', errorData)
+        console.error('Sync failed')
       }
     } catch (error) {
       console.error('Error syncing inbox:', error)
@@ -113,25 +111,57 @@ export default function OutlookConnectButton({
     }
   }
 
+  const handleSyncCalendar = async () => {
+    setIsSyncing(true)
+    setSyncStatus('syncing')
+    
+    try {
+      const response = await fetch('/api/sync-calendar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setSyncStatus('success')
+        setTimeout(() => setSyncStatus(''), 3000)
+        
+        console.log('Calendar sync completed:', data)
+      } else {
+        setSyncStatus('error')
+        setTimeout(() => setSyncStatus(''), 3000)
+        console.error('Calendar sync failed')
+      }
+    } catch (error) {
+      console.error('Error syncing calendar:', error)
+      setSyncStatus('error')
+      setTimeout(() => setSyncStatus(''), 3000)
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   const getStatusIcon = () => {
     switch (connectionStatus) {
       case 'connected':
-        return <CheckCircle className="h-4 w-4 text-green-500" />
-      case 'disconnected':
-        return <XCircle className="h-4 w-4 text-red-500" />
+        return <CheckCircle className="h-5 w-5 text-green-500" />
       case 'checking':
-        return <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
+        return <Loader2 className="h-5 w-5 text-gray-500 animate-spin" />
+      default:
+        return <XCircle className="h-5 w-5 text-red-500" />
     }
   }
 
   const getStatusText = () => {
     switch (connectionStatus) {
       case 'connected':
-        return 'Connected'
-      case 'disconnected':
-        return 'Disconnected'
+        return 'Microsoft Connected'
       case 'checking':
-        return 'Checking...'
+        return 'Checking connection...'
+      default:
+        return 'Not Connected'
     }
   }
 
@@ -139,10 +169,10 @@ export default function OutlookConnectButton({
     switch (connectionStatus) {
       case 'connected':
         return 'bg-green-100 text-green-800 border-green-200'
-      case 'disconnected':
-        return 'bg-red-100 text-red-800 border-red-200'
       case 'checking':
         return 'bg-gray-100 text-gray-800 border-gray-200'
+      default:
+        return 'bg-red-100 text-red-800 border-red-200'
     }
   }
 
@@ -151,94 +181,104 @@ export default function OutlookConnectButton({
       case 'syncing':
         return 'Syncing...'
       case 'success':
-        return '✓ Synced'
+        return 'Sync completed!'
       case 'error':
-        return '✗ Error'
+        return 'Sync failed'
       default:
-        return 'Sync Inbox'
+        return ''
     }
   }
 
-  return (
-    <Card className={className}>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Calendar className="h-5 w-5" />
-          Outlook Integration
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-600">Connection Status</span>
-          <Badge className={`flex items-center gap-1 ${getStatusColor()}`}>
-            {getStatusIcon()}
-            {getStatusText()}
-          </Badge>
-        </div>
+  if (connectionStatus === 'checking') {
+    return (
+      <Card className={`${className}`}>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-5 w-5 animate-spin text-gray-500" />
+              <span className="text-sm text-gray-600">Checking Microsoft connection...</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
-        {connectionStatus === 'connected' ? (
-          <div className="space-y-3">
-            <p className="text-sm text-gray-600">
-              Your Outlook calendar is connected. You can now add events directly from BlocIQ.
-            </p>
-            
-            {/* Sync Inbox Button */}
-            <Button 
+  if (connectionStatus === 'connected') {
+    return (
+      <Card className={`${className}`}>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-blue-500" />
+              <CardTitle className="text-lg">Microsoft Integration</CardTitle>
+            </div>
+            <Badge className={getStatusColor()}>
+              {getStatusIcon()}
+              <span className="ml-1">{getStatusText()}</span>
+            </Badge>
+          </div>
+          {userEmail && (
+            <p className="text-sm text-gray-600">Connected as: {userEmail}</p>
+          )}
+        </CardHeader>
+        
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Mail className="h-4 w-4 text-blue-500" />
+            <span>Outlook emails automatically synced</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Calendar className="h-4 w-4 text-green-500" />
+            <span>Calendar events automatically synced</span>
+          </div>
+          
+          <div className="flex gap-2 pt-2">
+            <Button
               onClick={handleSyncInbox}
               disabled={isSyncing}
-              variant="outline"
               size="sm"
-              className="w-full flex items-center gap-2"
+              variant="outline"
+              className="flex-1"
             >
-              {isSyncing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+              {isSyncing && syncStatus === 'syncing' ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : (
-                <Mail className="h-4 w-4" />
+                <RefreshCw className="h-4 w-4 mr-2" />
               )}
-              {getSyncStatusText()}
+              Sync Emails
             </Button>
             
-            <Button 
-              onClick={handleDisconnect}
-              variant="outline"
+            <Button
+              onClick={handleSyncCalendar}
+              disabled={isSyncing}
               size="sm"
-              className="w-full"
+              variant="outline"
+              className="flex-1"
             >
-              Disconnect Outlook
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <p className="text-sm text-gray-600">
-              Connect your Outlook calendar to automatically add events from AI suggestions and sync your inbox.
-            </p>
-            <Button 
-              onClick={handleConnect}
-              disabled={isConnecting || connectionStatus === 'checking'}
-              className="w-full"
-            >
-              {isConnecting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Connecting...
-                </>
+              {isSyncing && syncStatus === 'syncing' ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : (
-                <>
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Connect Outlook
-                </>
+                <RefreshCw className="h-4 w-4 mr-2" />
               )}
+              Sync Calendar
             </Button>
           </div>
-        )}
+          
+          {syncStatus && (
+            <div className={`text-sm p-2 rounded ${
+              syncStatus === 'success' ? 'bg-green-50 text-green-700' :
+              syncStatus === 'error' ? 'bg-red-50 text-red-700' :
+              'bg-blue-50 text-blue-700'
+            }`}>
+              {getSyncStatusText()}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    )
+  }
 
-        <div className="text-xs text-gray-500">
-          <p>• Add calendar events from AI suggestions</p>
-          <p>• Sync emails from Outlook inbox</p>
-          <p>• Automatic reminders and notifications</p>
-          <p>• Sync with your existing Outlook calendar</p>
-        </div>
-      </CardContent>
-    </Card>
-  )
+  // This should not be reached with the new automatic flow
+  return null
 } 
