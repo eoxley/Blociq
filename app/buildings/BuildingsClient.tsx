@@ -136,70 +136,7 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <BlocIQCard className="bg-gradient-to-br from-[#F0FDFA] to-[#E2E8F0] border-0">
-          <BlocIQCardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-3xl font-bold text-[#0F5D5D]">{buildings.length}</div>
-                <div className="text-sm text-[#64748B]">Total Buildings</div>
-              </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-[#008C8F] to-[#007BDB] rounded-xl flex items-center justify-center">
-                <Building2 className="h-6 w-6 text-white" />
-              </div>
-            </div>
-          </BlocIQCardContent>
-        </BlocIQCard>
 
-        <BlocIQCard className="bg-gradient-to-br from-[#F0FDFA] to-[#E2E8F0] border-0">
-          <BlocIQCardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-3xl font-bold text-[#0F5D5D]">
-                  {buildings.reduce((total, building) => total + (building.unit_count || 0), 0)}
-                </div>
-                <div className="text-sm text-[#64748B]">Total Units</div>
-              </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-[#2078F4] to-[#1D4ED8] rounded-xl flex items-center justify-center">
-                <Home className="h-6 w-6 text-white" />
-              </div>
-            </div>
-          </BlocIQCardContent>
-        </BlocIQCard>
-
-        <BlocIQCard className="bg-gradient-to-br from-[#F0FDFA] to-[#E2E8F0] border-0">
-          <BlocIQCardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-3xl font-bold text-[#0F5D5D]">
-                  {buildings.filter(b => b.demo_ready).length}
-                </div>
-                <div className="text-sm text-[#64748B]">Demo Ready</div>
-              </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-[#10B981] to-[#059669] rounded-xl flex items-center justify-center">
-                <CheckCircle className="h-6 w-6 text-white" />
-              </div>
-            </div>
-          </BlocIQCardContent>
-        </BlocIQCard>
-
-        <BlocIQCard className="bg-gradient-to-br from-[#F0FDFA] to-[#E2E8F0] border-0">
-          <BlocIQCardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-3xl font-bold text-[#0F5D5D]">
-                  {buildings.filter(b => !b.demo_ready).length}
-                </div>
-                <div className="text-sm text-[#64748B]">In Setup</div>
-              </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-[#F59E0B] to-[#D97706] rounded-xl flex items-center justify-center">
-                <Wrench className="h-6 w-6 text-white" />
-              </div>
-            </div>
-          </BlocIQCardContent>
-        </BlocIQCard>
-      </div>
 
       {/* Controls */}
       <div className="flex items-center justify-between">
