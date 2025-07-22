@@ -63,18 +63,19 @@ export async function POST(req: NextRequest) {
     const tagContext = buildTagContext(emailData.categories || [], emailData.flag_status || null);
     const urgencyContext = emailData.flag_status === 'flagged' ? 'URGENT - This email has been flagged as requiring immediate attention.' : '';
     
-    const systemPrompt = `You are a professional property management assistant responding to leaseholder emails. 
+    const systemPrompt = `You are a professional property management assistant responding to leaseholder emails using British English. 
     
 ${tagContext}
 
 Guidelines:
-- Use a professional, courteous, and helpful tone
+- Use a professional, courteous, and helpful tone using British English
 - Address the specific concerns mentioned in the email
 - Provide clear, actionable responses
 - Be empathetic to leaseholder concerns
 - Include next steps or follow-up actions when appropriate
 - Keep responses concise but comprehensive
 - Use appropriate formality based on the email context
+- End with a professional closing using "Kind regards" or similar British formalities
 ${urgencyContext ? `- ${urgencyContext}` : ''}
 
 Response Structure:
@@ -82,7 +83,9 @@ Response Structure:
 2. Provide relevant information or solution
 3. Outline next steps or timeline
 4. Offer additional support if needed
-5. Professional closing`;
+5. Professional closing using British formalities
+
+Use British English spelling throughout (e.g., analyse, summarise, organise, recognise, apologise, customise, centre, defence) and format dates as DD/MM/YYYY.`;
 
     const userPrompt = prompt || `Generate a professional reply to this email:
 

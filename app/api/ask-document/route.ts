@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     if (!documents || documents.length === 0) {
       return NextResponse.json({
-        answer: "I couldn't find any documents to analyze. Please upload a document first, or check if you have access to the requested building.",
+        answer: "I couldn't find any documents to analyse. Please upload a document first, or check if you have access to the requested building.",
         documents_found: 0
       });
     }
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
 
     // Get the most recent document for analysis
     const latestDocument = documents[0] as any;
-    console.log("📄 Analyzing document:", latestDocument.file_name);
+    console.log("📄 Analysing document:", latestDocument.file_name);
 
     // Step 2: Extract text from the document (if not already stored)
     let documentText = '';
