@@ -138,14 +138,10 @@ export async function GET(req: NextRequest) {
     // Add portfolio overview
     if (buildings && buildings.length > 0) {
       const totalUnits = buildings.reduce((sum, building) => sum + (building.unit_count || 0), 0);
-      const demoReadyCount = buildings.filter(b => b.demo_ready).length;
-      const inSetupCount = buildings.filter(b => !b.demo_ready).length;
       
       prompt += `Portfolio Overview:\n`;
       prompt += `- Total Buildings: ${buildings.length}\n`;
-      prompt += `- Total Units: ${totalUnits}\n`;
-      prompt += `- Demo Ready: ${demoReadyCount}\n`;
-      prompt += `- In Setup: ${inSetupCount}\n\n`;
+      prompt += `- Total Units: ${totalUnits}\n\n`;
     }
 
     // Add events section
