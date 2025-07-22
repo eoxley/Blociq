@@ -33,60 +33,59 @@ export default function ReplyModal({ mode, email, onClose, onEmailSent }: ReplyM
   const [to, setTo] = useState("");
   const [cc, setCc] = useState("");
   const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("Generating draft...");
-  const [loading, setLoading] = useState(true);
+  const [body, setBody] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [generatingAI, setGeneratingAI] = useState(false);
 
   useEffect(() => {
     const toList = [email.from_email];
     const ccList = email.cc_email ? email.cc_email.split(",") : [];
 
-    if (mode === "reply") setTo(toList.join(", "));
+    if (mode === "reply") {
+      setTo(toList.join(", "));
+      setSubject(`RE: ${email.subject}`);
+    }
     if (mode === "replyAll") {
       setTo(toList.join(", "));
       setCc(ccList.join(", "));
+      setSubject(`RE: ${email.subject}`);
     }
     if (mode === "forward") {
       setTo("");
       setSubject(`FWD: ${email.subject}`);
       setBody(`\n\n---------- Forwarded message ----------\nFrom: ${email.from_name || email.from_email}\nSubject: ${email.subject}\n\n${email.body_full || email.body_preview}`);
-      setLoading(false);
-      return;
     }
-
-    const generateDraft = async () => {
-      try {
-        const res = await fetch("/api/generate-email-draft", { // Corrected API endpoint
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            emailId: email.id,
-            subject: email.subject,
-            body: email.body_full || email.body_preview,
-            buildingContext: email.buildings?.name,
-            tags: email.tags || []
-          }),
-        });
-        
-        if (res.ok) {
-          const { draft } = await res.json();
-          setSubject(`RE: ${email.subject}`);
-          setBody(draft);
-          toast.success("AI draft generated successfully");
-        } else {
-          setBody("Failed to generate draft. Please write your reply manually.");
-          toast.error("Failed to generate draft");
-        }
-      } catch (error) {
-        console.error("Error generating draft:", error);
-        setBody("Failed to generate draft. Please write your reply manually.");
-        toast.error("Failed to generate draft");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    generateDraft();
   }, [mode, email]);
+
+  const generateAIResponse = async () => {
+    setGeneratingAI(true);
+    try {
+      const res = await fetch("/api/generate-email-draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          emailId: email.id,
+          subject: email.subject,
+          body: email.body_full || email.body_preview,
+          buildingContext: email.buildings?.name,
+          tags: email.tags || []
+        }),
+      });
+      
+      if (res.ok) {
+        const { draft } = await res.json();
+        setBody(draft);
+        toast.success("AI response generated successfully");
+      } else {
+        toast.error("Failed to generate AI response");
+      }
+    } catch (error) {
+      console.error("Error generating AI response:", error);
+      toast.error("Failed to generate AI response");
+    } finally {
+      setGeneratingAI(false);
+    }
+  };
 
   const handleSend = async () => {
     if (!to.trim() || !subject.trim() || !body.trim()) {
@@ -157,20 +156,18 @@ export default function ReplyModal({ mode, email, onClose, onEmailSent }: ReplyM
             />
           </div>
           
-          {mode === "replyAll" && (
-            <div>
-              <label className="block text-sm font-medium text-[#333333] mb-2">
-                CC
-              </label>
-              <input
-                type="text"
-                value={cc}
-                onChange={(e) => setCc(e.target.value)}
-                placeholder="CC email addresses"
-                className="w-full border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-[#2BBEB4] focus:ring-2 focus:ring-[#2BBEB4]/20 outline-none transition-colors"
-              />
-            </div>
-          )}
+          <div>
+            <label className="block text-sm font-medium text-[#333333] mb-2">
+              CC
+            </label>
+            <input
+              type="text"
+              value={cc}
+              onChange={(e) => setCc(e.target.value)}
+              placeholder="CC email addresses"
+              className="w-full border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-[#2BBEB4] focus:ring-2 focus:ring-[#2BBEB4]/20 outline-none transition-colors"
+            />
+          </div>
           
           <div>
             <label className="block text-sm font-medium text-[#333333] mb-2">
@@ -186,15 +183,38 @@ export default function ReplyModal({ mode, email, onClose, onEmailSent }: ReplyM
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-[#333333] mb-2">
-              Message
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-[#333333]">
+                Message
+              </label>
+              <BlocIQButton
+                onClick={generateAIResponse}
+                disabled={generatingAI}
+                variant="outline"
+                size="sm"
+                className="text-xs"
+              >
+                {generatingAI ? (
+                  <>
+                    <div className="w-3 h-3 border-2 border-[#2BBEB4] border-t-transparent rounded-full animate-spin mr-1"></div>
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    Generate AI Response
+                  </>
+                )}
+              </BlocIQButton>
+            </div>
             <textarea
               rows={12}
               value={body}
               onChange={(e) => setBody(e.target.value)}
               className="w-full border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-[#2BBEB4] focus:ring-2 focus:ring-[#2BBEB4]/20 outline-none transition-colors resize-none"
-              placeholder="Type your message..."
+              placeholder="Type your message or click 'Generate AI Response' for assistance..."
             />
           </div>
         </div>
