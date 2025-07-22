@@ -43,7 +43,8 @@ import {
   Edit3,
   TrendingUp,
   Activity,
-  Zap
+  Zap,
+  Wrench
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatDistanceToNow, format } from 'date-fns'
@@ -80,6 +81,12 @@ export default function BuildingCommandCentre({ buildingData }: BuildingCommandC
   const [isSummaryLoading, setIsSummaryLoading] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [updatedBuildingData, setUpdatedBuildingData] = useState(buildingData)
+  
+  // New state for API data
+  const [majorWorksData, setMajorWorksData] = useState<any>(null)
+  const [isLoadingMajorWorks, setIsLoadingMajorWorks] = useState(false)
+  const [complianceData, setComplianceData] = useState<any>(null)
+  const [isLoadingCompliance, setIsLoadingCompliance] = useState(false)
 
   const { 
     building, 
@@ -174,29 +181,52 @@ export default function BuildingCommandCentre({ buildingData }: BuildingCommandC
 
   // Handle building information update
   const handleBuildingUpdate = async (buildingData: any, setupData: any) => {
+    setUpdatedBuildingData(buildingData)
+    setIsEditModalOpen(false)
+  }
+
+  // Fetch major works data for this building
+  const fetchMajorWorksData = async () => {
+    setIsLoadingMajorWorks(true)
     try {
-      const response = await fetch(`/api/buildings/${building.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ buildingData, setupData })
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to update building')
+      const response = await fetch('/api/major-works/list')
+      if (response.ok) {
+        const data = await response.json()
+        // Filter for this specific building
+        const buildingProjects = data.projects?.find((group: any) => 
+          group.building_id === building.id
+        ) || { projects: [] }
+        setMajorWorksData(buildingProjects)
       }
-
-      setUpdatedBuildingData({
-        ...updatedBuildingData,
-        building: { ...updatedBuildingData.building, ...buildingData },
-        buildingSetup: { ...updatedBuildingData.buildingSetup, ...setupData }
-      })
-
-      return true
     } catch (error) {
-      console.error('Error updating building:', error)
-      throw error
+      console.error('Error fetching major works data:', error)
+    } finally {
+      setIsLoadingMajorWorks(false)
     }
   }
+
+  // Fetch compliance data for this building
+  const fetchComplianceData = async () => {
+    setIsLoadingCompliance(true)
+    try {
+      // Use the existing compliance data from buildingData for now
+      // In the future, this could call a specific compliance API
+      setComplianceData({
+        summary: complianceSummary,
+        assets: complianceAssets
+      })
+    } catch (error) {
+      console.error('Error fetching compliance data:', error)
+    } finally {
+      setIsLoadingCompliance(false)
+    }
+  }
+
+  // Load data on component mount
+  React.useEffect(() => {
+    fetchMajorWorksData()
+    fetchComplianceData()
+  }, [building.id])
 
   return (
     <div className="space-y-8">
@@ -417,43 +447,146 @@ export default function BuildingCommandCentre({ buildingData }: BuildingCommandC
                   <Shield className="h-5 w-5 text-green-600" />
                   Compliance Status
                 </div>
-                <Link href={`/buildings/${building.id}/compliance`}>
-                  <Button variant="outline" size="sm" className="border-green-300 text-green-700 hover:bg-green-50">
-                    <ChevronRight className="h-4 w-4" />
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="border-green-300 text-green-700 hover:bg-green-50"
+                    onClick={fetchComplianceData}
+                    disabled={isLoadingCompliance}
+                  >
+                    <RefreshCw className={`h-3 w-3 ${isLoadingCompliance ? 'animate-spin' : ''}`} />
                   </Button>
-                </Link>
+                  <Link href={`/buildings/${building.id}/compliance`}>
+                    <Button variant="outline" size="sm" className="border-green-300 text-green-700 hover:bg-green-50">
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="text-center p-3 bg-green-100 rounded-lg">
-                  <div className="text-2xl font-bold text-green-700">{complianceSummary.compliant}</div>
-                  <div className="text-xs text-green-600 font-medium">Compliant</div>
+              {isLoadingCompliance ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600 mx-auto"></div>
+                  <p className="text-sm text-gray-500 mt-2">Loading compliance...</p>
                 </div>
-                <div className="text-center p-3 bg-yellow-100 rounded-lg">
-                  <div className="text-2xl font-bold text-yellow-700">{complianceSummary.dueSoon}</div>
-                  <div className="text-xs text-yellow-600 font-medium">Due Soon</div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="text-center p-3 bg-green-100 rounded-lg">
+                      <div className="text-2xl font-bold text-green-700">{complianceSummary.compliant}</div>
+                      <div className="text-xs text-green-600 font-medium">Compliant</div>
+                    </div>
+                    <div className="text-center p-3 bg-yellow-100 rounded-lg">
+                      <div className="text-2xl font-bold text-yellow-700">{complianceSummary.dueSoon}</div>
+                      <div className="text-xs text-yellow-600 font-medium">Due Soon</div>
+                    </div>
+                    <div className="text-center p-3 bg-red-100 rounded-lg">
+                      <div className="text-2xl font-bold text-red-700">{complianceSummary.overdue}</div>
+                      <div className="text-xs text-red-600 font-medium">Overdue</div>
+                    </div>
+                    <div className="text-center p-3 bg-gray-100 rounded-lg">
+                      <div className="text-2xl font-bold text-gray-700">{complianceSummary.total}</div>
+                      <div className="text-xs text-gray-600 font-medium">Total</div>
+                    </div>
+                  </div>
+                  
+                  {complianceAssets.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-gray-700">Categories:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {Array.from(new Set(complianceAssets.map(asset => asset.compliance_assets?.category).filter(Boolean))).map(category => (
+                          <Badge key={category} variant="outline" className="text-xs">
+                            {category}: {complianceAssets.filter(asset => asset.compliance_assets?.category === category).length}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Major Works Status */}
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-gray-50 to-orange-50 border-b">
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-gray-900">
+                  <Wrench className="h-5 w-5 text-orange-600" />
+                  Major Works
                 </div>
-                <div className="text-center p-3 bg-red-100 rounded-lg">
-                  <div className="text-2xl font-bold text-red-700">{complianceSummary.overdue}</div>
-                  <div className="text-xs text-red-600 font-medium">Overdue</div>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="border-orange-300 text-orange-700 hover:bg-orange-50"
+                    onClick={fetchMajorWorksData}
+                    disabled={isLoadingMajorWorks}
+                  >
+                    <RefreshCw className={`h-3 w-3 ${isLoadingMajorWorks ? 'animate-spin' : ''}`} />
+                  </Button>
+                  <Link href={`/buildings/${building.id}/major-works`}>
+                    <Button variant="outline" size="sm" className="border-orange-300 text-orange-700 hover:bg-orange-50">
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
                 </div>
-                <div className="text-center p-3 bg-gray-100 rounded-lg">
-                  <div className="text-2xl font-bold text-gray-700">{complianceSummary.total}</div>
-                  <div className="text-xs text-gray-600 font-medium">Total</div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              {isLoadingMajorWorks ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-600 mx-auto"></div>
+                  <p className="text-sm text-gray-500 mt-2">Loading major works...</p>
                 </div>
-              </div>
-              
-              {complianceAssets.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-gray-700">Categories:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {Array.from(new Set(complianceAssets.map(asset => asset.compliance_assets?.category).filter(Boolean))).map(category => (
-                      <Badge key={category} variant="outline" className="text-xs">
-                        {category}: {complianceAssets.filter(asset => asset.compliance_assets?.category === category).length}
-                      </Badge>
+              ) : majorWorksData?.projects?.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="text-center p-3 bg-orange-100 rounded-lg">
+                      <div className="text-2xl font-bold text-orange-700">
+                        {majorWorksData.projects.filter((p: any) => p.status === 'active').length}
+                      </div>
+                      <div className="text-xs text-orange-600 font-medium">Active</div>
+                    </div>
+                    <div className="text-center p-3 bg-blue-100 rounded-lg">
+                      <div className="text-2xl font-bold text-blue-700">
+                        {majorWorksData.projects.filter((p: any) => p.status === 'completed').length}
+                      </div>
+                      <div className="text-xs text-blue-600 font-medium">Completed</div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-gray-700">Recent Projects:</p>
+                    {majorWorksData.projects.slice(0, 3).map((project: any) => (
+                      <div key={project.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{project.title}</p>
+                          <p className="text-xs text-gray-500">
+                            {project.completion_percentage}% complete
+                          </p>
+                        </div>
+                        <Badge 
+                          variant="outline" 
+                          className={`text-xs ${
+                            project.status === 'active' ? 'border-orange-300 text-orange-700' :
+                            project.status === 'completed' ? 'border-green-300 text-green-700' :
+                            'border-gray-300 text-gray-700'
+                          }`}
+                        >
+                          {project.status}
+                        </Badge>
+                      </div>
                     ))}
                   </div>
+                </div>
+              ) : (
+                <div className="text-center py-6 text-gray-500">
+                  <Wrench className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm">No major works projects</p>
+                  <p className="text-xs text-gray-400">Create your first project to get started</p>
                 </div>
               )}
             </CardContent>
