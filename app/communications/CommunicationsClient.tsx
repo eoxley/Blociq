@@ -110,6 +110,7 @@ export default function CommunicationsClient({ userData }: CommunicationsClientP
   const [activeTab, setActiveTab] = useState<'templates' | 'log'>('templates')
   const [showNewTemplateModal, setShowNewTemplateModal] = useState(false)
   const [showSendModal, setShowSendModal] = useState(false)
+  const [showTemplatePreview, setShowTemplatePreview] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
   const [expandedBuildings, setExpandedBuildings] = useState<Set<string>>(new Set())
   const [submitting, setSubmitting] = useState(false)
@@ -284,6 +285,23 @@ export default function CommunicationsClient({ userData }: CommunicationsClientP
       newExpanded.add(buildingId)
     }
     setExpandedBuildings(newExpanded)
+  }
+
+  const handleTemplatePreview = (template: Template) => {
+    setSelectedTemplate(template)
+    setShowTemplatePreview(true)
+  }
+
+  const handleUseTemplate = (template: Template) => {
+    setSelectedTemplate(template)
+    setShowTemplatePreview(false)
+    setShowSendModal(true)
+    // Pre-fill the send form with template data
+    setSendForm({
+      ...sendForm,
+      subject: template.subject,
+      custom_message: template.body
+    })
   }
 
   const getTypeColor = (type: string) => {

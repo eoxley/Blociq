@@ -12,6 +12,7 @@ interface Building {
   unit_count: number | null
   created_at: string | null
   demo_ready?: boolean | null
+  is_hrb?: boolean | null
   units?: {
     id: number
     unit_number: string

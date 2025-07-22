@@ -249,6 +249,85 @@ ${logsText}
       console.warn('⚠️ Major works context fetch error:', error);
     }
 
+    // 🛡️ Load compliance data
+    let complianceContext = '';
+    
+    try {
+      // Fetch building compliance assets
+      const { data: buildingAssets, error: assetsError } = await supabase
+        .from('building_assets')
+        .select(`
+          *,
+          compliance_items (
+            id, item_type, category, frequency, assigned_to, notes
+          )
+        `)
+        .eq('building_id', buildingIdNum)
+        .eq('applies', true);
+
+      if (!assetsError && buildingAssets && buildingAssets.length > 0) {
+        // Fetch compliance documents
+        const assetIds = buildingAssets.map(asset => asset.compliance_item_id);
+        const { data: complianceDocs, error: docsError } = await supabase
+          .from('compliance_docs')
+          .select('*')
+          .eq('building_id', buildingIdNum)
+          .in('compliance_item_id', assetIds);
+
+        // Calculate compliance status for each asset
+        const assetsWithStatus = buildingAssets.map(asset => {
+          const dueDate = asset.next_due ? new Date(asset.next_due) : null;
+          const today = new Date();
+          let status = 'missing';
+          
+          if (asset.next_due) {
+            if (dueDate! < today) {
+              status = 'overdue';
+            } else if (dueDate! < new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000)) {
+              status = 'due_soon';
+            } else {
+              status = 'compliant';
+            }
+          }
+
+          return {
+            ...asset,
+            status,
+            documents: complianceDocs?.filter(doc => doc.compliance_item_id === asset.compliance_item_id) || []
+          };
+        });
+
+        const assetsText = assetsWithStatus.map(asset => 
+          `- ${asset.compliance_items?.item_type || 'Unknown'}: ${asset.status} (Due: ${asset.next_due || 'Not set'}, Category: ${asset.compliance_items?.category || 'General'})`
+        ).join('\n');
+
+        const docsText = complianceDocs && complianceDocs.length > 0 ? 
+          complianceDocs.map(doc => `- ${doc.doc_type || 'Document'}: ${doc.doc_url || 'No URL'}`).join('\n') : 
+          'No compliance documents uploaded';
+
+        const summary = {
+          total: assetsWithStatus.length,
+          compliant: assetsWithStatus.filter(a => a.status === 'compliant').length,
+          overdue: assetsWithStatus.filter(a => a.status === 'overdue').length,
+          due_soon: assetsWithStatus.filter(a => a.status === 'due_soon').length,
+          missing: assetsWithStatus.filter(a => a.status === 'missing').length
+        };
+
+        complianceContext = `
+=== COMPLIANCE ASSETS ===
+Summary: ${summary.compliant}/${summary.total} Compliant | ${summary.overdue} Overdue | ${summary.due_soon} Due Soon | ${summary.missing} Missing
+
+Assets:
+${assetsText}
+
+=== COMPLIANCE DOCUMENTS ===
+${docsText}
+`;
+      }
+    } catch (error) {
+      console.warn('⚠️ Compliance context fetch error:', error);
+    }
+
     const context = `
 === BUILDING ===
 ${JSON.stringify(building, null, 2)}
@@ -258,6 +337,9 @@ ${docsText}
 
 === MAJOR WORKS ===
 ${majorWorksContext}
+
+=== COMPLIANCE ===
+${complianceContext}
 
 === FOUNDER KNOWLEDGE ===
 ${founderKnowledge}
@@ -269,4 +351,24 @@ ${founderKnowledge}
     console.error('❌ Unexpected error building AI context:', err.message || err);
     return null;
   }
-} 
+}
+
+// Add compliance-specific AI instructions
+export const complianceAIInstructions = `
+You are an AI assistant for BlocIQ, a property management platform. You have access to building information, units, leaseholders, uploaded documents, major works projects, and compliance data. 
+
+For compliance-related queries, you can:
+- Summarise compliance status for any building (e.g., "What's overdue at Ashwood House?")
+- Explain specific compliance requirements (e.g., "What is a Fire Risk Assessment and how often is it required?")
+- Provide guidance on compliance documents and certificates
+- Help with compliance terminology and UK building regulations
+
+Use British English spelling (e.g., "summarise", "organisation") and provide helpful, accurate responses based on the available data. If you don't have enough information, ask for clarification or suggest what additional data might be needed.
+
+For compliance queries, always include:
+- Current status (compliant, overdue, due soon, missing)
+- Due dates where available
+- Category and frequency information
+- Any linked documents
+- Recommendations for next steps
+`; 

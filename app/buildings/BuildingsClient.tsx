@@ -21,7 +21,8 @@ import {
   Phone,
   Eye,
   Home,
-  Clock
+  Clock,
+  ShieldAlert
 } from 'lucide-react'
 import { BlocIQBadge } from '@/components/ui/blociq-badge'
 import { BlocIQButton } from '@/components/ui/blociq-button'
@@ -36,6 +37,7 @@ type Building = {
   unit_count: number | null
   created_at: string | null
   demo_ready?: boolean | null
+  is_hrb?: boolean | null
   units?: {
     id: number
     unit_number: string
@@ -203,7 +205,14 @@ function BuildingCard({ building }: { building: Building }) {
   const actualUnitCount = building.units?.length || 0
   
   return (
-    <BlocIQCard className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-white">
+    <BlocIQCard className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-white relative">
+      {/* HRB Indicator */}
+      {building.is_hrb && (
+        <div className="absolute top-2 right-2 z-10" title="High-Risk Building">
+          <ShieldAlert className="text-red-600 w-5 h-5" />
+        </div>
+      )}
+      
       <BlocIQCardHeader className="pb-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
@@ -283,7 +292,14 @@ function BuildingListItem({ building }: { building: Building }) {
   const actualUnitCount = building.units?.length || 0
   
   return (
-    <BlocIQCard className="group hover:shadow-lg transition-all duration-300 border-0 bg-white">
+    <BlocIQCard className="group hover:shadow-lg transition-all duration-300 border-0 bg-white relative">
+      {/* HRB Indicator */}
+      {building.is_hrb && (
+        <div className="absolute top-2 right-2 z-10" title="High-Risk Building">
+          <ShieldAlert className="text-red-600 w-5 h-5" />
+        </div>
+      )}
+      
       <BlocIQCardContent className="p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
