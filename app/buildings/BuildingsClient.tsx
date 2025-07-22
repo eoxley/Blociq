@@ -57,7 +57,6 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [sortBy, setSortBy] = useState<'name' | 'units' | 'date'>('name')
-  const [showUnitDetails, setShowUnitDetails] = useState<number | null>(null)
 
   // Filter buildings based on search term
   const filteredBuildings = buildings.filter(building => {
@@ -130,8 +129,6 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
         </div>
       </div>
 
-
-
       {/* Controls */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -184,8 +181,6 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
             <BuildingCard
               key={building.id}
               building={building}
-              showUnitDetails={showUnitDetails === building.id}
-              onToggleUnitDetails={() => setShowUnitDetails(showUnitDetails === building.id ? null : building.id)}
             />
           ))}
         </div>
@@ -195,8 +190,6 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
             <BuildingListItem
               key={building.id}
               building={building}
-              showUnitDetails={showUnitDetails === building.id}
-              onToggleUnitDetails={() => setShowUnitDetails(showUnitDetails === building.id ? null : building.id)}
             />
           ))}
         </div>
@@ -205,15 +198,7 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
   )
 }
 
-function BuildingCard({ 
-  building, 
-  showUnitDetails, 
-  onToggleUnitDetails 
-}: { 
-  building: Building
-  showUnitDetails: boolean
-  onToggleUnitDetails: () => void
-}) {
+function BuildingCard({ building }: { building: Building }) {
   // Calculate actual unit count from units array
   const actualUnitCount = building.units?.length || 0
   
@@ -253,60 +238,30 @@ function BuildingCard({
             <span className="font-semibold text-[#333333]">{actualUnitCount}</span>
           </div>
           
-          {building.units && building.units.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-[#333333]">Unit Overview</span>
-                <BlocIQButton
-                  variant="ghost"
-                  size="sm"
-                  onClick={onToggleUnitDetails}
-                  className="text-[#008C8F] hover:text-[#0F5D5D]"
-                >
-                  {showUnitDetails ? 'Hide' : 'Show'} Details
-                </BlocIQButton>
-              </div>
-              
-              {showUnitDetails && (
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {building.units.slice(0, 5).map((unit) => (
-                    <div key={unit.id} className="bg-[#F3F4F6] rounded-lg p-3">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-[#333333]">{unit.unit_number}</span>
-                        {unit.leaseholders && unit.leaseholders.length > 0 && (
-                          <div className="flex items-center gap-1">
-                            <User className="h-3 w-3 text-[#64748B]" />
-                            <span className="text-xs text-[#64748B]">{unit.leaseholders.length}</span>
-                          </div>
-                        )}
-                      </div>
-                      {unit.leaseholders && unit.leaseholders.length > 0 && (
-                        <div className="mt-2 space-y-1">
-                          {unit.leaseholders.slice(0, 2).map((leaseholder) => (
-                            <div key={leaseholder.id} className="text-xs text-[#64748B]">
-                              {leaseholder.name}
-                            </div>
-                          ))}
-                          {unit.leaseholders.length > 2 && (
-                            <div className="text-xs text-[#64748B]">
-                              +{unit.leaseholders.length - 2} more
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  {building.units.length > 5 && (
-                    <div className="text-xs text-[#64748B] text-center py-2">
-                      +{building.units.length - 5} more units
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+          {/* Action Buttons */}
+          <div className="grid grid-cols-2 gap-3 pt-4 border-t border-[#E2E8F0]">
+            <Link href={`/compliance/${building.id}`}>
+              <BlocIQButton 
+                variant="outline" 
+                className="w-full border-[#E2E8F0] text-[#64748B] hover:bg-[#F0FDFA] hover:text-[#008C8F] transition-all duration-300"
+              >
+                <Shield className="h-4 w-4 mr-2" />
+                Compliance
+              </BlocIQButton>
+            </Link>
+            
+            <Link href={`/major-works?building=${building.id}`}>
+              <BlocIQButton 
+                variant="outline" 
+                className="w-full border-[#E2E8F0] text-[#64748B] hover:bg-[#F0FDFA] hover:text-[#008C8F] transition-all duration-300"
+              >
+                <Wrench className="h-4 w-4 mr-2" />
+                Major Works
+              </BlocIQButton>
+            </Link>
+          </div>
           
-          <div className="pt-4 border-t border-[#E2E8F0]">
+          <div className="pt-2">
             <Link href={`/buildings/${building.id}`}>
               <BlocIQButton className="w-full bg-gradient-to-r from-[#008C8F] to-[#007BDB] text-white hover:from-[#0F5D5D] hover:to-[#0066CC] transition-all duration-300">
                 <Eye className="h-4 w-4 mr-2" />
@@ -321,15 +276,7 @@ function BuildingCard({
   )
 }
 
-function BuildingListItem({ 
-  building, 
-  showUnitDetails, 
-  onToggleUnitDetails 
-}: { 
-  building: Building
-  showUnitDetails: boolean
-  onToggleUnitDetails: () => void
-}) {
+function BuildingListItem({ building }: { building: Building }) {
   // Calculate actual unit count from units array
   const actualUnitCount = building.units?.length || 0
   
@@ -368,67 +315,40 @@ function BuildingListItem({
             </div>
             
             <div className="flex items-center gap-2">
-              <Link href={`/buildings/${building.id}`}>
+              <Link href={`/compliance/${building.id}`}>
                 <BlocIQButton
                   variant="outline"
                   size="sm"
-                  className="border-[#E2E8F0] text-[#64748B] hover:bg-[#F0FDFA]"
+                  className="border-[#E2E8F0] text-[#64748B] hover:bg-[#F0FDFA] hover:text-[#008C8F]"
+                >
+                  <Shield className="h-4 w-4 mr-1" />
+                  Compliance
+                </BlocIQButton>
+              </Link>
+              
+              <Link href={`/major-works?building=${building.id}`}>
+                <BlocIQButton
+                  variant="outline"
+                  size="sm"
+                  className="border-[#E2E8F0] text-[#64748B] hover:bg-[#F0FDFA] hover:text-[#008C8F]"
+                >
+                  <Wrench className="h-4 w-4 mr-1" />
+                  Major Works
+                </BlocIQButton>
+              </Link>
+              
+              <Link href={`/buildings/${building.id}`}>
+                <BlocIQButton
+                  size="sm"
+                  className="bg-gradient-to-r from-[#008C8F] to-[#007BDB] text-white"
                 >
                   <Eye className="h-4 w-4 mr-1" />
                   View
                 </BlocIQButton>
               </Link>
-              <BlocIQButton
-                size="sm"
-                className="bg-gradient-to-r from-[#008C8F] to-[#007BDB] text-white"
-              >
-                <Users className="h-4 w-4 mr-1" />
-                Manage
-              </BlocIQButton>
-              <BlocIQButton
-                variant="ghost"
-                size="sm"
-                onClick={onToggleUnitDetails}
-                className="text-[#008C8F] hover:text-[#0F5D5D]"
-              >
-                {showUnitDetails ? 'Hide' : 'Show'} Details
-              </BlocIQButton>
             </div>
           </div>
         </div>
-        
-        {showUnitDetails && building.units && building.units.length > 0 && (
-          <div className="mt-6 pt-6 border-t border-[#E2E8F0]">
-            <h4 className="font-semibold text-[#333333] mb-4">Units & Leaseholders</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {building.units.slice(0, 6).map((unit) => (
-                <div key={unit.id} className="bg-[#F3F4F6] rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-[#333333]">{unit.unit_number}</span>
-                    {unit.leaseholders && unit.leaseholders.length > 0 && (
-                      <BlocIQBadge variant="primary" size="sm">
-                        {unit.leaseholders.length} leaseholder{unit.leaseholders.length !== 1 ? 's' : ''}
-                      </BlocIQBadge>
-                    )}
-                  </div>
-                  {unit.leaseholders && unit.leaseholders.length > 0 && (
-                    <div className="space-y-2">
-                      {unit.leaseholders.map((leaseholder) => (
-                        <div key={leaseholder.id} className="text-sm">
-                          <div className="font-medium text-[#333333]">{leaseholder.name}</div>
-                          <div className="text-[#64748B]">{leaseholder.email}</div>
-                          {leaseholder.phone && (
-                            <div className="text-[#64748B]">{leaseholder.phone}</div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </BlocIQCardContent>
     </BlocIQCard>
   )
