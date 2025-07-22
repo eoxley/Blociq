@@ -149,6 +149,7 @@ CREATE TABLE IF NOT EXISTS incoming_emails (
   thread_id TEXT,
   unread BOOLEAN DEFAULT true,
   handled BOOLEAN DEFAULT false,
+  filed BOOLEAN DEFAULT false,
   flag_status TEXT DEFAULT 'notFlagged',
   categories TEXT[] DEFAULT '{}',
   pinned BOOLEAN DEFAULT false,

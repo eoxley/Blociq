@@ -1,8 +1,10 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Mail, Clock, Building, Eye, EyeOff } from 'lucide-react'
+import { Mail, Clock, Building, Eye, EyeOff, FolderOpen, Check } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { BlocIQButton } from '@/components/ui/blociq-button'
+import { toast } from 'sonner'
 import EmailContextMenu from './EmailContextMenu'
 
 interface Email {
@@ -16,6 +18,7 @@ interface Email {
   building_id: string | null
   unread: boolean | null
   handled: boolean | null
+  filed: boolean | null
   tags: string[] | null
   outlook_id: string | null
   buildings?: { name: string } | null
@@ -37,6 +40,44 @@ export default function EmailListItem({ email, isSelected, onSelect, dimmed, onT
     isVisible: false,
     position: { x: 0, y: 0 }
   })
+  const [filing, setFiling] = useState(false)
+
+  const handleFileEmail = async () => {
+    if (filing) return;
+    
+    setFiling(true);
+    try {
+      const response = await fetch('/api/email/file', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email_id: email.id,
+          outlook_id: email.outlook_id
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to file email');
+      }
+
+      toast.success('Email filed successfully');
+      
+      // Trigger a refresh of the email list
+      if (onTagsUpdated) {
+        onTagsUpdated();
+      }
+    } catch (error) {
+      console.error('Error filing email:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to file email');
+    } finally {
+      setFiling(false);
+    }
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return ''
     
@@ -163,12 +204,35 @@ export default function EmailListItem({ email, isSelected, onSelect, dimmed, onT
                 Handled
               </Badge>
             )}
+
+            {email.filed && (
+              <Badge variant="outline" className="text-xs bg-blue-100 text-blue-700 px-1 py-0 h-5">
+                <Check className="h-2 w-2 mr-1" />
+                Filed
+              </Badge>
+            )}
             
             {email.tags && email.tags.length > 0 && (
               <Badge variant="outline" className="text-xs px-1 py-0 h-5">
                 {email.tags[0]}
                 {email.tags.length > 1 && ` +${email.tags.length - 1}`}
               </Badge>
+            )}
+
+            {!email.filed && (
+              <BlocIQButton
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleFileEmail();
+                }}
+                disabled={filing}
+                className="text-xs px-2 py-0 h-5 border-blue-200 text-blue-700 hover:bg-blue-50"
+              >
+                <FolderOpen className="h-2 w-2 mr-1" />
+                {filing ? 'Filing...' : 'File'}
+              </BlocIQButton>
             )}
           </div>
         </div>
@@ -183,6 +247,8 @@ export default function EmailListItem({ email, isSelected, onSelect, dimmed, onT
         position={contextMenu.position}
         onClose={closeContextMenu}
         onTagsUpdated={onTagsUpdated}
+        emailFiled={email.filed || false}
+        outlookId={email.outlook_id}
       />
     </>
   )
