@@ -30,12 +30,12 @@ import { Input } from '@/components/ui/input'
 
 // Define the Building type based on the database schema
 type Building = {
-  id: number
+  id: string
   name: string
   address: string | null
   unit_count: number | null
   created_at: string | null
-  demo_ready?: boolean
+  demo_ready?: boolean | null
   units?: {
     id: number
     unit_number: string
