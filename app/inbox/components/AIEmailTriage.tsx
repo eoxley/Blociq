@@ -211,7 +211,7 @@ export default function AIEmailTriage({ emails, onTriageComplete, onEmailAction 
             </div>
             <div>
               <h3 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                AI Email Triage
+                ⚕️ AI Email Triage
               </h3>
               <p className="text-sm text-gray-600">Smart email analysis & prioritisation</p>
             </div>
@@ -265,7 +265,7 @@ export default function AIEmailTriage({ emails, onTriageComplete, onEmailAction 
               <Zap className="h-4 w-4 mr-2 relative z-10 animate-pulse" />
             )}
             <span className="relative z-10">
-              {loading ? 'Triage All...' : '🚀 Triage All'}
+              {loading ? 'Triage All...' : '⚕️ Triage All'}
             </span>
           </BlocIQButton>
         </div>
@@ -345,7 +345,7 @@ export default function AIEmailTriage({ emails, onTriageComplete, onEmailAction 
                       >
                         <div className="absolute inset-0 bg-gradient-to-r from-purple-300/20 to-blue-300/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
                         <Brain className="h-4 w-4 relative z-10 animate-pulse" />
-                        <span className="relative z-10 ml-1">🧠 Triage</span>
+                        <span className="relative z-10 ml-1">⚕️ Triage</span>
                       </BlocIQButton>
                     )}
                     

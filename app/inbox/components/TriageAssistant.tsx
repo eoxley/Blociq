@@ -370,7 +370,7 @@ export default function TriageAssistant({
             </Button>
             <div>
               <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                🧠 AI Inbox Triage Assistant
+                ⚕️ AI Inbox Triage Assistant
               </h2>
               <p className="text-sm text-gray-600 font-medium">
                 Quick assessment of entire inbox with auto-generated drafts
@@ -450,7 +450,7 @@ export default function TriageAssistant({
                 ) : (
                   <>
                     <Sparkles className="h-5 w-5 mr-2" />
-                    Start AI Triage
+                    ⚕️ Start AI Triage
                   </>
                 )}
               </Button>
@@ -476,7 +476,7 @@ export default function TriageAssistant({
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-red-600 font-medium">Critical</p>
+                        <p className="text-sm text-red-600 font-medium">🚨 Critical</p>
                         <p className="text-2xl font-bold text-red-700">{summary?.critical || 0}</p>
                       </div>
                       <AlertTriangle className="h-8 w-8 text-red-500" />
@@ -488,7 +488,7 @@ export default function TriageAssistant({
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-orange-600 font-medium">High Priority</p>
+                        <p className="text-sm text-orange-600 font-medium">🏥 High Priority</p>
                         <p className="text-2xl font-bold text-orange-700">{summary?.high || 0}</p>
                       </div>
                       <Flag className="h-8 w-8 text-orange-500" />
@@ -500,7 +500,7 @@ export default function TriageAssistant({
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-blue-600 font-medium">Drafts Generated</p>
+                        <p className="text-sm text-blue-600 font-medium">💉 Drafts Generated</p>
                         <p className="text-2xl font-bold text-blue-700">{summary?.totalDraftsGenerated || 0}</p>
                       </div>
                       <PenTool className="h-8 w-8 text-blue-500" />
@@ -512,7 +512,7 @@ export default function TriageAssistant({
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-green-600 font-medium">No Action Needed</p>
+                        <p className="text-sm text-green-600 font-medium">🩺 No Action Needed</p>
                         <p className="text-2xl font-bold text-green-700">{summary?.noAction || 0}</p>
                       </div>
                       <CheckCircle2 className="h-8 w-8 text-green-500" />
