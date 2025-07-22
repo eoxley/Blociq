@@ -53,31 +53,63 @@ export async function POST(req: NextRequest) {
     console.log("✅ Template found:", template.name);
 
     // Fetch building details
-    const { data: building, error: buildingError } = await supabase
-      .from("buildings")
-      .select("id, name, address")
-      .eq("id", parseInt(building_id))
-      .single();
+    console.log("🔍 Fetching building with ID:", building_id, "Type:", typeof building_id);
+    
+    // Handle building ID - could be numeric or UUID
+    const buildingIdNum = parseInt(building_id);
+    const isNumericBuildingId = !isNaN(buildingIdNum);
+    
+    let buildingQuery;
+    if (isNumericBuildingId) {
+      buildingQuery = supabase
+        .from("buildings")
+        .select("id, name, address")
+        .eq("id", buildingIdNum);
+    } else {
+      // Handle UUID or string building IDs
+      buildingQuery = supabase
+        .from("buildings")
+        .select("id, name, address")
+        .eq("id", building_id);
+    }
+    
+    const { data: building, error: buildingError } = await buildingQuery.single();
 
     if (buildingError || !building) {
       console.error("❌ Building not found:", buildingError);
+      console.error("❌ Building ID used:", building_id);
+      console.error("❌ Is numeric:", isNumericBuildingId);
       return NextResponse.json({ error: "Building not found" }, { status: 404 });
     }
 
-    console.log("✅ Building found:", building.name);
+    console.log("✅ Building found:", building.name, "Building ID:", building.id);
 
     // Fetch recipients based on selection
     let recipients: any[] = [];
     
     if (recipient_selection === 'all_leaseholders') {
-      // Get leaseholders for the selected building
+      // Get leaseholders for the selected building through units relationship
+      console.log("🔍 Fetching leaseholders for building ID:", building.id);
+      
+      // Query leaseholders through the units table
       const { data: leaseholders, error: leaseError } = await supabase
         .from("leaseholders")
-        .select("id, name, email, phone, unit_id")
-        .eq("building_id", parseInt(building_id));
+        .select(`
+          id, 
+          name, 
+          email, 
+          phone, 
+          unit_id,
+          units!inner (
+            id,
+            building_id
+          )
+        `)
+        .eq("units.building_id", building.id);
 
       if (leaseError) {
         console.error("❌ Error fetching leaseholders:", leaseError);
+        console.error("❌ Building ID used for leaseholders query:", building.id);
         return NextResponse.json({ 
           error: "Failed to fetch leaseholders", 
           details: leaseError 
@@ -85,16 +117,31 @@ export async function POST(req: NextRequest) {
       }
 
       recipients = leaseholders || [];
+      console.log(`📧 Found ${recipients.length} leaseholders`);
     } else if (recipient_selection === 'all_residents') {
-      // Fetch all residents (leaseholders + tenants)
+      // Fetch all residents (leaseholders + tenants) through units relationship
+      console.log("🔍 Fetching residents for building ID:", building.id);
+      
       const { data: residents, error: residentsError } = await supabase
         .from("leaseholders")
-        .select("id, name, email, phone, unit_id")
-        .eq("building_id", parseInt(building_id));
+        .select(`
+          id, 
+          name, 
+          email, 
+          phone, 
+          unit_id,
+          units!inner (
+            id,
+            building_id
+          )
+        `)
+        .eq("units.building_id", building.id);
 
       if (!residentsError && residents) {
         recipients = residents;
       }
+      
+      console.log(`📧 Found ${recipients.length} residents`);
     }
 
     if (recipients.length === 0) {
