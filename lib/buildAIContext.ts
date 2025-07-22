@@ -63,6 +63,61 @@ export async function buildAIContext(buildingId: string) {
       console.warn('⚠️ Documents table may not exist:', error);
     }
 
+    // 🏗️ Get major works projects
+    let majorWorksText = 'No major works projects available.';
+    
+    try {
+      const { data: majorWorks, error: mwError } = await supabase
+        .from('major_works_projects')
+        .select(`
+          title,
+          description,
+          status,
+          consultation_stage,
+          section20_notice_issued,
+          estimated_start_date,
+          estimated_completion_date,
+          estimated_cost,
+          actual_cost,
+          completion_percentage,
+          priority,
+          project_type,
+          contractor_name,
+          contractor_email,
+          contractor_phone,
+          is_active,
+          created_at,
+          updated_at
+        `)
+        .eq('building_id', buildingIdNum)
+        .order('created_at', { ascending: false });
+
+      if (mwError) {
+        console.warn('⚠️ No major works found or error fetching:', mwError.message);
+      } else if (majorWorks && majorWorks.length > 0) {
+        majorWorksText = majorWorks.map(project => (
+          `--- Major Works Project: ${project.title} ---
+Status: ${project.status}
+Consultation Stage: ${project.consultation_stage || 'N/A'}
+Priority: ${project.priority}
+Project Type: ${project.project_type || 'N/A'}
+Contractor: ${project.contractor_name || 'N/A'}
+Description: ${project.description || 'No description'}
+Estimated Cost: £${project.estimated_cost || 0}
+Actual Cost: £${project.actual_cost || 0}
+Completion: ${project.completion_percentage}%
+S20 Notice Issued: ${project.section20_notice_issued || 'Not issued'}
+Estimated Start: ${project.estimated_start_date || 'TBD'}
+Estimated Completion: ${project.estimated_completion_date || 'TBD'}
+Is Active: ${project.is_active ? 'Yes' : 'No'}
+Created: ${project.created_at}
+Updated: ${project.updated_at}`
+        )).join('\n\n') || 'No major works projects available.';
+      }
+    } catch (error) {
+      console.warn('⚠️ Major works table may not exist:', error);
+    }
+
     // 🧠 Load founder knowledge
     let founderKnowledge = '';
     
@@ -84,11 +139,34 @@ export async function buildAIContext(buildingId: string) {
     let majorWorksContext = '';
     
     try {
-      // Fetch major works projects for this building
+      // Fetch major works projects for this building using new schema
       const { data: projects, error: projectsError } = await supabase
-        .from('major_works')
-        .select('*')
-        .eq('building_id', buildingIdNum);
+        .from('major_works_projects')
+        .select(`
+          id,
+          title,
+          description,
+          status,
+          consultation_stage,
+          section20_notice_issued,
+          estimated_start_date,
+          actual_start_date,
+          estimated_completion_date,
+          actual_completion_date,
+          estimated_cost,
+          actual_cost,
+          completion_percentage,
+          priority,
+          project_type,
+          contractor_name,
+          contractor_email,
+          contractor_phone,
+          is_active,
+          created_at,
+          updated_at
+        `)
+        .eq('building_id', buildingIdNum)
+        .order('created_at', { ascending: false });
 
       if (projectsError) {
         console.warn('⚠️ Major works projects fetch error:', projectsError.message);
@@ -104,25 +182,57 @@ export async function buildAIContext(buildingId: string) {
           console.warn('⚠️ Major works documents fetch error:', docsError.message);
         }
 
+        // Fetch logs for these projects
+        const { data: logs, error: logsError } = await supabase
+          .from('major_works_logs')
+          .select('*')
+          .in('project_id', projectIds)
+          .order('timestamp', { ascending: false });
+
+        if (logsError) {
+          console.warn('⚠️ Major works logs fetch error:', logsError.message);
+        }
+
         const projectsText = projects.map(project => `
 Project: ${project.title}
 Status: ${project.status}
+Consultation Stage: ${project.consultation_stage || 'N/A'}
+Priority: ${project.priority}
+Project Type: ${project.project_type || 'N/A'}
+Contractor: ${project.contractor_name || 'N/A'}
 Description: ${project.description || 'No description'}
-Start Date: ${project.start_date ? new Date(project.start_date).toLocaleDateString() : 'Not set'}
-Consultation Stage: ${project.consultation_stage || 'Not set'}
-Funds Confirmed: ${project.funds_confirmed ? new Date(project.funds_confirmed).toLocaleDateString() : 'Not confirmed'}
-Contractor Appointed: ${project.contractor_appointed ? new Date(project.contractor_appointed).toLocaleDateString() : 'Not appointed'}
-Notice of Reason: ${project.notice_of_reason_issued ? new Date(project.notice_of_reason_issued).toLocaleDateString() : 'Not issued'}
+Estimated Cost: £${project.estimated_cost || 0}
+Actual Cost: £${project.actual_cost || 0}
+Completion: ${project.completion_percentage}%
+S20 Notice Issued: ${project.section20_notice_issued || 'Not issued'}
+Estimated Start: ${project.estimated_start_date || 'TBD'}
+Actual Start: ${project.actual_start_date || 'Not started'}
+Estimated Completion: ${project.estimated_completion_date || 'TBD'}
+Actual Completion: ${project.actual_completion_date || 'Not completed'}
+Is Active: ${project.is_active ? 'Yes' : 'No'}
+Created: ${project.created_at}
+Updated: ${project.updated_at}
 `).join('\n');
 
         const documentsText = documents && documents.length > 0 
           ? documents.map(doc => `
-Document: ${doc.file_name}
+Document: ${doc.title}
 Type: ${doc.document_type}
 Description: ${doc.description || 'No description'}
+File Size: ${doc.file_size} bytes
 Uploaded: ${new Date(doc.uploaded_at).toLocaleDateString()}
+Public: ${doc.is_public ? 'Yes' : 'No'}
 `).join('\n')
           : 'No documents uploaded';
+
+        const logsText = logs && logs.length > 0
+          ? logs.map(log => `
+Log Entry: ${log.action}
+Description: ${log.description}
+Timestamp: ${new Date(log.timestamp).toLocaleDateString()}
+Metadata: ${log.metadata ? JSON.stringify(log.metadata) : 'None'}
+`).join('\n')
+          : 'No activity logs';
 
         majorWorksContext = `
 === MAJOR WORKS PROJECTS ===
@@ -130,6 +240,9 @@ ${projectsText}
 
 === MAJOR WORKS DOCUMENTS ===
 ${documentsText}
+
+=== MAJOR WORKS ACTIVITY LOGS ===
+${logsText}
 `;
       }
     } catch (error) {

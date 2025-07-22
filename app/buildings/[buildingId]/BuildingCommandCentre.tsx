@@ -189,14 +189,12 @@ export default function BuildingCommandCentre({ buildingData }: BuildingCommandC
   const fetchMajorWorksData = async () => {
     setIsLoadingMajorWorks(true)
     try {
-      const response = await fetch('/api/major-works/list')
+      const response = await fetch(`/api/major-works/building/${building.id}?include_documents=true&include_logs=true`)
       if (response.ok) {
         const data = await response.json()
-        // Filter for this specific building
-        const buildingProjects = data.projects?.find((group: any) => 
-          group.building_id === building.id
-        ) || { projects: [] }
-        setMajorWorksData(buildingProjects)
+        setMajorWorksData(data)
+      } else {
+        console.error('Failed to fetch major works data:', response.status)
       }
     } catch (error) {
       console.error('Error fetching major works data:', error)
@@ -543,41 +541,86 @@ export default function BuildingCommandCentre({ buildingData }: BuildingCommandC
                 </div>
               ) : majorWorksData?.projects?.length > 0 ? (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 mb-4">
+                  {/* Summary Statistics */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                     <div className="text-center p-3 bg-orange-100 rounded-lg">
-                      <div className="text-2xl font-bold text-orange-700">
-                        {majorWorksData.projects.filter((p: any) => p.status === 'active').length}
+                      <div className="text-xl font-bold text-orange-700">
+                        {majorWorksData.summary?.active_projects || 0}
                       </div>
                       <div className="text-xs text-orange-600 font-medium">Active</div>
                     </div>
                     <div className="text-center p-3 bg-blue-100 rounded-lg">
-                      <div className="text-2xl font-bold text-blue-700">
-                        {majorWorksData.projects.filter((p: any) => p.status === 'completed').length}
+                      <div className="text-xl font-bold text-blue-700">
+                        {majorWorksData.summary?.planned_projects || 0}
                       </div>
-                      <div className="text-xs text-blue-600 font-medium">Completed</div>
+                      <div className="text-xs text-blue-600 font-medium">Planned</div>
+                    </div>
+                    <div className="text-center p-3 bg-green-100 rounded-lg">
+                      <div className="text-xl font-bold text-green-700">
+                        {majorWorksData.summary?.completed_projects || 0}
+                      </div>
+                      <div className="text-xs text-green-600 font-medium">Completed</div>
+                    </div>
+                    <div className="text-center p-3 bg-purple-100 rounded-lg">
+                      <div className="text-xl font-bold text-purple-700">
+                        £{(majorWorksData.summary?.total_estimated_cost / 1000).toFixed(0)}k
+                      </div>
+                      <div className="text-xs text-purple-600 font-medium">Budget</div>
                     </div>
                   </div>
                   
+                  {/* Recent Projects */}
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-gray-700">Recent Projects:</p>
                     {majorWorksData.projects.slice(0, 3).map((project: any) => (
-                      <div key={project.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{project.title}</p>
-                          <p className="text-xs text-gray-500">
-                            {project.completion_percentage}% complete
-                          </p>
+                      <div key={project.id} className="p-3 bg-gray-50 rounded-lg border-l-4 border-l-orange-500">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{project.title}</p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {project.consultation_stage || project.status}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge 
+                              variant="outline" 
+                              className={`text-xs ${
+                                project.status === 'ongoing' ? 'border-orange-300 text-orange-700' :
+                                project.status === 'completed' ? 'border-green-300 text-green-700' :
+                                project.status === 'planned' ? 'border-blue-300 text-blue-700' :
+                                'border-gray-300 text-gray-700'
+                              }`}
+                            >
+                              {project.status}
+                            </Badge>
+                            {project.priority === 'high' && (
+                              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                            )}
+                          </div>
                         </div>
-                        <Badge 
-                          variant="outline" 
-                          className={`text-xs ${
-                            project.status === 'active' ? 'border-orange-300 text-orange-700' :
-                            project.status === 'completed' ? 'border-green-300 text-green-700' :
-                            'border-gray-300 text-gray-700'
-                          }`}
-                        >
-                          {project.status}
-                        </Badge>
+                        
+                        {/* Progress Bar */}
+                        <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                          <div 
+                            className="bg-orange-500 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${project.completion_percentage}%` }}
+                          ></div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between text-xs text-gray-500">
+                          <span>{project.completion_percentage}% complete</span>
+                          {project.estimated_completion_date && (
+                            <span>Due: {new Date(project.estimated_completion_date).toLocaleDateString()}</span>
+                          )}
+                        </div>
+                        
+                        {/* Latest Activity */}
+                        {project.latest_activity && (
+                          <div className="mt-2 p-2 bg-white rounded border text-xs">
+                            <p className="font-medium text-gray-700">{project.latest_activity.action}</p>
+                            <p className="text-gray-500 truncate">{project.latest_activity.description}</p>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
