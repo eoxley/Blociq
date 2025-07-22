@@ -105,13 +105,13 @@ export default function EmailDetailPanel({ email, onEmailDeleted, onEmailSent }:
       if (response.ok) {
         const { summary: aiSummary } = await response.json();
         setSummary(aiSummary);
-        toast.success("Email summarized successfully");
+        toast.success("Email summarised successfully");
       } else {
-        throw new Error("Failed to summarize email");
+        throw new Error("Failed to summarise email");
       }
     } catch (error) {
-      console.error("Error summarizing email:", error);
-      toast.error("Failed to summarize email");
+      console.error("Error summarising email:", error);
+      toast.error("Failed to summarise email");
     } finally {
       setIsSummarizing(false);
     }

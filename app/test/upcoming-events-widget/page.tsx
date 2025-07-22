@@ -34,7 +34,7 @@ export default function UpcomingEventsWidgetTestPage() {
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                <span>Shows organizer, location, and online meeting info</span>
+                <span>Shows organiser, location, and online meeting info</span>
               </div>
             </div>
           </div>

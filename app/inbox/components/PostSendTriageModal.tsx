@@ -68,7 +68,7 @@ export default function PostSendTriageModal({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          prompt: `Analyze this email conversation and suggest the best post-reply action:
+          prompt: `Analyse this email conversation and suggest the best post-reply action:
           
 Original Email:
 Subject: ${originalEmail.subject}

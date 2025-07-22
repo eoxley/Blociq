@@ -237,11 +237,11 @@ export default function NewInboxClient({
         setAvailableTags(allTags)
         
         // Temporarily disable AI analysis to prevent errors
-        // const unanalyzedEmails = processedEmails.filter(email => !email.tags || email.tags.length === 0)
-        // console.log('🤖 NewInboxClient - Found unanalyzed emails:', unanalyzedEmails.length)
+        // const unanalysedEmails = processedEmails.filter(email => !email.tags || email.tags.length === 0)
+        // console.log('🤖 NewInboxClient - Found unanalysed emails:', unanalysedEmails.length)
         
-        // for (const email of unanalyzedEmails.slice(0, 5)) { // Limit to 5 at a time
-        //   await analyzeEmailWithAI(email)
+        // for (const email of unanalysedEmails.slice(0, 5)) { // Limit to 5 at a time
+        //   await analyseEmailWithAI(email)
         // }
       } else {
         console.log('📧 NewInboxClient - No emails found')
@@ -442,9 +442,9 @@ export default function NewInboxClient({
     }
   }
 
-  const analyzeEmailWithAI = async (email: Email) => {
+  const analyseEmailWithAI = async (email: Email) => {
     try {
-      const response = await fetch('/api/analyze-email', {
+      const response = await fetch('/api/analyse-email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -469,13 +469,13 @@ export default function NewInboxClient({
                 ...e, 
                 tags: data.analysis.tags,
                 building_id: data.analysis.buildingMatch.buildingId || e.building_id,
-                analyzed_at: new Date().toISOString()
+                analysed_at: new Date().toISOString()
               }
             : e
         ))
       }
     } catch (error) {
-      console.error('Error analyzing email with AI:', error)
+      console.error('Error analysing email with AI:', error)
     }
   }
 

@@ -119,7 +119,7 @@ export default function BuildingSummaryPanel({
           <Settings className="h-12 w-12 text-gray-400 mx-auto mb-3" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">Setup Required</h3>
           <p className="text-gray-600 mb-4">
-            Complete the building setup to customize communications and compliance tracking.
+            Complete the building setup to customise communications and compliance tracking.
           </p>
           <Link
             href={`/buildings/${buildingId}/setup`}

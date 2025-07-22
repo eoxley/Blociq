@@ -158,11 +158,11 @@ export default function DocumentAwareAI({
 
       setShowDocumentUpload(false);
       setUploadedFile(null);
-      toast.success('Document uploaded and analyzed successfully');
+              toast.success('Document uploaded and analysed successfully');
 
     } catch (error: any) {
       console.error("❌ Upload error:", error);
-      toast.error(error.message || 'Failed to upload and analyze document');
+              toast.error(error.message || 'Failed to upload and analyse document');
     } finally {
       setUploadLoading(false);
     }
@@ -410,7 +410,7 @@ export default function DocumentAwareAI({
                 ) : (
                   <>
                     <Brain className="h-4 w-4" />
-                    Upload & Analyze
+                    Upload & Analyse
                   </>
                 )}
               </Button>

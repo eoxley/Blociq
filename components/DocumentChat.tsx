@@ -248,7 +248,7 @@ export default function DocumentChat({ buildingId, onDocumentSelect }: DocumentC
               Ask me anything about your uploaded documents!
             </p>
             <p className="text-xs mt-2">
-              Try: "Summarize this document" or "What are the key actions?"
+              Try: "Summarise this document" or "What are the key actions?"
             </p>
           </div>
         ) : (
@@ -302,7 +302,7 @@ export default function DocumentChat({ buildingId, onDocumentSelect }: DocumentC
             <div className="bg-gray-100 rounded-lg px-4 py-2">
               <div className="flex items-center gap-2">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
-                <span className="text-sm text-gray-600">Analyzing document...</span>
+                <span className="text-sm text-gray-600">Analysing document...</span>
               </div>
             </div>
           </div>
@@ -339,7 +339,7 @@ export default function DocumentChat({ buildingId, onDocumentSelect }: DocumentC
             onClick={() => setInputValue("Summarize this document")}
             disabled={isLoading}
           >
-            Summarize
+            Summarise
           </Button>
           <Button
             variant="outline"

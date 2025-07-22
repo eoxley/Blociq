@@ -111,7 +111,7 @@ export default function DocumentUploader({
 
     } catch (error: any) {
       console.error("❌ Upload error:", error);
-      toast.error(error.message || 'Failed to upload and analyze document');
+              toast.error(error.message || 'Failed to upload and analyse document');
     } finally {
       setLoading(false);
     }
@@ -249,7 +249,7 @@ export default function DocumentUploader({
             disabled={!file || loading}
             className="w-full"
           >
-            {loading ? 'Analyzing...' : 'Upload & Analyze'}
+            {loading ? 'Analysing...' : 'Upload & Analyse'}
           </Button>
           
           <p className="text-xs italic text-gray-500 text-center mt-2">

@@ -161,7 +161,7 @@ export default function ComplianceDocumentsList({
           <h3 className="text-lg font-medium text-gray-900 mb-4">Upload New Document</h3>
           <div className="bg-gray-50 p-4 rounded-lg">
             <p className="text-sm text-gray-600 mb-4">
-              Upload a compliance document and our AI will automatically analyze it to extract key information.
+              Upload a compliance document and our AI will automatically analyse it to extract key information.
             </p>
             <SmartUploader
               table="compliance_docs"

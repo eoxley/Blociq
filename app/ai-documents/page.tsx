@@ -92,7 +92,7 @@ export default function AIDocumentsPage() {
                   <div className="text-3xl font-bold text-blue-700 group-hover:scale-110 transition-transform duration-300">
                     18
                   </div>
-                  <div className="text-sm text-blue-600 font-medium">Analyzed</div>
+                  <div className="text-sm text-blue-600 font-medium">Analysed</div>
                 </div>
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
                   <CheckCircle className="h-6 w-6 text-white" />
@@ -138,7 +138,7 @@ export default function AIDocumentsPage() {
           <TabsList className="grid w-full grid-cols-3 bg-gray-100 p-1 rounded-xl">
             <TabsTrigger value="upload" className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm rounded-lg">
               <Upload className="h-4 w-4 mr-2" />
-              Upload & Analyze
+                              Upload & Analyse
             </TabsTrigger>
             <TabsTrigger value="chat" className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm rounded-lg">
               <MessageSquare className="h-4 w-4 mr-2" />
@@ -161,7 +161,7 @@ export default function AIDocumentsPage() {
                         <Upload className="h-6 w-6 text-white" />
                       </div>
                       <div>
-                        <CardTitle className="text-2xl text-gray-900">Upload & Analyze Documents</CardTitle>
+                        <CardTitle className="text-2xl text-gray-900">Upload & Analyse Documents</CardTitle>
                         <p className="text-gray-600">AI will extract key information and classify your documents</p>
                       </div>
                     </div>
@@ -292,7 +292,7 @@ export default function AIDocumentsPage() {
                       <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold">2</div>
                       <div>
                         <p className="font-medium text-gray-900">AI Analysis</p>
-                        <p className="text-sm text-gray-600">AI extracts text and analyzes content</p>
+                        <p className="text-sm text-gray-600">AI extracts text and analyses content</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-4">
@@ -434,7 +434,7 @@ export default function AIDocumentsPage() {
                     <div className="flex items-start gap-4">
                       <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold">2</div>
                       <div>
-                        <p className="font-medium text-gray-900">AI Analyzes</p>
+                        <p className="font-medium text-gray-900">AI Analyses</p>
                         <p className="text-sm text-gray-600">AI finds relevant documents and extracts information</p>
                       </div>
                     </div>
@@ -546,7 +546,7 @@ export default function AIDocumentsPage() {
                       <CheckCircle className="h-5 w-5 text-green-600" />
                       <div>
                         <p className="font-medium text-purple-900">Document Analysis</p>
-                        <p className="text-sm text-purple-700">Analyzes uploaded documents</p>
+                        <p className="text-sm text-purple-700">Analyses uploaded documents</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 p-3 bg-white/50 rounded-lg hover:bg-white/70 transition-colors">

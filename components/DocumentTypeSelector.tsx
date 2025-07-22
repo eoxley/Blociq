@@ -21,7 +21,7 @@ interface DocumentTypeSelectorProps {
   onClose: () => void;
   documentId: string;
   onTypeSelected: (docType: string) => void;
-  onReanalyze?: () => void;
+  onReanalyse?: () => void;
 }
 
 interface ComplianceItem {
@@ -38,7 +38,7 @@ export default function DocumentTypeSelector({
   onClose,
   documentId,
   onTypeSelected,
-  onReanalyze
+  onReanalyse
 }: DocumentTypeSelectorProps) {
   const [selectedType, setSelectedType] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -83,9 +83,9 @@ export default function DocumentTypeSelector({
     }
   };
 
-  const handleReanalyze = async () => {
-    if (onReanalyze) {
-      onReanalyze();
+  const handleReanalyse = async () => {
+    if (onReanalyse) {
+      onReanalyse();
     }
     onClose();
   };
@@ -232,14 +232,14 @@ export default function DocumentTypeSelector({
         {/* Footer */}
         <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
           <div className="flex items-center gap-2">
-            {onReanalyze && (
+                          {onReanalyse && (
               <Button
-                onClick={handleReanalyze}
+                onClick={handleReanalyse}
                 variant="outline"
                 className="flex items-center gap-2"
               >
                 <RefreshCw className="h-4 w-4" />
-                Re-analyze with AI
+                                  Re-analyse with AI
               </Button>
             )}
           </div>
