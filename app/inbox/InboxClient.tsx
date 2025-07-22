@@ -6,9 +6,10 @@ import {
   MessageSquare, Loader2, Send, Edit3, Check, Tag, Flag, Search, Filter, 
   Archive, Trash2, Star, MoreHorizontal, Reply, Forward, Delete, Pin, 
   Eye, EyeOff, Calendar, Building, AlertCircle, CheckCircle, Clock as ClockIcon,
-  Wrench, Construction
+  Wrench, Construction, Home, Save
 } from 'lucide-react'
 import { supabase } from '@/utils/supabase/client'
+import EmailAssignmentDropdowns from './components/EmailAssignmentDropdowns'
 
 // Define the Email type based on the database schema
 type Email = {
@@ -22,6 +23,12 @@ type Email = {
   pinned: boolean | null
   flag_status: string | null
   categories: string[] | null
+  building_id: number | null
+  unit_id: number | null
+  leaseholder_id: string | null
+  buildings?: { name: string } | null
+  units?: { unit_number: string } | null
+  leaseholders?: { name: string; email: string } | null
 }
 
 interface InboxClientProps {
@@ -50,6 +57,15 @@ export default function InboxClient({ emails }: InboxClientProps) {
   const [filterStatus, setFilterStatus] = useState<'all' | 'unread' | 'flagged' | 'handled'>('all')
   const [sortBy, setSortBy] = useState<'date' | 'sender' | 'subject'>('date')
   const [viewMode, setViewMode] = useState<'list' | 'compact'>('list')
+
+  // Email assignment state
+  const [showAssignmentDropdowns, setShowAssignmentDropdowns] = useState<Set<string>>(new Set())
+  const [emailAssignments, setEmailAssignments] = useState<Record<string, {
+    buildingId: number | null;
+    unitId: number | null;
+    leaseholderId: string | null;
+    assignmentLabel: string;
+  }>>({})
 
   // Calculate email statistics
   const unreadCount = emails.filter(email => email.unread).length
@@ -416,6 +432,52 @@ export default function InboxClient({ emails }: InboxClientProps) {
     }
   }
 
+  const handleAssignmentChange = (emailId: string, assignment: {
+    buildingId: number | null;
+    unitId: number | null;
+    leaseholderId: string | null;
+    assignmentLabel: string;
+  }) => {
+    setEmailAssignments(prev => ({
+      ...prev,
+      [emailId]: assignment
+    }));
+    setShowAssignmentDropdowns(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(emailId);
+      return newSet;
+    });
+  };
+
+  const toggleAssignmentDropdowns = (emailId: string) => {
+    setShowAssignmentDropdowns(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(emailId)) {
+        newSet.delete(emailId);
+      } else {
+        newSet.add(emailId);
+      }
+      return newSet;
+    });
+  };
+
+  const getAssignmentLabel = (email: Email) => {
+    // Check if we have a saved assignment
+    const savedAssignment = emailAssignments[email.id];
+    if (savedAssignment) {
+      return savedAssignment.assignmentLabel;
+    }
+
+    // Check if email has assignment data
+    if (email.unit_id && email.leaseholder_id && email.units && email.leaseholders) {
+      return `Flat ${email.units.unit_number} – ${email.leaseholders.name}`;
+    } else if (email.unit_id && email.units) {
+      return `Flat ${email.units.unit_number} – Unassigned`;
+    }
+
+    return 'Unassigned';
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Unknown date'
     
@@ -639,6 +701,39 @@ export default function InboxClient({ emails }: InboxClientProps) {
                         {email.body_preview || 'No preview available'}
                       </p>
                       
+                      {/* Assignment Label */}
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded-full">
+                          {getAssignmentLabel(email)}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleAssignmentDropdowns(email.id);
+                          }}
+                          className="text-xs text-teal-600 hover:text-teal-700 flex items-center gap-1"
+                        >
+                          <Building className="h-3 w-3" />
+                          Assign
+                        </button>
+                      </div>
+                      
+                      {/* Assignment Dropdowns */}
+                      {showAssignmentDropdowns.has(email.id) && (
+                        <div 
+                          className="mt-3 p-3 bg-gray-50 rounded-lg border"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <EmailAssignmentDropdowns
+                            emailId={email.id}
+                            currentBuildingId={email.building_id}
+                            currentUnitId={email.unit_id}
+                            currentLeaseholderId={email.leaseholder_id}
+                            onAssignmentChange={(assignment) => handleAssignmentChange(email.id, assignment)}
+                          />
+                        </div>
+                      )}
+                      
                       {/* Status indicators */}
                       <div className="flex items-center gap-1 mt-2">
                         {email.unread && (
@@ -763,6 +858,37 @@ export default function InboxClient({ emails }: InboxClientProps) {
                       </button>
                     </div>
                   </div>
+                  
+                  {/* Assignment Information */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex items-center gap-2">
+                      <Building className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm font-medium text-gray-700">Assignment:</span>
+                      <span className="text-sm px-2 py-1 bg-gray-100 text-gray-700 rounded-full">
+                        {getAssignmentLabel(email)}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => toggleAssignmentDropdowns(email.id)}
+                      className="text-sm text-teal-600 hover:text-teal-700 flex items-center gap-1"
+                    >
+                      <Save className="h-3 w-3" />
+                      {showAssignmentDropdowns.has(email.id) ? 'Cancel' : 'Assign'}
+                    </button>
+                  </div>
+                  
+                  {/* Assignment Dropdowns */}
+                  {showAssignmentDropdowns.has(email.id) && (
+                    <div className="mb-4 p-4 bg-gray-50 rounded-lg border">
+                      <EmailAssignmentDropdowns
+                        emailId={email.id}
+                        currentBuildingId={email.building_id}
+                        currentUnitId={email.unit_id}
+                        currentLeaseholderId={email.leaseholder_id}
+                        onAssignmentChange={(assignment) => handleAssignmentChange(email.id, assignment)}
+                      />
+                    </div>
+                  )}
                   
                   {/* Status and Categories */}
                   <div className="flex items-center gap-3">

@@ -6,9 +6,9 @@ import Link from 'next/link';
 
 interface Unit {
   id: string;
-  name: string;
-  leaseholder?: {
-    full_name: string;
+  unit_number: string;
+  leaseholders?: {
+    name: string;
     email: string;
   }[];
 }
@@ -24,9 +24,10 @@ export default function UnitsSection({ buildingId }: { buildingId: string }) {
         .from('units')
         .select(`
           id,
-          name,
-          leaseholder:leaseholder_id (
-            full_name,
+          unit_number,
+          leaseholder_id,
+          leaseholders (
+            name,
             email
           )
         `)
@@ -59,19 +60,19 @@ export default function UnitsSection({ buildingId }: { buildingId: string }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {units.map((unit) => (
             <div key={unit.id} className="p-4 border rounded shadow-sm hover:shadow-md transition">
-              <h3 className="font-semibold text-lg mb-1">{unit.name}</h3>
+              <h3 className="font-semibold text-lg mb-1">Unit {unit.unit_number}</h3>
 
-              {unit.leaseholder && unit.leaseholder.length > 0 ? (
+              {unit.leaseholder_id && unit.leaseholders && unit.leaseholders.length > 0 ? (
                 <>
-                  <p className="text-sm text-gray-700">{unit.leaseholder[0].full_name}</p>
-                  <p className="text-sm text-gray-500">{unit.leaseholder[0].email}</p>
+                  <p className="text-sm text-gray-700">{unit.leaseholders[0].name}</p>
+                  <p className="text-sm text-gray-500">{unit.leaseholders[0].email}</p>
                   <p className="text-green-600 text-sm mt-1 flex items-center gap-1">
                     <span className="w-2 h-2 bg-green-500 rounded-full inline-block"></span>
                     Occupied
                   </p>
                 </>
               ) : (
-                <p className="text-sm italic text-red-400">No leaseholder assigned</p>
+                <p className="text-sm italic text-gray-400">Unassigned</p>
               )}
 
                               <Link href={`/buildings/${buildingId}/units/${unit.id}`}>

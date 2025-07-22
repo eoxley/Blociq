@@ -14,7 +14,7 @@ const mergeTags = [
   { tag: '{{building_name}}', label: 'Building Name', category: 'Building' },
   { tag: '{{building_address}}', label: 'Building Address', category: 'Building' },
   { tag: '{{leaseholder_name}}', label: 'Leaseholder Name', category: 'Person' },
-  { tag: '{{leaseholder_email}}', label: 'Leaseholder Email', category: 'Person' },
+  { tag: '{{leaseholder_email}}', label: 'Leaseholder Email (from leaseholders table)', category: 'Person' },
   { tag: '{{unit_number}}', label: 'Unit Number', category: 'Unit' },
   { tag: '{{service_charge_amount}}', label: 'Service Charge', category: 'Financial' },
   { tag: '{{ground_rent_amount}}', label: 'Ground Rent', category: 'Financial' },

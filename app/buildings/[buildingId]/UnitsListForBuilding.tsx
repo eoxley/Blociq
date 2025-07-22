@@ -6,13 +6,14 @@ import { useParams } from "next/navigation";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 interface Leaseholder {
-  full_name: string;
+  name: string;
   email: string;
 }
 
 interface Unit {
   id: string;
   unit_number: string;
+  leaseholder_id: string | null;
   leaseholders: Leaseholder[];
 }
 
@@ -41,7 +42,7 @@ export default function UnitsListForBuilding() {
       
       const { data, error } = await supabase
         .from("units")
-        .select("id, unit_number, leaseholders!inner(full_name, email)")
+        .select("id, unit_number, leaseholder_id, leaseholders(name, email)")
         .eq("building_id", buildingId);
       
       console.log('Units query result:', { data, error });
@@ -67,7 +68,7 @@ export default function UnitsListForBuilding() {
     <ul className="space-y-2">
       {units.map((unit) => (
         <li key={unit.id}>
-          Flat {unit.unit_number} – {unit.leaseholders && unit.leaseholders.length > 0 ? `${unit.leaseholders[0].full_name} (${unit.leaseholders[0].email})` : "No leaseholder assigned"}
+          Flat {unit.unit_number} – {unit.leaseholder_id && unit.leaseholders && unit.leaseholders.length > 0 ? `${unit.leaseholders[0].name} (${unit.leaseholders[0].email})` : "Unassigned"}
         </li>
       ))}
     </ul>

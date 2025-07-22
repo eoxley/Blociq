@@ -841,6 +841,7 @@ export interface Database {
           from_email: string | null
           handled: boolean | null
           id: string
+          leaseholder_id: string | null
           message_id: string | null
           pinned: boolean | null
           received_at: string | null
@@ -848,6 +849,7 @@ export interface Database {
           tag: string | null
           thread_id: string | null
           unit: string | null
+          unit_id: number | null
           unread: boolean | null
           user_id: string | null
         }
@@ -858,6 +860,7 @@ export interface Database {
           from_email?: string | null
           handled?: boolean | null
           id?: string
+          leaseholder_id?: string | null
           message_id?: string | null
           pinned?: boolean | null
           received_at?: string | null
@@ -865,6 +868,7 @@ export interface Database {
           tag?: string | null
           thread_id?: string | null
           unit?: string | null
+          unit_id?: number | null
           unread?: boolean | null
           user_id?: string | null
         }
@@ -875,6 +879,7 @@ export interface Database {
           from_email?: string | null
           handled?: boolean | null
           id?: string
+          leaseholder_id?: string | null
           message_id?: string | null
           pinned?: boolean | null
           received_at?: string | null
@@ -882,6 +887,7 @@ export interface Database {
           tag?: string | null
           thread_id?: string | null
           unit?: string | null
+          unit_id?: number | null
           unread?: boolean | null
           user_id?: string | null
         }
@@ -893,6 +899,20 @@ export interface Database {
             referencedRelation: "buildings"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "incoming_emails_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incoming_emails_leaseholder_id_fkey"
+            columns: ["leaseholder_id"]
+            isOneToOne: false
+            referencedRelation: "leaseholders"
+            referencedColumns: ["id"]
+          }
         ]
       }
       leaseholders: {
@@ -1217,7 +1237,7 @@ export interface Database {
           created_at: string | null
           floor: string | null
           id: number
-          leaseholder_email: string | null
+          leaseholder_id: string | null
           type: string | null
           unit_number: string
         }
@@ -1226,7 +1246,7 @@ export interface Database {
           created_at?: string | null
           floor?: string | null
           id?: never
-          leaseholder_email?: string | null
+          leaseholder_id?: string | null
           type?: string | null
           unit_number: string
         }
@@ -1235,7 +1255,7 @@ export interface Database {
           created_at?: string | null
           floor?: string | null
           id?: never
-          leaseholder_email?: string | null
+          leaseholder_id?: string | null
           type?: string | null
           unit_number?: string
         }
@@ -1247,6 +1267,13 @@ export interface Database {
             referencedRelation: "buildings"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "units_leaseholder_id_fkey"
+            columns: ["leaseholder_id"]
+            isOneToOne: false
+            referencedRelation: "leaseholders"
+            referencedColumns: ["id"]
+          }
         ]
       }
       occupiers: {

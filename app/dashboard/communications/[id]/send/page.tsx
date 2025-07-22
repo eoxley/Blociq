@@ -116,9 +116,8 @@ export default function ComposeMessagePage() {
       const leaseholdersWithUnits = data || [];
       setLeaseholders(leaseholdersWithUnits);
       
-      // Default select all leaseholders with no occupier
+      // Default select all leaseholders
       const defaultSelected = leaseholdersWithUnits
-        .filter(l => !l.unit?.leaseholder_email) // No occupier
         .map(l => l.id);
       setSelectedLeaseholders(defaultSelected);
     } catch (err: any) {

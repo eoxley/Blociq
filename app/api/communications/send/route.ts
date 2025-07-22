@@ -88,16 +88,24 @@ export async function POST(req: NextRequest) {
     if (recipient_selection === 'all_leaseholders') {
       const { data: units } = await supabase
         .from("units")
-        .select("id, unit_number, leaseholder_name, leaseholder_email, leaseholder_address")
+        .select(`
+          id,
+          unit_number,
+          leaseholder_id,
+          leaseholders!inner (
+            name,
+            email
+          )
+        `)
         .eq("building_id", building_id)
-        .not("leaseholder_email", "is", null);
+        .not("leaseholder_id", "is", null);
 
       recipients = units?.map(unit => ({
         type: 'leaseholder',
-        id: unit.id,
-        name: unit.leaseholder_name || `Leaseholder of ${unit.unit_number}`,
-        email: unit.leaseholder_email,
-        address: unit.leaseholder_address,
+        id: unit.leaseholder_id,
+        name: unit.leaseholders?.[0]?.name || `Leaseholder of ${unit.unit_number}`,
+        email: unit.leaseholders?.[0]?.email,
+        address: '', // Address not stored in leaseholders table
         unit_number: unit.unit_number,
         building_name: building.name
       })) || [];
@@ -120,15 +128,26 @@ export async function POST(req: NextRequest) {
     } else if (recipient_selection === 'specific_units' && merge_data?.unit_ids) {
       const { data: units } = await supabase
         .from("units")
-        .select("id, unit_number, leaseholder_name, leaseholder_email, leaseholder_address, occupier_name, occupier_email, occupier_address")
+        .select(`
+          id, 
+          unit_number, 
+          leaseholder_id,
+          occupier_name, 
+          occupier_email, 
+          occupier_address,
+          leaseholders (
+            name,
+            email
+          )
+        `)
         .in("id", merge_data.unit_ids);
 
       recipients = units?.map(unit => ({
         type: 'unit',
         id: unit.id,
-        name: unit.leaseholder_name || unit.occupier_name || `Unit ${unit.unit_number}`,
-        email: unit.leaseholder_email || unit.occupier_email,
-        address: unit.leaseholder_address || unit.occupier_address,
+        name: unit.leaseholder_id && unit.leaseholders?.[0]?.name || unit.occupier_name || `Unit ${unit.unit_number}`,
+        email: unit.leaseholder_id && unit.leaseholders?.[0]?.email || unit.occupier_email,
+        address: unit.occupier_address || '',
         unit_number: unit.unit_number,
         building_name: building.name
       })) || [];

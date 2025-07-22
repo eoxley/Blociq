@@ -116,14 +116,21 @@ export async function GET(req: NextRequest) {
           if (emailData.from_email) {
             const { data: unitMatch } = await supabase
               .from("units")
-              .select("unit_number, building_id, buildings(name)")
-              .eq("leaseholder_email", emailData.from_email)
+              .select(`
+                unit_number,
+                building_id,
+                buildings (name),
+                leaseholders!inner (
+                  email
+                )
+              `)
+              .eq("leaseholders.email", emailData.from_email)
               .single();
 
             if (unitMatch) {
               emailData.unit = unitMatch.unit_number;
               emailData.building_id = unitMatch.building_id;
-              emailData.building_name = (unitMatch.buildings as { name: string }[])?.[0]?.name;
+              emailData.building_name = unitMatch.buildings.name;
             } else {
               // Fallback: match "Flat 7" in subject
               const match = (emailData.subject as string)?.match(/flat\s?(\d+[A-Za-z]?)/i);
