@@ -205,12 +205,19 @@ export default function AIEmailTriage({ emails, onTriageComplete, onEmailAction 
     <BlocIQCard className="w-full">
       <BlocIQCardHeader>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Brain className="h-5 w-5 text-purple-500" />
-            <h3 className="text-lg font-semibold">AI Email Triage</h3>
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg shadow-lg">
+              <Brain className="h-6 w-6 text-white animate-pulse" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                AI Email Triage
+              </h3>
+              <p className="text-sm text-gray-600">Smart email analysis & prioritisation</p>
+            </div>
           </div>
-          <BlocIQBadge variant="secondary" className="bg-purple-100 text-purple-800">
-            <Sparkles className="h-3 w-3 mr-1" />
+          <BlocIQBadge variant="secondary" className="bg-gradient-to-r from-purple-100 to-blue-100 text-purple-800 border-purple-200 shadow-sm">
+            <Sparkles className="h-3 w-3 mr-1 animate-pulse" />
             Smart Sorting
           </BlocIQBadge>
         </div>
@@ -249,14 +256,17 @@ export default function AIEmailTriage({ emails, onTriageComplete, onEmailAction 
             onClick={triageAllEmails}
             disabled={loading}
             size="sm"
-            className="ml-auto"
+            className="ml-auto bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold relative overflow-hidden group"
           >
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-blue-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
             {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              <Loader2 className="h-4 w-4 animate-spin mr-2 relative z-10" />
             ) : (
-              <Zap className="h-4 w-4 mr-2" />
+              <Zap className="h-4 w-4 mr-2 relative z-10 animate-pulse" />
             )}
-            {loading ? 'Triage All...' : 'Triage All'}
+            <span className="relative z-10">
+              {loading ? 'Triage All...' : '🚀 Triage All'}
+            </span>
           </BlocIQButton>
         </div>
 
@@ -331,10 +341,11 @@ export default function AIEmailTriage({ emails, onTriageComplete, onEmailAction 
                       <BlocIQButton
                         onClick={() => triageEmail(email)}
                         size="sm"
-                        variant="outline"
+                        className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white border-0 shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 font-medium relative overflow-hidden group"
                       >
-                        <Brain className="h-4 w-4" />
-                        Triage
+                        <div className="absolute inset-0 bg-gradient-to-r from-purple-300/20 to-blue-300/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                        <Brain className="h-4 w-4 relative z-10 animate-pulse" />
+                        <span className="relative z-10 ml-1">🧠 Triage</span>
                       </BlocIQButton>
                     )}
                     
