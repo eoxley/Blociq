@@ -46,11 +46,11 @@ ${email.body_full || email.body_preview || 'No content available'}
     `.trim();
 
     // Create the prompt for OpenAI
-    const prompt = `Summarise the following email in 3 bullet points for the property manager. Focus on key actions, issues, or important information that needs attention.
+    const prompt = `Summarise the following email in 3 bullet points for the property manager using British English. Focus on key actions, issues, or important information that needs attention.
 
 ${emailContent}
 
-Provide a concise summary with 3 bullet points:`;
+Provide a concise summary with 3 bullet points using British English spelling and terminology:`;
 
     // Call OpenAI for summarization
     const completion = await openai.chat.completions.create({
@@ -58,7 +58,7 @@ Provide a concise summary with 3 bullet points:`;
       messages: [
         {
           role: "system",
-          content: "You are a helpful assistant that summarizes emails for property managers. Provide clear, actionable bullet points."
+          content: "You are a helpful assistant that summarises emails for property managers using British English. Provide clear, actionable bullet points with British spelling and terminology."
         },
         {
           role: "user",
@@ -90,9 +90,9 @@ Provide a concise summary with 3 bullet points:`;
     });
 
   } catch (error) {
-    console.error('Error summarizing email:', error);
+    console.error('Error summarising email:', error);
     return NextResponse.json({ 
-      error: 'Failed to summarize email',
+      error: 'Failed to summarise email',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }

@@ -124,9 +124,9 @@ export async function POST(req: NextRequest) {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            message: `Please analyze this document and provide:
+            message: `Please analyse this document and provide:
 1. A classification category (e.g., "Contract", "Invoice", "Report", "Notice", "Certificate", "Manual", "Policy", "Other")
-2. A brief summary (2-3 sentences) of the main content
+2. A brief summary (2-3 sentences) of the main content using British English
 3. Key topics or themes mentioned
 
 Document: ${document.file_name}
