@@ -65,7 +65,6 @@ interface Communication {
   building_id: string
   building_name: string
   method: 'email' | 'pdf' | 'both'
-  recipients: any[]
   subject: string
   body: string
   status: 'sent' | 'failed' | 'pending'
@@ -115,6 +114,17 @@ export default function CommunicationsClient({ userData }: CommunicationsClientP
   const [expandedBuildings, setExpandedBuildings] = useState<Set<string>>(new Set())
   const [submitting, setSubmitting] = useState(false)
 
+  // New state for leaseholder functionality
+  const [leaseholderCount, setLeaseholderCount] = useState<number>(0)
+  const [sendingToLeaseholders, setSendingToLeaseholders] = useState(false)
+  const [sendResults, setSendResults] = useState<{
+    success: boolean
+    successful: any[]
+    failed: any[]
+    total_recipients: number
+    success_rate: string
+  } | null>(null)
+
   // Template form state
   const [templateForm, setTemplateForm] = useState({
     name: '',
@@ -150,6 +160,33 @@ export default function CommunicationsClient({ userData }: CommunicationsClientP
     fetchCommunications()
     fetchBuildings()
   }, [])
+
+  // Fetch leaseholder count when building changes
+  useEffect(() => {
+    if (sendForm.building_id) {
+      fetchLeaseholderCount(sendForm.building_id)
+    } else {
+      setLeaseholderCount(0)
+    }
+  }, [sendForm.building_id])
+
+  const fetchLeaseholderCount = async (buildingId: string) => {
+    try {
+      const { count, error } = await supabase
+        .from('leaseholders')
+        .select('*', { count: 'exact', head: true })
+        .eq('building_id', parseInt(buildingId))
+
+      if (!error && count !== null) {
+        setLeaseholderCount(count)
+      } else {
+        setLeaseholderCount(0)
+      }
+    } catch (error) {
+      console.error('Error fetching leaseholder count:', error)
+      setLeaseholderCount(0)
+    }
+  }
 
   const fetchTemplates = async () => {
     try {
@@ -277,6 +314,55 @@ export default function CommunicationsClient({ userData }: CommunicationsClientP
     }
   }
 
+  // New function for sending to all leaseholders
+  const handleSendToAllLeaseholders = async () => {
+    if (!selectedTemplate || !sendForm.building_id) {
+      toast.error('Please select a template and building')
+      return
+    }
+
+    setSendingToLeaseholders(true)
+    setSendResults(null)
+
+    try {
+      const response = await fetch('/api/communications/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          template_id: selectedTemplate.id,
+          building_id: sendForm.building_id,
+          recipient_selection: 'all_leaseholders',
+          method: 'email',
+          subject: sendForm.subject || selectedTemplate.subject,
+          custom_message: sendForm.custom_message || selectedTemplate.body,
+          merge_data: sendForm.merge_data
+        })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setSendResults(data.results)
+        
+        if (data.results.failed.length === 0) {
+          toast.success(`✅ All emails sent successfully! ${data.results.successful.length} leaseholders contacted.`)
+        } else {
+          toast.warning(`⚠️ ${data.results.successful.length} emails sent, ${data.results.failed.length} failed.`)
+        }
+
+        // Refresh communications log
+        fetchCommunications()
+      } else {
+        toast.error(data.error || 'Failed to send to leaseholders')
+      }
+    } catch (error) {
+      console.error('Error sending to leaseholders:', error)
+      toast.error('Error sending to leaseholders')
+    } finally {
+      setSendingToLeaseholders(false)
+    }
+  }
+
   const toggleBuildingExpansion = (buildingId: string) => {
     const newExpanded = new Set(expandedBuildings)
     if (newExpanded.has(buildingId)) {
@@ -351,140 +437,100 @@ export default function CommunicationsClient({ userData }: CommunicationsClientP
     return true
   })
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-[#008C8F] to-[#007BDB] rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-            <Loader2 className="h-8 w-8 text-white animate-spin" />
-          </div>
-          <h3 className="text-lg font-bold text-[#333333] mb-2">Loading Communications</h3>
-          <p className="text-[#64748B]">Setting up your communication center...</p>
-        </div>
-      </div>
-    )
-  }
+  // Check if send to leaseholders button should be disabled
+  const isSendToLeaseholdersDisabled = !selectedTemplate || !sendForm.building_id || sendingToLeaseholders
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] rounded-2xl p-6 text-white shadow-xl">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-              <MessageSquare className="h-7 w-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold">Communications</h1>
-              <p className="text-white/90 text-lg">Template Library & Mail Merge</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <BlocIQButton
-              onClick={() => setShowNewTemplateModal(true)}
-              variant="outline"
-              className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              New Template
-            </BlocIQButton>
-            <BlocIQButton
-              onClick={() => setShowSendModal(true)}
-              className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
-            >
-              <Send className="h-5 w-5 mr-2" />
-              Send Message
-            </BlocIQButton>
-          </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-[#333333]">Communications</h1>
+          <p className="text-[#64748B] mt-1">Manage templates and send communications to leaseholders</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <BlocIQButton
+            onClick={() => setShowNewTemplateModal(true)}
+            className="flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            New Template
+          </BlocIQButton>
         </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <BlocIQCard variant="elevated">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <BlocIQCard>
           <BlocIQCardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#008C8F] to-[#007BDB] rounded-xl flex items-center justify-center">
-                <MessageSquare className="h-6 w-6 text-white" />
-              </div>
+            <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-[#333333]">{summary.total_communications}</div>
-                <div className="text-sm text-[#64748B]">Total Sent</div>
+                <p className="text-sm font-medium text-[#64748B]">Total Communications</p>
+                <p className="text-2xl font-bold text-[#333333]">{summary.total_communications}</p>
               </div>
+              <MessageSquare className="h-8 w-8 text-[#008C8F]" />
             </div>
           </BlocIQCardContent>
         </BlocIQCard>
 
-        <BlocIQCard variant="elevated">
+        <BlocIQCard>
           <BlocIQCardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#2BBEB4] to-[#0F5D5D] rounded-xl flex items-center justify-center">
-                <Mail className="h-6 w-6 text-white" />
-              </div>
+            <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-[#333333]">{summary.email_count}</div>
-                <div className="text-sm text-[#64748B]">Emails Sent</div>
+                <p className="text-sm font-medium text-[#64748B]">Emails Sent</p>
+                <p className="text-2xl font-bold text-[#333333]">{summary.email_count}</p>
               </div>
+              <Mail className="h-8 w-8 text-[#008C8F]" />
             </div>
           </BlocIQCardContent>
         </BlocIQCard>
 
-        <BlocIQCard variant="elevated">
+        <BlocIQCard>
           <BlocIQCardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#2078F4] to-blue-600 rounded-xl flex items-center justify-center">
-                <FileText className="h-6 w-6 text-white" />
-              </div>
+            <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-[#333333]">{summary.pdf_count}</div>
-                <div className="text-sm text-[#64748B]">PDFs Generated</div>
+                <p className="text-sm font-medium text-[#64748B]">Buildings Contacted</p>
+                <p className="text-2xl font-bold text-[#333333]">{summary.buildings_contacted}</p>
               </div>
+              <Building className="h-8 w-8 text-[#008C8F]" />
             </div>
           </BlocIQCardContent>
         </BlocIQCard>
 
-        <BlocIQCard variant="elevated">
+        <BlocIQCard>
           <BlocIQCardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#7645ED] to-purple-600 rounded-xl flex items-center justify-center">
-                <Building className="h-6 w-6 text-white" />
-              </div>
+            <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-[#333333]">{summary.buildings_contacted}</div>
-                <div className="text-sm text-[#64748B]">Buildings Contacted</div>
+                <p className="text-sm font-medium text-[#64748B]">Templates Used</p>
+                <p className="text-2xl font-bold text-[#333333]">{summary.templates_used}</p>
               </div>
+              <FileText className="h-8 w-8 text-[#008C8F]" />
             </div>
           </BlocIQCardContent>
         </BlocIQCard>
       </div>
 
-      {/* Tab Navigation */}
+      {/* Tabs */}
       <div className="flex space-x-1 bg-[#F3F4F6] p-1 rounded-xl">
         <button
           onClick={() => setActiveTab('templates')}
-          className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${
+          className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
             activeTab === 'templates'
-              ? 'bg-white text-[#008C8F] shadow-sm'
+              ? 'bg-white text-[#333333] shadow-sm'
               : 'text-[#64748B] hover:text-[#333333]'
           }`}
         >
-          <div className="flex items-center justify-center gap-2">
-            <FileText className="h-4 w-4" />
-            Template Library
-          </div>
+          Templates
         </button>
         <button
           onClick={() => setActiveTab('log')}
-          className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${
+          className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
             activeTab === 'log'
-              ? 'bg-white text-[#008C8F] shadow-sm'
+              ? 'bg-white text-[#333333] shadow-sm'
               : 'text-[#64748B] hover:text-[#333333]'
           }`}
         >
-          <div className="flex items-center justify-center gap-2">
-            <Archive className="h-4 w-4" />
-            Communication Log
-          </div>
+          Communication Log
         </button>
       </div>
 
@@ -492,129 +538,103 @@ export default function CommunicationsClient({ userData }: CommunicationsClientP
       {activeTab === 'templates' && (
         <div className="space-y-6">
           {/* Filters */}
-          <BlocIQCard variant="elevated">
-            <BlocIQCardContent className="p-6">
-              <div className="flex flex-wrap gap-4">
-                <div className="flex-1 min-w-[200px]">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#64748B]" />
-                    <input
-                      type="text"
-                      placeholder="Search templates..."
-                      value={filters.search}
-                      onChange={(e) => setFilters({...filters, search: e.target.value})}
-                      className="w-full pl-10 pr-4 py-2 border border-[#E2E8F0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
-                    />
-                  </div>
-                </div>
-                <select
-                  value={filters.type}
-                  onChange={(e) => setFilters({...filters, type: e.target.value})}
-                  className="px-4 py-2 border border-[#E2E8F0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
-                >
-                  <option value="">All Types</option>
-                  <option value="email">Email</option>
-                  <option value="letter">Letter</option>
-                  <option value="notice">Notice</option>
-                </select>
-                <select
-                  value={filters.category}
-                  onChange={(e) => setFilters({...filters, category: e.target.value})}
-                  className="px-4 py-2 border border-[#E2E8F0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
-                >
-                  <option value="">All Categories</option>
-                  <option value="general">General</option>
-                  <option value="welcome">Welcome</option>
-                  <option value="section20">Section 20</option>
-                  <option value="maintenance">Maintenance</option>
-                  <option value="emergency">Emergency</option>
-                </select>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#64748B]" />
+                <input
+                  type="text"
+                  placeholder="Search templates..."
+                  value={filters.search}
+                  onChange={(e) => setFilters({...filters, search: e.target.value})}
+                  className="w-full pl-10 pr-4 py-2 border border-[#E2E8F0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
+                />
               </div>
-            </BlocIQCardContent>
-          </BlocIQCard>
+            </div>
+            <select
+              value={filters.type}
+              onChange={(e) => setFilters({...filters, type: e.target.value})}
+              className="px-4 py-2 border border-[#E2E8F0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
+            >
+              <option value="">All Types</option>
+              <option value="email">Email</option>
+              <option value="letter">Letter</option>
+              <option value="notice">Notice</option>
+            </select>
+            <select
+              value={filters.category}
+              onChange={(e) => setFilters({...filters, category: e.target.value})}
+              className="px-4 py-2 border border-[#E2E8F0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
+            >
+              <option value="">All Categories</option>
+              <option value="general">General</option>
+              <option value="welcome">Welcome</option>
+              <option value="section20">Section 20</option>
+              <option value="maintenance">Maintenance</option>
+              <option value="emergency">Emergency</option>
+            </select>
+          </div>
 
           {/* Templates Grid */}
-          {filteredTemplates.length === 0 ? (
-            <BlocIQCard variant="elevated">
-              <BlocIQCardContent className="p-12 text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-[#008C8F] to-[#007BDB] rounded-xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-                  <FileText className="h-8 w-8 text-white" />
-                </div>
-                <h3 className="text-xl font-bold text-[#333333] mb-2">No Templates Found</h3>
-                <p className="text-[#64748B] mb-6">Create your first communication template to get started</p>
-                <BlocIQButton onClick={() => setShowNewTemplateModal(true)}>
-                  <Plus className="h-5 w-5 mr-2" />
-                  Create First Template
-                </BlocIQButton>
-              </BlocIQCardContent>
-            </BlocIQCard>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredTemplates.map((template) => (
-                <BlocIQCard key={template.id} variant="elevated" className="hover:shadow-lg transition-shadow">
-                  <BlocIQCardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="text-lg font-semibold text-[#333333]">{template.name}</h3>
-                          <BlocIQBadge variant={getTypeColor(template.type)} size="sm">
-                            {template.type}
-                          </BlocIQBadge>
-                        </div>
-                        {template.description && (
-                          <p className="text-sm text-[#64748B] mb-2">{template.description}</p>
-                        )}
-                        <div className="flex items-center gap-4 text-xs text-[#64748B]">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {template.last_used_at ? formatDate(template.last_used_at) : 'Never used'}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Send className="h-3 w-3" />
-                            {template.usage_count} uses
-                          </div>
-                        </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredTemplates.map((template) => (
+              <BlocIQCard key={template.id} className="hover:shadow-lg transition-shadow">
+                <BlocIQCardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-[#333333] mb-1">{template.name}</h3>
+                      <div className="flex items-center gap-2 mb-2">
+                        <BlocIQBadge variant={getTypeColor(template.type)}>
+                          {template.type}
+                        </BlocIQBadge>
+                                                 <BlocIQBadge variant="secondary">
+                           {template.category}
+                         </BlocIQBadge>
                       </div>
                     </div>
-                  </BlocIQCardHeader>
-                  <BlocIQCardContent>
-                    <div className="space-y-3">
-                      {template.placeholders.length > 0 && (
-                        <div>
-                          <p className="text-xs font-medium text-[#64748B] mb-1">Available merge fields:</p>
-                          <div className="flex flex-wrap gap-1">
-                            {template.placeholders.slice(0, 3).map((placeholder, index) => (
-                              <span key={index} className="text-xs bg-[#F3F4F6] px-2 py-1 rounded text-[#64748B]">
-                                {placeholder}
-                              </span>
-                            ))}
-                            {template.placeholders.length > 3 && (
-                              <span className="text-xs text-[#64748B]">+{template.placeholders.length - 3} more</span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      <div className="flex gap-2">
-                        <BlocIQButton
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedTemplate(template)
-                            setShowSendModal(true)
-                          }}
-                          className="flex-1"
-                        >
-                          <Send className="h-4 w-4 mr-1" />
-                          Use Template
-                        </BlocIQButton>
-                        <BlocIQButton variant="outline" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </BlocIQButton>
-                      </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleTemplatePreview(template)}
+                        className="p-1 hover:bg-[#F3F4F6] rounded transition-colors"
+                        title="Preview"
+                      >
+                        <Eye className="h-4 w-4 text-[#64748B]" />
+                      </button>
                     </div>
-                  </BlocIQCardContent>
-                </BlocIQCard>
-              ))}
+                  </div>
+                  {template.description && (
+                    <p className="text-sm text-[#64748B] line-clamp-2">{template.description}</p>
+                  )}
+                </BlocIQCardHeader>
+                <BlocIQCardContent className="pt-0">
+                  <div className="flex items-center justify-between text-sm text-[#64748B] mb-4">
+                    <span>Used {template.usage_count || 0} times</span>
+                    <span>Updated {formatDate(template.updated_at)}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <BlocIQButton
+                      onClick={() => handleUseTemplate(template)}
+                      size="sm"
+                      className="flex-1"
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Use Template
+                    </BlocIQButton>
+                  </div>
+                </BlocIQCardContent>
+              </BlocIQCard>
+            ))}
+          </div>
+
+          {filteredTemplates.length === 0 && (
+            <div className="text-center py-12">
+              <FileText className="h-12 w-12 text-[#64748B] mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-[#333333] mb-2">No templates found</h3>
+              <p className="text-[#64748B] mb-4">Create your first template to get started</p>
+              <BlocIQButton onClick={() => setShowNewTemplateModal(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Template
+              </BlocIQButton>
             </div>
           )}
         </div>
@@ -623,78 +643,62 @@ export default function CommunicationsClient({ userData }: CommunicationsClientP
       {/* Communication Log Tab */}
       {activeTab === 'log' && (
         <div className="space-y-6">
-          {communications.length === 0 ? (
-            <BlocIQCard variant="elevated">
-              <BlocIQCardContent className="p-12 text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-[#008C8F] to-[#007BDB] rounded-xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-                  <Archive className="h-8 w-8 text-white" />
-                </div>
-                <h3 className="text-xl font-bold text-[#333333] mb-2">No Communications Yet</h3>
-                <p className="text-[#64748B] mb-6">Send your first communication to see it here</p>
-                <BlocIQButton onClick={() => setShowSendModal(true)}>
-                  <Send className="h-5 w-5 mr-2" />
-                  Send First Message
-                </BlocIQButton>
-              </BlocIQCardContent>
-            </BlocIQCard>
+          {loading ? (
+            <div className="text-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-[#008C8F] mx-auto mb-4" />
+              <p className="text-[#64748B]">Loading communications...</p>
+            </div>
+          ) : communications.length === 0 ? (
+            <div className="text-center py-12">
+              <MessageSquare className="h-12 w-12 text-[#64748B] mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-[#333333] mb-2">No communications yet</h3>
+              <p className="text-[#64748B]">Send your first communication to see it here</p>
+            </div>
           ) : (
-            <div className="space-y-6">
-              {communications.map((building) => (
-                <BlocIQCard key={building.building_id} variant="elevated">
+            <div className="space-y-4">
+              {communications.map((buildingGroup) => (
+                <BlocIQCard key={buildingGroup.building_id}>
                   <BlocIQCardHeader>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center">
-                          <Building className="h-6 w-6 text-white" />
-                        </div>
+                        <Building className="h-5 w-5 text-[#008C8F]" />
                         <div>
-                          <h2 className="text-xl font-bold text-[#333333]">{building.building_name}</h2>
-                          <p className="text-sm text-[#64748B]">{building.building_address}</p>
+                          <h3 className="font-semibold text-[#333333]">{buildingGroup.building_name}</h3>
+                          <p className="text-sm text-[#64748B]">{buildingGroup.building_address}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <BlocIQBadge variant="secondary">
-                          {building.communications.length} {building.communications.length === 1 ? 'Communication' : 'Communications'}
-                        </BlocIQBadge>
-                        <BlocIQButton
-                          variant="outline"
-                          size="sm"
-                          onClick={() => toggleBuildingExpansion(building.building_id)}
-                        >
-                          {expandedBuildings.has(building.building_id) ? (
-                            <ChevronUp className="h-4 w-4" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4" />
-                          )}
-                        </BlocIQButton>
-                      </div>
+                      <button
+                        onClick={() => toggleBuildingExpansion(buildingGroup.building_id)}
+                        className="p-2 hover:bg-[#F3F4F6] rounded-lg transition-colors"
+                      >
+                        {expandedBuildings.has(buildingGroup.building_id) ? (
+                          <ChevronUp className="h-4 w-4 text-[#64748B]" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-[#64748B]" />
+                        )}
+                      </button>
                     </div>
                   </BlocIQCardHeader>
-
-                  {expandedBuildings.has(building.building_id) && (
+                  {expandedBuildings.has(buildingGroup.building_id) && (
                     <BlocIQCardContent>
                       <div className="space-y-4">
-                        {building.communications.map((comm) => (
-                          <div key={comm.id} className="bg-[#FAFAFA] rounded-xl p-4 border border-[#E2E8F0]">
+                        {buildingGroup.communications.map((comm) => (
+                          <div key={comm.id} className="border border-[#E2E8F0] rounded-lg p-4">
                             <div className="flex items-start justify-between mb-3">
                               <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <h3 className="text-lg font-semibold text-[#333333]">{comm.template_name}</h3>
-                                  <BlocIQBadge variant={getMethodColor(comm.method)} size="sm">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="font-medium text-[#333333]">{comm.template_name}</h4>
+                                  <BlocIQBadge variant={getMethodColor(comm.method)}>
                                     {comm.method}
                                   </BlocIQBadge>
-                                  <BlocIQBadge variant={getStatusColor(comm.status)} size="sm">
+                                  <BlocIQBadge variant={getStatusColor(comm.status)}>
                                     {comm.status}
                                   </BlocIQBadge>
                                 </div>
-                                {comm.subject && (
-                                  <p className="text-sm text-[#64748B] mb-2">{comm.subject}</p>
-                                )}
+                                <p className="text-sm text-[#64748B] mb-2">
+                                  Sent {formatDate(comm.sent_at)} by {comm.sent_by}
+                                </p>
                                 <div className="flex items-center gap-4 text-sm text-[#64748B]">
-                                  <div className="flex items-center gap-1">
-                                    <Calendar className="h-4 w-4" />
-                                    {formatDate(comm.sent_at)}
-                                  </div>
                                   <div className="flex items-center gap-1">
                                     <Users className="h-4 w-4" />
                                     {comm.recipient_count} recipients
@@ -835,16 +839,16 @@ export default function CommunicationsClient({ userData }: CommunicationsClientP
                   Template Body *
                 </label>
                 <div className="bg-[#F3F4F6] p-3 rounded-lg mb-2">
-                  <p className="text-xs text-[#64748B] mb-2">Available merge fields: {{name}}, {{unit}}, {{building}}, {{building_address}}, {{date}}, {{recipient_type}}</p>
+                  <p className="text-xs text-[#64748B] mb-2">Available merge fields: [leaseholder_name], [building_name], [building_address], [date], [manager_name]</p>
                 </div>
-                <textarea
-                  required
-                  value={templateForm.body}
-                  onChange={(e) => setTemplateForm({...templateForm, body: e.target.value})}
-                  rows={8}
-                  className="w-full px-4 py-3 border border-[#E2E8F0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent font-mono text-sm"
-                  placeholder="Enter your template content here. Use {{name}}, {{unit}}, {{building}} etc. for merge fields..."
-                />
+                                  <textarea
+                    required
+                    value={templateForm.body}
+                    onChange={(e) => setTemplateForm({...templateForm, body: e.target.value})}
+                    rows={8}
+                    className="w-full px-4 py-3 border border-[#E2E8F0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent font-mono text-sm"
+                    placeholder="Enter your template content here. Use [leaseholder_name], [building_name], [date] etc. for merge fields..."
+                  />
               </div>
 
               <div className="flex justify-end gap-3 pt-4">
@@ -960,6 +964,21 @@ export default function CommunicationsClient({ userData }: CommunicationsClientP
                 )}
               </div>
 
+              {/* Leaseholder Count Display */}
+              {sendForm.building_id && leaseholderCount > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Users className="h-5 w-5 text-blue-600" />
+                    <span className="font-medium text-blue-900">
+                      {leaseholderCount} leaseholder{leaseholderCount !== 1 ? 's' : ''} will receive this communication
+                    </span>
+                  </div>
+                  <p className="text-sm text-blue-700">
+                    This will send the communication to all leaseholders in the selected building.
+                  </p>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-[#333333] mb-2">
                   Additional Message (Optional)
@@ -985,6 +1004,47 @@ export default function CommunicationsClient({ userData }: CommunicationsClientP
                 </div>
               )}
 
+              {/* Send Results Display */}
+              {sendResults && (
+                <div className={`p-4 rounded-lg border ${
+                  sendResults.failed.length === 0 
+                    ? 'bg-green-50 border-green-200' 
+                    : 'bg-yellow-50 border-yellow-200'
+                }`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    {sendResults.failed.length === 0 ? (
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                    ) : (
+                      <AlertCircle className="h-5 w-5 text-yellow-600" />
+                    )}
+                    <span className={`font-medium ${
+                      sendResults.failed.length === 0 ? 'text-green-900' : 'text-yellow-900'
+                    }`}>
+                      {sendResults.failed.length === 0 
+                        ? '✅ All emails sent successfully!' 
+                        : `⚠️ ${sendResults.successful.length} emails sent, ${sendResults.failed.length} failed`
+                      }
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-700">
+                    <p>Success Rate: {sendResults.success_rate}</p>
+                    <p>Total Recipients: {sendResults.total_recipients}</p>
+                  </div>
+                  {sendResults.failed.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-sm font-medium text-yellow-900 mb-2">Failed Recipients:</p>
+                      <div className="space-y-1">
+                        {sendResults.failed.map((failure, index) => (
+                          <div key={index} className="text-sm text-yellow-800">
+                            {failure.name} ({failure.email}) - {failure.reason}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="flex justify-end gap-3 pt-4">
                 <BlocIQButton
                   type="button"
@@ -993,6 +1053,22 @@ export default function CommunicationsClient({ userData }: CommunicationsClientP
                 >
                   Cancel
                 </BlocIQButton>
+                
+                {/* Send to All Leaseholders Button */}
+                <BlocIQButton
+                  type="button"
+                  onClick={handleSendToAllLeaseholders}
+                  disabled={isSendToLeaseholdersDisabled}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {sendingToLeaseholders ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Mail className="h-4 w-4 mr-2" />
+                  )}
+                  {sendingToLeaseholders ? 'Sending to leaseholders...' : '📩 Send to All Leaseholders'}
+                </BlocIQButton>
+                
                 <BlocIQButton
                   type="submit"
                   disabled={submitting}
