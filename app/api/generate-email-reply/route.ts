@@ -9,7 +9,10 @@ const openai = new OpenAI({
 
 export async function POST(req: NextRequest) {
   const supabase = createRouteHandlerClient({ cookies: () => cookies() });
-  const { email_id, building_id } = await req.json();
+  
+  // Handle both old format (email_id) and new format (emailContent)
+  const body = await req.json();
+  const { email_id, building_id, emailContent } = body;
 
   // Get the current user's session
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -18,47 +21,67 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   }
 
-  if (!email_id) {
-    return NextResponse.json({ error: 'Email ID is required' }, { status: 400 });
+  if (!email_id && !emailContent) {
+    return NextResponse.json({ error: 'Either email_id or emailContent is required' }, { status: 400 });
   }
 
   try {
-    // Fetch the email from Supabase
-    const { data: email, error: fetchError } = await supabase
-      .from('incoming_emails')
-      .select(`
-        subject, 
-        body_full, 
-        body_preview, 
-        from_name, 
-        from_email, 
-        building_id,
-        tags,
-        buildings(name)
-      `)
-      .eq('id', email_id)
-      .single();
-
-    if (fetchError || !email) {
-      console.error('Email not found:', fetchError?.message);
-      return NextResponse.json({ error: 'Email not found' }, { status: 404 });
-    }
-
-    // Get building context if available
+    let emailData;
     let buildingContext = '';
-    if (email.buildings?.name) {
-      buildingContext = `Building: ${email.buildings.name}`;
+
+    if (email_id) {
+      // Fetch the email from Supabase
+      const { data: email, error: fetchError } = await supabase
+        .from('incoming_emails')
+        .select(`
+          subject, 
+          body_full, 
+          body_preview, 
+          from_name, 
+          from_email, 
+          building_id,
+          tags,
+          buildings(name)
+        `)
+        .eq('id', email_id)
+        .single();
+
+      if (fetchError || !email) {
+        console.error('Email not found:', fetchError?.message);
+        return NextResponse.json({ error: 'Email not found' }, { status: 404 });
+      }
+
+      emailData = email;
+      
+      // Get building context if available
+      if (email.buildings?.name) {
+        buildingContext = `Building: ${email.buildings.name}`;
+      }
+    } else {
+      // Use provided emailContent
+      emailData = emailContent;
+      if (emailContent.buildingId) {
+        buildingContext = `Building: ${emailContent.buildingId}`;
+      }
     }
 
     // Prepare the email content for reply generation
-    const emailContent = `
+    const emailContentForPrompt = email_id ? `
 Original Email:
-From: ${email.from_name || 'Unknown'} (${email.from_email || 'No email'})
-Subject: ${email.subject || 'No Subject'}
+From: ${emailData.from_name || 'Unknown'} (${emailData.from_email || 'No email'})
+Subject: ${emailData.subject || 'No Subject'}
 ${buildingContext}
 
 Content:
-${email.body_full || email.body_preview || 'No content available'}
+${emailData.body_full || emailData.body_preview || 'No content available'}
+    `.trim() : `
+Original Email:
+From: ${emailData.from || 'Unknown'} (${emailData.fromName || 'No name'})
+Subject: ${emailData.subject || 'No Subject'}
+${buildingContext}
+
+Content:
+${emailData.body || 'No content available'}
     `.trim();
 
     // Create the prompt for OpenAI
@@ -81,7 +104,7 @@ Guidelines:
 
     const userPrompt = `Generate a professional reply to this email for a property manager:
 
-${emailContent}
+${emailContentForPrompt}
 
 Please create a reply that:
 1. Acknowledges the sender appropriately
@@ -118,7 +141,7 @@ Return only the reply content, formatted as a proper email response.`;
         email_id: email_id,
         user_id: session.user.id,
         draft_content: draftReply,
-        building_id: building_id || email.building_id,
+        building_id: building_id || (emailData?.building_id),
         created_at: new Date().toISOString()
       });
     } catch (logError) {
@@ -128,10 +151,10 @@ Return only the reply content, formatted as a proper email response.`;
 
     return NextResponse.json({ 
       success: true,
-      draft: draftReply,
+      reply: draftReply,
       context: {
-        original_email: email,
-        building_name: email.buildings?.name
+        original_email: emailData,
+        building_name: emailData?.buildings?.name
       }
     });
 

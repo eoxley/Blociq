@@ -127,9 +127,9 @@ export default function TriageAssistant({
       const { data: emails, error } = await supabase
         .from('incoming_emails')
         .select(`
-          id, subject, from_name, from_email, received_at, body_preview, body_full, building_id, is_read, is_handled, tags, outlook_id, buildings(name)
+          id, subject, from_name, from_email, received_at, body_preview, body_full, building_id, unread, handled, tag, message_id, buildings(name)
         `)
-        .eq('is_handled', false)
+        .eq('handled', false)
         .order('received_at', { ascending: true })
 
       if (error) throw error
@@ -198,7 +198,7 @@ export default function TriageAssistant({
           })
 
           const draftData = await draftResponse.json()
-          const draftReply = draftResponse.ok ? draftData.reply : 'Unable to generate draft'
+          const draftReply = draftResponse.ok ? (draftData.reply || draftData.draft) : 'Unable to generate draft'
 
           // Create enhanced triage result
           const enhancedResult: TriageResult = {
@@ -219,7 +219,7 @@ export default function TriageAssistant({
           // Mark email as read
           await supabase
             .from('incoming_emails')
-            .update({ is_read: true })
+            .update({ unread: false })
             .eq('id', email?.id)
 
         } catch (error) {
