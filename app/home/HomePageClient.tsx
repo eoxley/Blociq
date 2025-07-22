@@ -184,12 +184,16 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           setUpcomingEvents([]);
         } else {
           // Transform database events to match PropertyEvent type
-          const transformedEvents: PropertyEvent[] = (events || []).map(event => ({
-            building: event.building_id ? `Building ${event.building_id}` : 'General',
-            date: event.start_time,
-            title: event.title,
-            category: event.category || event.event_type || '📅 Event'
-          }));
+          const transformedEvents: PropertyEvent[] = (events || []).map(event => {
+            // Find building name from buildings array
+            const building = buildings.find(b => b.id === event.building_id);
+            return {
+              building: building ? building.name : 'General',
+              date: event.start_time,
+              title: event.title,
+              category: event.category || event.event_type || '📅 Event'
+            };
+          });
           setUpcomingEvents(transformedEvents);
         }
       } catch (error) {
@@ -201,7 +205,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     };
 
     fetchEvents();
-  }, [supabase]);
+  }, [supabase, buildings]); // Add buildings as dependency
 
   // Fetch recent emails
   useEffect(() => {
@@ -432,12 +436,17 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           .limit(10);
 
         if (!error && events) {
-          const transformedEvents: PropertyEvent[] = events.map(event => ({
-            building: event.building_id ? `Building ${event.building_id}` : 'General',
-            date: event.start_time,
-            title: event.title,
-            category: event.category || event.event_type || '📅 Event'
-          }));
+          // Transform database events to match PropertyEvent type
+          const transformedEvents: PropertyEvent[] = (events || []).map(event => {
+            // Find building name from buildings array
+            const building = buildings.find(b => b.id === event.building_id);
+            return {
+              building: building ? building.name : 'General',
+              date: event.start_time,
+              title: event.title,
+              category: event.category || event.event_type || '📅 Event'
+            };
+          });
           setUpcomingEvents(transformedEvents);
         }
       } else {

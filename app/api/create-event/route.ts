@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 
 export async function POST(req: NextRequest) {
   try {
-    const { title, date, building } = await req.json();
+    const { title, date, building, description } = await req.json();
 
     // Validate required fields
     if (!title || !date) {
@@ -14,11 +14,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate date format
+    // Validate date format (datetime-local format)
     const eventDate = new Date(date);
     if (isNaN(eventDate.getTime())) {
       return NextResponse.json(
-        { error: 'Invalid date format. Use YYYY-MM-DD' },
+        { error: 'Invalid date format' },
         { status: 400 }
       );
     }
@@ -32,19 +32,37 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    // Create the event data
+    // Find building ID if building name is provided
+    let buildingId = null;
+    if (building) {
+      const { data: buildingData, error: buildingError } = await supabase
+        .from('buildings')
+        .select('id')
+        .eq('name', building)
+        .single();
+      
+      if (!buildingError && buildingData) {
+        buildingId = buildingData.id;
+      }
+    }
+
+    // Create the event data for property_events table
     const eventData = {
       title: title,
-      date: eventDate.toISOString(),
-      building: building || null,
-      user_id: session.user.id,
+      description: description || null,
+      start_time: eventDate.toISOString(),
+      end_time: null, // Optional field
+      building_id: buildingId,
+      event_type: 'manual',
+      category: 'Property Event',
+      created_by: session.user.id,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
 
-    // Insert the event into the database
+    // Insert the event into the property_events table
     const { data: newEvent, error: insertError } = await supabase
-      .from('events')
+      .from('property_events')
       .insert(eventData)
       .select()
       .single();
@@ -52,7 +70,7 @@ export async function POST(req: NextRequest) {
     if (insertError) {
       console.error('Error creating event:', insertError);
       return NextResponse.json(
-        { error: 'Failed to create event' },
+        { error: 'Failed to create event', details: insertError },
         { status: 500 }
       );
     }
@@ -65,7 +83,6 @@ export async function POST(req: NextRequest) {
 
       if (accessToken) {
         const startTime = new Date(eventDate);
-        startTime.setHours(10, 0, 0, 0); // 10:00 AM
         const endTime = new Date(startTime);
         endTime.setMinutes(endTime.getMinutes() + 30); // 30 minutes duration
 
@@ -87,7 +104,7 @@ export async function POST(req: NextRequest) {
             },
             body: {
               contentType: 'HTML',
-              content: 'Created from BlocIQ',
+              content: description ? `Created from BlocIQ\n\n${description}` : 'Created from BlocIQ',
             },
             reminderMinutesBeforeStart: 15,
           }),
@@ -100,6 +117,12 @@ export async function POST(req: NextRequest) {
             eventId: outlookEvent.id,
             message: 'Event also added to Outlook calendar'
           };
+          
+          // Update the property_events record with the Outlook event ID
+          await supabase
+            .from('property_events')
+            .update({ outlook_event_id: outlookEvent.id })
+            .eq('id', newEvent.id);
         } else {
           outlookResult = {
             success: false,
