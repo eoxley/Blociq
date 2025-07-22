@@ -7,6 +7,14 @@ const supabase = createClient(
 );
 
 export async function GET(req: NextRequest) {
+  return await syncCalendar(req);
+}
+
+export async function POST(req: NextRequest) {
+  return await syncCalendar(req);
+}
+
+async function syncCalendar(req: NextRequest) {
   try {
     console.log("📅 Starting calendar sync process...");
 
@@ -150,6 +158,7 @@ export async function GET(req: NextRequest) {
 
     // 4. Return success response
     return NextResponse.json({ 
+      success: true,
       message: "Calendar synced successfully", 
       count: inserts.length,
       user_id: tokens.user_id,

@@ -209,7 +209,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         const { data: emails, error } = await supabase
           .from('incoming_emails')
           .select('*')
-          .eq('is_deleted', false)
           .order('received_at', { ascending: false })
           .limit(5);
 
@@ -223,8 +222,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             from_email: email.from_email,
             body_preview: email.body_preview,
             received_at: email.received_at,
-            handled: email.is_handled,
-            unread: !email.is_read,
+            handled: email.handled || false,
+            unread: !email.unread,
             flag_status: email.flag_status || 'none',
             categories: email.categories || []
           }));
@@ -255,7 +254,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         const { data: emails, error } = await supabase
           .from('incoming_emails')
           .select('*')
-          .eq('is_deleted', false)
           .order('received_at', { ascending: false })
           .limit(5);
 
@@ -266,8 +264,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             from_email: email.from_email,
             body_preview: email.body_preview,
             received_at: email.received_at,
-            handled: email.is_handled,
-            unread: !email.is_read,
+            handled: email.handled || false,
+            unread: !email.unread,
             flag_status: email.flag_status || 'none',
             categories: email.categories || []
           }));

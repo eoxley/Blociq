@@ -3,6 +3,14 @@ import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 
 export async function GET(req: NextRequest) {
+  return await syncEmails(req);
+}
+
+export async function POST(req: NextRequest) {
+  return await syncEmails(req);
+}
+
+async function syncEmails(req: NextRequest) {
   try {
     console.log("📧 Starting email sync process...");
     
@@ -180,6 +188,7 @@ export async function GET(req: NextRequest) {
     }
 
     const responseData = {
+      success: true,
       message: "Emails synced successfully",
       count: inserts.length,
       total_in_db: dbCount || 0,
