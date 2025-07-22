@@ -513,8 +513,7 @@ export default function NewInboxClient({
               className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold relative overflow-hidden group"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-blue-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-              <Brain className="h-4 w-4 mr-2 animate-pulse" />
-              <span className="relative z-10">⚕️ AI Triage</span>
+              <span className="relative z-10">🚑 AI Triage</span>
             </BlocIQButton>
           </div>
         </div>
