@@ -53,17 +53,25 @@ export default function BuildingUnitsDisplay({ units, buildingName }: BuildingUn
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [expandedUnits, setExpandedUnits] = useState<Set<number>>(new Set());
 
-  // Filter units based on search
-  const filteredUnits = units.filter(unit => 
-    unit.unit_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    unit.leaseholders?.some(lh => 
-      lh.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lh.email?.toLowerCase().includes(searchTerm.toLowerCase())
-    ) ||
-    unit.floor?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Ensure units is an array and filter with safe defaults
+  const safeUnits = Array.isArray(units) ? units : [];
+  
+  // Filter units based on search with null checks
+  const filteredUnits = safeUnits.filter(unit => {
+    if (!unit?.unit_number) return false;
+    
+    const searchLower = searchTerm.toLowerCase();
+    const unitNumberMatch = unit.unit_number.toLowerCase().includes(searchLower);
+    const leaseholderMatch = unit.leaseholders?.some(lh => 
+      lh?.name?.toLowerCase().includes(searchLower) ||
+      lh?.email?.toLowerCase().includes(searchLower)
+    ) || false;
+    const floorMatch = unit.floor?.toLowerCase().includes(searchLower) || false;
+    
+    return unitNumberMatch || leaseholderMatch || floorMatch;
+  });
 
-  // Sort units
+  // Sort units with safe defaults
   const sortedUnits = [...filteredUnits].sort((a, b) => {
     let aValue: string | number;
     let bValue: string | number;
@@ -72,8 +80,8 @@ export default function BuildingUnitsDisplay({ units, buildingName }: BuildingUn
       aValue = a.floor || '';
       bValue = b.floor || '';
     } else {
-      aValue = a.unit_number;
-      bValue = b.unit_number;
+      aValue = a.unit_number || '';
+      bValue = b.unit_number || '';
     }
 
     if (sortOrder === 'asc') {
@@ -99,7 +107,8 @@ export default function BuildingUnitsDisplay({ units, buildingName }: BuildingUn
     if (!dateString) return 'Not specified';
     try {
       return format(new Date(dateString), 'dd/MM/yyyy');
-    } catch {
+    } catch (error) {
+      console.warn('Invalid date format:', dateString);
       return 'Invalid date';
     }
   };
@@ -120,7 +129,7 @@ export default function BuildingUnitsDisplay({ units, buildingName }: BuildingUn
     }
   };
 
-  if (units.length === 0) {
+  if (safeUnits.length === 0) {
     return (
       <Card className="border-0 shadow-lg">
         <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 border-b">
