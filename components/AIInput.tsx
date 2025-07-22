@@ -88,7 +88,9 @@ export default function AIInput({ buildingId, context }: AIInputProps) {
       {answer && (
         <div className="bg-gray-50 p-4 rounded-md">
           <h3 className="font-semibold mb-2">AI Response:</h3>
-          <p className="text-gray-700 whitespace-pre-wrap">{answer}</p>
+          <div className="max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400 pr-2">
+            <p className="text-gray-700 whitespace-pre-wrap break-words">{answer}</p>
+          </div>
         </div>
       )}
     </div>

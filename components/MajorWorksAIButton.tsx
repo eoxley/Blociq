@@ -152,8 +152,10 @@ export default function MajorWorksAIButton({
               {answer && (
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h3 className="text-sm font-medium text-gray-700 mb-2">AI Response:</h3>
-                  <div className="text-gray-800 whitespace-pre-wrap text-sm leading-relaxed">
-                    {answer}
+                  <div className="max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400 pr-2">
+                    <div className="text-gray-800 whitespace-pre-wrap text-sm leading-relaxed break-words">
+                      {answer}
+                    </div>
                   </div>
                   <p className="text-xs italic text-gray-500 mt-3 pt-3 border-t border-gray-200">
                     AI-generated guidance is for support only and should not replace professional advice.
