@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { 
   Mail, 
   Search, 
@@ -34,7 +35,9 @@ import {
   AlertCircle,
   Info,
   Check,
-  X
+  X,
+  LogOut,
+  Settings
 } from 'lucide-react'
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
@@ -86,6 +89,7 @@ export default function NewInboxClient({
   searchParams,
 }: NewInboxClientProps) {
   const supabase = createClientComponentClient()
+  const router = useRouter()
   const [emails, setEmails] = useState<Email[]>(initialEmails)
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null)
   const [isSyncing, setIsSyncing] = useState(false)
@@ -440,6 +444,16 @@ export default function NewInboxClient({
     }
   }
 
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut()
+      router.push('/login')
+    } catch (error) {
+      console.error('Error signing out:', error)
+      toast.error('Failed to sign out')
+    }
+  }
+
   const analyseEmailWithAI = async (email: Email) => {
     try {
       const response = await fetch('/api/analyse-email', {
@@ -487,6 +501,23 @@ export default function NewInboxClient({
             <p className="text-xl text-white/90">Manage and respond to property-related emails</p>
           </div>
           <div className="flex items-center gap-4">
+            {/* Account Settings and Logout Links */}
+            <div className="flex items-center gap-2 mr-4">
+              <Link 
+                href="/account" 
+                className="flex items-center gap-2 px-3 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200"
+              >
+                <span className="text-lg">⚙️</span>
+                <span className="text-sm font-medium">Account</span>
+              </Link>
+              <button 
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-3 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200"
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="text-sm font-medium">Logout</span>
+              </button>
+            </div>
             <BlocIQButton 
               onClick={handleSync}
               disabled={isSyncing}
