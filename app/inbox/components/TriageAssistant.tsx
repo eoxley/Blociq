@@ -301,8 +301,10 @@ export default function TriageAssistant({
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">🧠 Inbox Triage Assistant</h2>
-              <p className="text-sm text-gray-600">
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                🧠 Inbox Triage Assistant
+              </h2>
+              <p className="text-sm text-gray-600 font-medium">
                 Processed {processedCount} of {totalUnhandled} unhandled emails
               </p>
             </div>
@@ -455,14 +457,13 @@ export default function TriageAssistant({
                     <Button
                       onClick={handleSummarise}
                       disabled={isProcessing}
-                      variant="outline"
                       size="lg"
-                      className="h-16 flex flex-col items-center gap-2 bg-white hover:bg-blue-50"
+                      className="h-16 flex flex-col items-center gap-2 bg-gradient-to-br from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white border-0 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold"
                     >
                       {isProcessing ? (
                         <Loader2 className="h-6 w-6 animate-spin" />
                       ) : (
-                        <Brain className="h-6 w-6" />
+                        <Brain className="h-6 w-6 animate-pulse" />
                       )}
                       <span className="text-sm">🧠 Summarise</span>
                     </Button>
@@ -470,14 +471,13 @@ export default function TriageAssistant({
                     <Button
                       onClick={handleDraftReply}
                       disabled={isProcessing}
-                      variant="outline"
                       size="lg"
-                      className="h-16 flex flex-col items-center gap-2 bg-white hover:bg-blue-50"
+                      className="h-16 flex flex-col items-center gap-2 bg-gradient-to-br from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white border-0 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold"
                     >
                       {isProcessing ? (
                         <Loader2 className="h-6 w-6 animate-spin" />
                       ) : (
-                        <PenTool className="h-6 w-6" />
+                        <PenTool className="h-6 w-6 animate-pulse" />
                       )}
                       <span className="text-sm">✍️ Draft Reply</span>
                     </Button>
@@ -485,14 +485,13 @@ export default function TriageAssistant({
                     <Button
                       onClick={handleCreateTodo}
                       disabled={isProcessing}
-                      variant="outline"
                       size="lg"
-                      className="h-16 flex flex-col items-center gap-2 bg-white hover:bg-blue-50"
+                      className="h-16 flex flex-col items-center gap-2 bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold"
                     >
                       {isProcessing ? (
                         <Loader2 className="h-6 w-6 animate-spin" />
                       ) : (
-                        <CheckSquare className="h-6 w-6" />
+                        <CheckSquare className="h-6 w-6 animate-pulse" />
                       )}
                       <span className="text-sm">📝 Add To-Do</span>
                     </Button>
@@ -500,14 +499,13 @@ export default function TriageAssistant({
                     <Button
                       onClick={handleMarkHandled}
                       disabled={isProcessing}
-                      variant="outline"
                       size="lg"
-                      className="h-16 flex flex-col items-center gap-2 bg-white hover:bg-green-50 border-green-300"
+                      className="h-16 flex flex-col items-center gap-2 bg-gradient-to-br from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white border-0 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold"
                     >
                       {isProcessing ? (
                         <Loader2 className="h-6 w-6 animate-spin" />
                       ) : (
-                        <CheckCircle className="h-6 w-6" />
+                        <CheckCircle className="h-6 w-6 animate-pulse" />
                       )}
                       <span className="text-sm">✅ Mark Handled</span>
                     </Button>
@@ -517,7 +515,7 @@ export default function TriageAssistant({
                       disabled={isProcessing}
                       variant="outline"
                       size="lg"
-                      className="h-16 flex flex-col items-center gap-2 bg-white hover:bg-gray-50"
+                      className="h-16 flex flex-col items-center gap-2 bg-white hover:bg-gray-50 border-2 border-gray-300 hover:border-gray-400 shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 font-semibold"
                     >
                       <SkipForward className="h-6 w-6" />
                       <span className="text-sm">⏭ Skip</span>
