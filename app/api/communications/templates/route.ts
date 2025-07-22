@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
     console.log("✅ User authenticated:", user.id);
 
-    // Fetch communication templates
+    // Fetch communication templates with error handling
     const { data: templates, error: templatesError } = await supabase
       .from("communication_templates")
       .select("*")
@@ -26,6 +26,16 @@ export async function GET(req: NextRequest) {
 
     if (templatesError) {
       console.error("❌ Error fetching templates:", templatesError);
+      
+      // If table doesn't exist, return empty array instead of error
+      if (templatesError.code === '42P01') { // Table doesn't exist
+        console.log("⚠️ Communication templates table doesn't exist, returning empty array");
+        return NextResponse.json({
+          templates: [],
+          count: 0
+        });
+      }
+      
       return NextResponse.json({ 
         error: "Failed to fetch templates",
         details: templatesError
