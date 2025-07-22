@@ -1,8 +1,7 @@
 "use client";
 import { useState } from "react";
-import { Trash2, Reply, ReplyAll, Forward, Brain, Loader2, User, Clock, Building, Mail, Sparkles, CheckCircle } from "lucide-react";
+import { Trash2, Reply, ReplyAll, Forward, Loader2, User, Clock, Building, Mail, CheckCircle } from "lucide-react";
 import ReplyModal from "./ReplyModal";
-import AIEmailAnalysis from "./AIEmailAnalysis";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { BlocIQButton } from "@/components/ui/blociq-button";
 import { BlocIQBadge } from "@/components/ui/blociq-badge";
@@ -35,8 +34,6 @@ export default function EmailDetailPanel({ email, onEmailDeleted, onEmailSent }:
   const supabase = createClientComponentClient();
   const [showReplyModal, setShowReplyModal] = useState<null | "reply" | "replyAll" | "forward">(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [summary, setSummary] = useState<string | null>(null);
-  const [isSummarizing, setIsSummarizing] = useState(false);
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "Unknown date";
@@ -89,33 +86,7 @@ export default function EmailDetailPanel({ email, onEmailDeleted, onEmailSent }:
     }
   };
 
-  const handleSummarise = async () => {
-    setIsSummarizing(true);
-    try {
-      const response = await fetch("/api/summarise-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          emailId: email.id,
-          subject: email.subject,
-          body: email.body_full || email.body_preview,
-        }),
-      });
 
-      if (response.ok) {
-        const { summary: aiSummary } = await response.json();
-        setSummary(aiSummary);
-        toast.success("Email summarised successfully");
-      } else {
-        throw new Error("Failed to summarise email");
-      }
-    } catch (error) {
-      console.error("Error summarising email:", error);
-      toast.error("Failed to summarise email");
-    } finally {
-      setIsSummarizing(false);
-    }
-  };
 
   const handleEmailSent = () => {
     onEmailSent?.();
@@ -211,20 +182,7 @@ export default function EmailDetailPanel({ email, onEmailDeleted, onEmailSent }:
             <Forward className="h-4 w-4" />
             Forward
           </BlocIQButton>
-          <BlocIQButton
-            onClick={handleSummarise}
-            disabled={isSummarizing}
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-2"
-          >
-            {isSummarizing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Brain className="h-4 w-4" />
-            )}
-            {isSummarizing ? "Summarizing..." : "AI Summary"}
-          </BlocIQButton>
+
           <BlocIQButton
             onClick={async () => {
               try {
@@ -271,32 +229,7 @@ export default function EmailDetailPanel({ email, onEmailDeleted, onEmailSent }:
         </div>
       </div>
 
-      {/* AI Summary */}
-      {summary && (
-        <div className="p-6 border-b border-[#E2E8F0] bg-[#F0FDFA]">
-          <div className="flex items-center gap-2 mb-3">
-            <Brain className="h-5 w-5 text-[#0F5D5D]" />
-            <h3 className="font-semibold text-[#0F5D5D]">AI Summary</h3>
-          </div>
-          <p className="text-[#333333] text-sm leading-relaxed">{summary}</p>
-        </div>
-      )}
 
-      {/* AI Email Analysis */}
-      <div className="p-6 border-b border-[#E2E8F0]">
-        <AIEmailAnalysis 
-          email={email}
-          onAnalysisComplete={(analysis) => {
-            console.log('AI Analysis completed:', analysis);
-            toast.success('Email analysis completed');
-          }}
-          onDraftGenerated={(draft) => {
-            console.log('AI Draft generated:', draft);
-            // You could open a reply modal with the generated draft
-            toast.success('AI draft generated - ready to use');
-          }}
-        />
-      </div>
 
       {/* Email Body */}
       <div className="flex-1 p-6 overflow-y-auto">
