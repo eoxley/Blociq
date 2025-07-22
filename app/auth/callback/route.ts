@@ -22,7 +22,6 @@ export async function GET(request: NextRequest) {
 
   // Check if this is a Microsoft OAuth callback
   const code = requestUrl.searchParams.get('code');
-  const state = requestUrl.searchParams.get('state');
   const error = requestUrl.searchParams.get('error');
 
   if (error) {
@@ -30,18 +29,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/login?error=microsoft_oauth`);
   }
 
-  if (code && state) {
+  if (code) {
     // This is a Microsoft OAuth callback
     console.log('[Callback] Processing Microsoft OAuth callback...');
     
     try {
-      // Verify state parameter
-      const storedState = cookieStore.get('microsoft_oauth_state')?.value;
-      if (state !== storedState) {
-        console.error('[Callback] State mismatch');
-        return NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/login?error=state_mismatch`);
-      }
-
       // Exchange authorization code for tokens
       const tokenResponse = await exchangeCodeForTokens(code);
       console.log('[Callback] Token exchange successful');
@@ -108,9 +100,9 @@ export async function GET(request: NextRequest) {
 }
 
 async function exchangeCodeForTokens(code: string): Promise<MicrosoftTokenResponse> {
-  const clientId = process.env.MICROSOFT_CLIENT_ID;
-  const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
-  const redirectUri = process.env.MICROSOFT_REDIRECT_URI || 'https://www.blociq.co.uk/auth/callback';
+  const clientId = process.env.OUTLOOK_CLIENT_ID;
+  const clientSecret = process.env.OUTLOOK_CLIENT_SECRET;
+  const redirectUri = "https://www.blociq.co.uk/auth/callback";
 
   if (!clientId || !clientSecret) {
     throw new Error('Microsoft OAuth credentials not configured');
