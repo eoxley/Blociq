@@ -49,7 +49,7 @@ import TriageAssistant from './components/TriageAssistant'
 import PostSendTriageModal from './components/PostSendTriageModal'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
-import OutlookConnectButton from '@/components/OutlookConnectButton'
+
 
 interface Email {
   id: string
@@ -563,10 +563,7 @@ export default function NewInboxClient({
         </div>
       </div>
 
-      {/* Outlook Integration */}
-      <div className="mb-6">
-        <OutlookConnectButton onSyncComplete={fetchEmails} />
-      </div>
+
 
       <div className="flex h-[calc(100vh-400px)] min-h-[600px]">
         {/* Email List */}
