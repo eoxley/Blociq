@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { MessageCircle, Calendar, ExternalLink, Send, Loader2, Plus, Mail, FileText, Pin, Paperclip, Home, X, Building, Brain, Clock, AlertCircle, CheckCircle } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import DailySummary from '@/components/DailySummary'
+import MajorWorksDashboard from '@/components/MajorWorksDashboard'
 import BreadcrumbNavigation from '@/components/BreadcrumbNavigation'
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
@@ -740,6 +741,15 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             </div>
           </BlocIQCardContent>
         </BlocIQCard>
+      </div>
+
+      {/* Major Works Dashboard */}
+      <div className="mb-8">
+        <MajorWorksDashboard 
+          showAllBuildings={true}
+          limit={5}
+          showAddButton={true}
+        />
       </div>
 
       {/* Daily Summary Section */}
