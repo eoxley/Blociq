@@ -1,4 +1,3 @@
-import LayoutWithSidebar from '@/components/LayoutWithSidebar'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
@@ -86,13 +85,11 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
   console.log('🔗 Inbox page - Search params:', params)
 
     return (
-    <LayoutWithSidebar>
       <NewInboxClient
         initialEmails={emails || []} // Pass fetched emails to show immediately
         lastSyncTime={lastSyncTime}
         userId={user.id}
         searchParams={params}
       />
-    </LayoutWithSidebar>
-  )
+    )
 }

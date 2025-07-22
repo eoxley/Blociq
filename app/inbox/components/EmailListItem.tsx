@@ -64,7 +64,7 @@ export default function EmailListItem({ email, isSelected, onSelect, dimmed }: E
     <div
       onClick={onSelect}
       className={`
-        p-4 rounded-lg cursor-pointer transition-all duration-200 border
+        p-3 rounded-lg cursor-pointer transition-all duration-200 border
         ${isSelected 
           ? 'bg-blue-50 border-blue-200 shadow-sm' 
           : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
@@ -76,7 +76,7 @@ export default function EmailListItem({ email, isSelected, onSelect, dimmed }: E
       <div className="flex items-start gap-3">
         {/* Sender Avatar */}
         <div className={`
-          w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium
+          w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0
           ${!email.is_read 
             ? 'bg-blue-100 text-blue-700' 
             : 'bg-gray-100 text-gray-600'
@@ -90,7 +90,7 @@ export default function EmailListItem({ email, isSelected, onSelect, dimmed }: E
           <div className="flex items-start justify-between gap-2 mb-1">
             <div className="flex items-center gap-2 min-w-0">
               <span className={`
-                font-medium truncate
+                text-sm font-medium truncate
                 ${!email.is_read ? 'text-gray-900' : 'text-gray-700'}
               `}>
                 {email.from_name || email.from_email || 'Unknown Sender'}
@@ -99,7 +99,7 @@ export default function EmailListItem({ email, isSelected, onSelect, dimmed }: E
                 <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
               )}
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-1 flex-shrink-0">
               <span className="text-xs text-gray-500">
                 {formatDate(email.received_at)}
               </span>
@@ -112,32 +112,32 @@ export default function EmailListItem({ email, isSelected, onSelect, dimmed }: E
           </div>
 
           <h3 className={`
-            font-medium mb-1 truncate
+            text-sm font-medium mb-1 truncate
             ${!email.is_read ? 'text-gray-900' : 'text-gray-700'}
           `}>
             {email.subject || 'No Subject'}
           </h3>
 
-          <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-            {truncateText(email.body_preview, 120)}
+          <p className="text-xs text-gray-600 mb-2 line-clamp-1">
+            {truncateText(email.body_preview, 80)}
           </p>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 flex-wrap">
             {email.buildings?.name && (
-              <Badge variant="outline" className="text-xs">
-                <Building className="h-3 w-3 mr-1" />
+              <Badge variant="outline" className="text-xs px-1 py-0 h-5">
+                <Building className="h-2 w-2 mr-1" />
                 {email.buildings.name}
               </Badge>
             )}
             
             {email.is_handled && (
-              <Badge variant="outline" className="text-xs bg-green-100 text-green-700">
+              <Badge variant="outline" className="text-xs bg-green-100 text-green-700 px-1 py-0 h-5">
                 Handled
               </Badge>
             )}
             
             {email.tags && email.tags.length > 0 && (
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-xs px-1 py-0 h-5">
                 {email.tags[0]}
                 {email.tags.length > 1 && ` +${email.tags.length - 1}`}
               </Badge>

@@ -27,9 +27,7 @@ export default function OutlookConnectButton({
   className = "", 
   onSyncComplete 
 }: OutlookConnectButtonProps) {
-  const [isSyncing, setIsSyncing] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'checking' | 'disconnected'>('checking')
-  const [syncStatus, setSyncStatus] = useState<string>('')
   const [userEmail, setUserEmail] = useState<string>('')
   const router = useRouter()
   const supabase = createClientComponentClient()
@@ -74,74 +72,7 @@ export default function OutlookConnectButton({
     }
   }
 
-  const handleSyncInbox = async () => {
-    setIsSyncing(true)
-    setSyncStatus('syncing')
-    
-    try {
-      const response = await fetch('/api/sync-outlook-inbox', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      })
 
-      if (response.ok) {
-        const data = await response.json()
-        setSyncStatus('success')
-        setTimeout(() => setSyncStatus(''), 3000)
-        
-        // Call the callback to refresh the inbox
-        if (onSyncComplete) {
-          onSyncComplete()
-        }
-        
-        console.log('Sync completed:', data)
-      } else {
-        setSyncStatus('error')
-        setTimeout(() => setSyncStatus(''), 3000)
-        console.error('Sync failed')
-      }
-    } catch (error) {
-      console.error('Error syncing inbox:', error)
-      setSyncStatus('error')
-      setTimeout(() => setSyncStatus(''), 3000)
-    } finally {
-      setIsSyncing(false)
-    }
-  }
-
-  const handleSyncCalendar = async () => {
-    setIsSyncing(true)
-    setSyncStatus('syncing')
-    
-    try {
-      const response = await fetch('/api/sync-calendar', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setSyncStatus('success')
-        setTimeout(() => setSyncStatus(''), 3000)
-        
-        console.log('Calendar sync completed:', data)
-      } else {
-        setSyncStatus('error')
-        setTimeout(() => setSyncStatus(''), 3000)
-        console.error('Calendar sync failed')
-      }
-    } catch (error) {
-      console.error('Error syncing calendar:', error)
-      setSyncStatus('error')
-      setTimeout(() => setSyncStatus(''), 3000)
-    } finally {
-      setIsSyncing(false)
-    }
-  }
 
   const getStatusIcon = () => {
     switch (connectionStatus) {
@@ -182,18 +113,7 @@ export default function OutlookConnectButton({
     }
   }
 
-  const getSyncStatusText = () => {
-    switch (syncStatus) {
-      case 'syncing':
-        return 'Syncing...'
-      case 'success':
-        return 'Sync completed!'
-      case 'error':
-        return 'Sync failed'
-      default:
-        return ''
-    }
-  }
+
 
   if (connectionStatus === 'checking') {
     return (
@@ -230,56 +150,6 @@ export default function OutlookConnectButton({
         </CardHeader>
         
         <CardContent className="space-y-4">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Mail className="h-4 w-4 text-blue-500" />
-            <span>Outlook emails automatically synced</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Calendar className="h-4 w-4 text-green-500" />
-            <span>Calendar events automatically synced</span>
-          </div>
-          
-          <div className="flex gap-2 pt-2">
-            <Button
-              onClick={handleSyncInbox}
-              disabled={isSyncing}
-              size="sm"
-              variant="outline"
-              className="flex-1"
-            >
-              {isSyncing && syncStatus === 'syncing' ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <RefreshCw className="h-4 w-4 mr-2" />
-              )}
-              Sync Emails
-            </Button>
-            
-            <Button
-              onClick={handleSyncCalendar}
-              disabled={isSyncing}
-              size="sm"
-              variant="outline"
-              className="flex-1"
-            >
-              {isSyncing && syncStatus === 'syncing' ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <RefreshCw className="h-4 w-4 mr-2" />
-              )}
-              Sync Calendar
-            </Button>
-          </div>
-          
-          {syncStatus && (
-            <div className={`text-sm p-2 rounded ${
-              syncStatus === 'success' ? 'bg-green-50 text-green-700' :
-              syncStatus === 'error' ? 'bg-red-50 text-red-700' :
-              'bg-blue-50 text-blue-700'
-            }`}>
-              {getSyncStatusText()}
-            </div>
-          )}
         </CardContent>
       </Card>
     )
