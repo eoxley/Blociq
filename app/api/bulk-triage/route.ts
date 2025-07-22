@@ -147,6 +147,7 @@ export async function POST(req: NextRequest) {
         });
     } catch (logError) {
       console.error('Failed to log AI interaction:', logError);
+      // Don't fail the request if logging fails
     }
 
     return NextResponse.json({
