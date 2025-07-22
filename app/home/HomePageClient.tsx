@@ -453,14 +453,24 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         {/* BlocIQ Chat Assistant Section */}
         <BlocIQCard variant="elevated" className="flex flex-col h-[600px]">
           <BlocIQCardHeader className="bg-gradient-to-r from-[#008C8F] to-[#007BDB] text-white rounded-t-xl">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                <Brain className="h-6 w-6 text-white" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                  <Brain className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-semibold text-white">BlocIQ Assistant</h2>
+                  <p className="text-white/80 text-sm">Your AI property management companion</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-2xl font-semibold text-white">BlocIQ Assistant</h2>
-                <p className="text-white/80 text-sm">Your AI property management companion</p>
-              </div>
+              <button
+                onClick={refreshChat}
+                disabled={isLoading}
+                className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-all duration-200 backdrop-blur-sm border border-white/30 disabled:opacity-50 disabled:cursor-not-allowed group"
+                title="Start new chat"
+              >
+                <RefreshCw className="h-5 w-5 text-white group-hover:rotate-180 transition-transform duration-300" />
+              </button>
             </div>
           </BlocIQCardHeader>
           
