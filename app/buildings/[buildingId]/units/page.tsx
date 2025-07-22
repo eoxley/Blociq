@@ -157,7 +157,6 @@ export default async function BuildingUnitsPage({
         unit_number: '1A',
         floor: '1',
         type: 'Apartment',
-        leaseholder_email: 'john.doe@example.com',
         leaseholders: [
           {
             id: 'lh1',
@@ -186,7 +185,6 @@ export default async function BuildingUnitsPage({
         unit_number: '1B',
         floor: '1',
         type: 'Apartment',
-        leaseholder_email: 'jane.smith@example.com',
         leaseholders: [
           {
             id: 'lh2',
@@ -215,7 +213,6 @@ export default async function BuildingUnitsPage({
         unit_number: '2A',
         floor: '2',
         type: 'Apartment',
-        leaseholder_email: 'mike.wilson@example.com',
         leaseholders: [
           {
             id: 'lh3',
@@ -244,7 +241,6 @@ export default async function BuildingUnitsPage({
         unit_number: '2B',
         floor: '2',
         type: 'Apartment',
-        leaseholder_email: null,
         leaseholders: [],
         occupiers: []
       },
@@ -254,7 +250,6 @@ export default async function BuildingUnitsPage({
         unit_number: '3A',
         floor: '3',
         type: 'Apartment',
-        leaseholder_email: 'sarah.jones@example.com',
         leaseholders: [
           {
             id: 'lh4',

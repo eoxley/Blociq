@@ -83,12 +83,7 @@ export default function UnitDetailClient({ building, unit }: UnitDetailClientPro
               <p className="text-sm font-medium text-gray-500">Type</p>
               <p className="text-lg">{unit.type || 'Residential'}</p>
             </div>
-            {unit.leaseholder_email && (
-              <div>
-                <p className="text-sm font-medium text-gray-500">Leaseholder Email</p>
-                <p className="text-lg">{unit.leaseholder_email}</p>
-              </div>
-            )}
+
           </div>
         </CardContent>
       </Card>

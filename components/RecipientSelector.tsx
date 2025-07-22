@@ -63,19 +63,20 @@ export default function RecipientSelector({
       const { supabase } = await import("@/utils/supabase");
       
       let query = supabase
-        .from('leases')
+        .from('units')
         .select(`
           id,
-          leaseholder_name,
-          leaseholder_email,
-          unit,
-          building_name
+          unit_number,
+          leaseholder_id,
+          leaseholders!inner (
+            name,
+            email
+          ),
+          buildings!inner (
+            name
+          )
         `)
-        .not('leaseholder_email', 'is', null);
-
-      if (buildingId) {
-        query = query.eq('building_id', buildingId);
-      }
+        .not('leaseholder_id', 'is', null);
 
       const { data, error } = await query;
 
@@ -84,13 +85,13 @@ export default function RecipientSelector({
         return;
       }
 
-      const formattedRecipients: Recipient[] = (data || []).map(lease => ({
-        id: lease.id,
-        name: lease.leaseholder_name || 'Unknown',
-        email: lease.leaseholder_email,
-        unit: lease.unit || 'Unknown',
+      const formattedRecipients: Recipient[] = (data || []).map(unit => ({
+        id: unit.leaseholder_id,
+        name: unit.leaseholders?.[0]?.name || 'Unknown',
+        email: unit.leaseholders?.[0]?.email || 'Unknown',
+        unit: unit.unit_number || 'Unknown',
         type: 'leaseholder' as const,
-        building_name: lease.building_name || 'Unknown'
+        building_name: unit.buildings?.name || 'Unknown'
       }));
 
       setRecipients(formattedRecipients);

@@ -52,7 +52,7 @@ export default async function BuildingDetailPage({
     `)
     .eq('building_id', buildingId)
 
-  // Fetch units and leaseholders
+  // Fetch units and leaseholders with lease information
   const { data: units } = await supabase
     .from('units')
     .select(`
@@ -62,6 +62,13 @@ export default async function BuildingDetailPage({
         name,
         email,
         phone
+      ),
+      leases (
+        id,
+        start_date,
+        expiry_date,
+        doc_type,
+        is_headlease
       )
     `)
     .eq('building_id', buildingId)

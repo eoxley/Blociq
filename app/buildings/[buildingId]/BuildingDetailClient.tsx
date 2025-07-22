@@ -115,7 +115,7 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
         // If no units in building prop, try to fetch from database
         const { data: unitsData, error: unitsError } = await supabase
           .from('units')
-          .select('id, unit_number, type, floor, notes, leaseholders(full_name, email, phone)')
+          .select('id, unit_number, type, floor, notes, leaseholder_id, leaseholders(name, email, phone)')
           .eq('building_id', building.id)
           .order('unit_number')
 
@@ -127,7 +127,7 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
         // Transform the data to match our Unit type
         const transformedUnits = (unitsData || []).map((unit: any) => ({
           ...unit,
-          leaseholder: unit.leaseholders?.[0] || null
+          leaseholder: unit.leaseholder_id && unit.leaseholders?.[0] ? unit.leaseholders[0] : null
         }))
 
         setUnits(transformedUnits)

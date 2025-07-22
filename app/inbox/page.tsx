@@ -29,14 +29,22 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
       received_at,
       body_preview,
       building_id,
+      unit_id,
+      leaseholder_id,
       unread,
       handled,
+      pinned,
+      flag_status,
+      categories,
       tag,
       message_id,
       thread_id,
       unit,
       user_id,
-      created_at
+      created_at,
+      buildings (name),
+      units (unit_number),
+      leaseholders (name, email)
     `)
     .eq('user_id', user.id) // Only get emails for this user
     .order('received_at', { ascending: false })

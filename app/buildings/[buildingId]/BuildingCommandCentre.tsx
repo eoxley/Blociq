@@ -49,6 +49,7 @@ import Link from 'next/link'
 import { formatDistanceToNow, format } from 'date-fns'
 import AddTaskModal from './AddTaskModal'
 import EditBuildingModal from './EditBuildingModal'
+import BuildingUnitsDisplay from './components/BuildingUnitsDisplay'
 
 interface BuildingCommandCentreProps {
   buildingData: {
@@ -129,12 +130,27 @@ export default function BuildingCommandCentre({ buildingData }: BuildingCommandC
   const handleSummarise = async () => {
     setIsSummaryLoading(true)
     try {
+      // Get current time to determine greeting
+      const now = new Date()
+      const hour = now.getHours()
+      let timeGreeting = ''
+      
+      if (hour >= 5 && hour < 12) {
+        timeGreeting = 'Good morning! '
+      } else if (hour >= 12 && hour < 17) {
+        timeGreeting = 'Good afternoon! '
+      } else if (hour >= 17 && hour < 22) {
+        timeGreeting = 'Good evening! '
+      } else {
+        timeGreeting = 'Good night! '
+      }
+
       const response = await fetch('/api/ask-ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           building_id: building.id,
-          prompt: 'Summarise compliance, tasks, and recent activity for this building'
+          prompt: `${timeGreeting}Please provide a comprehensive summary of compliance status, active tasks, and recent activity for ${building.name}. Include any urgent matters that need attention.`
         })
       })
       
@@ -255,7 +271,23 @@ export default function BuildingCommandCentre({ buildingData }: BuildingCommandC
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-teal-900 flex items-center gap-2">
                 <Brain className="h-5 w-5" />
-                AI Building Summary
+                {(() => {
+                  const now = new Date()
+                  const hour = now.getHours()
+                  let timeGreeting = ''
+                  
+                  if (hour >= 5 && hour < 12) {
+                    timeGreeting = 'Good Morning'
+                  } else if (hour >= 12 && hour < 17) {
+                    timeGreeting = 'Good Afternoon'
+                  } else if (hour >= 17 && hour < 22) {
+                    timeGreeting = 'Good Evening'
+                  } else {
+                    timeGreeting = 'Good Night'
+                  }
+                  
+                  return `${timeGreeting} - AI Building Summary`
+                })()}
               </h3>
               <Button 
                 variant="outline" 
@@ -277,224 +309,98 @@ export default function BuildingCommandCentre({ buildingData }: BuildingCommandC
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column - Building Details */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Building Information Card */}
+        {/* Left Column - Units & Quick Actions */}
+        <div className="space-y-6">
+          {/* Units Overview */}
+          <BuildingUnitsDisplay
+            units={units}
+            buildingName={building.name}
+          />
+
+          {/* Quick Actions */}
           <Card className="border-0 shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 border-b">
+            <CardHeader className="bg-gradient-to-r from-gray-50 to-green-50 border-b">
               <CardTitle className="flex items-center gap-2 text-gray-900">
-                <Building2 className="h-5 w-5 text-teal-600" />
-                Building Information
+                <Zap className="h-5 w-5 text-green-600" />
+                Quick Actions
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Basic Info */}
-                <div className="space-y-4">
-                  <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
-                    <h4 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
-                      <Gavel className="h-4 w-4" />
-                      Legal Structure
-                    </h4>
-                    <div className="space-y-2">
-                      <div>
-                        <span className="text-sm text-blue-700 font-medium">Client Type:</span>
-                        <p className="text-blue-900">{buildingSetup?.client_type || 'Not specified'}</p>
-                      </div>
-                      <div>
-                        <span className="text-sm text-blue-700 font-medium">Client Name:</span>
-                        <p className="text-blue-900">{buildingSetup?.client_name || 'Not specified'}</p>
-                      </div>
-                      {buildingSetup?.client_email && (
-                        <div>
-                          <span className="text-sm text-blue-700 font-medium">Email:</span>
-                          <a href={`mailto:${buildingSetup.client_email}`} className="text-blue-600 hover:underline">
-                            {buildingSetup.client_email}
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Building Stats */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <p className="text-xs text-gray-600 font-medium">Building Type</p>
-                      <p className="font-semibold">{buildingSetup?.structure_type || 'Not specified'}</p>
-                    </div>
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <p className="text-xs text-gray-600 font-medium">Total Units</p>
-                      <p className="font-semibold">{units.length}</p>
-                    </div>
-                    {building.building_age && (
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <p className="text-xs text-gray-600 font-medium">Building Age</p>
-                        <p className="font-semibold">{building.building_age}</p>
-                      </div>
-                    )}
-                    {building.total_floors && (
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <p className="text-xs text-gray-600 font-medium">Total Floors</p>
-                        <p className="font-semibold">{building.total_floors}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Management & Safety */}
-                <div className="space-y-4">
-                  {/* Building Management */}
-                  {(building.building_manager_name || building.building_manager_email || building.building_manager_phone) && (
-                    <div className="p-4 bg-green-50 rounded-xl border border-green-200">
-                      <h4 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
-                        <Settings className="h-4 w-4" />
-                        Building Management
-                      </h4>
-                      <div className="space-y-2">
-                        {building.building_manager_name && (
-                          <div>
-                            <span className="text-sm text-green-700 font-medium">Manager:</span>
-                            <p className="text-green-900">{building.building_manager_name}</p>
-                          </div>
-                        )}
-                        {building.building_manager_email && (
-                          <div>
-                            <span className="text-sm text-green-700 font-medium">Email:</span>
-                            <a href={`mailto:${building.building_manager_email}`} className="text-green-600 hover:underline">
-                              {building.building_manager_email}
-                            </a>
-                          </div>
-                        )}
-                        {building.building_manager_phone && (
-                          <div>
-                            <span className="text-sm text-green-700 font-medium">Phone:</span>
-                            <a href={`tel:${building.building_manager_phone}`} className="text-green-600 hover:underline">
-                              {building.building_manager_phone}
-                            </a>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Emergency Contact */}
-                  {(building.emergency_contact_name || building.emergency_contact_phone) && (
-                    <div className="p-4 bg-red-50 rounded-xl border border-red-200">
-                      <h4 className="font-semibold text-red-900 mb-3 flex items-center gap-2">
-                        <AlertCircle className="h-4 w-4" />
-                        Emergency Contact
-                      </h4>
-                      <div className="space-y-2">
-                        {building.emergency_contact_name && (
-                          <div>
-                            <span className="text-sm text-red-700 font-medium">Contact:</span>
-                            <p className="text-red-900">{building.emergency_contact_name}</p>
-                          </div>
-                        )}
-                        {building.emergency_contact_phone && (
-                          <div>
-                            <span className="text-sm text-red-700 font-medium">Phone:</span>
-                            <a href={`tel:${building.emergency_contact_phone}`} className="text-red-700 hover:underline font-medium">
-                              {building.emergency_contact_phone}
-                            </a>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Operational Notes */}
-                  {buildingSetup?.operational_notes && (
-                    <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-200">
-                      <h4 className="font-semibold text-yellow-900 mb-2 flex items-center gap-2">
-                        <Info className="h-4 w-4" />
-                        Operational Notes
-                      </h4>
-                      <p className="text-sm text-yellow-800">{buildingSetup.operational_notes}</p>
-                    </div>
-                  )}
-                </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Link href={`/buildings/${building.id}/units`}>
+                  <Button variant="outline" className="w-full h-auto p-3 flex flex-col items-center gap-2">
+                    <Home className="h-5 w-5" />
+                    <span className="text-xs">Manage Units</span>
+                  </Button>
+                </Link>
+                
+                <Link href={`/buildings/${building.id}/compliance`}>
+                  <Button variant="outline" className="w-full h-auto p-3 flex flex-col items-center gap-2">
+                    <Shield className="h-5 w-5" />
+                    <span className="text-xs">Compliance</span>
+                  </Button>
+                </Link>
+                
+                <Link href={`/buildings/${building.id}/communications`}>
+                  <Button variant="outline" className="w-full h-auto p-3 flex flex-col items-center gap-2">
+                    <Send className="h-5 w-5" />
+                    <span className="text-xs">Communications</span>
+                  </Button>
+                </Link>
+                
+                <Link href={`/buildings/${building.id}/documents`}>
+                  <Button variant="outline" className="w-full h-auto p-3 flex flex-col items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    <span className="text-xs">Documents</span>
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>
 
-          {/* Units & Leaseholders */}
+          {/* Quick Actions */}
           <Card className="border-0 shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-gray-50 to-purple-50 border-b">
+            <CardHeader className="bg-gradient-to-r from-gray-50 to-orange-50 border-b">
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-gray-900">
-                  <Users className="h-5 w-5 text-purple-600" />
-                  Units & Leaseholders
+                  <CheckSquare className="h-5 w-5 text-orange-600" />
+                  Quick Tasks
                 </div>
-                <Link href={`/buildings/${building.id}/units`}>
-                  <Button variant="outline" size="sm" className="border-purple-300 text-purple-700 hover:bg-purple-50">
-                    View All
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </Button>
-                </Link>
+                <AddTaskModal buildingId={building.id} onTaskAdded={handleTaskAdded} />
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              <div className="mb-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search units or leaseholders..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
+              {todos.filter((t: any) => !t.is_complete).slice(0, 5).length > 0 ? (
+                <div className="space-y-3">
+                  {todos.filter((t: any) => !t.is_complete).slice(0, 5).map((task) => (
+                    <div key={task.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                      <Square className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{task.title}</p>
+                        {task.due_date && (
+                          <p className="text-xs text-gray-500">
+                            Due: {format(new Date(task.due_date), 'MMM dd')}
+                          </p>
+                        )}
+                      </div>
+                      <Badge 
+                        variant="outline" 
+                        className={`text-xs ${
+                          task.priority === 'High' ? 'border-red-300 text-red-700' :
+                          task.priority === 'Medium' ? 'border-yellow-300 text-yellow-700' :
+                          'border-gray-300 text-gray-700'
+                        }`}
+                      >
+                        {task.priority}
+                      </Badge>
+                    </div>
+                  ))}
                 </div>
-              </div>
-              
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2 font-semibold text-gray-700">Unit</th>
-                      <th className="text-left py-2 font-semibold text-gray-700">Leaseholder</th>
-                      <th className="text-left py-2 font-semibold text-gray-700">Contact</th>
-                      <th className="text-left py-2 font-semibold text-gray-700">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredUnits.slice(0, 8).map((unit) => (
-                      <tr key={unit.id} className="border-b hover:bg-gray-50">
-                        <td className="py-3 font-medium">{unit.unit_number}</td>
-                        <td className="py-3">
-                          {unit.leaseholders?.[0]?.name || 'No leaseholder'}
-                        </td>
-                        <td className="py-3">
-                          {unit.leaseholders?.[0]?.email ? (
-                            <a href={`mailto:${unit.leaseholders[0].email}`} className="text-blue-600 hover:underline text-xs">
-                              {unit.leaseholders[0].email}
-                            </a>
-                          ) : '-'}
-                        </td>
-                        <td className="py-3">
-                          <Badge variant={unit.leaseholders?.length > 0 ? "default" : "outline"} className="text-xs">
-                            {unit.leaseholders?.length > 0 ? 'Has Leaseholder' : 'No Leaseholder'}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              
-              {filteredUnits.length === 0 && (
+              ) : (
                 <div className="text-center py-8 text-gray-500">
-                  No units found matching your search.
-                </div>
-              )}
-              
-              {filteredUnits.length > 8 && (
-                <div className="text-center pt-4">
-                  <Link href={`/buildings/${building.id}/units`}>
-                    <Button variant="outline" size="sm">
-                      View All {filteredUnits.length} Units
-                    </Button>
-                  </Link>
+                  <CheckSquare className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                  <p className="text-sm">All caught up!</p>
+                  <p className="text-xs text-gray-400">No active tasks</p>
                 </div>
               )}
             </CardContent>
@@ -548,54 +454,6 @@ export default function BuildingCommandCentre({ buildingData }: BuildingCommandC
                       </Badge>
                     ))}
                   </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Quick Tasks */}
-          <Card className="border-0 shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-gray-50 to-orange-50 border-b">
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-gray-900">
-                  <CheckSquare className="h-5 w-5 text-orange-600" />
-                  Quick Tasks
-                </div>
-                <AddTaskModal buildingId={building.id} onTaskAdded={handleTaskAdded} />
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              {todos.filter((t: any) => !t.is_complete).slice(0, 5).length > 0 ? (
-                <div className="space-y-3">
-                  {todos.filter((t: any) => !t.is_complete).slice(0, 5).map((task) => (
-                    <div key={task.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <Square className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{task.title}</p>
-                        {task.due_date && (
-                          <p className="text-xs text-gray-500">
-                            Due: {format(new Date(task.due_date), 'MMM dd')}
-                          </p>
-                        )}
-                      </div>
-                      <Badge 
-                        variant="outline" 
-                        className={`text-xs ${
-                          task.priority === 'High' ? 'border-red-300 text-red-700' :
-                          task.priority === 'Medium' ? 'border-yellow-300 text-yellow-700' :
-                          'border-gray-300 text-gray-700'
-                        }`}
-                      >
-                        {task.priority}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <CheckSquare className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                  <p className="text-sm">All caught up!</p>
-                  <p className="text-xs text-gray-400">No active tasks</p>
                 </div>
               )}
             </CardContent>
