@@ -429,6 +429,12 @@ export default function NewInboxClient({
     fetchEmails()
   }
 
+  const handleTagsUpdated = () => {
+    // Refresh the email list after tag updates
+    console.log('🔄 NewInboxClient - Refreshing emails after tag update')
+    fetchEmails()
+  }
+
   const handleConnectOutlook = () => {
     // Redirect to Outlook OAuth endpoint
     window.location.href = '/api/auth/outlook'
@@ -705,6 +711,7 @@ export default function NewInboxClient({
                     isSelected={selectedEmail?.id === email.id}
                     onSelect={() => handleEmailSelect(email)}
                     dimmed={email.is_handled || false}
+                    onTagsUpdated={handleTagsUpdated}
                   />
                 ))}
               </div>
