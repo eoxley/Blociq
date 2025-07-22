@@ -93,8 +93,8 @@ export default function DailySummary({ className = "" }: DailySummaryProps) {
               </div>
             </div>
             <h3 className="text-lg font-bold text-[#333333] mb-2">Generating Your Summary</h3>
-            <p className="text-[#64748B] mb-1">Analyzing your property portfolio...</p>
-            <p className="text-sm text-[#64748B]">Checking tasks, emails, and compliance alerts</p>
+            <p className="text-[#64748B] mb-1">Gathering your property portfolio data...</p>
+            <p className="text-sm text-[#64748B]">Checking events, emails, and compliance alerts</p>
           </div>
         ) : error ? (
           <div className="text-center py-12">

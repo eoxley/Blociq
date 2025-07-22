@@ -31,6 +31,8 @@ export async function GET(req: NextRequest) {
       .lte('start_time', sevenDaysFromNowStr)
       .order('start_time', { ascending: true });
 
+
+
     if (eventsError) {
       console.error('Error fetching events:', eventsError);
     }
@@ -63,6 +65,24 @@ export async function GET(req: NextRequest) {
     if (complianceError) {
       console.error('Error fetching compliance documents:', complianceError);
     }
+
+    // 4. Get building portfolio overview
+    const { data: buildings, error: buildingsError } = await supabase
+      .from('buildings')
+      .select(`
+        id,
+        name,
+        address,
+        unit_count,
+        demo_ready
+      `)
+      .order('name');
+
+    if (buildingsError) {
+      console.error('Error fetching buildings:', buildingsError);
+    }
+
+
 
     // Group data by building
     const buildingData: { [key: string]: any } = {};
@@ -113,11 +133,24 @@ export async function GET(req: NextRequest) {
     }
 
     // Construct the prompt for OpenAI
-    let prompt = "You are a helpful assistant to a property manager. Create a morning summary based on this data:\n\n";
+    let prompt = "You are a helpful assistant to a property manager. Create a comprehensive morning summary based on this portfolio data:\n\n";
+
+    // Add portfolio overview
+    if (buildings && buildings.length > 0) {
+      const totalUnits = buildings.reduce((sum, building) => sum + (building.unit_count || 0), 0);
+      const demoReadyCount = buildings.filter(b => b.demo_ready).length;
+      const inSetupCount = buildings.filter(b => !b.demo_ready).length;
+      
+      prompt += `Portfolio Overview:\n`;
+      prompt += `- Total Buildings: ${buildings.length}\n`;
+      prompt += `- Total Units: ${totalUnits}\n`;
+      prompt += `- Demo Ready: ${demoReadyCount}\n`;
+      prompt += `- In Setup: ${inSetupCount}\n\n`;
+    }
 
     // Add events section
     if (upcomingEvents && upcomingEvents.length > 0) {
-      prompt += "Upcoming Events (Next 7 Days):\n";
+      prompt += "Upcoming Property Events (Next 7 Days):\n";
       upcomingEvents.forEach(event => {
         const buildingName = event.buildings?.name || 'Unknown Building';
         const eventDate = new Date(event.start_time);
@@ -133,6 +166,8 @@ export async function GET(req: NextRequest) {
       });
       prompt += "\n";
     }
+
+
 
     // Add emails section
     if (unreadEmails && unreadEmails.length > 0) {
@@ -150,11 +185,13 @@ export async function GET(req: NextRequest) {
       prompt += "Compliance Alerts:\n";
       complianceAlerts.forEach(doc => {
         const buildingName = doc.buildings?.name || 'Unknown Building';
-        const daysUntilExpiry = Math.floor((new Date(doc.expiry_date).getTime() - new Date(today).getTime()) / (1000 * 60 * 60 * 24));
+        const daysUntilExpiry = Math.floor((new Date(doc.expiry_date || '').getTime() - new Date(today).getTime()) / (1000 * 60 * 60 * 24));
         prompt += `- ${buildingName}: ${doc.doc_type || 'Document'} expires in ${daysUntilExpiry} day${daysUntilExpiry > 1 ? 's' : ''}\n`;
       });
       prompt += "\n";
     }
+
+
 
     prompt += "Return a clear, friendly summary using bullet points using British English. Keep it concise but informative. Start with a greeting and organise the information logically.";
 
