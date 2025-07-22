@@ -58,8 +58,8 @@ export default function DailySummaryTestPage() {
             <CardContent>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="font-medium">Tasks:</span>
-                  <Badge variant="outline">building_todos</Badge>
+                  <span className="font-medium">Events:</span>
+                  <Badge variant="outline">property_events</Badge>
                 </div>
                 <div className="flex justify-between">
                   <span>Emails:</span>
@@ -67,7 +67,7 @@ export default function DailySummaryTestPage() {
                 </div>
                 <div className="flex justify-between">
                   <span>Compliance:</span>
-                  <Badge variant="outline">compliance_documents</Badge>
+                  <Badge variant="outline">compliance_docs</Badge>
                 </div>
                 <div className="flex justify-between">
                   <span>Buildings:</span>
@@ -99,15 +99,11 @@ export default function DailySummaryTestPage() {
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-                <span>Overdue tasks (past due date)</span>
+                <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                <span>Upcoming events (next 7 days)</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                <span>Tasks due today</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
                 <span>Unread emails</span>
               </div>
               <div className="flex items-center gap-2">
@@ -130,17 +126,17 @@ export default function DailySummaryTestPage() {
               <div>
                 <h3 className="font-semibold mb-3">Data Queries</h3>
                 <pre className="text-xs bg-gray-100 p-3 rounded overflow-x-auto">
-{`// Overdue and due today tasks
-SELECT * FROM building_todos 
-WHERE is_complete = false 
-AND due_date <= today
+{`// Upcoming events (next 7 days)
+SELECT * FROM property_events 
+WHERE start_time >= now() 
+AND start_time <= 7_days_from_now
 
 // Unread emails
 SELECT * FROM incoming_emails 
-WHERE is_read = false
+WHERE unread = true
 
 // Compliance alerts
-SELECT * FROM compliance_documents 
+SELECT * FROM compliance_docs 
 WHERE expiry_date <= 7_days_from_now
 AND expiry_date >= today`}
                 </pre>
