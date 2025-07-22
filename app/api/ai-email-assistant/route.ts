@@ -114,21 +114,42 @@ export async function POST(req: NextRequest) {
         break;
 
       case 'categorise':
-        systemPrompt = `You are an expert at categorising property management emails. 
-        Assign appropriate categories and tags for efficient email management.`;
+        systemPrompt = `You are an expert property management triage specialist using British English. 
+        Analyse emails for urgency, action requirements, and provide comprehensive triage information.
         
-        userPrompt = `Categorise this email:
+        Guidelines:
+        - Use British English spelling and terminology
+        - Assess urgency based on content, tone, and context
+        - Determine appropriate action timeline
+        - Provide clear, actionable insights
+        - Consider property management context
+        - Format response in structured sections`;
+        
+        userPrompt = `Analyse this property management email for triage purposes:
         
         Subject: ${emailContent?.subject}
         From: ${emailContent?.from}
         Content: ${emailContent?.body}
+        Received: ${emailContent?.receivedAt}
         
-        Assign:
-        1. Primary category (Maintenance/Compliance/Complaint/Service Charge/General)
-        2. Sub-category (if applicable)
-        3. Tags (comma-separated)
-        4. Priority (Low/Medium/High)
-        5. Department (if applicable)`;
+        Please provide a structured analysis in the following format:
+        
+        Urgency: [critical/high/medium/low/none]
+        Action Required: [immediate/today/this_week/no_action/file]
+        Category: [Maintenance/Compliance/Complaint/Service Charge/General/Other]
+        Summary: [2-3 sentence summary of the email content and key points]
+        Suggested Actions: [comma-separated list of recommended actions]
+        Tags: [comma-separated relevant tags]
+        Estimated Response Time: [1 hour/4 hours/24 hours/48 hours/1 week/no response needed]
+        
+        Consider:
+        - Is this urgent or time-sensitive?
+        - Does it require immediate attention?
+        - Can it be filed or marked as no action needed?
+        - What type of response is appropriate?
+        - Are there any legal or compliance implications?
+        
+        Use British English spelling and terminology throughout.`;
         break;
 
       case 'suggest-reply':
