@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
+import { getValidAccessToken, makeGraphRequest } from "@/lib/outlookAuth";
 
 export async function POST(req: NextRequest) {
   try {
     console.log("📁 Starting email filing process...");
     
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createClient(cookies());
     
     // Get the current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -26,40 +27,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "email_id is required" }, { status: 400 });
     }
 
-    console.log("📧 Filing email:", { email_id, outlook_id });
-
-    // Get the most recent valid token for this user
-    const { data: tokens, error: tokenError } = await supabase
-      .from("outlook_tokens")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("expires_at", { ascending: false })
-      .limit(1)
-      .single();
-
-    if (tokenError || !tokens) {
-      console.error("❌ No valid Outlook token found:", tokenError);
-      return NextResponse.json({ error: "No valid Outlook token found" }, { status: 401 });
+    if (!outlook_id) {
+      console.error("❌ Missing outlook_id in request");
+      return NextResponse.json({ error: "outlook_id is required" }, { status: 400 });
     }
 
-    console.log("✅ Outlook token found, expires at:", tokens.expires_at);
+    console.log("📧 Filing email:", { email_id, outlook_id });
 
-    // Check if token is expired
-    if (new Date(tokens.expires_at) < new Date()) {
-      console.error("❌ Outlook token has expired");
-      return NextResponse.json({ error: "Outlook token has expired" }, { status: 401 });
+    // Get valid Outlook access token using utility function
+    let accessToken: string;
+    try {
+      accessToken = await getValidAccessToken();
+      console.log("✅ Valid Outlook access token obtained");
+    } catch (error) {
+      console.error("❌ Failed to get valid Outlook access token:", error);
+      return NextResponse.json({ error: "Missing or expired Outlook token" }, { status: 403 });
     }
 
     // Step 1: Get the "Filed" folder ID from Outlook
     console.log("📂 Getting 'Filed' folder ID from Outlook...");
     
-    const foldersResponse = await fetch('https://graph.microsoft.com/v1.0/me/mailFolders', {
-      headers: {
-        Authorization: `Bearer ${tokens.access_token}`,
-        "Content-Type": "application/json",
-      },
-    });
-
+    const foldersResponse = await makeGraphRequest('/me/mailFolders');
+    
     if (!foldersResponse.ok) {
       const errorData = await foldersResponse.json();
       console.error("❌ Error fetching mail folders:", errorData);
@@ -80,11 +69,10 @@ export async function POST(req: NextRequest) {
       console.log("📂 'Filed' folder not found, creating it...");
       
       // Create the "Filed" folder
-      const createFolderResponse = await fetch('https://graph.microsoft.com/v1.0/me/mailFolders', {
+      const createFolderResponse = await makeGraphRequest('/me/mailFolders', {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${tokens.access_token}`,
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           displayName: "Filed",
@@ -105,46 +93,36 @@ export async function POST(req: NextRequest) {
       folderId = newFolderData.id;
       console.log("✅ Created 'Filed' folder:", folderId);
       
-      // Store the folder ID for future use
-      await supabase
-        .from("outlook_folders")
-        .upsert({
-          user_id: user.id,
-          folder_name: "Filed",
-          folder_id: folderId,
-          created_at: new Date().toISOString()
-        }, { onConflict: "user_id,folder_name" });
+      // Note: Could store the folder ID for future use, but for now we'll look it up each time
+      // This avoids the need for an additional table that's not in the schema yet
     } else {
       folderId = filedFolder.id;
       console.log("✅ Found existing 'Filed' folder:", folderId);
     }
 
-    // Step 2: Move the email in Outlook (if outlook_id is provided)
-    if (outlook_id) {
-      console.log("📧 Moving email in Outlook to 'Filed' folder...");
-      
-      const moveResponse = await fetch(`https://graph.microsoft.com/v1.0/me/messages/${outlook_id}/move`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${tokens.access_token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          destinationId: folderId
-        }),
-      });
+    // Step 2: Move the email in Outlook
+    console.log("📧 Moving email in Outlook to 'Filed' folder...");
+    
+    const moveResponse = await makeGraphRequest(`/me/messages/${outlook_id}/move`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        destinationId: folderId
+      }),
+    });
 
-      if (!moveResponse.ok) {
-        const errorData = await moveResponse.json();
-        console.error("❌ Error moving email in Outlook:", errorData);
-        // Don't fail the entire operation if Outlook move fails
-        console.warn("⚠️ Failed to move email in Outlook, but continuing with Supabase update");
-      } else {
-        console.log("✅ Email moved to 'Filed' folder in Outlook");
-      }
-    } else {
-      console.log("⚠️ No outlook_id provided, skipping Outlook move");
+    if (!moveResponse.ok) {
+      const errorData = await moveResponse.json();
+      console.error("❌ Error moving email in Outlook:", errorData);
+      return NextResponse.json({ 
+        error: "Failed to move email in Outlook", 
+        details: errorData 
+      }, { status: moveResponse.status });
     }
+
+    console.log("✅ Email moved to 'Filed' folder in Outlook");
 
     // Step 3: Update Supabase to mark email as filed
     console.log("💾 Updating Supabase to mark email as filed...");
@@ -154,7 +132,7 @@ export async function POST(req: NextRequest) {
       .update({ 
         filed: true,
         updated_at: new Date().toISOString()
-      })
+      } as any)
       .eq("id", email_id)
       .select();
 
@@ -169,12 +147,13 @@ export async function POST(req: NextRequest) {
     console.log("✅ Email marked as filed in Supabase");
 
     const responseData = {
+      success: true,
       message: "Email filed successfully",
       email_id,
       outlook_id,
       filed: true,
       filed_at: new Date().toISOString(),
-      outlook_moved: !!outlook_id
+      outlook_moved: true
     };
 
     console.log("🎉 Email filing completed successfully");
