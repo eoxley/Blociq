@@ -1,8 +1,9 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { Mail, Clock, Building, Eye, EyeOff } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import EmailContextMenu from './EmailContextMenu'
 
 interface Email {
   id: string
@@ -25,9 +26,17 @@ interface EmailListItemProps {
   isSelected: boolean
   onSelect: () => void
   dimmed?: boolean
+  onTagsUpdated?: () => void
 }
 
-export default function EmailListItem({ email, isSelected, onSelect, dimmed }: EmailListItemProps) {
+export default function EmailListItem({ email, isSelected, onSelect, dimmed, onTagsUpdated }: EmailListItemProps) {
+  const [contextMenu, setContextMenu] = useState<{
+    isVisible: boolean
+    position: { x: number; y: number }
+  }>({
+    isVisible: false,
+    position: { x: 0, y: 0 }
+  })
   const formatDate = (dateString: string | null) => {
     if (!dateString) return ''
     
@@ -60,19 +69,38 @@ export default function EmailListItem({ email, isSelected, onSelect, dimmed }: E
     return text.substring(0, maxLength) + '...'
   }
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    setContextMenu({
+      isVisible: true,
+      position: { x: e.clientX, y: e.clientY }
+    })
+  }
+
+  const closeContextMenu = () => {
+    setContextMenu({
+      isVisible: false,
+      position: { x: 0, y: 0 }
+    })
+  }
+
   return (
-    <div
-      onClick={onSelect}
-      className={`
-        p-3 rounded-lg cursor-pointer transition-all duration-200 border
-        ${isSelected 
-          ? 'bg-blue-50 border-blue-200 shadow-sm' 
-          : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
-        }
-        ${!email.is_read ? 'border-l-4 border-l-blue-500' : ''}
-        ${dimmed ? 'opacity-60 grayscale' : ''}
-      `}
-    >
+    <>
+      <div
+        onClick={onSelect}
+        onContextMenu={handleContextMenu}
+        className={`
+          p-3 rounded-lg cursor-pointer transition-all duration-200 border
+          ${isSelected 
+            ? 'bg-blue-50 border-blue-200 shadow-sm' 
+            : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+          }
+          ${!email.is_read ? 'border-l-4 border-l-blue-500' : ''}
+          ${dimmed ? 'opacity-60 grayscale' : ''}
+        `}
+      >
       <div className="flex items-start gap-3">
         {/* Sender Avatar */}
         <div className={`
@@ -145,6 +173,17 @@ export default function EmailListItem({ email, isSelected, onSelect, dimmed }: E
           </div>
         </div>
       </div>
-    </div>
+      </div>
+
+      {/* Context Menu */}
+      <EmailContextMenu
+        emailId={email.id}
+        currentTags={email.tags}
+        isVisible={contextMenu.isVisible}
+        position={contextMenu.position}
+        onClose={closeContextMenu}
+        onTagsUpdated={onTagsUpdated}
+      />
+    </>
   )
 } 
