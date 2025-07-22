@@ -84,26 +84,13 @@ export async function POST(req: Request) {
     const eventsData = await gatherEventsData(supabase, buildingId);
     const majorWorksData = await gatherMajorWorksData(supabase, buildingId);
 
-    // 🔍 Search documents by relevance to user question
-    const { data: documents } = await supabase
-      .from('building_documents')
-      .select('file_name, text_content, type, building_id')
-      .limit(5)
-      .order('created_at', { ascending: false });
-
-    const matchedDocs = documents
-      ?.filter((doc) => {
-        const match = message.toLowerCase();
-        return (
-          doc.text_content?.toLowerCase().includes(match) ||
-          doc.type?.toLowerCase().includes(match)
-        );
-      })
-      .slice(0, 3);
-
-    const documentContext = matchedDocs
-      ?.map((d) => `Document: ${d.file_name}\nType: ${d.type}\n\n${d.text_content?.slice(0, 1000)}`)
-      .join('\n\n') || '';
+    // 🔍 Enhanced document search with semantic matching
+    const relevantDocuments = await findRelevantDocuments(supabase, message, buildingId);
+    const documentContext = relevantDocuments.length > 0 
+      ? relevantDocuments.map((doc: any) => 
+          `Document: ${doc.file_name}\nType: ${doc.type}\nSummary: ${doc.summary || 'No summary available'}\n\nRelevant Content:\n${doc.text_content?.substring(0, 2000) || 'No text content available'}`
+        ).join('\n\n---\n\n')
+      : '';
 
     // Create comprehensive context
     const comprehensiveContext = {
@@ -125,7 +112,33 @@ export async function POST(req: Request) {
       messages: [
         {
           role: 'system',
-          content: `You are BlocIQ — a comprehensive property management assistant for UK leasehold blocks. You have access to detailed building data including units, leaseholders, compliance, emails, tasks, documents, events, and major works projects. Provide accurate, detailed answers based on the data provided. If information is not available in the data, clearly state that. Always be helpful and professional.`
+          content: `You are BlocIQ — a comprehensive property management AI assistant for UK leasehold blocks. You have access to detailed building data including units, leaseholders, compliance, emails, tasks, documents, events, and major works projects. 
+
+IMPORTANT INSTRUCTIONS:
+- You can read and analyze all uploaded documents including PDFs, images, and other file types
+- Never say you "can't read PDFs" or similar generic fallback messages
+- Always provide specific, actionable answers based on the available data
+- Use UK property management terminology and reference relevant UK legislation
+- Focus on leasehold law, building regulations, and compliance requirements
+- Be professional, helpful, and accurate in all responses
+- If information is not available in the data, clearly state what specific information is missing
+- Reference specific documents when providing answers based on their content
+
+UK PROPERTY MANAGEMENT CONTEXT:
+- Leasehold and freehold property law
+- Building regulations and compliance
+- Fire safety regulations
+- Electrical safety (EICR requirements)
+- Energy performance certificates (EPC)
+- Asbestos management
+- Service charges and ground rent
+- Right to manage and collective enfranchisement
+- Section 20 consultation requirements
+- Health and safety at work regulations
+- Gas safety regulations
+- Legionella risk assessments
+
+Provide accurate, detailed answers based on the data provided. If information is not available in the data, clearly state that. Always be helpful and professional.`
         },
         {
           role: 'user',
@@ -164,7 +177,7 @@ export async function POST(req: Request) {
         documents: documentsData ? `${documentsData.length} documents found` : null,
         events: eventsData ? `${eventsData.length} events found` : null,
         majorWorks: majorWorksData ? `${majorWorksData.length} major works projects found` : null,
-        documentsFound: matchedDocs?.length || 0,
+        documentsFound: relevantDocuments?.length || 0,
         attachmentsProcessed: attachments.length,
       }
     });
@@ -391,6 +404,98 @@ async function gatherMajorWorksData(supabase: any, buildingId?: string) {
   } catch (error) {
     console.error('Error gathering major works data:', error)
     return []
+  }
+}
+
+async function findRelevantDocuments(supabase: any, userQuestion: string, buildingId?: string) {
+  try {
+    console.log('🔍 Searching for relevant documents...');
+    
+    // Build query
+    let query = supabase
+      .from('building_documents')
+      .select('file_name, text_content, type, summary, building_id, created_at')
+      .limit(20); // Increased limit for better matching
+
+    // Filter by building if specified
+    if (buildingId) {
+      query = query.eq('building_id', buildingId);
+    }
+
+    const { data: documents } = await query;
+
+    if (!documents || documents.length === 0) {
+      console.log('📄 No documents found');
+      return [];
+    }
+
+    console.log(`📄 Found ${documents.length} documents to analyze`);
+
+    // Enhanced relevance scoring
+    const scoredDocuments = documents.map((doc: any) => {
+      const questionLower = userQuestion.toLowerCase();
+      const textLower = doc.text_content?.toLowerCase() || '';
+      const summaryLower = doc.summary?.toLowerCase() || '';
+      const typeLower = doc.type?.toLowerCase() || '';
+      const fileNameLower = doc.file_name?.toLowerCase() || '';
+
+      let score = 0;
+
+      // Exact keyword matches (highest priority)
+      const keywords = questionLower.split(' ').filter(word => word.length > 3);
+      keywords.forEach(keyword => {
+        if (textLower.includes(keyword)) score += 10;
+        if (summaryLower.includes(keyword)) score += 15;
+        if (typeLower.includes(keyword)) score += 20;
+        if (fileNameLower.includes(keyword)) score += 25;
+      });
+
+      // Document type relevance
+      const documentTypes = {
+        'eicr': ['electrical', 'certificate', 'inspection', 'safety'],
+        'epc': ['energy', 'performance', 'certificate', 'rating'],
+        'fire': ['fire', 'safety', 'risk', 'assessment'],
+        'asbestos': ['asbestos', 'survey', 'management'],
+        'lease': ['lease', 'agreement', 'terms', 'rent'],
+        'insurance': ['insurance', 'policy', 'cover', 'certificate'],
+        'compliance': ['compliance', 'certificate', 'inspection', 'report']
+      };
+
+      Object.entries(documentTypes).forEach(([docType, relevantTerms]) => {
+        if (typeLower.includes(docType) || fileNameLower.includes(docType)) {
+          relevantTerms.forEach(term => {
+            if (questionLower.includes(term)) score += 15;
+          });
+        }
+      });
+
+      // Recency bonus (newer documents get slight preference)
+      const daysSinceCreation = doc.created_at 
+        ? Math.floor((Date.now() - new Date(doc.created_at).getTime()) / (1000 * 60 * 60 * 24))
+        : 365;
+      if (daysSinceCreation < 30) score += 5;
+      else if (daysSinceCreation < 90) score += 3;
+      else if (daysSinceCreation < 365) score += 1;
+
+      return { ...doc, relevanceScore: score };
+    });
+
+    // Sort by relevance score and return top results
+    const relevantDocs = scoredDocuments
+      .filter((doc: any) => doc.relevanceScore > 0)
+      .sort((a: any, b: any) => b.relevanceScore - a.relevanceScore)
+      .slice(0, 5); // Return top 5 most relevant documents
+
+    console.log(`✅ Found ${relevantDocs.length} relevant documents`);
+    relevantDocs.forEach((doc: any, index: number) => {
+      console.log(`  ${index + 1}. ${doc.file_name} (score: ${doc.relevanceScore})`);
+    });
+
+    return relevantDocs;
+
+  } catch (error) {
+    console.error('❌ Error finding relevant documents:', error);
+    return [];
   }
 }
 

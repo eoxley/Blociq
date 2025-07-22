@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@azure/msal-node": "^3.6.2",
-    "@google-cloud/vision": "^5.3.0",
+    "@google-cloud/vision": "^5.3.1",
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-label": "^2.1.7",
@@ -71,6 +71,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20.19.7",
+    "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/uuid": "^10.0.0",
