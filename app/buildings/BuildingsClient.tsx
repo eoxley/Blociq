@@ -20,7 +20,8 @@ import {
   Mail,
   Phone,
   Eye,
-  Home
+  Home,
+  Clock
 } from 'lucide-react'
 import { BlocIQBadge } from '@/components/ui/blociq-badge'
 import { BlocIQButton } from '@/components/ui/blociq-button'
@@ -102,9 +103,12 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
           </div>
           <h2 className="text-2xl font-bold text-[#333333] mb-4">No Buildings Yet</h2>
           <p className="text-[#64748B] mb-8">Get started by adding your first building to the portfolio</p>
-          <BlocIQButton className="bg-gradient-to-r from-[#008C8F] to-[#007BDB] text-white shadow-lg">
+          <BlocIQButton className="bg-gradient-to-r from-[#008C8F] to-[#007BDB] text-white shadow-lg relative">
             <Plus className="h-4 w-4 mr-2" />
             Add First Building
+            <div className="absolute -top-1 -right-1 bg-yellow-400 text-yellow-900 rounded-full p-1">
+              <Clock className="h-3 w-3" />
+            </div>
           </BlocIQButton>
         </div>
       </div>
@@ -121,13 +125,12 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
             <p className="text-white/80">Manage your property portfolio and leaseholder information</p>
           </div>
           <div className="flex items-center gap-4">
-            <BlocIQButton className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm">
+            <BlocIQButton className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm relative">
               <Plus className="h-4 w-4 mr-2" />
               Add Building
-            </BlocIQButton>
-            <BlocIQButton variant="outline" className="border-white/30 text-white hover:bg-white/10">
-              <Users className="h-4 w-4 mr-2" />
-              Import Data
+              <div className="absolute -top-1 -right-1 bg-yellow-400 text-yellow-900 rounded-full p-1">
+                <Clock className="h-3 w-3" />
+              </div>
             </BlocIQButton>
           </div>
         </div>
