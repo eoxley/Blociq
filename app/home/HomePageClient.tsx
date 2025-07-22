@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { MessageCircle, Calendar, ExternalLink, Send, Loader2, Plus, Mail, FileText, Pin, RefreshCw, Paperclip, Home, X, Building, Brain, Clock, AlertCircle, CheckCircle } from 'lucide-react'
+import { MessageCircle, Calendar, ExternalLink, Send, Loader2, Plus, Mail, FileText, Pin, Paperclip, Home, X, Building, Brain, Clock, AlertCircle, CheckCircle } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import DailySummary from '@/components/DailySummary'
 import BreadcrumbNavigation from '@/components/BreadcrumbNavigation'
@@ -89,8 +89,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const [context, setContext] = useState<any>(null)
   const [recentEmails, setRecentEmails] = useState<Email[]>([])
   const [loadingEmails, setLoadingEmails] = useState(true)
-  const [syncingEmails, setSyncingEmails] = useState(false)
-  const [syncingCalendar, setSyncingCalendar] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClientComponentClient()
 
@@ -244,73 +242,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
     fetchEmails();
   }, [supabase]);
-
-  // Sync emails function
-  const syncEmails = async () => {
-    setSyncingEmails(true)
-    try {
-      const response = await fetch('/api/sync-emails', {
-        method: 'POST',
-      })
-
-      if (response.ok) {
-        toast.success('Emails synced successfully!')
-        // Refresh emails list
-        const { data: emails, error } = await supabase
-          .from('incoming_emails')
-          .select('*')
-          .order('received_at', { ascending: false })
-          .limit(5);
-
-        if (!error && emails) {
-          const transformedEmails: Email[] = emails.map(email => ({
-            id: email.id,
-            subject: email.subject,
-            from_email: email.from_email,
-            body_preview: email.body_preview,
-            received_at: email.received_at,
-            handled: email.handled || false,
-            unread: !email.unread,
-            flag_status: email.flag_status || 'none',
-            categories: email.categories || []
-          }));
-          setRecentEmails(transformedEmails);
-        }
-      } else {
-        toast.error('Failed to sync emails')
-      }
-    } catch (error) {
-      console.error('Error syncing emails:', error)
-      toast.error('Failed to sync emails')
-    } finally {
-      setSyncingEmails(false)
-    }
-  }
-
-  const syncCalendar = async () => {
-    setSyncingCalendar(true)
-    try {
-      const response = await fetch('/api/sync-calendar', {
-        method: 'POST',
-      })
-
-      if (response.ok) {
-        const result = await response.json()
-        if (result.success) {
-          toast.success('Calendar synced successfully!')
-        } else {
-          toast.error(result.error || 'Failed to sync calendar')
-        }
-      } else {
-        toast.error('Failed to sync calendar')
-      }
-    } catch (error) {
-      console.error('Error syncing calendar:', error)
-      toast.error('Failed to sync calendar')
-    } finally {
-      setSyncingCalendar(false)
-    }
-  }
 
   const handleFileAttachment = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || [])
@@ -497,36 +428,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 <p className="text-white/90 text-lg">{currentWelcomeMessage}</p>
               </div>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <BlocIQButton 
-              onClick={syncCalendar}
-              disabled={syncingCalendar}
-              variant="outline"
-              size="sm"
-              className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
-            >
-              {syncingCalendar ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Calendar className="h-4 w-4 mr-2" />
-              )}
-              {syncingCalendar ? 'Syncing...' : 'Sync Calendar'}
-            </BlocIQButton>
-            <BlocIQButton 
-              onClick={syncEmails}
-              disabled={syncingEmails}
-              variant="outline"
-              size="sm"
-              className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
-            >
-              {syncingEmails ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <RefreshCw className="h-4 w-4 mr-2" />
-              )}
-              {syncingEmails ? 'Syncing...' : 'Sync Emails'}
-            </BlocIQButton>
           </div>
         </div>
       </div>
