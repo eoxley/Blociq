@@ -16,7 +16,8 @@ import {
   Clock,
   Calendar,
   Archive,
-  Eye
+  Eye,
+  FolderOpen
 } from 'lucide-react'
 import { BlocIQButton } from '@/components/ui/blociq-button'
 
@@ -27,6 +28,8 @@ interface EmailContextMenuProps {
   position: { x: number; y: number }
   onClose: () => void
   onTagsUpdated?: () => void
+  emailFiled?: boolean
+  outlookId?: string | null
 }
 
 const TRIAGE_CATEGORIES = [
@@ -107,10 +110,13 @@ export default function EmailContextMenu({
   isVisible, 
   position, 
   onClose, 
-  onTagsUpdated 
+  onTagsUpdated,
+  emailFiled = false,
+  outlookId
 }: EmailContextMenuProps) {
   const supabase = createClientComponentClient()
   const [updating, setUpdating] = useState(false)
+  const [filing, setFiling] = useState(false)
 
   const updateEmailTags = async (newTags: string[]) => {
     setUpdating(true)
@@ -168,6 +174,43 @@ export default function EmailContextMenu({
     const newTags = currentTags ? currentTags.filter(tag => tag !== tagToRemove) : []
     updateEmailTags(newTags)
   }
+
+  const handleFileEmail = async () => {
+    if (filing) return;
+    
+    setFiling(true);
+    try {
+      const response = await fetch('/api/email/file', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email_id: emailId,
+          outlook_id: outlookId
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to file email');
+      }
+
+      toast.success('Email filed successfully');
+      onClose();
+      
+      // Trigger a refresh of the email list
+      if (onTagsUpdated) {
+        onTagsUpdated();
+      }
+    } catch (error) {
+      console.error('Error filing email:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to file email');
+    } finally {
+      setFiling(false);
+    }
+  };
 
   if (!isVisible) return null
 
@@ -259,7 +302,7 @@ export default function EmailContextMenu({
         </div>
 
         {/* Urgency Levels */}
-        <div className="p-3">
+        <div className="p-3 border-b border-gray-200">
           <div className="text-xs font-medium text-gray-700 mb-2">Urgency:</div>
           <div className="space-y-1">
             {URGENCY_LEVELS.map((level) => {
@@ -285,6 +328,30 @@ export default function EmailContextMenu({
             })}
           </div>
         </div>
+
+        {/* File Action */}
+        {!emailFiled && (
+          <div className="p-3">
+            <div className="text-xs font-medium text-gray-700 mb-2">Actions:</div>
+            <button
+              onClick={handleFileEmail}
+              disabled={filing}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors hover:bg-blue-50 text-blue-700 border border-blue-200"
+            >
+              <FolderOpen className="h-3 w-3" />
+              <span>{filing ? 'Filing...' : 'File Email'}</span>
+            </button>
+          </div>
+        )}
+
+        {emailFiled && (
+          <div className="p-3">
+            <div className="flex items-center gap-2 px-2 py-1.5 rounded text-xs bg-blue-100 text-blue-700 border border-blue-200">
+              <Check className="h-3 w-3" />
+              <span>Email Filed</span>
+            </div>
+          </div>
+        )}
 
         {/* Loading State */}
         {updating && (
