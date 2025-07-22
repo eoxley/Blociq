@@ -169,6 +169,7 @@ export default function NewInboxClient({
         .select(`
           id, subject, from_email, received_at, body_preview, building_id, unread, handled, tag, message_id, thread_id, unit, user_id, created_at
         `)
+        .neq('tag', 'deleted') // Exclude deleted emails
         .order('received_at', { ascending: false })
 
       // Apply filters based on current filter state
@@ -401,6 +402,16 @@ export default function NewInboxClient({
             e.id === email.id ? { ...e, unread: false } : e
           ))
         })
+    }
+  }
+
+  const handleEmailDeleted = () => {
+    if (selectedEmail) {
+      // Remove the deleted email from the emails list
+      setEmails(prevEmails => prevEmails.filter(email => email.id !== selectedEmail.id))
+      // Clear the selected email
+      setSelectedEmail(null)
+      toast.success('Email removed from inbox')
     }
   }
 
@@ -724,10 +735,7 @@ export default function NewInboxClient({
           {selectedEmail ? (
             <EmailDetailPanel
               email={selectedEmail}
-              onEmailDeleted={() => {
-                setEmails(prev => prev.filter(e => e.id !== selectedEmail.id))
-                setSelectedEmail(null)
-              }}
+              onEmailDeleted={handleEmailDeleted}
               onEmailSent={() => {
                 // Refresh the email list after sending
               }}
@@ -770,7 +778,13 @@ export default function NewInboxClient({
           from_email: null,
           body_full: null,
           tags: null,
-          building_id: null
+          building_id: null,
+          received_at: null,
+          body_preview: null,
+          unread: null,
+          handled: null,
+          outlook_id: null,
+          buildings: null
         }}
         onActionComplete={handleEmailProcessed}
       />

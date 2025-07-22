@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
+import { generatePopulatedTemplate } from "@/utils/communications";
+import { sendEmailViaOutlook } from "@/utils/email";
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,16 +25,16 @@ export async function POST(req: NextRequest) {
     const { 
       template_id, 
       building_id, 
-      recipient_selection, 
-      method, 
+      recipient_selection = 'all_leaseholders',
+      method = 'email', 
       subject, 
       custom_message, 
-      merge_data 
+      merge_data = {}
     } = body;
 
-    if (!template_id || !building_id || !subject || !custom_message) {
+    if (!template_id || !building_id) {
       return NextResponse.json({ 
-        error: "Missing required fields: template_id, building_id, subject, custom_message" 
+        error: "Missing required fields: template_id, building_id" 
       }, { status: 400 });
     }
 
@@ -48,6 +50,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
 
+    console.log("✅ Template found:", template.name);
+
     // Fetch building details
     const { data: building, error: buildingError } = await supabase
       .from("buildings")
@@ -60,23 +64,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Building not found" }, { status: 404 });
     }
 
+    console.log("✅ Building found:", building.name);
+
     // Fetch recipients based on selection
     let recipients: any[] = [];
     
     if (recipient_selection === 'all_leaseholders') {
-      const { data: leaseholders, error: leaseholdersError } = await supabase
+      // Get leaseholders for the selected building
+      const { data: leaseholders, error: leaseError } = await supabase
         .from("leaseholders")
-        .select("id, name, email, phone")
+        .select("id, name, email, phone, unit_id")
         .eq("building_id", parseInt(building_id));
 
-      if (!leaseholdersError && leaseholders) {
-        recipients = leaseholders;
+      if (leaseError) {
+        console.error("❌ Error fetching leaseholders:", leaseError);
+        return NextResponse.json({ 
+          error: "Failed to fetch leaseholders", 
+          details: leaseError 
+        }, { status: 500 });
       }
+
+      recipients = leaseholders || [];
     } else if (recipient_selection === 'all_residents') {
       // Fetch all residents (leaseholders + tenants)
       const { data: residents, error: residentsError } = await supabase
         .from("leaseholders")
-        .select("id, name, email, phone")
+        .select("id, name, email, phone, unit_id")
         .eq("building_id", parseInt(building_id));
 
       if (!residentsError && residents) {
@@ -92,24 +105,6 @@ export async function POST(req: NextRequest) {
 
     console.log(`📧 Found ${recipients.length} recipients`);
 
-    // Process the message with placeholders
-    let processedMessage = custom_message;
-    let processedSubject = subject;
-
-    // Replace common placeholders
-    const placeholderMap = {
-      '[building_name]': building.name,
-      '[building_address]': building.address || '',
-      '[date]': new Date().toLocaleDateString('en-GB'),
-      '[manager_name]': user.user_metadata?.full_name || user.email?.split('@')[0] || 'Property Manager',
-      ...merge_data
-    };
-
-    Object.entries(placeholderMap).forEach(([placeholder, value]) => {
-      processedMessage = processedMessage.replace(new RegExp(placeholder, 'g'), value);
-      processedSubject = processedSubject.replace(new RegExp(placeholder, 'g'), value);
-    });
-
     // Get Outlook token for sending email
     const { data: tokens, error: tokenError } = await supabase
       .from("outlook_tokens")
@@ -119,136 +114,114 @@ export async function POST(req: NextRequest) {
       .limit(1)
       .single();
 
-    let emailResults: any[] = [];
-    let pdfResults: any[] = [];
+    if (tokenError || !tokens) {
+      console.error("❌ No valid Outlook token found:", tokenError);
+      return NextResponse.json({ error: "No valid Outlook token found for sending emails" }, { status: 401 });
+    }
 
-    // Send emails if method includes email
-    if (method === 'email' || method === 'both') {
-      if (tokenError || !tokens) {
-        console.error("❌ No valid Outlook token found:", tokenError);
-        return NextResponse.json({ error: "No valid Outlook token found for sending emails" }, { status: 401 });
-      }
+    // Check if token is expired
+    if (new Date(tokens.expires_at) < new Date()) {
+      console.error("❌ Outlook token has expired");
+      return NextResponse.json({ error: "Outlook token has expired" }, { status: 401 });
+    }
 
-      // Check if token is expired
-      if (new Date(tokens.expires_at) < new Date()) {
-        console.error("❌ Outlook token has expired");
-        return NextResponse.json({ error: "Outlook token has expired" }, { status: 401 });
-      }
+    console.log("✅ Outlook token validated");
 
-      console.log("📧 Sending emails via Microsoft Graph API...");
+    const failedRecipients: any[] = [];
+    const successfulSends: any[] = [];
 
-      // Send emails to all recipients
-      for (const recipient of recipients) {
-        try {
-          const graphApiUrl = "https://graph.microsoft.com/v1.0/me/sendMail";
-          const emailData = {
-            message: {
-              subject: processedSubject,
-              body: {
-                contentType: "HTML",
-                content: processedMessage
-              },
-              toRecipients: [
-                {
-                  emailAddress: {
-                    address: recipient.email,
-                    name: recipient.name
-                  }
-                }
-              ]
-            },
-            saveToSentItems: true
-          };
+    // Send emails to all recipients
+    for (const recipient of recipients) {
+      try {
+        // Generate populated message using utility function
+        const populatedMessage = generatePopulatedTemplate(
+          custom_message || template.body, 
+          {
+            leaseholder_name: recipient.name,
+            resident_name: recipient.name,
+            tenant_name: recipient.name,
+            building_name: building.name,
+            building_address: building.address || '',
+            property_address: `${building.name}, ${building.address || ''}`,
+            date: new Date().toLocaleDateString('en-GB'),
+            manager_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Property Manager',
+            manager_phone: user.user_metadata?.phone || '',
+            manager_email: user.email || '',
+            emergency_contact: 'Emergency: 0800 123 4567',
+            emergency_phone: '0800 123 4567',
+            ...merge_data
+          }
+        );
 
-          const response = await fetch(graphApiUrl, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${tokens.access_token}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(emailData)
+        // Send email via Outlook
+        const emailResult = await sendEmailViaOutlook({
+          to: recipient.email,
+          subject: subject || template.subject,
+          body: populatedMessage
+        }, tokens);
+
+        if (emailResult.success) {
+          successfulSends.push({
+            recipient_id: recipient.id,
+            recipient_email: recipient.email,
+            recipient_name: recipient.name,
+            message_id: emailResult.messageId,
+            sent_at: new Date().toISOString()
           });
 
-          if (response.ok) {
-            emailResults.push({
+          // Log successful communication
+          await supabase.from("communications_sent").insert({
+            template_id: template_id,
+            template_name: template.name,
+            sent_by: user.id,
+            sent_at: new Date().toISOString(),
+            building_id: parseInt(building_id),
+            building_name: building.name,
+            method: method,
+            recipients: [{ id: recipient.id, name: recipient.name, email: recipient.email }],
+            subject: subject || template.subject,
+            body: populatedMessage,
+            status: 'sent',
+            recipient_count: 1,
+            email_results: [{
               recipient_id: recipient.id,
               recipient_email: recipient.email,
               recipient_name: recipient.name,
               status: 'sent',
+              message_id: emailResult.messageId,
               sent_at: new Date().toISOString()
-            });
-          } else {
-            emailResults.push({
-              recipient_id: recipient.id,
-              recipient_email: recipient.email,
-              recipient_name: recipient.name,
-              status: 'failed',
-              error: `HTTP ${response.status}`
-            });
-          }
-        } catch (error) {
-          emailResults.push({
-            recipient_id: recipient.id,
-            recipient_email: recipient.email,
-            recipient_name: recipient.name,
-            status: 'failed',
-            error: error instanceof Error ? error.message : 'Unknown error'
+            }],
+            metadata: {
+              recipient_selection,
+              merge_data,
+              template_type: template.type,
+              template_category: template.category
+            }
+          });
+
+        } else {
+          failedRecipients.push({
+            email: recipient.email,
+            name: recipient.name,
+            reason: emailResult.error || 'Unknown error'
           });
         }
+
+      } catch (error) {
+        console.error(`❌ Error sending to ${recipient.email}:`, error);
+        failedRecipients.push({
+          email: recipient.email,
+          name: recipient.name,
+          reason: error instanceof Error ? error.message : 'Unknown error'
+        });
       }
-    }
-
-    // Generate PDFs if method includes pdf
-    if (method === 'pdf' || method === 'both') {
-      console.log("📄 Generating PDF letters...");
-      
-      // For now, we'll just log that PDF generation would happen
-      // In a real implementation, you'd use a PDF library like puppeteer or jsPDF
-      pdfResults = recipients.map(recipient => ({
-        recipient_id: recipient.id,
-        recipient_name: recipient.name,
-        status: 'generated',
-        generated_at: new Date().toISOString()
-      }));
-    }
-
-    // Log the communication in the database
-    const { data: communicationLog, error: logError } = await supabase
-      .from("communications_sent")
-      .insert({
-        template_id: template_id,
-        template_name: template.name,
-        sent_by: user.id,
-        sent_at: new Date().toISOString(),
-        building_id: parseInt(building_id),
-        building_name: building.name,
-        method: method,
-        recipients: recipients.map(r => ({ id: r.id, name: r.name, email: r.email })),
-        subject: processedSubject,
-        body: processedMessage,
-        status: 'sent',
-        recipient_count: recipients.length,
-        email_results: emailResults,
-        pdf_results: pdfResults,
-        metadata: {
-          recipient_selection,
-          merge_data,
-          template_type: template.type,
-          template_category: template.category
-        }
-      })
-      .select()
-      .single();
-
-    if (logError) {
-      console.warn("⚠️ Could not log communication:", logError);
     }
 
     // Update template usage count
     const { error: updateError } = await supabase
       .from("communication_templates")
       .update({ 
-        usage_count: (template.usage_count || 0) + 1,
+        usage_count: (template.usage_count || 0) + successfulSends.length,
         last_used_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -259,21 +232,21 @@ export async function POST(req: NextRequest) {
     }
 
     const responseData = {
-      message: "Communication sent successfully",
+      message: "Communication sending completed",
       communication: {
-        id: communicationLog?.id,
         template_name: template.name,
         building_name: building.name,
         method: method,
         recipient_count: recipients.length,
+        successful_sends: successfulSends.length,
+        failed_sends: failedRecipients.length,
         sent_at: new Date().toISOString()
       },
       results: {
-        emails: emailResults,
-        pdfs: pdfResults,
-        successful_emails: emailResults.filter(r => r.status === 'sent').length,
-        failed_emails: emailResults.filter(r => r.status === 'failed').length,
-        generated_pdfs: pdfResults.length
+        successful: successfulSends,
+        failed: failedRecipients,
+        total_recipients: recipients.length,
+        success_rate: `${((successfulSends.length / recipients.length) * 100).toFixed(1)}%`
       },
       debug_info: {
         user_id: user.id,
@@ -283,14 +256,14 @@ export async function POST(req: NextRequest) {
       }
     };
 
-    console.log("🎉 Communication sent successfully");
+    console.log("🎉 Communication sending completed");
     console.log("📊 Send summary:", {
       template: template.name,
       building: building.name,
       recipients: recipients.length,
-      method: method,
-      successful_emails: emailResults.filter(r => r.status === 'sent').length,
-      generated_pdfs: pdfResults.length
+      successful: successfulSends.length,
+      failed: failedRecipients.length,
+      success_rate: responseData.results.success_rate
     });
 
     return NextResponse.json(responseData);

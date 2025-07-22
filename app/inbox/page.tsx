@@ -19,7 +19,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
 
   console.log('🔍 Inbox page - User authenticated:', user.id)
 
-  // Fetch all emails from Supabase (no limit)
+  // Fetch all emails from Supabase (no limit) - exclude deleted emails
   const { data: rawEmails, error } = await supabase
     .from('incoming_emails')
     .select(`
@@ -47,6 +47,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
       leaseholders (name, email)
     `)
     .eq('user_id', user.id) // Only get emails for this user
+    .neq('tag', 'deleted') // Exclude deleted emails
     .order('received_at', { ascending: false })
 
   console.log('📧 Inbox page - Emails fetched:', rawEmails?.length || 0)
