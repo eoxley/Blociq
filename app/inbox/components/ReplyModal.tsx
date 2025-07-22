@@ -1,8 +1,10 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { toast } from "sonner";
 import { BlocIQButton } from "@/components/ui/blociq-button";
+import { Paperclip, X, Sparkles } from "lucide-react";
+import AIResponseModal from "./AIResponseModal";
 
 interface Email {
   id: string;
@@ -13,12 +15,19 @@ interface Email {
   body_preview: string | null;
   body_full: string | null;
   building_id: string | null;
-  is_read: boolean | null;
-  is_handled: boolean | null;
+  unread: boolean | null;
+  handled: boolean | null;
   tags: string[] | null;
   outlook_id: string | null;
   buildings?: { name: string } | null;
   cc_email?: string | null; // Added for replyAll
+}
+
+interface Attachment {
+  file: File;
+  id: string;
+  name: string;
+  size: number;
 }
 
 interface ReplyModalProps {
@@ -30,12 +39,15 @@ interface ReplyModalProps {
 
 export default function ReplyModal({ mode, email, onClose, onEmailSent }: ReplyModalProps) {
   const supabase = createClientComponentClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [to, setTo] = useState("");
   const [cc, setCc] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [loading, setLoading] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(false);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [showAIModal, setShowAIModal] = useState(false);
 
   useEffect(() => {
     const toList = [email.from_email];
@@ -57,6 +69,41 @@ export default function ReplyModal({ mode, email, onClose, onEmailSent }: ReplyM
     }
   }, [mode, email]);
 
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      const newAttachments: Attachment[] = Array.from(files).map(file => ({
+        file,
+        id: Math.random().toString(36).substr(2, 9),
+        name: file.name,
+        size: file.size
+      }));
+      
+      setAttachments(prev => [...prev, ...newAttachments]);
+    }
+    // Reset the input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const removeAttachment = (id: string) => {
+    setAttachments(prev => prev.filter(att => att.id !== id));
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const handleAIResponseGenerated = (response: string) => {
+    setBody(response);
+    setShowAIModal(false);
+  };
+
   const generateAIResponse = async () => {
     setGeneratingAI(true);
     try {
@@ -68,7 +115,8 @@ export default function ReplyModal({ mode, email, onClose, onEmailSent }: ReplyM
           subject: email.subject,
           body: email.body_full || email.body_preview,
           buildingContext: email.buildings?.name,
-          tags: email.tags || []
+          tags: email.tags || [],
+          mode: mode
         }),
       });
       
@@ -93,17 +141,24 @@ export default function ReplyModal({ mode, email, onClose, onEmailSent }: ReplyM
       return;
     }
 
+    setLoading(true);
     try {
+      // Create FormData for attachments
+      const formData = new FormData();
+      formData.append('to', JSON.stringify(to.split(',').map(email => email.trim())));
+      formData.append('cc', JSON.stringify(cc ? cc.split(',').map(email => email.trim()) : []));
+      formData.append('subject', subject);
+      formData.append('body', body);
+      formData.append('replyTo', email.from_email || '');
+      
+      // Add attachments
+      attachments.forEach((attachment, index) => {
+        formData.append(`attachment_${index}`, attachment.file);
+      });
+
       const response = await fetch("/api/send-email", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          to: to.split(',').map(email => email.trim()),
-          cc: cc ? cc.split(',').map(email => email.trim()) : [],
-          subject, 
-          body, 
-          replyTo: email.from_email 
-        }),
+        body: formData,
       });
 
       if (response.ok) {
@@ -122,6 +177,8 @@ export default function ReplyModal({ mode, email, onClose, onEmailSent }: ReplyM
     } catch (error) {
       console.error("Error sending email:", error);
       toast.error("Failed to send email");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -187,35 +244,98 @@ export default function ReplyModal({ mode, email, onClose, onEmailSent }: ReplyM
               <label className="block text-sm font-medium text-[#333333]">
                 Message
               </label>
-              <BlocIQButton
-                onClick={generateAIResponse}
-                disabled={generatingAI}
-                variant="outline"
-                size="sm"
-                className="text-xs"
-              >
-                {generatingAI ? (
-                  <>
-                    <div className="w-3 h-3 border-2 border-[#2BBEB4] border-t-transparent rounded-full animate-spin mr-1"></div>
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                    </svg>
-                    Generate AI Response
-                  </>
-                )}
-              </BlocIQButton>
+              <div className="flex gap-2">
+                <BlocIQButton
+                  onClick={() => setShowAIModal(true)}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                >
+                  <Sparkles className="w-3 h-3 mr-1" />
+                  AI Assistant
+                </BlocIQButton>
+                <BlocIQButton
+                  onClick={generateAIResponse}
+                  disabled={generatingAI}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                >
+                  {generatingAI ? (
+                    <>
+                      <div className="w-3 h-3 border-2 border-[#2BBEB4] border-t-transparent rounded-full animate-spin mr-1"></div>
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                      </svg>
+                      Quick AI
+                    </>
+                  )}
+                </BlocIQButton>
+              </div>
             </div>
             <textarea
               rows={12}
               value={body}
               onChange={(e) => setBody(e.target.value)}
               className="w-full border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-[#2BBEB4] focus:ring-2 focus:ring-[#2BBEB4]/20 outline-none transition-colors resize-none"
-              placeholder="Type your message or click 'Generate AI Response' for assistance..."
+              placeholder="Type your message or use AI Assistant for advanced help..."
             />
+          </div>
+
+          {/* Attachments */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-[#333333]">
+                Attachments
+              </label>
+              <BlocIQButton
+                onClick={() => fileInputRef.current?.click()}
+                variant="outline"
+                size="sm"
+                className="text-xs"
+              >
+                <Paperclip className="w-3 h-3 mr-1" />
+                Add Files
+              </BlocIQButton>
+            </div>
+            
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={handleFileSelect}
+              className="hidden"
+              accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
+            />
+            
+            {attachments.length > 0 && (
+              <div className="space-y-2">
+                {attachments.map((attachment) => (
+                  <div
+                    key={attachment.id}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Paperclip className="w-4 h-4 text-gray-500" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{attachment.name}</p>
+                        <p className="text-xs text-gray-500">{formatFileSize(attachment.size)}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => removeAttachment(attachment.id)}
+                      className="text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -236,6 +356,21 @@ export default function ReplyModal({ mode, email, onClose, onEmailSent }: ReplyM
           </BlocIQButton>
         </div>
       </div>
+
+      {/* AI Response Modal */}
+      <AIResponseModal
+        isOpen={showAIModal}
+        onClose={() => setShowAIModal(false)}
+        onResponseGenerated={handleAIResponseGenerated}
+        originalEmail={{
+          subject: email.subject,
+          body_full: email.body_full,
+          body_preview: email.body_preview,
+          buildings: email.buildings,
+          tags: email.tags
+        }}
+        mode={mode}
+      />
     </div>
   );
 } 
