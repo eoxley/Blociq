@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { MessageCircle, Calendar, ExternalLink, Send, Loader2, Plus, Mail, FileText, Pin, Paperclip, Home, X, Building, Brain, Clock, AlertCircle, CheckCircle } from 'lucide-react'
+import { MessageCircle, Calendar, ExternalLink, Send, Loader2, Plus, Mail, FileText, Pin, Paperclip, Home, X, Building, Brain, Clock, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import DailySummary from '@/components/DailySummary'
 import MajorWorksDashboard from '@/components/MajorWorksDashboard'
@@ -92,6 +92,22 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const [loadingEmails, setLoadingEmails] = useState(true)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClientComponentClient()
+
+  // Function to refresh/start new chat
+  const refreshChat = () => {
+    setMessages([
+      {
+        id: '1',
+        content: "Hello! I'm your BlocIQ assistant. I can help you with property management questions, compliance guidance, and more. What would you like to know?",
+        isUser: false,
+        timestamp: new Date()
+      }
+    ])
+    setInputValue('')
+    setAttachments([])
+    setError(null)
+    toast.success('New chat started!')
+  }
 
   // Dynamic welcome messages - rotating pool of positive, motivational, humorous, and informative messages
   const welcomeMessages = [
