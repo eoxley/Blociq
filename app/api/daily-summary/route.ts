@@ -16,29 +16,33 @@ export async function GET(req: NextRequest) {
     // Get today's date in ISO format
     const today = new Date().toISOString().split('T')[0];
 
-    // 1. Query overdue and due today tasks
-    const { data: tasks, error: tasksError } = await supabase
-      .from('building_todos')
+    // 1. Query upcoming property events (next 7 days)
+    const sevenDaysFromNow = new Date();
+    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+    const sevenDaysFromNowStr = sevenDaysFromNow.toISOString();
+
+    const { data: upcomingEvents, error: eventsError } = await supabase
+      .from('property_events')
       .select(`
         *,
         buildings(name)
       `)
-      .eq('is_complete', false)
-      .lte('due_date', today)
-      .order('due_date', { ascending: true });
+      .gte('start_time', new Date().toISOString())
+      .lte('start_time', sevenDaysFromNowStr)
+      .order('start_time', { ascending: true });
 
-    if (tasksError) {
-      console.error('Error fetching tasks:', tasksError);
+    if (eventsError) {
+      console.error('Error fetching events:', eventsError);
     }
 
-    // 2. Query unread emails
+    // 2. Query unread emails (using correct field name)
     const { data: unreadEmails, error: emailsError } = await supabase
       .from('incoming_emails')
       .select(`
         *,
         buildings(name)
       `)
-      .eq('is_read', false)
+      .eq('unread', true) // Changed from is_read to unread
       .order('received_at', { ascending: false });
 
     if (emailsError) {
@@ -46,12 +50,8 @@ export async function GET(req: NextRequest) {
     }
 
     // 3. Query compliance documents expiring soon (next 7 days)
-    const sevenDaysFromNow = new Date();
-    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-    const sevenDaysFromNowStr = sevenDaysFromNow.toISOString().split('T')[0];
-
     const { data: complianceAlerts, error: complianceError } = await supabase
-      .from('compliance_documents')
+      .from('compliance_docs')
       .select(`
         *,
         buildings(name)
@@ -67,14 +67,14 @@ export async function GET(req: NextRequest) {
     // Group data by building
     const buildingData: { [key: string]: any } = {};
 
-    // Group tasks by building
-    if (tasks) {
-      tasks.forEach(task => {
-        const buildingName = task.buildings?.name || 'Unknown Building';
+    // Group events by building
+    if (upcomingEvents) {
+      upcomingEvents.forEach(event => {
+        const buildingName = event.buildings?.name || 'Unknown Building';
         if (!buildingData[buildingName]) {
-          buildingData[buildingName] = { tasks: [], emails: [], compliance: [] };
+          buildingData[buildingName] = { events: [], emails: [], compliance: [] };
         }
-        buildingData[buildingName].tasks.push(task);
+        buildingData[buildingName].events.push(event);
       });
     }
 
@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
       unreadEmails.forEach(email => {
         const buildingName = email.buildings?.name || 'Unknown Building';
         if (!buildingData[buildingName]) {
-          buildingData[buildingName] = { tasks: [], emails: [], compliance: [] };
+          buildingData[buildingName] = { events: [], emails: [], compliance: [] };
         }
         buildingData[buildingName].emails.push(email);
       });
@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
       complianceAlerts.forEach(doc => {
         const buildingName = doc.buildings?.name || 'Unknown Building';
         if (!buildingData[buildingName]) {
-          buildingData[buildingName] = { tasks: [], emails: [], compliance: [] };
+          buildingData[buildingName] = { events: [], emails: [], compliance: [] };
         }
         buildingData[buildingName].compliance.push(doc);
       });
@@ -103,39 +103,34 @@ export async function GET(req: NextRequest) {
     // Check if we have any data to summarise
     const hasData = Object.keys(buildingData).length > 0 && 
       Object.values(buildingData).some(building => 
-        building.tasks.length > 0 || building.emails.length > 0 || building.compliance.length > 0
+        building.events.length > 0 || building.emails.length > 0 || building.compliance.length > 0
       );
 
     if (!hasData) {
       return NextResponse.json({
-        summary: "Good morning! You're all caught up today. No urgent tasks, unread emails, or compliance alerts to address. Enjoy your day! 🌟"
+        summary: "Good morning! You're all caught up today. No upcoming events, unread emails, or compliance alerts to address. Enjoy your day! 🌟"
       });
     }
 
     // Construct the prompt for OpenAI
     let prompt = "You are a helpful assistant to a property manager. Create a morning summary based on this data:\n\n";
 
-    // Add tasks section
-    const overdueTasks = tasks?.filter(task => new Date(task.due_date) < new Date(today)) || [];
-    const dueTodayTasks = tasks?.filter(task => task.due_date === today) || [];
-
-    if (overdueTasks.length > 0 || dueTodayTasks.length > 0) {
-      prompt += "Tasks Due Today or Overdue:\n";
-      
-      if (overdueTasks.length > 0) {
-        overdueTasks.forEach(task => {
-          const daysOverdue = Math.floor((new Date(today).getTime() - new Date(task.due_date).getTime()) / (1000 * 60 * 60 * 24));
-          const buildingName = task.buildings?.name || 'Unknown Building';
-          prompt += `- ${buildingName}: ${task.title} (overdue by ${daysOverdue} day${daysOverdue > 1 ? 's' : ''})\n`;
+    // Add events section
+    if (upcomingEvents && upcomingEvents.length > 0) {
+      prompt += "Upcoming Events (Next 7 Days):\n";
+      upcomingEvents.forEach(event => {
+        const buildingName = event.buildings?.name || 'Unknown Building';
+        const eventDate = new Date(event.start_time);
+        const daysUntilEvent = Math.floor((eventDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+        const dateStr = eventDate.toLocaleDateString('en-GB', { 
+          weekday: 'short', 
+          day: 'numeric', 
+          month: 'short',
+          hour: '2-digit',
+          minute: '2-digit'
         });
-      }
-      
-      if (dueTodayTasks.length > 0) {
-        dueTodayTasks.forEach(task => {
-          const buildingName = task.buildings?.name || 'Unknown Building';
-          prompt += `- ${buildingName}: ${task.title} (due today)\n`;
-        });
-      }
+        prompt += `- ${buildingName}: ${event.title} (${dateStr}${daysUntilEvent > 0 ? `, in ${daysUntilEvent} day${daysUntilEvent > 1 ? 's' : ''}` : ' today'})\n`;
+      });
       prompt += "\n";
     }
 
@@ -156,7 +151,7 @@ export async function GET(req: NextRequest) {
       complianceAlerts.forEach(doc => {
         const buildingName = doc.buildings?.name || 'Unknown Building';
         const daysUntilExpiry = Math.floor((new Date(doc.expiry_date).getTime() - new Date(today).getTime()) / (1000 * 60 * 60 * 24));
-        prompt += `- ${buildingName}: ${doc.document_type || 'Document'} expires in ${daysUntilExpiry} day${daysUntilExpiry > 1 ? 's' : ''}\n`;
+        prompt += `- ${buildingName}: ${doc.doc_type || 'Document'} expires in ${daysUntilExpiry} day${daysUntilExpiry > 1 ? 's' : ''}\n`;
       });
       prompt += "\n";
     }
@@ -168,7 +163,7 @@ export async function GET(req: NextRequest) {
     if (!openaiApiKey) {
       console.error('OpenAI API key not found');
       return NextResponse.json({
-        summary: "Good morning! I'm having trouble accessing the AI service right now, but you can check your tasks and emails manually. Have a great day! 🌅"
+        summary: "Good morning! I'm having trouble accessing the AI service right now, but you can check your events and emails manually. Have a great day! 🌅"
       });
     }
 
@@ -198,7 +193,7 @@ export async function GET(req: NextRequest) {
     if (!openaiResponse.ok) {
       console.error('OpenAI API error:', await openaiResponse.text());
       return NextResponse.json({
-        summary: "Good morning! I'm having trouble generating your summary right now, but you can check your tasks and emails manually. Have a productive day! 🌅"
+        summary: "Good morning! I'm having trouble generating your summary right now, but you can check your events and emails manually. Have a productive day! 🌅"
       });
     }
 
@@ -210,7 +205,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error('Error generating daily summary:', error);
     return NextResponse.json({
-      summary: "Good morning! I'm having trouble generating your summary right now, but you can check your tasks and emails manually. Have a productive day! 🌅"
+      summary: "Good morning! I'm having trouble generating your summary right now, but you can check your events and emails manually. Have a productive day! 🌅"
     });
   }
 } 
