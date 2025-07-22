@@ -514,7 +514,7 @@ export default function NewInboxClient({
             >
               <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-blue-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
               <Brain className="h-4 w-4 mr-2 animate-pulse" />
-              <span className="relative z-10">🧠 AI Triage</span>
+              <span className="relative z-10">⚕️ AI Triage</span>
             </BlocIQButton>
           </div>
         </div>
