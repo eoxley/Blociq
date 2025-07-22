@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Clock, User, Building, Mail, Brain, PenTool, Loader2, Reply, ReplyAll, Forward, Trash2 } from 'lucide-react'
+import { Clock, User, Building, Mail, PenTool, Loader2, Reply, ReplyAll, Forward, Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -32,8 +32,6 @@ interface EmailDetailProps {
 }
 
 export default function EmailDetail({ email, onEmailDeleted }: EmailDetailProps) {
-  const [summary, setSummary] = useState<string | null>(null)
-  const [isSummarizing, setIsSummarizing] = useState(false)
   const [isDraftingReply, setIsDraftingReply] = useState(false)
   const [showReplyEditor, setShowReplyEditor] = useState(false)
   const [draftReply, setDraftReply] = useState<string>('')
@@ -68,34 +66,7 @@ export default function EmailDetail({ email, onEmailDeleted }: EmailDetailProps)
     return '??'
   }
 
-  const handleSummarise = async () => {
-    setIsSummarizing(true)
-    try {
-      const response = await fetch('/api/summarise-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email_id: email.id
-        }),
-      })
 
-      const result = await response.json()
-
-      if (response.ok && result.success) {
-        setSummary(result.summary)
-        toast.success('Email summarized successfully')
-      } else {
-        toast.error(result.error || 'Failed to summarize email')
-      }
-    } catch (error) {
-      console.error('Error summarizing email:', error)
-      toast.error('Failed to summarize email')
-    } finally {
-      setIsSummarizing(false)
-    }
-  }
 
   const handleDraftReply = async () => {
     setIsDraftingReply(true)
@@ -305,22 +276,8 @@ export default function EmailDetail({ email, onEmailDeleted }: EmailDetailProps)
               )}
             </div>
 
-            {/* AI Action Buttons */}
+            {/* Draft Reply Button */}
             <div className="flex gap-2 mt-4">
-              <Button 
-                onClick={handleSummarise} 
-                disabled={isSummarizing}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
-              >
-                {isSummarizing ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Brain className="h-4 w-4" />
-                )}
-                {isSummarizing ? 'Summarising...' : '🧠 Summarise'}
-              </Button>
               <Button 
                 onClick={handleDraftReply}
                 disabled={isDraftingReply}
@@ -336,21 +293,6 @@ export default function EmailDetail({ email, onEmailDeleted }: EmailDetailProps)
                 {isDraftingReply ? 'Drafting...' : '✍️ Draft Reply'}
               </Button>
             </div>
-
-            {/* AI Summary Display */}
-            {summary && (
-              <Card className="mt-4">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Brain className="h-4 w-4 text-blue-600" />
-                    <h3 className="text-sm font-medium text-gray-900">AI Summary</h3>
-                  </div>
-                  <div className="text-sm text-gray-700 whitespace-pre-line">
-                    {summary}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
             {/* Reply Editor */}
             {showReplyEditor && (
@@ -434,13 +376,14 @@ export default function EmailDetail({ email, onEmailDeleted }: EmailDetailProps)
       </div>
 
       {/* Reply Modal */}
-      <ReplyModal
-        isOpen={replyModalState.isOpen}
-        onClose={() => setReplyModalState({ isOpen: false, action: 'reply' })}
-        email={email}
-        action={replyModalState.action}
-        onEmailSent={handleEmailSent}
-      />
+      {replyModalState.isOpen && (
+        <ReplyModal
+          mode={replyModalState.action}
+          onClose={() => setReplyModalState({ isOpen: false, action: 'reply' })}
+          email={email}
+          onEmailSent={handleEmailSent}
+        />
+      )}
     </div>
   )
 } 
