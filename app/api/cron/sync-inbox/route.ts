@@ -38,9 +38,24 @@ export async function GET(req: NextRequest) {
       authProvider: (done) => done(null, accessToken)
     });
 
-    // Fetch new emails from Outlook
+    // Get the most recent valid token for any user (for cron job)
+    const { data: tokens, error: tokenError } = await supabase
+      .from("outlook_tokens")
+      .select("*")
+      .order("expires_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (tokenError || !tokens) {
+      console.error("❌ No valid Outlook token found for cron job:", tokenError);
+      return NextResponse.json({ error: "No valid token available" }, { status: 401 });
+    }
+
+    console.log("✅ Using token for user:", tokens.email);
+
+    // Fetch new emails from Outlook using the token's associated email
     const messages = await client
-      .api("/users/eleanor.oxley@blociq.co.uk/messages")
+      .api(`/users/${tokens.email}/messages`)
       .filter(`receivedDateTime gt '${filterDate}'`)
       .select("id,subject,from,toRecipients,ccRecipients,body,bodyPreview,internetMessageId,conversationId,receivedDateTime,isRead")
       .orderby("receivedDateTime DESC")

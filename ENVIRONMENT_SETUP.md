@@ -14,13 +14,14 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 #### Microsoft OAuth Configuration
 ```bash
 # Server-side variables
-MICROSOFT_CLIENT_ID=your_microsoft_client_id
-MICROSOFT_CLIENT_SECRET=your_microsoft_client_secret
-MICROSOFT_REDIRECT_URI=http://localhost:3000/api/outlook/callback
+OUTLOOK_CLIENT_ID=your_microsoft_client_id
+OUTLOOK_CLIENT_SECRET=your_microsoft_client_secret
+OUTLOOK_TENANT_ID=your_tenant_id_or_common
+OUTLOOK_REDIRECT_URI=https://your-domain.com/auth/callback
 
 # Client-side variables (for OAuth flow)
 NEXT_PUBLIC_MICROSOFT_CLIENT_ID=your_microsoft_client_id
-NEXT_PUBLIC_MICROSOFT_REDIRECT_URI=http://localhost:3000/api/outlook/callback
+NEXT_PUBLIC_MICROSOFT_REDIRECT_URI=https://your-domain.com/auth/callback
 ```
 
 #### OpenAI Configuration
@@ -28,10 +29,19 @@ NEXT_PUBLIC_MICROSOFT_REDIRECT_URI=http://localhost:3000/api/outlook/callback
 OPENAI_API_KEY=your_openai_api_key
 ```
 
-#### Other Configuration
+#### Cron Job Configuration
 ```bash
-NEXTAUTH_SECRET=your_nextauth_secret
-NEXTAUTH_URL=http://localhost:3000
+CRON_SECRET=your_cron_secret_key_for_vercel_cron_jobs
+```
+
+#### Site Configuration
+```bash
+NEXT_PUBLIC_SITE_URL=https://your-domain.com
+```
+
+#### Google Cloud Configuration (Optional - for OCR)
+```bash
+GOOGLE_APPLICATION_CREDENTIALS=path_to_your_service_account_key.json
 ```
 
 ### Removed Variables
@@ -49,6 +59,7 @@ OUTLOOK_USER_EMAIL=hardcoded_email@example.com
 2. **OAuth Flow**: Users connect their Outlook accounts individually through OAuth
 3. **Token Management**: Tokens are automatically refreshed and managed per user
 4. **Security**: No more hardcoded email addresses in environment variables
+5. **Cron Jobs**: Added CRON_SECRET for secure Vercel cron job authentication
 
 ### Database Schema
 
@@ -71,9 +82,10 @@ CREATE TABLE outlook_tokens (
 ### Migration Steps
 
 1. **Update Environment Variables**: Remove `OUTLOOK_USER_EMAIL` and add Microsoft OAuth variables
-2. **Run Database Migration**: Execute the `outlook_tokens` table creation
-3. **Update Application**: The code now uses user-specific tokens instead of hardcoded email
-4. **User Connection**: Users will need to connect their Outlook accounts individually
+2. **Add CRON_SECRET**: Generate a secure random string for cron job authentication
+3. **Run Database Migration**: Execute the `outlook_tokens` table creation
+4. **Update Application**: The code now uses user-specific tokens instead of hardcoded email
+5. **User Connection**: Users will need to connect their Outlook accounts individually
 
 ### Benefits
 
@@ -81,4 +93,23 @@ CREATE TABLE outlook_tokens (
 - ✅ **Secure**: No hardcoded credentials in environment variables
 - ✅ **Scalable**: Supports multiple users with different Outlook accounts
 - ✅ **Automatic**: Token refresh and management is handled automatically
-- ✅ **User-friendly**: Simple OAuth flow for connecting accounts 
+- ✅ **User-friendly**: Simple OAuth flow for connecting accounts
+- ✅ **Cron Security**: Secure authentication for automated email sync
+
+### Deployment Checklist
+
+Before deploying, ensure all these environment variables are set in your Vercel project:
+
+- [ ] `NEXT_PUBLIC_SUPABASE_URL`
+- [ ] `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- [ ] `SUPABASE_SERVICE_ROLE_KEY`
+- [ ] `OUTLOOK_CLIENT_ID`
+- [ ] `OUTLOOK_CLIENT_SECRET`
+- [ ] `OUTLOOK_TENANT_ID`
+- [ ] `OUTLOOK_REDIRECT_URI`
+- [ ] `NEXT_PUBLIC_MICROSOFT_CLIENT_ID`
+- [ ] `NEXT_PUBLIC_MICROSOFT_REDIRECT_URI`
+- [ ] `OPENAI_API_KEY`
+- [ ] `CRON_SECRET`
+- [ ] `NEXT_PUBLIC_SITE_URL`
+- [ ] `GOOGLE_APPLICATION_CREDENTIALS` (optional) 
