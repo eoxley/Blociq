@@ -44,10 +44,9 @@ Add the following **Delegated** permissions:
 Add these environment variables to your `.env.local` file:
 
 ```bash
-# Microsoft OAuth Configuration
-MICROSOFT_CLIENT_ID=your_application_client_id
-MICROSOFT_CLIENT_SECRET=your_client_secret
-MICROSOFT_REDIRECT_URI=https://www.blociq.co.uk/auth/callback
+# Microsoft OAuth Configuration (Simplified)
+OUTLOOK_CLIENT_ID=your_application_client_id
+OUTLOOK_CLIENT_SECRET=your_client_secret
 
 # Site Configuration
 NEXT_PUBLIC_SITE_URL=https://www.blociq.co.uk
@@ -121,11 +120,11 @@ No additional setup or connection steps required!
 ### Common Issues:
 
 1. **"Microsoft authentication not configured"**
-   - Check `MICROSOFT_CLIENT_ID` environment variable
+   - Check `OUTLOOK_CLIENT_ID` environment variable
    - Verify Azure App Registration is set up correctly
 
 2. **"Redirect URI mismatch"**
-   - Ensure redirect URI in Azure matches `MICROSOFT_REDIRECT_URI`
+   - Ensure redirect URI in Azure matches `https://www.blociq.co.uk/auth/callback`
    - Check for trailing slashes or protocol differences
 
 3. **"Insufficient permissions"**
@@ -133,7 +132,7 @@ No additional setup or connection steps required!
    - Check that permissions are "Delegated" not "Application"
 
 4. **"Token exchange failed"**
-   - Verify `MICROSOFT_CLIENT_SECRET` is correct
+   - Verify `OUTLOOK_CLIENT_SECRET` is correct
    - Check that client secret hasn't expired
 
 ### Debug Steps:
