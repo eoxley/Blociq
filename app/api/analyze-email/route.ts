@@ -3,7 +3,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import OpenAI from 'openai';
 
-interface AnalyzeEmailRequest {
+interface AnalyseEmailRequest {
   emailId: string;
   subject: string | null;
   body: string | null;
@@ -13,7 +13,7 @@ interface AnalyzeEmailRequest {
 
 export async function POST(req: NextRequest) {
   try {
-    const { emailId, subject, body, fromEmail, fromName }: AnalyzeEmailRequest = await req.json();
+    const { emailId, subject, body, fromEmail, fromName }: AnalyseEmailRequest = await req.json();
     
     if (!emailId || !subject || !body) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     // Prepare building context for AI
     const buildingContext = buildings.map(b => `${b.name}${b.address ? ` (${b.address})` : ''}`).join(', ');
 
-    const systemPrompt = `You are an AI assistant that analyzes property management emails. Your task is to:
+    const systemPrompt = `You are an AI assistant that analyses property management emails using British English. Your task is to:
 
 1. TAG the email with relevant categories from: Finance, Maintenance, Complaint, Inquiry, Emergency, Compliance, Lease, General
 2. MATCH the email to a specific building if mentioned
@@ -59,11 +59,11 @@ Return your response as a JSON object with this exact structure:
     "buildingId": "uuid-or-null",
     "buildingName": "building-name-or-null", 
     "confidence": 85,
-    "reasoning": "explanation of why this building was matched"
+    "reasoning": "explanation of why this building was matched using British English"
   }
 }`;
 
-    const userPrompt = `Analyze this email:
+    const userPrompt = `Analyse this email using British English:
 
 Subject: ${subject}
 From: ${fromName || fromEmail}
@@ -113,7 +113,7 @@ Please provide tags and building match as specified.`;
     // Update the email with analysis results
     const updateData: any = {
       tags: tags,
-      analyzed_at: new Date().toISOString()
+      analysed_at: new Date().toISOString()
     };
 
     // Only set building_id if confidence is high enough and building exists
@@ -143,7 +143,7 @@ Please provide tags and building match as specified.`;
     });
 
   } catch (error: any) {
-    console.error('Error in analyze-email:', error);
+    console.error('Error in analyse-email:', error);
     return NextResponse.json(
       { error: 'Internal server error', details: error.message },
       { status: 500 }

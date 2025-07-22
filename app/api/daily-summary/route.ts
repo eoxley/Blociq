@@ -100,7 +100,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Check if we have any data to summarize
+    // Check if we have any data to summarise
     const hasData = Object.keys(buildingData).length > 0 && 
       Object.values(buildingData).some(building => 
         building.tasks.length > 0 || building.emails.length > 0 || building.compliance.length > 0
@@ -161,7 +161,7 @@ export async function GET(req: NextRequest) {
       prompt += "\n";
     }
 
-    prompt += "Return a clear, friendly summary using bullet points. Keep it concise but informative. Start with a greeting and organize the information logically.";
+    prompt += "Return a clear, friendly summary using bullet points using British English. Keep it concise but informative. Start with a greeting and organise the information logically.";
 
     // Call OpenAI API
     const openaiApiKey = process.env.OPENAI_API_KEY;
@@ -183,7 +183,7 @@ export async function GET(req: NextRequest) {
         messages: [
           {
             role: 'system',
-            content: 'You are a helpful property management assistant. Provide clear, actionable summaries in a friendly tone.'
+            content: 'You are a helpful property management assistant using British English. Provide clear, actionable summaries in a friendly tone with British spelling and terminology.'
           },
           {
             role: 'user',

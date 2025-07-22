@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     console.log("✅ Text extracted, length:", extractedText.length)
 
     // 3. Generate AI analysis with enhanced prompt
-    const aiAnalysis = await analyzeDocument(extractedText, file.name, buildingId)
+    const aiAnalysis = await analyseDocument(extractedText, file.name, buildingId)
 
     // 4. Store extracted text temporarily (will be linked when confirmed)
     try {
@@ -159,14 +159,14 @@ async function extractTextFromPDF(file: File): Promise<string> {
   }
 }
 
-async function analyzeDocument(text: string, fileName: string, buildingId?: string) {
+async function analyseDocument(text: string, fileName: string, buildingId?: string) {
   const prompt = `
-You are analyzing a document for a UK leasehold block management platform called BlocIQ.
+You are analysing a document for a UK leasehold block management platform called BlocIQ using British English.
 
 Document: ${fileName}
 Content: ${text.substring(0, 4000)}
 
-Please analyze this document and provide the following information in JSON format:
+Please analyse this document and provide the following information in JSON format using British English:
 
 1. classification: One of "Fire Risk Assessment", "EICR", "Insurance Certificate", "Lift Maintenance", "Other"
 2. document_type: Specific type within the classification (e.g., "Fire Risk Assessment - Type 1", "Electrical Installation Condition Report", "Building Insurance Certificate", "Lift Maintenance Certificate", "Meeting Minutes", "Lease Agreement", "Scope of Works")

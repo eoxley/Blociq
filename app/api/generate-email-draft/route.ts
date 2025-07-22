@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     const senderName = email.from_name || email.from_email || 'Unknown Sender';
     const emailTags = email.tags || tags;
 
-    const systemPrompt = `You are a professional property management assistant helping to draft email replies. 
+    const systemPrompt = `You are a professional property management assistant helping to draft email replies using British English. 
     
 Context:
 - Building: ${buildingName}${buildingAddress ? ` (${buildingAddress})` : ''}
@@ -61,14 +61,17 @@ Context:
 - Original Subject: ${subject}
 
 Guidelines:
-- Be professional, courteous, and helpful
+- Be professional, courteous, and helpful using British English
 - Address the specific concerns in the original email
 - Provide clear, actionable responses
 - Use appropriate tone based on the email content and tags
 - Include relevant building-specific information when applicable
 - Keep responses concise but comprehensive
-- End with a professional closing
-- If the email requires follow-up action, clearly state what will happen next`;
+- End with a professional closing using "Kind regards" or similar British formalities
+- If the email requires follow-up action, clearly state what will happen next
+- Use British English spelling throughout (e.g., analyse, summarise, organise, recognise, apologise, customise, centre, defence)
+- Format dates as DD/MM/YYYY (British format)
+- Use British terminology and expressions appropriate for UK property management`;
 
     const userPrompt = `Please draft a professional reply to this email:
 

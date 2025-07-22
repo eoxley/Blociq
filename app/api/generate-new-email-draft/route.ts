@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Build system prompt
-    const systemPrompt = `You are a professional property management assistant helping to draft new emails. 
+    const systemPrompt = `You are a professional property management assistant helping to draft new emails using British English. 
 
 Context:
 ${buildingContext ? `- ${buildingContext}` : ''}
@@ -56,16 +56,19 @@ ${context ? `- Additional Context: ${context}` : ''}
 ${purpose ? `- Purpose: ${purpose}` : ''}
 
 Guidelines:
-- Be professional, courteous, and helpful
+- Be professional, courteous, and helpful using British English
 - Address the subject matter appropriately
 - Provide clear, actionable content
 - Use appropriate tone for property management
 - Include relevant building-specific information when applicable
 - Keep content concise but comprehensive
-- End with a professional closing
+- End with a professional closing using "Kind regards" or similar British formalities
 - If the email requires follow-up action, clearly state what will happen next
 - Use a warm but professional greeting
-- Structure the email logically with proper paragraphs`;
+- Structure the email logically with proper paragraphs
+- Use British English spelling throughout (e.g., analyse, summarise, organise, recognise, apologise, customise, centre, defence)
+- Format dates as DD/MM/YYYY (British format)
+- Use British terminology and expressions appropriate for UK property management`;
 
     const userPrompt = `Please draft a professional email with the following details:
 

@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const prompt = `Analyze this incoming email and classify it with appropriate tags and urgency level.
+    const prompt = `Analyse this incoming email and classify it with appropriate tags and urgency level using British English.
 
 Email Subject: ${subject || 'No subject'}
 Email Body: ${body || 'No body content'}
@@ -24,7 +24,7 @@ Email Body: ${body || 'No body content'}
 Available tags: Urgent, Compliance, Leaseholder, General, Maintenance, Financial, Legal, Emergency, Routine
 
 Instructions:
-1. Analyze the content for urgency, compliance issues, leaseholder concerns, and general management topics
+1. Analyse the content for urgency, compliance issues, leaseholder concerns, and general management topics
 2. Select the most relevant tags (1-4 tags maximum)
 3. Determine if this email should be flagged as urgent (flag_status = 'flagged')
 4. Provide a confidence score (0-100) for your classification
@@ -34,7 +34,7 @@ Return your response as a JSON object with this exact structure:
   "tags": ["tag1", "tag2"],
   "flag_status": "flagged" or "notFlagged",
   "confidence": 85,
-  "reasoning": "Brief explanation of classification"
+  "reasoning": "Brief explanation of classification using British English"
 }
 
 Focus on:
@@ -53,7 +53,7 @@ Focus on:
       messages: [
         {
           role: 'system',
-          content: 'You are an expert property management assistant. Analyze emails and classify them with appropriate tags and urgency levels. Always respond with valid JSON.'
+          content: 'You are an expert property management assistant using British English. Analyse emails and classify them with appropriate tags and urgency levels. Always respond with valid JSON using British spelling and terminology.'
         },
         {
           role: 'user',
