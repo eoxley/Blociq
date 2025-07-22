@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import LayoutWithSidebar from '@/components/LayoutWithSidebar'
 import BuildingCommandCentre from './BuildingCommandCentre'
+import ErrorBoundary from '@/components/ErrorBoundary'
 
 export default async function BuildingDetailPage({ 
   params 
@@ -209,22 +210,24 @@ export default async function BuildingDetailPage({
     console.log('✅ Building data prepared successfully')
 
     return (
-      <LayoutWithSidebar>
-        <div className="space-y-6">
-          {/* Clean Header */}
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {building.name || 'Building Details'}
-            </h1>
-            {building.address && (
-              <p className="text-gray-600 text-lg">{building.address}</p>
-            )}
-          </div>
+      <ErrorBoundary>
+        <LayoutWithSidebar>
+          <div className="space-y-6">
+            {/* Clean Header */}
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                {building.name || 'Building Details'}
+              </h1>
+              {building.address && (
+                <p className="text-gray-600 text-lg">{building.address}</p>
+              )}
+            </div>
 
-          {/* Building Command Centre Component */}
-          <BuildingCommandCentre buildingData={buildingData} />
-        </div>
-      </LayoutWithSidebar>
+            {/* Building Command Centre Component */}
+            <BuildingCommandCentre buildingData={buildingData} />
+          </div>
+        </LayoutWithSidebar>
+      </ErrorBoundary>
     )
   } catch (error) {
     console.error('❌ Unexpected error in building detail page:', error)
