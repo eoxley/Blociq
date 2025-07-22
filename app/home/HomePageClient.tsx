@@ -450,7 +450,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           
           <BlocIQCardContent className="flex-1 flex flex-col p-6">
             {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2">
+            <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2 max-h-[400px] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
               {messages.map((message) => (
                 <div key={message.id} className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[80%] rounded-xl px-4 py-3 ${
@@ -458,7 +458,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                       ? 'bg-gradient-to-r from-[#008C8F] to-[#007BDB] text-white shadow-lg' 
                       : 'bg-[#FAFAFA] text-[#333333] border border-[#E2E8F0]'
                   }`}>
-                    <div className="text-sm whitespace-pre-line">{message.content}</div>
+                    <div className="text-sm whitespace-pre-line break-words">{message.content}</div>
                     <div className={`text-xs mt-1 ${
                       message.isUser ? 'text-white/70' : 'text-[#64748B]'
                     }`}>
