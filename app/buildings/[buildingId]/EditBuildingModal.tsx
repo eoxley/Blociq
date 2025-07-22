@@ -19,9 +19,11 @@ import {
   Save,
   X,
   Gavel,
-  Briefcase
+  Briefcase,
+  ShieldAlert
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { checkAndAssignBSAAssets } from '@/lib/bsaAssetAssignment'
 
 interface EditBuildingModalProps {
   building: any
@@ -63,6 +65,7 @@ export default function EditBuildingModal({
     building_manager_phone: building?.building_manager_phone || '',
     emergency_contact_name: building?.emergency_contact_name || '',
     emergency_contact_phone: building?.emergency_contact_phone || '',
+    is_hrb: building?.is_hrb || false,
   })
 
   const [setupData, setSetupData] = useState({
@@ -78,7 +81,26 @@ export default function EditBuildingModal({
     setIsLoading(true)
     try {
       await onSave(buildingData, setupData)
-      toast.success('Building information updated successfully')
+      
+      // Check if building was marked as HRB and assign BSA assets if needed
+      if (buildingData.is_hrb && !building?.is_hrb) {
+        try {
+          console.log('🏗️ Building marked as HRB, assigning BSA assets...')
+          const bsaResult = await checkAndAssignBSAAssets(building.id, true, 'current-user-id') // TODO: Get actual user ID
+          
+          if (bsaResult.success && 'assigned' in bsaResult && bsaResult.assigned > 0) {
+            toast.success(`Building updated successfully! ${bsaResult.assigned} BSA compliance assets automatically assigned.`)
+          } else {
+            toast.success('Building updated successfully!')
+          }
+        } catch (bsaError) {
+          console.error('❌ BSA asset assignment failed:', bsaError)
+          toast.success('Building updated successfully, but BSA asset assignment failed. Please check compliance setup.')
+        }
+      } else {
+        toast.success('Building information updated successfully')
+      }
+      
       onClose()
     } catch (error) {
       toast.error('Failed to update building information')
@@ -294,6 +316,33 @@ export default function EditBuildingModal({
                     />
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* High-Risk Building Status */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShieldAlert className="h-5 w-5 text-red-600" />
+                  High-Risk Building (HRB) Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="is_hrb"
+                    checked={buildingData.is_hrb}
+                    onChange={(e) => setBuildingData({...buildingData, is_hrb: e.target.checked})}
+                    className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                  />
+                  <Label htmlFor="is_hrb" className="text-sm font-medium text-gray-900">
+                    This is a High-Risk Building (HRB)
+                  </Label>
+                </div>
+                <p className="text-sm text-gray-600">
+                  High-Risk Buildings are subject to additional safety regulations and compliance requirements under the Building Safety Act 2022.
+                </p>
               </CardContent>
             </Card>
 

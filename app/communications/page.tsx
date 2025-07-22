@@ -1,18 +1,24 @@
-import { redirect } from 'next/navigation'
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import React from 'react'
+import { createClient } from '@/utils/supabase/server'
 import { cookies } from 'next/headers'
-import CommunicationsClient from './CommunicationsClient'
+import { redirect } from 'next/navigation'
+import CommunicationsClientNew from './CommunicationsClientNew'
+import LayoutWithSidebar from '@/components/LayoutWithSidebar'
 
 export default async function CommunicationsPage() {
-  const cookieStore = cookies()
-  const supabase = createServerComponentClient({ cookies: () => cookieStore })
+  const supabase = createClient(cookies())
+  
+  // Protect this route with Supabase Auth
   const { data: { session } } = await supabase.auth.getSession()
 
-  if (!session) redirect('/login')
+  if (!session) {
+    redirect('/login')
+  }
 
+  // Get user profile data
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, email')
+    .select('*')
     .eq('id', session.user.id)
     .single()
 
@@ -21,5 +27,11 @@ export default async function CommunicationsPage() {
     email: session.user.email || ''
   }
 
-  return <CommunicationsClient userData={userData} />
+  return (
+    <LayoutWithSidebar>
+      <div className="max-w-7xl mx-auto p-6">
+        <CommunicationsClient userData={userData} />
+      </div>
+    </LayoutWithSidebar>
+  )
 } 
