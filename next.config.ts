@@ -45,8 +45,19 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      {
+        source: '/api/cron/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, must-revalidate',
+          },
+        ],
+      },
     ];
   },
+  // Add output configuration for better deployment
+  output: 'standalone',
 };
 
 export default nextConfig;

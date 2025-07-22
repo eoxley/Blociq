@@ -22,10 +22,10 @@ export async function GET(request: NextRequest) {
 
   // Check if this is a Microsoft OAuth callback
   const code = requestUrl.searchParams.get('code');
-  const error = requestUrl.searchParams.get('error');
+  const oauthError = requestUrl.searchParams.get('error');
 
-  if (error) {
-    console.error('[Callback] Microsoft OAuth error:', error);
+  if (oauthError) {
+    console.error('[Callback] Microsoft OAuth error:', oauthError);
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/login?error=microsoft_oauth`);
   }
 
@@ -42,28 +42,40 @@ export async function GET(request: NextRequest) {
       const userInfo = await getUserInfo(tokenResponse.access_token);
       console.log('[Callback] User info retrieved:', userInfo.email);
 
-      // Create or update user in Supabase
-      const { data: authData, error: authError } = await supabase.auth.signInWithOAuth({
-        provider: 'azure',
-        options: {
-          scopes: 'openid profile email',
-          queryParams: {
-            access_token: tokenResponse.access_token,
-            refresh_token: tokenResponse.refresh_token
+      // For Microsoft OAuth, we'll handle the user creation differently
+      // First, try to get the current user session
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      let userId = user?.id;
+      
+      if (!userId) {
+        // If no user session, create a new user or sign in
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithOAuth({
+          provider: 'azure',
+          options: {
+            scopes: 'openid profile email',
+            queryParams: {
+              access_token: tokenResponse.access_token,
+              refresh_token: tokenResponse.refresh_token
+            }
           }
-        }
-      });
+        });
 
-      if (authError) {
-        console.error('[Callback] Supabase auth error:', authError);
-        return NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/login?error=supabase_auth`);
+        if (signInError) {
+          console.error('[Callback] Supabase auth error:', signInError);
+          return NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/login?error=supabase_auth`);
+        }
+        
+        // Get the user ID from the sign-in response
+        const { data: { user: newUser } } = await supabase.auth.getUser();
+        userId = newUser?.id;
       }
 
       // Save Microsoft tokens to Supabase
       const { error: tokenError } = await supabase
         .from('outlook_tokens')
         .upsert({
-          user_id: authData.user?.id || userInfo.id,
+          user_id: userId || userInfo.id,
           email: userInfo.email,
           access_token: tokenResponse.access_token,
           refresh_token: tokenResponse.refresh_token,
@@ -88,10 +100,10 @@ export async function GET(request: NextRequest) {
 
   // Handle regular Supabase auth callback
   console.log('[Callback] Attempting Supabase session exchange...');
-  const { data, error } = await supabase.auth.exchangeCodeForSession(requestUrl.searchParams.toString());
+  const { data, error: sessionError } = await supabase.auth.exchangeCodeForSession(requestUrl.searchParams.toString());
 
-  if (error) {
-    console.error('[Callback] Session exchange failed:', error.message);
+  if (sessionError) {
+    console.error('[Callback] Session exchange failed:', sessionError.message);
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/login?error=session`);
   }
 
