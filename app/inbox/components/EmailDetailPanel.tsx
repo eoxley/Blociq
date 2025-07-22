@@ -17,8 +17,8 @@ interface Email {
   body_preview: string | null;
   body_full: string | null;
   building_id: string | null;
-  is_read: boolean | null;
-  is_handled: boolean | null;
+  unread: boolean | null;
+  handled: boolean | null;
   tags: string[] | null;
   outlook_id: string | null;
   buildings?: { name: string } | null;
@@ -127,12 +127,12 @@ export default function EmailDetailPanel({ email, onEmailDeleted, onEmailSent }:
           
           {/* Status Badges */}
           <div className="flex items-center gap-2">
-            {!email.is_read && (
+            {email.unread && (
               <BlocIQBadge variant="primary" size="sm">
                 Unread
               </BlocIQBadge>
             )}
-            {email.is_handled && (
+            {email.handled && (
               <BlocIQBadge variant="success" size="sm">
                 Handled
               </BlocIQBadge>

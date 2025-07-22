@@ -62,8 +62,8 @@ interface Email {
   body_preview: string | null
   body_full: string | null
   building_id: string | null
-  is_read: boolean | null
-  is_handled: boolean | null
+  unread: boolean | null
+  handled: boolean | null
   tags: string[] | null
   outlook_id: string | null
   buildings?: { name: string } | null
@@ -218,8 +218,8 @@ export default function NewInboxClient({
           from_email: email.from_email || 'unknown@example.com',
           body_preview: email.body_preview || 'No preview available',
           body_full: email.body_preview || 'No content available', // Use body_preview as body_full
-          is_read: !email.unread, // Convert unread to is_read (inverted)
-          is_handled: email.handled || false,
+          unread: email.unread,
+          handled: email.handled || false,
           tags: email.tag ? [email.tag] : [], // Convert single tag to array
           building_id: email.building_id || null,
           outlook_id: email.message_id || null // Use message_id as outlook_id
@@ -326,8 +326,8 @@ export default function NewInboxClient({
             from_email: email.from_email || 'unknown@example.com',
             body_preview: email.body_preview || 'No preview available',
             body_full: email.body_preview || 'No content available', // Use body_preview as body_full
-            is_read: !email.unread, // Convert unread to is_read (inverted)
-            is_handled: email.handled || false,
+            unread: email.unread,
+            handled: email.handled || false,
             tags: email.tag ? [email.tag] : [], // Convert single tag to array
             building_id: email.building_id || null,
             outlook_id: email.message_id || null // Use message_id as outlook_id
@@ -376,7 +376,7 @@ export default function NewInboxClient({
       // Update local state
       setEmails(prev => prev.map(email => 
         email.id === emailId 
-          ? { ...email, is_handled: true }
+          ? { ...email, handled: true }
           : email
       ))
 
@@ -391,14 +391,14 @@ export default function NewInboxClient({
     setSelectedEmail(email)
     
     // Mark as read if not already read
-    if (!email.is_read) {
+    if (email.unread) {
       supabase
         .from('incoming_emails')
         .update({ unread: false })
         .eq('id', email.id)
         .then(() => {
           setEmails(prev => prev.map(e => 
-            e.id === email.id ? { ...e, is_read: true } : e
+            e.id === email.id ? { ...e, unread: false } : e
           ))
         })
     }
@@ -543,7 +543,7 @@ export default function NewInboxClient({
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-3xl font-bold">{emails?.filter(e => !e.is_read).length || 0}</div>
+                <div className="text-3xl font-bold">{emails?.filter(e => e.unread).length || 0}</div>
                 <div className="text-sm text-white/80">Unread</div>
               </div>
               <Mail className="h-10 w-10 text-white/80" />
@@ -553,7 +553,7 @@ export default function NewInboxClient({
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-3xl font-bold">{emails?.filter(e => !e.is_handled).length || 0}</div>
+                <div className="text-3xl font-bold">{emails?.filter(e => !e.handled).length || 0}</div>
                 <div className="text-sm text-white/80">Pending</div>
               </div>
               <Clock className="h-10 w-10 text-white/80" />
@@ -563,7 +563,7 @@ export default function NewInboxClient({
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-3xl font-bold">{emails?.filter(e => e.is_handled).length || 0}</div>
+                <div className="text-3xl font-bold">{emails?.filter(e => e.handled).length || 0}</div>
                 <div className="text-sm text-white/80">Handled</div>
               </div>
               <CheckCircle className="h-10 w-10 text-white/80" />
@@ -710,7 +710,7 @@ export default function NewInboxClient({
                     email={email}
                     isSelected={selectedEmail?.id === email.id}
                     onSelect={() => handleEmailSelect(email)}
-                    dimmed={email.is_handled || false}
+                    dimmed={email.handled || false}
                     onTagsUpdated={handleTagsUpdated}
                   />
                 ))}
