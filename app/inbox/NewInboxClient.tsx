@@ -19,7 +19,6 @@ import {
   User, 
   Calendar,
   Loader2,
-  Settings,
   Trash2,
   Archive,
   Tag,
@@ -35,8 +34,7 @@ import {
   AlertCircle,
   Info,
   Check,
-  X,
-  Database
+  X
 } from 'lucide-react'
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
@@ -517,42 +515,6 @@ export default function NewInboxClient({
             >
               <Brain className="h-4 w-4 mr-2" />
               AI Triage
-            </BlocIQButton>
-            <BlocIQButton 
-              onClick={async () => {
-                try {
-                  const response = await fetch('/api/test-emails')
-                  const data = await response.json()
-                  console.log('🔍 Test emails result:', data)
-                  toast.success(`Test completed: ${data.user_emails_count} emails found`)
-                } catch (error) {
-                  console.error('Test failed:', error)
-                  toast.error('Test failed')
-                }
-              }}
-              variant="secondary"
-              className="bg-white/20 hover:bg-white/30 text-white border-white/30"
-            >
-              <Settings className="h-4 w-4 mr-2" />
-              Test Emails
-            </BlocIQButton>
-            <BlocIQButton 
-              onClick={async () => {
-                try {
-                  const response = await fetch('/api/test-db')
-                  const data = await response.json()
-                  console.log('🔍 Test DB result:', data)
-                  toast.success(`DB Test: ${data.total_emails} total emails, ${data.emails_with_user_id} with user_id`)
-                } catch (error) {
-                  console.error('DB Test failed:', error)
-                  toast.error('DB Test failed')
-                }
-              }}
-              variant="secondary"
-              className="bg-white/20 hover:bg-white/30 text-white border-white/30"
-            >
-              <Database className="h-4 w-4 mr-2" />
-              Test DB
             </BlocIQButton>
           </div>
         </div>
