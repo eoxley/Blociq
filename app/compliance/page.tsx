@@ -21,6 +21,10 @@ export default async function CompliancePage() {
         name,
         address,
         unit_count,
+        units (
+          id,
+          unit_number
+        ),
         building_compliance_assets (
           id,
           status,
@@ -52,17 +56,23 @@ export default async function CompliancePage() {
       )
     }
 
+    // Transform buildings to include actual unit counts
+    const buildingsWithActualCounts = (buildings || []).map(building => ({
+      ...building,
+      unit_count: building.units?.length || 0
+    }))
+
     // Calculate compliance statistics
-    const totalBuildings = buildings?.length || 0
-    const buildingsWithCompliance = buildings?.filter(b => b.building_compliance_assets && b.building_compliance_assets.length > 0).length || 0
-    const overdueCount = buildings?.reduce((count, building) => {
+    const totalBuildings = buildingsWithActualCounts?.length || 0
+    const buildingsWithCompliance = buildingsWithActualCounts?.filter(b => b.building_compliance_assets && b.building_compliance_assets.length > 0).length || 0
+    const overdueCount = buildingsWithActualCounts?.reduce((count, building) => {
       const overdueAssets = building.building_compliance_assets?.filter(asset => 
         asset.status === 'overdue' || 
         (asset.next_due_date && new Date(asset.next_due_date) < new Date())
       ) || []
       return count + overdueAssets.length
     }, 0) || 0
-    const dueSoonCount = buildings?.reduce((count, building) => {
+    const dueSoonCount = buildingsWithActualCounts?.reduce((count, building) => {
       const dueSoonAssets = building.building_compliance_assets?.filter(asset => {
         if (!asset.next_due_date) return false
         const dueDate = new Date(asset.next_due_date)
@@ -236,9 +246,9 @@ export default async function CompliancePage() {
               </div>
             </div>
 
-            {buildings && buildings.length > 0 ? (
+            {buildingsWithActualCounts && buildingsWithActualCounts.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {buildings.map((building) => {
+                {buildingsWithActualCounts.map((building) => {
                   const complianceAssets = building.building_compliance_assets || []
                   const hasCompliance = complianceAssets.length > 0
                   const overdueAssets = complianceAssets.filter(asset => 
