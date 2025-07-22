@@ -53,7 +53,7 @@ export default async function BuildingsPage() {
       console.log(`📊 Found ${buildingCount} buildings in database`)
     }
 
-    // Fetch buildings with unit counts using a subquery
+    // Fetch buildings with their actual units to calculate unit counts
     const { data, error } = await supabase
       .from('buildings')
       .select(`
@@ -62,7 +62,12 @@ export default async function BuildingsPage() {
         address,
         unit_count,
         created_at,
-        demo_ready
+        demo_ready,
+        units (
+          id,
+          unit_number,
+          building_id
+        )
       `)
       .order('name')
 
@@ -74,15 +79,20 @@ export default async function BuildingsPage() {
 
     console.log('📋 Raw buildings data:', data)
 
-    // Transform the data to include actual unit counts
+    // Transform the data to calculate actual unit counts from the units array
     buildings = (data || []).map(building => ({
       ...building,
-      unit_count: building.unit_count || 0,
-      units: []
+      unit_count: building.units?.length || 0, // Calculate from actual units
+      units: building.units || []
     }))
 
     console.log(`✅ Successfully fetched ${buildings.length} buildings from database`)
-    console.log('🏢 Buildings:', buildings.map(b => ({ id: b.id, name: b.name, units: b.units?.length || 0 })))
+    console.log('🏢 Buildings with actual unit counts:', buildings.map(b => ({ 
+      id: b.id, 
+      name: b.name, 
+      unit_count: b.unit_count,
+      units_count: b.units?.length || 0 
+    })))
     
   } catch (error) {
     console.error('❌ Unexpected error in buildings page:', error)
