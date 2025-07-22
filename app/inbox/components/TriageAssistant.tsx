@@ -450,7 +450,7 @@ export default function TriageAssistant({
                 ) : (
                   <>
                     <Sparkles className="h-5 w-5 mr-2" />
-                    ⚕️ Start AI Triage
+                    🚑 Start AI Triage
                   </>
                 )}
               </Button>
