@@ -61,23 +61,6 @@ export default function MajorWorksClient({ userData, selectedBuildingId }: Major
 
   return (
     <div className="max-w-7xl mx-auto p-6">
-      {/* Header */}
-      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="w-12 h-12 bg-gradient-to-br from-[#008C8F] to-[#2BBEB4] rounded-xl flex items-center justify-center">
-            <BlocIQLogo className="h-7 w-7 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-[#0F5D5D] mb-2">
-              Major Works Management
-            </h1>
-            <p className="text-lg text-gray-600">
-              Track and manage major works projects across all buildings
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Major Works Dashboard */}
       <MajorWorksDashboard 
         showAllBuildings={true}

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import MajorWorksClient from './MajorWorksClient'
+import LayoutWithSidebar from '@/components/LayoutWithSidebar'
 
 interface MajorWorksPageProps {
   searchParams: Promise<{ building?: string }>
@@ -27,5 +28,9 @@ export default async function MajorWorksPage({ searchParams }: MajorWorksPagePro
     email: session.user.email || ''
   }
 
-  return <MajorWorksClient userData={userData} selectedBuildingId={building} />
+  return (
+    <LayoutWithSidebar>
+      <MajorWorksClient userData={userData} selectedBuildingId={building} />
+    </LayoutWithSidebar>
+  )
 } 
