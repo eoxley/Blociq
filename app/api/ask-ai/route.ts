@@ -151,7 +151,7 @@ function generateBuildingSummary(context: any, prompt?: string) {
       summary += `1. Address overdue compliance items immediately\n`
     }
     if (tasks.filter((t: any) => !t.is_complete && t.priority === 'High').length > 0) {
-      summary += `2. Prioritize high-priority tasks\n`
+      summary += `2. Prioritise high-priority tasks\n`
     }
     if (emails.filter((e: any) => e.unread).length > 0) {
       summary += `3. Review unread emails for urgent matters\n`

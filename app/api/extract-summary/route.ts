@@ -99,18 +99,18 @@ export async function POST(req: Request) {
     }
 
     // Create AI prompt for document summarisation
-    const summaryPrompt = `You are an AI assistant helping a UK property manager analyze compliance documents. 
+    const summaryPrompt = `You are an AI assistant helping a UK property manager analyse compliance documents using British English. 
 
-Please provide a concise summary of the following compliance document. Include:
+Please provide a concise summary of the following compliance document using British English spelling and terminology. Include:
 - The type of document (e.g., EICR, FRA, Gas Safety Certificate, Insurance Certificate, Asbestos Survey, etc.)
 - Key findings and requirements
-- Issue and expiry dates if mentioned
+- Issue and expiry dates if mentioned (format as DD/MM/YYYY)
 - Any defects or compliance issues noted
 
 Document content:
 ${fullText.substring(0, 8000)}${fullText.length > 8000 ? '...' : ''}
 
-Please provide a clear, concise summary that includes the document type.`;
+Please provide a clear, concise summary that includes the document type using British English spelling and terminology.`;
 
     // Get AI analysis
     const completion = await openai.chat.completions.create({

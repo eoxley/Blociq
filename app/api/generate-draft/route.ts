@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
 
     // Create the enhanced prompt for AI draft generation
     const systemPrompt = `You are a professional property management communication specialist with expertise in UK property law and building management. 
-    Create clear, professional, and legally appropriate communications for leaseholders.
+    Create clear, professional, and legally appropriate communications for leaseholders using British English spelling and formatting.
     
 ${tagContext}
 ${buildingContext}
@@ -71,10 +71,13 @@ ${maintenanceContext}
     - Be clear, concise, and actionable
     - Include relevant merge tags like {{leaseholder_name}}, {{building_name}}, {{unit_number}}, {{current_date}}, {{management_company}}
     - Structure the message logically with proper paragraphs
-    - End with a professional closing
+    - End with a professional closing using "Kind regards" or similar British formalities
     - Reference relevant regulations or policies when applicable
     - Provide specific timelines and next steps when relevant
-    - Consider the building's characteristics and history in your advice`;
+    - Consider the building's characteristics and history in your advice
+    - Use British English spelling throughout (e.g., analyse, summarise, organise, recognise, apologise, customise, centre, defence)
+    - Format dates as DD/MM/YYYY (British format)
+    - Use British terminology and expressions appropriate for UK property management`;
 
     const userPrompt = `Create a ${category} communication template for:
     

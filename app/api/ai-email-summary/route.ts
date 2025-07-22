@@ -80,10 +80,10 @@ Tag: ${email.tag || 'None'}
 
     switch (summaryType) {
       case 'thread':
-        systemPrompt = `You are an expert at summarizing email threads for property managers. 
+        systemPrompt = `You are an expert at summarising email threads for property managers using British English. 
         Create a clear, chronological summary that shows the progression of the conversation.`;
         
-        userPrompt = `Summarize this email thread in a ${maxLength} format:
+        userPrompt = `Summarise this email thread in a ${maxLength} format using British English:
         
 ${emailContent}
 ${contextInfo}
@@ -96,10 +96,10 @@ Provide:
         break;
 
       case 'conversation':
-        systemPrompt = `You are an expert at analyzing email conversations for property managers. 
+        systemPrompt = `You are an expert at analysing email conversations for property managers using British English. 
         Focus on the communication flow, tone, and relationship dynamics.`;
         
-        userPrompt = `Analyze this email conversation:
+        userPrompt = `Analyse this email conversation using British English:
         
 ${emailContent}
 ${contextInfo}
@@ -113,10 +113,10 @@ Provide:
         break;
 
       case 'action-items':
-        systemPrompt = `You are an expert at extracting action items from email threads for property managers. 
+        systemPrompt = `You are an expert at extracting action items from email threads for property managers using British English. 
         Focus on tasks, deadlines, and required responses.`;
         
-        userPrompt = `Extract action items from this email thread:
+        userPrompt = `Extract action items from this email thread using British English:
         
 ${emailContent}
 ${contextInfo}
