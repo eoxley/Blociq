@@ -18,19 +18,9 @@ export async function GET(req: NextRequest) {
 
     console.log("✅ User authenticated:", user.id);
 
-    // Get query parameters for filtering
-    const { searchParams } = new URL(req.url);
-    const building_id = searchParams.get('building_id');
-    const template_id = searchParams.get('template_id');
-    const method = searchParams.get('method');
-    const status = searchParams.get('status');
-    const date_from = searchParams.get('date_from');
-    const date_to = searchParams.get('date_to');
-    const limit = parseInt(searchParams.get('limit') || '50');
-
-    // Build query
-    let query = supabase
-      .from("communications_log")
+    // Fetch communications sent by this user
+    const { data: communications, error: communicationsError } = await supabase
+      .from("communications_sent")
       .select(`
         *,
         communication_templates (
@@ -45,129 +35,61 @@ export async function GET(req: NextRequest) {
           address
         )
       `)
-      .order("sent_at", { ascending: false })
-      .limit(limit);
-
-    // Apply filters
-    if (building_id) {
-      query = query.eq("building_id", building_id);
-    }
-    if (template_id) {
-      query = query.eq("template_id", template_id);
-    }
-    if (method) {
-      query = query.eq("method", method);
-    }
-    if (status) {
-      query = query.eq("status", status);
-    }
-    if (date_from) {
-      query = query.gte("sent_at", date_from);
-    }
-    if (date_to) {
-      query = query.lte("sent_at", date_to);
-    }
-
-    const { data: communications, error: communicationsError } = await query;
+      .eq("sent_by", user.id)
+      .order("sent_at", { ascending: false });
 
     if (communicationsError) {
-      console.error("❌ Failed to fetch communications log:", communicationsError);
+      console.error("❌ Error fetching communications:", communicationsError);
       return NextResponse.json({ 
-        error: "Failed to fetch communications log",
-        details: (communicationsError as any).message || "Unknown error"
+        error: "Failed to fetch communications",
+        details: communicationsError
       }, { status: 500 });
     }
 
-    console.log("✅ Communications log fetched successfully:", communications?.length || 0);
+    // Group communications by building
+    const buildingGroups: any[] = [];
+    const buildingMap = new Map();
 
-    // Get statistics
-    const { data: stats } = await supabase
-      .from("communication_stats")
-      .select("*")
-      .single();
-
-    // Get recipient details for each communication
-    const communicationsWithRecipients = await Promise.all(
-      (communications || []).map(async (comm) => {
-        const { data: recipients } = await supabase
-          .from("communication_recipients")
-          .select("*")
-          .eq("communication_id", comm.id)
-          .order("sent_at", { ascending: false });
-
-        return {
-          ...comm,
-          recipients: recipients || [],
-          recipient_count: recipients?.length || 0
-        };
-      })
-    );
-
-    // Group by building for easier frontend consumption
-    const groupedByBuilding = communicationsWithRecipients.reduce((acc: any, comm) => {
+    communications?.forEach((comm) => {
       const buildingId = comm.building_id;
-      const buildingName = comm.buildings?.name || "Unknown Building";
       
-      if (!acc[buildingId]) {
-        acc[buildingId] = {
+      if (!buildingMap.has(buildingId)) {
+        const buildingGroup = {
           building_id: buildingId,
-          building_name: buildingName,
-          building_address: comm.buildings?.address || "",
+          building_name: comm.buildings?.name || 'Unknown Building',
+          building_address: comm.buildings?.address || '',
           communications: []
         };
+        buildingGroups.push(buildingGroup);
+        buildingMap.set(buildingId, buildingGroup);
       }
       
-      acc[buildingId].communications.push(comm);
-      return acc;
-    }, {});
-
-    const groupedCommunications = Object.values(groupedByBuilding).sort((a: any, b: any) => 
-      a.building_name.localeCompare(b.building_name)
-    );
-
-    const responseData = {
-      message: "Communications log fetched successfully",
-      communications: groupedCommunications,
-      summary: {
-        total_communications: stats?.total_communications || 0,
-        email_count: stats?.email_count || 0,
-        pdf_count: stats?.pdf_count || 0,
-        both_count: stats?.both_count || 0,
-        successful_sends: stats?.successful_sends || 0,
-        failed_sends: stats?.failed_sends || 0,
-        buildings_contacted: stats?.buildings_contacted || 0,
-        templates_used: stats?.templates_used || 0,
-        last_communication_date: stats?.last_communication_date
-      },
-      filters: {
-        building_id,
-        template_id,
-        method,
-        status,
-        date_from,
-        date_to,
-        limit
-      },
-      debug_info: {
-        user_id: user.id,
-        timestamp: new Date().toISOString(),
-        communications_count: communications?.length || 0,
-        buildings_count: groupedCommunications.length
-      }
-    };
-
-    console.log("🎉 Communications log fetch completed successfully");
-    console.log("📊 Summary:", {
-      total_communications: stats?.total_communications || 0,
-      email_count: stats?.email_count || 0,
-      pdf_count: stats?.pdf_count || 0,
-      buildings: groupedCommunications.length
+      buildingMap.get(buildingId).communications.push(comm);
     });
 
-    return NextResponse.json(responseData);
+    // Calculate summary statistics
+    const summary = {
+      total_communications: communications?.length || 0,
+      email_count: communications?.filter(c => c.method === 'email').length || 0,
+      pdf_count: communications?.filter(c => c.method === 'pdf').length || 0,
+      both_count: communications?.filter(c => c.method === 'both').length || 0,
+      successful_sends: communications?.filter(c => c.status === 'sent').length || 0,
+      failed_sends: communications?.filter(c => c.status === 'failed').length || 0,
+      buildings_contacted: buildingGroups.length,
+      templates_used: new Set(communications?.map(c => c.template_id)).size,
+      last_communication_date: communications?.[0]?.sent_at || null
+    };
+
+    console.log(`✅ Found ${communications?.length || 0} communications across ${buildingGroups.length} buildings`);
+
+    return NextResponse.json({
+      communications: buildingGroups,
+      summary,
+      count: communications?.length || 0
+    });
 
   } catch (error) {
-    console.error("❌ Communications log error:", error);
+    console.error("❌ Communications log fetch error:", error);
     return NextResponse.json({ 
       error: "Internal server error during communications log fetch",
       details: error instanceof Error ? error.message : "Unknown error"
