@@ -12,6 +12,7 @@ interface BulkTriageRequest {
     receivedAt: string | null;
     buildingId?: string | null;
   }>;
+  performActions?: boolean; // New flag to control whether to perform actions
 }
 
 interface TriageResult {
@@ -23,6 +24,12 @@ interface TriageResult {
   suggestedActions: string[];
   tags: string[];
   estimatedResponseTime: string;
+  actionsPerformed?: {
+    markedAsRead: boolean;
+    categorized: boolean;
+    tagged: boolean;
+    statusUpdated: boolean;
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -35,11 +42,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { emails }: BulkTriageRequest = await req.json();
+    const { emails, performActions = true }: BulkTriageRequest = await req.json();
 
     if (!emails || emails.length === 0) {
       return NextResponse.json({ error: 'No emails provided' }, { status: 400 });
     }
+
+    console.log(`🔄 Starting bulk triage for ${emails.length} emails. Perform actions: ${performActions}`);
 
     // Initialize OpenAI
     const openai = new OpenAI({
@@ -106,9 +115,77 @@ export async function POST(req: NextRequest) {
           const result = completion.choices[0].message.content;
           const parsedResult = parseTriageResult(result);
 
+          // Perform actions on the email if requested
+          let actionsPerformed = {
+            markedAsRead: false,
+            categorized: false,
+            tagged: false,
+            statusUpdated: false
+          };
+
+          if (performActions) {
+            try {
+              // Mark email as read
+              await supabase
+                .from('incoming_emails')
+                .update({ 
+                  unread: false,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', email.id);
+              actionsPerformed.markedAsRead = true;
+
+              // Update email with triage information
+              const updateData: any = {
+                updated_at: new Date().toISOString()
+              };
+
+              // Add category if it's a valid one
+              if (parsedResult.category && parsedResult.category !== 'General') {
+                updateData.category = parsedResult.category;
+                actionsPerformed.categorized = true;
+              }
+
+              // Add tags
+              if (parsedResult.tags && parsedResult.tags.length > 0) {
+                updateData.tags = parsedResult.tags;
+                actionsPerformed.tagged = true;
+              }
+
+              // Update status based on action required
+              if (parsedResult.actionRequired === 'immediate' || parsedResult.actionRequired === 'today') {
+                updateData.status = 'urgent';
+                actionsPerformed.statusUpdated = true;
+              } else if (parsedResult.actionRequired === 'this_week') {
+                updateData.status = 'pending';
+                actionsPerformed.statusUpdated = true;
+              } else if (parsedResult.actionRequired === 'no_action' || parsedResult.actionRequired === 'file') {
+                updateData.status = 'filed';
+                updateData.is_handled = true;
+                actionsPerformed.statusUpdated = true;
+              }
+
+              // Update urgency level
+              updateData.urgency = parsedResult.urgency;
+              actionsPerformed.statusUpdated = true;
+
+              // Update the email with triage data
+              await supabase
+                .from('incoming_emails')
+                .update(updateData)
+                .eq('id', email.id);
+
+              console.log(`✅ Actions performed for email ${email.id}:`, actionsPerformed);
+
+            } catch (actionError) {
+              console.error(`❌ Error performing actions for email ${email.id}:`, actionError);
+            }
+          }
+
           return {
             emailId: email.id,
-            ...parsedResult
+            ...parsedResult,
+            actionsPerformed
           };
 
         } catch (error) {
@@ -121,7 +198,13 @@ export async function POST(req: NextRequest) {
             summary: 'Failed to analyse email',
             suggestedActions: ['Review manually'],
             tags: ['error'],
-            estimatedResponseTime: 'Unknown'
+            estimatedResponseTime: 'Unknown',
+            actionsPerformed: {
+              markedAsRead: false,
+              categorized: false,
+              tagged: false,
+              statusUpdated: false
+            }
           };
         }
       });
@@ -137,12 +220,22 @@ export async function POST(req: NextRequest) {
 
     // Log the bulk triage operation
     try {
+      const actionsSummary = results.reduce((acc, result) => {
+        if (result.actionsPerformed) {
+          acc.markedAsRead += result.actionsPerformed.markedAsRead ? 1 : 0;
+          acc.categorized += result.actionsPerformed.categorized ? 1 : 0;
+          acc.tagged += result.actionsPerformed.tagged ? 1 : 0;
+          acc.statusUpdated += result.actionsPerformed.statusUpdated ? 1 : 0;
+        }
+        return acc;
+      }, { markedAsRead: 0, categorized: 0, tagged: 0, statusUpdated: 0 });
+
       await supabase
         .from('ai_logs')
         .insert({
           user_id: user.id,
           question: `Bulk triage of ${emails.length} emails`,
-          response: `Processed ${results.length} emails successfully`,
+          response: `Processed ${results.length} emails successfully. Actions performed: ${JSON.stringify(actionsSummary)}`,
           timestamp: new Date().toISOString(),
         });
     } catch (logError) {
@@ -150,10 +243,13 @@ export async function POST(req: NextRequest) {
       // Don't fail the request if logging fails
     }
 
+    console.log(`🎉 Bulk triage completed for ${results.length} emails`);
+
     return NextResponse.json({
       success: true,
       results,
       totalProcessed: results.length,
+      actionsPerformed: performActions,
       timestamp: new Date().toISOString()
     });
 
@@ -166,11 +262,11 @@ export async function POST(req: NextRequest) {
   }
 }
 
-function parseTriageResult(result: string): Omit<TriageResult, 'emailId'> {
+function parseTriageResult(result: string): Omit<TriageResult, 'emailId' | 'actionsPerformed'> {
   const lines = result.split('\n');
   const parsed = {
-    urgency: 'medium' as const,
-    actionRequired: 'this_week' as const,
+    urgency: 'medium' as 'critical' | 'high' | 'medium' | 'low' | 'none',
+    actionRequired: 'this_week' as 'immediate' | 'today' | 'this_week' | 'no_action' | 'file',
     category: 'General',
     summary: '',
     suggestedActions: [] as string[],
