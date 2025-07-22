@@ -215,9 +215,11 @@ function BuildingCard({ building }: { building: Building }) {
                 {building.name}
               </h3>
               {building.address && (
-                <p className="text-sm text-[#64748B] flex items-center gap-1">
-                  <MapPin className="h-3 w-3" />
-                  {building.address}
+                <p className="text-sm text-[#64748B] flex items-center gap-1 break-words">
+                  <MapPin className="h-3 w-3 flex-shrink-0" />
+                  <span title={building.address}>
+                    {building.address}
+                  </span>
                 </p>
               )}
             </div>
@@ -293,9 +295,11 @@ function BuildingListItem({ building }: { building: Building }) {
                 {building.name}
               </h3>
               {building.address && (
-                <p className="text-sm text-[#64748B] flex items-center gap-1">
-                  <MapPin className="h-3 w-3" />
-                  {building.address}
+                <p className="text-sm text-[#64748B] flex items-center gap-1 break-words">
+                  <MapPin className="h-3 w-3 flex-shrink-0" />
+                  <span title={building.address}>
+                    {building.address}
+                  </span>
                 </p>
               )}
             </div>
