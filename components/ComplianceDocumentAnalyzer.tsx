@@ -35,11 +35,11 @@ export default function ComplianceDocumentAnalyzer({
   const [currentDocumentId, setCurrentDocumentId] = useState<string>("");
   const supabase = createClientComponentClient();
 
-  const handleAnalyzeDocument = async (documentId: string) => {
+  const handleAnalyseDocument = async (documentId: string) => {
     setAnalyzing(documentId);
     
     try {
-      toast.info("Analyzing document with AI...");
+      toast.info("Analysing document with AI...");
       
       // Call the AI analysis endpoint
       const result = await handleUploadComplete(documentId);
@@ -67,7 +67,7 @@ export default function ComplianceDocumentAnalyzer({
             [documentId]: result.data
           }));
           
-          toast.success(`Document analyzed! Type: ${result.data.doc_type || 'Unknown'}`);
+          toast.success(`Document analysed! Type: ${result.data.doc_type || 'Unknown'}`);
           onAnalysisComplete?.();
         } else {
           toast.warning("Analysis complete, but failed to update document");
@@ -90,11 +90,11 @@ export default function ComplianceDocumentAnalyzer({
     onAnalysisComplete?.();
   };
 
-  const handleReanalyze = async () => {
+  const handleReanalyse = async () => {
     if (!currentDocumentId) return;
     
     try {
-      toast.info("Re-analyzing document with AI...");
+      toast.info("Re-analysing document with AI...");
       
       const result = await handleUploadComplete(currentDocumentId);
       
@@ -243,7 +243,7 @@ export default function ComplianceDocumentAnalyzer({
 
               {/* Action Button */}
               <Button
-                onClick={() => handleAnalyzeDocument(doc.id)}
+                onClick={() => handleAnalyseDocument(doc.id)}
                 disabled={isAnalyzing}
                 className="w-full bg-teal-600 hover:bg-teal-700"
               >
@@ -275,7 +275,7 @@ export default function ComplianceDocumentAnalyzer({
         onClose={() => setShowTypeSelector(false)}
         documentId={currentDocumentId}
         onTypeSelected={handleTypeSelected}
-        onReanalyze={handleReanalyze}
+                        onReanalyse={handleReanalyse}
       />
     </div>
   );

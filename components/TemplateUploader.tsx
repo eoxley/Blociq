@@ -56,10 +56,10 @@ export default function TemplateUploader({ onUploadComplete }: TemplateUploaderP
       // Extract text and placeholders from the DOCX file
       const extracted = await extractFromDocx(file);
       setExtractedData(extracted);
-      toast.success('Template analyzed successfully!');
+              toast.success('Template analysed successfully!');
     } catch (error) {
       console.error('Error extracting from DOCX:', error);
-      toast.error('Failed to analyze template');
+              toast.error('Failed to analyse template');
     } finally {
       setUploading(false);
     }

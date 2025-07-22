@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 import OpenAI from 'openai';
 
 interface AIEmailRequest {
-  action: 'draft' | 'summary' | 'analyze' | 'categorize' | 'suggest-reply' | 'extract-info';
+  action: 'draft' | 'summary' | 'analyse' | 'categorise' | 'suggest-reply' | 'extract-info';
   emailId?: string;
   emailContent?: {
     subject: string;
@@ -94,11 +94,11 @@ export async function POST(req: NextRequest) {
         4. Category (Maintenance/Compliance/Complaint/General)`;
         break;
 
-      case 'analyze':
+      case 'analyse':
         systemPrompt = `You are an expert property management analyst. 
-        Analyze emails for sentiment, urgency, legal implications, and required actions.`;
+        Analyse emails for sentiment, urgency, legal implications, and required actions.`;
         
-        userPrompt = `Analyze this email:
+        userPrompt = `Analyse this email:
         
         Subject: ${emailContent?.subject}
         From: ${emailContent?.from}
@@ -113,11 +113,11 @@ export async function POST(req: NextRequest) {
         6. Priority level (1-5)`;
         break;
 
-      case 'categorize':
-        systemPrompt = `You are an expert at categorizing property management emails. 
+      case 'categorise':
+        systemPrompt = `You are an expert at categorising property management emails. 
         Assign appropriate categories and tags for efficient email management.`;
         
-        userPrompt = `Categorize this email:
+        userPrompt = `Categorise this email:
         
         Subject: ${emailContent?.subject}
         From: ${emailContent?.from}

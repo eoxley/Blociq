@@ -84,8 +84,8 @@ export default function AIActionBar({ email, onMarkHandled }: AIActionBarProps) 
     }
   }
 
-  // Summarize email
-  const handleSummarize = async () => {
+  // Summarise email
+  const handleSummarise = async () => {
     setIsSummarizing(true)
     setError(null)
     
@@ -103,14 +103,14 @@ export default function AIActionBar({ email, onMarkHandled }: AIActionBarProps) 
       })
 
       if (!response.ok) {
-        throw new Error('Failed to summarize email')
+        throw new Error('Failed to summarise email')
       }
 
       const data = await response.json()
       setSummary(data.summary || 'No summary generated')
     } catch (err) {
-      console.error('Error summarizing email:', err)
-      setError('Failed to summarize email. Please try again.')
+      console.error('Error summarising email:', err)
+      setError('Failed to summarise email. Please try again.')
     } finally {
       setIsSummarizing(false)
     }
@@ -239,7 +239,7 @@ export default function AIActionBar({ email, onMarkHandled }: AIActionBarProps) 
         </Button>
 
         <Button
-          onClick={handleSummarize}
+                      onClick={handleSummarise}
           disabled={isSummarizing}
           variant="outline"
           size="sm"

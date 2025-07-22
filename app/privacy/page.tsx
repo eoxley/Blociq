@@ -275,7 +275,7 @@ export default function PrivacyPolicyPage() {
               </p>
               <ul className="list-disc pl-6 text-gray-700 space-y-2">
                 <li>Maintain your login session and preferences</li>
-                <li>Analyze website usage and improve our services</li>
+                <li>Analyse website usage and improve our services</li>
                 <li>Ensure platform security and prevent fraud</li>
                 <li>Provide essential functionality</li>
               </ul>

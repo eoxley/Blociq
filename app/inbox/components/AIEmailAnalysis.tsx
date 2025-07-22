@@ -57,14 +57,14 @@ export default function AIEmailAnalysis({ email, onAnalysisComplete, onDraftGene
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'analysis' | 'draft' | 'summary'>('analysis');
 
-  const analyzeEmail = async () => {
+  const analyseEmail = async () => {
     setLoading(true);
     try {
       const response = await fetch('/api/ai-email-assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'analyze',
+          action: 'analyse',
           emailContent: {
             subject: email.subject || '',
             body: email.body_preview || '',
@@ -83,7 +83,7 @@ export default function AIEmailAnalysis({ email, onAnalysisComplete, onDraftGene
       toast.success('Email analysis completed');
     } catch (error) {
       console.error('Analysis error:', error);
-      toast.error('Failed to analyze email');
+      toast.error('Failed to analyse email');
     } finally {
       setLoading(false);
     }
@@ -245,12 +245,12 @@ export default function AIEmailAnalysis({ email, onAnalysisComplete, onDraftGene
             {!analysis ? (
               <div className="text-center py-8">
                 <Brain className="h-12 w-12 text-purple-300 mx-auto mb-4" />
-                <h4 className="font-medium text-gray-900 mb-2">Analyze Email</h4>
+                <h4 className="font-medium text-gray-900 mb-2">Analyse Email</h4>
                 <p className="text-gray-600 text-sm mb-4">
                   Get AI-powered insights about this email including sentiment, urgency, and suggested actions.
                 </p>
                 <BlocIQButton
-                  onClick={analyzeEmail}
+                  onClick={analyseEmail}
                   disabled={loading}
                   className="w-full"
                 >
@@ -259,7 +259,7 @@ export default function AIEmailAnalysis({ email, onAnalysisComplete, onDraftGene
                   ) : (
                     <Zap className="h-4 w-4 mr-2" />
                   )}
-                  {loading ? 'Analyzing...' : 'Analyze Email'}
+                  {loading ? 'Analysing...' : 'Analyse Email'}
                 </BlocIQButton>
               </div>
             ) : (

@@ -12,7 +12,7 @@ export default function DailySummaryTestPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">AI Daily Summary Test</h1>
         <p className="text-gray-600">
-          Test the AI-powered daily summary that analyzes your tasks, emails, and compliance alerts.
+          Test the AI-powered daily summary that analyses your tasks, emails, and compliance alerts.
         </p>
       </div>
 

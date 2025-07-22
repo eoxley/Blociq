@@ -69,7 +69,7 @@ export default function AIEmailTriage({ emails, onTriageComplete, onEmailAction 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'categorize',
+          action: 'categorise',
           emailContent: {
             subject: email.subject || '',
             body: email.body_preview || '',
@@ -107,15 +107,15 @@ export default function AIEmailTriage({ emails, onTriageComplete, onEmailAction 
         const response = await fetch('/api/ai-email-assistant', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'categorize',
-            emailContent: {
-              subject: email.subject || '',
-              body: email.body_preview || '',
-              from: email.from_email || '',
-              receivedAt: email.received_at || ''
-            }
-          })
+                  body: JSON.stringify({
+          action: 'categorise',
+          emailContent: {
+            subject: email.subject || '',
+            body: email.body_preview || '',
+            from: email.from_email || '',
+            receivedAt: email.received_at || ''
+          }
+        })
         });
 
         if (response.ok) {

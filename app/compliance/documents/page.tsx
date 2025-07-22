@@ -91,7 +91,7 @@ function ComplianceDocumentsInner() {
           <div className="mb-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-2">Upload New Document</h2>
             <p className="text-sm text-gray-600">
-              Upload a compliance document. The system will automatically analyze the document and extract relevant information.
+              Upload a compliance document. The system will automatically analyse the document and extract relevant information.
             </p>
           </div>
 
