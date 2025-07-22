@@ -103,12 +103,9 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
           </div>
           <h2 className="text-2xl font-bold text-[#333333] mb-4">No Buildings Yet</h2>
           <p className="text-[#64748B] mb-8">Get started by adding your first building to the portfolio</p>
-          <BlocIQButton className="bg-gradient-to-r from-[#008C8F] to-[#007BDB] text-white shadow-lg relative">
+          <BlocIQButton className="bg-gradient-to-r from-[#008C8F] to-[#007BDB] text-white shadow-lg">
             <Plus className="h-4 w-4 mr-2" />
             Add First Building
-            <div className="absolute -top-1 -right-1 bg-yellow-400 text-yellow-900 rounded-full p-1">
-              <Clock className="h-3 w-3" />
-            </div>
           </BlocIQButton>
         </div>
       </div>
@@ -125,12 +122,9 @@ export default function BuildingsClient({ buildings }: BuildingsClientProps) {
             <p className="text-white/80">Manage your property portfolio and leaseholder information</p>
           </div>
           <div className="flex items-center gap-4">
-            <BlocIQButton className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm relative">
+            <BlocIQButton className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm">
               <Plus className="h-4 w-4 mr-2" />
               Add Building
-              <div className="absolute -top-1 -right-1 bg-yellow-400 text-yellow-900 rounded-full p-1">
-                <Clock className="h-3 w-3" />
-              </div>
             </BlocIQButton>
           </div>
         </div>
@@ -220,6 +214,9 @@ function BuildingCard({
   showUnitDetails: boolean
   onToggleUnitDetails: () => void
 }) {
+  // Calculate actual unit count from units array
+  const actualUnitCount = building.units?.length || 0
+  
   return (
     <BlocIQCard className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-white">
       <BlocIQCardHeader className="pb-4">
@@ -241,17 +238,10 @@ function BuildingCard({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {building.demo_ready ? (
-              <BlocIQBadge variant="success" size="sm">
-                <CheckCircle className="h-3 w-3 mr-1" />
-                Demo Ready
-              </BlocIQBadge>
-            ) : (
-              <BlocIQBadge variant="warning" size="sm">
-                <Wrench className="h-3 w-3 mr-1" />
-                In Setup
-              </BlocIQBadge>
-            )}
+            <BlocIQBadge variant="secondary" size="sm">
+              <Home className="h-3 w-3 mr-1" />
+              {actualUnitCount} Unit{actualUnitCount !== 1 ? 's' : ''}
+            </BlocIQBadge>
           </div>
         </div>
       </BlocIQCardHeader>
@@ -259,14 +249,14 @@ function BuildingCard({
       <BlocIQCardContent className="pt-0">
         <div className="space-y-4">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-[#64748B]">Units:</span>
-            <span className="font-semibold text-[#333333]">{building.unit_count || 0}</span>
+            <span className="text-[#64748B]">Total Units:</span>
+            <span className="font-semibold text-[#333333]">{actualUnitCount}</span>
           </div>
           
           {building.units && building.units.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-[#333333]">Recent Units</span>
+                <span className="text-sm font-medium text-[#333333]">Unit Overview</span>
                 <BlocIQButton
                   variant="ghost"
                   size="sm"
@@ -306,27 +296,24 @@ function BuildingCard({
                       )}
                     </div>
                   ))}
+                  {building.units.length > 5 && (
+                    <div className="text-xs text-[#64748B] text-center py-2">
+                      +{building.units.length - 5} more units
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           )}
           
-          <div className="flex gap-2 pt-2">
-            <BlocIQButton
-              variant="outline"
-              size="sm"
-              className="flex-1 border-[#E2E8F0] text-[#64748B] hover:bg-[#F0FDFA]"
-            >
-              <Eye className="h-4 w-4 mr-1" />
-              View
-            </BlocIQButton>
-            <BlocIQButton
-              size="sm"
-              className="flex-1 bg-gradient-to-r from-[#008C8F] to-[#007BDB] text-white"
-            >
-              <Users className="h-4 w-4 mr-1" />
-              Manage
-            </BlocIQButton>
+          <div className="pt-4 border-t border-[#E2E8F0]">
+            <Link href={`/buildings/${building.id}`}>
+              <BlocIQButton className="w-full bg-gradient-to-r from-[#008C8F] to-[#007BDB] text-white hover:from-[#0F5D5D] hover:to-[#0066CC] transition-all duration-300">
+                <Eye className="h-4 w-4 mr-2" />
+                View Building
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </BlocIQButton>
+            </Link>
           </div>
         </div>
       </BlocIQCardContent>
@@ -343,6 +330,9 @@ function BuildingListItem({
   showUnitDetails: boolean
   onToggleUnitDetails: () => void
 }) {
+  // Calculate actual unit count from units array
+  const actualUnitCount = building.units?.length || 0
+  
   return (
     <BlocIQCard className="group hover:shadow-lg transition-all duration-300 border-0 bg-white">
       <BlocIQCardContent className="p-6">
@@ -366,33 +356,28 @@ function BuildingListItem({
           
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <div className="text-lg font-bold text-[#333333]">{building.unit_count || 0}</div>
-              <div className="text-sm text-[#64748B]">Units</div>
+              <div className="text-lg font-bold text-[#333333]">{actualUnitCount}</div>
+              <div className="text-sm text-[#64748B]">Unit{actualUnitCount !== 1 ? 's' : ''}</div>
             </div>
             
             <div className="flex items-center gap-2">
-              {building.demo_ready ? (
-                <BlocIQBadge variant="success" size="sm">
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  Demo Ready
-                </BlocIQBadge>
-              ) : (
-                <BlocIQBadge variant="warning" size="sm">
-                  <Wrench className="h-3 w-3 mr-1" />
-                  In Setup
-                </BlocIQBadge>
-              )}
+              <BlocIQBadge variant="secondary" size="sm">
+                <Home className="h-3 w-3 mr-1" />
+                Active
+              </BlocIQBadge>
             </div>
             
             <div className="flex items-center gap-2">
-              <BlocIQButton
-                variant="outline"
-                size="sm"
-                className="border-[#E2E8F0] text-[#64748B] hover:bg-[#F0FDFA]"
-              >
-                <Eye className="h-4 w-4 mr-1" />
-                View
-              </BlocIQButton>
+              <Link href={`/buildings/${building.id}`}>
+                <BlocIQButton
+                  variant="outline"
+                  size="sm"
+                  className="border-[#E2E8F0] text-[#64748B] hover:bg-[#F0FDFA]"
+                >
+                  <Eye className="h-4 w-4 mr-1" />
+                  View
+                </BlocIQButton>
+              </Link>
               <BlocIQButton
                 size="sm"
                 className="bg-gradient-to-r from-[#008C8F] to-[#007BDB] text-white"

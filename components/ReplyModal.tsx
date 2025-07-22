@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { X, Send, RefreshCw, MessageSquare, Building, User, Bold, Italic, Underline } from "lucide-react";
+import { X, Send, RefreshCw, MessageSquare, Building, User, Bold, Italic, Underline, Maximize2, Minimize2, Move } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
@@ -31,7 +31,16 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
   const [isSending, setIsSending] = useState(false);
   const [tone, setTone] = useState("Professional");
   const [buildingContext, setBuildingContext] = useState<string | null>(null);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [size, setSize] = useState({ width: 1200, height: 800 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   // Generate AI draft when modal opens
   useEffect(() => {
@@ -129,23 +138,128 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
     }
   };
 
+  const toggleFullScreen = () => {
+    setIsFullScreen(!isFullScreen);
+    setIsMinimized(false);
+  };
+
+  const toggleMinimize = () => {
+    setIsMinimized(!isMinimized);
+    setIsFullScreen(false);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.target === modalRef.current) {
+      setIsDragging(true);
+      setDragStart({
+        x: e.clientX - position.x,
+        y: e.clientY - position.y
+      });
+    }
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (isDragging && !isFullScreen) {
+      setPosition({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    setIsResizing(false);
+  };
+
+  const handleResizeMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsResizing(true);
+    setResizeStart({
+      x: e.clientX,
+      y: e.clientY,
+      width: size.width,
+      height: size.height
+    });
+  };
+
+  useEffect(() => {
+    if (isDragging || isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isDragging, isResizing, dragStart]);
+
   if (!isOpen) return null;
 
+  if (isMinimized) {
+    return (
+      <div 
+        className="fixed bottom-4 right-4 bg-white rounded-lg shadow-xl border z-50 cursor-pointer"
+        style={{ width: '300px', height: '60px' }}
+        onClick={() => setIsMinimized(false)}
+      >
+        <div className="flex items-center justify-between p-3">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4 text-blue-600" />
+            <span className="text-sm font-medium">Reply to: {email.subject}</span>
+          </div>
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onClose(); }}>
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const modalClasses = isFullScreen 
+    ? "fixed inset-0 bg-white z-50" 
+    : "fixed bg-white rounded-lg shadow-xl border z-50";
+
+  const modalStyle = isFullScreen 
+    ? {} 
+    : {
+        left: position.x,
+        top: position.y,
+        width: size.width,
+        height: size.height,
+        maxWidth: '90vw',
+        maxHeight: '90vh'
+      };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-40">
+      <div 
+        ref={modalRef}
+        className={modalClasses}
+        style={modalStyle}
+        onMouseDown={handleMouseDown}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between p-4 border-b bg-gray-50 rounded-t-lg">
+          <div className="flex items-center gap-3 cursor-move">
+            <Move className="h-4 w-4 text-gray-500" />
             <MessageSquare className="h-5 w-5 text-blue-600" />
             <h2 className="text-xl font-semibold">Reply to Email</h2>
           </div>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={toggleMinimize}>
+              <Minimize2 className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={toggleFullScreen}>
+              {isFullScreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
-        <div className="flex h-[calc(90vh-120px)]">
+        <div className="flex h-[calc(100%-80px)]">
           {/* Left Panel - Original Email */}
           <div className="w-1/3 border-r p-6 overflow-y-auto">
             <div className="space-y-4">
@@ -199,89 +313,67 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
                 <Select value={tone} onChange={(e) => setTone(e.target.value)}>
                   <option value="Professional">Professional</option>
                   <option value="Friendly">Friendly</option>
-                  <option value="Firm">Firm</option>
+                  <option value="Formal">Formal</option>
+                  <option value="Casual">Casual</option>
                 </Select>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={generateAIDraft}
-                  disabled={isGenerating}
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
-                  Regenerate
+              </div>
+
+              {/* Formatting Toolbar */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Format:</span>
+                <Button variant="outline" size="sm" onClick={() => applyFormatting('b')}>
+                  <Bold className="h-3 w-3" />
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => applyFormatting('i')}>
+                  <Italic className="h-3 w-3" />
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => applyFormatting('u')}>
+                  <Underline className="h-3 w-3" />
                 </Button>
               </div>
 
-              {/* Custom Formatting Toolbar */}
-              <div className="border rounded-md p-2 bg-gray-50">
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => applyFormatting('b')}
-                    title="Bold"
-                    className="hover:bg-blue-100"
-                  >
-                    <Bold className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => applyFormatting('i')}
-                    title="Italic"
-                    className="hover:bg-blue-100"
-                  >
-                    <Italic className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => applyFormatting('u')}
-                    title="Underline"
-                    className="hover:bg-blue-100"
-                  >
-                    <Underline className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Reply Editor */}
-              <div className="flex-1 flex flex-col">
-                <label className="text-sm font-medium mb-2">Your Reply</label>
+              {/* Reply Text Area */}
+              <div className="flex-1">
                 <Textarea
                   ref={textareaRef}
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
-                  placeholder="AI will generate a draft reply..."
-                  className="flex-1 resize-none"
-                  disabled={isGenerating}
-                  spellCheck={true}
+                  placeholder="Type your reply..."
+                  className="h-full resize-none"
                 />
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-between items-center pt-4 border-t">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <User className="h-4 w-4" />
-                  <span>To: {email.from_name || email.from_email}</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" onClick={generateAIDraft} disabled={isGenerating}>
+                    <RefreshCw className={`h-4 w-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
+                    {isGenerating ? 'Generating...' : 'Regenerate'}
+                  </Button>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex items-center gap-2">
                   <Button variant="outline" onClick={onClose}>
                     Cancel
                   </Button>
-                  <Button 
-                    onClick={sendReply}
-                    disabled={isSending || !replyText.trim()}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
+                  <Button onClick={sendReply} disabled={isSending || !replyText.trim()}>
                     <Send className="h-4 w-4 mr-2" />
-                    {isSending ? "Sending..." : "Send Reply"}
+                    {isSending ? 'Sending...' : 'Send Reply'}
                   </Button>
                 </div>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Resize Handle */}
+        {!isFullScreen && (
+          <div 
+            className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize"
+            onMouseDown={handleResizeMouseDown}
+          >
+            <div className="w-0 h-0 border-l-8 border-l-transparent border-b-8 border-b-gray-400"></div>
+          </div>
+        )}
       </div>
     </div>
   );

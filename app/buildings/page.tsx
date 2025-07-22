@@ -4,8 +4,6 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import BuildingsClient from './BuildingsClient'
 import LayoutWithSidebar from '@/components/LayoutWithSidebar'
-import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
 
 interface Building {
   id: number
@@ -33,29 +31,15 @@ export default async function BuildingsPage() {
   // Protect this route with Supabase Auth
   const { data: { session } } = await supabase.auth.getSession()
 
-  // Temporarily allow access for demonstration purposes
-  // if (!session) {
-  //   redirect('/login')
-  // }
+  if (!session) {
+    redirect('/login')
+  }
 
-  let finalBuildings: Building[] = []
+  let buildings: Building[] = []
 
   try {
-    // First, try a simple query to get just buildings
-    const { data: simpleBuildings, error: simpleError } = await supabase
-      .from('buildings')
-      .select('*')
-      .order('name')
-
-    console.log('Simple buildings query result:', simpleBuildings)
-    console.log('Simple buildings error:', simpleError)
-
-    if (simpleError) {
-      console.error('Simple query error:', simpleError)
-    }
-
-    // Then try the complex query with units and leaseholders
-    const { data: buildings, error } = await supabase
+    // Fetch buildings with unit counts using a subquery
+    const { data, error } = await supabase
       .from('buildings')
       .select(`
         id,
@@ -63,61 +47,51 @@ export default async function BuildingsPage() {
         address,
         unit_count,
         created_at,
+        demo_ready,
         units (
           id,
           unit_number,
-          building_id
+          building_id,
+          leaseholders (
+            id,
+            name,
+            email,
+            phone
+          )
         )
       `)
       .order('name')
 
-    console.log('Complex buildings query result:', buildings)
-    console.log('Complex buildings error:', error)
-
     if (error) {
       console.error('Error fetching buildings:', error)
+      throw error
     }
 
-    // Use simple buildings if complex query fails, or example data for demonstration
-    finalBuildings = buildings || simpleBuildings || []
-    
-    // Remove duplicate buildings by name (keep the first one)
-    const uniqueBuildings = finalBuildings.reduce((acc: Building[], building) => {
-      const existingBuilding = acc.find(b => b.name === building.name)
-      if (!existingBuilding) {
-        acc.push(building)
-      } else {
-        console.log(`🔄 Removing duplicate building: ${building.name} (ID: ${building.id})`)
-      }
-      return acc
-    }, [])
-    
-    finalBuildings = uniqueBuildings
+    // Transform the data to include actual unit counts
+    buildings = (data || []).map(building => ({
+      ...building,
+      unit_count: building.units?.length || 0
+    }))
+
+    console.log(`✅ Successfully fetched ${buildings.length} buildings from database`)
     
   } catch (error) {
     console.error('Unexpected error in buildings page:', error)
-    finalBuildings = []
+    buildings = []
   }
-  
-  // Remove all dummy data - show empty state if no real buildings found
-  // if (finalBuildings.length === 0) {
-  //   finalBuildings = [
-  //     // All dummy data removed
-  //   ]
-  // }
 
   return (
     <LayoutWithSidebar>
       <div className="space-y-6">
-        {finalBuildings.length === 0 && (
-          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-yellow-800 text-sm">
-              <strong>Debug:</strong> No buildings found in database. Using demo data.
+        {buildings.length === 0 && (
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-blue-800 text-sm">
+              <strong>No buildings found:</strong> The database doesn't contain any buildings yet. Add your first building to get started.
             </p>
           </div>
         )}
 
-        <BuildingsClient buildings={finalBuildings} />
+        <BuildingsClient buildings={buildings} />
       </div>
     </LayoutWithSidebar>
   )

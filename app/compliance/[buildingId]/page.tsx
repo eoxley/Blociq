@@ -44,7 +44,11 @@ export default async function CompliancePage({ params }: { params: Promise<{ bui
         name,
         address,
         unit_count,
-        created_at
+        created_at,
+        units (
+          id,
+          unit_number
+        )
       `)
       .eq('id', buildingId)
       .maybeSingle()
@@ -92,6 +96,13 @@ export default async function CompliancePage({ params }: { params: Promise<{ bui
           </div>
         </LayoutWithSidebar>
       )
+    }
+
+    // Calculate actual unit count from units array
+    const actualUnitCount = building.units?.length || 0
+    const buildingWithActualCount = {
+      ...building,
+      unit_count: actualUnitCount
     }
 
     // Query building compliance assets with related data
@@ -201,7 +212,7 @@ export default async function CompliancePage({ params }: { params: Promise<{ bui
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Building Compliance</h1>
-                <p className="text-gray-600">{building.name}</p>
+                <p className="text-gray-600">{buildingWithActualCount.name}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -224,9 +235,9 @@ export default async function CompliancePage({ params }: { params: Promise<{ bui
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-600">Building</p>
-                  <p className="text-lg font-semibold text-gray-900">{building.name}</p>
-                  {building.address && (
-                    <p className="text-sm text-gray-500">{building.address}</p>
+                  <p className="text-lg font-semibold text-gray-900">{buildingWithActualCount.name}</p>
+                  {buildingWithActualCount.address && (
+                    <p className="text-sm text-gray-500">{buildingWithActualCount.address}</p>
                   )}
                 </div>
               </div>
@@ -237,7 +248,7 @@ export default async function CompliancePage({ params }: { params: Promise<{ bui
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-600">Units</p>
-                  <p className="text-lg font-semibold text-gray-900">{building.unit_count || 0}</p>
+                  <p className="text-lg font-semibold text-gray-900">{actualUnitCount}</p>
                 </div>
               </div>
               
@@ -248,7 +259,7 @@ export default async function CompliancePage({ params }: { params: Promise<{ bui
                 <div>
                   <p className="text-sm font-medium text-gray-600">Added</p>
                   <p className="text-lg font-semibold text-gray-900">
-                    {building.created_at ? formatDate(building.created_at) : 'Unknown'}
+                    {buildingWithActualCount.created_at ? formatDate(buildingWithActualCount.created_at) : 'Unknown'}
                   </p>
                 </div>
               </div>
