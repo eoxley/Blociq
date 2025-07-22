@@ -60,7 +60,7 @@ export default function InboxInner() {
           query = query.eq("isUnread", true);
           break;
         case "handled":
-          query = query.eq("is_handled", true);
+          query = query.eq("handled", true);
           break;
         case "unhandled":
           query = query.eq("is_handled", false);
@@ -122,7 +122,7 @@ export default function InboxInner() {
         setEmails(prevEmails => 
           prevEmails.map(e => 
             e.message_id === email.message_id 
-              ? { ...e, is_handled: true, handled_at: data.handledAt }
+              ? { ...e, handled: true, handled_at: data.handledAt }
               : e
           )
         );

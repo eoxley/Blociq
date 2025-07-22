@@ -14,8 +14,8 @@ interface Email {
   body_preview: string | null
   body_full: string | null
   building_id: string | null
-  is_read: boolean | null
-  is_handled: boolean | null
+  unread: boolean | null
+  handled: boolean | null
   tags: string[] | null
   outlook_id: string | null
   buildings?: { name: string } | null
@@ -97,7 +97,7 @@ export default function EmailListItem({ email, isSelected, onSelect, dimmed, onT
             ? 'bg-blue-50 border-blue-200 shadow-sm' 
             : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
           }
-          ${!email.is_read ? 'border-l-4 border-l-blue-500' : ''}
+          ${email.unread ? 'border-l-4 border-l-blue-500' : ''}
           ${dimmed ? 'opacity-60 grayscale' : ''}
         `}
       >
@@ -105,7 +105,7 @@ export default function EmailListItem({ email, isSelected, onSelect, dimmed, onT
         {/* Sender Avatar */}
         <div className={`
           w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0
-          ${!email.is_read 
+          ${email.unread 
             ? 'bg-blue-100 text-blue-700' 
             : 'bg-gray-100 text-gray-600'
           }
@@ -119,11 +119,11 @@ export default function EmailListItem({ email, isSelected, onSelect, dimmed, onT
             <div className="flex items-center gap-2 min-w-0">
               <span className={`
                 text-sm font-medium truncate
-                ${!email.is_read ? 'text-gray-900' : 'text-gray-700'}
+                ${email.unread ? 'text-gray-900' : 'text-gray-700'}
               `}>
                 {email.from_name || email.from_email || 'Unknown Sender'}
               </span>
-              {!email.is_read && (
+              {email.unread && (
                 <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
               )}
             </div>
@@ -131,7 +131,7 @@ export default function EmailListItem({ email, isSelected, onSelect, dimmed, onT
               <span className="text-xs text-gray-500">
                 {formatDate(email.received_at)}
               </span>
-              {!email.is_read ? (
+              {email.unread ? (
                 <EyeOff className="h-3 w-3 text-gray-400" />
               ) : (
                 <Eye className="h-3 w-3 text-gray-400" />
@@ -141,7 +141,7 @@ export default function EmailListItem({ email, isSelected, onSelect, dimmed, onT
 
           <h3 className={`
             text-sm font-medium mb-1 truncate
-            ${!email.is_read ? 'text-gray-900' : 'text-gray-700'}
+            ${email.unread ? 'text-gray-900' : 'text-gray-700'}
           `}>
             {email.subject || 'No Subject'}
           </h3>
@@ -158,7 +158,7 @@ export default function EmailListItem({ email, isSelected, onSelect, dimmed, onT
               </Badge>
             )}
             
-            {email.is_handled && (
+            {email.handled && (
               <Badge variant="outline" className="text-xs bg-green-100 text-green-700 px-1 py-0 h-5">
                 Handled
               </Badge>

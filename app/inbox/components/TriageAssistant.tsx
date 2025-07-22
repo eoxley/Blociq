@@ -643,7 +643,7 @@ export default function TriageAssistant({
                                 // Mark as handled
                                 await supabase
                                   .from('incoming_emails')
-                                  .update({ is_handled: true })
+                                  .update({ handled: true })
                                   .eq('id', result.emailId)
                                 
                                 // Remove from results

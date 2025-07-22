@@ -109,7 +109,7 @@ export default function ReplyModal({ mode, email, onClose, onEmailSent }: ReplyM
       if (response.ok) {
         await supabase
           .from("incoming_emails")
-          .update({ is_handled: true, handled_at: new Date().toISOString() })
+          .update({ handled: true, handled_at: new Date().toISOString() })
           .eq("id", email.id);
 
         toast.success("Email sent successfully");
