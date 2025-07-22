@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
     console.log("✅ User authenticated:", user.id);
 
-    // Fetch communications sent by this user
+    // Fetch communications sent by this user with error handling
     const { data: communications, error: communicationsError } = await supabase
       .from("communications_sent")
       .select(`
@@ -40,6 +40,27 @@ export async function GET(req: NextRequest) {
 
     if (communicationsError) {
       console.error("❌ Error fetching communications:", communicationsError);
+      
+      // If table doesn't exist, return empty array instead of error
+      if (communicationsError.code === '42P01') { // Table doesn't exist
+        console.log("⚠️ Communications sent table doesn't exist, returning empty array");
+        return NextResponse.json({
+          communications: [],
+          summary: {
+            total_communications: 0,
+            email_count: 0,
+            pdf_count: 0,
+            both_count: 0,
+            successful_sends: 0,
+            failed_sends: 0,
+            buildings_contacted: 0,
+            templates_used: 0,
+            last_communication_date: null
+          },
+          count: 0
+        });
+      }
+      
       return NextResponse.json({ 
         error: "Failed to fetch communications",
         details: communicationsError

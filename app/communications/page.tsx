@@ -15,15 +15,9 @@ export default async function CommunicationsPage() {
     redirect('/login')
   }
 
-  // Get user profile data
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', session.user.id)
-    .single()
-
+  // Simple user data without complex database queries
   const userData = {
-    name: profile?.full_name || session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Property Manager',
+    name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Property Manager',
     email: session.user.email || ''
   }
 
