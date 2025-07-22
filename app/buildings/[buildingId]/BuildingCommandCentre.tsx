@@ -88,26 +88,32 @@ export default function BuildingCommandCentre({ buildingData }: BuildingCommandC
   const [complianceData, setComplianceData] = useState<any>(null)
   const [isLoadingCompliance, setIsLoadingCompliance] = useState(false)
 
+  // Safely destructure with defaults to prevent undefined errors
   const { 
-    building, 
-    buildingSetup, 
-    complianceSummary, 
-    complianceAssets, 
-    units, 
-    recentEmails, 
-    complianceDocs, 
-    buildingDocs, 
-    events,
-    todos
+    building = {}, 
+    buildingSetup = {}, 
+    complianceSummary = { total: 0, compliant: 0, dueSoon: 0, overdue: 0 }, 
+    complianceAssets = [], 
+    units = [], 
+    recentEmails = [], 
+    complianceDocs = [], 
+    buildingDocs = [], 
+    events = [],
+    todos = []
   } = updatedBuildingData
 
-  // Filter units based on search
-  const filteredUnits = units.filter(unit => 
-    unit.unit_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    unit.leaseholders?.some((lh: any) => 
-      lh.name?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  )
+  // Filter units based on search with safe defaults
+  const filteredUnits = units.filter(unit => {
+    if (!unit?.unit_number) return false
+    
+    const searchLower = searchTerm.toLowerCase()
+    const unitNumberMatch = unit.unit_number.toLowerCase().includes(searchLower)
+    const leaseholderMatch = unit.leaseholders?.some((lh: any) => 
+      lh?.name?.toLowerCase().includes(searchLower)
+    ) || false
+    
+    return unitNumberMatch || leaseholderMatch
+  })
 
   // Handle AI question
   const handleAiQuestion = async () => {
