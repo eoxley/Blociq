@@ -85,6 +85,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   ])
   const [error, setError] = useState<string | null>(null)
   const [isAddingEvent, setIsAddingEvent] = useState(false)
+  const [showAddEventForm, setShowAddEventForm] = useState(false)
   const [context, setContext] = useState<any>(null)
   const [recentEmails, setRecentEmails] = useState<Email[]>([])
   const [loadingEmails, setLoadingEmails] = useState(true)
@@ -419,8 +420,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
       if (response.ok && result.success) {
         toast.success('Event created successfully!')
-        // Reset form
+        // Reset form and hide it
         ;(e.target as HTMLFormElement).reset()
+        setShowAddEventForm(false)
         // Refresh events list
         const { data: events, error } = await supabase
           .from('property_events')
@@ -669,76 +671,109 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           
           <BlocIQCardContent>
             <div className="space-y-4">
+              {/* Add Event Button */}
+              {!showAddEventForm && (
+                <div className="text-center">
+                  <BlocIQButton
+                    onClick={() => setShowAddEventForm(true)}
+                    size="sm"
+                    className="bg-gradient-to-r from-[#008C8F] to-[#2BBEB4] hover:from-[#007B8A] hover:to-[#2BBEB4] text-white"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add New Event
+                  </BlocIQButton>
+                </div>
+              )}
+
               {/* Manual Event Input Form */}
-              <div className="bg-gradient-to-r from-[#F0FDFA] to-emerald-50 rounded-xl p-4 border border-[#2BBEB4]/20">
-                <h3 className="font-semibold text-[#0F5D5D] mb-3">Add New Event</h3>
-                <form onSubmit={handleAddEvent} className="space-y-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-[#333333] mb-1">Event Title</label>
-                      <input
-                        type="text"
-                        name="title"
-                        required
-                        className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
-                        placeholder="Enter event title"
-                      />
+              {showAddEventForm && (
+                <div className="bg-gradient-to-r from-[#F0FDFA] to-emerald-50 rounded-xl p-4 border border-[#2BBEB4]/20">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-[#0F5D5D]">Add New Event</h3>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddEventForm(false)}
+                      className="text-[#64748B] hover:text-[#333333] transition-colors"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+                  <form onSubmit={handleAddEvent} className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-[#333333] mb-1">Event Title</label>
+                        <input
+                          type="text"
+                          name="title"
+                          required
+                          className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
+                          placeholder="Enter event title"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-[#333333] mb-1">Date & Time</label>
+                        <input
+                          type="datetime-local"
+                          name="date"
+                          required
+                          min={new Date().toISOString().slice(0, 16)}
+                          className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
+                        />
+                      </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-[#333333] mb-1">Date & Time</label>
-                      <input
-                        type="datetime-local"
-                        name="date"
-                        required
+                      <label className="block text-sm font-medium text-[#333333] mb-1">Building (Optional)</label>
+                      <select
+                        name="building"
                         className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
+                      >
+                        <option value="">Select a building</option>
+                        {buildings.map(building => (
+                          <option key={building.id} value={building.name}>{building.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#333333] mb-1">Description (Optional)</label>
+                      <textarea
+                        name="description"
+                        rows={3}
+                        className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
+                        placeholder="Enter event description"
                       />
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[#333333] mb-1">Building (Optional)</label>
-                    <select
-                      name="building"
-                      className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
-                    >
-                      <option value="">Select a building</option>
-                      {/* Assuming 'buildings' is defined elsewhere or passed as a prop */}
-                      {/* For now, a placeholder or a dummy list */}
-                      {buildings.map(building => (
-                        <option key={building.id} value={building.name}>{building.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[#333333] mb-1">Description (Optional)</label>
-                    <textarea
-                      name="description"
-                      rows={3}
-                      className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
-                      placeholder="Enter event description"
-                    />
-                  </div>
-                  <div className="flex justify-end">
-                    <BlocIQButton
-                      type="submit"
-                      disabled={isAddingEvent}
-                      size="sm"
-                      className="bg-gradient-to-r from-[#008C8F] to-[#2BBEB4] hover:from-[#007B8A] hover:to-[#2BBEB4] text-white"
-                    >
-                      {isAddingEvent ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          Adding...
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Event
-                        </>
-                      )}
-                    </BlocIQButton>
-                  </div>
-                </form>
-              </div>
+                    <div className="flex justify-end gap-2">
+                      <BlocIQButton
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAddEventForm(false)}
+                        disabled={isAddingEvent}
+                      >
+                        Cancel
+                      </BlocIQButton>
+                      <BlocIQButton
+                        type="submit"
+                        disabled={isAddingEvent}
+                        size="sm"
+                        className="bg-gradient-to-r from-[#008C8F] to-[#2BBEB4] hover:from-[#007B8A] hover:to-[#2BBEB4] text-white"
+                      >
+                        {isAddingEvent ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Adding...
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Event
+                          </>
+                        )}
+                      </BlocIQButton>
+                    </div>
+                  </form>
+                </div>
+              )}
 
               {/* Events List */}
               {loadingEvents ? (
@@ -789,7 +824,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 <div className="text-center py-8">
                   <Calendar className="h-12 w-12 text-[#64748B] mx-auto mb-3" />
                   <p className="text-[#64748B] text-sm">No events yet</p>
-                  <p className="text-[#64748B] text-xs mt-1">Add your first property event above</p>
+                  <p className="text-[#64748B] text-xs mt-1">Click "Add New Event" to get started</p>
                 </div>
               )}
             </div>
