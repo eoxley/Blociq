@@ -273,7 +273,10 @@ export default function ComposeEmailModal({
 
           {/* Subject Field */}
           <div className="space-y-2">
-            <Label htmlFor="subject">Subject:</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="subject">Subject:</Label>
+              <span className="text-xs text-gray-500">Required for AI Draft</span>
+            </div>
             <Input
               id="subject"
               placeholder="Enter subject..."
@@ -313,24 +316,30 @@ export default function ComposeEmailModal({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="body">Message:</Label>
-              <Button
-                onClick={handleAIDraft}
-                disabled={isGeneratingDraft || !subject.trim()}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
-              >
-                {isGeneratingDraft ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Brain className="h-4 w-4" />
+              <div className="flex items-center gap-2">
+                {!subject.trim() && (
+                  <span className="text-xs text-gray-500">Enter subject first</span>
                 )}
-                {isGeneratingDraft ? 'Generating...' : '🧠 AI Draft'}
-              </Button>
+                <Button
+                  onClick={handleAIDraft}
+                  disabled={isGeneratingDraft || !subject.trim()}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                  title={!subject.trim() ? "Please enter a subject first to generate AI draft" : "Generate AI-powered email draft"}
+                >
+                  {isGeneratingDraft ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Brain className="h-4 w-4" />
+                  )}
+                  {isGeneratingDraft ? 'Generating...' : '🧠 AI Draft'}
+                </Button>
+              </div>
             </div>
             <Textarea
               id="body"
-              placeholder="Enter your message or click 'AI Draft' to generate content..."
+              placeholder="Enter your message or click 'AI Draft' to generate content (subject required)..."
               value={body}
               onChange={(e) => setBody(e.target.value)}
               rows={12}
