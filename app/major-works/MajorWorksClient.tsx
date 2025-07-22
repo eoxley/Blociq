@@ -65,9 +65,10 @@ interface BuildingGroup {
 
 interface MajorWorksClientProps {
   userData: UserData
+  selectedBuildingId?: string
 }
 
-export default function MajorWorksClient({ userData }: MajorWorksClientProps) {
+export default function MajorWorksClient({ userData, selectedBuildingId }: MajorWorksClientProps) {
   const supabase = createClientComponentClient()
   const [loading, setLoading] = useState(true)
   const [projects, setProjects] = useState<BuildingGroup[]>([])
@@ -82,12 +83,13 @@ export default function MajorWorksClient({ userData }: MajorWorksClientProps) {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [expandedBuildings, setExpandedBuildings] = useState<Set<string>>(new Set())
   const [submitting, setSubmitting] = useState(false)
+  const [buildings, setBuildings] = useState<any[]>([])
 
   // New project form state
   const [newProject, setNewProject] = useState({
     title: '',
     description: '',
-    building_id: '',
+    building_id: selectedBuildingId || '',
     start_date: '',
     estimated_cost: '',
     expected_duration: '',
@@ -103,9 +105,6 @@ export default function MajorWorksClient({ userData }: MajorWorksClientProps) {
     cost_update: '',
     include_ai_suggestion: false
   })
-
-  // Available buildings for new projects
-  const [buildings, setBuildings] = useState<Array<{id: string, name: string}>>([])
 
   useEffect(() => {
     fetchProjects()
@@ -167,7 +166,7 @@ export default function MajorWorksClient({ userData }: MajorWorksClientProps) {
         setNewProject({
           title: '',
           description: '',
-          building_id: '',
+          building_id: selectedBuildingId || '',
           start_date: '',
           estimated_cost: '',
           expected_duration: '',
@@ -248,7 +247,7 @@ export default function MajorWorksClient({ userData }: MajorWorksClientProps) {
       case 'planning': return 'default'
       case 'notice_of_intention': return 'secondary'
       case 'statement_of_estimates': return 'warning'
-      case 'contractor_appointed': return 'info'
+      case 'contractor_appointed': return 'secondary'
       case 'works_in_progress': return 'default'
       case 'completed': return 'success'
       case 'on_hold': return 'warning'
