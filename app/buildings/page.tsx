@@ -91,7 +91,8 @@ export default async function BuildingsPage() {
       id: b.id, 
       name: b.name, 
       unit_count: b.unit_count,
-      units_count: b.units?.length || 0 
+      units_count: b.units?.length || 0,
+      address: b.address // Add address to debugging
     })))
     
   } catch (error) {
