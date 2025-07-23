@@ -5,6 +5,7 @@ import SupabaseProvider from '@/components/SupabaseProvider';
 import { BlocIQProvider } from '@/components/BlocIQContext';
 import Footer from '@/components/Footer';
 import { Toaster } from 'sonner';
+import ConditionalFloatingAI from '@/components/ConditionalFloatingAI';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -29,6 +30,7 @@ export default function RootLayout({
               </main>
               <Footer />
             </div>
+            <ConditionalFloatingAI />
           </SupabaseProvider>
           <Toaster 
             position="top-right" 
