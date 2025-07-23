@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
         };
 
         // Call AI for classification and summary
-        const aiResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ask-ai`, {
+        const aiResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ask-ai`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
