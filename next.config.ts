@@ -31,6 +31,12 @@ const nextConfig: NextConfig = {
         },
       };
     }
+    
+    // Suppress deprecation warnings
+    config.infrastructureLogging = {
+      level: 'error',
+    };
+    
     return config;
   },
   // Add headers to prevent caching issues
