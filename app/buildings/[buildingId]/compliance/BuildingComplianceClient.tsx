@@ -72,7 +72,7 @@ interface Building {
   address: string | null
   unit_count: number | null
   building_age?: string | null
-  construction_type: string | null
+  construction_type?: string | null
   total_floors: string | null
   lift_available: string | null
   fire_safety_status: string | null

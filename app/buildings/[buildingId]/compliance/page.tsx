@@ -63,7 +63,7 @@ export default async function BuildingCompliancePage({
       )
     }
 
-    // Fetch building data with enhanced information
+    // Fetch building data with only existing columns
     const { data: building, error: buildingError } = await supabase
       .from('buildings')
       .select(`
@@ -71,7 +71,6 @@ export default async function BuildingCompliancePage({
         name, 
         address,
         unit_count,
-        construction_type,
         total_floors,
         lift_available,
         fire_safety_status,
