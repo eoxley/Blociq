@@ -32,12 +32,31 @@ export default async function BuildingDetailPage({
 
     console.log('🔍 Fetching building details for ID:', buildingId)
 
-    // Fetch building data
-    const { data: building, error: buildingError } = await supabase
-      .from('buildings')
-      .select('*')
-      .eq('id', buildingId)
-      .single()
+    // Try to fetch building by ID - handle both integer and UUID
+    let building = null
+    let buildingError = null
+
+    // First, try as integer ID
+    if (/^\d+$/.test(buildingId)) {
+      const { data, error } = await supabase
+        .from('buildings')
+        .select('*')
+        .eq('id', parseInt(buildingId))
+        .single()
+      
+      building = data
+      buildingError = error
+    } else {
+      // If not an integer, try as UUID (in case there's a UUID column)
+      const { data, error } = await supabase
+        .from('buildings')
+        .select('*')
+        .eq('id', buildingId)
+        .single()
+      
+      building = data
+      buildingError = error
+    }
 
     if (buildingError) {
       console.error('❌ Error fetching building:', buildingError)
@@ -51,160 +70,183 @@ export default async function BuildingDetailPage({
 
     console.log('✅ Building found:', building.name)
 
-    // Fetch building setup data with error handling
-    const { data: buildingSetup, error: setupError } = await supabase
-      .from('building_setup')
-      .select('*')
-      .eq('building_id', buildingId)
-      .single()
-
-    if (setupError && setupError.code !== 'PGRST116') {
-      console.warn('⚠️ Error fetching building setup:', setupError)
-    }
-
-    // Fetch compliance summary with error handling
-    const { data: complianceAssets, error: complianceError } = await supabase
-      .from('building_compliance_assets')
-      .select(`
-        *,
-        compliance_assets (
-          name,
-          category
-        )
-      `)
-      .eq('building_id', buildingId)
-
-    if (complianceError) {
-      console.warn('⚠️ Error fetching compliance assets:', complianceError)
-    }
-
-    // Fetch units and leaseholders with lease information
-    const { data: units, error: unitsError } = await supabase
-      .from('units')
-      .select(`
-        *,
-        leaseholders (
-          id,
-          name,
-          email,
-          phone
-        ),
-        leases (
-          id,
-          start_date,
-          expiry_date,
-          doc_type,
-          is_headlease
-        )
-      `)
-      .eq('building_id', buildingId)
-      .order('unit_number')
-
-    if (unitsError) {
-      console.warn('⚠️ Error fetching units:', unitsError)
-    }
-
-    // Fetch recent emails with error handling
-    const { data: recentEmails, error: emailsError } = await supabase
-      .from('incoming_emails')
-      .select('*')
-      .eq('building_id', buildingId)
-      .order('received_at', { ascending: false })
-      .limit(5)
-
-    if (emailsError) {
-      console.warn('⚠️ Error fetching recent emails:', emailsError)
-    }
-
-    // Fetch compliance documents with error handling
-    const { data: complianceDocs, error: complianceDocsError } = await supabase
-      .from('compliance_docs')
-      .select('*')
-      .eq('building_id', buildingId)
-      .order('created_at', { ascending: false })
-      .limit(5)
-
-    if (complianceDocsError) {
-      console.warn('⚠️ Error fetching compliance docs:', complianceDocsError)
-    }
-
-    // Fetch building documents with error handling
-    const { data: buildingDocs, error: buildingDocsError } = await supabase
-      .from('building_documents')
-      .select('*')
-      .eq('building_id', buildingId)
-      .order('created_at', { ascending: false })
-      .limit(5)
-
-    if (buildingDocsError) {
-      console.warn('⚠️ Error fetching building docs:', buildingDocsError)
-    }
-
-    // Fetch property events with error handling
-    const { data: events, error: eventsError } = await supabase
-      .from('property_events')
-      .select('*')
-      .eq('building_id', buildingId)
-      .gte('start_time', new Date().toISOString())
-      .order('start_time', { ascending: true })
-      .limit(5)
-
-    if (eventsError) {
-      console.warn('⚠️ Error fetching events:', eventsError)
-    }
-
-    // Fetch building todos with error handling
-    const { data: todos, error: todosError } = await supabase
-      .from('building_todos')
-      .select('*')
-      .eq('building_id', buildingId)
-      .order('due_date', { ascending: true })
-      .limit(10)
-
-    if (todosError) {
-      console.warn('⚠️ Error fetching todos:', todosError)
-    }
-
-    // Calculate compliance summary with safe defaults
-    const now = new Date()
-    const complianceSummary = {
-      total: complianceAssets?.length || 0,
-      compliant: complianceAssets?.filter(asset => asset?.status === 'compliant').length || 0,
-      dueSoon: complianceAssets?.filter(asset => {
-        if (!asset?.next_due_date) return false
-        try {
-          const dueDate = new Date(asset.next_due_date)
-          const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-          return daysUntilDue <= 30 && daysUntilDue > 0
-        } catch (error) {
-          console.warn('⚠️ Invalid date format:', asset.next_due_date)
-          return false
-        }
-      }).length || 0,
-      overdue: complianceAssets?.filter(asset => {
-        if (!asset?.next_due_date) return false
-        try {
-          const dueDate = new Date(asset.next_due_date)
-          return dueDate < now
-        } catch (error) {
-          console.warn('⚠️ Invalid date format:', asset.next_due_date)
-          return false
-        }
-      }).length || 0
-    }
-
-    // Prepare data for the client component with safe defaults
-    const buildingData = {
+    // Initialize empty data structures to prevent undefined errors
+    const buildingData: any = {
       building: building || {},
-      buildingSetup: buildingSetup || {},
-      complianceSummary,
-      complianceAssets: complianceAssets || [],
-      units: units || [],
-      recentEmails: recentEmails || [],
-      complianceDocs: complianceDocs || [],
-      buildingDocs: buildingDocs || [],
-      events: events || [],
-      todos: todos || []
+      buildingSetup: {},
+      complianceSummary: { total: 0, compliant: 0, dueSoon: 0, overdue: 0 },
+      complianceAssets: [],
+      units: [],
+      recentEmails: [],
+      complianceDocs: [],
+      buildingDocs: [],
+      events: [],
+      todos: []
+    }
+
+    // Try to fetch additional data with individual error handling
+    try {
+      const { data: buildingSetup } = await supabase
+        .from('building_setup')
+        .select('*')
+        .eq('building_id', building.id)
+        .single()
+      
+      if (buildingSetup) {
+        buildingData.buildingSetup = buildingSetup
+      }
+    } catch (error) {
+      console.warn('⚠️ Error fetching building setup:', error)
+    }
+
+    try {
+      const { data: complianceAssets } = await supabase
+        .from('building_compliance_assets')
+        .select(`
+          *,
+          compliance_assets (
+            name,
+            category
+          )
+        `)
+        .eq('building_id', building.id)
+
+      if (complianceAssets) {
+        buildingData.complianceAssets = complianceAssets
+        
+        // Calculate compliance summary
+        const now = new Date()
+        buildingData.complianceSummary = {
+          total: complianceAssets.length,
+          compliant: complianceAssets.filter(asset => asset?.status === 'compliant').length,
+          dueSoon: complianceAssets.filter(asset => {
+            if (!asset?.next_due_date) return false
+            try {
+              const dueDate = new Date(asset.next_due_date)
+              const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+              return daysUntilDue <= 30 && daysUntilDue > 0
+            } catch (error) {
+              return false
+            }
+          }).length,
+          overdue: complianceAssets.filter(asset => {
+            if (!asset?.next_due_date) return false
+            try {
+              const dueDate = new Date(asset.next_due_date)
+              return dueDate < now
+            } catch (error) {
+              return false
+            }
+          }).length
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Error fetching compliance assets:', error)
+    }
+
+    try {
+      const { data: units } = await supabase
+        .from('units')
+        .select(`
+          *,
+          leaseholders (
+            id,
+            name,
+            email,
+            phone
+          ),
+          leases (
+            id,
+            start_date,
+            expiry_date,
+            doc_type,
+            is_headlease
+          )
+        `)
+        .eq('building_id', building.id)
+        .order('unit_number')
+
+      if (units) {
+        buildingData.units = units
+      }
+    } catch (error) {
+      console.warn('⚠️ Error fetching units:', error)
+    }
+
+    try {
+      const { data: recentEmails } = await supabase
+        .from('incoming_emails')
+        .select('*')
+        .eq('building_id', building.id)
+        .order('received_at', { ascending: false })
+        .limit(5)
+
+      if (recentEmails) {
+        buildingData.recentEmails = recentEmails
+      }
+    } catch (error) {
+      console.warn('⚠️ Error fetching recent emails:', error)
+    }
+
+    try {
+      const { data: complianceDocs } = await supabase
+        .from('compliance_docs')
+        .select('*')
+        .eq('building_id', building.id)
+        .order('created_at', { ascending: false })
+        .limit(5)
+
+      if (complianceDocs) {
+        buildingData.complianceDocs = complianceDocs
+      }
+    } catch (error) {
+      console.warn('⚠️ Error fetching compliance docs:', error)
+    }
+
+    try {
+      const { data: buildingDocs } = await supabase
+        .from('building_documents')
+        .select('*')
+        .eq('building_id', building.id)
+        .order('created_at', { ascending: false })
+        .limit(5)
+
+      if (buildingDocs) {
+        buildingData.buildingDocs = buildingDocs
+      }
+    } catch (error) {
+      console.warn('⚠️ Error fetching building docs:', error)
+    }
+
+    try {
+      const { data: events } = await supabase
+        .from('property_events')
+        .select('*')
+        .eq('building_id', building.id)
+        .gte('start_time', new Date().toISOString())
+        .order('start_time', { ascending: true })
+        .limit(5)
+
+      if (events) {
+        buildingData.events = events
+      }
+    } catch (error) {
+      console.warn('⚠️ Error fetching events:', error)
+    }
+
+    try {
+      const { data: todos } = await supabase
+        .from('building_todos')
+        .select('*')
+        .eq('building_id', building.id)
+        .order('due_date', { ascending: true })
+        .limit(10)
+
+      if (todos) {
+        buildingData.todos = todos
+      }
+    } catch (error) {
+      console.warn('⚠️ Error fetching todos:', error)
     }
 
     console.log('✅ Building data prepared successfully')
