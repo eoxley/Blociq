@@ -1,9 +1,9 @@
 'use client'
 
 // Home page client component - Major works dashboard removed for cleaner interface
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { MessageCircle, Calendar, ExternalLink, Send, Loader2, Plus, Mail, FileText, Pin, Paperclip, Home, X, Building, Brain, Clock, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react'
+import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2 } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import DailySummary from '@/components/DailySummary'
 import MajorWorksDashboard from '@/components/MajorWorksDashboard'
@@ -51,12 +51,7 @@ type UserData = {
   email: string
 }
 
-type ChatMessage = {
-  id: string
-  content: string
-  isUser: boolean
-  timestamp: Date
-}
+
 
 type Email = {
   id: string
@@ -75,41 +70,13 @@ interface HomePageClientProps {
 }
 
 export default function HomePageClient({ userData }: HomePageClientProps) {
-  const [inputValue, setInputValue] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [attachments, setAttachments] = useState<File[]>([])
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      content: "Hello! I'm your BlocIQ assistant. I can help you with property management questions, compliance guidance, and more. What would you like to know?",
-      isUser: false,
-      timestamp: new Date()
-    }
-  ])
-  const [error, setError] = useState<string | null>(null)
   const [isAddingEvent, setIsAddingEvent] = useState(false)
   const [showAddEventForm, setShowAddEventForm] = useState(false)
-  const [context, setContext] = useState<any>(null)
   const [recentEmails, setRecentEmails] = useState<Email[]>([])
   const [loadingEmails, setLoadingEmails] = useState(true)
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClientComponentClient()
 
-  // Function to refresh/start new chat
-  const refreshChat = () => {
-    setMessages([
-      {
-        id: '1',
-        content: "Hello! I'm your BlocIQ assistant. I can help you with property management questions, compliance guidance, and more. What would you like to know?",
-        isUser: false,
-        timestamp: new Date()
-      }
-    ])
-    setInputValue('')
-    setAttachments([])
-    setError(null)
-    toast.success('New chat started!')
-  }
+
 
   // Dynamic welcome messages - rotating pool of positive, motivational, humorous, and informative messages
   const welcomeMessages = [
@@ -262,90 +229,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     fetchEmails();
   }, [supabase]);
 
-  const handleFileAttachment = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || [])
-    if (files.length > 0) {
-      setAttachments(prev => [...prev, ...files])
-    }
-  }
 
-  const removeAttachment = (index: number) => {
-    setAttachments(prev => prev.filter((_, i) => i !== index))
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!inputValue.trim() && attachments.length === 0) return
-
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      content: inputValue + (attachments.length > 0 ? `\n\n📎 Attachments: ${attachments.map(f => f.name).join(', ')}` : ''),
-      isUser: true,
-      timestamp: new Date()
-    }
-
-    setMessages(prev => [...prev, userMessage])
-    setInputValue('')
-    setAttachments([])
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      console.log("🧠 HomePageClient: Starting AI request");
-      console.log("📝 Input value:", inputValue);
-      console.log("📎 Attachments:", attachments.length);
-
-      const formData = new FormData()
-      formData.append('message', inputValue)
-      
-      // Add attachments to form data
-      attachments.forEach((file, index) => {
-        formData.append(`attachment_${index}`, file)
-      })
-
-      console.log("📤 Sending request to /api/ask-assistant");
-      console.log("📦 Request body:", formData);
-
-      const res = await fetch('/api/ask-assistant', {
-        method: 'POST',
-        body: formData,
-      })
-
-      console.log("📥 Response status:", res.status);
-      console.log("📥 Response headers:", Object.fromEntries(res.headers.entries()));
-
-      if (!res.ok) {
-        console.error("❌ Response not ok:", res.status, res.statusText);
-        throw new Error('Failed to get AI answer')
-      }
-
-      const data = await res.json()
-      console.log("📦 Response data:", data);
-
-      const aiMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        content: data.answer || data.content || 'No answer received',
-        isUser: false,
-        timestamp: new Date()
-      }
-
-      console.log("✅ AI message created:", aiMessage.content.substring(0, 100) + "...");
-      setMessages(prev => [...prev, aiMessage])
-    } catch (err) {
-      console.error('❌ Error in handleSubmit:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred')
-      const errorMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        content: 'Sorry, I encountered an error. Please try again.',
-        isUser: false,
-        timestamp: new Date()
-      }
-      setMessages(prev => [...prev, errorMessage])
-    } finally {
-      setIsLoading(false)
-      console.log("🏁 AI request completed");
-    }
-  }
 
   const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -425,12 +309,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     }
   }
 
-  const formatMessageTime = (timestamp: Date) => {
-    return timestamp.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    })
-  }
+
 
   return (
     <div className="space-y-8">
@@ -451,149 +330,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* BlocIQ Chat Assistant Section */}
-        <BlocIQCard variant="elevated" className="flex flex-col h-[600px]">
-          <BlocIQCardHeader className="bg-gradient-to-r from-[#008C8F] to-[#007BDB] text-white rounded-t-xl">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                  <Brain className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-semibold text-white">BlocIQ Assistant</h2>
-                  <p className="text-white/80 text-sm">Your AI property management companion</p>
-                </div>
-              </div>
-              <button
-                onClick={refreshChat}
-                disabled={isLoading}
-                className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-all duration-200 backdrop-blur-sm border border-white/30 disabled:opacity-50 disabled:cursor-not-allowed group"
-                title="Start new chat"
-              >
-                <RefreshCw className="h-5 w-5 text-white group-hover:rotate-180 transition-transform duration-300" />
-              </button>
-            </div>
-          </BlocIQCardHeader>
-          
-          <BlocIQCardContent className="flex-1 flex flex-col p-6">
-            {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2 max-h-[400px] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
-              {messages.map((message) => (
-                <div key={message.id} className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[80%] rounded-xl px-4 py-3 ${
-                    message.isUser 
-                      ? 'bg-gradient-to-r from-[#008C8F] to-[#007BDB] text-white shadow-lg' 
-                      : 'bg-[#FAFAFA] text-[#333333] border border-[#E2E8F0]'
-                  }`}>
-                    <div className="text-sm whitespace-pre-line break-words">{message.content}</div>
-                    <div className={`text-xs mt-1 ${
-                      message.isUser ? 'text-white/70' : 'text-[#64748B]'
-                    }`}>
-                      {formatMessageTime(message.timestamp)}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              
-              {/* Loading indicator */}
-              {isLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-[#FAFAFA] border border-[#E2E8F0] rounded-xl px-4 py-3">
-                    <div className="flex items-center gap-2 text-[#64748B]">
-                      <Loader2 className="animate-spin h-4 w-4" />
-                      <span className="text-sm">Thinking...</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Action buttons for last AI message */}
-            {messages.length > 1 && !messages[messages.length - 1].isUser && !isLoading && (
-              <div className="flex gap-2 mb-4">
-                <BlocIQButton variant="outline" size="sm" className="flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  📧 Turn into email
-                </BlocIQButton>
-                <BlocIQButton variant="outline" size="sm" className="flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  📝 Save as advice note
-                </BlocIQButton>
-                <BlocIQButton variant="outline" size="sm" className="flex items-center gap-2">
-                  <Pin className="h-4 w-4" />
-                  📌 Attach to building diary
-                </BlocIQButton>
-              </div>
-            )}
-
-            {/* Input form */}
-            <div className="space-y-3 bg-[#FAFAFA] p-4 rounded-xl border border-[#E2E8F0]">
-              {/* Attachments Display */}
-              {attachments.length > 0 && (
-                <div className="p-2 bg-white rounded-xl border border-[#E2E8F0]">
-                  <div className="text-xs text-[#64748B] mb-2">📎 Attachments:</div>
-                  <div className="space-y-1">
-                    {attachments.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between text-xs bg-[#F3F4F6] p-2 rounded border">
-                        <span className="truncate flex-1">{file.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeAttachment(index)}
-                          className="text-[#EF4444] hover:text-red-700 ml-2"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              <div className="flex gap-3">
-                <BlocIQButton
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  variant="outline"
-                  size="sm"
-                  className="px-4 py-3"
-                  disabled={isLoading}
-                >
-                  <Paperclip className="h-5 w-5" />
-                </BlocIQButton>
-                <input
-                  type="text"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="Ask about your buildings, compliance, or recent emails…"
-                  className="flex-1 px-4 py-3 border border-[#E2E8F0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent bg-white text-[#333333]"
-                  disabled={isLoading}
-                />
-                <BlocIQButton 
-                  type="submit"
-                  disabled={isLoading || (!inputValue.trim() && attachments.length === 0)}
-                  size="sm"
-                  className="px-6 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={handleSubmit}
-                >
-                  <Send className="h-5 w-5" />
-                  Send
-                </BlocIQButton>
-              </div>
-              
-              {/* Hidden file input */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                onChange={handleFileAttachment}
-                className="hidden"
-                accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
-              />
-            </div>
-          </BlocIQCardContent>
-        </BlocIQCard>
-
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Upcoming Events Section */}
         <BlocIQCard variant="elevated">
           <BlocIQCardHeader>
