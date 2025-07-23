@@ -1,5 +1,6 @@
 'use client'
 
+// Home page client component - Major works dashboard removed for cleaner interface
 import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { MessageCircle, Calendar, ExternalLink, Send, Loader2, Plus, Mail, FileText, Pin, Paperclip, Home, X, Building, Brain, Clock, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react'
