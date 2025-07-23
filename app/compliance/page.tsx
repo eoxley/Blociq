@@ -266,7 +266,7 @@ export default async function CompliancePage() {
                   return (
                     <Link
                       key={building.id}
-                      href={`/compliance/${building.id}`}
+                      href={`/buildings/${building.id}/compliance`}
                       className="group block bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-lg transition-all duration-200 overflow-hidden"
                     >
                       {/* Status Indicator */}

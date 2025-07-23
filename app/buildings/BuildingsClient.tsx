@@ -251,7 +251,7 @@ function BuildingCard({ building }: { building: Building }) {
           
           {/* Action Buttons */}
           <div className="grid grid-cols-2 gap-3 pt-4 border-t border-[#E2E8F0]">
-            <Link href={`/compliance/${building.id}`}>
+            <Link href={`/buildings/${building.id}/compliance`}>
               <BlocIQButton 
                 variant="outline" 
                 className="w-full border-[#E2E8F0] text-[#64748B] hover:bg-[#F0FDFA] hover:text-[#008C8F] transition-all duration-300"
@@ -261,7 +261,7 @@ function BuildingCard({ building }: { building: Building }) {
               </BlocIQButton>
             </Link>
             
-            <Link href={`/major-works?building=${building.id}`}>
+            <Link href={`/buildings/${building.id}/major-works`}>
               <BlocIQButton 
                 variant="outline" 
                 className="w-full border-[#E2E8F0] text-[#64748B] hover:bg-[#F0FDFA] hover:text-[#008C8F] transition-all duration-300"
@@ -335,7 +335,7 @@ function BuildingListItem({ building }: { building: Building }) {
             </div>
             
             <div className="flex items-center gap-2">
-              <Link href={`/compliance/${building.id}`}>
+              <Link href={`/buildings/${building.id}/compliance`}>
                 <BlocIQButton
                   variant="outline"
                   size="sm"
@@ -346,7 +346,7 @@ function BuildingListItem({ building }: { building: Building }) {
                 </BlocIQButton>
               </Link>
               
-              <Link href={`/major-works?building=${building.id}`}>
+              <Link href={`/buildings/${building.id}/major-works`}>
                 <BlocIQButton
                   variant="outline"
                   size="sm"
