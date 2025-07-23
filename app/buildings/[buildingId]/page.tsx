@@ -13,7 +13,8 @@ export default async function BuildingDetailPage({
 }) {
   try {
     const { buildingId } = await params
-    const supabase = createServerComponentClient({ cookies })
+    const cookieStore = cookies()
+    const supabase = createServerComponentClient({ cookies: () => cookieStore })
     
     // Secure the route using Supabase Auth
     const {

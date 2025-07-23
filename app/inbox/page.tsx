@@ -8,7 +8,8 @@ interface InboxPageProps {
 }
 
 export default async function InboxPage({ searchParams }: InboxPageProps) {
-  const supabase = createServerComponentClient({ cookies })
+  const cookieStore = await cookies()
+  const supabase = createServerComponentClient({ cookies: () => cookieStore })
   
   // Check if user is authenticated
   const { data: { user } } = await supabase.auth.getUser()

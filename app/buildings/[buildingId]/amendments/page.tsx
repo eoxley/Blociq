@@ -12,7 +12,8 @@ export default async function BuildingAmendmentsPage({
 }) {
   const { buildingId } = await params
   
-  const supabase = createServerComponentClient({ cookies })
+  const cookieStore = cookies()
+  const supabase = createServerComponentClient({ cookies: () => cookieStore })
   
   // Check if user is authenticated
   const { data: { user } } = await supabase.auth.getUser()

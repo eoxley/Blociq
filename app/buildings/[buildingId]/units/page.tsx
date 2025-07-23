@@ -15,7 +15,8 @@ export default async function BuildingUnitsPage({
   console.log('BuildingUnitsPage - buildingId:', buildingId)
   console.log('BuildingUnitsPage - buildingId type:', typeof buildingId)
   
-  const supabase = createServerComponentClient({ cookies })
+  const cookieStore = cookies()
+  const supabase = createServerComponentClient({ cookies: () => cookieStore })
   
   // Check if user is authenticated
   const { data: { session } } = await supabase.auth.getSession()

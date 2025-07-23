@@ -66,8 +66,29 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
   const [isEditing, setIsEditing] = useState(false)
   const [editedBuilding, setEditedBuilding] = useState(building)
   const [searchTerm, setSearchTerm] = useState('')
-  const supabase = createClientComponentClient()
+  // Initialize Supabase client with error handling
+  const [supabase, setSupabase] = useState<any>(null)
   const { setContext } = useBlocIQContext()
+
+  // Initialize Supabase client safely
+  useEffect(() => {
+    try {
+      const client = createClientComponentClient()
+      setSupabase(client)
+    } catch (error) {
+      console.error('Failed to initialize Supabase client:', error)
+      // Create a mock client to prevent crashes
+      setSupabase({
+        from: () => ({
+          select: () => ({
+            eq: () => ({
+              order: () => Promise.resolve({ data: [], error: null })
+            })
+          })
+        })
+      })
+    }
+  }, [])
 
   // Filter units based on search term
   const filteredUnits = units.filter((unit) => {
@@ -112,25 +133,27 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
           return
         }
 
-        // If no units in building prop, try to fetch from database
-        const { data: unitsData, error: unitsError } = await supabase
-          .from('units')
-          .select('id, unit_number, type, floor, notes, leaseholder_id, leaseholders(name, email, phone)')
-          .eq('building_id', building.id)
-          .order('unit_number')
+        // If no units in building prop and supabase is available, try to fetch from database
+        if (supabase) {
+          const { data: unitsData, error: unitsError } = await supabase
+            .from('units')
+            .select('id, unit_number, type, floor, notes, leaseholder_id, leaseholders(name, email, phone)')
+            .eq('building_id', building.id)
+            .order('unit_number')
 
-        if (unitsError) {
-          console.error('Error fetching units:', unitsError)
-          return
+          if (unitsError) {
+            console.error('Error fetching units:', unitsError)
+            return
+          }
+
+          // Transform the data to match our Unit type
+          const transformedUnits = (unitsData || []).map((unit: any) => ({
+            ...unit,
+            leaseholder: unit.leaseholder_id && unit.leaseholders?.[0] ? unit.leaseholders[0] : null
+          }))
+
+          setUnits(transformedUnits)
         }
-
-        // Transform the data to match our Unit type
-        const transformedUnits = (unitsData || []).map((unit: any) => ({
-          ...unit,
-          leaseholder: unit.leaseholder_id && unit.leaseholders?.[0] ? unit.leaseholders[0] : null
-        }))
-
-        setUnits(transformedUnits)
       } catch (error) {
         console.error('Error fetching units:', error)
       } finally {
@@ -157,6 +180,11 @@ export default function BuildingDetailClient({ building, recentEmails }: Buildin
   }
 
   const handleSave = async () => {
+    if (!supabase) {
+      console.error('Supabase client not available')
+      return
+    }
+    
     try {
       const { error } = await supabase
         .from('buildings')
