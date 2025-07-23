@@ -1,7 +1,10 @@
-import { cookies } from 'next/headers'
+import React from 'react'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import LayoutWithSidebar from '@/components/LayoutWithSidebar'
 import BuildingComplianceClient from './BuildingComplianceClient'
+import ErrorBoundary from '@/components/ErrorBoundary'
 
 export default async function BuildingCompliancePage({ 
   params 
@@ -10,74 +13,33 @@ export default async function BuildingCompliancePage({
 }) {
   try {
     const { buildingId } = await params
-    console.log('🔍 Building compliance page - Building ID:', buildingId)
+    const supabase = createServerComponentClient({ cookies })
     
-    const cookieStore = cookies()
-    const supabase = createServerComponentClient({ cookies: () => cookieStore })
+    // Secure the route using Supabase Auth
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
 
+    if (!session) {
+      redirect('/login')
+    }
+
+    // Validate buildingId
     if (!buildingId) {
-      return (
-        <div className="p-6 space-y-4">
-          <h1 className="text-2xl font-semibold text-[#333333]">Compliance</h1>
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-            <p className="text-red-600">Missing building ID.</p>
-            <p className="text-red-500 text-sm mt-2">Please provide a valid building ID in the URL.</p>
-          </div>
-        </div>
-      )
+      console.error('No building ID provided')
+      redirect('/buildings')
     }
 
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
-    console.log('🔍 Session check:', { 
-      hasSession: !!sessionData?.session, 
-      sessionError: sessionError?.message 
-    })
-    
-    if (sessionError) {
-      console.error('Session error:', sessionError)
-      return (
-        <div className="p-6 space-y-4">
-          <h1 className="text-2xl font-semibold text-[#333333]">Compliance</h1>
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-            <p className="text-red-600">Authentication error.</p>
-            <p className="text-red-500 text-sm mt-2">Please try logging in again.</p>
-            <a href="/login" className="text-blue-600 hover:text-blue-800 underline mt-2 inline-block">
-              Go to Login
-            </a>
-          </div>
-        </div>
-      )
-    }
-    
-    if (!sessionData?.session) {
-      return (
-        <div className="p-6 space-y-4">
-          <h1 className="text-2xl font-semibold text-[#333333]">Compliance</h1>
-          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-            <p className="text-yellow-600">Please log in to view compliance information.</p>
-            <a href="/login" className="text-blue-600 hover:text-blue-800 underline mt-2 inline-block">
-              Go to Login
-            </a>
-          </div>
-        </div>
-      )
-    }
+    console.log('🔍 Fetching building compliance for ID:', buildingId)
 
-    // Fetch building data with only existing columns
+    // Fetch building details with safe column selection - only use columns that definitely exist
     const { data: building, error: buildingError } = await supabase
       .from('buildings')
       .select(`
         id, 
         name, 
         address,
-        unit_count,
-        total_floors,
-        lift_available,
-        fire_safety_status,
-        asbestos_status,
-        energy_rating,
-        building_insurance_provider,
-        building_insurance_expiry
+        unit_count
       `)
       .eq('id', buildingId)
       .maybeSingle()
@@ -85,25 +47,33 @@ export default async function BuildingCompliancePage({
     if (buildingError) {
       console.error('Building fetch error:', buildingError.message)
       return (
-        <div className="p-6 space-y-4">
-          <h1 className="text-2xl font-semibold text-[#333333]">Compliance</h1>
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-            <p className="text-red-600">Could not load building information.</p>
-            <p className="text-red-500 text-sm mt-2">Error: {buildingError.message}</p>
-          </div>
-        </div>
+        <ErrorBoundary>
+          <LayoutWithSidebar>
+            <div className="p-6 space-y-4">
+              <h1 className="text-2xl font-semibold text-[#333333]">Compliance</h1>
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                <p className="text-red-600">Could not load building information.</p>
+                <p className="text-red-500 text-sm mt-2">Error: {buildingError.message}</p>
+              </div>
+            </div>
+          </LayoutWithSidebar>
+        </ErrorBoundary>
       )
     }
 
     if (!building) {
       return (
-        <div className="p-6 space-y-4">
-          <h1 className="text-2xl font-semibold text-[#333333]">Compliance</h1>
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-            <p className="text-red-600">Building not found.</p>
-            <p className="text-red-500 text-sm mt-2">Building ID: {buildingId}</p>
-          </div>
-        </div>
+        <ErrorBoundary>
+          <LayoutWithSidebar>
+            <div className="p-6 space-y-4">
+              <h1 className="text-2xl font-semibold text-[#333333]">Compliance</h1>
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                <p className="text-red-600">Building not found.</p>
+                <p className="text-red-500 text-sm mt-2">Building ID: {buildingId}</p>
+              </div>
+            </div>
+          </LayoutWithSidebar>
+        </ErrorBoundary>
       )
     }
 
@@ -116,13 +86,17 @@ export default async function BuildingCompliancePage({
     if (assetsError) {
       console.error('Compliance assets fetch error:', assetsError.message)
       return (
-        <div className="p-6 space-y-4">
-          <h1 className="text-2xl font-semibold text-[#333333]">Compliance</h1>
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-            <p className="text-red-600">Could not load compliance assets.</p>
-            <p className="text-red-500 text-sm mt-2">Error: {assetsError.message}</p>
-          </div>
-        </div>
+        <ErrorBoundary>
+          <LayoutWithSidebar>
+            <div className="p-6 space-y-4">
+              <h1 className="text-2xl font-semibold text-[#333333]">Compliance</h1>
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                <p className="text-red-600">Could not load compliance assets.</p>
+                <p className="text-red-500 text-sm mt-2">Error: {assetsError.message}</p>
+              </div>
+            </div>
+          </LayoutWithSidebar>
+        </ErrorBoundary>
       )
     }
 
@@ -190,8 +164,20 @@ export default async function BuildingCompliancePage({
       return daysUntilDue <= 30 && daysUntilDue > 0
     }).length || 0
 
+    // Prepare building data with safe defaults for missing columns
+    const buildingData = {
+      ...building,
+      total_floors: null,
+      lift_available: null,
+      fire_safety_status: null,
+      asbestos_status: null,
+      energy_rating: null,
+      building_insurance_provider: null,
+      building_insurance_expiry: null
+    }
+
     const complianceData = {
-      building,
+      building: buildingData,
       assets: assets || [],
       buildingAssets: safeBuildingAssets,
       complianceDocuments: safeComplianceDocuments,
@@ -207,18 +193,17 @@ export default async function BuildingCompliancePage({
       }
     }
 
-    return <BuildingComplianceClient complianceData={complianceData} />
+    console.log('✅ Building compliance data prepared successfully')
 
-  } catch (err) {
-    console.error('Compliance page crash:', err)
     return (
-      <div className="p-6 space-y-4">
-        <h1 className="text-2xl font-semibold text-[#333333]">Compliance</h1>
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-          <p className="text-red-600">An unexpected error occurred.</p>
-          <p className="text-red-500 text-sm mt-2">Error details: {err instanceof Error ? err.message : String(err)}</p>
-        </div>
-      </div>
+      <ErrorBoundary>
+        <LayoutWithSidebar>
+          <BuildingComplianceClient complianceData={complianceData} />
+        </LayoutWithSidebar>
+      </ErrorBoundary>
     )
+  } catch (error) {
+    console.error('❌ Unexpected error in building compliance page:', error)
+    redirect('/buildings')
   }
 } 
