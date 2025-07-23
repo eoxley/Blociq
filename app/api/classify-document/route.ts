@@ -224,8 +224,60 @@ Content: ${extractedText.substring(0, 2000)}`,
       }, { status: 500 });
     }
 
+    // Enhanced document analysis for actionable insights
+    if (extractedText && extractedText.length > 50) {
+      try {
+        console.log("🧠 Starting enhanced document analysis...");
+        
+        const analysisResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/documents/analyze`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            documentId: documentId,
+            documentText: extractedText,
+            fileName: document.file_name,
+            documentType: classification
+          })
+        });
+
+        if (analysisResponse.ok) {
+          const analysisResult = await analysisResponse.json();
+          console.log("✅ Enhanced analysis completed:", analysisResult.analysis);
+          
+          // Update document with enhanced analysis results
+          const { error: analysisUpdateError } = await supabase
+            .from(tableName)
+            .update({
+              suggested_action: analysisResult.analysis?.suggested_action || null,
+              confidence_level: analysisResult.analysis?.confidence_level || 'medium',
+              key_findings: analysisResult.analysis?.key_findings || [],
+              compliance_status: analysisResult.analysis?.compliance_status || 'unknown'
+            })
+            .eq('id', documentId);
+
+          if (analysisUpdateError) {
+            console.warn("⚠️ Failed to update document with analysis results:", analysisUpdateError);
+          }
+        } else {
+          console.warn("⚠️ Enhanced analysis failed, continuing with basic classification");
+        }
+      } catch (analysisError) {
+        console.warn("⚠️ Enhanced analysis error:", analysisError);
+        // Continue without enhanced analysis
+      }
+    }
+
+    // Get the latest document data including analysis results
+    const { data: updatedDocument } = await supabase
+      .from(tableName)
+      .select('*')
+      .eq('id', documentId)
+      .single();
+
     const responseData = {
-      message: "Document classified successfully",
+      message: "Document classified and analyzed successfully",
       document: {
         id: documentId,
         name: document.file_name,
@@ -236,12 +288,17 @@ Content: ${extractedText.substring(0, 2000)}`,
       classification: classification,
       summary: summary,
       extracted_text: extractedText.substring(0, 500) + (extractedText.length > 500 ? '...' : ''),
+      suggested_action: updatedDocument?.suggested_action || null,
+      confidence_level: updatedDocument?.confidence_level || 'medium',
+      key_findings: updatedDocument?.key_findings || [],
+      compliance_status: updatedDocument?.compliance_status || 'unknown',
       debug_info: {
         user_id: user.id,
         timestamp: new Date().toISOString(),
         document_type: documentType,
         is_unlinked: document.is_unlinked || isUnlinked,
-        text_length: extractedText.length
+        text_length: extractedText.length,
+        enhanced_analysis: updatedDocument?.suggested_action ? 'completed' : 'not_applicable'
       }
     };
 

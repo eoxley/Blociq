@@ -51,6 +51,10 @@ interface UploadedFile {
   classification?: string;
   extracted_text?: string;
   summary?: string;
+  suggested_action?: string;
+  confidence_level?: string;
+  key_findings?: string[];
+  compliance_status?: string;
   metadata?: any;
   is_unlinked?: boolean;
   building_id?: string | null;
@@ -181,6 +185,10 @@ export default function SmartUploader({
         let classification = null;
         let extractedText = null;
         let summary = null;
+        let suggestedAction = null;
+        let confidenceLevel = null;
+        let keyFindings = null;
+        let complianceStatus = null;
 
         if (autoClassify && (file.type === 'application/pdf' || file.type.includes('text'))) {
           try {
@@ -201,6 +209,10 @@ export default function SmartUploader({
               classification = aiData.classification;
               extractedText = aiData.extracted_text;
               summary = aiData.summary;
+              suggestedAction = aiData.suggested_action;
+              confidenceLevel = aiData.confidence_level;
+              keyFindings = aiData.key_findings;
+              complianceStatus = aiData.compliance_status;
 
               // Update document with AI results
               await supabase
@@ -209,6 +221,10 @@ export default function SmartUploader({
                   classification: classification,
                   extracted_text: extractedText,
                   summary: summary,
+                  suggested_action: suggestedAction,
+                  confidence_level: confidenceLevel,
+                  key_findings: keyFindings,
+                  compliance_status: complianceStatus,
                   ai_processed_at: new Date().toISOString(),
                   status: 'processed'
                 })
@@ -231,6 +247,10 @@ export default function SmartUploader({
           classification: classification,
           extracted_text: extractedText,
           summary: summary,
+          suggested_action: suggestedAction,
+          confidence_level: confidenceLevel,
+          key_findings: keyFindings,
+          compliance_status: complianceStatus,
           metadata: savedDocument,
           is_unlinked: isUnlinked,
           building_id: savedDocument.building_id
@@ -262,10 +282,25 @@ export default function SmartUploader({
             }
           );
         } else {
+          const analysisInfo = file.suggested_action ? 
+            ` with AI analysis and suggested action` : 
+            file.classification ? ` and classified as: ${file.classification}` : '';
+          
           toast.success(
-            `Document uploaded successfully${file.classification ? ` and classified as: ${file.classification}` : ''}`,
+            `Document uploaded successfully${analysisInfo}`,
             {
-              duration: 3000
+              duration: 4000,
+              action: file.suggested_action ? {
+                label: "View Analysis",
+                onClick: () => {
+                  // Could open a modal or navigate to analysis view
+                  console.log("Analysis:", {
+                    suggested_action: file.suggested_action,
+                    confidence_level: file.confidence_level,
+                    compliance_status: file.compliance_status
+                  });
+                }
+              } : undefined
             }
           );
         }
