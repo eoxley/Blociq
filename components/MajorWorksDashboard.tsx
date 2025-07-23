@@ -98,16 +98,14 @@ export default function MajorWorksDashboard({
   const [isLoading, setIsLoading] = useState(true)
   const [expandedProject, setExpandedProject] = useState<string | null>(null)
   const [filterStatus, setFilterStatus] = useState<string>('all')
-  const [searchTerm, setSearchTerm] = useState('')
   const [selectedBuilding, setSelectedBuilding] = useState<string>('all')
+  const [searchTerm, setSearchTerm] = useState('')
   const [buildings, setBuildings] = useState<any[]>([])
 
   useEffect(() => {
+    fetchBuildings()
     fetchProjects()
-    if (showAllBuildings) {
-      fetchBuildings()
-    }
-  }, [selectedBuilding])
+  }, [])
 
   const fetchBuildings = async () => {
     try {
@@ -122,39 +120,12 @@ export default function MajorWorksDashboard({
   }
 
   const fetchProjects = async () => {
-    setIsLoading(true)
     try {
-      let url = '/api/major-works/list?include_documents=true&include_logs=true&include_observations=true'
-      if (selectedBuilding !== 'all') {
-        url = `/api/major-works/building/${selectedBuilding}?include_documents=true&include_logs=true&include_observations=true`
-      }
-      
-      const response = await fetch(url)
+      setIsLoading(true)
+      const response = await fetch('/api/major-works/list')
       if (response.ok) {
         const data = await response.json()
-        const allProjects = data.projects || []
-        
-        // Apply filters
-        let filteredProjects = allProjects
-        
-        if (filterStatus !== 'all') {
-          filteredProjects = filteredProjects.filter((project: Project) => project.status === filterStatus)
-        }
-        
-        if (searchTerm) {
-          filteredProjects = filteredProjects.filter((project: Project) => 
-            project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            project.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            project.buildings?.name.toLowerCase().includes(searchTerm.toLowerCase())
-          )
-        }
-        
-        // Apply limit
-        if (limit) {
-          filteredProjects = filteredProjects.slice(0, limit)
-        }
-        
-        setProjects(filteredProjects)
+        setProjects(data.projects || [])
       }
     } catch (error) {
       console.error('Error fetching projects:', error)
@@ -164,33 +135,32 @@ export default function MajorWorksDashboard({
   }
 
   const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'planning': return 'bg-blue-100 text-blue-800'
-      case 'consultation': return 'bg-yellow-100 text-yellow-800'
-      case 'delivery': return 'bg-orange-100 text-orange-800'
-      case 'complete': return 'bg-green-100 text-green-800'
-      case 'on hold': return 'bg-gray-100 text-gray-800'
-      default: return 'bg-gray-100 text-gray-800'
+    const colors: { [key: string]: string } = {
+      'Planning': 'bg-blue-100 text-blue-800',
+      'Consultation': 'bg-yellow-100 text-yellow-800',
+      'Delivery': 'bg-green-100 text-green-800',
+      'Complete': 'bg-gray-100 text-gray-800',
+      'On Hold': 'bg-red-100 text-red-800'
     }
+    return colors[status] || 'bg-gray-100 text-gray-800'
   }
 
   const getPriorityColor = (priority: string) => {
-    switch (priority.toLowerCase()) {
-      case 'high': return 'bg-red-100 text-red-800'
-      case 'medium': return 'bg-yellow-100 text-yellow-800'
-      case 'low': return 'bg-green-100 text-green-800'
-      default: return 'bg-gray-100 text-gray-800'
+    const colors: { [key: string]: string } = {
+      'High': 'bg-red-100 text-red-800',
+      'Medium': 'bg-yellow-100 text-yellow-800',
+      'Low': 'bg-green-100 text-green-800'
     }
+    return colors[priority] || 'bg-gray-100 text-gray-800'
   }
 
   const getHealthColor = (health: string) => {
-    switch (health.toLowerCase()) {
-      case 'excellent': return 'bg-green-100 text-green-800'
-      case 'good': return 'bg-blue-100 text-blue-800'
-      case 'fair': return 'bg-yellow-100 text-yellow-800'
-      case 'poor': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
+    const colors: { [key: string]: string } = {
+      'Good': 'bg-green-100 text-green-800',
+      'At Risk': 'bg-yellow-100 text-yellow-800',
+      'Critical': 'bg-red-100 text-red-800'
     }
+    return colors[health] || 'bg-gray-100 text-gray-800'
   }
 
   const toggleProjectExpansion = (projectId: string) => {
@@ -207,49 +177,39 @@ export default function MajorWorksDashboard({
 
   const getProjectProgress = (project: Project) => {
     if (project.actual_completion_date) return 100
-    if (!project.actual_start_date) return 0
-    
-    const startDate = new Date(project.actual_start_date)
-    const endDate = new Date(project.estimated_completion_date)
-    const today = new Date()
-    
-    if (today < startDate) return 0
-    if (today > endDate) return 100
-    
-    const totalDays = differenceInDays(endDate, startDate)
-    const daysElapsed = differenceInDays(today, startDate)
-    return Math.round((daysElapsed / totalDays) * 100)
+    if (project.completion_percentage) return project.completion_percentage
+    return 0
   }
 
   const getDaysRemaining = (project: Project) => {
-    if (project.actual_completion_date) return 0
-    if (!project.estimated_completion_date) return null
+    const completionDate = project.actual_completion_date || project.estimated_completion_date
+    if (!completionDate) return null
     
-    const endDate = new Date(project.estimated_completion_date)
     const today = new Date()
-    const days = differenceInDays(endDate, today)
-    return days > 0 ? days : 0
+    const completion = new Date(completionDate)
+    const diffTime = completion.getTime() - today.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    
+    return diffDays
   }
 
   const getActiveProjectsCount = () => {
-    return projects.filter(p => p.is_active && p.status !== 'Complete').length
+    return projects.filter(p => p.status !== 'Complete' && p.is_active).length
   }
 
   const getOverdueProjectsCount = () => {
     return projects.filter(p => {
-      if (!p.estimated_completion_date || p.actual_completion_date) return false
-      const endDate = new Date(p.estimated_completion_date)
-      const today = new Date()
-      return endDate < today
+      const daysRemaining = getDaysRemaining(p)
+      return daysRemaining !== null && daysRemaining < 0 && p.status !== 'Complete'
     }).length
   }
 
-  const getTotalEstimatedCost = () => {
-    return projects.reduce((sum, p) => sum + (p.estimated_cost || 0), 0)
+  const getTotalProjectsCount = () => {
+    return projects.length
   }
 
-  const getTotalActualCost = () => {
-    return projects.reduce((sum, p) => sum + (p.actual_cost || 0), 0)
+  const getCompletedProjectsCount = () => {
+    return projects.filter(p => p.status === 'Complete').length
   }
 
   if (isLoading) {
@@ -274,73 +234,99 @@ export default function MajorWorksDashboard({
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Major Works Dashboard</h2>
-          <p className="text-gray-600">Track and manage major works projects across all buildings</p>
+    <div className="space-y-8">
+      {/* Enhanced Header with Gradient Background */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-2xl p-8 text-white shadow-2xl">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="relative z-10">
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <h1 className="text-4xl font-bold">Major Works Management</h1>
+              <p className="text-teal-100 text-lg">Track and manage major works projects across all buildings</p>
+            </div>
+            <div className="flex items-center gap-4">
+              {showAddButton && (
+                <Link href="/major-works/new">
+                  <Button className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Major Work
+                  </Button>
+                </Link>
+              )}
+              <Button variant="outline" className="border-white/30 text-white hover:bg-white/10">
+                <Activity className="h-4 w-4 mr-2" />
+                View Reports
+              </Button>
+            </div>
+          </div>
         </div>
-        {showAddButton && (
-          <Link href="/major-works/new">
-            <Button className="bg-teal-600 hover:bg-teal-700">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Major Work
-            </Button>
-          </Link>
-        )}
+        {/* Decorative elements */}
+        <div className="absolute top-4 right-4 w-20 h-20 bg-white/10 rounded-full"></div>
+        <div className="absolute bottom-4 left-4 w-16 h-16 bg-white/5 rounded-full"></div>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-gradient-to-br from-teal-50 to-teal-100">
+          <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Active Projects</p>
-                <p className="text-2xl font-bold text-gray-900">{getActiveProjectsCount()}</p>
+                <div className="text-3xl font-bold text-teal-700 group-hover:scale-110 transition-transform duration-300">
+                  {getTotalProjectsCount()}
+                </div>
+                <div className="text-sm text-teal-600 font-medium">Total Projects</div>
               </div>
-              <Activity className="h-8 w-8 text-blue-600" />
+              <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <Construction className="h-6 w-6 text-white" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
+        <Card className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-gradient-to-br from-blue-50 to-blue-100">
+          <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Overdue Projects</p>
-                <p className="text-2xl font-bold text-red-600">{getOverdueProjectsCount()}</p>
+                <div className="text-3xl font-bold text-blue-700 group-hover:scale-110 transition-transform duration-300">
+                  {getActiveProjectsCount()}
+                </div>
+                <div className="text-sm text-blue-600 font-medium">Active Projects</div>
               </div>
-              <AlertTriangle className="h-8 w-8 text-red-600" />
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <Activity className="h-6 w-6 text-white" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
+        <Card className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-gradient-to-br from-red-50 to-red-100">
+          <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Budget</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  £{(getTotalEstimatedCost() / 1000).toFixed(0)}k
-                </p>
+                <div className="text-3xl font-bold text-red-700 group-hover:scale-110 transition-transform duration-300">
+                  {getOverdueProjectsCount()}
+                </div>
+                <div className="text-sm text-red-600 font-medium">Overdue Projects</div>
               </div>
-              <DollarSign className="h-8 w-8 text-green-600" />
+              <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <AlertTriangle className="h-6 w-6 text-white" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
+        <Card className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 bg-gradient-to-br from-green-50 to-green-100">
+          <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Spent to Date</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  £{(getTotalActualCost() / 1000).toFixed(0)}k
-                </p>
+                <div className="text-3xl font-bold text-green-700 group-hover:scale-110 transition-transform duration-300">
+                  {getCompletedProjectsCount()}
+                </div>
+                <div className="text-sm text-green-600 font-medium">Completed</div>
               </div>
-              <TrendingUp className="h-8 w-8 text-purple-600" />
+              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <CheckCircle className="h-6 w-6 text-white" />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -453,7 +439,7 @@ export default function MajorWorksDashboard({
                     </div>
                     
                     {/* Project Details Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-teal-600" />
                         <div>
@@ -476,16 +462,6 @@ export default function MajorWorksDashboard({
                               ? format(new Date(project.actual_completion_date), 'dd MMM yyyy')
                               : format(new Date(project.estimated_completion_date), 'dd MMM yyyy')
                             }
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4 text-green-600" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">Budget</p>
-                          <p className="text-sm text-gray-600">
-                            £{(project.estimated_cost / 1000).toFixed(0)}k
                           </p>
                         </div>
                       </div>
