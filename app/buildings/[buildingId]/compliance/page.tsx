@@ -35,7 +35,6 @@ export default async function BuildingCompliancePage({
         name, 
         address,
         unit_count,
-        building_age,
         construction_type,
         total_floors,
         lift_available,
