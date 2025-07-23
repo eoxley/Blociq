@@ -87,21 +87,42 @@ export async function POST(req: NextRequest) {
     let extractedText = "";
     let classification = "Unknown";
     let summary = "";
+    let confidence = "medium";
 
     try {
       if (document.file_type === 'application/pdf') {
-        // For PDF files, we'll use a simpler approach that works in serverless
-        // Since PDF.js with canvas doesn't work in Vercel, we'll extract basic info
-        extractedText = `PDF Document: ${document.file_name}`;
-        console.log("✅ PDF processing completed (basic extraction)");
+        // Enhanced PDF text extraction
+        const { extractTextWithAnalysis } = await import('@/lib/extractTextFromPdf');
+        const buffer = Buffer.from(await fileData.arrayBuffer());
+        const analysis = await extractTextWithAnalysis(buffer, document.file_name);
+        
+        extractedText = analysis.text;
+        classification = analysis.documentType;
+        summary = analysis.summary;
+        confidence = analysis.confidence;
+        
+        console.log("✅ Enhanced PDF processing completed:", {
+          documentType: classification,
+          confidence: confidence,
+          textLength: extractedText.length,
+          summary: summary.substring(0, 100) + '...'
+        });
       } else if (document.file_type.includes('text') || document.file_type.includes('document')) {
         // Text file extraction
         const text = await fileData.text();
         extractedText = text;
+        
+        // Basic classification for text files
+        const { detectDocumentType, generateBasicSummary } = await import('@/lib/extractTextFromPdf');
+        classification = detectDocumentType(document.file_name, text);
+        summary = generateBasicSummary(text, classification);
+        
         console.log("✅ Text file extracted, length:", text.length);
       } else {
         console.log("⚠️ File type not supported for text extraction:", document.file_type);
         extractedText = `Document: ${document.file_name} (${document.file_type})`;
+        classification = "General Document";
+        summary = "Document uploaded successfully. Content analysis limited due to file type.";
       }
 
       // AI Classification and summarization

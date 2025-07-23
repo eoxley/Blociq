@@ -34,11 +34,32 @@ export async function POST(req: NextRequest) {
     if (!documentText || documentText.length < 50) {
       console.log("⚠️ Document text too short for analysis");
       
+      // Try to extract text from the document if it's a PDF
+      let enhancedText = documentText;
+      let enhancedSummary = "Document contains limited readable text. Consider re-uploading with OCR or a text-based version.";
+      
+      try {
+        const { extractTextWithAnalysis, isTextSufficientForAnalysis } = await import('@/lib/extractTextFromPdf');
+        
+        // If we have a file buffer, try enhanced extraction
+        if (documentText.includes('PDF Document:') || documentText.length < 20) {
+          // This is a fallback case, so we'll use the basic summary
+          enhancedSummary = "Document appears to be scanned or image-based. OCR processing recommended for better analysis.";
+        } else {
+          // Use the existing text but enhance the analysis
+          const analysis = await extractTextWithAnalysis(Buffer.from(documentText), fileName);
+          enhancedText = analysis.text;
+          enhancedSummary = analysis.summary;
+        }
+      } catch (extractionError) {
+        console.warn("⚠️ Enhanced text extraction failed:", extractionError);
+      }
+      
       // Update document with fallback summary
       const { error: updateError } = await supabase
         .from('building_documents')
         .update({
-          summary: "Document contains limited readable text. Consider re-uploading with OCR or a text-based version.",
+          summary: enhancedSummary,
           suggested_action: "Re-upload document with better text extraction or enable OCR processing.",
           confidence_level: "low"
         })
@@ -50,7 +71,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        summary: "Document contains limited readable text. Consider re-uploading with OCR or a text-based version.",
+        summary: enhancedSummary,
         suggested_action: "Re-upload document with better text extraction or enable OCR processing.",
         confidence_level: "low"
       });
