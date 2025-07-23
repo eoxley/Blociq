@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import { createClient } from '@/utils/supabase/server'
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { redirect } from 'next/navigation'
 import BuildingComplianceClient from './BuildingComplianceClient'
 
@@ -10,7 +10,8 @@ export default async function BuildingCompliancePage({
 }) {
   try {
     const { buildingId } = await params
-    const supabase = createClient(cookies())
+    const cookieStore = cookies()
+    const supabase = createServerComponentClient({ cookies: () => cookieStore })
 
     if (!buildingId) {
       return (
@@ -126,7 +127,7 @@ export default async function BuildingCompliancePage({
     const statusDatesMap: Record<string, string> = {}
     const notesMap: Record<string, string> = {}
     
-    buildingAssets?.forEach((buildingAsset) => {
+    buildingAssets?.forEach((buildingAsset: any) => {
       statusMap[buildingAsset.asset_id] = buildingAsset.status || 'Not Tracked'
       statusDatesMap[buildingAsset.asset_id] = buildingAsset.next_due_date || ''
       notesMap[buildingAsset.asset_id] = buildingAsset.notes || ''
@@ -135,15 +136,15 @@ export default async function BuildingCompliancePage({
     // Calculate compliance statistics
     const totalAssets = assets?.length || 0
     const trackedAssets = buildingAssets?.length || 0
-    const compliantAssets = buildingAssets?.filter(asset => 
+    const compliantAssets = buildingAssets?.filter((asset: any) => 
       asset.status === 'Compliant' || 
       (asset.next_due_date && new Date(asset.next_due_date) > new Date())
     ).length || 0
-    const overdueAssets = buildingAssets?.filter(asset => 
+    const overdueAssets = buildingAssets?.filter((asset: any) => 
       asset.status === 'Overdue' || 
       (asset.next_due_date && new Date(asset.next_due_date) < new Date())
     ).length || 0
-    const dueSoonAssets = buildingAssets?.filter(asset => {
+    const dueSoonAssets = buildingAssets?.filter((asset: any) => {
       if (!asset.next_due_date) return false
       const dueDate = new Date(asset.next_due_date)
       const today = new Date()
