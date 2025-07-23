@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import { createClient } from '@/utils/supabase/server'
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { redirect } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import LayoutWithSidebar from '@/components/LayoutWithSidebar'
@@ -9,7 +9,8 @@ import { Shield, Building2, AlertTriangle, CheckCircle, Clock, TrendingUp, Arrow
 export default async function CompliancePage({ params }: { params: Promise<{ buildingId: string }> }) {
   try {
     const { buildingId } = await params
-    const supabase = createClient(cookies())
+    const cookieStore = cookies()
+    const supabase = createServerComponentClient({ cookies: () => cookieStore })
 
     if (!buildingId) {
       return (
