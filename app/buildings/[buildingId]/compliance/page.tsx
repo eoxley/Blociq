@@ -10,6 +10,8 @@ export default async function BuildingCompliancePage({
 }) {
   try {
     const { buildingId } = await params
+    console.log('🔍 Building compliance page - Building ID:', buildingId)
+    
     const cookieStore = cookies()
     const supabase = createServerComponentClient({ cookies: () => cookieStore })
 
@@ -25,8 +27,41 @@ export default async function BuildingCompliancePage({
       )
     }
 
-    const { data: sessionData } = await supabase.auth.getSession()
-    if (!sessionData?.session) redirect('/login')
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+    console.log('🔍 Session check:', { 
+      hasSession: !!sessionData?.session, 
+      sessionError: sessionError?.message 
+    })
+    
+    if (sessionError) {
+      console.error('Session error:', sessionError)
+      return (
+        <div className="p-6 space-y-4">
+          <h1 className="text-2xl font-semibold text-[#333333]">Compliance</h1>
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+            <p className="text-red-600">Authentication error.</p>
+            <p className="text-red-500 text-sm mt-2">Please try logging in again.</p>
+            <a href="/login" className="text-blue-600 hover:text-blue-800 underline mt-2 inline-block">
+              Go to Login
+            </a>
+          </div>
+        </div>
+      )
+    }
+    
+    if (!sessionData?.session) {
+      return (
+        <div className="p-6 space-y-4">
+          <h1 className="text-2xl font-semibold text-[#333333]">Compliance</h1>
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+            <p className="text-yellow-600">Please log in to view compliance information.</p>
+            <a href="/login" className="text-blue-600 hover:text-blue-800 underline mt-2 inline-block">
+              Go to Login
+            </a>
+          </div>
+        </div>
+      )
+    }
 
     // Fetch building data with enhanced information
     const { data: building, error: buildingError } = await supabase
@@ -96,7 +131,7 @@ export default async function BuildingCompliancePage({
     const { data: buildingAssets, error: buildingAssetsError } = await supabase
       .from('building_compliance_assets')
       .select('*')
-      .eq('building_id', parseInt(buildingId, 10))
+      .eq('building_id', buildingId)
 
     if (buildingAssetsError) {
       console.error('Building compliance assets fetch error:', buildingAssetsError.message)
@@ -115,19 +150,23 @@ export default async function BuildingCompliancePage({
         summary,
         extracted_text
       `)
-      .eq('building_id', parseInt(buildingId, 10))
+      .eq('building_id', buildingId)
       .order('created_at', { ascending: false })
 
     if (documentsError) {
       console.error('Compliance documents fetch error:', documentsError.message)
     }
 
+    // Handle missing data gracefully
+    const safeBuildingAssets = buildingAssets || []
+    const safeComplianceDocuments = complianceDocuments || []
+
     // Create status map and dates map
     const statusMap: Record<string, string> = {}
     const statusDatesMap: Record<string, string> = {}
     const notesMap: Record<string, string> = {}
     
-    buildingAssets?.forEach((buildingAsset: any) => {
+    safeBuildingAssets.forEach((buildingAsset: any) => {
       statusMap[buildingAsset.asset_id] = buildingAsset.status || 'Not Tracked'
       statusDatesMap[buildingAsset.asset_id] = buildingAsset.next_due_date || ''
       notesMap[buildingAsset.asset_id] = buildingAsset.notes || ''
@@ -135,16 +174,16 @@ export default async function BuildingCompliancePage({
 
     // Calculate compliance statistics
     const totalAssets = assets?.length || 0
-    const trackedAssets = buildingAssets?.length || 0
-    const compliantAssets = buildingAssets?.filter((asset: any) => 
+    const trackedAssets = safeBuildingAssets.length || 0
+    const compliantAssets = safeBuildingAssets.filter((asset: any) => 
       asset.status === 'Compliant' || 
       (asset.next_due_date && new Date(asset.next_due_date) > new Date())
     ).length || 0
-    const overdueAssets = buildingAssets?.filter((asset: any) => 
+    const overdueAssets = safeBuildingAssets.filter((asset: any) => 
       asset.status === 'Overdue' || 
       (asset.next_due_date && new Date(asset.next_due_date) < new Date())
     ).length || 0
-    const dueSoonAssets = buildingAssets?.filter((asset: any) => {
+    const dueSoonAssets = safeBuildingAssets.filter((asset: any) => {
       if (!asset.next_due_date) return false
       const dueDate = new Date(asset.next_due_date)
       const today = new Date()
@@ -155,8 +194,8 @@ export default async function BuildingCompliancePage({
     const complianceData = {
       building,
       assets: assets || [],
-      buildingAssets: buildingAssets || [],
-      complianceDocuments: complianceDocuments || [],
+      buildingAssets: safeBuildingAssets,
+      complianceDocuments: safeComplianceDocuments,
       statusMap,
       statusDatesMap,
       notesMap,

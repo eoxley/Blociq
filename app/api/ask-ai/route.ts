@@ -60,7 +60,17 @@ export async function POST(request: Request) {
       messages: [
         {
           role: 'system',
-          content: `You are BlocIQ, a comprehensive property management AI assistant for UK leasehold blocks. You have access to detailed building data including units, leaseholders, compliance, emails, tasks, documents, events, and major works projects. Provide accurate, detailed answers based on the data provided. If information is not available in the data, clearly state that. Always be helpful and professional.`
+          content: `You are BlocIQ, a comprehensive property management AI assistant for UK leasehold blocks. You have access to detailed building data including units, leaseholders, compliance, emails, tasks, documents, events, and major works projects.
+
+IMPORTANT: When document content is provided in the context, analyze it thoroughly and provide specific insights based on the actual content. Do not give vague responses like "I cannot access the content" when document excerpts are available.
+
+For documents:
+- If document content is provided, analyze it and give specific answers based on what you find
+- If the document contains compliance information, highlight key findings and suggest actions
+- If the document is a survey or report, summarize the main findings and any required follow-up actions
+- If the document appears to have limited readable text, suggest re-uploading with OCR or a text-based version
+
+Always be helpful, professional, and accurate. If information is not available in the data, clearly state that.`
         },
         {
           role: 'user',
@@ -259,7 +269,7 @@ async function gatherDocumentsData(supabase: any, buildingId?: string) {
   try {
     let query = supabase
       .from('building_documents')
-      .select('*')
+      .select('*, full_text, extracted_text, summary, suggested_action')
       .order('created_at', { ascending: false })
       .limit(20)
     
@@ -435,9 +445,28 @@ AVAILABLE DATA:
     documents.slice(0, 5).forEach((doc: any, i: number) => {
       prompt += `${i + 1}. ${doc.file_name || 'Unnamed'}
 - Type: ${doc.type || 'Not specified'}
-- Created: ${doc.created_at || 'Unknown'}\n`
+- Created: ${doc.created_at || 'Unknown'}
+- Summary: ${doc.summary || 'No summary available'}
+- Suggested Action: ${doc.suggested_action || 'No action suggested'}\n`
     })
     prompt += '\n'
+    
+    // Include document content excerpts for AI analysis
+    const documentsWithContent = documents.filter((doc: any) => 
+      doc.full_text || doc.extracted_text
+    )
+    
+    if (documentsWithContent.length > 0) {
+      prompt += `DOCUMENT CONTENT EXCERPTS:\n`
+      documentsWithContent.forEach((doc: any, i: number) => {
+        const content = doc.full_text || doc.extracted_text || ''
+        const excerpt = content.slice(0, 1000) // Limit to 1000 characters per document
+        if (excerpt.length > 50) { // Only include if there's substantial content
+          prompt += `Document: ${doc.file_name || 'Unnamed'}\n---\n${excerpt}\n\n`
+        }
+      })
+      prompt += '\n'
+    }
   }
 
   // Events Information
@@ -474,6 +503,15 @@ AVAILABLE DATA:
 - Be helpful, professional, and accurate
 - If the question is about a specific building, focus on that building's data
 - If no specific building is mentioned, provide information about all buildings if available
+
+DOCUMENT ANALYSIS GUIDELINES:
+- When document content is provided, analyze it thoroughly and provide specific insights
+- For compliance documents, highlight key findings, deadlines, and required actions
+- For surveys and reports, summarize main findings and suggest follow-up actions
+- For contracts and legal documents, identify key terms and obligations
+- For financial documents, highlight costs, payments, and financial implications
+- Always suggest practical next steps for property managers
+- If document content appears unclear or limited, suggest re-uploading with better text extraction
 
 Please provide your answer:`
 
