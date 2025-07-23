@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import OpenAI from 'openai';
-import { extractTextFromPDFWithValidation } from '@/lib/extractTextFromPdf';
+import { extractTextFromPDF } from '@/lib/extractTextFromPdf';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -56,10 +56,10 @@ export async function POST(request: NextRequest) {
 
     if (file.type.includes('pdf')) {
       console.log('📄 Processing PDF document...');
-      const extractionResult = await extractTextFromPDFWithValidation(fileBuffer);
+      const extractionResult = await extractTextFromPDF(fileBuffer);
       extractedText = extractionResult.text;
       extractionMethod = extractionResult.method;
-      extractionConfidence = extractionResult.confidence;
+      extractionConfidence = extractionResult.confidence === 'high' ? 0.9 : extractionResult.confidence === 'medium' ? 0.7 : 0.5;
     } else {
       // For images, we'll use OCR directly
       console.log('🖼️ Processing image document...');
