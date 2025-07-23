@@ -10,7 +10,8 @@ export default async function MajorWorksPage({
   params: Promise<{ buildingId: string }> 
 }) {
   const { buildingId } = await params
-  const supabase = createServerComponentClient({ cookies })
+  const cookieStore = cookies()
+  const supabase = createServerComponentClient({ cookies: () => cookieStore })
   
   // Check if user is authenticated
   const { data: { user } } = await supabase.auth.getUser()

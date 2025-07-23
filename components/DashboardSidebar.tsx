@@ -25,21 +25,42 @@ const navItems = [
 
 export default function DashboardSidebar() {
   const pathname = usePathname();
-  const supabase = createClientComponentClient();
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [notifications, setNotifications] = useState(3); // Mock notification count
+  const [supabase, setSupabase] = useState<any>(null);
+
+  // Initialize Supabase client safely
+  useEffect(() => {
+    try {
+      const client = createClientComponentClient();
+      setSupabase(client);
+    } catch (error) {
+      console.error('Failed to initialize Supabase client:', error);
+      // Create a mock client to prevent crashes
+      setSupabase({
+        auth: {
+          getUser: async () => ({ data: { user: null }, error: null }),
+          signOut: async () => ({ error: null })
+        }
+      });
+    }
+  }, []);
 
   useEffect(() => {
     const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
+      if (supabase) {
+        const { data: { user } } = await supabase.auth.getUser();
+        setUser(user);
+      }
     };
     getUser();
-  }, [supabase.auth]);
+  }, [supabase]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
     router.push('/login');
   };
 

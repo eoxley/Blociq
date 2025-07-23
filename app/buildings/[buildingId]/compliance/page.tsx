@@ -13,7 +13,8 @@ export default async function BuildingCompliancePage({
 }) {
   try {
     const { buildingId } = await params
-    const supabase = createServerComponentClient({ cookies })
+    const cookieStore = cookies()
+    const supabase = createServerComponentClient({ cookies: () => cookieStore })
     
     // Secure the route using Supabase Auth
     const {
@@ -206,4 +207,4 @@ export default async function BuildingCompliancePage({
     console.error('❌ Unexpected error in building compliance page:', error)
     redirect('/buildings')
   }
-} 
+}
