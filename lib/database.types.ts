@@ -215,6 +215,8 @@ export interface Database {
           notes: string | null
           next_due_date: string | null
           last_updated: string
+          latest_document_id: string | null
+          last_renewed_date: string | null
         }
         Insert: {
           id?: string
@@ -224,6 +226,8 @@ export interface Database {
           notes?: string | null
           next_due_date?: string | null
           last_updated?: string
+          latest_document_id?: string | null
+          last_renewed_date?: string | null
         }
         Update: {
           id?: string
@@ -233,6 +237,8 @@ export interface Database {
           notes?: string | null
           next_due_date?: string | null
           last_updated?: string
+          latest_document_id?: string | null
+          last_renewed_date?: string | null
         }
         Relationships: [
           {
@@ -245,6 +251,67 @@ export interface Database {
           {
             foreignKeyName: "building_compliance_assets_asset_id_fkey"
             columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "building_compliance_assets_latest_document_id_fkey"
+            columns: ["latest_document_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_documents"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      compliance_documents: {
+        Row: {
+          id: string
+          building_id: number
+          compliance_asset_id: string
+          document_url: string
+          title: string | null
+          summary: string | null
+          extracted_date: string
+          doc_type: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          building_id: number
+          compliance_asset_id: string
+          document_url: string
+          title?: string | null
+          summary?: string | null
+          extracted_date?: string
+          doc_type?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          building_id?: number
+          compliance_asset_id?: string
+          document_url?: string
+          title?: string | null
+          summary?: string | null
+          extracted_date?: string
+          doc_type?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_documents_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_documents_compliance_asset_id_fkey"
+            columns: ["compliance_asset_id"]
             isOneToOne: false
             referencedRelation: "compliance_assets"
             referencedColumns: ["id"]

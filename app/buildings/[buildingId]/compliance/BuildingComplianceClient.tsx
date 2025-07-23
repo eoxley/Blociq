@@ -291,6 +291,7 @@ export default function BuildingComplianceClient({ complianceData }: BuildingCom
               Upload Document
             </BlocIQButton>
             <BlocIQButton
+              onClick={() => window.location.href = `/buildings/${complianceData.building.id}/compliance/setup`}
               variant="outline"
               size="sm"
               className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
