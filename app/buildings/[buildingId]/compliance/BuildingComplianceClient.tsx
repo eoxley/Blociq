@@ -71,7 +71,7 @@ interface Building {
   name: string
   address: string | null
   unit_count: number | null
-  building_age: string | null
+  building_age?: string | null
   construction_type: string | null
   total_floors: string | null
   lift_available: string | null

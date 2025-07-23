@@ -336,7 +336,7 @@ export default function ComposeMessagePage() {
           purpose: draftPurpose,
           tags: tags,
           buildingType: building.construction_type || undefined,
-          buildingAge: building.building_age || undefined,
+          buildingAge: (building as any).building_age || undefined,
           specialFeatures: [
             building.lift_available && 'Lift Available',
             building.heating_type && `Heating: ${building.heating_type}`,
