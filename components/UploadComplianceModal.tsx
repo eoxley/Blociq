@@ -1,196 +1,265 @@
 'use client'
 
-import React, { useState, useRef, useCallback } from 'react'
+import React, { useState, useCallback } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { 
   Upload, 
   FileText, 
-  X, 
+  Calendar, 
+  Clock, 
   CheckCircle, 
   AlertCircle, 
-  Loader2, 
-  Brain,
-  Calendar,
-  Info,
-  Eye,
-  Download
+  X, 
+  Loader2,
+  Cloud,
+  Download,
+  Eye
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { BlocIQButton } from '@/components/ui/blociq-button'
+import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
+import { BlocIQBadge } from '@/components/ui/blociq-badge'
 import { toast } from 'sonner'
 
 interface UploadComplianceModalProps {
-  isOpen: boolean
-  onClose: () => void
   buildingId: string
   complianceAssetId: string
   assetName: string
+  isOpen: boolean
+  onClose: () => void
+  onSuccess?: () => void
 }
 
 interface ExtractedData {
   title: string
   summary: string
-  last_renewed_date: string | null
-  next_due_date: string | null
-  compliance_issues: string | null
+  last_renewed_date: string
+  next_due_date: string
 }
 
-export default function UploadComplianceModal({ 
-  isOpen, 
-  onClose, 
-  buildingId, 
-  complianceAssetId, 
-  assetName 
+interface UploadState {
+  isUploading: boolean
+  isProcessing: boolean
+  isSaving: boolean
+  progress: number
+  file: File | null
+  extractedData: ExtractedData | null
+  error: string | null
+}
+
+export default function UploadComplianceModal({
+  buildingId,
+  complianceAssetId,
+  assetName,
+  isOpen,
+  onClose,
+  onSuccess
 }: UploadComplianceModalProps) {
+  const [uploadState, setUploadState] = useState<UploadState>({
+    isUploading: false,
+    isProcessing: false,
+    isSaving: false,
+    progress: 0,
+    file: null,
+    extractedData: null,
+    error: null
+  })
+
   const supabase = createClientComponentClient()
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [isDragOver, setIsDragOver] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [uploadProgress, setUploadProgress] = useState(0)
-  const [extractedData, setExtractedData] = useState<ExtractedData | null>(null)
-  const [showPreview, setShowPreview] = useState(false)
 
-  // Validate file
-  const validateFile = (file: File): string | null => {
-    // Check file size (10MB limit)
-    if (file.size > 10 * 1024 * 1024) {
-      return 'File size must be less than 10MB'
-    }
-
-    // Check file type
-    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase()
-    const acceptedTypes = ['.pdf', '.doc', '.docx']
-    if (!acceptedTypes.includes(fileExtension)) {
-      return 'File type not supported. Accepted types: PDF, DOC, DOCX'
-    }
-
-    return null
-  }
-
-  // Handle file selection
-  const handleFileSelect = useCallback((files: FileList | File[]) => {
-    const file = Array.from(files)[0]
-    if (!file) return
-
-    const validationError = validateFile(file)
-    if (validationError) {
-      toast.error(validationError)
-      return
-    }
-
-    setSelectedFile(file)
-    setExtractedData(null)
-    setShowPreview(false)
+  const resetState = useCallback(() => {
+    setUploadState({
+      isUploading: false,
+      isProcessing: false,
+      isSaving: false,
+      progress: 0,
+      file: null,
+      extractedData: null,
+      error: null
+    })
   }, [])
 
-  // Handle drag and drop
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragOver(true)
-  }, [])
+  const handleClose = useCallback(() => {
+    resetState()
+    onClose()
+  }, [resetState, onClose])
 
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragOver(false)
-  }, [])
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragOver(false)
-    const files = e.dataTransfer.files
-    handleFileSelect(files)
-  }, [handleFileSelect])
-
-  // Handle file upload and AI extraction
-  const handleUploadAndAnalyse = async () => {
-    if (!selectedFile) return
-
-    setUploading(true)
-    setUploadProgress(0)
-
-    try {
-      // Get current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-      if (userError || !user) {
-        throw new Error('User not authenticated')
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    if (acceptedFiles.length > 0) {
+      const file = acceptedFiles[0]
+      
+      // Validate file type
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg']
+      if (!allowedTypes.includes(file.type)) {
+        setUploadState(prev => ({
+          ...prev,
+          error: 'Please upload a PDF or image file (JPEG, PNG)'
+        }))
+        return
       }
 
-      // Generate file path
-      const timestamp = Date.now()
-      const fileName = `${timestamp}_${selectedFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
-      const filePath = `compliance-documents/${buildingId}/${complianceAssetId}/${fileName}`
-
-      // Upload to Supabase storage
-      setUploadProgress(25)
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(filePath, selectedFile, {
-          cacheControl: '3600',
-          upsert: false
-        })
-
-      if (uploadError) {
-        throw new Error(`Upload failed: ${uploadError.message}`)
+      // Validate file size (10MB limit)
+      if (file.size > 10 * 1024 * 1024) {
+        setUploadState(prev => ({
+          ...prev,
+          error: 'File size must be less than 10MB'
+        }))
+        return
       }
 
-      // Get public URL
-      setUploadProgress(50)
-      const { data: { publicUrl } } = supabase.storage
-        .from('documents')
-        .getPublicUrl(filePath)
+      setUploadState(prev => ({
+        ...prev,
+        file,
+        error: null
+      }))
+    }
+  }, [])
 
-      // Send to AI extraction API
-      setUploadProgress(75)
-      const extractionResponse = await fetch('/api/extract-compliance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fileUrl: publicUrl,
-          buildingId,
-          complianceAssetId,
-          assetName
-        })
+  const uploadToSupabase = async (file: File): Promise<string> => {
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${buildingId}/${complianceAssetId}/${Date.now()}.${fileExt}`
+    const filePath = `compliance-documents/${fileName}`
+
+    const { data, error } = await supabase.storage
+      .from('documents')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
       })
 
-      if (!extractionResponse.ok) {
-        const errorData = await extractionResponse.json()
-        throw new Error(errorData.error || 'AI extraction failed')
+    if (error) {
+      throw new Error(`Upload failed: ${error.message}`)
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('documents')
+      .getPublicUrl(filePath)
+
+    return urlData.publicUrl
+  }
+
+  const extractDocumentData = async (fileUrl: string): Promise<ExtractedData> => {
+    const response = await fetch('/api/extract', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        fileUrl,
+        assetName,
+        buildingId
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error(`Extraction failed: ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    return data
+  }
+
+  const saveToDatabase = async (fileUrl: string, extractedData: ExtractedData) => {
+    // Save to compliance_documents
+    const { data: documentData, error: documentError } = await supabase
+      .from('compliance_docs')
+      .insert({
+        building_id: buildingId,
+        doc_type: assetName,
+        doc_url: fileUrl,
+        title: extractedData.title,
+        summary: extractedData.summary,
+        uploaded_at: new Date().toISOString(),
+        expiry_date: extractedData.next_due_date || null
+      })
+      .select()
+      .single()
+
+    if (documentError) {
+      throw new Error(`Failed to save document: ${documentError.message}`)
+    }
+
+    // Update building_compliance_assets
+    const { error: assetError } = await supabase
+      .from('building_compliance_assets')
+      .update({
+        last_renewed_date: extractedData.last_renewed_date || null,
+        next_due_date: extractedData.next_due_date || null,
+        latest_document_id: documentData.id,
+        last_updated: new Date().toISOString()
+      })
+      .eq('building_id', buildingId)
+      .eq('asset_id', complianceAssetId)
+
+    if (assetError) {
+      throw new Error(`Failed to update asset: ${assetError.message}`)
+    }
+
+    return documentData
+  }
+
+  const handleUpload = async () => {
+    if (!uploadState.file) return
+
+    try {
+      setUploadState(prev => ({ ...prev, isUploading: true, error: null }))
+
+      // Step 1: Upload to Supabase Storage
+      const fileUrl = await uploadToSupabase(uploadState.file)
+      setUploadState(prev => ({ ...prev, progress: 33, isUploading: false, isProcessing: true }))
+
+      // Step 2: Extract data using AI
+      const extractedData = await extractDocumentData(fileUrl)
+      setUploadState(prev => ({ ...prev, progress: 66, extractedData }))
+
+      // Step 3: Save to database
+      setUploadState(prev => ({ ...prev, isProcessing: false, isSaving: true }))
+      await saveToDatabase(fileUrl, extractedData)
+      setUploadState(prev => ({ ...prev, progress: 100, isSaving: false }))
+
+      // Success
+      toast.success('Document uploaded and processed successfully!', {
+        description: `AI extracted key dates and information from ${uploadState.file.name}`
+      })
+
+      // Call success callback
+      if (onSuccess) {
+        onSuccess()
       }
 
-      const extractionData = await extractionResponse.json()
-      setExtractedData(extractionData.extracted_data)
-      setShowPreview(true)
-      setUploadProgress(100)
-
-      toast.success('Document uploaded and analysed successfully!')
-      
-      // Close modal after a short delay to show success
+      // Close modal after a brief delay
       setTimeout(() => {
-        onClose()
-        // Reset state
-        setSelectedFile(null)
-        setExtractedData(null)
-        setShowPreview(false)
-        setUploadProgress(0)
-      }, 2000)
+        handleClose()
+      }, 1500)
 
     } catch (error) {
       console.error('Upload error:', error)
-      toast.error(error instanceof Error ? error.message : 'Upload failed')
-    } finally {
-      setUploading(false)
+      setUploadState(prev => ({
+        ...prev,
+        isUploading: false,
+        isProcessing: false,
+        isSaving: false,
+        error: error instanceof Error ? error.message : 'Upload failed'
+      }))
+      
+      toast.error('Upload failed', {
+        description: error instanceof Error ? error.message : 'Please try again'
+      })
     }
   }
 
-  // Format date for display
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'Not found'
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes'
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  }
+
+  const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString('en-GB', {
       day: 'numeric',
-      month: 'long',
+      month: 'short',
       year: 'numeric'
     })
   }
@@ -198,224 +267,195 @@ export default function UploadComplianceModal({
   if (!isOpen) return null
 
   return (
-    <TooltipProvider>
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-serif font-bold text-[#333333]">
-                Upload Document for {assetName}
-              </h2>
-              <p className="text-gray-600 mt-1">
-                Upload a compliance document and let AI extract key information
-              </p>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <BlocIQCard className="w-full max-w-2xl max-h-[90vh] overflow-hidden">
+        <BlocIQCardHeader className="border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-[#2BBEB4] rounded-lg flex items-center justify-center">
+                <Upload className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-serif font-semibold text-[#333333]">
+                  Upload Compliance Document
+                </h2>
+                <p className="text-sm text-gray-600 font-serif">
+                  {assetName}
+                </p>
+              </div>
             </div>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              disabled={uploading}
             >
-              <X className="h-5 w-5 text-gray-600" />
+              <X className="w-5 h-5 text-gray-500" />
             </button>
           </div>
+        </BlocIQCardHeader>
 
-          {/* Upload Area */}
-          {!selectedFile && (
+        <BlocIQCardContent className="p-6 space-y-6">
+          {/* File Upload Area */}
+          {!uploadState.file && (
             <div
-              className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
-                isDragOver 
-                  ? 'border-[#2BBEB4] bg-[#2BBEB4]/5' 
-                  : 'border-gray-300 hover:border-[#2BBEB4]'
-              }`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
+              className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-[#2BBEB4] transition-colors cursor-pointer"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault()
+                onDrop(Array.from(e.dataTransfer.files))
+              }}
+              onClick={() => {
+                const input = document.createElement('input')
+                input.type = 'file'
+                input.accept = '.pdf,.jpg,.jpeg,.png'
+                input.onchange = (e) => {
+                  const files = (e.target as HTMLInputElement).files
+                  if (files) onDrop(Array.from(files))
+                }
+                input.click()
+              }}
             >
-              <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <Cloud className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-serif font-semibold text-[#333333] mb-2">
                 Drop your document here
               </h3>
-              <p className="text-gray-600 mb-4">
+              <p className="text-gray-600 font-serif mb-4">
                 or click to browse files
               </p>
-              <p className="text-sm text-gray-500 mb-4">
-                Supported formats: PDF, DOC, DOCX (max 10MB)
+              <p className="text-sm text-gray-500">
+                Supports PDF, JPEG, PNG (max 10MB)
               </p>
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                className="bg-[#2BBEB4] hover:bg-[#0F5D5D] text-white"
-              >
-                Choose File
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.doc,.docx"
-                onChange={(e) => e.target.files && handleFileSelect(e.target.files)}
-                className="hidden"
-              />
             </div>
           )}
 
-          {/* File Preview */}
-          {selectedFile && !showPreview && (
-            <Card className="mb-6">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-[#2BBEB4]/10 rounded-lg">
-                    <FileText className="h-6 w-6 text-[#2BBEB4]" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-gray-900">{selectedFile.name}</h4>
-                    <p className="text-sm text-gray-600">
-                      {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedFile(null)}
-                    disabled={uploading}
-                  >
-                    Remove
-                  </Button>
+          {/* Selected File */}
+          {uploadState.file && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <div className="flex items-center space-x-3">
+                <FileText className="w-8 h-8 text-[#2BBEB4]" />
+                <div className="flex-1">
+                  <h4 className="font-serif font-semibold text-[#333333]">
+                    {uploadState.file.name}
+                  </h4>
+                  <p className="text-sm text-gray-600">
+                    {formatFileSize(uploadState.file.size)}
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* AI Extraction Preview */}
-          {showPreview && extractedData && (
-            <Card className="mb-6 border-[#2BBEB4]/20 bg-[#2BBEB4]/5">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Brain className="h-5 w-5 text-[#2BBEB4]" />
-                  <h3 className="font-semibold text-[#333333]">AI Analysis Results</h3>
-                  <Badge variant="outline" className="bg-[#2BBEB4]/10 text-[#2BBEB4] border-[#2BBEB4]/20">
-                    Auto-filled
-                  </Badge>
-                </div>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Document Title</label>
-                    <p className="text-gray-900 mt-1">{extractedData.title}</p>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Summary</label>
-                    <p className="text-gray-900 mt-1 text-sm leading-relaxed">
-                      {extractedData.summary}
-                    </p>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                        Last Renewed Date
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Info className="h-3 w-3 text-gray-400" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            Auto-filled by document analysis
-                          </TooltipContent>
-                        </Tooltip>
-                      </label>
-                      <p className="text-gray-900 mt-1">{formatDate(extractedData.last_renewed_date)}</p>
-                    </div>
-                    
-                    <div>
-                      <label className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                        Next Due Date
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Info className="h-3 w-3 text-gray-400" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            Auto-filled by document analysis
-                          </TooltipContent>
-                        </Tooltip>
-                      </label>
-                      <p className="text-gray-900 mt-1">{formatDate(extractedData.next_due_date)}</p>
-                    </div>
-                  </div>
-                  
-                  {extractedData.compliance_issues && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">Compliance Issues</label>
-                      <p className="text-gray-900 mt-1 text-sm">{extractedData.compliance_issues}</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                <button
+                  onClick={() => setUploadState(prev => ({ ...prev, file: null }))}
+                  className="p-1 hover:bg-gray-200 rounded"
+                >
+                  <X className="w-4 h-4 text-gray-500" />
+                </button>
+              </div>
+            </div>
           )}
 
           {/* Progress Bar */}
-          {uploading && (
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">Processing...</span>
-                <span className="text-sm text-gray-500">{uploadProgress}%</span>
+          {(uploadState.isUploading || uploadState.isProcessing || uploadState.isSaving) && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-serif text-gray-600">
+                  {uploadState.isUploading && 'Uploading to cloud...'}
+                  {uploadState.isProcessing && 'AI processing document...'}
+                  {uploadState.isSaving && 'Saving to database...'}
+                </span>
+                <span className="text-[#2BBEB4] font-semibold">
+                  {uploadState.progress}%
+                </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
+                <div
                   className="bg-[#2BBEB4] h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${uploadProgress}%` }}
+                  style={{ width: `${uploadState.progress}%` }}
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                {uploadProgress < 50 ? 'Uploading document...' : 
-                 uploadProgress < 75 ? 'Processing with AI...' : 
-                 'Saving to database...'}
-              </p>
+            </div>
+          )}
+
+          {/* Extracted Data Preview */}
+          {uploadState.extractedData && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="font-serif font-semibold text-blue-900 mb-3 flex items-center">
+                <CheckCircle className="w-4 h-4 mr-2" />
+                AI Extracted Information
+              </h4>
+              <div className="space-y-2 text-sm">
+                <div>
+                  <span className="font-medium text-blue-800">Title:</span>
+                  <span className="text-blue-700 ml-2">{uploadState.extractedData.title}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-blue-800">Last Renewed:</span>
+                  <span className="text-blue-700 ml-2">
+                    {uploadState.extractedData.last_renewed_date ? 
+                      formatDate(uploadState.extractedData.last_renewed_date) : 
+                      'Not found'
+                    }
+                  </span>
+                </div>
+                <div>
+                  <span className="font-medium text-blue-800">Next Due:</span>
+                  <span className="text-blue-700 ml-2">
+                    {uploadState.extractedData.next_due_date ? 
+                      formatDate(uploadState.extractedData.next_due_date) : 
+                      'Not found'
+                    }
+                  </span>
+                </div>
+                {uploadState.extractedData.summary && (
+                  <div>
+                    <span className="font-medium text-blue-800">Summary:</span>
+                    <p className="text-blue-700 mt-1 text-xs">
+                      {uploadState.extractedData.summary}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Error Message */}
+          {uploadState.error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-center space-x-2">
+                <AlertCircle className="w-5 h-5 text-red-500" />
+                <span className="text-red-700 font-serif">{uploadState.error}</span>
+              </div>
             </div>
           )}
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-3">
-            <Button
+          <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
+            <BlocIQButton
               variant="outline"
-              onClick={onClose}
-              disabled={uploading}
+              onClick={handleClose}
+              disabled={uploadState.isUploading || uploadState.isProcessing || uploadState.isSaving}
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
             >
               Cancel
-            </Button>
-            
-            {selectedFile && !showPreview && (
-              <Button
-                onClick={handleUploadAndAnalyse}
-                disabled={uploading}
-                className="bg-[#2BBEB4] hover:bg-[#0F5D5D] text-white px-6"
-              >
-                {uploading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <Brain className="h-4 w-4 mr-2" />
-                    Upload & Analyse
-                  </>
-                )}
-              </Button>
-            )}
-            
-            {showPreview && (
-              <Button
-                onClick={onClose}
-                className="bg-[#2BBEB4] hover:bg-[#0F5D5D] text-white px-6"
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Done
-              </Button>
-            )}
+            </BlocIQButton>
+            <BlocIQButton
+              onClick={handleUpload}
+              disabled={!uploadState.file || uploadState.isUploading || uploadState.isProcessing || uploadState.isSaving}
+              className="bg-[#2BBEB4] hover:bg-[#0F5D5D] text-white min-w-[120px]"
+            >
+              {uploadState.isUploading || uploadState.isProcessing || uploadState.isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {uploadState.isUploading && 'Uploading...'}
+                  {uploadState.isProcessing && 'Processing...'}
+                  {uploadState.isSaving && 'Saving...'}
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload & Process
+                </>
+              )}
+            </BlocIQButton>
           </div>
-        </div>
-      </div>
-    </TooltipProvider>
+        </BlocIQCardContent>
+      </BlocIQCard>
+    </div>
   )
 } 
