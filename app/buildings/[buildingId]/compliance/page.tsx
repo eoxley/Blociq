@@ -65,19 +65,38 @@ export default async function BuildingCompliancePage({
     let buildingError = null
     
     try {
-      const buildingResult = await supabase
-        .from('buildings')
-        .select(`
-          id, 
-          name, 
-          address,
-          unit_count
-        `)
-        .eq('id', buildingId)
-        .maybeSingle()
-      
-      building = buildingResult.data
-      buildingError = buildingResult.error
+      // Try to fetch building by ID - handle both integer and UUID
+      if (/^\d+$/.test(buildingId)) {
+        // If it's a numeric ID, try as integer
+        const buildingResult = await supabase
+          .from('buildings')
+          .select(`
+            id, 
+            name, 
+            address,
+            unit_count
+          `)
+          .eq('id', parseInt(buildingId))
+          .maybeSingle()
+        
+        building = buildingResult.data
+        buildingError = buildingResult.error
+      } else {
+        // If it's not numeric, try as UUID
+        const buildingResult = await supabase
+          .from('buildings')
+          .select(`
+            id, 
+            name, 
+            address,
+            unit_count
+          `)
+          .eq('id', buildingId)
+          .maybeSingle()
+        
+        building = buildingResult.data
+        buildingError = buildingResult.error
+      }
     } catch (error) {
       console.error('❌ Unexpected error fetching building:', error)
       buildingError = error instanceof Error ? error : new Error('Unknown error occurred')
@@ -169,7 +188,7 @@ export default async function BuildingCompliancePage({
             recommended_frequency
           )
         `)
-        .eq('building_id', buildingId)
+        .eq('building_id', building.id)
         .eq('status', 'active')
       
       buildingAssets = assetsResult.data
@@ -233,7 +252,7 @@ export default async function BuildingCompliancePage({
           expiry_date,
           building_id
         `)
-        .eq('building_id', buildingId)
+        .eq('building_id', building.id)
         .order('uploaded_at', { ascending: false })
       
       complianceDocuments = documentsResult.data || []
