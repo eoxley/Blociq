@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { Shield } from 'lucide-react'
 import LayoutWithSidebar from '@/components/LayoutWithSidebar'
-import ComplianceSetupClient from './ComplianceSetupClient'
+import BuildingComplianceSetup from './BuildingComplianceSetup'
 import { Tables } from '@/lib/database.types'
 
 type ComplianceAsset = Tables<'compliance_assets'> & {
@@ -12,7 +12,7 @@ type ComplianceAsset = Tables<'compliance_assets'> & {
 
 type BuildingComplianceAsset = Tables<'building_compliance_assets'>
 
-export default async function ComplianceSetupPage({ 
+export default async function BuildingComplianceSetupPage({ 
   params 
 }: { 
   params: Promise<{ buildingId: string }> 
@@ -40,7 +40,7 @@ export default async function ComplianceSetupPage({
     redirect('/buildings')
   }
 
-  // Fetch all compliance assets with enhanced data
+  // 🔧 Query: Fetch all compliance assets (master list)
   const { data: assets, error: assetsError } = await supabase
     .from('compliance_assets')
     .select('*')
@@ -88,7 +88,7 @@ export default async function ComplianceSetupPage({
     )
   }
 
-  // Fetch existing building compliance assets
+  // 🔧 Query: Fetch existing building compliance assets for buildingId
   const { data: buildingAssets, error: buildingAssetsError } = await supabase
     .from('building_compliance_assets')
     .select('*')
@@ -100,7 +100,7 @@ export default async function ComplianceSetupPage({
 
   // Create a set of active asset IDs for quick lookup
   const activeAssetIds = new Set(
-    (buildingAssets || []).map(asset => asset.asset_id)
+    (buildingAssets || []).filter(asset => asset.status === 'active').map(asset => asset.asset_id)
   )
 
   // Enhance assets with recommended frequency and active status
@@ -131,7 +131,7 @@ export default async function ComplianceSetupPage({
     }
   })
 
-  // Group assets by category
+  // 🧩 UI: Group assets by category
   const groupedAssets = enhancedAssets.reduce((acc, asset) => {
     const category = asset.category || 'Other'
     if (!acc[category]) {
@@ -143,7 +143,7 @@ export default async function ComplianceSetupPage({
 
   return (
     <LayoutWithSidebar>
-      <ComplianceSetupClient 
+      <BuildingComplianceSetup 
         building={building}
         groupedAssets={groupedAssets}
         buildingId={buildingId}
