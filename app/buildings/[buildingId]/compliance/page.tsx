@@ -1,436 +1,230 @@
 import React from 'react'
 import { createClient } from '@supabase/supabase-js'
-import { Shield, Calendar, AlertTriangle, CheckCircle, Home, RefreshCw } from 'lucide-react'
-import LayoutWithSidebar from '@/components/LayoutWithSidebar'
-import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
-import { BlocIQBadge } from '@/components/ui/blociq-badge'
-
-// Fallback UI component for errors
-function ComplianceErrorFallback({ 
-  title, 
-  message, 
-  buildingId, 
-  error 
-}: { 
-  title: string
-  message: string
-  buildingId?: string
-  error?: any
-}) {
-  console.error('🔴 Compliance page error:', { title, message, buildingId, error })
-  
-  return (
-    <LayoutWithSidebar>
-      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center p-4">
-        <div className="max-w-md mx-auto text-center">
-          <div className="bg-white rounded-2xl shadow-lg p-8">
-            <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Shield className="h-8 w-8 text-white" />
-            </div>
-            <h2 className="text-2xl font-serif font-bold text-[#333333] mb-4">
-              {title}
-            </h2>
-            <p className="text-gray-600 mb-6">
-              {message}
-            </p>
-            <div className="space-y-3">
-              <button
-                onClick={() => window.location.reload()}
-                className="w-full bg-[#2BBEB4] hover:bg-[#0F5D5D] text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center gap-2"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Try Again
-              </button>
-              <button
-                onClick={() => window.location.href = '/buildings'}
-                className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center gap-2"
-              >
-                <Home className="h-4 w-4" />
-                View All Buildings
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </LayoutWithSidebar>
-  )
-}
-
-// Loading state component
-function ComplianceLoadingState() {
-  return (
-    <LayoutWithSidebar>
-      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
-        <div className="max-w-md mx-auto text-center p-8">
-          <div className="bg-white rounded-2xl shadow-lg p-8">
-            <div className="w-16 h-16 bg-[#2BBEB4] rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
-              <Shield className="h-8 w-8 text-white" />
-            </div>
-            <h2 className="text-2xl font-serif font-bold text-[#333333] mb-4">
-              Loading Compliance Data
-            </h2>
-            <p className="text-gray-600 mb-6">
-              Please wait while we fetch the compliance information...
-            </p>
-            <div className="flex justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2BBEB4]"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </LayoutWithSidebar>
-  )
-}
 
 export default async function BuildingCompliancePage({ 
   params 
 }: { 
   params: Promise<{ buildingId: string }> 
 }) {
+  console.log("🔍 === BUILDING COMPLIANCE PAGE START ===")
+  console.log("Received params:", params)
+
   try {
-    // 1. Validate params safely
+    // 1. Resolve params
     const resolvedParams = await params
+    console.log("Resolved params:", resolvedParams)
+
     const buildingId = resolvedParams?.buildingId
+    console.log("Building ID:", buildingId)
 
-    console.log('🔍 Building compliance page - buildingId:', buildingId)
-
-    // 2. Validate buildingId
-    if (!buildingId || typeof buildingId !== 'string' || buildingId.trim().length === 0) {
-      console.error('❌ Invalid buildingId:', buildingId)
+    if (!buildingId) {
+      console.error("❌ Missing building ID")
       return (
-        <ComplianceErrorFallback
-          title="Invalid Building ID"
-          message="The building ID provided is invalid or missing. Please check the URL and try again."
-          buildingId={buildingId}
-        />
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="bg-white p-8 rounded-lg shadow">
+            <h1 className="text-xl font-bold text-red-600 mb-4">Error: Missing Building ID</h1>
+            <p className="text-gray-600">No building ID provided in the URL parameters.</p>
+          </div>
+        </div>
       )
     }
 
-    // 3. Validate environment variables
+    // 2. Check environment variables
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
+    console.log("Supabase URL exists:", !!supabaseUrl)
+    console.log("Supabase service key exists:", !!supabaseServiceKey)
+
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('❌ Missing Supabase environment variables')
+      console.error("❌ Missing Supabase environment variables")
       return (
-        <ComplianceErrorFallback
-          title="Configuration Error"
-          message="The application is not properly configured. Please contact support."
-          buildingId={buildingId}
-        />
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="bg-white p-8 rounded-lg shadow">
+            <h1 className="text-xl font-bold text-red-600 mb-4">Configuration Error</h1>
+            <p className="text-gray-600">Missing Supabase environment variables.</p>
+            <p className="text-sm text-gray-500 mt-2">URL: {!!supabaseUrl}, Key: {!!supabaseServiceKey}</p>
+          </div>
+        </div>
       )
     }
 
-    // 4. Create Supabase client with service role key
+    // 3. Create Supabase client
     let supabase
     try {
+      console.log("🔧 Creating Supabase client...")
       supabase = createClient(supabaseUrl, supabaseServiceKey)
-      console.log('✅ Supabase client created successfully')
-    } catch (error) {
-      console.error('❌ Failed to create Supabase client:', error)
+      console.log("✅ Supabase client created successfully")
+    } catch (err) {
+      console.error("❌ Error creating Supabase client:", err)
       return (
-        <ComplianceErrorFallback
-          title="Database Connection Error"
-          message="Unable to connect to the database. Please try again later."
-          buildingId={buildingId}
-          error={error}
-        />
-      )
-    }
-
-    // 5. Fetch building details with error handling
-    console.log('🔍 Fetching building with UUID:', buildingId)
-    
-    let building = null
-    try {
-      const { data, error } = await supabase
-        .from('buildings')
-        .select('id, name, address, unit_count')
-        .eq('id', buildingId)
-        .maybeSingle()
-
-      if (error) {
-        console.error('❌ Building query error:', error)
-        throw error
-      }
-
-      building = data
-      console.log('✅ Building query result:', building)
-
-      if (!building) {
-        console.error('❌ No building found for ID:', buildingId)
-        return (
-          <ComplianceErrorFallback
-            title="Building Not Found"
-            message={`The building with UUID "${buildingId}" doesn't exist or you don't have permission to view it.`}
-            buildingId={buildingId}
-          />
-        )
-      }
-    } catch (error) {
-      console.error('❌ Error fetching building:', error)
-      return (
-        <ComplianceErrorFallback
-          title="Error Loading Building"
-          message="We encountered an error while loading the building information. Please try again later."
-          buildingId={buildingId}
-          error={error}
-        />
-      )
-    }
-
-    // 6. Fetch compliance assets with error handling
-    console.log('🔍 Fetching compliance assets for building:', building.id)
-    
-    let complianceAssets = []
-    try {
-      const { data, error } = await supabase
-        .from('building_compliance_assets')
-        .select(`
-          id,
-          status,
-          next_due_date,
-          last_renewed_date,
-          notes,
-          compliance_assets (
-            id,
-            name,
-            category,
-            description,
-            recommended_frequency
-          )
-        `)
-        .eq('building_id', building.id)
-        .eq('status', 'active')
-
-      if (error) {
-        console.error('❌ Compliance assets query error:', error)
-        throw error
-      }
-
-      complianceAssets = data || []
-      console.log('✅ Compliance assets query result:', complianceAssets.length, 'assets found')
-    } catch (error) {
-      console.error('❌ Error fetching compliance assets:', error)
-      return (
-        <ComplianceErrorFallback
-          title="Could Not Load Compliance Data"
-          message={`We encountered an error while loading the compliance information for ${building.name}. Please try again later.`}
-          buildingId={buildingId}
-          error={error}
-        />
-      )
-    }
-
-    // 7. Process and group compliance assets
-    let groupedAssets = {}
-    try {
-      groupedAssets = complianceAssets.reduce((acc: any, asset: any) => {
-        const category = asset.compliance_assets?.category || 'Other'
-        if (!acc[category]) {
-          acc[category] = []
-        }
-        acc[category].push(asset)
-        return acc
-      }, {})
-
-      console.log('✅ Grouped assets by category:', Object.keys(groupedAssets))
-    } catch (error) {
-      console.error('❌ Error processing compliance assets:', error)
-      return (
-        <ComplianceErrorFallback
-          title="Data Processing Error"
-          message="We encountered an error while processing the compliance data. Please try again later."
-          buildingId={buildingId}
-          error={error}
-        />
-      )
-    }
-
-    // 8. Helper functions
-    const formatDate = (dateString: string | null) => {
-      if (!dateString) return 'Not set'
-      try {
-        return new Date(dateString).toLocaleDateString('en-GB', {
-          day: 'numeric',
-          month: 'short',
-          year: 'numeric'
-        })
-      } catch (error) {
-        console.error('❌ Error formatting date:', dateString, error)
-        return 'Invalid date'
-      }
-    }
-
-    const getStatusBadge = (nextDueDate: string | null) => {
-      if (!nextDueDate) return { variant: 'secondary' as const, text: 'No due date' }
-      
-      try {
-        const dueDate = new Date(nextDueDate)
-        const today = new Date()
-        const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-        
-        if (daysUntilDue < 0) {
-          return { variant: 'destructive' as const, text: 'Overdue' }
-        } else if (daysUntilDue <= 30) {
-          return { variant: 'warning' as const, text: 'Due Soon' }
-        } else {
-          return { variant: 'default' as const, text: 'On Track' }
-        }
-      } catch (error) {
-        console.error('❌ Error calculating status:', error)
-        return { variant: 'secondary' as const, text: 'Unknown' }
-      }
-    }
-
-    // 9. Render the main compliance page
-    console.log('✅ Rendering compliance page successfully')
-    
-    return (
-      <LayoutWithSidebar>
-        <div className="min-h-screen bg-[#FAFAFA] p-8">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-serif font-bold text-[#333333] mb-2">
-              Compliance Tracker
-            </h1>
-            <p className="text-[#64748B]">
-              {building.name} • {Object.keys(groupedAssets).length} categories • {complianceAssets.length} active assets
-            </p>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="bg-white p-8 rounded-lg shadow">
+            <h1 className="text-xl font-bold text-red-600 mb-4">Database Connection Error</h1>
+            <p className="text-gray-600">Failed to create Supabase client.</p>
+            <p className="text-sm text-gray-500 mt-2">Error: {err instanceof Error ? err.message : String(err)}</p>
           </div>
+        </div>
+      )
+    }
 
-          {/* No assets state */}
-          {complianceAssets.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="max-w-md mx-auto">
-                <div className="w-16 h-16 bg-[#2BBEB4] rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Shield className="h-8 w-8 text-white" />
-                </div>
-                <h2 className="text-2xl font-serif font-bold text-[#333333] mb-4">
-                  No Active Compliance Assets
-                </h2>
-                <p className="text-gray-600 mb-6">
-                  No active compliance assets found for {building.name}. You may need to set up compliance tracking first.
-                </p>
-                <div className="space-y-3">
-                  <button
-                    onClick={() => window.location.href = `/buildings/${buildingId}/compliance/setup`}
-                    className="w-full bg-[#2BBEB4] hover:bg-[#0F5D5D] text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-200"
-                  >
-                    Setup Compliance Tracking
-                  </button>
-                  <button
-                    onClick={() => window.location.href = '/buildings'}
-                    className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors duration-200"
-                  >
-                    View All Buildings
-                  </button>
-                </div>
+    // 4. Test building query
+    console.log("🔍 Testing building query for ID:", buildingId)
+    let buildingResult
+    try {
+      buildingResult = await supabase
+        .from("buildings")
+        .select("id, name")
+        .eq("id", buildingId)
+        .maybeSingle()
+      
+      console.log("✅ Building query completed")
+      console.log("Building result:", buildingResult)
+    } catch (err) {
+      console.error("❌ Building query error:", err)
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="bg-white p-8 rounded-lg shadow">
+            <h1 className="text-xl font-bold text-red-600 mb-4">Building Query Error</h1>
+            <p className="text-gray-600">Failed to fetch building data.</p>
+            <p className="text-sm text-gray-500 mt-2">Error: {err instanceof Error ? err.message : String(err)}</p>
+          </div>
+        </div>
+      )
+    }
+
+    if (buildingResult.error) {
+      console.error("❌ Building query response error:", buildingResult.error)
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="bg-white p-8 rounded-lg shadow">
+            <h1 className="text-xl font-bold text-red-600 mb-4">Building Query Response Error</h1>
+            <p className="text-gray-600">Supabase returned an error for building query.</p>
+            <p className="text-sm text-gray-500 mt-2">Error: {buildingResult.error.message}</p>
+          </div>
+        </div>
+      )
+    }
+
+    if (!buildingResult.data) {
+      console.error("❌ No building found for ID:", buildingId)
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="bg-white p-8 rounded-lg shadow">
+            <h1 className="text-xl font-bold text-red-600 mb-4">Building Not Found</h1>
+            <p className="text-gray-600">No building found with ID: {buildingId}</p>
+          </div>
+        </div>
+      )
+    }
+
+    console.log("✅ Building found:", buildingResult.data)
+
+    // 5. Test compliance assets query
+    console.log("🔍 Testing compliance assets query...")
+    let complianceResult
+    try {
+      complianceResult = await supabase
+        .from("building_compliance_assets")
+        .select("id")
+        .eq("building_id", buildingId)
+        .limit(1)
+      
+      console.log("✅ Compliance assets query completed")
+      console.log("Compliance result:", complianceResult)
+    } catch (err) {
+      console.error("❌ Compliance assets query error:", err)
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="bg-white p-8 rounded-lg shadow">
+            <h1 className="text-xl font-bold text-red-600 mb-4">Compliance Query Error</h1>
+            <p className="text-gray-600">Failed to fetch compliance assets data.</p>
+            <p className="text-sm text-gray-500 mt-2">Error: {err instanceof Error ? err.message : String(err)}</p>
+          </div>
+        </div>
+      )
+    }
+
+    if (complianceResult.error) {
+      console.error("❌ Compliance assets query response error:", complianceResult.error)
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="bg-white p-8 rounded-lg shadow">
+            <h1 className="text-xl font-bold text-red-600 mb-4">Compliance Query Response Error</h1>
+            <p className="text-gray-600">Supabase returned an error for compliance assets query.</p>
+            <p className="text-sm text-gray-500 mt-2">Error: {complianceResult.error.message}</p>
+          </div>
+        </div>
+      )
+    }
+
+    console.log("✅ Compliance assets found:", complianceResult.data?.length || 0, "items")
+
+    // 6. Success - render minimal page
+    console.log("✅ All queries successful - rendering page")
+    console.log("=== BUILDING COMPLIANCE PAGE END ===")
+
+    return (
+      <div className="min-h-screen bg-gray-50 p-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white rounded-lg shadow p-8">
+            <h1 className="text-2xl font-bold text-gray-900 mb-6">Compliance Page - Debug Mode</h1>
+            
+            <div className="space-y-4">
+              <div className="p-4 bg-green-50 border border-green-200 rounded">
+                <h2 className="font-semibold text-green-800">✅ Success</h2>
+                <p className="text-green-700">All database queries completed successfully</p>
+              </div>
+
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded">
+                <h2 className="font-semibold text-blue-800">📊 Data Summary</h2>
+                <ul className="text-blue-700 space-y-1">
+                  <li><strong>Building ID:</strong> {buildingId}</li>
+                  <li><strong>Building Name:</strong> {buildingResult.data.name}</li>
+                  <li><strong>Compliance Assets:</strong> {complianceResult.data?.length || 0} found</li>
+                </ul>
+              </div>
+
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded">
+                <h2 className="font-semibold text-gray-800">🔧 Technical Details</h2>
+                <ul className="text-gray-700 space-y-1 text-sm">
+                  <li><strong>Supabase URL:</strong> {supabaseUrl ? 'Configured' : 'Missing'}</li>
+                  <li><strong>Service Key:</strong> {supabaseServiceKey ? 'Configured' : 'Missing'}</li>
+                  <li><strong>Building Query:</strong> Success</li>
+                  <li><strong>Compliance Query:</strong> Success</li>
+                </ul>
               </div>
             </div>
-          ) : (
-            /* Compliance Categories */
-            <div className="space-y-6">
-              {Object.entries(groupedAssets).map(([category, assets]: [string, any]) => (
-                <BlocIQCard key={category} variant="elevated">
-                  <BlocIQCardHeader>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center">
-                        <Shield className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-semibold text-[#333333]">{category}</h2>
-                        <p className="text-sm text-[#64748B]">{assets.length} compliance items</p>
-                      </div>
-                    </div>
-                  </BlocIQCardHeader>
-                  
-                  <BlocIQCardContent>
-                    <div className="space-y-4">
-                      {assets.map((asset: any) => {
-                        const statusBadge = getStatusBadge(asset.next_due_date)
-                        const isOverdue = statusBadge.variant === 'destructive'
-                        
-                        return (
-                          <div 
-                            key={asset.id} 
-                            className={`p-4 rounded-xl border transition-all duration-200 ${
-                              isOverdue 
-                                ? 'bg-red-50 border-red-200' 
-                                : 'bg-gradient-to-r from-[#F0FDFA] to-emerald-50 border-[#E2E8F0]'
-                            }`}
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <h3 className="font-semibold text-[#333333]">
-                                    {asset.compliance_assets?.name || 'Unknown Asset'}
-                                  </h3>
-                                  <BlocIQBadge variant={statusBadge.variant} size="sm">
-                                    {statusBadge.text}
-                                  </BlocIQBadge>
-                                </div>
-                                
-                                {asset.compliance_assets?.description && (
-                                  <p className="text-sm text-[#64748B] mb-3">
-                                    {asset.compliance_assets.description}
-                                  </p>
-                                )}
-                                
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                                  <div className="flex items-center gap-2">
-                                    <Calendar className="h-4 w-4 text-[#64748B]" />
-                                    <span className="text-[#64748B]">Last Renewed:</span>
-                                    <span className="font-medium text-[#333333]">
-                                      {formatDate(asset.last_renewed_date)}
-                                    </span>
-                                  </div>
-                                  
-                                  <div className="flex items-center gap-2">
-                                    <AlertTriangle className="h-4 w-4 text-[#64748B]" />
-                                    <span className="text-[#64748B]">Next Due:</span>
-                                    <span className={`font-medium ${
-                                      isOverdue ? 'text-red-600' : 'text-[#333333]'
-                                    }`}>
-                                      {formatDate(asset.next_due_date)}
-                                    </span>
-                                  </div>
-                                  
-                                  {asset.compliance_assets?.recommended_frequency && (
-                                    <div className="flex items-center gap-2">
-                                      <CheckCircle className="h-4 w-4 text-[#64748B]" />
-                                      <span className="text-[#64748B]">Frequency:</span>
-                                      <span className="font-medium text-[#333333]">
-                                        {asset.compliance_assets.recommended_frequency}
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </BlocIQCardContent>
-                </BlocIQCard>
-              ))}
-            </div>
-          )}
+          </div>
         </div>
-      </LayoutWithSidebar>
+      </div>
     )
 
   } catch (error) {
-    // 10. Catch-all error handler
-    console.error('❌ Unhandled error in BuildingCompliancePage:', error)
-    
+    // 7. Catch-all error handler
+    console.error("❌ === UNHANDLED ERROR IN BUILDING COMPLIANCE PAGE ===")
+    console.error("Error:", error)
+    console.error("Error type:", typeof error)
+    console.error("Error constructor:", error?.constructor?.name)
+    console.error("Error message:", error instanceof Error ? error.message : 'No message')
+    console.error("Error stack:", error instanceof Error ? error.stack : 'No stack')
+    console.error("=== END UNHANDLED ERROR ===")
+
     return (
-      <ComplianceErrorFallback
-        title="Unexpected Error"
-        message="We encountered an unexpected error while loading the compliance page. Please try again later or contact support."
-        error={error}
-      />
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-lg shadow max-w-md">
+          <h1 className="text-xl font-bold text-red-600 mb-4">Unexpected Error</h1>
+          <p className="text-gray-600 mb-4">An unexpected error occurred while loading the page.</p>
+          <div className="bg-red-50 border border-red-200 rounded p-3">
+            <p className="text-sm text-red-700">
+              <strong>Error Type:</strong> {error?.constructor?.name || 'Unknown'}
+            </p>
+            <p className="text-sm text-red-700">
+              <strong>Message:</strong> {error instanceof Error ? error.message : String(error)}
+            </p>
+          </div>
+        </div>
+      </div>
     )
   }
 }
