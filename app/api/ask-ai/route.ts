@@ -25,6 +25,23 @@ export async function POST(request: Request) {
     console.log('🔍 AI Query:', prompt)
     console.log('🏢 Building ID:', building_id)
 
+    // Check if this is a document search query
+    const isDocumentSearch = detectDocumentSearchQuery(prompt)
+    
+    if (isDocumentSearch && building_id) {
+      console.log('📄 Detected document search query, searching compliance documents...')
+      const documentSearchResult = await searchComplianceDocuments(supabase, prompt, building_id)
+      
+      if (documentSearchResult.found) {
+        return NextResponse.json({
+          success: true,
+          response: documentSearchResult.response,
+          documentSearch: true,
+          documents: documentSearchResult.documents
+        })
+      }
+    }
+
     // Comprehensive data gathering from all relevant tables
     const buildingData = await gatherBuildingData(supabase, building_id)
     const unitsData = await gatherUnitsData(supabase, building_id)
@@ -516,4 +533,230 @@ DOCUMENT ANALYSIS GUIDELINES:
 Please provide your answer:`
 
   return prompt
+}
+
+/**
+ * Detect if the user's query is asking to find or locate a document
+ */
+function detectDocumentSearchQuery(prompt: string): boolean {
+  const searchKeywords = [
+    'where', 'find', 'locate', 'view', 'show', 'get', 'download',
+    'see', 'access', 'retrieve', 'pull up', 'bring up', 'open'
+  ]
+  
+  const documentTypes = [
+    'fra', 'fire risk assessment', 'fire safety',
+    'eicr', 'electrical', 'electrical certificate',
+    'asbestos', 'asbestos survey',
+    'loler', 'lifting equipment',
+    'insurance', 'insurance certificate',
+    'gas', 'gas certificate', 'gas safety',
+    'epc', 'energy performance',
+    'pat', 'portable appliance',
+    'certificate', 'cert', 'document', 'report',
+    'survey', 'assessment', 'inspection'
+  ]
+  
+  const lowerPrompt = prompt.toLowerCase()
+  
+  // Check for search keywords
+  const hasSearchKeyword = searchKeywords.some(keyword => 
+    lowerPrompt.includes(keyword)
+  )
+  
+  // Check for document types
+  const hasDocumentType = documentTypes.some(docType => 
+    lowerPrompt.includes(docType)
+  )
+  
+  return hasSearchKeyword && hasDocumentType
+}
+
+/**
+ * Search compliance documents based on user query
+ */
+async function searchComplianceDocuments(supabase: any, prompt: string, buildingId: string) {
+  try {
+    console.log('🔍 Searching compliance documents for building:', buildingId)
+    
+    // Extract search terms from the prompt
+    const searchTerms = extractSearchTerms(prompt)
+    
+    // Build the search query
+    let query = supabase
+      .from('compliance_docs')
+      .select(`
+        id,
+        title,
+        summary,
+        doc_url,
+        uploaded_at,
+        expiry_date,
+        classification,
+        building_id
+      `)
+      .eq('building_id', buildingId)
+      .order('uploaded_at', { ascending: false })
+      .limit(5)
+    
+    // Add search filters based on extracted terms
+    if (searchTerms.length > 0) {
+      const searchConditions = searchTerms.map(term => 
+        `or(title.ilike.%${term}%,summary.ilike.%${term}%)`
+      ).join(',')
+      
+      query = query.or(searchConditions)
+    }
+    
+    const { data: documents, error } = await query
+    
+    if (error) {
+      console.error('❌ Error searching compliance documents:', error)
+      return { found: false, response: null, documents: [] }
+    }
+    
+    if (!documents || documents.length === 0) {
+      return {
+        found: true,
+        response: `I couldn't find that document for this building. Try uploading it or checking the compliance tracker.`,
+        documents: []
+      }
+    }
+    
+    // Get building name for context
+    const { data: building } = await supabase
+      .from('buildings')
+      .select('name')
+      .eq('id', buildingId)
+      .single()
+    
+    const buildingName = building?.name || 'this building'
+    
+    // Format the response
+    const response = formatDocumentSearchResponse(documents, buildingName, buildingId)
+    
+    return {
+      found: true,
+      response,
+      documents: documents.map((doc: any) => ({
+        id: doc.id,
+        title: doc.title,
+        summary: doc.summary,
+        doc_url: doc.doc_url,
+        uploaded_at: doc.uploaded_at,
+        expiry_date: doc.expiry_date
+      }))
+    }
+    
+  } catch (error) {
+    console.error('❌ Error in searchComplianceDocuments:', error)
+    return { found: false, response: null, documents: [] }
+  }
+}
+
+/**
+ * Extract search terms from user prompt
+ */
+function extractSearchTerms(prompt: string): string[] {
+  const lowerPrompt = prompt.toLowerCase()
+  
+  // Common document type mappings
+  const documentMappings: { [key: string]: string[] } = {
+    'fra': ['fire risk assessment', 'fire safety', 'fra'],
+    'fire': ['fire risk assessment', 'fire safety', 'fra'],
+    'eicr': ['electrical', 'electrical certificate', 'eicr'],
+    'electrical': ['electrical', 'electrical certificate', 'eicr'],
+    'asbestos': ['asbestos', 'asbestos survey'],
+    'loler': ['loler', 'lifting equipment'],
+    'insurance': ['insurance', 'insurance certificate'],
+    'gas': ['gas', 'gas certificate', 'gas safety'],
+    'epc': ['epc', 'energy performance'],
+    'pat': ['pat', 'portable appliance'],
+    'certificate': ['certificate', 'cert'],
+    'document': ['document', 'doc'],
+    'report': ['report'],
+    'survey': ['survey', 'assessment'],
+    'inspection': ['inspection', 'assessment']
+  }
+  
+  const searchTerms: string[] = []
+  
+  // Check for specific document types
+  for (const [key, terms] of Object.entries(documentMappings)) {
+    if (lowerPrompt.includes(key)) {
+      searchTerms.push(...terms)
+    }
+  }
+  
+  // Add any other relevant terms from the prompt
+  const words = lowerPrompt.split(/\s+/)
+  words.forEach(word => {
+    if (word.length > 3 && !searchTerms.includes(word)) {
+      searchTerms.push(word)
+    }
+  })
+  
+  return [...new Set(searchTerms)] // Remove duplicates
+}
+
+/**
+ * Format the document search response with natural language and links
+ */
+function formatDocumentSearchResponse(documents: any[], buildingName: string, buildingId: string): string {
+  if (documents.length === 0) {
+    return `I couldn't find that document for ${buildingName}. Try uploading it or checking the compliance tracker.`
+  }
+  
+  let response = ''
+  
+  if (documents.length === 1) {
+    const doc = documents[0]
+    const uploadDate = new Date(doc.uploaded_at).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    })
+    
+    response += `I found the ${doc.title} for ${buildingName}. It was uploaded on ${uploadDate}.`
+    
+    if (doc.expiry_date) {
+      const expiryDate = new Date(doc.expiry_date).toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      })
+      response += ` It expires on ${expiryDate}.`
+    }
+    
+    response += `\n\n📄 [View Document](${doc.doc_url})`
+    response += `\n🔗 [View in Compliance Tracker](/buildings/${buildingId}/compliance)`
+    
+  } else {
+    response += `I found ${documents.length} relevant documents for ${buildingName}:\n\n`
+    
+    documents.forEach((doc: any, index) => {
+      const uploadDate = new Date(doc.uploaded_at).toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      })
+      
+      response += `${index + 1}. **${doc.title}** (uploaded ${uploadDate})\n`
+      
+      if (doc.expiry_date) {
+        const expiryDate = new Date(doc.expiry_date).toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        })
+        response += `   Expires: ${expiryDate}\n`
+      }
+      
+      response += `   📄 [View Document](${doc.doc_url})\n\n`
+    })
+    
+    response += `🔗 [View All in Compliance Tracker](/buildings/${buildingId}/compliance)`
+  }
+  
+  return response
 } 
