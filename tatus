@@ -1,5 +1,3 @@
-[33m03a745b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m)[m feat: Add comprehensive compliance document management system
-[33m1e4b8f8[m[33m ([m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m Fix Supabase cookies issue and remove AI speech bubble from landing page - Fix cookies() usage in server components for Next.js 15 compatibility - Remove AI speech bubble from landing page (www.blociq.co.uk) - Add error handling for client-side Supabase initialization - Update all building-related pages to use correct cookies pattern
-[33mcfba1e2[m Fix building compliance page - handle missing total_floors column and other database schema issues
-[33m14f38eb[m Remove AI speech bubble/chat assistant from landing page for cleaner interface
-[33m92f58f3[m Fix building page UI errors - handle both integer and UUID building IDs, add better error handling and error page
+[33m9eb8514[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Fresh start - reset Vercel deploy pipeline
+[33m9e75ada[m[33m ([m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmaster[m[33m)[m Trigger production deploy for major works + AI
+[33m684155c[m Trigger production deployment from Cursor
