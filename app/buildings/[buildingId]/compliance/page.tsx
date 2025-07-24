@@ -68,42 +68,27 @@ export default async function BuildingCompliancePage({
       // Try to fetch building by ID - handle both integer and UUID
       if (/^\d+$/.test(buildingId)) {
         // If it's a numeric ID, try as integer
-        const buildingResult = await supabase
+        const { data, error } = await supabase
           .from('buildings')
-          .select(`
-            id, 
-            name, 
-            address,
-            unit_count
-          `)
+          .select('*')
           .eq('id', parseInt(buildingId))
-          .maybeSingle()
-        
-        building = buildingResult.data
-        buildingError = buildingResult.error
+          .single()
+
+        if (error) throw error
+        building = data
       } else {
         // If it's not numeric, try as UUID
-        const buildingResult = await supabase
+        const { data, error } = await supabase
           .from('buildings')
-          .select(`
-            id, 
-            name, 
-            address,
-            unit_count
-          `)
+          .select('*')
           .eq('id', buildingId)
-          .maybeSingle()
-        
-        building = buildingResult.data
-        buildingError = buildingResult.error
+          .single()
+
+        if (error) throw error
+        building = data
       }
     } catch (error) {
-      console.error('❌ Unexpected error fetching building:', error)
-      buildingError = error instanceof Error ? error : new Error('Unknown error occurred')
-    }
-
-    if (buildingError) {
-      console.error('❌ Building fetch error:', buildingError.message)
+      console.error('❌ Error fetching building:', error)
       return (
         <ErrorBoundary>
           <LayoutWithSidebar>
@@ -114,7 +99,7 @@ export default async function BuildingCompliancePage({
                     <Shield className="h-8 w-8 text-white" />
                   </div>
                   <h2 className="text-2xl font-serif font-bold text-[#333333] mb-4">
-                    Could Not Load Building
+                    Error Loading Building
                   </h2>
                   <p className="text-gray-600 mb-6">
                     We encountered an error while loading the building information. Please try again later.
@@ -140,6 +125,8 @@ export default async function BuildingCompliancePage({
         </ErrorBoundary>
       )
     }
+
+
 
     if (!building) {
       console.error('❌ Building not found for ID:', buildingId)
@@ -177,29 +164,23 @@ export default async function BuildingCompliancePage({
     let buildingAssetsError = null
     
     try {
-      const assetsResult = await supabase
+      const { data, error } = await supabase
         .from('building_compliance_assets')
         .select(`
           *,
           compliance_assets (
             name,
             category,
-            description,
-            recommended_frequency
+            description
           )
         `)
         .eq('building_id', building.id)
         .eq('status', 'active')
-      
-      buildingAssets = assetsResult.data
-      buildingAssetsError = assetsResult.error
-    } catch (error) {
-      console.error('❌ Unexpected error fetching building compliance assets:', error)
-      buildingAssetsError = error instanceof Error ? error : new Error('Unknown error occurred')
-    }
 
-    if (buildingAssetsError) {
-      console.error('❌ Building compliance assets fetch error:', buildingAssetsError.message)
+      if (error) throw error
+      buildingAssets = data
+    } catch (error) {
+      console.error('❌ Error fetching building compliance assets:', error)
       return (
         <ErrorBoundary>
           <LayoutWithSidebar>
@@ -242,28 +223,18 @@ export default async function BuildingCompliancePage({
     let documentsError = null
     
     try {
-      const documentsResult = await supabase
+      const { data, error } = await supabase
         .from('compliance_documents')
-        .select(`
-          id,
-          doc_type,
-          document_url,
-          extracted_date,
-          building_id
-        `)
+        .select('*')
         .eq('building_id', building.id)
         .order('extracted_date', { ascending: false })
-      
-      complianceDocuments = documentsResult.data || []
-      documentsError = documentsResult.error
-    } catch (error) {
-      console.error('❌ Unexpected error fetching compliance documents:', error)
-      documentsError = error instanceof Error ? error : new Error('Unknown error occurred')
-    }
 
-    if (documentsError) {
-      console.error('❌ Compliance documents fetch error:', documentsError.message)
+      if (error) throw error
+      complianceDocuments = data || []
+    } catch (error) {
+      console.error('❌ Error fetching compliance documents:', error)
       // Don't fail the page for document errors, just log them
+      complianceDocuments = []
     }
 
     // Handle missing data gracefully
