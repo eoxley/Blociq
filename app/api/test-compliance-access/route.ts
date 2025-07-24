@@ -36,25 +36,15 @@ export async function GET(request: Request) {
     let buildingError = null
     
     try {
-      if (/^\d+$/.test(buildingId)) {
-        const { data, error } = await supabase
-          .from('buildings')
-          .select('id, name, address, unit_count')
-          .eq('id', parseInt(buildingId))
-          .maybeSingle()
-        
-        building = data
-        buildingError = error
-      } else {
-        const { data, error } = await supabase
-          .from('buildings')
-          .select('id, name, address, unit_count')
-          .eq('id', buildingId)
-          .maybeSingle()
-        
-        building = data
-        buildingError = error
-      }
+      // Buildings table uses UUID as primary key
+      const { data, error } = await supabase
+        .from('buildings')
+        .select('id, name, address, unit_count')
+        .eq('id', buildingId)
+        .maybeSingle()
+      
+      building = data
+      buildingError = error
     } catch (error) {
       buildingError = error instanceof Error ? error : new Error('Unknown error')
     }

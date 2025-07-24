@@ -60,32 +60,20 @@ export default async function BuildingDetailPage({
       redirect('/login')
     }
 
-    // Try to fetch building by ID with enhanced error handling
+    // Try to fetch building by UUID
     let building = null
     let buildingError = null
 
     try {
-      // First, try as integer ID
-      if (/^\d+$/.test(buildingId)) {
-        const { data, error } = await supabase
-          .from('buildings')
-          .select('*')
-          .eq('id', parseInt(buildingId))
-          .single()
-        
-        building = data
-        buildingError = error
-      } else {
-        // If not an integer, try as UUID (in case there's a UUID column)
-        const { data, error } = await supabase
-          .from('buildings')
-          .select('*')
-          .eq('id', buildingId)
-          .single()
-        
-        building = data
-        buildingError = error
-      }
+      // Buildings table uses UUID as primary key
+      const { data, error } = await supabase
+        .from('buildings')
+        .select('*')
+        .eq('id', buildingId)
+        .maybeSingle()
+      
+      building = data
+      buildingError = error
     } catch (error) {
       console.error('❌ Unexpected error fetching building:', error)
       buildingError = error instanceof Error ? error : new Error('Unknown error occurred')
