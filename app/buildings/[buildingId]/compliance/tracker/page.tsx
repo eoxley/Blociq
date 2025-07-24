@@ -42,7 +42,7 @@ export default async function ComplianceTrackerPage({ params }: { params: Promis
     const exampleComplianceAssets = [
       {
         id: "1",
-        building_id: parseInt(buildingId),
+        building_id: buildingId,
         asset_id: "1",
         status: "Compliant",
         last_updated: "2024-01-15",
@@ -56,7 +56,7 @@ export default async function ComplianceTrackerPage({ params }: { params: Promis
       },
       {
         id: "2",
-        building_id: parseInt(buildingId),
+        building_id: buildingId,
         asset_id: "2",
         status: "Due Soon",
         last_updated: "2023-12-01",
@@ -70,7 +70,7 @@ export default async function ComplianceTrackerPage({ params }: { params: Promis
       },
       {
         id: "3",
-        building_id: parseInt(buildingId),
+        building_id: buildingId,
         asset_id: "3",
         status: "Compliant",
         last_updated: "2024-02-01",
@@ -84,7 +84,7 @@ export default async function ComplianceTrackerPage({ params }: { params: Promis
       },
       {
         id: "4",
-        building_id: parseInt(buildingId),
+        building_id: buildingId,
         asset_id: "4",
         status: "Overdue",
         last_updated: "2023-10-15",
@@ -98,7 +98,7 @@ export default async function ComplianceTrackerPage({ params }: { params: Promis
       },
       {
         id: "5",
-        building_id: parseInt(buildingId),
+        building_id: buildingId,
         asset_id: "5",
         status: "Compliant",
         last_updated: "2023-08-20",
@@ -112,7 +112,7 @@ export default async function ComplianceTrackerPage({ params }: { params: Promis
       },
       {
         id: "6",
-        building_id: parseInt(buildingId),
+        building_id: buildingId,
         asset_id: "6",
         status: "Compliant",
         last_updated: "2024-01-10",
@@ -126,7 +126,7 @@ export default async function ComplianceTrackerPage({ params }: { params: Promis
       },
       {
         id: "7",
-        building_id: parseInt(buildingId),
+        building_id: buildingId,
         asset_id: "7",
         status: "Missing",
         last_updated: "",
