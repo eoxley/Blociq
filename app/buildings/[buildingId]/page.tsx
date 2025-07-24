@@ -285,10 +285,10 @@ export default async function BuildingDetailPage({
 
     try {
       const { data: complianceDocs } = await supabase
-        .from('compliance_docs')
+        .from('compliance_documents')
         .select('*')
         .eq('building_id', building.id)
-        .order('created_at', { ascending: false })
+        .order('extracted_date', { ascending: false })
         .limit(5)
 
       if (complianceDocs) {
