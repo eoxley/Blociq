@@ -243,17 +243,16 @@ export default async function BuildingCompliancePage({
     
     try {
       const documentsResult = await supabase
-        .from('compliance_docs')
+        .from('compliance_documents')
         .select(`
           id,
           doc_type,
-          doc_url,
-          uploaded_at,
-          expiry_date,
+          document_url,
+          extracted_date,
           building_id
         `)
         .eq('building_id', building.id)
-        .order('uploaded_at', { ascending: false })
+        .order('extracted_date', { ascending: false })
       
       complianceDocuments = documentsResult.data || []
       documentsError = documentsResult.error
