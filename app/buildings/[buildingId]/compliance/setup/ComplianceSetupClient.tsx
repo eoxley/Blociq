@@ -1,81 +1,83 @@
 'use client'
 
-import React, { useState } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { useRouter } from 'next/navigation'
-import { 
-  Shield, 
-  CheckCircle, 
-  Clock, 
-  Brain, 
-  Info, 
-  Save, 
-  ArrowRight,
-  Building2,
-  AlertTriangle,
-  CheckSquare,
-  Square
-} from 'lucide-react'
-import { Tables } from '@/lib/database.types'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import React, { useState, useEffect } from 'react'
+import { createClient } from '@supabase/supabase-js'
+import { Shield, CheckSquare, Square, Clock, Brain, Save, ArrowRight, AlertTriangle, CheckCircle, Building2, FileText, Settings, Zap, CheckCircle2, XCircle } from 'lucide-react'
+import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
+import { BlocIQBadge } from '@/components/ui/blociq-badge'
+import { BlocIQButton } from '@/components/ui/blociq-button'
 
-type ComplianceAsset = Tables<'compliance_assets'> & {
-  recommended_frequency?: string
-}
-
-type Building = Tables<'buildings'>
-
-interface ComplianceSetupClientProps {
-  building: Building
-  groupedAssets: Record<string, (ComplianceAsset & { isActive: boolean })[]>
-  buildingId: string
-}
-
-// Category configurations with tooltips
+// Category configurations with BlocIQ styling
 const categoryConfigs = {
   'Legal & Safety': {
     description: 'Fire, electrical and health legislation',
     color: 'bg-red-50 border-red-200 text-red-700',
-    icon: Shield
+    icon: Shield,
+    emoji: '🔥'
   },
   'Structural & Condition': {
     description: 'Building structure and condition assessments',
     color: 'bg-orange-50 border-orange-200 text-orange-700',
-    icon: Building2
+    icon: Building2,
+    emoji: '🏗️'
   },
   'Operational & Contracts': {
     description: 'Service contracts and operational requirements',
     color: 'bg-blue-50 border-blue-200 text-blue-700',
-    icon: Clock
+    icon: Settings,
+    emoji: '⚙️'
   },
   'Insurance': {
     description: 'Building and liability insurance requirements',
     color: 'bg-purple-50 border-purple-200 text-purple-700',
-    icon: Shield
+    icon: Shield,
+    emoji: '🛡️'
   },
   'Lease & Documentation': {
     description: 'Lease compliance and documentation requirements',
     color: 'bg-green-50 border-green-200 text-green-700',
-    icon: CheckCircle
+    icon: FileText,
+    emoji: '📋'
   },
   'Admin': {
     description: 'Administrative and reporting requirements',
     color: 'bg-gray-50 border-gray-200 text-gray-700',
-    icon: CheckCircle
+    icon: CheckCircle,
+    emoji: '📊'
   },
   'Smart Records': {
     description: 'Digital record keeping and smart building systems',
     color: 'bg-teal-50 border-teal-200 text-teal-700',
-    icon: Brain
+    icon: Zap,
+    emoji: '⚡'
   },
   'Safety': {
     description: 'BSA-specific safety requirements',
     color: 'bg-yellow-50 border-yellow-200 text-yellow-700',
-    icon: AlertTriangle
+    icon: AlertTriangle,
+    emoji: '⚠️'
   }
+}
+
+interface ComplianceAsset {
+  id: string
+  name: string
+  category: string
+  description?: string
+  recommended_frequency?: string
+  isSelected: boolean
+}
+
+interface Building {
+  id: string
+  name: string
+  address?: string
+}
+
+interface ComplianceSetupClientProps {
+  building: Building
+  groupedAssets: Record<string, ComplianceAsset[]>
+  buildingId: string
 }
 
 export default function ComplianceSetupClient({ 
@@ -83,331 +85,346 @@ export default function ComplianceSetupClient({
   groupedAssets, 
   buildingId 
 }: ComplianceSetupClientProps) {
-  const [selectedAssets, setSelectedAssets] = useState<Set<string>>(
-    new Set(
-      Object.values(groupedAssets)
-        .flat()
-        .filter(asset => asset.isActive)
-        .map(asset => asset.id)
-    )
-  )
-  const [isSaving, setIsSaving] = useState(false)
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle')
-  
-  const router = useRouter()
-  const supabase = createClientComponentClient()
+  const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set())
+  const [saving, setSaving] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [saveMessage, setSaveMessage] = useState('')
 
-  const handleAssetToggle = (assetId: string) => {
-    setSelectedAssets(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(assetId)) {
-        newSet.delete(assetId)
-      } else {
-        newSet.add(assetId)
-      }
-      return newSet
+  // Initialize selected assets from props
+  useEffect(() => {
+    const initialSelected = new Set<string>()
+    Object.values(groupedAssets).forEach(assets => {
+      assets.forEach(asset => {
+        if (asset.isSelected) {
+          initialSelected.add(asset.id)
+        }
+      })
     })
-  }
+    setSelectedAssets(initialSelected)
+  }, [groupedAssets])
 
-  const handleSaveAndContinue = async () => {
-    setIsSaving(true)
-    setSaveStatus('saving')
-
-    try {
-      // Get all existing building compliance assets
-      const { data: existingAssets, error: fetchError } = await supabase
-        .from('building_compliance_assets')
-        .select('asset_id')
-        .eq('building_id', buildingId)
-
-      if (fetchError) {
-        console.error('Error fetching existing assets:', fetchError)
-        setSaveStatus('error')
-        return
-      }
-
-      const existingAssetIds = new Set(existingAssets?.map(asset => asset.asset_id) || [])
-      const selectedAssetIds = Array.from(selectedAssets)
-
-      // Assets to add (new selections)
-      const assetsToAdd = selectedAssetIds.filter(id => !existingAssetIds.has(id))
-      
-      // Assets to remove (deselected)
-      const assetsToRemove = Array.from(existingAssetIds).filter(id => !selectedAssets.has(id))
-
-      // Add new assets
-      if (assetsToAdd.length > 0) {
-        const { error: insertError } = await supabase
-          .from('building_compliance_assets')
-          .upsert(
-            assetsToAdd.map(assetId => ({
-              building_id: parseInt(buildingId),
-              asset_id: assetId,
-              status: 'active',
-              notes: null,
-              next_due_date: null,
-              last_updated: new Date().toISOString()
-            }))
-          )
-
-        if (insertError) {
-          console.error('Error adding assets:', insertError)
-          setSaveStatus('error')
-          return
-        }
-      }
-
-      // Remove deselected assets
-      if (assetsToRemove.length > 0) {
-        const { error: deleteError } = await supabase
-          .from('building_compliance_assets')
-          .delete()
-          .eq('building_id', buildingId)
-          .in('asset_id', assetsToRemove)
-
-        if (deleteError) {
-          console.error('Error removing assets:', deleteError)
-          setSaveStatus('error')
-          return
-        }
-      }
-
-      setSaveStatus('success')
-      
-      // Navigate to compliance page after a brief delay
-      setTimeout(() => {
-        router.push(`/buildings/${buildingId}/compliance`)
-      }, 1000)
-
-    } catch (error) {
-      console.error('Error saving compliance setup:', error)
-      setSaveStatus('error')
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  const isAIAutoFill = (assetName: string) => {
-    const aiKeywords = ['fire', 'fra', 'gas', 'asbestos', 'lift', 'eicr', 'd&o', 'insurance']
+  // Helper functions
+  const isAIAsset = (assetName: string) => {
+    const aiKeywords = ['fire', 'fra', 'gas', 'asbestos', 'lift', 'eicr', 'd&o', 'insurance', 'epc']
     return aiKeywords.some(keyword => 
       assetName.toLowerCase().includes(keyword.toLowerCase())
     )
   }
 
-  const getFrequencyColor = (frequency: string) => {
-    const colors = {
-      '6 months': 'bg-orange-100 text-orange-800 border-orange-200',
-      '1 year': 'bg-blue-100 text-blue-800 border-blue-200',
-      '2 years': 'bg-green-100 text-green-800 border-green-200',
-      '3 years': 'bg-purple-100 text-purple-800 border-purple-200',
-      '5 years': 'bg-indigo-100 text-indigo-800 border-indigo-200',
-      '10 years': 'bg-gray-100 text-gray-800 border-gray-200'
+  const handleAssetToggle = (assetId: string, checked: boolean) => {
+    const newSelected = new Set(selectedAssets)
+    if (checked) {
+      newSelected.add(assetId)
+    } else {
+      newSelected.delete(assetId)
     }
-    return colors[frequency as keyof typeof colors] || colors['1 year']
+    setSelectedAssets(newSelected)
   }
 
-  const selectedCount = selectedAssets.size
-  const totalCount = Object.values(groupedAssets).flat().length
+  const saveSelections = async () => {
+    setSaving(true)
+    setSaveStatus('idle')
+    setSaveMessage('')
+
+    try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      )
+
+      // Get all asset IDs from grouped assets
+      const allAssetIds = new Set<string>()
+      Object.values(groupedAssets).forEach(assets => {
+        assets.forEach(asset => {
+          allAssetIds.add(asset.id)
+        })
+      })
+
+      // Prepare upsert data for selected assets
+      const upsertData = Array.from(selectedAssets).map(assetId => ({
+        building_id: buildingId,
+        asset_id: assetId,
+        status: 'active',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }))
+
+      // Upsert selected assets
+      if (upsertData.length > 0) {
+        const { error: upsertError } = await supabase
+          .from('building_compliance_assets')
+          .upsert(upsertData, { onConflict: 'building_id,asset_id' })
+
+        if (upsertError) {
+          throw new Error(`Failed to save selected assets: ${upsertError.message}`)
+        }
+      }
+
+      // Update unselected assets to inactive
+      const unselectedAssetIds = Array.from(allAssetIds).filter(id => !selectedAssets.has(id))
+      
+      if (unselectedAssetIds.length > 0) {
+        const { error: updateError } = await supabase
+          .from('building_compliance_assets')
+          .update({ status: 'inactive', updated_at: new Date().toISOString() })
+          .eq('building_id', buildingId)
+          .in('asset_id', unselectedAssetIds)
+
+        if (updateError) {
+          throw new Error(`Failed to update unselected assets: ${updateError.message}`)
+        }
+      }
+
+      setSaveStatus('success')
+      setSaveMessage(`Successfully saved ${selectedAssets.size} compliance assets for ${building.name}`)
+      
+      // Redirect after a short delay
+      setTimeout(() => {
+        window.location.href = `/buildings/${buildingId}/compliance`
+      }, 2000)
+
+    } catch (error) {
+      console.error('Error saving compliance selections:', error)
+      setSaveStatus('error')
+      setSaveMessage(error instanceof Error ? error.message : 'An unexpected error occurred')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const getSelectedCount = (assets: ComplianceAsset[]) => {
+    return assets.filter(asset => selectedAssets.has(asset.id)).length
+  }
 
   return (
-    <TooltipProvider>
-      <div className="min-h-screen bg-[#FAFAFA]">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div className="flex items-center justify-between">
+    <div className="space-y-8">
+      {/* Enhanced Header with BlocIQ Gradient Background */}
+      <div className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] rounded-2xl p-8 text-white shadow-xl">
+        <div className="flex items-center justify-between">
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                <Shield className="h-7 w-7 text-white" />
+              </div>
               <div>
-                <h1 className="text-3xl font-serif text-[#333333] font-bold">
-                  Compliance Setup
-                </h1>
-                <p className="text-lg text-gray-600 mt-1">
-                  {building.name} • Select applicable compliance requirements
+                <h1 className="text-3xl font-serif font-bold">Compliance Setup</h1>
+                <p className="text-white/90 text-lg">{building.name}</p>
+                <p className="text-white/80 text-sm">{building.address}</p>
+              </div>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-2xl font-bold">{selectedAssets.size}</div>
+            <div className="text-white/80 text-sm">Currently Selected</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Save Status */}
+      {saveStatus !== 'idle' && (
+        <BlocIQCard variant="elevated">
+          <BlocIQCardContent>
+            <div className={`flex items-center gap-3 p-4 rounded-xl ${
+              saveStatus === 'success' 
+                ? 'bg-green-50 border border-green-200' 
+                : 'bg-red-50 border border-red-200'
+            }`}>
+              {saveStatus === 'success' ? (
+                <CheckCircle2 className="h-6 w-6 text-green-600" />
+              ) : (
+                <XCircle className="h-6 w-6 text-red-600" />
+              )}
+              <div>
+                <p className={`font-semibold ${
+                  saveStatus === 'success' ? 'text-green-800' : 'text-red-800'
+                }`}>
+                  {saveStatus === 'success' ? 'Success!' : 'Error'}
+                </p>
+                <p className={`text-sm ${
+                  saveStatus === 'success' ? 'text-green-700' : 'text-red-700'
+                }`}>
+                  {saveMessage}
                 </p>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <p className="text-sm text-gray-600">Selected</p>
-                  <p className="text-2xl font-bold text-[#2BBEB4]">
-                    {selectedCount} / {totalCount}
-                  </p>
-                </div>
-              </div>
             </div>
+          </BlocIQCardContent>
+        </BlocIQCard>
+      )}
+
+      {/* Setup Instructions */}
+      <BlocIQCard variant="elevated">
+        <BlocIQCardContent>
+          <div className="text-center py-6">
+            <div className="w-16 h-16 bg-[#2BBEB4] rounded-full flex items-center justify-center mx-auto mb-4">
+              <Settings className="h-8 w-8 text-white" />
+            </div>
+            <h2 className="text-2xl font-serif font-bold text-[#333333] mb-3">
+              Configure Compliance Tracking
+            </h2>
+            <p className="text-[#64748B] max-w-2xl mx-auto">
+              Select the compliance requirements that apply to {building.name}. 
+              This will set up your compliance tracking dashboard and help you monitor deadlines and requirements.
+            </p>
           </div>
-        </div>
+        </BlocIQCardContent>
+      </BlocIQCard>
 
-        {/* Main Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="space-y-8">
-            {/* Instructions */}
-            <Card className="bg-gradient-to-r from-[#2BBEB4]/10 to-[#0F5D5D]/10 border-[#2BBEB4]/20">
-              <CardContent className="p-6">
-                <div className="flex items-start gap-4">
-                  <div className="p-2 bg-[#2BBEB4] rounded-lg">
-                    <Shield className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-[#333333] mb-2">
-                      Setup Your Building's Compliance Requirements
-                    </h3>
-                    <p className="text-gray-600 leading-relaxed">
-                      Select the compliance assets that apply to {building.name}. 
-                      This will create a tailored compliance tracking system for your building. 
-                      Assets marked with 🧠 will be auto-filled when relevant documents are uploaded.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Compliance Categories */}
-            <div className="space-y-8">
-              {Object.entries(groupedAssets).map(([category, assets]) => {
-                const config = categoryConfigs[category as keyof typeof categoryConfigs] || categoryConfigs['Admin']
-                const IconComponent = config.icon
-                
-                return (
-                  <div key={category} className="space-y-4">
-                    {/* Category Header */}
-                    <div className="flex items-center gap-3 sticky top-24 z-10 bg-[#FAFAFA] py-2">
-                      <div className={`p-2 rounded-lg ${config.color.split(' ')[0]}`}>
-                        <IconComponent className="h-5 w-5" />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-xl font-serif font-semibold text-[#333333]">
-                          {category}
-                        </h2>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Info className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{config.description}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                      <div className="flex-1 border-t border-gray-300 ml-4"></div>
-                    </div>
-
-                    {/* Assets Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {assets.map((asset) => {
-                        const isSelected = selectedAssets.has(asset.id)
-                        const isAI = isAIAutoFill(asset.name)
-                        
-                        return (
-                          <Card 
-                            key={asset.id} 
-                            className={`transition-all duration-200 hover:shadow-lg cursor-pointer ${
-                              isSelected 
-                                ? 'ring-2 ring-[#2BBEB4] bg-[#2BBEB4]/5' 
-                                : 'hover:bg-gray-50'
-                            }`}
-                            onClick={() => handleAssetToggle(asset.id)}
-                          >
-                            <CardContent className="p-4">
-                              <div className="flex items-start gap-3">
-                                {/* Checkbox */}
-                                <div className="mt-1">
-                                  {isSelected ? (
-                                    <CheckSquare className="h-5 w-5 text-[#2BBEB4]" />
-                                  ) : (
-                                    <Square className="h-5 w-5 text-gray-400" />
-                                  )}
-                                </div>
-
-                                {/* Content */}
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-start justify-between gap-2 mb-2">
-                                    <h3 className="font-semibold text-[#333333] leading-tight">
-                                      {asset.name}
-                                    </h3>
-                                    {isAI && (
-                                      <Tooltip>
-                                        <TooltipTrigger>
-                                          <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800 border-blue-200">
-                                            🧠 AI Auto-fill
-                                          </Badge>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>Auto-filled from uploaded document</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    )}
-                                  </div>
-
-                                  {asset.description && (
-                                    <p className="text-sm text-gray-600 mb-3 leading-relaxed">
-                                      {asset.description}
-                                    </p>
-                                  )}
-
-                                  <div className="flex items-center gap-2">
-                                    <Badge 
-                                      variant="outline" 
-                                      className={`text-xs ${getFrequencyColor(asset.recommended_frequency || '1 year')}`}
-                                    >
-                                      📆 {asset.recommended_frequency || '1 year'}
-                                    </Badge>
-                                  </div>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Sticky Save Button */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-20">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div className="text-sm text-gray-600">
-              {selectedCount} of {totalCount} assets selected
-            </div>
+      {/* Compliance Categories */}
+      {Object.keys(groupedAssets).length > 0 ? (
+        <div className="space-y-6">
+          {Object.entries(groupedAssets).map(([category, assets]) => {
+            const config = categoryConfigs[category as keyof typeof categoryConfigs] || {
+              description: 'Other compliance requirements',
+              color: 'bg-gray-50 border-gray-200 text-gray-700',
+              icon: Shield,
+              emoji: '📋'
+            }
+            const IconComponent = config.icon
+            const selectedCount = getSelectedCount(assets)
             
-            <div className="flex items-center gap-4">
-              {saveStatus === 'success' && (
-                <div className="flex items-center gap-2 text-green-600">
-                  <CheckCircle className="h-4 w-4" />
-                  <span>Saved successfully!</span>
-                </div>
-              )}
-              
-              {saveStatus === 'error' && (
-                <div className="flex items-center gap-2 text-red-600">
-                  <AlertTriangle className="h-4 w-4" />
-                  <span>Error saving. Please try again.</span>
-                </div>
-              )}
+            return (
+              <BlocIQCard key={category} variant="elevated">
+                <BlocIQCardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center">
+                        <IconComponent className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-serif font-semibold text-[#333333]">
+                          {config.emoji} {category}
+                        </h2>
+                        <p className="text-sm text-[#64748B]">{config.description}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <BlocIQBadge variant="secondary" className="bg-gray-100 text-gray-700">
+                        {selectedCount} of {assets.length} selected
+                      </BlocIQBadge>
+                    </div>
+                  </div>
+                </BlocIQCardHeader>
+                
+                <BlocIQCardContent>
+                  <div className="space-y-4">
+                    {assets.map((asset) => {
+                      const isAI = isAIAsset(asset.name)
+                      const isChecked = selectedAssets.has(asset.id)
+                      
+                      return (
+                        <div 
+                          key={asset.id} 
+                          className="bg-gradient-to-r from-[#F0FDFA] to-emerald-50 rounded-xl p-6 border border-[#E2E8F0] hover:shadow-lg transition-all duration-200"
+                        >
+                          <div className="flex items-start space-x-4">
+                            {/* Checkbox */}
+                            <div className="mt-1 flex-shrink-0">
+                              <input
+                                type="checkbox"
+                                id={`asset-${asset.id}`}
+                                checked={isChecked}
+                                onChange={(e) => handleAssetToggle(asset.id, e.target.checked)}
+                                disabled={saving}
+                                className="w-5 h-5 text-[#008C8F] bg-gray-100 border-gray-300 rounded focus:ring-[#008C8F] focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                              />
+                            </div>
 
-              <Button
-                onClick={handleSaveAndContinue}
-                disabled={isSaving}
-                className="bg-[#2BBEB4] hover:bg-[#0F5D5D] text-white px-8 py-3 rounded-lg font-semibold transition-colors duration-200 flex items-center gap-2"
+                            {/* Asset Details */}
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <label 
+                                  htmlFor={`asset-${asset.id}`}
+                                  className="text-lg font-serif font-semibold text-[#333333] cursor-pointer"
+                                >
+                                  {asset.name}
+                                </label>
+                                {isAI && (
+                                  <BlocIQBadge variant="success" size="sm">
+                                    🧠 AI Auto-fill
+                                  </BlocIQBadge>
+                                )}
+                              </div>
+                              
+                              {asset.description && (
+                                <p className="text-sm text-[#64748B] mb-3">
+                                  {asset.description}
+                                </p>
+                              )}
+
+                              <div className="flex items-center space-x-4 text-sm text-gray-500">
+                                {asset.recommended_frequency && (
+                                  <div className="flex items-center space-x-1">
+                                    <Clock className="h-4 w-4" />
+                                    <BlocIQBadge variant="secondary" size="sm">
+                                      {asset.recommended_frequency}
+                                    </BlocIQBadge>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </BlocIQCardContent>
+              </BlocIQCard>
+            )
+          })}
+        </div>
+      ) : (
+        /* Empty State */
+        <BlocIQCard variant="elevated">
+          <BlocIQCardContent>
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-[#2BBEB4] rounded-full flex items-center justify-center mx-auto mb-6">
+                <Shield className="h-8 w-8 text-white" />
+              </div>
+              <h2 className="text-2xl font-serif font-bold text-[#333333] mb-4">
+                No Compliance Assets Available
+              </h2>
+              <p className="text-[#64748B] mb-6 max-w-md mx-auto">
+                No compliance assets have been configured in the system. Please contact your administrator.
+              </p>
+            </div>
+          </BlocIQCardContent>
+        </BlocIQCard>
+      )}
+
+      {/* Call to Action */}
+      <BlocIQCard variant="elevated">
+        <BlocIQCardContent>
+          <div className="text-center py-6">
+            <h3 className="text-xl font-serif font-semibold text-[#333333] mb-4">
+              Ready to Start Compliance Tracking?
+            </h3>
+            <p className="text-[#64748B] mb-6">
+              Your selections will be saved and you'll be redirected to the compliance dashboard.
+            </p>
+            <div className="space-y-3">
+              <BlocIQButton
+                variant="primary"
+                className="w-full bg-gradient-to-r from-[#008C8F] to-[#2BBEB4] hover:from-[#007B8A] hover:to-[#2BBEB4] text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={saveSelections}
+                disabled={saving}
               >
-                {isSaving ? (
+                {saving ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                     Saving...
                   </>
                 ) : (
                   <>
-                    <Save className="h-4 w-4" />
-                    Save & Continue
-                    <ArrowRight className="h-4 w-4" />
+                    <Save className="h-4 w-4 mr-2" />
+                    Save & Start Compliance Tracking
+                    <ArrowRight className="h-4 w-4 ml-2" />
                   </>
                 )}
-              </Button>
+              </BlocIQButton>
             </div>
           </div>
-        </div>
-      </div>
-    </TooltipProvider>
+        </BlocIQCardContent>
+      </BlocIQCard>
+    </div>
   )
 } 
