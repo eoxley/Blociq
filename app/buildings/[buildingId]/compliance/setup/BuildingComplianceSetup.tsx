@@ -158,7 +158,7 @@ export default function BuildingComplianceSetup({
           .from('building_compliance_assets')
           .upsert(
             assetsToAdd.map(assetId => ({
-              building_id: parseInt(buildingId),
+              building_id: buildingId,
               asset_id: assetId,
               status: 'active',
               notes: null,
