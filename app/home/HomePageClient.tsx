@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2 } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import DailySummary from '@/components/DailySummary'
-import MajorWorksDashboard from '@/components/MajorWorksDashboard'
+import AskBlocIQHomepage from '@/components/AskBlocIQHomepage'
 
 import BreadcrumbNavigation from '@/components/BreadcrumbNavigation'
 import { BlocIQButton } from '@/components/ui/blociq-button'
@@ -508,13 +508,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         </BlocIQCard>
       </div>
 
-      {/* Major Works Dashboard */}
+      {/* Ask BlocIQ AI Assistant */}
       <div className="mb-8">
-        <MajorWorksDashboard 
-          showAllBuildings={true}
-          limit={5}
-          showAddButton={true}
-        />
+        <AskBlocIQHomepage />
       </div>
 
       {/* Daily Summary Section */}
