@@ -17,6 +17,40 @@ export default async function BuildingCompliancePage({
     const cookieStore = cookies()
     const supabase = createServerComponentClient({ cookies: () => cookieStore })
     
+    // Validate buildingId immediately
+    if (!buildingId || buildingId.trim().length === 0) {
+      console.error('❌ No building ID provided or invalid building ID')
+      return (
+        <ErrorBoundary>
+          <LayoutWithSidebar>
+            <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
+              <div className="max-w-md mx-auto text-center p-8">
+                <div className="bg-white rounded-2xl shadow-lg p-8">
+                  <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Shield className="h-8 w-8 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-serif font-bold text-[#333333] mb-4">
+                    Invalid Building
+                  </h2>
+                  <p className="text-gray-600 mb-6">
+                    The building ID provided is invalid or missing. Please check the URL and try again.
+                  </p>
+                  <button
+                    onClick={() => window.location.href = '/buildings'}
+                    className="w-full bg-[#2BBEB4] hover:bg-[#0F5D5D] text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-200"
+                  >
+                    View All Buildings
+                  </button>
+                </div>
+              </div>
+            </div>
+          </LayoutWithSidebar>
+        </ErrorBoundary>
+      )
+    }
+
+    console.log('🔍 Fetching building compliance tracker for ID:', buildingId)
+    
     // Secure the route using Supabase Auth
     const {
       data: { session },
@@ -26,36 +60,61 @@ export default async function BuildingCompliancePage({
       redirect('/login')
     }
 
-    // Validate buildingId
-    if (!buildingId) {
-      console.error('No building ID provided')
-      redirect('/buildings')
+    // Fetch building details with enhanced error handling
+    let building = null
+    let buildingError = null
+    
+    try {
+      const buildingResult = await supabase
+        .from('buildings')
+        .select(`
+          id, 
+          name, 
+          address,
+          unit_count
+        `)
+        .eq('id', buildingId)
+        .maybeSingle()
+      
+      building = buildingResult.data
+      buildingError = buildingResult.error
+    } catch (error) {
+      console.error('❌ Unexpected error fetching building:', error)
+      buildingError = error instanceof Error ? error : new Error('Unknown error occurred')
     }
 
-    console.log('🔍 Fetching building compliance tracker for ID:', buildingId)
-
-    // Fetch building details
-    const { data: building, error: buildingError } = await supabase
-      .from('buildings')
-      .select(`
-        id, 
-        name, 
-        address,
-        unit_count
-      `)
-      .eq('id', buildingId)
-      .maybeSingle()
-
     if (buildingError) {
-      console.error('Building fetch error:', buildingError.message)
+      console.error('❌ Building fetch error:', buildingError.message)
       return (
         <ErrorBoundary>
           <LayoutWithSidebar>
-            <div className="p-6 space-y-4">
-              <h1 className="text-2xl font-semibold text-[#333333]">Compliance Tracker</h1>
-              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                <p className="text-red-600">Could not load building information.</p>
-                <p className="text-red-500 text-sm mt-2">Error: {buildingError.message}</p>
+            <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
+              <div className="max-w-md mx-auto text-center p-8">
+                <div className="bg-white rounded-2xl shadow-lg p-8">
+                  <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Shield className="h-8 w-8 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-serif font-bold text-[#333333] mb-4">
+                    Could Not Load Building
+                  </h2>
+                  <p className="text-gray-600 mb-6">
+                    We encountered an error while loading the building information. Please try again later.
+                  </p>
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="w-full bg-[#2BBEB4] hover:bg-[#0F5D5D] text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-200"
+                    >
+                      Try Again
+                    </button>
+                    <button
+                      onClick={() => window.location.href = '/buildings'}
+                      className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors duration-200"
+                    >
+                      View All Buildings
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </LayoutWithSidebar>
@@ -64,14 +123,29 @@ export default async function BuildingCompliancePage({
     }
 
     if (!building) {
+      console.error('❌ Building not found for ID:', buildingId)
       return (
         <ErrorBoundary>
           <LayoutWithSidebar>
-            <div className="p-6 space-y-4">
-              <h1 className="text-2xl font-semibold text-[#333333]">Compliance Tracker</h1>
-              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                <p className="text-red-600">Building not found.</p>
-                <p className="text-red-500 text-sm mt-2">Building ID: {buildingId}</p>
+            <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
+              <div className="max-w-md mx-auto text-center p-8">
+                <div className="bg-white rounded-2xl shadow-lg p-8">
+                  <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Shield className="h-8 w-8 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-serif font-bold text-[#333333] mb-4">
+                    Building Not Found
+                  </h2>
+                  <p className="text-gray-600 mb-6">
+                    The building you're looking for doesn't exist or you don't have permission to view it.
+                  </p>
+                  <button
+                    onClick={() => window.location.href = '/buildings'}
+                    className="w-full bg-[#2BBEB4] hover:bg-[#0F5D5D] text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-200"
+                  >
+                    View All Buildings
+                  </button>
+                </div>
               </div>
             </div>
           </LayoutWithSidebar>
@@ -79,31 +153,64 @@ export default async function BuildingCompliancePage({
       )
     }
 
-    // 🔧 Supabase Query: Fetch active building compliance assets with compliance asset details
-    const { data: buildingAssets, error: buildingAssetsError } = await supabase
-      .from('building_compliance_assets')
-      .select(`
-        *,
-        compliance_assets (
-          name,
-          category,
-          description,
-          recommended_frequency
-        )
-      `)
-      .eq('building_id', buildingId)
-      .eq('status', 'active')
+    // 🔧 Supabase Query: Fetch active building compliance assets with enhanced error handling
+    let buildingAssets = null
+    let buildingAssetsError = null
+    
+    try {
+      const assetsResult = await supabase
+        .from('building_compliance_assets')
+        .select(`
+          *,
+          compliance_assets (
+            name,
+            category,
+            description,
+            recommended_frequency
+          )
+        `)
+        .eq('building_id', buildingId)
+        .eq('status', 'active')
+      
+      buildingAssets = assetsResult.data
+      buildingAssetsError = assetsResult.error
+    } catch (error) {
+      console.error('❌ Unexpected error fetching building compliance assets:', error)
+      buildingAssetsError = error instanceof Error ? error : new Error('Unknown error occurred')
+    }
 
     if (buildingAssetsError) {
-      console.error('Building compliance assets fetch error:', buildingAssetsError.message)
+      console.error('❌ Building compliance assets fetch error:', buildingAssetsError.message)
       return (
         <ErrorBoundary>
           <LayoutWithSidebar>
-            <div className="p-6 space-y-4">
-              <h1 className="text-2xl font-semibold text-[#333333]">Compliance Tracker</h1>
-              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                <p className="text-red-600">Could not load compliance assets.</p>
-                <p className="text-red-500 text-sm mt-2">Error: {buildingAssetsError.message}</p>
+            <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
+              <div className="max-w-md mx-auto text-center p-8">
+                <div className="bg-white rounded-2xl shadow-lg p-8">
+                  <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Shield className="h-8 w-8 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-serif font-bold text-[#333333] mb-4">
+                    Could Not Load Compliance Data
+                  </h2>
+                  <p className="text-gray-600 mb-6">
+                    We encountered an error while loading the compliance information for {building.name}. Please try again later.
+                  </p>
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="w-full bg-[#2BBEB4] hover:bg-[#0F5D5D] text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-200"
+                    >
+                      Try Again
+                    </button>
+                    <button
+                      onClick={() => window.location.href = '/buildings'}
+                      className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors duration-200"
+                    >
+                      View All Buildings
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </LayoutWithSidebar>
@@ -111,22 +218,34 @@ export default async function BuildingCompliancePage({
       )
     }
 
-    // Fetch compliance documents for this building (optional)
-    const { data: complianceDocuments, error: documentsError } = await supabase
-      .from('compliance_docs')
-      .select(`
-        id,
-        doc_type,
-        doc_url,
-        uploaded_at,
-        expiry_date,
-        building_id
-      `)
-      .eq('building_id', buildingId)
-      .order('uploaded_at', { ascending: false })
+    // Fetch compliance documents for this building with enhanced error handling
+    let complianceDocuments: any[] = []
+    let documentsError = null
+    
+    try {
+      const documentsResult = await supabase
+        .from('compliance_docs')
+        .select(`
+          id,
+          doc_type,
+          doc_url,
+          uploaded_at,
+          expiry_date,
+          building_id
+        `)
+        .eq('building_id', buildingId)
+        .order('uploaded_at', { ascending: false })
+      
+      complianceDocuments = documentsResult.data || []
+      documentsError = documentsResult.error
+    } catch (error) {
+      console.error('❌ Unexpected error fetching compliance documents:', error)
+      documentsError = error instanceof Error ? error : new Error('Unknown error occurred')
+    }
 
     if (documentsError) {
-      console.error('Compliance documents fetch error:', documentsError.message)
+      console.error('❌ Compliance documents fetch error:', documentsError.message)
+      // Don't fail the page for document errors, just log them
     }
 
     // Handle missing data gracefully
@@ -135,6 +254,7 @@ export default async function BuildingCompliancePage({
 
     // If no active assets exist, show a message to run the setup
     if (safeBuildingAssets.length === 0) {
+      console.log('ℹ️ No compliance assets found for building:', buildingId)
       return (
         <ErrorBoundary>
           <LayoutWithSidebar>
@@ -145,7 +265,7 @@ export default async function BuildingCompliancePage({
                     <Shield className="h-8 w-8 text-white" />
                   </div>
                   <h2 className="text-2xl font-serif font-bold text-[#333333] mb-4">
-                    No Compliance Assets Configured
+                    No Compliance Assets Currently Tracked
                   </h2>
                   <p className="text-gray-600 mb-6">
                     This building doesn't have any compliance requirements configured yet. Set up compliance tracking to start monitoring building requirements.
@@ -158,10 +278,10 @@ export default async function BuildingCompliancePage({
                       Setup Compliance
                     </button>
                     <button
-                      onClick={() => window.history.back()}
+                      onClick={() => window.location.href = '/buildings'}
                       className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors duration-200"
                     >
-                      Go Back
+                      View All Buildings
                     </button>
                   </div>
                 </div>
@@ -234,6 +354,40 @@ export default async function BuildingCompliancePage({
     )
   } catch (error) {
     console.error('❌ Unexpected error in building compliance tracker page:', error)
-    redirect('/buildings')
+    return (
+      <ErrorBoundary>
+        <LayoutWithSidebar>
+          <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
+            <div className="max-w-md mx-auto text-center p-8">
+              <div className="bg-white rounded-2xl shadow-lg p-8">
+                <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Shield className="h-8 w-8 text-white" />
+                </div>
+                <h2 className="text-2xl font-serif font-bold text-[#333333] mb-4">
+                  Something Went Wrong
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  We encountered an unexpected error while loading the compliance tracker. Please try again later.
+                </p>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="w-full bg-[#2BBEB4] hover:bg-[#0F5D5D] text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-200"
+                  >
+                    Try Again
+                  </button>
+                  <button
+                    onClick={() => window.location.href = '/buildings'}
+                    className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors duration-200"
+                  >
+                    View All Buildings
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </LayoutWithSidebar>
+      </ErrorBoundary>
+    )
   }
 }
