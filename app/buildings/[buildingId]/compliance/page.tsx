@@ -56,40 +56,22 @@ export default async function BuildingCompliancePage({
   try {
     // Fetch building details first
     let building = null
-    console.log('🔍 Attempting to fetch building with ID:', buildingId, 'Type:', typeof buildingId)
+    console.log('🔍 Attempting to fetch building with UUID:', buildingId)
     
     try {
-      if (/^\d+$/.test(buildingId)) {
-        // If it's a numeric ID, try as integer
-        console.log('🔢 Treating as integer ID:', parseInt(buildingId))
-        const { data, error } = await supabase
-          .from('buildings')
-          .select('*')
-          .eq('id', parseInt(buildingId))
-          .maybeSingle()
+      // Buildings table uses UUID as primary key
+      const { data, error } = await supabase
+        .from('buildings')
+        .select('*')
+        .eq('id', buildingId)
+        .maybeSingle()
 
-        if (error) {
-          console.error('❌ Integer query error:', error)
-          throw error
-        }
-        building = data
-        console.log('✅ Integer query result:', building)
-      } else {
-        // If it's not numeric, try as UUID
-        console.log('🔑 Treating as UUID:', buildingId)
-        const { data, error } = await supabase
-          .from('buildings')
-          .select('*')
-          .eq('id', buildingId)
-          .maybeSingle()
-
-        if (error) {
-          console.error('❌ UUID query error:', error)
-          throw error
-        }
-        building = data
-        console.log('✅ UUID query result:', building)
+      if (error) {
+        console.error('❌ Building query error:', error)
+        throw error
       }
+      building = data
+      console.log('✅ Building query result:', building)
       
       if (!building) {
         console.error('❌ No building found for ID:', buildingId)
@@ -105,7 +87,7 @@ export default async function BuildingCompliancePage({
                     Building Not Found
                   </h2>
                   <p className="text-gray-600 mb-6">
-                    The building with ID "{buildingId}" doesn't exist or you don't have permission to view it.
+                    The building with UUID "{buildingId}" doesn't exist or you don't have permission to view it.
                   </p>
                   <button
                     onClick={() => window.location.href = '/buildings'}
