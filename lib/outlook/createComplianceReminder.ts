@@ -38,6 +38,361 @@ interface ReminderMetadata {
   created_at: string;
 }
 
+interface CreateComplianceReminderInput {
+  buildingName: string;
+  assetName: string;
+  nextDueDate: string; // ISO format
+  outlookAccessToken: string;
+}
+
+interface OutlookEventResponse {
+  id: string;
+  subject: string;
+  start: {
+    dateTime: string;
+    timeZone: string;
+  };
+  end: {
+    dateTime: string;
+    timeZone: string;
+  };
+  isAllDay: boolean;
+  reminderMinutesBeforeStart: number;
+  importance: string;
+}
+
+/**
+ * Creates an Outlook calendar event for a compliance renewal reminder
+ * using Microsoft Graph API.
+ */
+export async function createComplianceReminder(
+  input: CreateComplianceReminderInput
+): Promise<string> {
+  try {
+    // Validate inputs
+    const validation = validateComplianceReminderInput(input);
+    if (!validation.isValid) {
+      throw new Error(`Invalid input: ${validation.errors.join(', ')}`);
+    }
+
+    console.log('📅 Creating compliance reminder for:', {
+      building: input.buildingName,
+      asset: input.assetName,
+      dueDate: input.nextDueDate
+    });
+
+    // Format the due date for the event
+    const dueDate = new Date(input.nextDueDate);
+    const formattedDate = dueDate.toISOString();
+
+    // Create the event body
+    const eventBody = {
+      subject: `[Compliance Reminder] ${input.assetName} due at ${input.buildingName}`,
+      body: {
+        contentType: "Text",
+        content: `This is a compliance deadline reminder created by BlocIQ.
+
+Asset: ${input.assetName}
+Building: ${input.buildingName}
+Due Date: ${dueDate.toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        })}
+
+Please ensure this compliance requirement is renewed before the due date.`
+      },
+      start: {
+        dateTime: formattedDate,
+        timeZone: "Europe/London"
+      },
+      end: {
+        dateTime: formattedDate,
+        timeZone: "Europe/London"
+      },
+      isAllDay: true,
+      reminderMinutesBeforeStart: 43200, // 30 days (30 * 24 * 60)
+      importance: "high",
+      categories: ["Compliance", "BlocIQ"],
+      showAs: "busy"
+    };
+
+    // Make the API request to Microsoft Graph
+    const response = await fetch('https://graph.microsoft.com/v1.0/me/events', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${input.outlookAccessToken}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(eventBody)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Failed to create Outlook event:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText
+      });
+      
+      throw new Error(`Failed to create Outlook event: ${response.status} ${response.statusText}`);
+    }
+
+    const eventData: OutlookEventResponse = await response.json();
+
+    console.log('✅ Compliance reminder created successfully:', {
+      eventId: eventData.id,
+      subject: eventData.subject,
+      dueDate: eventData.start.dateTime
+    });
+
+    return eventData.id;
+
+  } catch (error) {
+    console.error('❌ Error creating compliance reminder:', error);
+    
+    if (error instanceof Error) {
+      throw new Error(`Failed to create compliance reminder: ${error.message}`);
+    }
+    
+    throw new Error('Failed to create compliance reminder: Unknown error');
+  }
+}
+
+/**
+ * Validates the input parameters for creating a compliance reminder
+ */
+function validateComplianceReminderInput(
+  input: CreateComplianceReminderInput
+): { isValid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  // Validate building name
+  if (!input.buildingName || input.buildingName.trim().length === 0) {
+    errors.push('Building name is required');
+  }
+
+  // Validate asset name
+  if (!input.assetName || input.assetName.trim().length === 0) {
+    errors.push('Asset name is required');
+  }
+
+  // Validate next due date
+  if (!input.nextDueDate) {
+    errors.push('Next due date is required');
+  } else {
+    const dueDate = new Date(input.nextDueDate);
+    if (isNaN(dueDate.getTime())) {
+      errors.push('Invalid next due date format (must be ISO format)');
+    } else if (dueDate < new Date()) {
+      errors.push('Next due date cannot be in the past');
+    }
+  }
+
+  // Validate Outlook access token
+  if (!input.outlookAccessToken || input.outlookAccessToken.trim().length === 0) {
+    errors.push('Outlook access token is required');
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+}
+
+/**
+ * Helper function to check if a compliance reminder already exists
+ * for the given asset and building
+ */
+export async function checkExistingComplianceReminder(
+  buildingName: string,
+  assetName: string,
+  outlookAccessToken: string
+): Promise<boolean> {
+  try {
+    const searchSubject = `[Compliance Reminder] ${assetName} due at ${buildingName}`;
+    
+    const response = await fetch(
+      `https://graph.microsoft.com/v1.0/me/events?$filter=subject eq '${encodeURIComponent(searchSubject)}'`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${outlookAccessToken}`,
+          'Accept': 'application/json'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      console.error('❌ Failed to check existing reminders:', response.statusText);
+      return false;
+    }
+
+    const data = await response.json();
+    return data.value && data.value.length > 0;
+
+  } catch (error) {
+    console.error('❌ Error checking existing compliance reminder:', error);
+    return false;
+  }
+}
+
+/**
+ * Helper function to delete a compliance reminder by event ID
+ */
+export async function deleteComplianceReminder(
+  eventId: string,
+  outlookAccessToken: string
+): Promise<boolean> {
+  try {
+    const response = await fetch(`https://graph.microsoft.com/v1.0/me/events/${eventId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${outlookAccessToken}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      console.error('❌ Failed to delete compliance reminder:', response.statusText);
+      return false;
+    }
+
+    console.log('✅ Compliance reminder deleted successfully:', eventId);
+    return true;
+
+  } catch (error) {
+    console.error('❌ Error deleting compliance reminder:', error);
+    return false;
+  }
+}
+
+/**
+ * Helper function to update a compliance reminder
+ */
+export async function updateComplianceReminder(
+  eventId: string,
+  input: CreateComplianceReminderInput
+): Promise<boolean> {
+  try {
+    // Validate inputs
+    const validation = validateComplianceReminderInput(input);
+    if (!validation.isValid) {
+      throw new Error(`Invalid input: ${validation.errors.join(', ')}`);
+    }
+
+    const dueDate = new Date(input.nextDueDate);
+    const formattedDate = dueDate.toISOString();
+
+    const eventBody = {
+      subject: `[Compliance Reminder] ${input.assetName} due at ${input.buildingName}`,
+      body: {
+        contentType: "Text",
+        content: `This is a compliance deadline reminder created by BlocIQ.
+
+Asset: ${input.assetName}
+Building: ${input.buildingName}
+Due Date: ${dueDate.toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        })}
+
+Please ensure this compliance requirement is renewed before the due date.`
+      },
+      start: {
+        dateTime: formattedDate,
+        timeZone: "Europe/London"
+      },
+      end: {
+        dateTime: formattedDate,
+        timeZone: "Europe/London"
+      },
+      isAllDay: true,
+      reminderMinutesBeforeStart: 43200, // 30 days
+      importance: "high",
+      categories: ["Compliance", "BlocIQ"],
+      showAs: "busy"
+    };
+
+    const response = await fetch(`https://graph.microsoft.com/v1.0/me/events/${eventId}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${input.outlookAccessToken}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(eventBody)
+    });
+
+    if (!response.ok) {
+      console.error('❌ Failed to update compliance reminder:', response.statusText);
+      return false;
+    }
+
+    console.log('✅ Compliance reminder updated successfully:', eventId);
+    return true;
+
+  } catch (error) {
+    console.error('❌ Error updating compliance reminder:', error);
+    return false;
+  }
+}
+
+/**
+ * Helper function to create or update a compliance reminder
+ * (creates new if doesn't exist, updates if it does)
+ */
+export async function createOrUpdateComplianceReminder(
+  input: CreateComplianceReminderInput
+): Promise<{ eventId: string; action: 'created' | 'updated' }> {
+  try {
+    // Check if reminder already exists
+    const exists = await checkExistingComplianceReminder(
+      input.buildingName,
+      input.assetName,
+      input.outlookAccessToken
+    );
+
+    if (exists) {
+      // Get the existing event ID and update it
+      const searchSubject = `[Compliance Reminder] ${input.assetName} due at ${input.buildingName}`;
+      
+      const response = await fetch(
+        `https://graph.microsoft.com/v1.0/me/events?$filter=subject eq '${encodeURIComponent(searchSubject)}'`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${input.outlookAccessToken}`,
+            'Accept': 'application/json'
+          }
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.value && data.value.length > 0) {
+          const eventId = data.value[0].id;
+          const updated = await updateComplianceReminder(eventId, input);
+          
+          if (updated) {
+            return { eventId, action: 'updated' };
+          }
+        }
+      }
+    }
+
+    // Create new reminder if doesn't exist or update failed
+    const eventId = await createComplianceReminder(input);
+    return { eventId, action: 'created' };
+
+  } catch (error) {
+    console.error('❌ Error in createOrUpdateComplianceReminder:', error);
+    throw error;
+  }
+}
+
 /**
  * Create a compliance reminder calendar event in Outlook
  * 
