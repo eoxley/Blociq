@@ -4,7 +4,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { Shield } from 'lucide-react'
 import LayoutWithSidebar from '@/components/LayoutWithSidebar'
-import ComplianceTrackerClient from './ComplianceTrackerClient'
+import BuildingComplianceTracker from './BuildingComplianceTracker'
 import ErrorBoundary from '@/components/ErrorBoundary'
 
 export default async function BuildingCompliancePage({ 
@@ -79,16 +79,16 @@ export default async function BuildingCompliancePage({
       )
     }
 
-    // Fetch active building compliance assets with compliance asset details
+    // 🔧 Supabase Query: Fetch active building compliance assets with compliance asset details
     const { data: buildingAssets, error: buildingAssetsError } = await supabase
       .from('building_compliance_assets')
       .select(`
         *,
         compliance_assets (
-          id,
           name,
+          category,
           description,
-          category
+          recommended_frequency
         )
       `)
       .eq('building_id', buildingId)
@@ -111,7 +111,7 @@ export default async function BuildingCompliancePage({
       )
     }
 
-    // Fetch compliance documents for this building
+    // Fetch compliance documents for this building (optional)
     const { data: complianceDocuments, error: documentsError } = await supabase
       .from('compliance_docs')
       .select(`
@@ -189,14 +189,6 @@ export default async function BuildingCompliancePage({
       const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
       return daysUntilDue <= 30 && daysUntilDue > 0
     }).length
-    const missingDocuments = safeBuildingAssets.filter((asset: any) => {
-      // Check if there's a document for this asset
-      const assetDocuments = safeComplianceDocuments.filter((doc: any) => 
-        doc.doc_type?.toLowerCase().includes(asset.compliance_assets?.name?.toLowerCase() || '') ||
-        asset.compliance_assets?.name?.toLowerCase().includes(doc.doc_type?.toLowerCase() || '')
-      )
-      return assetDocuments.length === 0
-    }).length
 
     // Group assets by category
     const groupedAssets = safeBuildingAssets.reduce((acc: any, buildingAsset: any) => {
@@ -227,8 +219,7 @@ export default async function BuildingCompliancePage({
         total: totalAssets,
         compliant: compliantAssets,
         overdue: overdueAssets,
-        dueSoon: dueSoonAssets,
-        missingDocuments
+        dueSoon: dueSoonAssets
       }
     }
 
@@ -237,7 +228,7 @@ export default async function BuildingCompliancePage({
     return (
       <ErrorBoundary>
         <LayoutWithSidebar>
-          <ComplianceTrackerClient complianceData={complianceData} />
+          <BuildingComplianceTracker complianceData={complianceData} />
         </LayoutWithSidebar>
       </ErrorBoundary>
     )
