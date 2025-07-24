@@ -2,6 +2,7 @@ import React from 'react'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { Building2, AlertTriangle, RefreshCw } from 'lucide-react'
 import LayoutWithSidebar from '@/components/LayoutWithSidebar'
 import BuildingCommandCentre from './BuildingCommandCentre'
 import ErrorBoundary from '@/components/ErrorBoundary'
@@ -16,6 +17,40 @@ export default async function BuildingDetailPage({
     const cookieStore = cookies()
     const supabase = createServerComponentClient({ cookies: () => cookieStore })
     
+    // Validate buildingId immediately
+    if (!buildingId || buildingId.trim().length === 0) {
+      console.error('❌ No building ID provided or invalid building ID')
+      return (
+        <ErrorBoundary>
+          <LayoutWithSidebar>
+            <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
+              <div className="max-w-md mx-auto text-center p-8">
+                <div className="bg-white rounded-2xl shadow-lg p-8">
+                  <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Building2 className="h-8 w-8 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-serif font-bold text-[#333333] mb-4">
+                    Invalid Building
+                  </h2>
+                  <p className="text-gray-600 mb-6">
+                    The building ID provided is invalid or missing. Please check the URL and try again.
+                  </p>
+                  <button
+                    onClick={() => window.location.href = '/buildings'}
+                    className="w-full bg-[#2BBEB4] hover:bg-[#0F5D5D] text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-200"
+                  >
+                    View All Buildings
+                  </button>
+                </div>
+              </div>
+            </div>
+          </LayoutWithSidebar>
+        </ErrorBoundary>
+      )
+    }
+
+    console.log('🔍 Fetching building details for ID:', buildingId)
+    
     // Secure the route using Supabase Auth
     const {
       data: { session },
@@ -25,48 +60,105 @@ export default async function BuildingDetailPage({
       redirect('/login')
     }
 
-    // Validate buildingId
-    if (!buildingId) {
-      console.error('No building ID provided')
-      redirect('/buildings')
-    }
-
-    console.log('🔍 Fetching building details for ID:', buildingId)
-
-    // Try to fetch building by ID - handle both integer and UUID
+    // Try to fetch building by ID with enhanced error handling
     let building = null
     let buildingError = null
 
-    // First, try as integer ID
-    if (/^\d+$/.test(buildingId)) {
-      const { data, error } = await supabase
-        .from('buildings')
-        .select('*')
-        .eq('id', parseInt(buildingId))
-        .single()
-      
-      building = data
-      buildingError = error
-    } else {
-      // If not an integer, try as UUID (in case there's a UUID column)
-      const { data, error } = await supabase
-        .from('buildings')
-        .select('*')
-        .eq('id', buildingId)
-        .single()
-      
-      building = data
-      buildingError = error
+    try {
+      // First, try as integer ID
+      if (/^\d+$/.test(buildingId)) {
+        const { data, error } = await supabase
+          .from('buildings')
+          .select('*')
+          .eq('id', parseInt(buildingId))
+          .single()
+        
+        building = data
+        buildingError = error
+      } else {
+        // If not an integer, try as UUID (in case there's a UUID column)
+        const { data, error } = await supabase
+          .from('buildings')
+          .select('*')
+          .eq('id', buildingId)
+          .single()
+        
+        building = data
+        buildingError = error
+      }
+    } catch (error) {
+      console.error('❌ Unexpected error fetching building:', error)
+      buildingError = error instanceof Error ? error : new Error('Unknown error occurred')
     }
 
     if (buildingError) {
       console.error('❌ Error fetching building:', buildingError)
-      redirect('/buildings')
+      return (
+        <ErrorBoundary>
+          <LayoutWithSidebar>
+            <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
+              <div className="max-w-md mx-auto text-center p-8">
+                <div className="bg-white rounded-2xl shadow-lg p-8">
+                  <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Building2 className="h-8 w-8 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-serif font-bold text-[#333333] mb-4">
+                    Could Not Load Building
+                  </h2>
+                  <p className="text-gray-600 mb-6">
+                    We encountered an error while loading the building information. Please try again later.
+                  </p>
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="w-full bg-[#2BBEB4] hover:bg-[#0F5D5D] text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-200"
+                    >
+                      Try Again
+                    </button>
+                    <button
+                      onClick={() => window.location.href = '/buildings'}
+                      className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors duration-200"
+                    >
+                      View All Buildings
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </LayoutWithSidebar>
+        </ErrorBoundary>
+      )
     }
 
     if (!building) {
-      console.error('❌ Building not found:', buildingId)
-      redirect('/buildings')
+      console.error('❌ Building not found for ID:', buildingId)
+      return (
+        <ErrorBoundary>
+          <LayoutWithSidebar>
+            <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
+              <div className="max-w-md mx-auto text-center p-8">
+                <div className="bg-white rounded-2xl shadow-lg p-8">
+                  <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Building2 className="h-8 w-8 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-serif font-bold text-[#333333] mb-4">
+                    Building Not Found
+                  </h2>
+                  <p className="text-gray-600 mb-6">
+                    The building you're looking for doesn't exist or you don't have permission to view it.
+                  </p>
+                  <button
+                    onClick={() => window.location.href = '/buildings'}
+                    className="w-full bg-[#2BBEB4] hover:bg-[#0F5D5D] text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-200"
+                  >
+                    View All Buildings
+                  </button>
+                </div>
+              </div>
+            </div>
+          </LayoutWithSidebar>
+        </ErrorBoundary>
+      )
     }
 
     console.log('✅ Building found:', building.name)
@@ -140,6 +232,8 @@ export default async function BuildingDetailPage({
             }
           }).length
         }
+        
+        console.log('✅ Compliance assets loaded:', complianceAssets.length, 'assets')
       }
     } catch (error) {
       console.warn('⚠️ Error fetching compliance assets:', error)
@@ -250,7 +344,7 @@ export default async function BuildingDetailPage({
       console.warn('⚠️ Error fetching todos:', error)
     }
 
-    console.log('✅ Building data prepared successfully')
+    console.log('✅ Building data prepared successfully for:', building.name)
 
     return (
       <ErrorBoundary>
@@ -274,6 +368,40 @@ export default async function BuildingDetailPage({
     )
   } catch (error) {
     console.error('❌ Unexpected error in building detail page:', error)
-    redirect('/buildings')
+    return (
+      <ErrorBoundary>
+        <LayoutWithSidebar>
+          <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
+            <div className="max-w-md mx-auto text-center p-8">
+              <div className="bg-white rounded-2xl shadow-lg p-8">
+                <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <AlertTriangle className="h-8 w-8 text-white" />
+                </div>
+                <h2 className="text-2xl font-serif font-bold text-[#333333] mb-4">
+                  Something Went Wrong
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  We encountered an unexpected error while loading the building information. Please try again later.
+                </p>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="w-full bg-[#2BBEB4] hover:bg-[#0F5D5D] text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-200"
+                  >
+                    Try Again
+                  </button>
+                  <button
+                    onClick={() => window.location.href = '/buildings'}
+                    className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors duration-200"
+                  >
+                    View All Buildings
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </LayoutWithSidebar>
+      </ErrorBoundary>
+    )
   }
 } 
