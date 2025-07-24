@@ -56,27 +56,68 @@ export default async function BuildingCompliancePage({
   try {
     // Fetch building details first
     let building = null
+    console.log('🔍 Attempting to fetch building with ID:', buildingId, 'Type:', typeof buildingId)
+    
     try {
       if (/^\d+$/.test(buildingId)) {
         // If it's a numeric ID, try as integer
+        console.log('🔢 Treating as integer ID:', parseInt(buildingId))
         const { data, error } = await supabase
           .from('buildings')
           .select('*')
           .eq('id', parseInt(buildingId))
-          .single()
+          .maybeSingle()
 
-        if (error) throw error
+        if (error) {
+          console.error('❌ Integer query error:', error)
+          throw error
+        }
         building = data
+        console.log('✅ Integer query result:', building)
       } else {
         // If it's not numeric, try as UUID
+        console.log('🔑 Treating as UUID:', buildingId)
         const { data, error } = await supabase
           .from('buildings')
           .select('*')
           .eq('id', buildingId)
-          .single()
+          .maybeSingle()
 
-        if (error) throw error
+        if (error) {
+          console.error('❌ UUID query error:', error)
+          throw error
+        }
         building = data
+        console.log('✅ UUID query result:', building)
+      }
+      
+      if (!building) {
+        console.error('❌ No building found for ID:', buildingId)
+        return (
+          <LayoutWithSidebar>
+            <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
+              <div className="max-w-md mx-auto text-center p-8">
+                <div className="bg-white rounded-2xl shadow-lg p-8">
+                  <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Shield className="h-8 w-8 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-serif font-bold text-[#333333] mb-4">
+                    Building Not Found
+                  </h2>
+                  <p className="text-gray-600 mb-6">
+                    The building with ID "{buildingId}" doesn't exist or you don't have permission to view it.
+                  </p>
+                  <button
+                    onClick={() => window.location.href = '/buildings'}
+                    className="w-full bg-[#2BBEB4] hover:bg-[#0F5D5D] text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-200"
+                  >
+                    View All Buildings
+                  </button>
+                </div>
+              </div>
+            </div>
+          </LayoutWithSidebar>
+        )
       }
     } catch (error) {
       console.error('❌ Error fetching building:', error)
@@ -89,17 +130,25 @@ export default async function BuildingCompliancePage({
                   <Shield className="h-8 w-8 text-white" />
                 </div>
                 <h2 className="text-2xl font-serif font-bold text-[#333333] mb-4">
-                  Building Not Found
+                  Error Loading Building
                 </h2>
                 <p className="text-gray-600 mb-6">
-                  The building you're looking for doesn't exist or you don't have permission to view it.
+                  We encountered an error while loading the building information. Please try again later.
                 </p>
-                <button
-                  onClick={() => window.location.href = '/buildings'}
-                  className="w-full bg-[#2BBEB4] hover:bg-[#0F5D5D] text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-200"
-                >
-                  View All Buildings
-                </button>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="w-full bg-[#2BBEB4] hover:bg-[#0F5D5D] text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-200"
+                  >
+                    Try Again
+                  </button>
+                  <button
+                    onClick={() => window.location.href = '/buildings'}
+                    className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors duration-200"
+                  >
+                    View All Buildings
+                  </button>
+                </div>
               </div>
             </div>
           </div>
