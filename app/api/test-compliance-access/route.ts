@@ -84,8 +84,7 @@ export async function GET(request: Request) {
           compliance_assets (
             name,
             category,
-            description,
-            recommended_frequency
+            description
           )
         `)
         .eq('building_id', building.id)
