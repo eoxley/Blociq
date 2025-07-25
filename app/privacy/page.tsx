@@ -19,7 +19,7 @@ export default function PrivacyPolicyPage() {
           </div>
         </div>
 
-                {/* Content */}
+        {/* Content */}
         <div className="bg-white rounded-xl shadow-lg p-8 md:p-12">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-4">
