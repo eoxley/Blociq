@@ -26,7 +26,7 @@ export function useEmailSync(): [Email[], number] {
   useEffect(() => {
     const fetchEmails = async () => {
       const { data, error } = await supabase
-        .from("emails")
+        .from("incoming_emails")
         .select("*")
         .order("received_at", { ascending: false });
 
