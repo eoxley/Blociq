@@ -11,10 +11,10 @@ import { BlocIQBadge } from '@/components/ui/blociq-badge';
 
 const navItems = [
   { label: "Home", icon: "🏠", href: "/home", comingSoon: false, description: "Dashboard overview" },
-  { label: "Inbox", icon: "📥", href: "/inbox", comingSoon: false, description: "Email management" },
-  { label: "Buildings", icon: "🏢", href: "/buildings", comingSoon: false, description: "Property portfolio" },
+  { label: "Inbox", icon: "📥", href: "/dashboard/inbox", comingSoon: false, description: "Email management" },
+  { label: "Buildings", icon: "🏢", href: "/dashboard/buildings", comingSoon: false, description: "Property portfolio" },
   { label: "Compliance", icon: "🛡️", href: "/compliance", comingSoon: false, description: "Regulatory tracking" },
-  { label: "Communications", icon: "📣", href: "/communications", comingSoon: false, description: "Letter & email templates" },
+  { label: "Communications", icon: "📣", href: "/dashboard/communications", comingSoon: false, description: "Letter & email templates" },
   { label: "AI Documents", icon: "🤖", href: "/ai-documents", comingSoon: false, description: "Smart document analysis" },
   { label: "Major Works", icon: "🔧", href: "/major-works", comingSoon: false, description: "Project management" },
   { label: "Finances", icon: "💷", href: "#", comingSoon: true, description: "Financial tracking" },
