@@ -1,4 +1,5 @@
 import { ReactNode } from 'react'
+import { redirect } from 'next/navigation'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import MobileNavigation from '@/components/MobileNavigation'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
@@ -9,6 +10,11 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   const cookieStore = cookies()
   const supabase = createServerComponentClient({ cookies: () => cookieStore })
   const { data: { user } } = await supabase.auth.getUser()
+
+  // Redirect to login if user is not authenticated
+  if (!user) {
+    redirect('/login')
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#FAFAFA]">

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import Link from 'next/link'
 import { 
   Building2, 
@@ -163,22 +163,58 @@ function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
   )
 }
 
-// Server component that fetches data and renders the client component
-export default async function BuildingsPage() {
-  // Create Supabase client with service role key for server-side queries
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+// Client component that fetches data and renders the buildings list
+export default function BuildingsPage() {
+  const [buildings, setBuildings] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const supabase = createClientComponentClient()
 
-  // Fetch all buildings with RLS-safe query
-  const { data: buildings, error } = await supabase
-    .from('buildings')
-    .select('*')
-    .order('name')
+  // Fetch buildings on component mount
+  React.useEffect(() => {
+    const fetchBuildings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('buildings')
+          .select('*')
+          .order('name')
+
+        if (error) {
+          console.error('Error fetching buildings:', error)
+          setError('Unable to load your buildings at this time. Please try again later.')
+        } else {
+          setBuildings(data || [])
+        }
+      } catch (err) {
+        console.error('Error fetching buildings:', err)
+        setError('Unable to load your buildings at this time. Please try again later.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchBuildings()
+  }, [supabase])
+
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg animate-pulse">
+            <Building2 className="h-8 w-8 text-white" />
+          </div>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            Loading Buildings...
+          </h1>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            Please wait while we load your properties
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   if (error) {
-    console.error('Error fetching buildings:', error)
     return (
       <div className="space-y-6">
         <div className="text-center">
@@ -189,7 +225,7 @@ export default async function BuildingsPage() {
             Error Loading Buildings
           </h1>
           <p className="text-lg text-gray-600">
-            Unable to load your buildings at this time. Please try again later.
+            {error}
           </p>
         </div>
       </div>
@@ -212,7 +248,7 @@ export default async function BuildingsPage() {
       </div>
 
       {/* Buildings List */}
-      <BuildingsList initialBuildings={buildings || []} />
+      <BuildingsList initialBuildings={buildings} />
 
       {/* CTA Section */}
       {buildings && buildings.length > 0 && (
