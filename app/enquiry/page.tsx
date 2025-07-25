@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Send, Building2, Users, Mail, User, Building } from 'lucide-react';
 import Link from 'next/link';
 import BlocIQLogo from '@/components/BlocIQLogo';
+import LayoutWithSidebar from '@/components/LayoutWithSidebar';
 
 export default function EnquiryPage() {
   const [formData, setFormData] = useState({
@@ -56,7 +57,7 @@ This enquiry was submitted through the BlocIQ landing page.
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <LayoutWithSidebar>
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="text-center">
             <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -78,34 +79,12 @@ This enquiry was submitted through the BlocIQ landing page.
             </Link>
           </div>
         </div>
-      </div>
+      </LayoutWithSidebar>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Navigation */}
-      <nav className="bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <Link href="/" className="flex items-center">
-              <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
-                <BlocIQLogo className="text-white" size={24} />
-              </div>
-              <span className="ml-3 text-2xl font-bold text-gray-900">BlocIQ</span>
-            </Link>
-            <Link 
-              href="/"
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Homepage
-            </Link>
-          </div>
-        </div>
-      </nav>
-
-      {/* Main Content */}
+    <LayoutWithSidebar>
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12">
           <div className="text-center mb-8">
@@ -249,6 +228,6 @@ This enquiry was submitted through the BlocIQ landing page.
           </div>
         </div>
       </div>
-    </div>
+    </LayoutWithSidebar>
   );
 } 
