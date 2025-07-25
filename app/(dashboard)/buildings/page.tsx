@@ -10,7 +10,8 @@ import {
   Plus,
   Eye,
   ArrowRight,
-  Search
+  Search,
+  Shield
 } from 'lucide-react'
 
 // Client component for the buildings list with search functionality
@@ -121,6 +122,17 @@ function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
                 View Building
                 <ArrowRight className="h-4 w-4" />
               </Link>
+
+              {/* View Compliance Link */}
+              <div className="mt-4">
+                <Link 
+                  href={`/buildings/${building.id}/compliance`}
+                  className="inline-flex items-center gap-2 bg-teal-50 text-teal-700 rounded-full px-4 py-2 text-sm font-medium hover:bg-teal-100 transition-colors duration-200"
+                >
+                  <Shield className="h-4 w-4" />
+                  View Compliance
+                </Link>
+              </div>
             </div>
           ))}
         </div>
