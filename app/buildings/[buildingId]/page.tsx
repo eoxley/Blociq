@@ -17,12 +17,15 @@ import {
   Zap,
   Phone,
   ArrowRight,
-  User
+  User,
+  Search,
+  Eye
 } from 'lucide-react'
 import LayoutWithSidebar from '@/components/LayoutWithSidebar'
 import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
 import { BlocIQBadge } from '@/components/ui/blociq-badge'
 import { BlocIQButton } from '@/components/ui/blociq-button'
+import SearchableUnitsTable from '@/components/SearchableUnitsTable'
 
 export default async function BuildingDetailPage({ 
   params 
@@ -504,47 +507,7 @@ export default async function BuildingDetailPage({
             </div>
             
             <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100">
-              {units.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {units.map((unit) => (
-                    <div key={unit.id} className="p-6 border border-gray-200 rounded-2xl hover:shadow-lg transition-all duration-300">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-xl font-bold text-gray-900">Unit {unit.unit_number}</h3>
-                        <BlocIQBadge variant="secondary" size="sm">{unit.type}</BlocIQBadge>
-                      </div>
-                      <p className="text-lg text-gray-600 mb-4">Floor {unit.floor}</p>
-                      {unit.leaseholders && unit.leaseholders.length > 0 ? (
-                        <div className="space-y-3">
-                          {unit.leaseholders.map((leaseholder) => (
-                            <div key={leaseholder.id} className="p-3 bg-gray-50 rounded-xl">
-                              <div className="font-semibold text-gray-900 mb-1">{leaseholder.name}</div>
-                              <div className="text-gray-600">{leaseholder.email}</div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-4">
-                          <p className="text-gray-500 italic">No leaseholder assigned</p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <Users className="h-16 w-16 text-gray-400 mx-auto mb-6" />
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">No units added yet</h3>
-                  <p className="text-gray-600 mb-8 max-w-md mx-auto">
-                    Start by adding units to this building to manage leaseholder information
-                  </p>
-                  <a 
-                    href={`/buildings/${buildingId}/units`}
-                    className="inline-flex items-center gap-3 bg-gradient-to-r from-teal-600 to-teal-700 text-white px-8 py-4 rounded-xl hover:from-teal-700 hover:to-teal-800 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-                  >
-                    Add Units
-                  </a>
-                </div>
-              )}
+              <SearchableUnitsTable units={units} buildingId={buildingId} />
               
               <div className="text-center mt-8 pt-6 border-t border-gray-200">
                 <span className="text-lg text-gray-600 font-medium">{units.length} units total</span>
