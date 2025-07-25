@@ -3,7 +3,7 @@
 // Home page client component - Major works dashboard removed for cleaner interface
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2 } from 'lucide-react'
+import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2, ExternalLink, RefreshCw } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import DailySummary from '@/components/DailySummary'
 import AskBlocIQHomepage from '@/components/AskBlocIQHomepage'
@@ -14,12 +14,18 @@ import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui
 import { BlocIQBadge } from '@/components/ui/blociq-badge'
 import BlocIQLogo from '@/components/BlocIQLogo'
 import { toast } from 'sonner'
+import { checkOutlookConnection, fetchOutlookEvents, getOutlookAuthUrl } from '@/lib/outlookUtils'
 
 type PropertyEvent = {
   building: string
   date: string
   title: string
   category: string
+  source?: 'property' | 'outlook'
+  event_type?: 'outlook' | 'manual'
+  location?: string | null
+  organiser_name?: string | null
+  online_meeting?: any | null
 }
 
 type Building = {
@@ -129,6 +135,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const [upcomingEvents, setUpcomingEvents] = useState<PropertyEvent[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [buildings, setBuildings] = useState<Building[]>([]);
+  
+  // Outlook integration
+  const [outlookConnected, setOutlookConnected] = useState(false);
+  const [outlookEmail, setOutlookEmail] = useState<string | null>(null);
+  const [loadingOutlook, setLoadingOutlook] = useState(false);
+  const [syncingOutlook, setSyncingOutlook] = useState(false);
 
   // Fetch buildings for event form
   useEffect(() => {
@@ -164,7 +176,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           .limit(10);
 
         if (error) {
-          console.error('Error fetching events:', error);
+          console.error('Error fetching events:', error?.message || JSON.stringify(error));
           setUpcomingEvents([]);
         } else {
           // Transform database events to match PropertyEvent type
@@ -175,13 +187,15 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               building: building ? building.name : 'General',
               date: event.start_time,
               title: event.title,
-              category: event.category || event.event_type || '📅 Event'
+              category: event.category || event.event_type || '📅 Event',
+              source: 'property',
+              event_type: 'manual'
             };
           });
           setUpcomingEvents(transformedEvents);
         }
       } catch (error) {
-        console.error('Error fetching events:', error);
+        console.error('Error fetching events:', error?.message || JSON.stringify(error));
         setUpcomingEvents([]);
       } finally {
         setLoadingEvents(false);
@@ -190,6 +204,61 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
     fetchEvents();
   }, [supabase, buildings]); // Add buildings as dependency
+
+  // Check Outlook connection status
+  useEffect(() => {
+    const checkOutlook = async () => {
+      try {
+        const status = await checkOutlookConnection();
+        setOutlookConnected(status.connected);
+        setOutlookEmail(status.email || null);
+      } catch (error) {
+        console.error('Error checking Outlook connection:', error);
+        setOutlookConnected(false);
+      }
+    };
+
+    checkOutlook();
+  }, []);
+
+  // Fetch Outlook events if connected
+  useEffect(() => {
+    const loadOutlookEvents = async () => {
+      if (!outlookConnected) return;
+
+      setLoadingOutlook(true);
+      try {
+        const outlookEvents = await fetchOutlookEvents();
+        
+        // Transform Outlook events to match PropertyEvent type
+        const transformedOutlookEvents: PropertyEvent[] = outlookEvents.map((event: any) => ({
+          building: 'Outlook Calendar',
+          date: event.start_time,
+          title: event.title || event.subject || 'Untitled Event',
+          category: event.categories?.join(', ') || '📅 Outlook Event',
+          source: 'outlook',
+          event_type: 'outlook',
+          location: event.location,
+          organiser_name: event.organiser_name,
+          online_meeting: event.online_meeting
+        }));
+
+        // Combine with existing property events and sort by date
+        setUpcomingEvents(prev => {
+          const combined = [...prev, ...transformedOutlookEvents];
+          return combined.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        });
+
+      } catch (error) {
+        console.error('Error fetching Outlook events:', error);
+        toast.error('Failed to load Outlook events');
+      } finally {
+        setLoadingOutlook(false);
+      }
+    };
+
+    loadOutlookEvents();
+  }, [outlookConnected]);
 
   // Fetch recent emails
   useEffect(() => {
@@ -295,7 +364,21 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   }
 
   const formatEventDate = (dateString: string) => {
+    if (!dateString) {
+      return {
+        date: 'Unknown Date',
+        time: 'Unknown Time'
+      }
+    }
+    
     const date = new Date(dateString)
+    if (isNaN(date.getTime())) {
+      return {
+        date: 'Invalid Date',
+        time: 'Invalid Time'
+      }
+    }
+    
     return {
       date: date.toLocaleDateString('en-GB', { 
         weekday: 'short', 
@@ -308,6 +391,50 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       })
     }
   }
+
+  const handleConnectOutlook = () => {
+    try {
+      const authUrl = getOutlookAuthUrl();
+      window.location.href = authUrl;
+    } catch (error) {
+      console.error('Error getting Outlook auth URL:', error);
+      toast.error('Failed to connect Outlook. Please try again.');
+    }
+  };
+
+  const handleSyncOutlook = async () => {
+    setSyncingOutlook(true);
+    try {
+      const outlookEvents = await fetchOutlookEvents();
+      
+      // Transform Outlook events to match PropertyEvent type
+      const transformedOutlookEvents: PropertyEvent[] = outlookEvents.map((event: any) => ({
+        building: 'Outlook Calendar',
+        date: event.start_time,
+        title: event.title || event.subject || 'Untitled Event',
+        category: event.categories?.join(', ') || '📅 Outlook Event',
+        source: 'outlook',
+        event_type: 'outlook',
+        location: event.location,
+        organiser_name: event.organiser_name,
+        online_meeting: event.online_meeting
+      }));
+
+      // Replace existing Outlook events with new ones
+      setUpcomingEvents(prev => {
+        const propertyEvents = prev.filter(event => event.source === 'property');
+        const combined = [...propertyEvents, ...transformedOutlookEvents];
+        return combined.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      });
+
+      toast.success('Outlook calendar synced successfully!');
+    } catch (error) {
+      console.error('Error syncing Outlook:', error);
+      toast.error('Failed to sync Outlook calendar');
+    } finally {
+      setSyncingOutlook(false);
+    }
+  };
 
 
 
@@ -334,13 +461,51 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               {/* Upcoming Events Section */}
               <BlocIQCard variant="elevated">
                 <BlocIQCardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center">
-                      <Calendar className="h-6 w-6 text-white" />
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center">
+                        <Calendar className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-semibold text-[#333333]">Property Events</h2>
+                        <p className="text-sm text-[#64748B]">Manage your property events</p>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="text-2xl font-semibold text-[#333333]">Property Events</h2>
-                      <p className="text-sm text-[#64748B]">Manage your property events</p>
+                    
+                    {/* Outlook Integration Status */}
+                    <div className="flex items-center gap-2">
+                      {outlookConnected ? (
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span>Outlook Connected</span>
+                          </div>
+                          <BlocIQButton
+                            onClick={handleSyncOutlook}
+                            disabled={syncingOutlook}
+                            size="sm"
+                            variant="outline"
+                            className="text-[#008C8F] border-[#008C8F] hover:bg-[#F0FDFA]"
+                          >
+                            {syncingOutlook ? (
+                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                            ) : (
+                              <RefreshCw className="h-3 w-3 mr-1" />
+                            )}
+                            {syncingOutlook ? 'Syncing...' : 'Sync'}
+                          </BlocIQButton>
+                        </div>
+                      ) : (
+                        <BlocIQButton
+                          onClick={handleConnectOutlook}
+                          size="sm"
+                          variant="outline"
+                          className="text-[#008C8F] border-[#008C8F] hover:bg-[#F0FDFA]"
+                        >
+                          <ExternalLink className="h-3 w-3 mr-1" />
+                          Connect Outlook
+                        </BlocIQButton>
+                      )}
                     </div>
                   </div>
                 </BlocIQCardHeader>
@@ -452,27 +617,42 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                     )}
 
                     {/* Events List */}
-                    {loadingEvents ? (
+                    {(loadingEvents || (outlookConnected && loadingOutlook)) ? (
                       <div className="text-center py-8">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#008C8F] mx-auto mb-2"></div>
-                        <p className="text-[#64748B] text-sm">Loading events...</p>
+                        <p className="text-[#64748B] text-sm">
+                          {loadingEvents ? 'Loading events...' : 'Loading Outlook events...'}
+                        </p>
                       </div>
                     ) : upcomingEvents.length > 0 ? (
                       <div className="space-y-3">
                         {upcomingEvents.map((event, index) => {
                           const { date, time } = formatEventDate(event.date)
                           const eventDate = new Date(event.date)
-                          const isToday = eventDate.toDateString() === new Date().toDateString()
-                          const isTomorrow = eventDate.toDateString() === new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString()
+                          const isToday = !isNaN(eventDate.getTime()) && eventDate.toDateString() === new Date().toDateString()
+                          const isTomorrow = !isNaN(eventDate.getTime()) && eventDate.toDateString() === new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString()
+                          const isOutlookEvent = event.source === 'outlook'
                           
                           return (
-                            <div key={`property-${index}`} className="bg-gradient-to-r from-[#F0FDFA] to-emerald-50 rounded-xl p-4 hover:shadow-lg text-sm border-l-4 border-[#2BBEB4] transition-all duration-200">
+                            <div 
+                              key={`${event.source}-${index}`} 
+                              className={`rounded-xl p-4 hover:shadow-lg text-sm border-l-4 transition-all duration-200 ${
+                                isOutlookEvent 
+                                  ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-400' 
+                                  : 'bg-gradient-to-r from-[#F0FDFA] to-emerald-50 border-[#2BBEB4]'
+                              }`}
+                            >
                               <div className="flex items-start justify-between">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-1">
                                     <div className="font-bold text-[#333333]">
-                                      {event.title}
+                                      {event.title || 'Untitled Event'}
                                     </div>
+                                    {isOutlookEvent && (
+                                      <BlocIQBadge variant="secondary" size="sm">
+                                        Outlook
+                                      </BlocIQBadge>
+                                    )}
                                     {(isToday || isTomorrow) && (
                                       <BlocIQBadge variant={isToday ? "destructive" : "warning"} size="sm">
                                         {isToday ? 'Today' : 'Tomorrow'}
@@ -485,8 +665,23 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                                     </div>
                                   )}
                                   <div className="text-[#64748B] mb-1">
-                                    📍 {event.building}
+                                    📍 {event.building || 'General'}
                                   </div>
+                                  {event.location && (
+                                    <div className="text-[#64748B] mb-1">
+                                      🏢 {event.location}
+                                    </div>
+                                  )}
+                                  {event.organiser_name && (
+                                    <div className="text-[#64748B] mb-1">
+                                      👤 {event.organiser_name}
+                                    </div>
+                                  )}
+                                  {event.online_meeting && (
+                                    <div className="text-blue-600 mb-1">
+                                      🎥 Online meeting available
+                                    </div>
+                                  )}
                                   <div className="text-[#64748B]">
                                     🕒 {date} at {time}
                                   </div>
@@ -500,7 +695,25 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                       <div className="text-center py-8">
                         <Calendar className="h-12 w-12 text-[#64748B] mx-auto mb-3" />
                         <p className="text-[#64748B] text-sm">No events yet</p>
-                        <p className="text-[#64748B] text-xs mt-1">Click "Add New Event" to get started</p>
+                        <p className="text-[#64748B] text-xs mt-1">
+                          {outlookConnected 
+                            ? 'Add property events or sync your Outlook calendar'
+                            : 'Add property events or connect your Outlook calendar'
+                          }
+                        </p>
+                        {!outlookConnected && (
+                          <div className="mt-4">
+                            <BlocIQButton
+                              onClick={handleConnectOutlook}
+                              size="sm"
+                              variant="outline"
+                              className="text-[#008C8F] border-[#008C8F] hover:bg-[#F0FDFA]"
+                            >
+                              <ExternalLink className="h-3 w-3 mr-1" />
+                              Connect Outlook Calendar
+                            </BlocIQButton>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

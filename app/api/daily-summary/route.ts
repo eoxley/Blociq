@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
 
 
     if (eventsError) {
-      console.error('Error fetching events:', eventsError);
+      console.error('Error fetching events:', eventsError?.message || JSON.stringify(eventsError));
     }
 
     // 2. Query unread emails (using correct field name)
