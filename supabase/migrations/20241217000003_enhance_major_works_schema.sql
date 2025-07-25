@@ -160,13 +160,6 @@ CREATE INDEX IF NOT EXISTS idx_major_works_logs_timestamp ON major_works_logs(ti
 -- Enable RLS on logs table
 ALTER TABLE major_works_logs ENABLE ROW LEVEL SECURITY;
 
--- Create RLS policies for logs table
-CREATE POLICY "Major works logs are viewable by authenticated users" ON major_works_logs
-    FOR SELECT USING (auth.role() = 'authenticated');
-
-CREATE POLICY "Major works logs can be created by authenticated users" ON major_works_logs
-    FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-
 -- Add comments for new columns
 COMMENT ON COLUMN major_works_projects.title IS 'Project title (alias for name)';
 COMMENT ON COLUMN major_works_projects.created_by IS 'User who created the project';
