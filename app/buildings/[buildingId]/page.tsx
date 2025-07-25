@@ -188,22 +188,50 @@ export default async function BuildingDetailPage({
     console.log("🔍 Fetching related data for building:", building.id)
     
     // Fetch units and leaseholders
-    const unitsResult = await supabase
-      .from("units")
-      .select(`
-        id,
-        unit_number,
-        floor,
-        type,
-        leaseholder_email,
-        leaseholders (
+    // Fetch units and leaseholders
+    // Since building.id is a UUID but units.building_id expects integer,
+    // we need to find the correct building ID or use a different approach
+    let unitsResult
+    try {
+      // First, try to find the building by name to get the integer ID
+      const buildingByNameResult = await supabase
+        .from("buildings")
+        .select("id")
+        .eq("name", building.name)
+        .maybeSingle()
+      
+      let buildingIdForUnits = building.id
+      
+      if (buildingByNameResult.data && typeof buildingByNameResult.data.id === 'number') {
+        buildingIdForUnits = buildingByNameResult.data.id
+        console.log("🔍 Found building by name with integer ID:", buildingIdForUnits)
+      } else {
+        console.log("🔍 Using original building ID:", buildingIdForUnits)
+      }
+      
+      unitsResult = await supabase
+        .from("units")
+        .select(`
           id,
-          name,
-          email
-        )
-      `)
-      .eq("building_id", building.id)
-      .order("unit_number")
+          unit_number,
+          floor,
+          type,
+          leaseholder_id,
+          leaseholders!leaseholder_id (
+            id,
+            name,
+            email
+          )
+        `)
+        .eq("building_id", buildingIdForUnits)
+        .order("unit_number")
+      
+      console.log("🔍 Units query result:", unitsResult)
+      
+    } catch (error) {
+      console.error("❌ Error fetching units:", error)
+      unitsResult = { data: [], error: null }
+    }
 
     // Fetch compliance summary
     const complianceResult = await supabase
@@ -251,6 +279,8 @@ export default async function BuildingDetailPage({
       .limit(3)
 
     console.log("✅ All related data queries completed")
+    console.log("🔍 Units query result:", unitsResult)
+    console.log("🔍 Units data:", unitsResult.data)
 
     // Process data
     const units = unitsResult.data || []
