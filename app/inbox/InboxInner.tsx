@@ -39,7 +39,7 @@ export default function InboxInner() {
       );
 
       const { data, error } = await supabase
-        .from("emails")
+        .from("incoming_emails")
         .select(`
           *,
           buildings(name),
