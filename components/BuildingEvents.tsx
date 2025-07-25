@@ -57,12 +57,12 @@ export default function BuildingEvents({ buildingId, buildingName }: BuildingEve
         .limit(10);
 
       if (error) {
-        console.error('Error fetching events:', error);
+        console.error('Error fetching events:', error?.message || JSON.stringify(error));
       } else {
         setEvents(data || []);
       }
     } catch (error) {
-      console.error('Error fetching events:', error);
+      console.error('Error fetching events:', error?.message || JSON.stringify(error));
     } finally {
       setLoading(false);
     }
@@ -73,7 +73,23 @@ export default function BuildingEvents({ buildingId, buildingName }: BuildingEve
   };
 
   const formatEventDate = (dateString: string) => {
+    if (!dateString) {
+      return {
+        date: 'Unknown Date',
+        time: 'Unknown Time',
+        fullDate: 'Unknown Date'
+      };
+    }
+    
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return {
+        date: 'Invalid Date',
+        time: 'Invalid Time',
+        fullDate: 'Invalid Date'
+      };
+    }
+    
     return {
       date: date.toLocaleDateString('en-GB', {
         weekday: 'short',
@@ -175,7 +191,8 @@ export default function BuildingEvents({ buildingId, buildingName }: BuildingEve
         ) : filteredEvents.length > 0 ? (
           filteredEvents.map((event) => {
             const { date, time, fullDate } = formatEventDate(event.start_time);
-            const isToday = new Date(event.start_time).toDateString() === new Date().toDateString();
+            const eventDate = new Date(event.start_time);
+            const isToday = !isNaN(eventDate.getTime()) && eventDate.toDateString() === new Date().toDateString();
             
             return (
               <div
@@ -188,7 +205,7 @@ export default function BuildingEvents({ buildingId, buildingName }: BuildingEve
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-lg">{getEventTypeEmoji(event.event_type)}</span>
-                      <h3 className="font-semibold text-gray-900">{event.title}</h3>
+                      <h3 className="font-semibold text-gray-900">{event.title || 'Untitled Event'}</h3>
                       {isToday && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
                           Today
@@ -214,7 +231,7 @@ export default function BuildingEvents({ buildingId, buildingName }: BuildingEve
                     )}
                     
                     <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <span>Created: {new Date(event.created_at).toLocaleDateString('en-GB')}</span>
+                      <span>Created: {event.created_at ? new Date(event.created_at).toLocaleDateString('en-GB') : 'Unknown'}</span>
                       {event.outlook_event_id && (
                         <span className="flex items-center gap-1 text-blue-600">
                           <ExternalLink className="h-3 w-3" />
