@@ -177,8 +177,8 @@ export default async function BuildingCompliancePage({
     const building = buildingResult.data
     console.log("✅ Building found:", building)
 
-    // 5. Fetch compliance assets
-    console.log("🔍 Fetching compliance assets for building:", building.id)
+    // 5. Fetch compliance assets for the specific building
+    console.log("🔍 Fetching compliance assets for building ID:", buildingId)
     let complianceResult
     try {
       complianceResult = await supabase
@@ -189,7 +189,7 @@ export default async function BuildingCompliancePage({
           next_due_date,
           last_renewed_date,
           notes,
-          compliance_assets (
+          compliance_asset:compliance_assets (
             id,
             name,
             category,
@@ -197,34 +197,20 @@ export default async function BuildingCompliancePage({
             recommended_frequency
           )
         `)
-        .eq("building_id", building.id)
+        .eq("building_id", buildingId)
         .eq("status", "active")
+        .order("created_at", { ascending: false })
       
       console.log("✅ Compliance assets query completed")
       console.log("Compliance result:", complianceResult)
+      
+      if (complianceResult.error) {
+        console.error("❌ Supabase compliance query failed:", complianceResult.error)
+        throw new Error(`Supabase compliance asset query failed: ${complianceResult.error.message}`)
+      }
+      
     } catch (err) {
-      console.error("❌ Compliance assets query error:", err)
-      return (
-        <LayoutWithSidebar>
-          <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
-            <div className="bg-white p-8 rounded-2xl shadow-lg max-w-md">
-              <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Shield className="h-8 w-8 text-white" />
-              </div>
-              <h1 className="text-2xl font-serif font-bold text-[#333333] mb-4 text-center">
-                Compliance Query Error
-              </h1>
-              <p className="text-gray-600 text-center mb-6">
-                Failed to fetch compliance assets data.
-              </p>
-            </div>
-          </div>
-        </LayoutWithSidebar>
-      )
-    }
-
-    if (complianceResult.error) {
-      console.error("❌ Compliance assets query response error:", complianceResult.error)
+      console.error("⚠️ Compliance page error:", err)
       return (
         <LayoutWithSidebar>
           <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
@@ -236,8 +222,13 @@ export default async function BuildingCompliancePage({
                 Compliance Query Response Error
               </h1>
               <p className="text-gray-600 text-center mb-6">
-                Supabase returned an error for compliance assets query.
+                There was an issue loading compliance data. Please check your Supabase table or contact support.
               </p>
+              <div className="bg-red-50 border border-red-200 rounded p-3 mt-4">
+                <p className="text-sm text-red-700">
+                  <strong>Error:</strong> {err instanceof Error ? err.message : 'Unknown error'}
+                </p>
+              </div>
             </div>
           </div>
         </LayoutWithSidebar>
@@ -249,7 +240,7 @@ export default async function BuildingCompliancePage({
 
     // 6. Group assets by category
     const groupedAssets = complianceAssets.reduce((acc: any, asset: any) => {
-      const category = asset.compliance_assets?.category || 'Other'
+      const category = asset.compliance_asset?.category || 'Other'
       if (!acc[category]) {
         acc[category] = []
       }
@@ -358,7 +349,7 @@ export default async function BuildingCompliancePage({
                       {assets.map((asset: any) => {
                         const statusBadge = getStatusBadge(asset.next_due_date, asset.last_renewed_date)
                         const StatusIcon = statusBadge.icon
-                        const isAI = isAIAsset(asset.compliance_assets?.name || '')
+                        const isAI = isAIAsset(asset.compliance_asset?.name || '')
                         
                         return (
                           <div 
@@ -369,7 +360,7 @@ export default async function BuildingCompliancePage({
                               <div className="flex-1">
                                 <div className="flex items-center gap-3 mb-3">
                                   <h3 className="text-lg font-serif font-semibold text-[#333333]">
-                                    {asset.compliance_assets?.name || 'Unknown Asset'}
+                                    {asset.compliance_asset?.name || 'Unknown Asset'}
                                   </h3>
                                   <BlocIQBadge variant={statusBadge.variant} size="sm">
                                     <StatusIcon className="h-3 w-3 mr-1" />
@@ -382,9 +373,9 @@ export default async function BuildingCompliancePage({
                                   )}
                                 </div>
                                 
-                                {asset.compliance_assets?.description && (
+                                {asset.compliance_asset?.description && (
                                   <p className="text-sm text-[#64748B] mb-4">
-                                    {asset.compliance_assets.description}
+                                    {asset.compliance_asset.description}
                                   </p>
                                 )}
                                 
@@ -407,12 +398,12 @@ export default async function BuildingCompliancePage({
                                     </span>
                                   </div>
                                   
-                                  {asset.compliance_assets?.recommended_frequency && (
+                                  {asset.compliance_asset?.recommended_frequency && (
                                     <div className="flex items-center gap-2">
                                       <ClipboardCheck className="h-4 w-4 text-[#64748B]" />
                                       <span className="text-[#64748B]">Frequency:</span>
                                       <span className="font-medium text-[#333333]">
-                                        {asset.compliance_assets.recommended_frequency}
+                                        {asset.compliance_asset.recommended_frequency}
                                       </span>
                                     </div>
                                   )}
