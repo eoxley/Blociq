@@ -320,29 +320,23 @@ export default async function BuildingDetailPage({
             <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12"></div>
             
             <div className="relative z-10">
-              <div className="flex items-center justify-between">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm shadow-lg">
-                      <Building2 className="h-9 w-9 text-white" />
-                    </div>
-                    <div>
-                      <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">{building.name}</h1>
-                      <p className="text-white/90 text-xl">{building.address}</p>
-                      <div className="flex items-center gap-3 mt-3">
-                        {building.is_hrb && (
-                          <BlocIQBadge variant="destructive" size="sm" className="bg-red-500/20 text-white border-red-300">
-                            <AlertTriangle className="h-3 w-3 mr-1" />
-                            High-Risk Building
-                          </BlocIQBadge>
-                        )}
-                      </div>
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm shadow-lg">
+                    <Building2 className="h-9 w-9 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">{building.name}</h1>
+                    <p className="text-white/90 text-xl">{building.address}</p>
+                    <div className="flex items-center gap-3 mt-3">
+                      {building.is_hrb && (
+                        <BlocIQBadge variant="destructive" size="sm" className="bg-red-500/20 text-white border-red-300">
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          High-Risk Building
+                        </BlocIQBadge>
+                      )}
                     </div>
                   </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-4xl font-bold text-white">{units.length}</div>
-                  <div className="text-white/80 text-lg">Units</div>
                 </div>
               </div>
             </div>
