@@ -1,0 +1,6 @@
+warning: in the working copy of 'app/api/ask-ai/route.ts', LF will be replaced by CRLF the next time Git touches it
+app/api/ask-ai/route.ts
+app/buildings/[buildingId]/page.tsx
+components/AskBlocIQHomepage.tsx
+components/SearchableUnitsTable.tsx
+lib/buildAIContext.ts
