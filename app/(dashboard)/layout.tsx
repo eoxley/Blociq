@@ -40,8 +40,8 @@ export default async function DashboardLayout({ children }: { children: ReactNod
                 <BlocIQLogo className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white">BlocIQ Dashboard</h1>
-                <p className="text-white/80 text-sm">Property Intelligence Platform</p>
+                <h1 className="text-xl font-bold text-white">Your Buildings</h1>
+                <p className="text-white/80 text-sm">Manage all properties under your agency</p>
               </div>
             </div>
             

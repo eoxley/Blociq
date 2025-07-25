@@ -168,11 +168,11 @@ export default function BuildingsPage() {
   const [error, setError] = useState<string | null>(null)
   const supabase = createClientComponentClient()
 
-  // Fetch buildings and units on component mount
+  // Fetch buildings with unit counts from the buildings table
   React.useEffect(() => {
-    const fetchBuildingsAndUnits = async () => {
+    const fetchBuildings = async () => {
       try {
-        // Fetch buildings
+        // Fetch buildings with unit_count from the buildings table
         const { data: buildingsData, error: buildingsError } = await supabase
           .from('buildings')
           .select('*')
@@ -184,32 +184,23 @@ export default function BuildingsPage() {
           return
         }
 
-        // Fetch all units to calculate live unit counts
-        const { data: unitsData, error: unitsError } = await supabase
-          .from('units')
-          .select('id, building_id')
-
-        if (unitsError) {
-          console.error('Error fetching units:', unitsError)
-          // Continue with buildings even if units fail to load
-        } else {
-          console.log('Units query successful')
-          console.log('Total units returned:', unitsData?.length || 0)
-          console.log('Sample units:', unitsData?.slice(0, 3))
-        }
-
-        // Calculate unit count for each building
+        // Map buildings to include liveUnitCount from the unit_count field
         const buildingsWithUnitCounts = (buildingsData || []).map(building => {
-          const unitCount = unitsData ? unitsData.filter(unit => unit.building_id === building.id).length : 0
-          
-          // Debug logging
-          console.log(`Building: ${building.name} (${building.id})`)
-          console.log(`Total units found: ${unitsData?.length || 0}`)
-          console.log(`Units for this building: ${unitCount}`)
-          if (unitsData) {
-            const buildingUnits = unitsData.filter(unit => unit.building_id === building.id)
-            console.log(`Building units:`, buildingUnits)
+          // Handle unit_count - it could be a number, string, or null
+          let unitCount = 0
+          if (building.unit_count !== null && building.unit_count !== undefined) {
+            // If it's already a number, use it directly
+            if (typeof building.unit_count === 'number') {
+              unitCount = building.unit_count
+            } else {
+              // If it's a string, parse it
+              unitCount = parseInt(building.unit_count.toString(), 10) || 0
+            }
           }
+          
+          console.log(`Building: ${building.name} (${building.id})`)
+          console.log(`Unit count from database: ${building.unit_count} (type: ${typeof building.unit_count})`)
+          console.log(`Parsed unit count: ${unitCount}`)
           
           return {
             ...building,
@@ -226,7 +217,7 @@ export default function BuildingsPage() {
       }
     }
 
-    fetchBuildingsAndUnits()
+    fetchBuildings()
   }, [supabase])
 
   if (loading) {
