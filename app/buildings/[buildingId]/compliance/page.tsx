@@ -446,18 +446,20 @@ export default async function BuildingCompliancePage({
                     <Shield className="h-8 w-8 text-white" />
                   </div>
                   <h2 className="text-2xl font-serif font-bold text-[#333333] mb-4">
-                    No Compliance Data Found
+                    No Compliance Assets Assigned
                   </h2>
                   <p className="text-[#64748B] mb-6 max-w-md mx-auto">
-                    Set up compliance tracking to begin monitoring your building's regulatory requirements and deadlines.
+                    This building doesn't have any compliance tracking set up yet.
+                    Please click below to assign relevant compliance assets.
                   </p>
                   <div className="space-y-3">
-                    <BlocIQButton
-                      className="bg-gradient-to-r from-[#008C8F] to-[#2BBEB4] hover:from-[#007B8A] hover:to-[#2BBEB4] text-white"
+                    <a
+                      href={`/buildings/${buildingId}/compliance/setup`}
+                      className="inline-flex items-center justify-center px-6 py-3 text-white font-semibold rounded-xl bg-gradient-to-r from-[#008C8F] to-[#2BBEB4] hover:from-[#007B8A] hover:to-[#2BBEB4] transition-all duration-200 shadow-lg hover:shadow-xl"
                     >
                       <ClipboardCheck className="h-4 w-4 mr-2" />
-                      Setup Compliance Tracking
-                    </BlocIQButton>
+                      Set Up Compliance
+                    </a>
                   </div>
                 </div>
               </BlocIQCardContent>
