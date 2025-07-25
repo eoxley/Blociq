@@ -258,19 +258,6 @@ export default function BuildingsPage() {
 
   return (
     <div className="space-y-8">
-      {/* Page Header */}
-      <div className="text-center">
-        <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-          <Building2 className="h-8 w-8 text-white" />
-        </div>
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
-          Your Buildings
-        </h1>
-        <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-          Manage all properties under your agency
-        </p>
-      </div>
-
       {/* Buildings List */}
       <BuildingsList initialBuildings={buildings} />
 
