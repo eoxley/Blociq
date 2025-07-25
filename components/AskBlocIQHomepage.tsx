@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import { Send, Loader2, Sparkles, MessageCircle } from 'lucide-react'
+import { Send, Loader2, Sparkles, MessageCircle, Upload, FileText, X } from 'lucide-react'
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
 import { toast } from 'sonner'
@@ -21,6 +21,14 @@ type DocumentSearchResult = {
   summary: string
 }
 
+type UploadedFile = {
+  file: File
+  id: string
+  name: string
+  size: number
+  type: string
+}
+
 export default function AskBlocIQHomepage() {
   const [prompt, setPrompt] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -28,7 +36,11 @@ export default function AskBlocIQHomepage() {
   const [documentResults, setDocumentResults] = useState<DocumentSearchResult[]>([])
   const [isDocumentSearch, setIsDocumentSearch] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(true)
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
+  const [isDragOver, setIsDragOver] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const resultsRef = useRef<HTMLDivElement>(null)
 
   // Rotating placeholder suggestions
@@ -72,9 +84,67 @@ export default function AskBlocIQHomepage() {
     inputRef.current?.focus()
   }
 
+  // File handling functions
+  const acceptedFileTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
+  const maxFileSize = 10 * 1024 * 1024 // 10MB
+
+  const validateFile = (file: File): boolean => {
+    if (!acceptedFileTypes.includes(file.type)) {
+      toast.error(`File type not supported. Please upload PDF, DOCX, or TXT files.`)
+      return false
+    }
+    
+    if (file.size > maxFileSize) {
+      toast.error(`File too large. Please upload files smaller than 10MB.`)
+      return false
+    }
+    
+    return true
+  }
+
+  const handleFileSelect = (files: FileList | null) => {
+    if (!files) return
+    
+    Array.from(files).forEach(file => {
+      if (validateFile(file)) {
+        const fileId = Math.random().toString(36).substr(2, 9)
+        const uploadedFile: UploadedFile = {
+          file,
+          id: fileId,
+          name: file.name,
+          size: file.size,
+          type: file.type
+        }
+        
+        setUploadedFiles(prev => [...prev, uploadedFile])
+        toast.success(`Uploaded: ${file.name}`)
+      }
+    })
+  }
+
+  const removeFile = (fileId: string) => {
+    setUploadedFiles(prev => prev.filter(f => f.id !== fileId))
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+    handleFileSelect(e.dataTransfer.files)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!prompt.trim() || isLoading) return
+    if ((!prompt.trim() && uploadedFiles.length === 0) || isLoading) return
 
     setIsLoading(true)
     setAiResponse(null)
@@ -83,15 +153,35 @@ export default function AskBlocIQHomepage() {
     setShowSuggestions(false)
 
     try {
-      const response = await fetch('/api/ask-ai', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      // Create FormData if files are uploaded
+      let requestBody: FormData | string
+      let headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+
+      if (uploadedFiles.length > 0) {
+        requestBody = new FormData()
+        requestBody.append('prompt', prompt.trim())
+        requestBody.append('building_id', 'null') // Homepage doesn't have specific building context
+        
+        uploadedFiles.forEach((uploadedFile, index) => {
+          requestBody.append(`file`, uploadedFile.file)
+          requestBody.append(`fileName`, uploadedFile.name)
+        })
+        
+        // Remove Content-Type header to let browser set it with boundary
+        delete headers['Content-Type']
+      } else {
+        requestBody = JSON.stringify({
           prompt: prompt.trim(),
           building_id: null // Homepage doesn't have specific building context
-        }),
+        })
+      }
+
+      const response = await fetch('/api/ask-ai', {
+        method: 'POST',
+        headers,
+        body: requestBody,
       })
 
       const data: AIResponse = await response.json()
@@ -103,6 +193,9 @@ export default function AskBlocIQHomepage() {
           setIsDocumentSearch(true)
           setDocumentResults(data.documents)
         }
+
+        // Clear uploaded files after successful submission
+        setUploadedFiles([])
 
         // Scroll to results
         setTimeout(() => {
@@ -127,6 +220,21 @@ export default function AskBlocIQHomepage() {
       e.preventDefault()
       handleSubmit(e as any)
     }
+  }
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes'
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  }
+
+  const getFileIcon = (fileType: string) => {
+    if (fileType.includes('pdf')) return '📄'
+    if (fileType.includes('word') || fileType.includes('document')) return '📝'
+    if (fileType.includes('text')) return '📄'
+    return '📎'
   }
 
   return (
@@ -162,7 +270,7 @@ export default function AskBlocIQHomepage() {
               />
               <button
                 type="submit"
-                disabled={isLoading || !prompt.trim()}
+                disabled={isLoading || (!prompt.trim() && uploadedFiles.length === 0)}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 p-2 bg-gradient-to-r from-[#008C8F] to-[#2BBEB4] hover:from-[#007B8A] hover:to-[#2BBEB4] disabled:from-gray-300 disabled:to-gray-400 text-white rounded-lg transition-all duration-200 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
@@ -172,6 +280,70 @@ export default function AskBlocIQHomepage() {
                 )}
               </button>
             </div>
+
+            {/* File Upload Zone */}
+            <div
+              className={`border-2 border-dashed rounded-xl p-4 text-center transition-all duration-200 ${
+                isDragOver 
+                  ? 'border-teal-500 bg-teal-50' 
+                  : 'border-teal-400 hover:bg-teal-50'
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <div className="flex flex-col items-center gap-2">
+                <Upload className="h-6 w-6 text-teal-600" />
+                <p className="text-sm text-gray-600">
+                  Drag & drop a file here or{' '}
+                  <span 
+                    className="text-teal-600 underline cursor-pointer hover:text-teal-700"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    click to upload
+                  </span>
+                </p>
+                <p className="text-xs text-gray-500">
+                  Supports PDF, DOCX, TXT (max 10MB)
+                </p>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept=".pdf,.docx,.txt"
+                onChange={(e) => handleFileSelect(e.target.files)}
+                className="hidden"
+              />
+            </div>
+
+            {/* Uploaded Files List */}
+            {uploadedFiles.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-700">Uploaded files:</p>
+                {uploadedFiles.map((uploadedFile) => (
+                  <div
+                    key={uploadedFile.id}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">{getFileIcon(uploadedFile.type)}</span>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{uploadedFile.name}</p>
+                        <p className="text-xs text-gray-500">{formatFileSize(uploadedFile.size)}</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(uploadedFile.id)}
+                      className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Quick Suggestions */}
             {showSuggestions && (

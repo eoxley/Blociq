@@ -14,6 +14,7 @@ interface Unit {
   unit_number: string
   floor: string | null
   type: string
+  leaseholder_id: string | null
   leaseholders: Leaseholder[]
 }
 
@@ -53,16 +54,28 @@ export default function SearchableUnitsTable({ units, buildingId }: SearchableUn
         <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
           <Search className="h-8 w-8 text-gray-400" />
         </div>
-        <h3 className="text-xl font-bold text-gray-900 mb-4">No units added yet</h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-4">No units found</h3>
         <p className="text-gray-600 mb-8 max-w-md mx-auto">
-          Start by adding units to this building to manage leaseholder information
+          No units are currently assigned to this building. You can view and manage units in the dedicated units page.
         </p>
-        <a 
-          href={`/buildings/${buildingId}/units`}
-          className="inline-flex items-center gap-3 bg-gradient-to-r from-teal-600 to-teal-700 text-white px-8 py-4 rounded-xl hover:from-teal-700 hover:to-teal-800 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-        >
-          Add Units
-        </a>
+        <div className="space-y-4">
+          <a 
+            href={`/buildings/${buildingId}/units`}
+            className="inline-flex items-center gap-3 bg-gradient-to-r from-teal-600 to-teal-700 text-white px-8 py-4 rounded-xl hover:from-teal-700 hover:to-teal-800 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+          >
+            View All Units
+          </a>
+          <div className="text-sm text-gray-500">
+            <a 
+              href={`/api/test-units?buildingId=${buildingId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-teal-600 hover:text-teal-700 underline"
+            >
+              Debug: Check database data
+            </a>
+          </div>
+        </div>
       </div>
     )
   }
