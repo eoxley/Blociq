@@ -1,7 +1,7 @@
--- Create compliance_documents table
+-- Create compliance_documents table with UUID-safe schema
 CREATE TABLE IF NOT EXISTS compliance_documents (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  building_id INTEGER NOT NULL REFERENCES buildings(id) ON DELETE CASCADE,
+  building_id UUID NOT NULL REFERENCES buildings(id) ON DELETE CASCADE,
   compliance_asset_id UUID NOT NULL REFERENCES compliance_assets(id) ON DELETE CASCADE,
   document_url TEXT NOT NULL,
   title TEXT,

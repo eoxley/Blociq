@@ -2,6 +2,62 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { cookies } from 'next/headers';
 
+async function refreshOutlookToken(supabase: any, userId: string, refreshToken: string) {
+  try {
+    const params = new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: process.env.OUTLOOK_CLIENT_ID!,
+      client_secret: process.env.OUTLOOK_CLIENT_SECRET!,
+      redirect_uri: process.env.OUTLOOK_REDIRECT_URI!
+    });
+
+    const response = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params.toString(),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Token refresh failed:', errorData);
+      throw new Error('Failed to refresh token');
+    }
+
+    const tokenData = await response.json();
+    
+    // Calculate new expiry time
+    const expiresAt = new Date();
+    expiresAt.setSeconds(expiresAt.getSeconds() + tokenData.expires_in);
+
+    // Update the tokens in the database
+    const { error: updateError } = await supabase
+      .from('outlook_tokens')
+      .update({
+        access_token: tokenData.access_token,
+        refresh_token: tokenData.refresh_token || refreshToken, // Use new refresh token if provided, otherwise keep the old one
+        expires_at: expiresAt.toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId);
+
+    if (updateError) {
+      console.error('Failed to update tokens in database:', updateError);
+      throw new Error('Failed to update tokens');
+    }
+
+    return {
+      access_token: tokenData.access_token,
+      expires_at: expiresAt.toISOString()
+    };
+  } catch (error) {
+    console.error('Error refreshing Outlook token:', error);
+    throw error;
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
     const supabase = createClient(cookies());
@@ -27,16 +83,28 @@ export async function GET(req: NextRequest) {
       }, { status: 404 });
     }
 
-    // Check if token is expired
+    let accessToken = tokens.access_token;
+    let expiresAt = tokens.expires_at;
+
+    // Check if token is expired and refresh if necessary
     const now = new Date();
-    const expiresAt = new Date(tokens.expires_at);
-    const isExpired = expiresAt <= now;
+    const tokenExpiresAt = new Date(tokens.expires_at);
+    const isExpired = tokenExpiresAt <= now;
 
     if (isExpired) {
-      return NextResponse.json({ 
-        error: 'Outlook token expired',
-        message: 'Please reconnect your Outlook account'
-      }, { status: 401 });
+      try {
+        console.log('Outlook token expired, attempting to refresh...');
+        const refreshedTokens = await refreshOutlookToken(supabase, session.user.id, tokens.refresh_token);
+        accessToken = refreshedTokens.access_token;
+        expiresAt = refreshedTokens.expires_at;
+        console.log('Token refreshed successfully');
+      } catch (refreshError) {
+        console.error('Failed to refresh token:', refreshError);
+        return NextResponse.json({ 
+          error: 'Outlook session expired',
+          message: 'Your Outlook session has expired. Please reconnect your account.'
+        }, { status: 401 });
+      }
     }
 
     // Fetch upcoming events from Microsoft Graph API
@@ -44,7 +112,7 @@ export async function GET(req: NextRequest) {
       'https://graph.microsoft.com/v1.0/me/calendar/events?$orderby=start/dateTime&$top=10&$select=id,subject,body,location,start,end,isAllDay,organizer,attendees,importance,showAs,categories,webLink,onlineMeeting,createdDateTime,lastModifiedDateTime',
       {
         headers: {
-          'Authorization': `Bearer ${tokens.access_token}`,
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
       }
@@ -53,6 +121,15 @@ export async function GET(req: NextRequest) {
     if (!response.ok) {
       const errorData = await response.json();
       console.error('Microsoft Graph API error:', errorData);
+      
+      // If we get a 401 with a refreshed token, the refresh token might be invalid
+      if (response.status === 401 && isExpired) {
+        return NextResponse.json({ 
+          error: 'Outlook session expired',
+          message: 'Your Outlook session has expired. Please reconnect your account.'
+        }, { status: 401 });
+      }
+      
       return NextResponse.json({ 
         error: 'Failed to fetch calendar events',
         details: errorData
