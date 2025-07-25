@@ -49,10 +49,10 @@ function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
           </div>
 
           {/* Create New Building Button */}
-          <Link 
-            href="/dashboard/buildings/create"
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-teal-600 to-teal-700 text-white px-6 py-3 rounded-xl hover:from-teal-700 hover:to-teal-800 transform hover:-translate-y-0.5 transition-all shadow-lg hover:shadow-xl font-semibold"
-          >
+                     <Link 
+             href="/buildings/create"
+             className="inline-flex items-center gap-2 bg-gradient-to-r from-teal-600 to-teal-700 text-white px-6 py-3 rounded-xl hover:from-teal-700 hover:to-teal-800 transform hover:-translate-y-0.5 transition-all shadow-lg hover:shadow-xl font-semibold"
+           >
             <Plus className="h-5 w-5" />
             Create New Building
             <ArrowRight className="h-4 w-4" />
@@ -104,10 +104,10 @@ function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
               </div>
 
               {/* View Button */}
-              <Link 
-                href={`/dashboard/buildings/${building.id}`}
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-teal-600 to-teal-700 text-white px-6 py-3 rounded-xl hover:from-teal-700 hover:to-teal-800 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 w-full justify-center"
-              >
+                             <Link 
+                 href={`/buildings/${building.id}`}
+                 className="inline-flex items-center gap-2 bg-gradient-to-r from-teal-600 to-teal-700 text-white px-6 py-3 rounded-xl hover:from-teal-700 hover:to-teal-800 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 w-full justify-center"
+               >
                 <Eye className="h-5 w-5" />
                 🔐 View Building
                 <ArrowRight className="h-4 w-4" />
@@ -147,10 +147,10 @@ function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
             Get started by adding your first building to your portfolio. 
             You'll be able to manage units, compliance, and communications all in one place.
           </p>
-          <Link 
-            href="/dashboard/buildings/create"
-            className="inline-flex items-center gap-3 bg-gradient-to-r from-teal-600 to-teal-700 text-white px-8 py-4 rounded-xl hover:from-teal-700 hover:to-teal-800 transition-all duration-200 font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-          >
+                     <Link 
+             href="/buildings/create"
+             className="inline-flex items-center gap-3 bg-gradient-to-r from-teal-600 to-teal-700 text-white px-8 py-4 rounded-xl hover:from-teal-700 hover:to-teal-800 transition-all duration-200 font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+           >
             <Plus className="h-6 w-6" />
             Create Your First Building
             <ArrowRight className="h-5 w-5" />
@@ -282,10 +282,10 @@ export default function BuildingsPage() {
             <p className="text-gray-600 mb-6">
               Expand your portfolio by adding more properties to manage.
             </p>
-            <Link 
-              href="/dashboard/buildings/create"
-              className="inline-flex items-center gap-3 bg-gradient-to-r from-teal-600 to-teal-700 text-white px-6 py-3 rounded-xl hover:from-teal-700 hover:to-teal-800 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-            >
+                         <Link 
+               href="/buildings/create"
+               className="inline-flex items-center gap-3 bg-gradient-to-r from-teal-600 to-teal-700 text-white px-6 py-3 rounded-xl hover:from-teal-700 hover:to-teal-800 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+             >
               <Plus className="h-5 w-5" />
               Add New Building
               <ArrowRight className="h-4 w-4" />
