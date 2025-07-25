@@ -279,19 +279,6 @@ export default function BuildingsPage() {
 
   return (
     <div className="space-y-12">
-      {/* Hero Section - Matching Landing Page Style */}
-      <div className="text-center py-12">
-        <div className="w-20 h-20 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-lg">
-          <Building2 className="h-10 w-10 text-white" />
-        </div>
-        <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-          Your Buildings
-        </h1>
-        <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-          Manage all properties under your agency with intelligent oversight and streamlined operations
-        </p>
-      </div>
-
       {/* Buildings List */}
       <BuildingsList initialBuildings={buildings} />
 
