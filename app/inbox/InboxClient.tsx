@@ -256,7 +256,7 @@ export default function InboxClient({ emails }: InboxClientProps) {
     
     try {
       const { error } = await supabase
-        .from('emails')
+        .from('incoming_emails')
         .update({ flag_status: newFlagStatus })
         .eq('id', emailId)
 
@@ -290,7 +290,7 @@ export default function InboxClient({ emails }: InboxClientProps) {
       const updatedCategories = [...currentCategories, newTag]
 
       const { error } = await supabase
-        .from('emails')
+        .from('incoming_emails')
         .update({ categories: updatedCategories })
         .eq('id', emailId)
 
@@ -319,7 +319,7 @@ export default function InboxClient({ emails }: InboxClientProps) {
       const updatedCategories = currentCategories.filter(cat => cat !== categoryToRemove)
 
       const { error } = await supabase
-        .from('emails')
+        .from('incoming_emails')
         .update({ categories: updatedCategories })
         .eq('id', emailId)
 

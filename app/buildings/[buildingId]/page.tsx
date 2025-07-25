@@ -191,44 +191,33 @@ export default async function BuildingDetailPage({
     console.log("🔍 Fetching related data for building:", building.id)
     
     // Fetch units and leaseholders
-    // Fetch units and leaseholders
-    // Since building.id is a UUID but units.building_id expects integer,
-    // we need to find the correct building ID or use a different approach
     let unitsResult
     try {
-      // First, try to find the building by name to get the integer ID
-      const buildingByNameResult = await supabase
-        .from("buildings")
-        .select("id")
-        .eq("name", building.name)
-        .maybeSingle()
+      // Convert buildingId to integer for the units query
+      const buildingIdInt = parseInt(buildingId, 10)
       
-      let buildingIdForUnits = building.id
-      
-      if (buildingByNameResult.data && typeof buildingByNameResult.data.id === 'number') {
-        buildingIdForUnits = buildingByNameResult.data.id
-        console.log("🔍 Found building by name with integer ID:", buildingIdForUnits)
+      if (isNaN(buildingIdInt)) {
+        console.error("❌ Invalid building ID format:", buildingId)
+        unitsResult = { data: [], error: null }
       } else {
-        console.log("🔍 Using original building ID:", buildingIdForUnits)
-      }
-      
-      unitsResult = await supabase
-        .from("units")
-        .select(`
-          id,
-          unit_number,
-          floor,
-          type,
-          leaseholders (
+        unitsResult = await supabase
+          .from("units")
+          .select(`
             id,
-            name,
-            email
-          )
-        `)
-        .eq("building_id", buildingIdForUnits)
-        .order("unit_number")
-      
-      console.log("🔍 Units query result:", unitsResult)
+            unit_number,
+            floor,
+            type,
+            leaseholders (
+              id,
+              name,
+              email
+            )
+          `)
+          .eq("building_id", buildingIdInt)
+          .order("unit_number")
+        
+        console.log("🔍 Units query result:", unitsResult)
+      }
       
     } catch (error) {
       console.error("❌ Error fetching units:", error)
