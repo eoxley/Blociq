@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Send, Loader2, Sparkles, MessageCircle } from 'lucide-react'
 import { BlocIQButton } from '@/components/ui/blociq-button'
-import { BlocIQCard, BlocIQCardContent } from '@/components/ui/blociq-card'
+import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
 import { toast } from 'sonner'
 
 type AIResponse = {
@@ -132,23 +132,20 @@ export default function AskBlocIQHomepage() {
   return (
     <div className="space-y-6">
       {/* Main Input Section */}
-      <BlocIQCard variant="elevated" className="bg-gradient-to-br from-white to-[#FAFAFA]">
-        <BlocIQCardContent className="p-6">
-          <div className="text-center mb-6">
-            <div className="flex items-center justify-center gap-3 mb-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center">
-                <Sparkles className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-serif font-bold text-[#333333]">
-                  Ask BlocIQ Anything
-                </h2>
-                <p className="text-[#64748B] text-sm">
-                  Your AI assistant for property compliance, leasehold law, and operations
-                </p>
-              </div>
+      <BlocIQCard variant="elevated">
+        <BlocIQCardHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center">
+              <Sparkles className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-semibold text-[#333333]">Ask BlocIQ AI</h2>
+              <p className="text-sm text-[#64748B]">Get instant answers about your properties</p>
             </div>
           </div>
+        </BlocIQCardHeader>
+        
+        <BlocIQCardContent>
 
           {/* Chat-style Input */}
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -180,13 +177,13 @@ export default function AskBlocIQHomepage() {
             {showSuggestions && (
               <div className="space-y-3">
                 <p className="text-sm text-[#64748B] font-medium">Try asking:</p>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-1 gap-2">
                   {quickSuggestions.map((suggestion, index) => (
                     <button
                       key={index}
                       type="button"
                       onClick={() => handleSuggestionClick(suggestion)}
-                      className="px-3 py-2 bg-white border border-[#E2E8F0] hover:border-[#008C8F] hover:bg-[#F0FDFA] rounded-lg text-sm text-[#333333] transition-all duration-200 hover:shadow-sm"
+                      className="w-full text-left px-3 py-2 bg-white border border-[#E2E8F0] hover:border-[#008C8F] hover:bg-[#F0FDFA] rounded-lg text-sm text-[#333333] transition-all duration-200 hover:shadow-sm"
                     >
                       {suggestion}
                     </button>
