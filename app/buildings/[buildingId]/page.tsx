@@ -219,8 +219,7 @@ export default async function BuildingDetailPage({
           unit_number,
           floor,
           type,
-          leaseholder_id,
-          leaseholders!leaseholder_id (
+          leaseholders (
             id,
             name,
             email
