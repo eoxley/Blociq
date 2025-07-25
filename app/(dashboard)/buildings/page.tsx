@@ -192,11 +192,25 @@ export default function BuildingsPage() {
         if (unitsError) {
           console.error('Error fetching units:', unitsError)
           // Continue with buildings even if units fail to load
+        } else {
+          console.log('Units query successful')
+          console.log('Total units returned:', unitsData?.length || 0)
+          console.log('Sample units:', unitsData?.slice(0, 3))
         }
 
         // Calculate unit count for each building
         const buildingsWithUnitCounts = (buildingsData || []).map(building => {
           const unitCount = unitsData ? unitsData.filter(unit => unit.building_id === building.id).length : 0
+          
+          // Debug logging
+          console.log(`Building: ${building.name} (${building.id})`)
+          console.log(`Total units found: ${unitsData?.length || 0}`)
+          console.log(`Units for this building: ${unitCount}`)
+          if (unitsData) {
+            const buildingUnits = unitsData.filter(unit => unit.building_id === building.id)
+            console.log(`Building units:`, buildingUnits)
+          }
+          
           return {
             ...building,
             liveUnitCount: unitCount
