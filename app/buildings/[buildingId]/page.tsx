@@ -558,62 +558,7 @@ export default async function BuildingDetailPage({
             </div>
           </section>
 
-          {/* Leaseholders - Enhanced Landing Page Style */}
-          <section className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-8">
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-                <User className="h-8 w-8 text-white" />
-              </div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">Leaseholders</h2>
-              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-                All leaseholders associated with {building.name}
-              </p>
-            </div>
-            
-            <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100">
-              {allLeaseholders.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {allLeaseholders.map((leaseholder) => (
-                    <div key={leaseholder.id} className="p-6 border border-gray-200 rounded-2xl hover:shadow-lg transition-all duration-300">
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center">
-                          <User className="h-6 w-6 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-bold text-gray-900">{leaseholder.name}</h3>
-                          <p className="text-lg text-gray-600">Unit {leaseholder.unit_number}</p>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-500 text-sm">Email:</span>
-                          <span className="text-gray-700 font-medium">{leaseholder.email}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <User className="h-16 w-16 text-gray-400 mx-auto mb-6" />
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">No leaseholders yet</h3>
-                  <p className="text-gray-600 mb-8 max-w-md mx-auto">
-                    Add units and assign leaseholders to see them listed here
-                  </p>
-                  <a 
-                    href={`/buildings/${buildingId}/units`}
-                    className="inline-flex items-center gap-3 bg-gradient-to-r from-teal-600 to-teal-700 text-white px-8 py-4 rounded-xl hover:from-teal-700 hover:to-teal-800 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-                  >
-                    Add Units
-                  </a>
-                </div>
-              )}
-              
-              <div className="text-center mt-8 pt-6 border-t border-gray-200">
-                <span className="text-lg text-gray-600 font-medium">{allLeaseholders.length} leaseholders total</span>
-              </div>
-            </div>
-          </section>
+
 
           {/* Latest Documents - Enhanced Landing Page Style */}
           <section className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-8">
