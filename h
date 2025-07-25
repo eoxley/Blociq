@@ -1,0 +1,5 @@
+[33m8db8365[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Add debugging for unit count calculation - Log units query results and building-unit matching - Help identify why unit counts are incorrect
+[33m424730f[m Fix build error - Remove routing conflict by using correct URL structure - Update DashboardSidebar to point to /buildings - Update all internal links in buildings page to use /buildings - Ensure proper navigation and layout inheritance
+[33m714ed17[m Fix 404 error on buildings dashboard - Add redirect from /buildings to /dashboard/buildings - Maintain URL compatibility while using dashboard layout
+[33m43802c1[m Fix deployment error - Remove duplicate buildings page to resolve routing conflict - Keep only (dashboard)/buildings/page.tsx for proper navigation
+[33m97de126[m Add live unit count to buildings dashboard - Fetch real unit counts from units table - Display live unit count on each building card - Use UUID-safe matching for building_id - Fallback to 0 units if none exist - Maintain consistent UI styling
