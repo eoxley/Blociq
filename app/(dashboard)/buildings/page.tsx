@@ -95,15 +95,13 @@ function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
                 </div>
               )}
 
-              {/* Unit Count */}
-              {building.unit_count && (
-                <div className="flex items-center gap-3 mb-6">
-                  <Users className="h-5 w-5 text-teal-600" />
-                  <p className="text-gray-600">
-                    🧱 {building.unit_count} {building.unit_count === 1 ? 'unit' : 'units'}
-                  </p>
-                </div>
-              )}
+              {/* Live Unit Count */}
+              <div className="flex items-center gap-3 mb-6">
+                <Users className="h-5 w-5 text-teal-600" />
+                <p className="text-gray-600">
+                  🧱 {building.liveUnitCount || 0} {(building.liveUnitCount || 0) === 1 ? 'unit' : 'units'}
+                </p>
+              </div>
 
               {/* View Button */}
               <Link 
@@ -170,30 +168,51 @@ export default function BuildingsPage() {
   const [error, setError] = useState<string | null>(null)
   const supabase = createClientComponentClient()
 
-  // Fetch buildings on component mount
+  // Fetch buildings and units on component mount
   React.useEffect(() => {
-    const fetchBuildings = async () => {
+    const fetchBuildingsAndUnits = async () => {
       try {
-        const { data, error } = await supabase
+        // Fetch buildings
+        const { data: buildingsData, error: buildingsError } = await supabase
           .from('buildings')
           .select('*')
           .order('name')
 
-        if (error) {
-          console.error('Error fetching buildings:', error)
+        if (buildingsError) {
+          console.error('Error fetching buildings:', buildingsError)
           setError('Unable to load your buildings at this time. Please try again later.')
-        } else {
-          setBuildings(data || [])
+          return
         }
+
+        // Fetch all units to calculate live unit counts
+        const { data: unitsData, error: unitsError } = await supabase
+          .from('units')
+          .select('id, building_id')
+
+        if (unitsError) {
+          console.error('Error fetching units:', unitsError)
+          // Continue with buildings even if units fail to load
+        }
+
+        // Calculate unit count for each building
+        const buildingsWithUnitCounts = (buildingsData || []).map(building => {
+          const unitCount = unitsData ? unitsData.filter(unit => unit.building_id === building.id).length : 0
+          return {
+            ...building,
+            liveUnitCount: unitCount
+          }
+        })
+
+        setBuildings(buildingsWithUnitCounts)
       } catch (err) {
-        console.error('Error fetching buildings:', err)
+        console.error('Error fetching data:', err)
         setError('Unable to load your buildings at this time. Please try again later.')
       } finally {
         setLoading(false)
       }
     }
 
-    fetchBuildings()
+    fetchBuildingsAndUnits()
   }, [supabase])
 
   if (loading) {
