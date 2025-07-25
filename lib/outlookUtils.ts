@@ -88,6 +88,15 @@ export async function fetchOutlookEvents() {
     
     if (!response.ok) {
       const errorData = await response.json();
+      // Check if it's a connection issue that should be handled gracefully
+      if (errorData.message && (
+        errorData.message.includes('Please reconnect') ||
+        errorData.message.includes('Outlook not connected') ||
+        errorData.message.includes('Token expired') ||
+        errorData.message.includes('Token invalid')
+      )) {
+        throw new Error(errorData.message);
+      }
       throw new Error(errorData.message || 'Failed to fetch Outlook events');
     }
 

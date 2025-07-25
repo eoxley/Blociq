@@ -15,20 +15,60 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
-    const { building_id, prompt } = body
+    // Check if the request is multipart/form-data (file upload) or JSON
+    const contentType = request.headers.get('content-type') || ''
+    let prompt: string
+    let building_id: string | null
+    let uploadedFiles: Array<{ name: string; content: string; type: string }> = []
 
-    if (!prompt) {
-      return NextResponse.json({ error: 'Prompt is required' }, { status: 400 })
+    if (contentType.includes('multipart/form-data')) {
+      // Handle file upload
+      const formData = await request.formData()
+      prompt = (formData.get('prompt') as string) || ''
+      building_id = (formData.get('building_id') as string) || null
+      
+      // Process uploaded files
+      const files = formData.getAll('file') as File[]
+      const fileNames = formData.getAll('fileName') as string[]
+      
+      console.log('📁 Processing uploaded files:', files.length)
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        const fileName = fileNames[i] || file.name
+        
+        try {
+          const fileContent = await extractTextFromFile(file)
+          uploadedFiles.push({
+            name: fileName,
+            content: fileContent,
+            type: file.type
+          })
+          console.log(`✅ Extracted text from ${fileName} (${fileContent.length} characters)`)
+        } catch (error) {
+          console.error(`❌ Error processing file ${fileName}:`, error)
+          // Continue with other files even if one fails
+        }
+      }
+    } else {
+      // Handle JSON request (existing functionality)
+      const body = await request.json()
+      prompt = body.prompt
+      building_id = body.building_id
+    }
+
+    if (!prompt && uploadedFiles.length === 0) {
+      return NextResponse.json({ error: 'Prompt or file is required' }, { status: 400 })
     }
 
     console.log('🔍 AI Query:', prompt)
     console.log('🏢 Building ID:', building_id)
+    console.log('📁 Uploaded files:', uploadedFiles.length)
 
     // Check if this is a document search query
     const isDocumentSearch = detectDocumentSearchQuery(prompt)
     
-    if (isDocumentSearch && building_id) {
+    if (isDocumentSearch && building_id && building_id !== 'null') {
       console.log('📄 Detected document search query, searching compliance documents...')
       const documentSearchResult = await searchComplianceDocuments(supabase, prompt, building_id)
       
@@ -43,15 +83,15 @@ export async function POST(request: Request) {
     }
 
     // Comprehensive data gathering from all relevant tables
-    const buildingData = await gatherBuildingData(supabase, building_id)
-    const unitsData = await gatherUnitsData(supabase, building_id)
-    const leaseholdersData = await gatherLeaseholdersData(supabase, building_id)
-    const complianceData = await gatherComplianceData(supabase, building_id)
-    const emailsData = await gatherEmailsData(supabase, building_id)
-    const tasksData = await gatherTasksData(supabase, building_id)
-    const documentsData = await gatherDocumentsData(supabase, building_id)
-    const eventsData = await gatherEventsData(supabase, building_id)
-    const majorWorksData = await gatherMajorWorksData(supabase, building_id)
+    const buildingData = await gatherBuildingData(supabase, building_id || undefined)
+    const unitsData = await gatherUnitsData(supabase, building_id || undefined)
+    const leaseholdersData = await gatherLeaseholdersData(supabase, building_id || undefined)
+    const complianceData = await gatherComplianceData(supabase, building_id || undefined)
+    const emailsData = await gatherEmailsData(supabase, building_id || undefined)
+    const tasksData = await gatherTasksData(supabase, building_id || undefined)
+    const documentsData = await gatherDocumentsData(supabase, building_id || undefined)
+    const eventsData = await gatherEventsData(supabase, building_id || undefined)
+    const majorWorksData = await gatherMajorWorksData(supabase, building_id || undefined)
 
     // Combine all data into a comprehensive context
     const comprehensiveContext = {
@@ -63,7 +103,8 @@ export async function POST(request: Request) {
       tasks: tasksData,
       documents: documentsData,
       events: eventsData,
-      majorWorks: majorWorksData
+      majorWorks: majorWorksData,
+      uploadedFiles: uploadedFiles
     }
 
     // Create a detailed prompt for the AI
@@ -86,6 +127,14 @@ For documents:
 - If the document contains compliance information, highlight key findings and suggest actions
 - If the document is a survey or report, summarize the main findings and any required follow-up actions
 - If the document appears to have limited readable text, suggest re-uploading with OCR or a text-based version
+
+For uploaded files:
+- Analyze the content thoroughly and provide specific insights
+- If it's a lease document, identify key terms, obligations, and important dates
+- If it's a compliance document, highlight requirements and deadlines
+- If it's a financial document, identify costs, payments, and financial implications
+- If it's a report or survey, summarize findings and suggest actions
+- Always provide practical, actionable advice for property managers
 
 Always be helpful, professional, and accurate. If information is not available in the data, clearly state that.`
         },
@@ -124,13 +173,65 @@ Always be helpful, professional, and accurate. If information is not available i
         tasks: tasksData ? `${tasksData.length} tasks found` : null,
         documents: documentsData ? `${documentsData.length} documents found` : null,
         events: eventsData ? `${eventsData.length} events found` : null,
-        majorWorks: majorWorksData ? `${majorWorksData.length} major works projects found` : null
+        majorWorks: majorWorksData ? `${majorWorksData.length} major works projects found` : null,
+        uploadedFiles: uploadedFiles.length > 0 ? `${uploadedFiles.length} files processed` : null
       }
     })
 
   } catch (error) {
     console.error('❌ Error in comprehensive ask-ai API:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+/**
+ * Extract text from uploaded files
+ */
+async function extractTextFromFile(file: File): Promise<string> {
+  try {
+    if (file.type === 'text/plain') {
+      // Handle plain text files
+      return await file.text()
+    } else if (file.type === 'application/pdf') {
+      // Handle PDF files using OpenAI's vision API
+      const arrayBuffer = await file.arrayBuffer()
+      const base64 = Buffer.from(arrayBuffer).toString('base64')
+      
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+      
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "Extract all the text content from this PDF document. Return only the extracted text without any additional commentary or formatting."
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:${file.type};base64,${base64}`
+                }
+              }
+            ]
+          }
+        ],
+        max_tokens: 4000
+      })
+      
+      return response.choices[0].message.content || ''
+    } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      // For DOCX files, we'll need to use a library like mammoth
+      // For now, return a placeholder message
+      return `[DOCX file: ${file.name} - Text extraction not yet implemented for Word documents. Please convert to PDF or TXT for full analysis.]`
+    } else {
+      return `[Unsupported file type: ${file.type}]`
+    }
+  } catch (error) {
+    console.error('Error extracting text from file:', error)
+    return `[Error processing file: ${file.name}]`
   }
 }
 
@@ -349,7 +450,7 @@ async function gatherMajorWorksData(supabase: any, buildingId?: string) {
 }
 
 function createAIPrompt(userQuestion: string, context: any) {
-  const { building, units, leaseholders, compliance, emails, tasks, documents, events, majorWorks } = context
+  const { building, units, leaseholders, compliance, emails, tasks, documents, events, majorWorks, uploadedFiles } = context
 
   let prompt = `You are BlocIQ, a comprehensive property management AI assistant. Answer the following question based on the detailed building data provided:
 
@@ -484,6 +585,20 @@ AVAILABLE DATA:
       })
       prompt += '\n'
     }
+  }
+
+  // Uploaded Files Information
+  if (uploadedFiles && uploadedFiles.length > 0) {
+    prompt += `UPLOADED FILES (${uploadedFiles.length} total):\n`
+    uploadedFiles.forEach((file: { name: string; content: string; type: string }, i: number) => {
+      prompt += `${i + 1}. ${file.name} (${file.type})\n`
+      if (file.content.length > 200) { // Only include if content is substantial
+        prompt += `Content Excerpt: ${file.content.slice(0, 200)}...\n`
+      } else {
+        prompt += `Content: ${file.content}\n`
+      }
+      prompt += '\n'
+    })
   }
 
   // Events Information

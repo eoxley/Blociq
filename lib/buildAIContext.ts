@@ -27,12 +27,14 @@ export async function buildAIContext(buildingId: string) {
         service_charge_end,
         units (
           id,
-          name,
-                  leaseholders (
-          name,
-          email,
-          phone
-        )
+          unit_number,
+          floor,
+          type,
+          leaseholders (
+            name,
+            email,
+            phone
+          )
         )
       `)
       .eq('id', buildingIdNum)

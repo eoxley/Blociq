@@ -251,7 +251,13 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
       } catch (error) {
         console.error('Error fetching Outlook events:', error);
-        toast.error('Failed to load Outlook events');
+        // Don't show error toast for Outlook connection issues - just log it
+        // This prevents spam when Outlook is not connected
+        if (error instanceof Error && error.message.includes('Please reconnect')) {
+          console.log('Outlook not connected - skipping events fetch');
+        } else {
+          toast.error('Failed to load Outlook events');
+        }
       } finally {
         setLoadingOutlook(false);
       }

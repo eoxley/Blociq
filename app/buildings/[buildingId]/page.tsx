@@ -26,6 +26,7 @@ import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui
 import { BlocIQBadge } from '@/components/ui/blociq-badge'
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import SearchableUnitsTable from '@/components/SearchableUnitsTable'
+import BuildingInfoClient from '@/components/BuildingInfoClient'
 
 export default async function BuildingDetailPage({ 
   params 
@@ -193,31 +194,28 @@ export default async function BuildingDetailPage({
     // Fetch units and leaseholders
     let unitsResult
     try {
-      // Convert buildingId to integer for the units query
-      const buildingIdInt = parseInt(buildingId, 10)
+      // Use the actual building ID from the building result
+      const actualBuildingId = building.id
+      console.log("🔍 Using building ID for units query:", actualBuildingId)
       
-      if (isNaN(buildingIdInt)) {
-        console.error("❌ Invalid building ID format:", buildingId)
-        unitsResult = { data: [], error: null }
-      } else {
-        unitsResult = await supabase
-          .from("units")
-          .select(`
+      unitsResult = await supabase
+        .from("units")
+        .select(`
+          id,
+          unit_number,
+          floor,
+          type,
+          leaseholder_id,
+          leaseholders (
             id,
-            unit_number,
-            floor,
-            type,
-            leaseholders (
-              id,
-              name,
-              email
-            )
-          `)
-          .eq("building_id", buildingIdInt)
-          .order("unit_number")
+            name,
+            email
+          )
+        `)
+        .eq("building_id", actualBuildingId)
+        .order("unit_number")
         
-        console.log("🔍 Units query result:", unitsResult)
-      }
+      console.log("🔍 Units query result:", unitsResult)
       
     } catch (error) {
       console.error("❌ Error fetching units:", error)
@@ -345,81 +343,7 @@ export default async function BuildingDetailPage({
               </p>
             </div>
             
-            <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {building.notes && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center">
-                        <BookOpen className="h-5 w-5 text-white" />
-                      </div>
-                      <span className="text-lg font-semibold text-gray-900">Notes</span>
-                    </div>
-                    <p className="text-gray-700 leading-relaxed">{building.notes}</p>
-                  </div>
-                )}
-                
-                {building.key_access_notes && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center">
-                        <Key className="h-5 w-5 text-white" />
-                      </div>
-                      <span className="text-lg font-semibold text-gray-900">Key Access</span>
-                    </div>
-                    <p className="text-gray-700 leading-relaxed">{building.key_access_notes}</p>
-                  </div>
-                )}
-                
-                {building.parking_notes && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center">
-                        <Car className="h-5 w-5 text-white" />
-                      </div>
-                      <span className="text-lg font-semibold text-gray-900">Parking</span>
-                    </div>
-                    <p className="text-gray-700 leading-relaxed">{building.parking_notes}</p>
-                  </div>
-                )}
-                
-                {building.entry_code && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center">
-                        <Phone className="h-5 w-5 text-white" />
-                      </div>
-                      <span className="text-lg font-semibold text-gray-900">Entry Code</span>
-                    </div>
-                    <p className="text-gray-700 font-mono text-lg">{building.entry_code}</p>
-                  </div>
-                )}
-                
-                {building.fire_panel_location && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center">
-                        <Zap className="h-5 w-5 text-white" />
-                      </div>
-                      <span className="text-lg font-semibold text-gray-900">Fire Panel</span>
-                    </div>
-                    <p className="text-gray-700 leading-relaxed">{building.fire_panel_location}</p>
-                  </div>
-                )}
-                
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center">
-                      <Calendar className="h-5 w-5 text-white" />
-                    </div>
-                    <span className="text-lg font-semibold text-gray-900">Added</span>
-                  </div>
-                  <p className="text-gray-700 text-lg">
-                    {new Date(building.created_at).toLocaleDateString('en-GB')}
-                  </p>
-                </div>
-              </div>
-            </div>
+            <BuildingInfoClient building={building} />
           </section>
 
           {/* Compliance Status - Enhanced Landing Page Style */}
@@ -498,7 +422,16 @@ export default async function BuildingDetailPage({
               <SearchableUnitsTable units={units} buildingId={buildingId} />
               
               <div className="text-center mt-8 pt-6 border-t border-gray-200">
-                <span className="text-lg text-gray-600 font-medium">{units.length} units total</span>
+                <div className="flex items-center justify-center gap-4">
+                  <span className="text-lg text-gray-600 font-medium">{units.length} units total</span>
+                  <a 
+                    href={`/buildings/${buildingId}/units`}
+                    className="inline-flex items-center gap-2 text-teal-600 hover:text-teal-700 font-semibold text-lg"
+                  >
+                    View All Units
+                    <ArrowRight className="h-4 w-4" />
+                  </a>
+                </div>
               </div>
             </div>
           </section>
