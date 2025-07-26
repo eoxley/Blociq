@@ -1,87 +1,364 @@
 import pdfParse from 'pdf-parse';
+import OpenAI from 'openai';
 
 export interface TextExtractionResult {
   text: string;
   confidence: 'high' | 'medium' | 'low';
-  method: 'pdf-parse' | 'ocr' | 'fallback';
+  method: 'pdf-parse' | 'openai-vision' | 'ocr' | 'fallback';
   pageCount?: number;
   wordCount?: number;
+  error?: string;
+  suggestions?: string[];
 }
 
-/**
- * Extract text from PDF buffer with intelligent fallback
- */
-export async function extractTextFromPDF(buffer: Buffer): Promise<TextExtractionResult> {
-  try {
-    // Primary method: pdf-parse
-    const pdfData = await pdfParse(buffer);
-    const extractedText = pdfData.text || '';
-    
-    // Check if we got substantial text
-    if (extractedText.trim().length > 100) {
-      return {
-        text: extractedText,
-        confidence: 'high',
-        method: 'pdf-parse',
-        pageCount: pdfData.numpages,
-        wordCount: extractedText.split(/\s+/).length
-      };
-    }
-    
-    // If text is too short, it might be a scanned document
-    console.log('⚠️ PDF text extraction yielded limited content, attempting OCR...');
-    
-    // For now, return the limited text with low confidence
-    // In a full implementation, you would integrate with Google Vision API or similar OCR service
-    return {
-      text: extractedText || 'Document appears to be scanned or image-based. OCR processing recommended.',
-      confidence: 'low',
-      method: 'pdf-parse',
-      pageCount: pdfData.numpages,
-      wordCount: extractedText.split(/\s+/).length
-    };
-    
-  } catch (error) {
-    console.error('❌ PDF text extraction failed:', error);
-    
-    // Fallback: return basic document info
-    return {
-      text: 'Document processing failed. Please ensure the file is a valid PDF and try again.',
-      confidence: 'low',
-      method: 'fallback',
-      wordCount: 0
-    };
-  }
-}
-
-/**
- * Enhanced text extraction with document type detection
- */
-export async function extractTextWithAnalysis(buffer: Buffer, fileName: string): Promise<{
+export interface DocumentAnalysisResult {
   text: string;
   confidence: 'high' | 'medium' | 'low';
   documentType: string;
   keyPhrases: string[];
   summary: string;
-}> {
-  const extractionResult = await extractTextFromPDF(buffer);
-  
-  // Detect document type based on filename and content
-  const documentType = detectDocumentType(fileName, extractionResult.text);
-  
-  // Extract key phrases for better analysis
-  const keyPhrases = extractKeyPhrases(extractionResult.text);
-  
-  // Generate basic summary
-  const summary = generateBasicSummary(extractionResult.text, documentType);
+  error?: string;
+  suggestions?: string[];
+}
+
+/**
+ * Enhanced text extraction with multiple fallback methods
+ */
+export async function extractTextFromPDF(buffer: Buffer, fileName?: string): Promise<TextExtractionResult> {
+  const extractionMethods = [
+    { name: 'pdf-parse', method: extractWithPdfParse },
+    { name: 'openai-vision', method: extractWithOpenAI },
+    { name: 'ocr', method: extractWithOCR }
+  ];
+
+  for (const { name, method } of extractionMethods) {
+    try {
+      console.log(`🔄 Attempting ${name} extraction...`);
+      const result = await method(buffer, fileName);
+      
+      if (result.text && result.text.trim().length > 50) {
+        console.log(`✅ ${name} extraction successful (${result.text.length} characters)`);
+        return {
+          ...result,
+          method: name as any,
+          wordCount: result.text.split(/\s+/).length
+        };
+      } else {
+        console.log(`⚠️ ${name} extraction yielded insufficient content`);
+      }
+    } catch (error) {
+      console.error(`❌ ${name} extraction failed:`, error);
+    }
+  }
+
+  // All methods failed
+  return {
+    text: 'Document processing failed. The document may be corrupted, password-protected, or in an unsupported format.',
+    confidence: 'low',
+    method: 'fallback',
+    error: 'All extraction methods failed',
+    suggestions: [
+      'Try uploading a different version of the document',
+      'Ensure the document is not password-protected',
+      'Convert the document to PDF format if it\'s in another format',
+      'For scanned documents, try using a text-based version',
+      'Check that the file is not corrupted'
+    ]
+  };
+}
+
+/**
+ * Primary method: pdf-parse
+ */
+async function extractWithPdfParse(buffer: Buffer, fileName?: string): Promise<Partial<TextExtractionResult>> {
+  const pdfData = await pdfParse(buffer);
+  const extractedText = pdfData.text || '';
   
   return {
-    text: extractionResult.text,
-    confidence: extractionResult.confidence,
-    documentType,
-    keyPhrases,
-    summary
+    text: extractedText,
+    confidence: extractedText.trim().length > 200 ? 'high' : 'medium',
+    pageCount: pdfData.numpages
   };
+}
+
+/**
+ * Fallback method: OpenAI Vision API
+ */
+async function extractWithOpenAI(buffer: Buffer, fileName?: string): Promise<Partial<TextExtractionResult>> {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OpenAI API key not configured');
+  }
+
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const base64 = buffer.toString('base64');
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: `Extract all readable text from this document. If it's a scanned document or image, describe what you can see. Return only the extracted text without any additional commentary or formatting. If the document appears to be scanned or image-based, mention this clearly.`
+          },
+          {
+            type: "image_url",
+            image_url: {
+              url: `data:application/pdf;base64,${base64}`
+            }
+          }
+        ]
+      }
+    ],
+    max_tokens: 4000
+  });
+
+  const extractedText = response.choices[0].message.content || '';
+  
+  return {
+    text: extractedText,
+    confidence: extractedText.includes('scanned') || extractedText.includes('image') ? 'low' : 'high'
+  };
+}
+
+/**
+ * OCR fallback method (placeholder for OCR service integration)
+ */
+async function extractWithOCR(buffer: Buffer, fileName?: string): Promise<Partial<TextExtractionResult>> {
+  // This would integrate with Google Vision API, Azure Computer Vision, or similar OCR service
+  // For now, return a helpful message suggesting OCR processing
+  
+  return {
+    text: 'This document appears to be scanned or image-based. OCR processing is recommended for better text extraction. Please try uploading a text-based version of the document or contact support for OCR processing.',
+    confidence: 'low',
+    suggestions: [
+      'Upload a text-based version of the document',
+      'Use OCR processing service',
+      'Convert scanned document to searchable PDF',
+      'Contact support for manual processing'
+    ]
+  };
+}
+
+/**
+ * Enhanced text extraction with document type detection and analysis
+ */
+export async function extractTextWithAnalysis(buffer: Buffer, fileName: string): Promise<DocumentAnalysisResult> {
+  try {
+    const extractionResult = await extractTextFromPDF(buffer, fileName);
+    
+    if (extractionResult.error) {
+      return {
+        text: extractionResult.text,
+        confidence: 'low',
+        documentType: 'Unknown',
+        keyPhrases: [],
+        summary: 'Document processing failed. Please try a different file or format.',
+        error: extractionResult.error,
+        suggestions: extractionResult.suggestions
+      };
+    }
+    
+    // Detect document type based on filename and content
+    const documentType = detectDocumentType(fileName, extractionResult.text);
+    
+    // Extract key phrases for better analysis
+    const keyPhrases = extractKeyPhrases(extractionResult.text);
+    
+    // Generate basic summary
+    const summary = generateBasicSummary(extractionResult.text, documentType);
+    
+    return {
+      text: extractionResult.text,
+      confidence: extractionResult.confidence,
+      documentType,
+      keyPhrases,
+      summary
+    };
+  } catch (error) {
+    console.error('❌ Document analysis failed:', error);
+    return {
+      text: 'Document analysis failed. Please try again.',
+      confidence: 'low',
+      documentType: 'Unknown',
+      keyPhrases: [],
+      summary: 'Unable to analyze document content.',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      suggestions: [
+        'Check that the file is not corrupted',
+        'Try uploading a different version',
+        'Ensure the document is in a supported format',
+        'Contact support if the problem persists'
+      ]
+    };
+  }
+}
+
+/**
+ * Extract text from various file types with enhanced error handling
+ */
+export async function extractTextFromFile(file: File): Promise<TextExtractionResult> {
+  try {
+    console.log(`📄 Processing file: ${file.name} (${file.type})`);
+    
+    if (file.type === 'text/plain') {
+      const text = await file.text();
+      return {
+        text,
+        confidence: 'high',
+        method: 'pdf-parse',
+        wordCount: text.split(/\s+/).length
+      };
+    } else if (file.type === 'application/pdf') {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      return await extractTextFromPDF(buffer, file.name);
+    } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      return await extractTextFromDocx(file);
+    } else if (file.type.includes('image/')) {
+      return await extractTextFromImage(file);
+    } else {
+      return {
+        text: `Unsupported file type: ${file.type}. Please upload PDF, DOCX, TXT, or image files.`,
+        confidence: 'low',
+        method: 'fallback',
+        error: 'Unsupported file type',
+        suggestions: [
+          'Convert the file to PDF format',
+          'Upload a text-based version',
+          'Use a supported file type (PDF, DOCX, TXT, JPG, PNG)'
+        ]
+      };
+    }
+  } catch (error) {
+    console.error('❌ File processing failed:', error);
+    return {
+      text: `Error processing file: ${file.name}`,
+      confidence: 'low',
+      method: 'fallback',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      suggestions: [
+        'Check that the file is not corrupted',
+        'Try uploading a different version',
+        'Ensure the file is in a supported format',
+        'Contact support if the problem persists'
+      ]
+    };
+  }
+}
+
+/**
+ * Extract text from DOCX files
+ */
+async function extractTextFromDocx(file: File): Promise<TextExtractionResult> {
+  try {
+    // For now, use OpenAI Vision API as a fallback for DOCX
+    // In production, you'd use a library like mammoth.js
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const arrayBuffer = await file.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString('base64');
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: "Extract all the text content from this Word document. Return only the extracted text without any additional commentary or formatting."
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:${file.type};base64,${base64}`
+              }
+            }
+          ]
+        }
+      ],
+      max_tokens: 4000
+    });
+
+    const extractedText = response.choices[0].message.content || '';
+    
+    return {
+      text: extractedText,
+      confidence: 'high',
+      method: 'openai-vision',
+      wordCount: extractedText.split(/\s+/).length
+    };
+  } catch (error) {
+    console.error('❌ DOCX extraction failed:', error);
+    return {
+      text: `Unable to extract text from Word document: ${file.name}. Please convert to PDF or TXT format.`,
+      confidence: 'low',
+      method: 'fallback',
+      error: 'DOCX extraction failed',
+      suggestions: [
+        'Convert the document to PDF format',
+        'Save as plain text (.txt)',
+        'Copy and paste content into a text file',
+        'Use a different document format'
+      ]
+    };
+  }
+}
+
+/**
+ * Extract text from image files
+ */
+async function extractTextFromImage(file: File): Promise<TextExtractionResult> {
+  try {
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const arrayBuffer = await file.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString('base64');
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: "Extract all readable text from this image. If there's no text, describe what you can see. Return only the extracted text or description without additional commentary."
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:${file.type};base64,${base64}`
+              }
+            }
+          ]
+        }
+      ],
+      max_tokens: 2000
+    });
+
+    const extractedText = response.choices[0].message.content || '';
+    
+    return {
+      text: extractedText,
+      confidence: extractedText.length > 50 ? 'medium' : 'low',
+      method: 'openai-vision',
+      wordCount: extractedText.split(/\s+/).length
+    };
+  } catch (error) {
+    console.error('❌ Image text extraction failed:', error);
+    return {
+      text: `Unable to extract text from image: ${file.name}. The image may not contain readable text or may be of low quality.`,
+      confidence: 'low',
+      method: 'fallback',
+      error: 'Image text extraction failed',
+      suggestions: [
+        'Ensure the image contains clear, readable text',
+        'Try a higher resolution image',
+        'Use a text-based document instead',
+        'Convert image to PDF with embedded text'
+      ]
+    };
+  }
 }
 
 /**

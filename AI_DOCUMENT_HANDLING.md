@@ -1,326 +1,314 @@
-# AI Document Handling System
+# BlocIQ AI Document Handling System
 
 ## Overview
 
-The AI Document Handling System provides intelligent PDF processing for UK leasehold block management, with user-controlled confirmation before saving data. The system extracts text, generates summaries, classifies documents, and extracts metadata while ensuring users maintain full control over the final data.
+The BlocIQ AI Document Handling System provides robust document processing with intelligent fallback mechanisms, comprehensive error handling, and user-friendly feedback. The system supports multiple file formats and automatically handles various document processing scenarios.
 
 ## Features
 
-### 1. Intelligent Document Processing
-- **Text Extraction**: Uses OpenAI's PDF processing to extract text from uploaded PDFs
-- **AI Classification**: Automatically classifies documents as Compliance, Lease, Minutes, Insurance, Financial, or Other
-- **Summary Generation**: Creates concise, readable summaries of document content
-- **Metadata Extraction**: Extracts key dates, responsible parties, contractors, and action items
-- **Compliance Asset Linking**: Suggests appropriate compliance assets for linking
+### ✅ **Multi-Format Support**
+- **PDF Documents**: Text-based and scanned PDFs
+- **Word Documents**: DOCX and DOC files
+- **Text Files**: Plain text documents
+- **Image Files**: JPG, PNG, GIF with text extraction
+- **Size Limits**: Up to 10MB per file
 
-### 2. User-Controlled Confirmation
-- **Preview Interface**: Shows AI analysis results before saving
-- **Editable Fields**: Users can modify all AI-generated information
-- **Accept & File**: Explicit user confirmation required before saving
-- **Cancel Option**: Users can discard AI analysis and start over
+### ✅ **Intelligent Text Extraction**
+- **Primary Method**: pdf-parse for text-based PDFs
+- **Fallback Method**: OpenAI Vision API for complex documents
+- **OCR Support**: Placeholder for OCR service integration
+- **Confidence Scoring**: High/Medium/Low confidence levels
 
-### 3. RLS-Safe Implementation
-- **User Authentication**: Validates user permissions before processing
-- **Building Access Control**: Ensures users can only access authorized buildings
-- **Secure File Storage**: Files stored in user-specific Supabase storage buckets
+### ✅ **Enhanced Error Handling**
+- **Specific Error Messages**: Clear explanations of what went wrong
+- **Actionable Suggestions**: Step-by-step guidance for users
+- **Graceful Degradation**: Continue processing other files if one fails
+- **User-Friendly Feedback**: Toast notifications and status indicators
+
+### ✅ **Document Analysis**
+- **Automatic Classification**: Detect document types (EICR, FRA, etc.)
+- **Key Phrase Extraction**: Identify important terms and concepts
+- **Summary Generation**: AI-powered document summaries
+- **Compliance Detection**: Identify compliance-related content
 
 ## System Architecture
 
-### API Endpoints
+### File Processing Pipeline
 
-#### `/api/upload-and-analyse` (POST)
-Handles PDF upload, text extraction, and AI analysis.
-
-**Request:**
-```typescript
-FormData {
-  file: File (PDF)
-  buildingId?: string
-}
+```
+1. File Upload → 2. Validation → 3. Text Extraction → 4. Analysis → 5. Storage
 ```
 
-**Response:**
-```typescript
-{
-  success: boolean
-  ai: {
-    classification: string
-    document_type: string
-    summary: string
-    inspection_date: string | null
-    next_due_date: string | null
-    responsible_party: string
-    action_required: string
-    confidence: number
-    suggested_compliance_asset: string | null
-    contractor_name: string | null
-    building_name: string | null
-    key_dates: string[]
-    key_entities: string[]
-    originalFileName: string
-    buildingId: string | null
-    extractedText: string
-    file_url: string
-  }
-}
-```
+#### 1. File Upload
+- Drag & drop interface
+- File type validation
+- Size limit enforcement
+- Progress tracking
 
-#### `/api/documents/confirm-file` (POST)
-Handles user confirmation and saves document with all metadata.
+#### 2. Validation
+- File type checking
+- Size validation
+- Empty file detection
+- Corrupted file detection
 
-**Request:**
-```typescript
-FormData {
-  file_url: string
-  document_type: string
-  classification: string
-  summary: string
-  inspection_date: string
-  next_due_date: string
-  responsible_party: string
-  action_required: string
-  contractor_name: string
-  confidence: string
-  suggested_compliance_asset: string
-  building_id?: string
-  unit_id?: string
-  leaseholder_id?: string
-}
-```
+#### 3. Text Extraction
+- **PDF**: pdf-parse → OpenAI Vision → OCR (fallback)
+- **DOCX**: OpenAI Vision API
+- **TXT**: Direct text reading
+- **Images**: OpenAI Vision API
 
-**Response:**
-```typescript
-{
-  success: boolean
-  document_id: string
-  building_id: number | null
-  message: string
-}
-```
+#### 4. Analysis
+- Document type detection
+- Key phrase extraction
+- Summary generation
+- Compliance analysis
 
-### Database Tables
+#### 5. Storage
+- Supabase Storage for files
+- Database storage for metadata
+- AI analysis results storage
 
-#### `building_documents`
-Stores uploaded documents with metadata:
-```sql
-CREATE TABLE building_documents (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  building_id INTEGER REFERENCES buildings(id),
-  unit_id INTEGER REFERENCES units(id),
-  leaseholder_id UUID REFERENCES leaseholders(id),
-  file_name TEXT NOT NULL,
-  file_url TEXT NOT NULL,
-  type TEXT,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-```
+## API Endpoints
 
-#### `compliance_assets`
-Predefined compliance categories for linking:
-```sql
-CREATE TABLE compliance_assets (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  description TEXT,
-  category TEXT,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-```
+### `/api/ask-ai` (Enhanced)
+Handles AI queries with document context and improved error handling.
 
-#### `building_compliance_assets`
-Links buildings to compliance assets with status:
-```sql
-CREATE TABLE building_compliance_assets (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  building_id INTEGER REFERENCES buildings(id),
-  asset_id UUID REFERENCES compliance_assets(id),
-  status TEXT NOT NULL,
-  notes TEXT,
-  next_due_date DATE,
-  last_updated TIMESTAMP DEFAULT NOW()
-);
-```
+**Features:**
+- Multi-format file upload support
+- Enhanced text extraction with fallbacks
+- Comprehensive error messages
+- Document processing status feedback
 
-## Usage Flow
+**Request Types:**
+- **JSON**: Standard text queries
+- **FormData**: File uploads with questions
 
-### 1. Document Upload
-```typescript
-// User selects PDF file
-const file = event.target.files[0];
+### `/api/documents/upload-enhanced`
+Enhanced document upload with comprehensive processing.
 
-// Upload and analyze
-const formData = new FormData();
-formData.append('file', file);
-formData.append('buildingId', buildingId);
+**Features:**
+- Multi-format support
+- AI-powered analysis
+- Error handling with suggestions
+- Progress tracking
 
-const response = await fetch('/api/upload-and-analyse', {
-  method: 'POST',
-  body: formData
-});
+### `/api/classify-document`
+Document classification and analysis endpoint.
 
-const result = await response.json();
-```
-
-### 2. User Confirmation
-```typescript
-// Show confirmation dialog with AI results
-setAiResult(result.ai);
-setShowConfirmation(true);
-
-// User can edit fields
-const updateField = (field, value) => {
-  setEditableFields(prev => ({
-    ...prev,
-    [field]: value
-  }));
-};
-```
-
-### 3. Accept & File
-```typescript
-// User confirms and saves
-const formData = new FormData();
-formData.append('file_url', aiResult.file_url);
-formData.append('document_type', editableFields.document_type);
-// ... other fields
-
-const response = await fetch('/api/documents/confirm-file', {
-  method: 'POST',
-  body: formData
-});
-```
-
-## Security Features
-
-### Row Level Security (RLS)
-- Users can only access documents for buildings they have permission to view
-- File storage paths include user ID for isolation
-- All database operations validate user permissions
-
-### File Security
-- Files stored in Supabase storage with user-specific paths
-- Public URLs generated for document access
-- File type validation (PDF only)
-
-### API Security
-- Authentication required for all endpoints
-- Input validation and sanitization
-- Error handling without exposing sensitive information
-
-## Supported Document Types
-
-### Compliance Documents
-- Fire Risk Assessments
-- Electrical Installation Condition Reports (EICR)
-- Gas Safety Certificates
-- Asbestos Surveys
-- Legionella Risk Assessments
-- Lift Safety Certificates (LOLER)
-
-### Legal Documents
-- Lease Agreements
-- Assignment Documents
-- Service Charge Demands
-- Section 20 Notices
-
-### Administrative Documents
-- AGM Minutes
-- Board Meeting Minutes
-- Insurance Certificates
-- Planning Permissions
-
-### Financial Documents
-- Service Charge Statements
-- Budget Documents
-- Accounts
-
-## Setup Instructions
-
-### 1. Environment Variables
-```bash
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-OPENAI_API_KEY=your_openai_api_key
-```
-
-### 2. Database Setup
-Run the seed script to create compliance assets:
-```bash
-npx tsx scripts/seedComplianceAssets.ts
-```
-
-### 3. Storage Bucket
-Create a `building-documents` bucket in Supabase storage with appropriate RLS policies.
-
-### 4. RLS Policies
-Ensure appropriate RLS policies are in place for:
-- `building_documents` table
-- `compliance_assets` table
-- `building_compliance_assets` table
-- Storage bucket access
+**Features:**
+- Automatic document type detection
+- Key phrase extraction
+- Summary generation
+- Compliance analysis
 
 ## Error Handling
 
-### Common Errors
-- **File Upload Failed**: Check storage bucket permissions and file size limits
-- **Text Extraction Failed**: Document may be scanned or corrupted
-- **AI Analysis Failed**: Check OpenAI API key and quota
-- **Permission Denied**: User doesn't have access to the specified building
+### Document Processing Errors
 
-### Fallback Behavior
-- If AI analysis fails, system provides basic document type detection
-- Users can manually edit all fields
-- System continues to work even if compliance linking fails
+#### 1. **Scanned Document Detection**
+```
+Error: "This appears to be a scanned document"
+Suggestions:
+- Upload a text-based version
+- Use OCR processing service
+- Convert to searchable PDF
+```
 
-## Performance Considerations
+#### 2. **Corrupted File Detection**
+```
+Error: "File appears to be corrupted"
+Suggestions:
+- Try uploading a different version
+- Check that the file is not corrupted
+- Convert to a different format
+```
 
-### File Size Limits
-- Maximum file size: 10MB
-- Recommended: Under 5MB for optimal processing
-- Large files may take longer to process
+#### 3. **Unsupported File Type**
+```
+Error: "Unsupported file type"
+Suggestions:
+- Convert to PDF format
+- Upload a text-based version
+- Use supported file types
+```
 
-### Processing Time
-- Text extraction: 5-15 seconds
-- AI analysis: 10-30 seconds
-- Total processing time: 15-45 seconds
+#### 4. **File Too Large**
+```
+Error: "File too large"
+Suggestions:
+- Compress the file
+- Split into smaller files
+- Keep files under 10MB
+```
 
-### Caching
-- AI analysis results are not cached (user-specific)
-- File URLs are cached by Supabase storage
+### AI Response Error Handling
+
+The AI system provides helpful guidance when documents fail to process:
+
+- **Explains what went wrong** in user-friendly terms
+- **Suggests specific solutions** for each error type
+- **Recommends alternative approaches** (OCR, conversion, etc.)
+- **Maintains context** even when document processing fails
+
+## UI Components
+
+### EnhancedDocumentUpload
+A comprehensive document upload component with:
+
+- **Drag & drop interface**
+- **Real-time progress tracking**
+- **Status indicators** (uploading, processing, completed, error)
+- **Error messages with suggestions**
+- **File validation**
+- **Multiple file support**
+
+### DocumentAwareAI
+Enhanced AI assistant component with:
+
+- **Document context awareness**
+- **File upload integration**
+- **Error handling**
+- **Status feedback**
+
+## Best Practices
+
+### For Users
+
+1. **Use Text-Based PDFs**
+   - Convert scanned documents to searchable PDFs
+   - Ensure documents are not password-protected
+   - Use high-quality scans for better OCR results
+
+2. **File Preparation**
+   - Keep files under 10MB for faster processing
+   - Use supported formats (PDF, DOCX, TXT, JPG, PNG)
+   - Ensure files are not corrupted
+
+3. **When Errors Occur**
+   - Read the specific error message
+   - Follow the suggested solutions
+   - Try alternative file formats
+   - Contact support if issues persist
+
+### For Developers
+
+1. **Error Handling**
+   - Always provide specific error messages
+   - Include actionable suggestions
+   - Log errors for debugging
+   - Gracefully handle partial failures
+
+2. **User Feedback**
+   - Show progress indicators
+   - Provide real-time status updates
+   - Use clear, non-technical language
+   - Offer multiple solution paths
+
+3. **Performance**
+   - Implement proper file size limits
+   - Use async processing for large files
+   - Cache processed results
+   - Implement retry mechanisms
+
+## Troubleshooting
+
+### Common Issues
+
+#### 1. **"Document processing failed"**
+- Check file format and size
+- Ensure file is not corrupted
+- Try converting to PDF format
+- Verify file is not password-protected
+
+#### 2. **"Scanned document detected"**
+- Upload a text-based version
+- Use OCR processing service
+- Convert to searchable PDF
+- Contact support for manual processing
+
+#### 3. **"File too large"**
+- Compress the file
+- Split into smaller files
+- Use a different format
+- Reduce image quality if applicable
+
+#### 4. **"Unsupported file type"**
+- Convert to PDF format
+- Use supported formats (PDF, DOCX, TXT, JPG, PNG)
+- Save as plain text if possible
+- Contact support for additional formats
+
+### Debugging
+
+#### Server Logs
+Check for detailed error messages in server logs:
+```bash
+# Look for extraction errors
+grep "extraction failed" logs/
+
+# Check for file processing issues
+grep "processing error" logs/
+
+# Monitor AI responses
+grep "AI response" logs/
+```
+
+#### Client-Side Debugging
+Use browser developer tools to:
+- Monitor network requests
+- Check file upload progress
+- View error responses
+- Debug UI issues
 
 ## Future Enhancements
 
 ### Planned Features
-- **Batch Upload**: Process multiple documents simultaneously
-- **OCR Enhancement**: Better handling of scanned documents
-- **Template Recognition**: Identify document templates and forms
-- **Automated Reminders**: Set up reminders based on extracted dates
-- **Document Versioning**: Track document updates and changes
+
+1. **OCR Integration**
+   - Google Vision API integration
+   - Azure Computer Vision support
+   - Local OCR processing
+
+2. **Advanced Document Types**
+   - Excel file processing
+   - PowerPoint presentation analysis
+   - Email message parsing
+
+3. **Enhanced AI Analysis**
+   - Document comparison
+   - Version control
+   - Change detection
+   - Compliance tracking
+
+4. **Performance Improvements**
+   - Batch processing
+   - Background processing
+   - Result caching
+   - CDN integration
 
 ### Integration Opportunities
-- **Email Integration**: Process documents from email attachments
-- **Calendar Integration**: Create calendar events from extracted dates
-- **Workflow Automation**: Trigger actions based on document types
-- **Reporting**: Generate compliance reports from document data
 
-## Troubleshooting
+1. **Third-Party Services**
+   - Google Drive integration
+   - Dropbox sync
+   - OneDrive connection
+   - Email attachment processing
 
-### Debug Mode
-Enable debug logging by setting:
-```bash
-NODE_ENV=development
-```
+2. **Compliance Systems**
+   - Automated compliance checking
+   - Deadline tracking
+   - Action item generation
+   - Report generation
 
-### Common Issues
-1. **File not uploading**: Check storage bucket permissions
-2. **AI not responding**: Verify OpenAI API key and quota
-3. **Permission errors**: Check user's building access
-4. **Database errors**: Verify RLS policies and table structure
+## Support
 
-### Support
-For issues with the AI document handling system, check:
-1. Browser console for client-side errors
-2. Server logs for API errors
-3. Supabase dashboard for database errors
-4. OpenAI dashboard for API usage and errors 
+For technical support or questions about the document handling system:
+
+1. **Check the troubleshooting guide** above
+2. **Review error messages** for specific solutions
+3. **Contact the development team** with detailed error information
+4. **Provide file samples** for testing (if possible)
+
+## Conclusion
+
+The BlocIQ AI Document Handling System provides a robust, user-friendly solution for document processing with comprehensive error handling and intelligent fallback mechanisms. The system ensures that users can successfully process their documents and receive helpful guidance when issues arise. 

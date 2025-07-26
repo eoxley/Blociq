@@ -3,9 +3,11 @@
 import { Suspense } from "react";
 import LayoutWithSidebar from '@/components/LayoutWithSidebar';
 import DocumentAwareAI from '@/components/DocumentAwareAI';
+import EnhancedDocumentUpload from '@/components/EnhancedDocumentUpload';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Brain, FileText, Upload, MessageSquare, CheckCircle } from 'lucide-react';
+import { Brain, FileText, Upload, MessageSquare, CheckCircle, AlertTriangle, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 export default function AIAssistantPage() {
   return (
@@ -36,6 +38,29 @@ export default function AIAssistantPage() {
           <div className="absolute top-4 right-4 w-20 h-20 bg-white/10 rounded-full"></div>
           <div className="absolute bottom-4 left-4 w-16 h-16 bg-white/5 rounded-full"></div>
         </div>
+
+        {/* Document Upload Section */}
+        <Card className="border-0 shadow-xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5" />
+              Upload Documents for AI Analysis
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <EnhancedDocumentUpload
+              multiple={true}
+              acceptedFileTypes={['.pdf', '.doc', '.docx', '.txt', '.jpg', '.jpeg', '.png']}
+              maxFileSize={10}
+              onUploadComplete={(document) => {
+                console.log('Document uploaded:', document);
+              }}
+              onUploadError={(error) => {
+                console.error('Upload error:', error);
+              }}
+            />
+          </CardContent>
+        </Card>
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -69,6 +94,69 @@ export default function AIAssistantPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Document Processing Tips */}
+        <Card className="border-0 shadow-lg bg-gradient-to-r from-amber-50 to-orange-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-amber-800">
+              <Info className="h-5 w-5" />
+              Document Processing Tips
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <h4 className="font-medium text-amber-800 flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  Best Practices
+                </h4>
+                <div className="space-y-2 text-sm text-amber-700">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle className="h-3 w-3 text-green-600 mt-0.5" />
+                    <span>Use text-based PDFs for best results</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle className="h-3 w-3 text-green-600 mt-0.5" />
+                    <span>Convert scanned documents to searchable PDFs</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle className="h-3 w-3 text-green-600 mt-0.5" />
+                    <span>Ensure documents are not password-protected</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle className="h-3 w-3 text-green-600 mt-0.5" />
+                    <span>Keep files under 10MB for faster processing</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="font-medium text-amber-800 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-orange-600" />
+                  Troubleshooting
+                </h4>
+                <div className="space-y-2 text-sm text-amber-700">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-3 w-3 text-orange-600 mt-0.5" />
+                    <span>Scanned documents may need OCR processing</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-3 w-3 text-orange-600 mt-0.5" />
+                    <span>Corrupted files should be re-uploaded</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-3 w-3 text-orange-600 mt-0.5" />
+                    <span>Unsupported formats can be converted to PDF</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-3 w-3 text-orange-600 mt-0.5" />
+                    <span>Large files may take longer to process</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Example Questions */}
         <Card>

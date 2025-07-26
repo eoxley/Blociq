@@ -136,6 +136,13 @@ For uploaded files:
 - If it's a report or survey, summarize findings and suggest actions
 - Always provide practical, actionable advice for property managers
 
+For document processing errors:
+- If a document shows processing errors, explain what went wrong and provide specific solutions
+- Suggest alternative file formats or conversion methods
+- Recommend OCR processing for scanned documents
+- Guide users to upload text-based versions when possible
+- Be helpful and constructive in your suggestions
+
 Always be helpful, professional, and accurate. If information is not available in the data, clearly state that.`
         },
         {
@@ -185,53 +192,61 @@ Always be helpful, professional, and accurate. If information is not available i
 }
 
 /**
- * Extract text from uploaded files
+ * Extract text from uploaded files with enhanced error handling
  */
 async function extractTextFromFile(file: File): Promise<string> {
   try {
+    console.log(`📄 Processing file: ${file.name} (${file.type})`);
+    
     if (file.type === 'text/plain') {
       // Handle plain text files
-      return await file.text()
+      const text = await file.text();
+      console.log(`✅ Text file processed: ${text.length} characters`);
+      return text;
     } else if (file.type === 'application/pdf') {
-      // Handle PDF files using OpenAI's vision API
-      const arrayBuffer = await file.arrayBuffer()
-      const base64 = Buffer.from(arrayBuffer).toString('base64')
+      // Handle PDF files using enhanced extraction
+      const { extractTextFromPDF } = await import('@/lib/extractTextFromPdf');
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const result = await extractTextFromPDF(buffer, file.name);
       
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+      if (result.error) {
+        console.error(`❌ PDF extraction failed: ${result.error}`);
+        return `[Document Processing Error: ${result.error}]\n\nSuggestions:\n${result.suggestions?.map(s => `• ${s}`).join('\n') || 'Please try uploading a different version of the document.'}`;
+      }
       
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: "Extract all the text content from this PDF document. Return only the extracted text without any additional commentary or formatting."
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: `data:${file.type};base64,${base64}`
-                }
-              }
-            ]
-          }
-        ],
-        max_tokens: 4000
-      })
-      
-      return response.choices[0].message.content || ''
+      console.log(`✅ PDF processed using ${result.method}: ${result.text.length} characters (confidence: ${result.confidence})`);
+      return result.text;
     } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-      // For DOCX files, we'll need to use a library like mammoth
-      // For now, return a placeholder message
-      return `[DOCX file: ${file.name} - Text extraction not yet implemented for Word documents. Please convert to PDF or TXT for full analysis.]`
+      // Handle DOCX files using enhanced extraction
+      const { extractTextFromFile } = await import('@/lib/extractTextFromPdf');
+      const result = await extractTextFromFile(file);
+      
+      if (result.error) {
+        console.error(`❌ DOCX extraction failed: ${result.error}`);
+        return `[Word Document Processing Error: ${result.error}]\n\nSuggestions:\n${result.suggestions?.map(s => `• ${s}`).join('\n') || 'Please convert to PDF or TXT format.'}`;
+      }
+      
+      console.log(`✅ DOCX processed using ${result.method}: ${result.text.length} characters (confidence: ${result.confidence})`);
+      return result.text;
+    } else if (file.type.includes('image/')) {
+      // Handle image files using enhanced extraction
+      const { extractTextFromFile } = await import('@/lib/extractTextFromPdf');
+      const result = await extractTextFromFile(file);
+      
+      if (result.error) {
+        console.error(`❌ Image extraction failed: ${result.error}`);
+        return `[Image Processing Error: ${result.error}]\n\nSuggestions:\n${result.suggestions?.map(s => `• ${s}`).join('\n') || 'Please ensure the image contains clear, readable text.'}`;
+      }
+      
+      console.log(`✅ Image processed using ${result.method}: ${result.text.length} characters (confidence: ${result.confidence})`);
+      return result.text;
     } else {
-      return `[Unsupported file type: ${file.type}]`
+      console.warn(`⚠️ Unsupported file type: ${file.type}`);
+      return `[Unsupported File Type: ${file.type}]\n\nThis file type is not supported. Please upload:\n• PDF documents\n• Word documents (DOCX)\n• Text files (TXT)\n• Image files (JPG, PNG) with readable text`;
     }
   } catch (error) {
-    console.error('Error extracting text from file:', error)
-    return `[Error processing file: ${file.name}]`
+    console.error(`❌ Error processing file ${file.name}:`, error);
+    return `[Processing Error: ${file.name}]\n\nAn error occurred while processing this file. Please:\n• Check that the file is not corrupted\n• Try uploading a different version\n• Ensure the file is in a supported format\n• Contact support if the problem persists`;
   }
 }
 
