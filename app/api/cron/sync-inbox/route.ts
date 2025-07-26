@@ -40,6 +40,11 @@ export async function GET() {
     console.log(`📥 Page fetched: ${result.value?.length ?? 0} messages`);
 
     for (const msg of result.value || []) {
+      console.log('📨 Raw message:', JSON.stringify(msg, null, 2));
+      console.log('📨 From:', msg.from?.emailAddress?.address);
+      console.log('📨 Subject:', msg.subject);
+      console.log('📨 Received:', msg.receivedDateTime);
+
       const insert = {
         user_id: tokenRow.user_id,
         subject: msg.subject ?? null,
