@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 
     const { error: upsertError } = await supabase
       .from('outlook_tokens')
-      .upsert(upsertData, { onConflict: 'user_email' });
+      .upsert(upsertData, { onConflict: 'user_id' });
     if (upsertError) {
       console.error('[Outlook Exchange] Error upserting token:', upsertError);
       throw upsertError;
