@@ -45,72 +45,78 @@ export async function GET(req: NextRequest) {
 
     console.log('[Sync Inbox] Loaded token for user:', tokenData.user_id);
 
-    // Fetch messages from Microsoft Graph API
-    const response = await fetch('https://graph.microsoft.com/v1.0/me/messages?$top=10', {
-      headers: {
-        'Authorization': `Bearer ${tokenData.access_token}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    // Fetch all messages from Microsoft Graph API with pagination
+    let nextLink: string | null = 'https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$orderby=receivedDateTime desc';
+    let totalSynced = 0;
+    let totalErrors = 0;
 
-    if (!response.ok) {
-      console.error('[Sync Inbox] Microsoft Graph API error:', response.status, response.statusText);
-      return NextResponse.json(
-        { success: false, error: `Microsoft API error: ${response.status}` },
-        { status: response.status }
-      );
-    }
+    while (nextLink) {
+      console.log('[Sync Inbox] Fetching messages from:', nextLink);
+      
+      const response = await fetch(nextLink, {
+        headers: {
+          'Authorization': `Bearer ${tokenData.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-    const graphData = await response.json();
-    const messages: MicrosoftMessage[] = graphData.value || [];
-
-    console.log('[Sync Inbox] Fetched', messages.length, 'messages from Microsoft');
-
-    let successCount = 0;
-    let errorCount = 0;
-
-    // Process each message
-    for (const message of messages) {
-      try {
-        const emailData = {
-          user_id: tokenData.user_id,
-          subject: message.subject || '',
-          from_name: message.from?.emailAddress?.name || '',
-          from_email: message.from?.emailAddress?.address || '',
-          body_preview: message.bodyPreview || '',
-          received_at: message.receivedDateTime,
-          outlook_message_id: message.id,
-          folder: message.parentFolderId || '',
-          sync_status: 'fetched',
-          last_sync_at: new Date().toISOString(),
-        };
-
-        console.log('[Sync Inbox] Upserting message:', message.id, '-', message.subject);
-
-        const { error: upsertError } = await supabase
-          .from('incoming_emails')
-          .upsert(emailData, { onConflict: 'outlook_message_id' });
-
-        if (upsertError) {
-          console.error('[Sync Inbox] Failed to upsert message', message.id, ':', upsertError);
-          errorCount++;
-        } else {
-          console.log('[Sync Inbox] Successfully upserted message:', message.id);
-          successCount++;
-        }
-      } catch (messageError) {
-        console.error('[Sync Inbox] Error processing message', message.id, ':', messageError);
-        errorCount++;
+      if (!response.ok) {
+        console.error('[Sync Inbox] Microsoft Graph API error:', response.status, response.statusText);
+        return NextResponse.json(
+          { success: false, error: `Microsoft API error: ${response.status}` },
+          { status: response.status }
+        );
       }
+
+      const graphData = await response.json();
+      const messages: MicrosoftMessage[] = graphData.value || [];
+      nextLink = graphData['@odata.nextLink'] || null;
+
+      console.log('[Sync Inbox] Fetched', messages.length, 'messages from current page');
+
+      // Process each message in the current page
+      for (const message of messages) {
+        try {
+          const emailData = {
+            user_id: tokenData.user_id,
+            subject: message.subject || '',
+            from_name: message.from?.emailAddress?.name || '',
+            from_email: message.from?.emailAddress?.address || '',
+            body_preview: message.bodyPreview || '',
+            received_at: message.receivedDateTime,
+            outlook_message_id: message.id,
+            folder: message.parentFolderId || '',
+            sync_status: 'fetched',
+            last_sync_at: new Date().toISOString(),
+          };
+
+          console.log('[Sync Inbox] Upserting message:', message.id, '-', message.subject);
+
+          const { error: upsertError } = await supabase
+            .from('incoming_emails')
+            .upsert(emailData, { onConflict: 'outlook_message_id' });
+
+          if (upsertError) {
+            console.error('[Sync Inbox] Failed to upsert message', message.id, ':', upsertError);
+            totalErrors++;
+          } else {
+            console.log('[Sync Inbox] Successfully upserted message:', message.id);
+            totalSynced++;
+          }
+        } catch (messageError) {
+          console.error('[Sync Inbox] Error processing message', message.id, ':', messageError);
+          totalErrors++;
+        }
+      }
+
+      console.log('[Sync Inbox] Page completed. Total synced so far:', totalSynced, 'Errors:', totalErrors);
     }
 
-    console.log('[Sync Inbox] Sync completed. Success:', successCount, 'Errors:', errorCount);
+    console.log('[Sync Inbox] Full sync completed. Total synced:', totalSynced, 'Total errors:', totalErrors);
 
     return NextResponse.json({
       success: true,
-      count: successCount,
-      errors: errorCount,
-      total: messages.length,
+      synced: totalSynced,
     });
 
   } catch (error) {
