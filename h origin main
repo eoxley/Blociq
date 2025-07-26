@@ -1,0 +1,5 @@
+[33mda50a5a[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m 🧹 Fully remove PKCE from frontend – switch to standard OAuth code flow
+[33ma05de78[m 🔥 Remove PKCE and switch to server-side OAuth with client_secret
+[33m17188fc[m 🔐 Switch from PKCE to server-side OAuth with client secret
+[33m6b3f814[m 🔥 Fix token exchange: remove client_secret from PKCE flow
+[33m28d4e71[m 🛠 Fix client ID and log token exchange flow for Outlook PKCE
