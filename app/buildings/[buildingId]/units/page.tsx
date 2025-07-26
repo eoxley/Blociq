@@ -29,8 +29,11 @@ export default async function BuildingUnitsPage({
   // Check if user is authenticated
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) {
+    console.log('BuildingUnitsPage - No session found, redirecting to login')
     redirect('/login')
   }
+
+  console.log('BuildingUnitsPage - User authenticated:', session.user.email)
 
   // Fetch building data first
   const { data: building, error: buildingError } = await supabase
@@ -83,6 +86,12 @@ export default async function BuildingUnitsPage({
   console.log('Building:', JSON.stringify(building, null, 2))
   console.log('Units:', JSON.stringify(finalUnits, null, 2))
   console.log('Units count being passed to client:', finalUnits.length)
+
+  // Add a simple test to verify the data is correct
+  if (finalUnits.length > 0) {
+    console.log('BuildingUnitsPage - First unit:', finalUnits[0])
+    console.log('BuildingUnitsPage - Last unit:', finalUnits[finalUnits.length - 1])
+  }
 
   return (
     <LayoutWithSidebar>
