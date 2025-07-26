@@ -86,6 +86,12 @@ export default async function TestUnitsPage() {
             >
               Test API endpoint
             </a>
+            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <h3 className="text-sm font-medium text-yellow-800 mb-2">Direct URL to Test:</h3>
+              <p className="text-sm text-yellow-700 font-mono break-all">
+                http://localhost:3003/buildings/{testBuildingId}/units
+              </p>
+            </div>
           </div>
         </div>
       </div>

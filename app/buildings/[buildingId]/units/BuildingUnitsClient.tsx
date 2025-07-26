@@ -34,10 +34,14 @@ interface BuildingUnitsClientProps {
 }
 
 export default function BuildingUnitsClient({ building, units, buildingId }: BuildingUnitsClientProps) {
+  console.log('=== BUILDING UNITS CLIENT DEBUG ===')
   console.log('BuildingUnitsClient - Received building:', building)
   console.log('BuildingUnitsClient - Received units:', units)
   console.log('BuildingUnitsClient - Units count:', units?.length || 0)
   console.log('BuildingUnitsClient - Building ID:', buildingId)
+  console.log('BuildingUnitsClient - Units type:', typeof units)
+  console.log('BuildingUnitsClient - Units is array:', Array.isArray(units))
+  console.log('BuildingUnitsClient - First unit:', units?.[0])
 
   // Safety checks
   if (!building) {
@@ -58,12 +62,30 @@ export default function BuildingUnitsClient({ building, units, buildingId }: Bui
         <Building className="h-12 w-12 text-gray-400 mx-auto mb-4" />
         <h3 className="text-lg font-medium text-gray-900 mb-2">Units Data Error</h3>
         <p className="text-gray-500">The units data could not be loaded.</p>
+        <pre className="mt-4 text-xs bg-gray-100 p-2 rounded">
+          {JSON.stringify(units, null, 2)}
+        </pre>
       </div>
     )
   }
   
   return (
     <div className="space-y-6">
+      {/* Debug Section */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <h3 className="text-sm font-medium text-blue-800 mb-2">Debug Information</h3>
+        <div className="text-sm text-blue-700 space-y-1">
+          <p>Building ID: {buildingId}</p>
+          <p>Building Name: {building.name}</p>
+          <p>Units Count: {units?.length || 0}</p>
+          <p>Units Type: {typeof units}</p>
+          <p>Units is Array: {Array.isArray(units) ? 'Yes' : 'No'}</p>
+          {units?.[0] && (
+            <p>First Unit: {JSON.stringify(units[0])}</p>
+          )}
+        </div>
+      </div>
+
       {/* Building Header */}
       <div className="flex items-center space-x-3 mb-8">
         <Building className="h-8 w-8 text-teal-600" />
