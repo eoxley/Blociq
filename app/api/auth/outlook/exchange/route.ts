@@ -1,29 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { exchangeCodeForTokensWithPkce } from '@/lib/outlook';
+import { exchangeCodeForTokens } from '@/lib/outlook';
 import { saveOutlookTokens } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
   try {
     console.log('[Outlook Exchange] Starting token exchange...');
     
-    const { code, code_verifier } = await req.json();
+    const { code } = await req.json();
     
     console.log('[Outlook Exchange] Received code:', code ? 'present' : 'missing');
-    console.log('[Outlook Exchange] Received code_verifier:', code_verifier ? 'present' : 'missing');
     
     if (!code) {
       console.error('[Outlook Exchange] Missing code parameter');
       return new NextResponse('Missing code parameter', { status: 400 });
     }
     
-    if (!code_verifier) {
-      console.error('[Outlook Exchange] Missing code_verifier parameter');
-      return new NextResponse('Missing code_verifier parameter', { status: 400 });
-    }
-    
-    // Exchange code for tokens using PKCE
-    console.log('[Outlook Exchange] Calling exchangeCodeForTokensWithPkce...');
-    const tokenData = await exchangeCodeForTokensWithPkce(code, code_verifier);
+    // Exchange code for tokens
+    console.log('[Outlook Exchange] Calling exchangeCodeForTokens...');
+    const redirectUri = 'https://www.blociq.co.uk/api/auth/outlook/callback';
+    const tokenData = await exchangeCodeForTokens(code, redirectUri);
     console.log('[Outlook Exchange] Token exchange successful:', {
       hasAccessToken: !!tokenData.access_token,
       hasRefreshToken: !!tokenData.refresh_token,
