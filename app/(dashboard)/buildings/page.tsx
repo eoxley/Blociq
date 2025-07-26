@@ -50,14 +50,25 @@ function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
           </div>
 
           {/* Create New Building Button */}
-          <Link 
-            href="/buildings/create"
-            className="inline-flex items-center gap-3 bg-gradient-to-r from-teal-600 to-teal-700 text-white px-8 py-4 rounded-xl hover:from-teal-700 hover:to-teal-800 transform hover:-translate-y-1 transition-all shadow-lg hover:shadow-xl font-semibold text-lg"
-          >
-            <Plus className="h-6 w-6" />
-            Create New Building
-            <ArrowRight className="h-5 w-5" />
-          </Link>
+          <div className="relative">
+            <Link 
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                // Show coming soon message
+                alert('Building creation feature coming soon!');
+              }}
+              className="inline-flex items-center gap-3 bg-gradient-to-r from-gray-400 to-gray-500 text-white px-8 py-4 rounded-xl cursor-not-allowed opacity-75 hover:opacity-75 transform transition-all shadow-lg font-semibold text-lg"
+            >
+              <Plus className="h-6 w-6" />
+              Create New Building
+              <ArrowRight className="h-5 w-5" />
+            </Link>
+            {/* Coming Soon Badge */}
+            <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
+              COMING SOON
+            </div>
+          </div>
         </div>
 
         {/* Search Results Count */}
@@ -168,14 +179,25 @@ function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
             Get started by adding your first building to your portfolio. 
             You'll be able to manage units, compliance, and communications all in one place with BlocIQ's intelligent platform.
           </p>
-          <Link 
-            href="/buildings/create"
-            className="inline-flex items-center gap-3 bg-gradient-to-r from-teal-600 to-teal-700 text-white px-10 py-5 rounded-xl hover:from-teal-700 hover:to-teal-800 transition-all duration-200 font-semibold text-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-          >
-            <Plus className="h-7 w-7" />
-            Create Your First Building
-            <ArrowRight className="h-6 w-6" />
-          </Link>
+          <div className="relative inline-block">
+            <Link 
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                // Show coming soon message
+                alert('Building creation feature coming soon!');
+              }}
+              className="inline-flex items-center gap-3 bg-gradient-to-r from-gray-400 to-gray-500 text-white px-8 py-4 rounded-xl cursor-not-allowed opacity-75 hover:opacity-75 transition-all duration-200 font-semibold text-lg shadow-lg transform"
+            >
+              <Plus className="h-6 w-6" />
+              Create Your First Building
+              <ArrowRight className="h-5 w-5" />
+            </Link>
+            {/* Coming Soon Badge */}
+            <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
+              COMING SOON
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -274,14 +296,25 @@ export default function BuildingsPage() {
               <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto leading-relaxed">
                 Expand your portfolio by adding more properties to manage with BlocIQ's intelligent platform.
               </p>
-              <Link 
-                href="/buildings/create"
-                className="inline-flex items-center gap-3 bg-gradient-to-r from-teal-600 to-teal-700 text-white px-8 py-4 rounded-xl hover:from-teal-700 hover:to-teal-800 transition-all duration-200 font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-              >
-                <Plus className="h-6 w-6" />
-                Add New Building
-                <ArrowRight className="h-5 w-5" />
-              </Link>
+              <div className="relative inline-block">
+                <Link 
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    // Show coming soon message
+                    alert('Building creation feature coming soon!');
+                  }}
+                  className="inline-flex items-center gap-3 bg-gradient-to-r from-gray-400 to-gray-500 text-white px-8 py-4 rounded-xl cursor-not-allowed opacity-75 hover:opacity-75 transition-all duration-200 font-semibold text-lg shadow-lg transform"
+                >
+                  <Plus className="h-6 w-6" />
+                  Add New Building
+                  <ArrowRight className="h-5 w-5" />
+                </Link>
+                {/* Coming Soon Badge */}
+                <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
+                  COMING SOON
+                </div>
+              </div>
             </div>
           </div>
         </section>
