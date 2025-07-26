@@ -1,72 +1,136 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { exchangeCodeForTokensWithPkce } from '@/lib/outlook';
-import { saveOutlookTokens } from '@/lib/supabase';
-
-// Store code verifiers temporarily (in production, use Redis or similar)
-const codeVerifiers = new Map<string, string>();
-
-export async function POST(req: NextRequest) {
-  try {
-    const { codeVerifier } = await req.json();
-    const requestId = crypto.randomUUID();
-    codeVerifiers.set(requestId, codeVerifier);
-    
-    console.log('[Outlook Callback] Stored code verifier with request ID:', requestId);
-    return NextResponse.json({ requestId });
-  } catch (error) {
-    console.error('[Outlook Callback] Error storing code verifier:', error);
-    return new NextResponse('Error storing code verifier', { status: 500 });
-  }
-}
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const searchParams = url.searchParams;
   const code = searchParams.get('code');
-  const state = searchParams.get('state'); // This contains the requestId
 
   console.log('[Outlook Callback] Callback URL:', req.url);
   console.log('[Outlook Callback] Query string:', searchParams.toString());
-  console.log('[Outlook Callback] State parameter:', state);
+  console.log('[Outlook Callback] Code parameter:', code);
 
   if (!code) {
     console.error('[Outlook Callback] Missing code parameter');
     return new NextResponse('Missing code', { status: 400 });
   }
 
-  if (!state) {
-    console.error('[Outlook Callback] Missing state parameter');
-    return new NextResponse('Missing state', { status: 400 });
-  }
-
-  try {
-    // Retrieve the code verifier using the state parameter (requestId)
-    const verifier = codeVerifiers.get(state);
-    if (!verifier) {
-      console.error('[Outlook Callback] No verifier found for state:', state);
-      return new NextResponse('Invalid state parameter', { status: 400 });
-    }
-
-    console.log('[Outlook Callback] Retrieved verifier for state:', state);
+  // Return a temporary HTML page that handles the token exchange
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Connecting Outlook...</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="spinner"></div>
+        <h2>Connecting Outlook Account...</h2>
+        <p>Please wait while we complete the authentication process.</p>
+    </div>
     
-    const tokenData = await exchangeCodeForTokensWithPkce(code, verifier);
-    console.log('[Outlook Callback] Token response:', tokenData);
+    <script>
+        (async function() {
+            try {
+                console.log('[Outlook Callback] Starting token exchange...');
+                
+                // Read code_verifier from localStorage
+                const codeVerifier = localStorage.getItem('outlook_pkce_verifier');
+                console.log('[Outlook Callback] Retrieved code_verifier from localStorage:', codeVerifier ? 'found' : 'not found');
+                
+                if (!codeVerifier) {
+                    throw new Error('Code verifier not found in localStorage');
+                }
+                
+                // Get the authorization code from URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const code = urlParams.get('code');
+                console.log('[Outlook Callback] Authorization code:', code ? 'found' : 'not found');
+                
+                if (!code) {
+                    throw new Error('Authorization code not found in URL');
+                }
+                
+                // POST to exchange endpoint
+                console.log('[Outlook Callback] Sending POST to /api/auth/outlook/exchange');
+                const response = await fetch('/api/auth/outlook/exchange', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        code: code,
+                        code_verifier: codeVerifier
+                    })
+                });
+                
+                console.log('[Outlook Callback] Exchange response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('[Outlook Callback] Exchange failed:', errorText);
+                    throw new Error('Token exchange failed: ' + errorText);
+                }
+                
+                // Clean up localStorage
+                localStorage.removeItem('outlook_pkce_verifier');
+                console.log('[Outlook Callback] Cleaned up localStorage');
+                
+                // Redirect to home page
+                console.log('[Outlook Callback] Redirecting to /');
+                window.location.href = '/';
+                
+            } catch (error) {
+                console.error('[Outlook Callback] Error during token exchange:', error);
+                document.body.innerHTML = \`
+                    <div class="container">
+                        <h2 style="color: #e74c3c;">Connection Failed</h2>
+                        <p>Error: \${error.message}</p>
+                        <button onclick="window.location.href='/outlook/connect'" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            Try Again
+                        </button>
+                    </div>
+                \`;
+            }
+        })();
+    </script>
+</body>
+</html>`;
 
-    await saveOutlookTokens({
-      access_token: tokenData.access_token,
-      refresh_token: tokenData.refresh_token,
-      expires_in: tokenData.expires_in,
-      user_email: 'testbloc@blociq.co.uk',
-    });
-    console.log('[Outlook Callback] Token saved successfully');
-
-    // Clean up the stored verifier
-    codeVerifiers.delete(state);
-    console.log('[Outlook Callback] Cleaned up verifier for state:', state);
-
-    return NextResponse.redirect(new URL('/', req.url));
-  } catch (error) {
-    console.error('[Outlook Callback] Error:', error);
-    return new NextResponse('Callback error', { status: 500 });
-  }
+  return new NextResponse(html, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/html',
+    },
+  });
 } 

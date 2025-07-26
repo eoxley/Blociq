@@ -57,23 +57,9 @@ export default function OutlookConnectPage() {
       const codeChallenge: string = await generateCodeChallenge(codeVerifier);
       console.log('[Outlook Connect] Generated code challenge:', codeChallenge);
 
-      // Store code verifier in localStorage as backup
+      // Store code verifier in localStorage
       localStorage.setItem('outlook_pkce_verifier', codeVerifier);
       console.log('[Outlook Connect] Stored code verifier in localStorage');
-
-      // Send code verifier to server and get request ID
-      const response: Response = await fetch('/api/auth/outlook/callback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ codeVerifier }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to store code verifier on server');
-      }
-
-      const { requestId }: { requestId: string } = await response.json();
-      console.log('[Outlook Connect] Received request ID:', requestId);
 
       // Build authorization URL with all required PKCE parameters
       const authUrl: URL = new URL('https://login.microsoftonline.com/common/oauth2/v2.0/authorize');
@@ -86,7 +72,6 @@ export default function OutlookConnectPage() {
       authUrl.searchParams.set('scope', 'Mail.Read offline_access openid');
       authUrl.searchParams.set('code_challenge', codeChallenge);
       authUrl.searchParams.set('code_challenge_method', 'S256');
-      authUrl.searchParams.set('state', requestId);
 
       // Log the final authorization URL for debugging
       console.log('[Outlook Connect] Final authorization URL:', authUrl.toString());
