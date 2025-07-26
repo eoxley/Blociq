@@ -189,47 +189,25 @@ export default function BuildingsPage() {
   const [error, setError] = useState<string | null>(null)
   const supabase = createClientComponentClient()
 
-  // Fetch buildings with unit counts from the buildings table
+  // Fetch buildings with live unit counts from the units table
   React.useEffect(() => {
     const fetchBuildings = async () => {
       try {
-        // Fetch buildings with unit_count from the buildings table
-        const { data: buildingsData, error: buildingsError } = await supabase
-          .from('buildings')
-          .select('*')
-          .order('name')
-
-        if (buildingsError) {
-          console.error('Error fetching buildings:', buildingsError)
-          setError('Unable to load your buildings at this time. Please try again later.')
-          return
+        // Use the new API endpoint that handles the UUID/integer mismatch
+        const response = await fetch('/api/buildings')
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
         }
-
-        // Map buildings to include liveUnitCount from the unit_count field
-        const buildingsWithUnitCounts = (buildingsData || []).map(building => {
-          // Handle unit_count - it could be a number, string, or null
-          let unitCount = 0
-          if (building.unit_count !== null && building.unit_count !== undefined) {
-            // If it's already a number, use it directly
-            if (typeof building.unit_count === 'number') {
-              unitCount = building.unit_count
-            } else {
-              // If it's a string, parse it
-              unitCount = parseInt(building.unit_count.toString(), 10) || 0
-            }
-          }
-          
-          console.log(`Building: ${building.name} (${building.id})`)
-          console.log(`Unit count from database: ${building.unit_count} (type: ${typeof building.unit_count})`)
-          console.log(`Parsed unit count: ${unitCount}`)
-          
-          return {
-            ...building,
-            liveUnitCount: unitCount
-          }
-        })
-
-        setBuildings(buildingsWithUnitCounts)
+        
+        const data = await response.json()
+        
+        if (data.error) {
+          throw new Error(data.error)
+        }
+        
+        console.log('Buildings data:', data)
+        setBuildings(data.buildings || [])
       } catch (err) {
         console.error('Error fetching data:', err)
         setError('Unable to load your buildings at this time. Please try again later.')
@@ -239,7 +217,7 @@ export default function BuildingsPage() {
     }
 
     fetchBuildings()
-  }, [supabase])
+  }, [])
 
   if (loading) {
     return (
