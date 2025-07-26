@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -21,7 +21,6 @@ interface BuildingAmendmentsProps {
 }
 
 export default function BuildingAmendments({ buildingId }: BuildingAmendmentsProps) {
-  const supabase = createClientComponentClient()
   const [amendments, setAmendments] = useState<BuildingAmendment[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('')

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { Upload, FileText, Download, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -36,7 +36,6 @@ export default function ProjectDocumentsUploader({
   projectId, 
   onDocumentUploaded 
 }: ProjectDocumentsUploaderProps) {
-  const supabase = createClientComponentClient()
   const [isUploading, setIsUploading] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [selectedDocType, setSelectedDocType] = useState('')

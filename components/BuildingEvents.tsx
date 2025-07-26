@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabaseClient';
 import { Calendar, Plus, Clock, MapPin, Filter, ExternalLink } from 'lucide-react';
 import CreateEventModal from './CreateEventModal';
 
@@ -36,7 +36,6 @@ const EVENT_TYPE_EMOJIS: Record<string, string> = {
 };
 
 export default function BuildingEvents({ buildingId, buildingName }: BuildingEventsProps) {
-  const supabase = createClientComponentClient();
   const [events, setEvents] = useState<BuildingEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 
 import { 
   Mail, 
@@ -87,7 +87,6 @@ export default function NewInboxClient({
   userId,
   searchParams,
 }: NewInboxClientProps) {
-  const supabase = createClientComponentClient()
   const [emails, setEmails] = useState<Email[]>(initialEmails)
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null)
   const [isSyncing, setIsSyncing] = useState(false)

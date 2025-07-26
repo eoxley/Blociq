@@ -1,4 +1,4 @@
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { createOrUpdateComplianceReminder } from '@/lib/outlook/createComplianceReminder'
 
 interface OnDueDateUpdatedInput {
@@ -22,7 +22,6 @@ interface OnDueDateUpdatedResult {
 export async function onDueDateUpdated(
   input: OnDueDateUpdatedInput
 ): Promise<OnDueDateUpdatedResult> {
-  const supabase = createClientComponentClient()
 
   try {
     // Validate inputs
@@ -187,7 +186,6 @@ export async function removeComplianceReminder(
   complianceAssetId: string,
   outlookAccessToken: string
 ): Promise<OnDueDateUpdatedResult> {
-  const supabase = createClientComponentClient()
 
   try {
     console.log('🗑️ Removing compliance reminder for:', {
@@ -257,7 +255,6 @@ export async function getComplianceReminderStatus(
   buildingId: string,
   complianceAssetId: string
 ): Promise<{ hasReminder: boolean; eventId?: string; lastUpdated?: string }> {
-  const supabase = createClientComponentClient()
 
   try {
     const { data: buildingAsset, error } = await supabase
@@ -290,7 +287,6 @@ export async function refreshBuildingComplianceReminders(
   buildingId: string,
   outlookAccessToken: string
 ): Promise<{ success: boolean; processed: number; errors: string[] }> {
-  const supabase = createClientComponentClient()
 
   try {
     console.log('🔄 Refreshing all compliance reminders for building:', buildingId)

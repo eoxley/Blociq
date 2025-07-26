@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import {
   Inbox as InboxIcon,
   CheckCircle,
@@ -43,7 +43,6 @@ export default function FolderSidebar({
   isSyncing,
   lastSync,
 }: FolderSidebarProps) {
-  const supabase = createClientComponentClient()
   const [buildings, setBuildings] = useState<Building[]>([])
   const [tags, setTags] = useState<TagFolder[]>([])
   const [loadingFolders, setLoadingFolders] = useState(true)

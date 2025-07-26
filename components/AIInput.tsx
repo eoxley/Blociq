@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabaseClient';
 
 interface AIInputProps {
   buildingId?: string;
@@ -13,7 +13,6 @@ export default function AIInput({ buildingId, context }: AIInputProps) {
   const [answer, setAnswer] = useState('');
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
-  const supabase = createClientComponentClient();
 
   useEffect(() => {
     const getSession = async () => {
@@ -21,7 +20,7 @@ export default function AIInput({ buildingId, context }: AIInputProps) {
       setUserId(session?.user?.id ?? null);
     };
     getSession();
-  }, [supabase]);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2, ExternalLink, RefreshCw } from 'lucide-react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import DailySummary from '@/components/DailySummary'
 import AskBlocIQHomepage from '@/components/AskBlocIQHomepage'
 
@@ -81,7 +81,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const [showAddEventForm, setShowAddEventForm] = useState(false)
   const [recentEmails, setRecentEmails] = useState<Email[]>([])
   const [loadingEmails, setLoadingEmails] = useState(true)
-  const supabase = createClientComponentClient()
 
 
 
@@ -163,7 +162,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     };
 
     fetchBuildings();
-  }, [supabase]);
+  }, []);
 
   // Fetch real property events from database
   useEffect(() => {

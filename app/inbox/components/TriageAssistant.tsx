@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import {
   Brain,
   PenTool,
@@ -103,7 +103,6 @@ export default function TriageAssistant({
   onClose,
   onEmailProcessed
 }: TriageAssistantProps) {
-  const supabase = createClientComponentClient()
   const [isTriageRunning, setIsTriageRunning] = useState(false)
   const [progress, setProgress] = useState(0)
   const [currentStep, setCurrentStep] = useState('')

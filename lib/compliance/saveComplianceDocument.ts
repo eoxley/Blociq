@@ -1,4 +1,4 @@
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 
 interface SaveComplianceDocumentInput {
   buildingId: string
@@ -23,7 +23,6 @@ interface SaveComplianceDocumentResult {
 export async function saveComplianceDocument(
   input: SaveComplianceDocumentInput
 ): Promise<SaveComplianceDocumentResult> {
-  const supabase = createClientComponentClient()
 
   try {
     console.log('💾 Saving compliance document for asset:', input.complianceAssetId)
@@ -169,7 +168,6 @@ export function validateComplianceDocumentInput(
  * Helper function to get compliance document by ID
  */
 export async function getComplianceDocument(documentId: string) {
-  const supabase = createClientComponentClient()
 
   const { data, error } = await supabase
     .from('compliance_docs')
@@ -198,7 +196,6 @@ export async function getComplianceDocument(documentId: string) {
  * Helper function to get building compliance assets with latest documents
  */
 export async function getBuildingComplianceAssetsWithDocuments(buildingId: string) {
-  const supabase = createClientComponentClient()
 
   const { data, error } = await supabase
     .from('building_compliance_assets')

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { 
   Plus, 
   Mail, 
@@ -67,7 +67,6 @@ interface CommunicationsClientProps {
 }
 
 export default function CommunicationsClientNew({ userData }: CommunicationsClientProps) {
-  const supabase = createClientComponentClient()
   const [loading, setLoading] = useState(true)
   const [templates, setTemplates] = useState<Template[]>([])
   const [buildings, setBuildings] = useState<Building[]>([])

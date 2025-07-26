@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FileText, Sparkles, Download, Calendar } from "lucide-react";
 import { handleUploadComplete, updateDocumentWithAIAnalysis } from "@/lib/aiDocumentAnalysis";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { supabase } from '@/lib/supabaseClient';
 import { toast } from "sonner";
 import DocumentTypeSelector from "./DocumentTypeSelector";
 
@@ -33,7 +33,6 @@ export default function ComplianceDocumentAnalyzer({
   const [analysisResults, setAnalysisResults] = useState<Record<string, any>>({});
   const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [currentDocumentId, setCurrentDocumentId] = useState<string>("");
-  const supabase = createClientComponentClient();
 
   const handleAnalyseDocument = async (documentId: string) => {
     setAnalyzing(documentId);

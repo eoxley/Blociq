@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import { Menu, X, Bell, Settings, User, HelpCircle, LogOut } from 'lucide-react';
 import BlocIQLogo from './BlocIQLogo';
@@ -23,7 +23,6 @@ const navItems = [
 export default function MobileNavigation() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
-  const supabase = createClientComponentClient();
   const router = useRouter();
 
   const handleLogout = async () => {

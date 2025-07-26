@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
@@ -47,7 +47,6 @@ interface SetupData {
 type SetupStep = 'buildings' | 'assets' | 'configuration' | 'review' | 'complete'
 
 export default function ComplianceSetupWizard() {
-  const supabase = createClientComponentClient()
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState<SetupStep>('buildings')
   const [selectedBuildings, setSelectedBuildings] = useState<Set<string>>(new Set())

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { 
   Lightbulb, 
   Plus, 
@@ -35,7 +35,6 @@ export default function AISuggestedActionSidebar({
 }: AISuggestedActionSidebarProps) {
   const [isCreating, setIsCreating] = useState(false)
   const [isDismissed, setIsDismissed] = useState(false)
-  const supabase = createClientComponentClient()
 
   if (!suggestedAction || isDismissed) {
     return null

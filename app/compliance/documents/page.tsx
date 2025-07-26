@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabaseClient';
 import LayoutWithSidebar from '@/components/LayoutWithSidebar';
 import SmartUploader from '@/components/SmartUploader';
 import { Shield, ArrowLeft } from 'lucide-react';
@@ -12,7 +12,6 @@ function ComplianceDocumentsInner() {
   const searchParams = useSearchParams();
   const buildingId = searchParams?.get('building');
   const docType = searchParams?.get('type');
-  const supabase = createClientComponentClient();
   
   const [building, setBuilding] = useState<{ id: number; name: string; address: string | null } | null>(null);
   const [uploadedDocuments, setUploadedDocuments] = useState<any[]>([]);

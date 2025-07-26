@@ -34,7 +34,7 @@ import {
   AlertCircle,
   ChevronUp
 } from 'lucide-react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -153,7 +153,6 @@ export default function ComplianceTrackerClient({ complianceData }: ComplianceTr
   const [filter, setFilter] = useState<'all' | 'overdue' | 'due-soon' | 'compliant' | 'missing'>('all')
   
   const router = useRouter()
-  const supabase = createClientComponentClient()
 
   const toggleCategory = (category: string) => {
     setExpandedCategories(prev => {

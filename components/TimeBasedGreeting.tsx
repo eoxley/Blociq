@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabaseClient';
 import { getTimeBasedGreeting } from '@/utils/greeting';
 
 interface TimeBasedGreetingProps {
@@ -16,7 +16,6 @@ export default function TimeBasedGreeting({
   const [greeting, setGreeting] = useState<string>("Hello!");
   const [userName, setUserName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const supabase = createClientComponentClient();
 
   useEffect(() => {
     const getUserData = async () => {

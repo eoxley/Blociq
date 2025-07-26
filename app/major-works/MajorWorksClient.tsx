@@ -1,6 +1,6 @@
 'use client'
 import React, { useState, useEffect } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { 
   Plus, 
   Building, 
@@ -40,7 +40,6 @@ interface MajorWorksClientProps {
 }
 
 export default function MajorWorksClient({ userData, selectedBuildingId }: MajorWorksClientProps) {
-  const supabase = createClientComponentClient()
   const [buildings, setBuildings] = useState<any[]>([])
 
   useEffect(() => {

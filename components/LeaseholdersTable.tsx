@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabaseClient';
 import { Search, ChevronDown, ChevronUp, User, Mail, Home, Eye } from 'lucide-react';
 import { BlocIQBadge } from '@/components/ui/blociq-badge';
 
@@ -48,7 +48,6 @@ export default function LeaseholdersTable({ buildingId, className = "" }: Leaseh
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isExpanded, setIsExpanded] = useState(true);
-  const supabase = createClientComponentClient();
 
   useEffect(() => {
     const fetchLeaseholders = async () => {

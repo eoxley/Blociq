@@ -28,7 +28,7 @@ import {
   ChevronDown,
   ChevronRight
 } from 'lucide-react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
 import { BlocIQBadge } from '@/components/ui/blociq-badge'
@@ -104,7 +104,6 @@ interface BuildingComplianceClientProps {
 }
 
 export default function BuildingComplianceClient({ complianceData }: BuildingComplianceClientProps) {
-  const supabase = createClientComponentClient()
   const [filter, setFilter] = useState<'all' | 'overdue' | 'due-soon' | 'compliant' | 'missing'>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null)
