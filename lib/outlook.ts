@@ -93,7 +93,7 @@ export async function exchangeCodeForTokensWithPkce(code: string, verifier: stri
   expires_in: number;
 }> {
   const client_id = process.env.NEXT_PUBLIC_OUTLOOK_CLIENT_ID!;
-  const redirect_uri = 'https://www.blociq.co.uk/api/auth/outlook/callback';
+  const redirect_uri = process.env.NEXT_PUBLIC_MICROSOFT_REDIRECT_URI!;
   const tokenUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
 
   console.log('[exchangeCodeForTokensWithPkce] Starting PKCE token exchange...');
@@ -104,6 +104,10 @@ export async function exchangeCodeForTokensWithPkce(code: string, verifier: stri
 
   if (!client_id) {
     throw new Error('NEXT_PUBLIC_OUTLOOK_CLIENT_ID environment variable is not set');
+  }
+
+  if (!redirect_uri) {
+    throw new Error('NEXT_PUBLIC_MICROSOFT_REDIRECT_URI environment variable is not set');
   }
 
   const params = new URLSearchParams({
