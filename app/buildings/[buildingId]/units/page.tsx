@@ -57,7 +57,6 @@ export default async function BuildingUnitsPage({
       unit_number,
       floor,
       type,
-      address,
       building_id
     `)
     .eq("building_id", buildingId)
@@ -77,16 +76,7 @@ export default async function BuildingUnitsPage({
     })
   }
 
-  // Check if units are empty but should exist
-  if (!units || units.length === 0) {
-    console.log('BuildingUnitsPage - No units found for building ID:', buildingId)
-    console.log('BuildingUnitsPage - This could be due to:')
-    console.log('1. No units exist for this building')
-    console.log('2. RLS (Row Level Security) policies on the units table')
-    console.log('3. Database schema mismatch between building_id types')
-  }
-
-  // Use empty array if no units found (no demo data)
+  // Use empty array if no units found
   const finalUnits = units || []
 
   console.log('BuildingUnitsPage - Final data being passed to client:')
