@@ -52,13 +52,19 @@ export async function exchangeCodeForTokens(code: string) {
   params.append('code', code);
   params.append('redirect_uri', process.env.NEXT_PUBLIC_MICROSOFT_REDIRECT_URI!);
 
+  console.log("🚀 Sending token exchange with:", params.toString());
+
   const res = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
     body: params.toString(),
   });
 
   const data = await res.json();
+  console.log("📥 Microsoft token response:", data);
+
   if (!res.ok || !data.access_token) {
     throw new Error(`Microsoft OAuth error (${res.status}): ${data.error} - ${data.error_description}`);
   }
