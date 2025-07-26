@@ -15,6 +15,7 @@ import { BlocIQBadge } from '@/components/ui/blociq-badge'
 import BlocIQLogo from '@/components/BlocIQLogo'
 import { toast } from 'sonner'
 import { checkOutlookConnection, fetchOutlookEvents, getOutlookAuthUrl } from '@/lib/outlookUtils'
+import { getTimeBasedGreeting } from '@/utils/greeting'
 
 type PropertyEvent = {
   building: string
@@ -455,7 +456,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 <BlocIQLogo className="h-7 w-7 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold">Welcome back, {userData.name}!</h1>
+                <h1 className="text-3xl font-bold">{getTimeBasedGreeting(userData.name)}</h1>
                 <p className="text-white/90 text-lg">{currentWelcomeMessage}</p>
               </div>
             </div>

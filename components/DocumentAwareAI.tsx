@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { getTimeBasedGreeting } from '@/utils/greeting';
 import { 
   MessageSquare, 
   Upload, 
@@ -60,6 +61,8 @@ export default function DocumentAwareAI({
   const [response, setResponse] = useState<AIResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
+  const [greeting, setGreeting] = useState<string>("Hello!");
   const [documentContext, setDocumentContext] = useState<DocumentContext | null>(null);
   const [showDocumentUpload, setShowDocumentUpload] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -70,6 +73,24 @@ export default function DocumentAwareAI({
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setUserId(session?.user?.id ?? null);
+      
+      // Get user data for greeting
+      if (session?.user) {
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('name')
+            .eq('id', session.user.id)
+            .single();
+          
+          const name = profile?.name || session.user.user_metadata?.name || session.user.email?.split('@')[0] || null;
+          setUserName(name);
+          setGreeting(getTimeBasedGreeting(name || undefined));
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
+          setGreeting(getTimeBasedGreeting());
+        }
+      }
     };
     getSession();
   }, [supabase]);
@@ -289,15 +310,23 @@ export default function DocumentAwareAI({
       {/* AI Chat Interface */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Brain className="h-5 w-5" />
-            Document-Aware AI Assistant
-            {documentContext && (
-              <Badge variant="outline" className="text-green-600 border-green-600">
-                Document Context Active
-              </Badge>
-            )}
-          </CardTitle>
+          <div className="space-y-4">
+            {/* Greeting Section */}
+            <div className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] rounded-xl p-4 text-white">
+              <h2 className="text-2xl font-semibold">{greeting}</h2>
+              <p className="text-white/90 text-sm">How can I help you today?</p>
+            </div>
+            
+            <CardTitle className="flex items-center gap-2">
+              <Brain className="h-5 w-5" />
+              Document-Aware AI Assistant
+              {documentContext && (
+                <Badge variant="outline" className="text-green-600 border-green-600">
+                  Document Context Active
+                </Badge>
+              )}
+            </CardTitle>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Question Input */}
