@@ -32,7 +32,7 @@ ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 -- Create compliance_reminders table
 CREATE TABLE IF NOT EXISTS compliance_reminders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    building_id INTEGER REFERENCES buildings(id) ON DELETE CASCADE,
+    building_id UUID REFERENCES buildings(id) ON DELETE CASCADE,
     asset_id UUID REFERENCES compliance_assets(id) ON DELETE CASCADE,
     reminder_type TEXT NOT NULL CHECK (reminder_type IN ('due_soon', 'overdue', 'custom')),
     reminder_date DATE NOT NULL,
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS compliance_reminders (
 -- Create compliance_audit_log table
 CREATE TABLE IF NOT EXISTS compliance_audit_log (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    building_id INTEGER REFERENCES buildings(id) ON DELETE CASCADE,
+    building_id UUID REFERENCES buildings(id) ON DELETE CASCADE,
     asset_id UUID REFERENCES compliance_assets(id) ON DELETE CASCADE,
     action TEXT NOT NULL CHECK (action IN ('created', 'updated', 'deleted', 'status_changed', 'document_uploaded', 'reminder_sent')),
     old_value JSONB,
@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS compliance_audit_log (
 -- Create compliance_reports table
 CREATE TABLE IF NOT EXISTS compliance_reports (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    building_id INTEGER REFERENCES buildings(id) ON DELETE CASCADE,
+    building_id UUID REFERENCES buildings(id) ON DELETE CASCADE,
     report_type TEXT NOT NULL CHECK (report_type IN ('monthly', 'quarterly', 'annual', 'custom')),
     report_date DATE NOT NULL,
     generated_by UUID REFERENCES auth.users(id),
@@ -76,6 +76,11 @@ CREATE INDEX IF NOT EXISTS idx_compliance_assets_required_if ON compliance_asset
 CREATE INDEX IF NOT EXISTS idx_compliance_assets_priority ON compliance_assets(priority);
 
 CREATE INDEX IF NOT EXISTS idx_building_compliance_assets_status ON building_compliance_assets(status);
+
+-- Add missing next_due_date column to building_compliance_assets table
+ALTER TABLE building_compliance_assets
+ADD COLUMN IF NOT EXISTS next_due_date DATE;
+
 CREATE INDEX IF NOT EXISTS idx_building_compliance_assets_next_due_date ON building_compliance_assets(next_due_date);
 CREATE INDEX IF NOT EXISTS idx_building_compliance_assets_assigned_to ON building_compliance_assets(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_building_compliance_assets_risk_level ON building_compliance_assets(risk_level);
@@ -290,7 +295,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to get compliance statistics for a building
-CREATE OR REPLACE FUNCTION get_building_compliance_stats(p_building_id INTEGER)
+CREATE OR REPLACE FUNCTION get_building_compliance_stats(p_building_id UUID)
 RETURNS JSON AS $$
 DECLARE
     result JSON;
