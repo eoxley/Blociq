@@ -93,14 +93,7 @@ export default function BuildingDetailPage() {
             floor,
             type,
             building_id,
-            leaseholder_id,
-            leaseholders (
-              id,
-              name,
-              email,
-              phone,
-              unit_id
-            )
+            leaseholder_id
           `)
           .eq('building_id', buildingIdForUnits)
           .order('unit_number')
@@ -117,8 +110,43 @@ export default function BuildingDetailPage() {
           // Don't set error here, just log it and continue with empty units
         }
 
+        // If units were fetched successfully, fetch leaseholder data separately
+        let unitsWithLeaseholders = unitData || []
+        if (unitData && unitData.length > 0) {
+          // Get all unique leaseholder IDs
+          const leaseholderIds = unitData
+            .map(unit => unit.leaseholder_id)
+            .filter(id => id !== null) as string[]
+
+          if (leaseholderIds.length > 0) {
+            // Fetch leaseholders separately
+            const { data: leaseholderData, error: leaseholderError } = await supabase
+              .from('leaseholders')
+              .select('id, name, email, phone, unit_id')
+              .in('id', leaseholderIds)
+
+            if (leaseholderError) {
+              console.error('❌ Leaseholders fetch error:', leaseholderError)
+            } else {
+              console.log('👥 Leaseholders fetched:', leaseholderData)
+              
+              // Create a map of leaseholder data by ID
+              const leaseholderMap = new Map()
+              leaseholderData?.forEach(leaseholder => {
+                leaseholderMap.set(leaseholder.id, leaseholder)
+              })
+
+              // Attach leaseholder data to units
+              unitsWithLeaseholders = unitData.map(unit => ({
+                ...unit,
+                leaseholders: unit.leaseholder_id ? leaseholderMap.get(unit.leaseholder_id) || null : null
+              }))
+            }
+          }
+        }
+
         setBuilding(buildingData)
-        setUnits(unitData || [])
+        setUnits(unitsWithLeaseholders)
         setLoading(false)
       } catch (err) {
         console.error('❌ Unexpected error:', err)
