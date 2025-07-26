@@ -9,11 +9,19 @@ export default async function BuildingUnitsPage({
 }: { 
   params: Promise<{ buildingId: string }> 
 }) {
+  console.log('=== UNITS PAGE DEBUG ===')
+  
+  // Wait for params to be available
   const { buildingId } = await params
   
-  console.log('=== UNITS PAGE DEBUG ===')
   console.log('BuildingUnitsPage - buildingId:', buildingId)
   console.log('BuildingUnitsPage - buildingId type:', typeof buildingId)
+  
+  // Validate building ID
+  if (!buildingId) {
+    console.error('BuildingUnitsPage - No building ID provided')
+    redirect('/buildings')
+  }
   
   const cookieStore = cookies()
   const supabase = createServerComponentClient({ cookies: () => cookieStore })
@@ -35,248 +43,51 @@ export default async function BuildingUnitsPage({
   console.log('BuildingUnitsPage - building error:', buildingError)
 
   if (buildingError || !building) {
-    console.log('BuildingUnitsPage - redirecting to /buildings due to building error')
+    console.error('BuildingUnitsPage - Building not found or error:', buildingError)
     redirect('/buildings')
   }
 
-  // Try to convert building ID to number for units query
-  const buildingIdNum = parseInt(buildingId, 10)
-  const isNumericBuildingId = !isNaN(buildingIdNum)
+  // Fetch units using the UUID building ID
+  console.log('BuildingUnitsPage - Fetching units for building ID:', buildingId)
   
-  console.log('BuildingUnitsPage - buildingId is numeric:', isNumericBuildingId)
-  console.log('BuildingUnitsPage - Converted buildingId to number:', buildingIdNum)
+  const { data: units, error: unitsError } = await supabase
+    .from("units")
+    .select(`
+      id,
+      unit_number,
+      floor,
+      type,
+      address,
+      building_id
+    `)
+    .eq("building_id", buildingId)
+    .order('unit_number')
 
-  // Fetch units with leaseholders and occupiers
-  let unitsQuery
-  if (isNumericBuildingId) {
-    unitsQuery = supabase
-      .from("units")
-      .select(`
-        *,
-        leaseholders (
-          id,
-          name,
-          email,
-          phone
-        ),
-        occupiers (
-          id,
-          full_name,
-          email,
-          phone,
-          start_date,
-          end_date,
-          rent_amount,
-          rent_frequency,
-          status
-        )
-      `)
-      .eq("building_id", buildingIdNum)
-      .order('unit_number')
-  } else {
-    // For UUID building IDs, we need to handle differently
-    // First get the building's numeric ID if it exists
-    const { data: buildingWithId } = await supabase
-      .from('buildings')
-      .select('id')
-      .eq('id', buildingId)
-      .single()
-    
-    if (buildingWithId && typeof buildingWithId.id === 'number') {
-      unitsQuery = supabase
-        .from("units")
-        .select(`
-          *,
-          leaseholders (
-            id,
-            name,
-            email,
-            phone
-          ),
-          occupiers (
-            id,
-            full_name,
-            email,
-            phone,
-            start_date,
-            end_date,
-            rent_amount,
-            rent_frequency,
-            status
-          )
-        `)
-        .eq("building_id", buildingWithId.id)
-        .order('unit_number')
-    } else {
-      // Fallback: try to find units by building name
-      unitsQuery = supabase
-        .from("units")
-        .select(`
-          *,
-          leaseholders (
-            id,
-            name,
-            email,
-            phone
-          ),
-          occupiers (
-            id,
-            full_name,
-            email,
-            phone,
-            start_date,
-            end_date,
-            rent_amount,
-            rent_frequency,
-            status
-          )
-        `)
-        .order('unit_number')
-    }
-  }
-
-  const { data: units, error: unitsQueryError } = await unitsQuery
-
-  console.log("Units with leaseholders and occupiers:", units)
-  console.log('BuildingUnitsPage - units error:', unitsQueryError)
+  console.log('BuildingUnitsPage - units data:', units)
+  console.log('BuildingUnitsPage - units error:', unitsError)
   console.log('BuildingUnitsPage - units count:', units?.length || 0)
 
-  if (unitsQueryError) {
-    console.error('Error fetching units:', unitsQueryError)
+  if (unitsError) {
+    console.error('BuildingUnitsPage - Error fetching units:', unitsError)
+    console.error('BuildingUnitsPage - Error details:', {
+      message: unitsError.message,
+      details: unitsError.details,
+      hint: unitsError.hint,
+      code: unitsError.code
+    })
   }
 
-  // If no units found, let's add some demo units for testing
-  let finalUnits = units || []
-  if (finalUnits.length === 0) {
-    console.log('No units found, adding demo units for testing')
-    
-    // Add demo units with leaseholders
-    const demoUnits = [
-      {
-        id: 1,
-        building_id: buildingIdNum || 1,
-        unit_number: '1A',
-        floor: '1',
-        type: 'Apartment',
-        leaseholders: [
-          {
-            id: 'lh1',
-            name: 'John Doe',
-            email: 'john.doe@example.com',
-            phone: '+44 7700 900123'
-          }
-        ],
-        occupiers: [
-          {
-            id: 'occ1',
-            full_name: 'John Doe',
-            email: 'john.doe@example.com',
-            phone: '+44 7700 900123',
-            start_date: '2023-01-01',
-            end_date: null,
-            rent_amount: 1200,
-            rent_frequency: 'Monthly',
-            status: 'Active'
-          }
-        ]
-      },
-      {
-        id: 2,
-        building_id: buildingIdNum || 1,
-        unit_number: '1B',
-        floor: '1',
-        type: 'Apartment',
-        leaseholders: [
-          {
-            id: 'lh2',
-            name: 'Jane Smith',
-            email: 'jane.smith@example.com',
-            phone: '+44 7700 900456'
-          }
-        ],
-        occupiers: [
-          {
-            id: 'occ2',
-            full_name: 'Jane Smith',
-            email: 'jane.smith@example.com',
-            phone: '+44 7700 900456',
-            start_date: '2023-02-01',
-            end_date: null,
-            rent_amount: 1150,
-            rent_frequency: 'Monthly',
-            status: 'Active'
-          }
-        ]
-      },
-      {
-        id: 3,
-        building_id: buildingIdNum || 1,
-        unit_number: '2A',
-        floor: '2',
-        type: 'Apartment',
-        leaseholders: [
-          {
-            id: 'lh3',
-            name: 'Mike Wilson',
-            email: 'mike.wilson@example.com',
-            phone: '+44 7700 900789'
-          }
-        ],
-        occupiers: [
-          {
-            id: 'occ3',
-            full_name: 'Mike Wilson',
-            email: 'mike.wilson@example.com',
-            phone: '+44 7700 900789',
-            start_date: '2023-03-01',
-            end_date: null,
-            rent_amount: 1250,
-            rent_frequency: 'Monthly',
-            status: 'Active'
-          }
-        ]
-      },
-      {
-        id: 4,
-        building_id: buildingIdNum || 1,
-        unit_number: '2B',
-        floor: '2',
-        type: 'Apartment',
-        leaseholders: [],
-        occupiers: []
-      },
-      {
-        id: 5,
-        building_id: buildingIdNum || 1,
-        unit_number: '3A',
-        floor: '3',
-        type: 'Apartment',
-        leaseholders: [
-          {
-            id: 'lh4',
-            name: 'Sarah Jones',
-            email: 'sarah.jones@example.com',
-            phone: '+44 7700 900012'
-          }
-        ],
-        occupiers: [
-          {
-            id: 'occ4',
-            full_name: 'Sarah Jones',
-            email: 'sarah.jones@example.com',
-            phone: '+44 7700 900012',
-            start_date: '2023-04-01',
-            end_date: null,
-            rent_amount: 1300,
-            rent_frequency: 'Monthly',
-            status: 'Active'
-          }
-        ]
-      }
-    ]
-    
-    finalUnits = demoUnits
+  // Check if units are empty but should exist
+  if (!units || units.length === 0) {
+    console.log('BuildingUnitsPage - No units found for building ID:', buildingId)
+    console.log('BuildingUnitsPage - This could be due to:')
+    console.log('1. No units exist for this building')
+    console.log('2. RLS (Row Level Security) policies on the units table')
+    console.log('3. Database schema mismatch between building_id types')
   }
+
+  // Use empty array if no units found (no demo data)
+  const finalUnits = units || []
 
   console.log('BuildingUnitsPage - Final data being passed to client:')
   console.log('Building:', JSON.stringify(building, null, 2))
@@ -287,6 +98,7 @@ export default async function BuildingUnitsPage({
       <BuildingUnitsClient 
         building={building} 
         units={finalUnits}
+        buildingId={buildingId}
       />
     </LayoutWithSidebar>
   )
