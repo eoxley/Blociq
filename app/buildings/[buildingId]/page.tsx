@@ -30,17 +30,17 @@ interface Leaseholder {
   name: string | null
   email: string | null
   phone: string | null
-  unit_id: string
+  unit_id: number | null
 }
 
 interface Unit {
-  id: string
+  id: number
   unit_number: string
   floor: string | null
   type: string | null
-  building_id: string
+  building_id: number
   leaseholder_id: string | null
-  leaseholders?: Leaseholder[]
+  leaseholders?: Leaseholder | null
 }
 
 export default function BuildingDetailPage() {
@@ -71,14 +71,20 @@ export default function BuildingDetailPage() {
           .single()
 
         console.log('🏢 Building data:', buildingData)
-        if (buildingError) {
+        if (buildingError || !buildingData) {
           console.error('❌ Building fetch error:', buildingError)
           setError('Building not found')
           setLoading(false)
           return
         }
 
+        console.log('🔍 Building ID type:', typeof buildingData.id, 'Value:', buildingData.id)
+
         // Fetch units with leaseholder information
+        // Convert building ID to number since units table expects building_id as number
+        const buildingIdForUnits = parseInt(buildingData.id, 10)
+        console.log('🔍 Using building ID for units query:', buildingIdForUnits)
+        
         const { data: unitData, error: unitError } = await supabase
           .from('units')
           .select(`
@@ -96,12 +102,18 @@ export default function BuildingDetailPage() {
               unit_id
             )
           `)
-          .eq('building_id', buildingId)
+          .eq('building_id', buildingIdForUnits)
           .order('unit_number')
 
         console.log('🏠 Units fetched:', unitData)
         if (unitError) {
           console.error('❌ Units fetch error:', unitError)
+          console.error('❌ Error details:', {
+            message: unitError.message,
+            details: unitError.details,
+            hint: unitError.hint,
+            code: unitError.code
+          })
           // Don't set error here, just log it and continue with empty units
         }
 
@@ -206,7 +218,7 @@ export default function BuildingDetailPage() {
                   <Home className="h-6 w-6 text-teal-600" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Units</h2>
+                  <h2 className="text-2xl font-bold text-gray-900">Units ({units.length})</h2>
                   <p className="text-gray-600">
                     {units.length} unit{units.length !== 1 ? 's' : ''} in this building
                   </p>
@@ -227,9 +239,7 @@ export default function BuildingDetailPage() {
             ) : (
               <div className="space-y-4">
                 {units.map((unit) => {
-                  const leaseholder = unit.leaseholders && unit.leaseholders.length > 0 
-                    ? unit.leaseholders[0] 
-                    : null
+                  const leaseholder = unit.leaseholders || null
 
                   return (
                     <div 
@@ -243,19 +253,20 @@ export default function BuildingDetailPage() {
                             <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
                               <Home className="h-5 w-5 text-teal-600" />
                             </div>
-                            <div>
+                            <div className="flex-1">
                               <h3 className="text-xl font-semibold text-gray-900">
                                 Unit {unit.unit_number}
                               </h3>
-                              <div className="flex items-center gap-4 text-sm text-gray-600">
-                                {unit.floor && (
-                                  <span>Floor {unit.floor}</span>
-                                )}
-                                {unit.type && (
-                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                    {unit.type}
+                              <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                                <span className="flex items-center gap-1">
+                                  <span className="font-medium">Floor:</span>
+                                  <span className="text-gray-700">
+                                    {unit.floor || "Not specified"}
                                   </span>
-                                )}
+                                </span>
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  {unit.type || "Unknown"}
+                                </span>
                               </div>
                             </div>
                           </div>
@@ -271,29 +282,33 @@ export default function BuildingDetailPage() {
                               </div>
                               
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                {leaseholder.email && (
-                                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                                    <Mail className="h-4 w-4 text-gray-400" />
+                                <div className="flex items-center gap-2 text-sm text-gray-600">
+                                  <Mail className="h-4 w-4 text-gray-400" />
+                                  {leaseholder.email ? (
                                     <a 
                                       href={`mailto:${leaseholder.email}`}
                                       className="text-blue-600 hover:underline"
                                     >
                                       {leaseholder.email}
                                     </a>
-                                  </div>
-                                )}
+                                  ) : (
+                                    <span className="text-gray-500 italic">No email provided</span>
+                                  )}
+                                </div>
                                 
-                                {leaseholder.phone && (
-                                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                                    <Phone className="h-4 w-4 text-gray-400" />
+                                <div className="flex items-center gap-2 text-sm text-gray-600">
+                                  <Phone className="h-4 w-4 text-gray-400" />
+                                  {leaseholder.phone ? (
                                     <a 
                                       href={`tel:${leaseholder.phone}`}
                                       className="text-blue-600 hover:underline"
                                     >
                                       {leaseholder.phone}
                                     </a>
-                                  </div>
-                                )}
+                                  ) : (
+                                    <span className="text-gray-500 italic">No phone provided</span>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           ) : (
@@ -339,7 +354,7 @@ export default function BuildingDetailPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Occupied Units</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {units.filter(unit => unit.leaseholders && unit.leaseholders.length > 0).length}
+                    {units.filter(unit => unit.leaseholders).length}
                   </p>
                 </div>
               </div>
@@ -353,7 +368,7 @@ export default function BuildingDetailPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Vacant Units</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {units.filter(unit => !unit.leaseholders || unit.leaseholders.length === 0).length}
+                    {units.filter(unit => !unit.leaseholders).length}
                   </p>
                 </div>
               </div>
