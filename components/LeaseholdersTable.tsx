@@ -122,7 +122,7 @@ export default function LeaseholdersTable({ buildingId, className = "" }: Leaseh
         }
 
         // Fetch units for these unit IDs
-        const { data: units, error: unitsError } = await supabase
+        const { data: units, error: unitsQueryError } = await supabase
           .from('units')
           .select(`
             id,
@@ -132,9 +132,9 @@ export default function LeaseholdersTable({ buildingId, className = "" }: Leaseh
           `)
           .in('id', leaseUnitIds);
 
-        if (unitsError) {
-          console.error('Error fetching units:', unitsError);
-          throw new Error(`Failed to fetch units: ${unitsError.message}`);
+        if (unitsQueryError) {
+          console.error('Error fetching units:', unitsQueryError);
+          throw new Error(`Failed to fetch units: ${unitsQueryError.message}`);
         }
 
         // Fetch leaseholders for these units
