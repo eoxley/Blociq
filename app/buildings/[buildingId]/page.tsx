@@ -1,7 +1,8 @@
-import React from 'react'
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
+import { supabase } from '@/lib/supabaseClient'
 import { 
   Building2, 
   MapPin, 
@@ -42,65 +43,113 @@ interface Unit {
   leaseholders?: Leaseholder[]
 }
 
-export default async function BuildingDetailPage({ 
-  params 
-}: { 
-  params: Promise<{ buildingId: string }> 
-}) {
-  const { buildingId } = await params
-  
-  // Validate building ID
-  if (!buildingId) {
-    redirect('/buildings')
+export default function BuildingDetailPage() {
+  const params = useParams()
+  const buildingId = params?.buildingId as string
+
+  const [building, setBuilding] = useState<Building | null>(null)
+  const [units, setUnits] = useState<Unit[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!buildingId) {
+        setError('No building ID provided')
+        setLoading(false)
+        return
+      }
+
+      console.log('📌 Building ID received:', buildingId)
+
+      try {
+        // Fetch building details
+        const { data: buildingData, error: buildingError } = await supabase
+          .from('buildings')
+          .select('id, name, address, access_notes, parking_info')
+          .eq('id', buildingId)
+          .single()
+
+        console.log('🏢 Building data:', buildingData)
+        if (buildingError) {
+          console.error('❌ Building fetch error:', buildingError)
+          setError('Building not found')
+          setLoading(false)
+          return
+        }
+
+        // Fetch units with leaseholder information
+        const { data: unitData, error: unitError } = await supabase
+          .from('units')
+          .select(`
+            id,
+            unit_number,
+            floor,
+            type,
+            building_id,
+            leaseholder_id,
+            leaseholders (
+              id,
+              name,
+              email,
+              phone,
+              unit_id
+            )
+          `)
+          .eq('building_id', buildingId)
+          .order('unit_number')
+
+        console.log('🏠 Units fetched:', unitData)
+        if (unitError) {
+          console.error('❌ Units fetch error:', unitError)
+          // Don't set error here, just log it and continue with empty units
+        }
+
+        setBuilding(buildingData)
+        setUnits(unitData || [])
+        setLoading(false)
+      } catch (err) {
+        console.error('❌ Unexpected error:', err)
+        setError('An unexpected error occurred')
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [buildingId])
+
+  if (loading) {
+    return (
+      <LayoutWithSidebar>
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                <Building2 className="h-8 w-8 text-teal-600" />
+              </div>
+              <p className="text-lg text-gray-600">Loading building information...</p>
+            </div>
+          </div>
+        </div>
+      </LayoutWithSidebar>
+    )
   }
 
-  const cookieStore = cookies()
-  const supabase = createServerComponentClient({ cookies: () => cookieStore })
-  
-  // Check if user is authenticated
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) {
-    redirect('/login')
+  if (error || !building) {
+    return (
+      <LayoutWithSidebar>
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="bg-red-50 border border-red-200 rounded-xl p-8 text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="h-8 w-8 text-red-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-red-900 mb-2">Building Not Found</h1>
+            <p className="text-red-700">{error || 'The requested building could not be found.'}</p>
+          </div>
+        </div>
+      </LayoutWithSidebar>
+    )
   }
-
-  // Fetch building details
-  const { data: building, error: buildingError } = await supabase
-    .from('buildings')
-    .select('id, name, address, access_notes, parking_info')
-    .eq('id', buildingId)
-    .single()
-
-  if (buildingError || !building) {
-    console.error('Building not found:', buildingError)
-    redirect('/buildings')
-  }
-
-  // Fetch units with leaseholder information
-  const { data: units, error: unitsError } = await supabase
-    .from('units')
-    .select(`
-      id,
-      unit_number,
-      floor,
-      type,
-      building_id,
-      leaseholder_id,
-      leaseholders (
-        id,
-        name,
-        email,
-        phone,
-        unit_id
-      )
-    `)
-    .eq('building_id', buildingId)
-    .order('unit_number')
-
-  if (unitsError) {
-    console.error('Error fetching units:', unitsError)
-  }
-
-  const unitsList = units || []
 
   return (
     <LayoutWithSidebar>
@@ -159,7 +208,7 @@ export default async function BuildingDetailPage({
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">Units</h2>
                   <p className="text-gray-600">
-                    {unitsList.length} unit{unitsList.length !== 1 ? 's' : ''} in this building
+                    {units.length} unit{units.length !== 1 ? 's' : ''} in this building
                   </p>
                 </div>
               </div>
@@ -167,7 +216,7 @@ export default async function BuildingDetailPage({
           </div>
 
           <div className="p-8">
-            {unitsList.length === 0 ? (
+            {units.length === 0 ? (
               <div className="text-center py-12">
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Home className="h-8 w-8 text-gray-400" />
@@ -177,7 +226,7 @@ export default async function BuildingDetailPage({
               </div>
             ) : (
               <div className="space-y-4">
-                {unitsList.map((unit) => {
+                {units.map((unit) => {
                   const leaseholder = unit.leaseholders && unit.leaseholders.length > 0 
                     ? unit.leaseholders[0] 
                     : null
@@ -268,7 +317,7 @@ export default async function BuildingDetailPage({
         </div>
 
         {/* Summary Stats */}
-        {unitsList.length > 0 && (
+        {units.length > 0 && (
           <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
               <div className="flex items-center gap-3">
@@ -277,7 +326,7 @@ export default async function BuildingDetailPage({
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Units</p>
-                  <p className="text-2xl font-bold text-gray-900">{unitsList.length}</p>
+                  <p className="text-2xl font-bold text-gray-900">{units.length}</p>
                 </div>
               </div>
             </div>
@@ -290,7 +339,7 @@ export default async function BuildingDetailPage({
                 <div>
                   <p className="text-sm font-medium text-gray-600">Occupied Units</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {unitsList.filter(unit => unit.leaseholders && unit.leaseholders.length > 0).length}
+                    {units.filter(unit => unit.leaseholders && unit.leaseholders.length > 0).length}
                   </p>
                 </div>
               </div>
@@ -304,7 +353,7 @@ export default async function BuildingDetailPage({
                 <div>
                   <p className="text-sm font-medium text-gray-600">Vacant Units</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {unitsList.filter(unit => !unit.leaseholders || unit.leaseholders.length === 0).length}
+                    {units.filter(unit => !unit.leaseholders || unit.leaseholders.length === 0).length}
                   </p>
                 </div>
               </div>
