@@ -113,6 +113,11 @@ export interface Database {
           service_charge_frequency: string | null
           ground_rent_amount: number | null
           ground_rent_frequency: string | null
+          notes: string | null
+          key_access_notes: string | null
+          entry_code: string | null
+          fire_panel_location: string | null
+          updated_at: string | null
         }
         Insert: {
           id?: string
@@ -146,6 +151,11 @@ export interface Database {
           service_charge_frequency?: string | null
           ground_rent_amount?: number | null
           ground_rent_frequency?: string | null
+          notes?: string | null
+          key_access_notes?: string | null
+          entry_code?: string | null
+          fire_panel_location?: string | null
+          updated_at?: string | null
         }
         Update: {
           id?: string

@@ -22,6 +22,9 @@ interface BuildingInfoClientProps {
 export default function BuildingInfoClient({ building }: BuildingInfoClientProps) {
   const handleUpdate = async (updatedBuilding: Partial<BuildingInfo>) => {
     try {
+      console.log('🔍 Updating building:', building.id)
+      console.log('📝 Update data:', updatedBuilding)
+      
       const response = await fetch(`/api/buildings/${building.id}/update`, {
         method: 'PUT',
         headers: {
@@ -32,7 +35,8 @@ export default function BuildingInfoClient({ building }: BuildingInfoClientProps
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to update building')
+        console.error('❌ Building update failed:', errorData)
+        throw new Error(errorData.details || errorData.error || 'Failed to update building')
       }
 
       const result = await response.json()
