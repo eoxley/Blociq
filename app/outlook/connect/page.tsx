@@ -25,19 +25,36 @@ async function generateCodeChallenge(verifier: string): Promise<string> {
 }
 
 export default function OutlookConnectPage() {
-  const [isConnecting, setIsConnecting] = useState(false);
+  const [isConnecting, setIsConnecting] = useState<boolean>(false);
 
-  const handleConnectOutlook = async () => {
+  const handleConnectOutlook = async (): Promise<void> => {
     try {
       setIsConnecting(true);
       console.log('[Outlook Connect] Starting OAuth flow...');
 
+      // Load environment variables with proper typing
+      const clientId: string = process.env.NEXT_PUBLIC_OUTLOOK_CLIENT_ID!;
+      const redirectUri: string = process.env.NEXT_PUBLIC_MICROSOFT_REDIRECT_URI!;
+
+      // Log both values to the console
+      console.log("🔐 clientId:", clientId);
+      console.log("🔁 redirectUri:", redirectUri);
+      
+      // Validate environment variables
+      if (!clientId) {
+        throw new Error('NEXT_PUBLIC_OUTLOOK_CLIENT_ID environment variable is not set. Please check your .env.local file.');
+      }
+
+      if (!redirectUri) {
+        throw new Error('NEXT_PUBLIC_MICROSOFT_REDIRECT_URI environment variable is not set. Please check your .env.local file.');
+      }
+
       // Generate PKCE code verifier
-      const codeVerifier = generateCodeVerifier();
+      const codeVerifier: string = generateCodeVerifier();
       console.log('[Outlook Connect] Generated code verifier:', codeVerifier);
 
       // Generate code challenge
-      const codeChallenge = await generateCodeChallenge(codeVerifier);
+      const codeChallenge: string = await generateCodeChallenge(codeVerifier);
       console.log('[Outlook Connect] Generated code challenge:', codeChallenge);
 
       // Store code verifier in localStorage as backup
@@ -45,7 +62,7 @@ export default function OutlookConnectPage() {
       console.log('[Outlook Connect] Stored code verifier in localStorage');
 
       // Send code verifier to server and get request ID
-      const response = await fetch('/api/auth/outlook/callback', {
+      const response: Response = await fetch('/api/auth/outlook/callback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ codeVerifier }),
@@ -55,30 +72,37 @@ export default function OutlookConnectPage() {
         throw new Error('Failed to store code verifier on server');
       }
 
-      const { requestId } = await response.json();
+      const { requestId }: { requestId: string } = await response.json();
       console.log('[Outlook Connect] Received request ID:', requestId);
 
-      // Build authorization URL
-      const clientId = process.env.NEXT_PUBLIC_OUTLOOK_CLIENT_ID;
-      const redirectUri = 'https://www.blociq.co.uk/api/auth/outlook/callback';
+      // Build authorization URL with all required PKCE parameters
+      const authUrl: URL = new URL('https://login.microsoftonline.com/common/oauth2/v2.0/authorize');
       
-      const authUrl = new URL('https://login.microsoftonline.com/common/oauth2/v2.0/authorize');
-      authUrl.searchParams.set('client_id', clientId!);
+      // Set all required OAuth 2.0 PKCE parameters
+      authUrl.searchParams.set('client_id', clientId);
       authUrl.searchParams.set('redirect_uri', redirectUri);
       authUrl.searchParams.set('response_type', 'code');
       authUrl.searchParams.set('response_mode', 'query');
       authUrl.searchParams.set('scope', 'Mail.Read offline_access openid');
       authUrl.searchParams.set('code_challenge', codeChallenge);
       authUrl.searchParams.set('code_challenge_method', 'S256');
-      authUrl.searchParams.set('state', requestId); // Pass requestId in state
+      authUrl.searchParams.set('state', requestId);
 
-      console.log('[Outlook Connect] Redirecting to Microsoft authorize endpoint:', authUrl.toString());
+      // Log the final authorization URL for debugging
+      console.log('[Outlook Connect] Final authorization URL:', authUrl.toString());
+      console.log('[Outlook Connect] PKCE parameters confirmed:');
+      console.log('  - client_id:', authUrl.searchParams.get('client_id'));
+      console.log('  - redirect_uri:', authUrl.searchParams.get('redirect_uri'));
+      console.log('  - code_challenge:', authUrl.searchParams.get('code_challenge'));
+      console.log('  - code_challenge_method:', authUrl.searchParams.get('code_challenge_method'));
 
       // Redirect to Microsoft's authorize endpoint
       window.location.href = authUrl.toString();
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[Outlook Connect] Error starting OAuth flow:', error);
+      const errorMessage: string = error instanceof Error ? error.message : 'Unknown error occurred';
+      alert(`Error: ${errorMessage}`);
       setIsConnecting(false);
     }
   };
