@@ -13,6 +13,7 @@ export default function OutlookConnectPage() {
       // Load environment variables with proper typing
       const clientId: string = process.env.NEXT_PUBLIC_OUTLOOK_CLIENT_ID!;
       const redirectUri: string = process.env.NEXT_PUBLIC_MICROSOFT_REDIRECT_URI!;
+      const scopes: string = 'Mail.Read offline_access openid';
 
       // Log both values to the console
       console.log("🔐 clientId:", clientId);
@@ -27,24 +28,18 @@ export default function OutlookConnectPage() {
         throw new Error('NEXT_PUBLIC_MICROSOFT_REDIRECT_URI environment variable is not set. Please check your .env.local file.');
       }
 
-      // Build authorization URL
-      const authUrl: URL = new URL('https://login.microsoftonline.com/common/oauth2/v2.0/authorize');
-      
-      // Set all required OAuth 2.0 parameters
-      authUrl.searchParams.set('client_id', clientId);
-      authUrl.searchParams.set('redirect_uri', redirectUri);
-      authUrl.searchParams.set('response_type', 'code');
-      authUrl.searchParams.set('response_mode', 'query');
-      authUrl.searchParams.set('scope', 'Mail.Read offline_access openid');
+      // Build authorization URL using template string
+      const authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&response_mode=query&scope=${scopes}`;
 
       // Log the final authorization URL for debugging
-      console.log('[Outlook Connect] Final authorization URL:', authUrl.toString());
+      console.log('[Outlook Connect] Final authorization URL:', authUrl);
       console.log('[Outlook Connect] OAuth parameters confirmed:');
-      console.log('  - client_id:', authUrl.searchParams.get('client_id'));
-      console.log('  - redirect_uri:', authUrl.searchParams.get('redirect_uri'));
+      console.log('  - client_id:', clientId);
+      console.log('  - redirect_uri:', redirectUri);
+      console.log('  - scope:', scopes);
 
       // Redirect to Microsoft's authorize endpoint
-      window.location.href = authUrl.toString();
+      window.location.href = authUrl;
 
     } catch (error: unknown) {
       console.error('[Outlook Connect] Error starting OAuth flow:', error);

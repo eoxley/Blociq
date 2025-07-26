@@ -17,8 +17,7 @@ export async function POST(req: NextRequest) {
     
     // Exchange code for tokens
     console.log('[Outlook Exchange] Calling exchangeCodeForTokens...');
-    const redirectUri = 'https://www.blociq.co.uk/api/auth/outlook/callback';
-    const tokenData = await exchangeCodeForTokens(code, redirectUri);
+    const tokenData = await exchangeCodeForTokens(code);
     console.log('[Outlook Exchange] Token exchange successful:', {
       hasAccessToken: !!tokenData.access_token,
       hasRefreshToken: !!tokenData.refresh_token,
