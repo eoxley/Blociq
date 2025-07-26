@@ -99,6 +99,11 @@ export async function exchangeCodeForTokensWithPkce(code: string, verifier: stri
   console.log('[exchangeCodeForTokensWithPkce] Starting PKCE token exchange...');
   console.log('[exchangeCodeForTokensWithPkce] Code:', code);
   console.log('[exchangeCodeForTokensWithPkce] Verifier:', verifier);
+  console.log('[exchangeCodeForTokensWithPkce] Client ID:', client_id);
+
+  if (!client_id) {
+    throw new Error('OUTLOOK_CLIENT_ID environment variable is not set');
+  }
 
   const params = new URLSearchParams({
     client_id,
