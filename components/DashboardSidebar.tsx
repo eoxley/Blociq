@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 import { Bell, Settings, User, HelpCircle, ExternalLink, LogOut } from 'lucide-react';
 import BlocIQLogo from './BlocIQLogo';
 import { BlocIQBadge } from '@/components/ui/blociq-badge';
@@ -28,39 +28,17 @@ export default function DashboardSidebar() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [notifications, setNotifications] = useState(3); // Mock notification count
-  const [supabase, setSupabase] = useState<any>(null);
-
-  // Initialize Supabase client safely
-  useEffect(() => {
-    try {
-      const client = createClientComponentClient();
-      setSupabase(client);
-    } catch (error) {
-      console.error('Failed to initialize Supabase client:', error);
-      // Create a mock client to prevent crashes
-      setSupabase({
-        auth: {
-          getUser: async () => ({ data: { user: null }, error: null }),
-          signOut: async () => ({ error: null })
-        }
-      });
-    }
-  }, []);
 
   useEffect(() => {
     const getUser = async () => {
-      if (supabase) {
-        const { data: { user } } = await supabase.auth.getUser();
-        setUser(user);
-      }
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
     };
     getUser();
-  }, [supabase]);
+  }, []);
 
   const handleLogout = async () => {
-    if (supabase) {
-      await supabase.auth.signOut();
-    }
+    await supabase.auth.signOut();
     router.push('/login');
   };
 

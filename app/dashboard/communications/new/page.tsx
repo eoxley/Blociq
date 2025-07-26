@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select } from '@/components/ui/select';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabaseClient';
 import { Database } from '@/lib/database.types';
 import { ArrowLeft, Save } from 'lucide-react';
 import Link from 'next/link';
@@ -16,7 +16,6 @@ import MergeTagHelper from '@/components/MergeTagHelper';
 
 export default function NewTemplatePage() {
   const router = useRouter();
-  const supabase = createClientComponentClient<Database>();
   
   const [formData, setFormData] = useState({
     name: '',

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
 
 interface Unit {
@@ -14,7 +14,6 @@ interface Unit {
 }
 
 export default function UnitsSection({ buildingId }: { buildingId: string }) {
-  const supabase = createClientComponentClient();
   const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(true);
 

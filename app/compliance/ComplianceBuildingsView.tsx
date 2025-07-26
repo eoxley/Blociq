@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Shield, AlertTriangle, CheckCircle, Clock, Eye, Upload, Bell } from 'lucide-react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { getActiveComplianceAssets, ActiveComplianceAsset } from '../../lib/complianceUtils'
 
 interface BuildingComplianceSummary {
@@ -25,7 +25,6 @@ export default function ComplianceBuildingsView({ onViewBuilding }: ComplianceBu
   const [buildings, setBuildings] = useState<BuildingComplianceSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedBuilding, setSelectedBuilding] = useState<number | null>(null)
-  const supabase = createClientComponentClient()
 
   useEffect(() => {
     loadBuildingsCompliance()

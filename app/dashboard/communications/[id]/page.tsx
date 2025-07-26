@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select } from '@/components/ui/select';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabaseClient';
 import { Database } from '@/lib/database.types';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import Link from 'next/link';
@@ -20,7 +20,6 @@ export default function EditTemplatePage() {
   const router = useRouter();
   const params = useParams();
   const templateId = params?.id as string;
-  const supabase = createClientComponentClient<Database>();
   
   const [template, setTemplate] = useState<Template | null>(null);
   const [formData, setFormData] = useState({

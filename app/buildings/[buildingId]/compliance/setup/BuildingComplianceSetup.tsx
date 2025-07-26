@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabaseClient';
 import { Shield, Save, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card';
 import { BlocIQBadge } from '@/components/ui/blociq-badge';
@@ -21,7 +21,6 @@ interface BuildingComplianceSetupProps {
 }
 
 export default function BuildingComplianceSetup({ buildingId, buildingName }: BuildingComplianceSetupProps) {
-  const supabase = createClientComponentClient();
   const [masterAssets, setMasterAssets] = useState<ComplianceAsset[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);

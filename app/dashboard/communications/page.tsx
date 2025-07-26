@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabaseClient';
 import { Database } from '@/lib/database.types';
 import { Plus, Search, Edit, Trash2, Mail, FileText, Send, History } from 'lucide-react';
 
@@ -19,7 +19,6 @@ export default function CommunicationsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const supabase = createClientComponentClient<Database>();
 
   useEffect(() => {
     fetchTemplates();

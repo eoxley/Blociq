@@ -16,7 +16,7 @@ import {
   Building
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 
 interface OutlookConnectButtonProps {
   className?: string;
@@ -30,7 +30,6 @@ export default function OutlookConnectButton({
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'checking' | 'disconnected'>('checking')
   const [userEmail, setUserEmail] = useState<string>('')
   const router = useRouter()
-  const supabase = createClientComponentClient()
 
   // Check connection status on mount
   useEffect(() => {

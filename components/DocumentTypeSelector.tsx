@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { supabase } from '@/lib/supabaseClient';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -45,7 +45,6 @@ export default function DocumentTypeSelector({
   const [complianceItems, setComplianceItems] = useState<ComplianceItem[]>([]);
   const [filter, setFilter] = useState<string>("");
   const [category, setCategory] = useState<string>("all");
-  const supabase = createClientComponentClient();
 
   useEffect(() => {
     if (isOpen) {

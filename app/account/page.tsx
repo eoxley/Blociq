@@ -1,11 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabaseClient';
 import LayoutWithSidebar from '@/components/LayoutWithSidebar';
 
 export default function AccountPage() {
-  const supabase = createClientComponentClient();
   const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {

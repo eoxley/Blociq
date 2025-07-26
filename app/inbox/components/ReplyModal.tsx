@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { supabase } from '@/lib/supabaseClient';
 import { toast } from "sonner";
 import { BlocIQButton } from "@/components/ui/blociq-button";
 import { Paperclip, X, Sparkles } from "lucide-react";
@@ -38,7 +38,6 @@ interface ReplyModalProps {
 }
 
 export default function ReplyModal({ mode, email, onClose, onEmailSent }: ReplyModalProps) {
-  const supabase = createClientComponentClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [to, setTo] = useState("");
   const [cc, setCc] = useState("");

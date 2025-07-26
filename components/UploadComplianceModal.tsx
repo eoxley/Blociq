@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useCallback } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { 
   Upload, 
   FileText, 
@@ -64,7 +64,6 @@ export default function UploadComplianceModal({
     error: null
   })
 
-  const supabase = createClientComponentClient()
 
   const resetState = useCallback(() => {
     setUploadState({

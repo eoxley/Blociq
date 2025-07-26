@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabaseClient';
 import { getTimeBasedGreeting } from '@/utils/greeting';
 
 interface AISummaryProps {
@@ -23,7 +23,6 @@ export default function AISummary({ user, className = "", showSubtitle = true }:
   const [greeting, setGreeting] = useState("Hello");
   const [userName, setUserName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const supabase = createClientComponentClient();
 
   useEffect(() => {
     const localHour = new Date().getHours(); // This is client-side
@@ -60,7 +59,7 @@ export default function AISummary({ user, className = "", showSubtitle = true }:
     };
 
     getUserData();
-  }, [supabase, user]);
+  }, [user]);
 
   // Use our existing utility function for consistent greeting logic
   const fullGreeting = getTimeBasedGreeting(userName || undefined);

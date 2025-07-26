@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -38,7 +38,6 @@ export default function OccupierManagement({ unitId }: OccupierManagementProps) 
     end_date: '',
     notes: ''
   });
-  const supabase = createClientComponentClient();
 
   useEffect(() => {
     fetchOccupiers();

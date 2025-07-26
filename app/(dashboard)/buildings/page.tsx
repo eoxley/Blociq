@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import Link from 'next/link'
 import { 
   Building2, 
@@ -209,7 +209,6 @@ export default function BuildingsPage() {
   const [buildings, setBuildings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const supabase = createClientComponentClient()
 
   // Fetch buildings with live unit counts from the units table
   React.useEffect(() => {

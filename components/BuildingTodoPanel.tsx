@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { 
   CheckCircle, 
   Circle, 
@@ -63,7 +63,6 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
     due_date: '',
     priority: 'Medium' as 'Low' | 'Medium' | 'High'
   })
-  const supabase = createClientComponentClient()
 
   // Fetch todos
   const fetchTodos = async () => {

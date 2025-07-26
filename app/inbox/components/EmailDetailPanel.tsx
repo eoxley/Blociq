@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Trash2, Reply, ReplyAll, Forward, Loader2, User, Clock, Building, Mail, CheckCircle } from "lucide-react";
 import ReplyModal from "./ReplyModal";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { supabase } from '@/lib/supabaseClient';
 import { BlocIQButton } from "@/components/ui/blociq-button";
 import { BlocIQBadge } from "@/components/ui/blociq-badge";
 import { BlocIQCard, BlocIQCardContent } from "@/components/ui/blociq-card";
@@ -31,7 +31,6 @@ interface EmailDetailPanelProps {
 }
 
 export default function EmailDetailPanel({ email, onEmailDeleted, onEmailSent }: EmailDetailPanelProps) {
-  const supabase = createClientComponentClient();
   const [showReplyModal, setShowReplyModal] = useState<null | "reply" | "replyAll" | "forward">(null);
   const [isDeleting, setIsDeleting] = useState(false);
 

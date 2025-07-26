@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { MessageCircle, X, Send, Loader2, Minimize2, Maximize2, Paperclip, Home } from 'lucide-react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 
 type ChatMessage = {
   id: string
@@ -27,7 +27,6 @@ export default function FloatingBlocIQ() {
   ])
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const supabase = createClientComponentClient()
 
   const handleFileAttachment = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || [])

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Shield, AlertTriangle, CheckCircle, Clock, Upload, Bell, ArrowLeft, FileText, Calendar } from 'lucide-react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { getActiveComplianceAssets, ActiveComplianceAsset } from '../../lib/complianceUtils'
 import SmartUploader from '../../components/SmartUploader'
 
@@ -16,7 +16,6 @@ export default function BuildingComplianceDetail({ buildingId, buildingName, onB
   const [assets, setAssets] = useState<ActiveComplianceAsset[]>([])
   const [loading, setLoading] = useState(true)
   const [uploadingAsset, setUploadingAsset] = useState<string | null>(null)
-  const supabase = createClientComponentClient()
 
   useEffect(() => {
     loadBuildingAssets()

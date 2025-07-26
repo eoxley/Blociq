@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabaseClient';
 import { Database } from '@/lib/database.types';
 import { ArrowLeft, Mail, FileText, Eye, Download, Filter, Calendar, Building, Users } from 'lucide-react';
 import Link from 'next/link';
@@ -25,7 +25,6 @@ interface CommunicationWithDetails extends Communication {
 
 export default function CommunicationsLogPage() {
   const router = useRouter();
-  const supabase = createClientComponentClient<Database>();
   
   const [communications, setCommunications] = useState<CommunicationWithDetails[]>([]);
   const [buildings, setBuildings] = useState<Building[]>([]);

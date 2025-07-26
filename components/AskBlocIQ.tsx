@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Plus, Calendar, Loader2 } from 'lucide-react';
@@ -55,7 +55,6 @@ export default function AskBlocIQ({
   const [addingToTodo, setAddingToTodo] = useState(false);
   const [addingToCalendar, setAddingToCalendar] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
-  const supabase = createClientComponentClient();
 
   useEffect(() => {
     const getSession = async () => {
@@ -63,7 +62,7 @@ export default function AskBlocIQ({
       setUserId(session?.user?.id ?? null);
     };
     getSession();
-  }, [supabase]);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -20,7 +20,6 @@ import {
 import BlocIQLogo from './BlocIQLogo'
 
 export default function Sidebar() {
-  const supabase = createClientComponentClient()
   const router = useRouter()
   const pathname = usePathname()
 

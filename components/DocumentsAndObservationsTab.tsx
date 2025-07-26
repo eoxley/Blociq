@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { FileText, MessageSquare, Upload, Download, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -26,7 +26,6 @@ interface DocumentsAndObservationsTabProps {
 export default function DocumentsAndObservationsTab({ 
   projectId 
 }: DocumentsAndObservationsTabProps) {
-  const supabase = createClientComponentClient()
   const [documents, setDocuments] = useState<ProjectDocument[]>([])
   const [isLoading, setIsLoading] = useState(true)
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Shield, AlertTriangle, Clock, CheckCircle, Save, CheckSquare, XCircle, Info, Building } from 'lucide-react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { UK_COMPLIANCE_ITEMS, BuildingAsset } from '../../lib/complianceUtils'
 
 interface Building {
@@ -22,7 +22,6 @@ export default function UKComplianceSetup({ onSaveSuccess }: UKComplianceSetupPr
   const [saving, setSaving] = useState(false)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
   const [saveSuccess, setSaveSuccess] = useState(false)
-  const supabase = createClientComponentClient()
 
   // Load buildings on component mount
   useEffect(() => {

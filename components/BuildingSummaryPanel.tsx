@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabaseClient';
 import { Building2, Users, Settings, Edit, Info, MapPin } from 'lucide-react';
 import Link from 'next/link';
 
@@ -29,7 +29,6 @@ export default function BuildingSummaryPanel({
   buildingName, 
   buildingAddress 
 }: BuildingSummaryPanelProps) {
-  const supabase = createClientComponentClient();
   const [setup, setSetup] = useState<BuildingSetup | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -55,7 +54,7 @@ export default function BuildingSummaryPanel({
     };
 
     fetchSetup();
-  }, [buildingId, supabase]);
+  }, [buildingId]);
 
   const getStructureTypeColor = (type: string | null) => {
     switch (type) {

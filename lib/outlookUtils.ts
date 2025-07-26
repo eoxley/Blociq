@@ -1,4 +1,4 @@
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabaseClient';
 
 export interface OutlookConnectionStatus {
   connected: boolean;
@@ -11,7 +11,6 @@ export interface OutlookConnectionStatus {
  * Check if the current user has Outlook connected
  */
 export async function checkOutlookConnection(): Promise<OutlookConnectionStatus> {
-  const supabase = createClientComponentClient();
   
   try {
     // Get the current user's session

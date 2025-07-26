@@ -11,7 +11,7 @@ import {
   Settings,
   LogOut
 } from 'lucide-react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
 
 interface InboxLayoutProps {
@@ -21,7 +21,7 @@ interface InboxLayoutProps {
 export default function InboxLayout({ children }: InboxLayoutProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const supabase = createClientComponentClient()
+
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()

@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Shield, AlertTriangle, CheckCircle, Clock, Calendar, Plus, Edit, FileText, Upload } from 'lucide-react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { ActiveComplianceAsset, getStatusColor, getStatusBadgeColor, getDaysUntilDue, formatDate } from '@/lib/complianceUtils'
 
 interface ComplianceTrackerClientProps {
@@ -14,7 +14,6 @@ interface ComplianceTrackerClientProps {
 export default function ComplianceTrackerClient({ building, complianceAssets }: ComplianceTrackerClientProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
-  const supabase = createClientComponentClient()
 
   // Get unique categories
   const categories = ['all', ...Array.from(new Set(complianceAssets.map(asset => asset.category)))]

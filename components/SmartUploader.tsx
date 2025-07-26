@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useCallback } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { supabase } from '@/lib/supabaseClient';
 import { 
   Upload, 
   FileText, 
@@ -74,7 +74,6 @@ export default function SmartUploader({
   customStoragePath,
   allowUnlinked = true // Default to allowing unlinked uploads
 }: SmartUploaderProps) {
-  const supabase = createClientComponentClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);

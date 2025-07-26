@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { 
   CheckCircle, 
   XCircle, 
@@ -87,7 +87,6 @@ export default function BuildingComplianceView({ buildingId, buildingName }: Bui
   const [sendingReminders, setSendingReminders] = useState<Set<string>>(new Set())
   const [uploadingDocuments, setUploadingDocuments] = useState<Set<string>>(new Set())
   const [bsaAssetsSummary, setBsaAssetsSummary] = useState<any>(null)
-  const supabase = createClientComponentClient()
 
   useEffect(() => {
     loadComplianceData()

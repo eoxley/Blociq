@@ -3,14 +3,14 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useRouter } from 'next/navigation'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { LogOut, Settings } from 'lucide-react'
 import BlocIQLogo from '@/components/BlocIQLogo'
 
 export default function Footer() {
   const pathname = usePathname()
   const router = useRouter()
-  const supabase = createClientComponentClient()
+
 
   // Check if we should show the account/logout links
   const shouldShowAccountLinks = pathname && 

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { supabase } from '@/lib/supabaseClient';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -35,7 +35,6 @@ export default function ComplianceDocumentsList({
   const [documents, setDocuments] = useState<ComplianceDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUploader, setShowUploader] = useState(false);
-  const supabase = createClientComponentClient();
 
   useEffect(() => {
     fetchDocuments();

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { toast } from 'sonner'
 import { 
   Flag, 
@@ -114,7 +114,6 @@ export default function EmailContextMenu({
   emailFiled = false,
   outlookId
 }: EmailContextMenuProps) {
-  const supabase = createClientComponentClient()
   const [updating, setUpdating] = useState(false)
   const [filing, setFiling] = useState(false)
 
