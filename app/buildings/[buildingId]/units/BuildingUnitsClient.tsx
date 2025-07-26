@@ -29,7 +29,7 @@ type Unit = Tables<'units'> & {
 
 interface BuildingUnitsClientProps {
   building: Tables<'buildings'>
-  units: Unit[]
+  units: any[] // Changed to any to handle database types mismatch
   buildingId: string
 }
 
