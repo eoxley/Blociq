@@ -3,8 +3,8 @@
 
 CREATE TABLE IF NOT EXISTS property_events (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  building_id INTEGER REFERENCES buildings(id) ON DELETE CASCADE,
-  created_by VARCHAR(255) REFERENCES auth.users(id) ON DELETE SET NULL,
+  building_id UUID REFERENCES buildings(id) ON DELETE CASCADE,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   title VARCHAR(255) NOT NULL,
   description TEXT,
   start_time TIMESTAMP WITH TIME ZONE NOT NULL,

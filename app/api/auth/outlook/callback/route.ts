@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createClient } from '@/utils/supabase/server';
+import { exchangeCodeForTokens } from '@/lib/outlook';
+import { saveUserOutlookTokens } from '@/lib/outlookAuth';
 
 /**
  * Helper function to exchange authorization code for tokens
@@ -93,6 +95,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(new URL('/inbox?error=outlook_missing_params', req.url));
     }
 
+    console.log('[Outlook Callback] Code param received:', code);
+
     // Verify state parameter from cookie
     const cookieStore = await cookies();
     const storedState = cookieStore.get('outlook_oauth_state')?.value;
@@ -118,46 +122,33 @@ export async function GET(req: NextRequest) {
 
     // ✅ 1. Exchange the `code` from Outlook OAuth for an access and refresh token
     console.log('[Outlook Callback] Exchanging authorization code for tokens...');
-    const tokenData = await getTokenFromCode(code);
-    console.log('[Outlook Callback] Token exchange successful');
+    const tokenData = await exchangeCodeForTokens(code);
+    console.log('[Outlook Callback] Token response:', tokenData);
 
     // ✅ 2. Fetch the Microsoft user's email via Microsoft Graph `/me` endpoint
     console.log('[Outlook Callback] Fetching user info from Microsoft Graph...');
     const userInfo = await getMicrosoftUser(tokenData.access_token);
     console.log('[Outlook Callback] User info retrieved:', userInfo.email);
 
-    // Calculate token expiry
-    const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
-
-    // ✅ 3. Store the token details in the `outlook_tokens` Supabase table
-    console.log('[Outlook Callback] Storing tokens in database...');
-    const { error: insertError } = await supabase
-      .from('outlook_tokens')
-      .upsert({
-        user_id: user.id,
-        email: userInfo.email,
-        access_token: tokenData.access_token,
-        refresh_token: tokenData.refresh_token,
-        expires_at: expiresAt
-      }, {
-        onConflict: 'user_id,email'
-      });
-
-    if (insertError) {
-      console.error('[Outlook Callback] Failed to store tokens in database:', insertError);
-      return NextResponse.redirect(new URL('/inbox?error=outlook_token_storage_failed', req.url));
-    }
+    // ✅ 3. Call saveOutlookTokens with the required parameters
+    console.log('[Outlook Callback] Saving tokens to database...');
+    await saveUserOutlookTokens(
+      'testbloc@blociq.co.uk', // user_email as specified
+      tokenData.access_token,
+      tokenData.refresh_token,
+      tokenData.expires_in
+    );
 
     // Clean up the OAuth state cookie
     cookieStore.delete('outlook_oauth_state');
 
-    console.log('[Outlook Callback] Token stored successfully for user:', user.id, 'email:', userInfo.email);
+    console.log('[Outlook Callback] Token stored successfully for user:', user.id, 'email: testbloc@blociq.co.uk');
     
-    // ✅ 6. Redirect to `/inbox` on success (updated from /dashboard/inbox)
-    return NextResponse.redirect(new URL(`/inbox?success=outlook_connected&email=${encodeURIComponent(userInfo.email)}`, req.url));
+    // ✅ 4. Redirect to `/` on success
+    return NextResponse.redirect(new URL('/', req.url));
 
   } catch (error) {
-    console.error('[Outlook Callback] Error in Outlook OAuth callback:', error);
+    console.error('[Outlook Callback] Callback error:', error);
     return NextResponse.redirect(new URL('/inbox?error=outlook_callback_failed', req.url));
   }
 } 
