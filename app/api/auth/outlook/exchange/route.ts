@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { exchangeCodeForTokens } from '@/lib/outlook';
-import { saveOutlookTokens } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function POST(req: NextRequest) {
   try {
     console.log('[Outlook Exchange] Starting token exchange...');
     
-    const { code } = await req.json();
+    const { code }: { code: string } = await req.json();
     
     console.log('[Outlook Exchange] Received code:', code ? 'present' : 'missing');
     
@@ -23,17 +27,38 @@ export async function POST(req: NextRequest) {
       hasRefreshToken: !!tokenData.refresh_token,
       expiresIn: tokenData.expires_in
     });
-    
-    // Save tokens to Supabase
-    console.log('[Outlook Exchange] Saving tokens to Supabase...');
-    await saveOutlookTokens({
+
+    // Fetch user from auth.users
+    const { data: user, error } = await supabase
+      .from('auth.users')
+      .select('id')
+      .eq('email', 'testbloc@blociq.co.uk')
+      .maybeSingle();
+
+    if (!user || error) {
+      console.error('❌ Failed to find user in auth.users:', error);
+      throw new Error('User not found for testbloc@blociq.co.uk');
+    }
+
+    const upsertData = {
+      user_id: user.id,
+      email: 'testbloc@blociq.co.uk',
+      user_email: 'testbloc@blociq.co.uk',
       access_token: tokenData.access_token,
       refresh_token: tokenData.refresh_token,
-      expires_in: tokenData.expires_in,
-      user_email: 'testbloc@blociq.co.uk',
-    });
-    console.log('[Outlook Exchange] Tokens saved successfully');
-    
+      expires_at: new Date(Date.now() + tokenData.expires_in * 1000).toISOString(),
+    };
+    console.log('[Outlook Exchange] Upserting token with:', upsertData);
+
+    const { error: upsertError } = await supabase
+      .from('outlook_tokens')
+      .upsert(upsertData, { onConflict: 'user_email' });
+    if (upsertError) {
+      console.error('[Outlook Exchange] Error upserting token:', upsertError);
+      throw upsertError;
+    }
+    console.log('[Outlook Exchange] Token upserted successfully for', upsertData.user_email);
+
     // Return success response
     return NextResponse.json({ 
       success: true, 
