@@ -28,20 +28,8 @@ export async function POST(req: NextRequest) {
       expiresIn: tokenData.expires_in
     });
 
-    // Fetch user from auth.users
-    const { data: user, error } = await supabase
-      .from('auth.users')
-      .select('id')
-      .eq('email', 'testbloc@blociq.co.uk')
-      .maybeSingle();
-
-    if (!user || error) {
-      console.error('❌ Failed to find user in auth.users:', error);
-      throw new Error('User not found for testbloc@blociq.co.uk');
-    }
-
     const upsertData = {
-      user_id: user.id,
+      user_id: 'ee16d137-2e05-4032-a852-15478ec60c3c',
       email: 'testbloc@blociq.co.uk',
       user_email: 'testbloc@blociq.co.uk',
       access_token: tokenData.access_token,
