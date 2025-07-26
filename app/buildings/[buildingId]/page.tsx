@@ -187,16 +187,18 @@ export default async function BuildingDetailPage({
 
     const building = buildingResult.data
     console.log("✅ Building found:", building)
+    console.log("🔍 Building ID from URL (buildingId):", buildingId, "Type:", typeof buildingId)
+    console.log("🔍 Building ID from result (building.id):", building.id, "Type:", typeof building.id)
 
     // 5. Fetch related data
     console.log("🔍 Fetching related data for building:", building.id)
     
-    // Fetch units
+    // Fetch units with leaseholder information
     let unitsResult
     try {
-      // Use the actual building ID from the building result
-      const actualBuildingId = building.id
-      console.log("🔍 Using building ID for units query:", actualBuildingId)
+      // Use the building ID from URL params directly for units query
+      // This matches the pattern used in the units page
+      console.log("🔍 Using building ID for units query:", buildingId)
       
       unitsResult = await supabase
         .from("units")
@@ -205,9 +207,23 @@ export default async function BuildingDetailPage({
           unit_number,
           floor,
           type,
-          address
+          building_id,
+          leaseholder_id,
+          leaseholders (
+            id,
+            name,
+            email,
+            phone
+          ),
+          leases (
+            id,
+            start_date,
+            expiry_date,
+            doc_type,
+            is_headlease
+          )
         `)
-        .eq("building_id", actualBuildingId)
+        .eq("building_id", buildingId)
         .order("unit_number")
         
       console.log("🔍 Units query result:", unitsResult)
@@ -228,13 +244,13 @@ export default async function BuildingDetailPage({
           category
         )
       `)
-      .eq("building_id", building.id)
+      .eq("building_id", buildingId)
 
     // Fetch latest documents
     const documentsResult = await supabase
       .from("building_documents")
       .select("*")
-      .eq("building_id", building.id)
+      .eq("building_id", buildingId)
       .order("created_at", { ascending: false })
       .limit(3)
 
@@ -242,7 +258,7 @@ export default async function BuildingDetailPage({
     const tasksResult = await supabase
       .from("building_tasks")
       .select("*")
-      .eq("building_id", building.id)
+      .eq("building_id", buildingId)
       .order("due_date")
       .limit(5)
 
@@ -250,7 +266,7 @@ export default async function BuildingDetailPage({
     const majorWorksResult = await supabase
       .from("major_works")
       .select("*")
-      .eq("building_id", building.id)
+      .eq("building_id", buildingId)
       .order("start_date", { ascending: false })
       .limit(3)
 
@@ -258,7 +274,7 @@ export default async function BuildingDetailPage({
     const diaryResult = await supabase
       .from("diary_entries")
       .select("*")
-      .eq("building_id", building.id)
+      .eq("building_id", buildingId)
       .order("created_at", { ascending: false })
       .limit(3)
 
