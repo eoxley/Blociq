@@ -145,24 +145,42 @@ export default function DocumentAwareAI({
       const data = await response.json();
       console.log("🧠 Document Analysis Result:", data);
 
-      // Set document context for AI
-      setDocumentContext({
-        fileName: data.ai.originalFileName,
-        type: data.ai.document_type,
-        summary: data.ai.summary,
-        inspection_date: data.ai.inspection_date,
-        next_due_date: data.ai.next_due_date,
-        responsible_party: data.ai.responsible_party,
-        action_required: data.ai.action_required,
-      });
+      // Check if the document was processed successfully
+      if (data.ai && data.ai.extractedText) {
+        // Set document context for AI
+        setDocumentContext({
+          fileName: data.ai.originalFileName,
+          type: data.ai.document_type,
+          summary: data.ai.summary,
+          inspection_date: data.ai.inspection_date,
+          next_due_date: data.ai.next_due_date,
+          responsible_party: data.ai.responsible_party,
+          action_required: data.ai.action_required,
+        });
 
-      setShowDocumentUpload(false);
-      setUploadedFile(null);
-              toast.success('Document uploaded and analysed successfully');
+        setShowDocumentUpload(false);
+        setUploadedFile(null);
+        toast.success('Document uploaded and analysed successfully');
+      } else {
+        // Document processing failed or yielded limited content
+        throw new Error('Document processing yielded limited content. Please try uploading a different version or format.');
+      }
 
     } catch (error: any) {
       console.error("❌ Upload error:", error);
-              toast.error(error.message || 'Failed to upload and analyse document');
+      
+      // Provide specific error messages based on the error
+      let errorMessage = error.message || 'Failed to upload and analyse document';
+      
+      if (error.message.includes('OCR') || error.message.includes('scanned')) {
+        errorMessage = 'This appears to be a scanned document. Please upload a text-based version or use OCR processing.';
+      } else if (error.message.includes('corrupted') || error.message.includes('invalid')) {
+        errorMessage = 'The file appears to be corrupted or in an invalid format. Please try uploading a different version.';
+      } else if (error.message.includes('unsupported')) {
+        errorMessage = 'This file type is not supported. Please upload PDF, DOCX, TXT, or image files.';
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setUploadLoading(false);
     }
@@ -176,11 +194,37 @@ export default function DocumentAwareAI({
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      if (!selectedFile.name.toLowerCase().endsWith('.pdf')) {
-        toast.error('Only PDF files are supported');
+      // Validate file type
+      const allowedTypes = [
+        'application/pdf',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/msword',
+        'text/plain',
+        'image/jpeg',
+        'image/png',
+        'image/gif'
+      ];
+      
+      if (!allowedTypes.includes(selectedFile.type)) {
+        toast.error('Unsupported file type. Please upload PDF, DOCX, DOC, TXT, or image files.');
         return;
       }
+      
+      // Validate file size (10MB limit)
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (selectedFile.size > maxSize) {
+        toast.error('File too large. Please upload files smaller than 10MB.');
+        return;
+      }
+      
+      // Check for empty files
+      if (selectedFile.size === 0) {
+        toast.error('File appears to be empty. Please select a valid file.');
+        return;
+      }
+      
       setUploadedFile(selectedFile);
+      toast.success(`File selected: ${selectedFile.name}`);
     }
   };
 
