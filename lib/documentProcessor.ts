@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { TextExtractionResult, DocumentAnalysisResult } from './extractTextFromPdf';
+import { extractTextFromPDF } from './extractTextFromPdf';
 
 export interface DocumentProcessingResult {
   success: boolean;
@@ -8,7 +8,7 @@ export interface DocumentProcessingResult {
   summaryText?: string;
   documentType?: string;
   confidence: 'high' | 'medium' | 'low';
-  method: string;
+  extractionMethod: string;
   errorMessage?: string;
   suggestions?: string[];
   metadata?: {
@@ -31,7 +31,6 @@ export interface ProcessingOptions {
  */
 export async function processDocument(
   file: File | Buffer,
-  fileName: string,
   options: ProcessingOptions = {}
 ): Promise<DocumentProcessingResult> {
   const startTime = Date.now();
@@ -43,45 +42,50 @@ export async function processDocument(
   } = options;
 
   try {
-    console.log(`🔄 Starting document processing: ${fileName}`);
+    // Convert File to Buffer if needed
+    const buffer = file instanceof File ? Buffer.from(await file.arrayBuffer()) : file;
+    const fileName = file instanceof File ? file.name : 'unknown';
+    const fileSize = buffer.length;
+
+    console.log(`📄 Processing document: ${fileName} (${fileSize} bytes)`);
 
     // 1. Validation
-    const validation = await validateDocument(file, fileName, maxFileSize);
+    const validation = validateDocument(buffer, fileName, maxFileSize);
     if (!validation.valid) {
       return {
         success: false,
         status: 'error',
         extractedText: '',
         confidence: 'low',
-        method: 'validation',
+        extractionMethod: 'validation',
         errorMessage: validation.error,
         suggestions: validation.suggestions,
         metadata: {
-          fileSize: file instanceof File ? file.size : file.length,
+          fileSize,
           processingTime: Date.now() - startTime
         }
       };
     }
 
     // 2. Determine file type and processing strategy
-    const fileType = getFileType(file, fileName);
-    console.log(`📄 File type detected: ${fileType}`);
+    const fileType = detectFileType(fileName, buffer);
+    console.log(`🔍 Detected file type: ${fileType}`);
 
     // 3. Process based on file type
     let result: DocumentProcessingResult;
 
     switch (fileType) {
       case 'pdf':
-        result = await processPDF(file, fileName, { enableOCR, retryAttempts });
+        result = await processPDF(buffer, fileName, { enableOCR, retryAttempts });
         break;
       case 'docx':
-        result = await processDOCX(file, fileName, { retryAttempts });
+        result = await processDOCX(buffer, fileName, { retryAttempts });
         break;
       case 'txt':
-        result = await processTXT(file, fileName);
+        result = await processTXT(buffer, fileName);
         break;
       case 'image':
-        result = await processImage(file, fileName, { enableOCR });
+        result = await processImage(buffer, fileName, { enableOCR });
         break;
       default:
         result = {
@@ -89,15 +93,15 @@ export async function processDocument(
           status: 'error',
           extractedText: '',
           confidence: 'low',
-          method: 'unsupported',
+          extractionMethod: 'unknown',
           errorMessage: `Unsupported file type: ${fileType}`,
           suggestions: [
             'Convert to PDF format',
-            'Upload a text-based version',
-            'Use supported formats: PDF, DOCX, TXT, JPG, PNG'
+            'Save as plain text (.txt)',
+            'Use a supported file type'
           ],
           metadata: {
-            fileSize: file instanceof File ? file.size : file.length,
+            fileSize,
             processingTime: Date.now() - startTime
           }
         };
@@ -106,22 +110,26 @@ export async function processDocument(
     // 4. Add metadata
     result.metadata = {
       ...result.metadata,
-      fileSize: file instanceof File ? file.size : file.length,
+      fileSize,
       processingTime: Date.now() - startTime
     };
+
+    // 5. Generate summary if text was extracted
+    if (result.success && result.extractedText.length > 50) {
+      result.summaryText = await generateSummary(result.extractedText, fileName);
+    }
 
     console.log(`✅ Document processing completed: ${result.status} (${result.metadata.processingTime}ms)`);
     return result;
 
   } catch (error) {
-    console.error(`❌ Document processing failed: ${fileName}`, error);
-    
+    console.error('❌ Document processing failed:', error);
     return {
       success: false,
       status: 'error',
       extractedText: '',
       confidence: 'low',
-      method: 'exception',
+      extractionMethod: 'exception',
       errorMessage: 'Document processing failed unexpectedly',
       suggestions: [
         'Check that the file is not corrupted',
@@ -130,7 +138,7 @@ export async function processDocument(
         'Contact support if the problem persists'
       ],
       metadata: {
-        fileSize: file instanceof File ? file.size : file.length,
+        fileSize: file instanceof File ? file.size : 0,
         processingTime: Date.now() - startTime
       }
     };
@@ -140,28 +148,26 @@ export async function processDocument(
 /**
  * Validate document before processing
  */
-async function validateDocument(
-  file: File | Buffer,
+function validateDocument(
+  buffer: Buffer,
   fileName: string,
   maxFileSize: number
-): Promise<{ valid: boolean; error?: string; suggestions?: string[] }> {
-  const fileSize = file instanceof File ? file.size : file.length;
-
+): { valid: boolean; error?: string; suggestions?: string[] } {
   // Check file size
-  if (fileSize > maxFileSize) {
+  if (buffer.length > maxFileSize) {
     return {
       valid: false,
-      error: `File too large (${(fileSize / 1024 / 1024).toFixed(1)}MB)`,
+      error: 'File too large',
       suggestions: [
         'Compress the file',
         'Split into smaller files',
-        `Keep files under ${(maxFileSize / 1024 / 1024).toFixed(0)}MB`
+        `Keep files under ${Math.round(maxFileSize / 1024 / 1024)}MB`
       ]
     };
   }
 
   // Check for empty files
-  if (fileSize === 0) {
+  if (buffer.length === 0) {
     return {
       valid: false,
       error: 'File is empty',
@@ -179,11 +185,11 @@ async function validateDocument(
   if (!extension || !supportedExtensions.includes(extension)) {
     return {
       valid: false,
-      error: `Unsupported file extension: .${extension}`,
+      error: 'Unsupported file type',
       suggestions: [
         'Convert to PDF format',
-        'Upload a text-based version',
-        `Use supported formats: ${supportedExtensions.map(ext => '.' + ext).join(', ')}`
+        'Save as plain text (.txt)',
+        `Use one of these formats: ${supportedExtensions.join(', ')}`
       ]
     };
   }
@@ -192,96 +198,105 @@ async function validateDocument(
 }
 
 /**
- * Determine file type from file and filename
+ * Detect file type from filename and content
  */
-function getFileType(file: File | Buffer, fileName: string): string {
+function detectFileType(fileName: string, buffer: Buffer): string {
   const extension = fileName.split('.').pop()?.toLowerCase();
   
-  if (extension === 'pdf') return 'pdf';
-  if (extension === 'docx' || extension === 'doc') return 'docx';
-  if (extension === 'txt') return 'txt';
-  if (['jpg', 'jpeg', 'png', 'gif'].includes(extension || '')) return 'image';
-  
-  return 'unknown';
+  switch (extension) {
+    case 'pdf':
+      return 'pdf';
+    case 'docx':
+    case 'doc':
+      return 'docx';
+    case 'txt':
+      return 'txt';
+    case 'jpg':
+    case 'jpeg':
+    case 'png':
+    case 'gif':
+      return 'image';
+    default:
+      return 'unknown';
+  }
 }
 
 /**
  * Process PDF documents with multiple fallback methods
  */
 async function processPDF(
-  file: File | Buffer,
+  buffer: Buffer,
   fileName: string,
   options: { enableOCR: boolean; retryAttempts: number }
 ): Promise<DocumentProcessingResult> {
   const { enableOCR, retryAttempts } = options;
   
-  // Method 1: Try OpenAI Vision API (primary)
+  // Method 1: Try pdf-parse (fastest, works for text-based PDFs)
   try {
-    console.log('🔄 Attempting OpenAI Vision extraction...');
-    const openaiResult = await extractWithOpenAI(file, fileName);
+    console.log('🔄 Attempting pdf-parse extraction...');
+    const result = await extractTextFromPDF(buffer, fileName);
     
-    if (openaiResult.text && openaiResult.text.trim().length > 100) {
+    if (result.text && result.text.trim().length > 100) {
       return {
         success: true,
         status: 'success',
-        extractedText: openaiResult.text,
-        confidence: openaiResult.confidence,
-        method: 'openai-vision',
+        extractedText: result.text,
+        confidence: result.confidence,
+        extractionMethod: 'pdf-parse',
         metadata: {
-          wordCount: openaiResult.text.split(/\s+/).length
+          pageCount: result.pageCount,
+          wordCount: result.wordCount
         }
       };
     }
   } catch (error) {
-    console.warn('⚠️ OpenAI Vision extraction failed:', error);
+    console.log('⚠️ pdf-parse failed, trying OpenAI Vision...');
   }
 
-  // Method 2: Try pdf-parse (fallback)
+  // Method 2: Try OpenAI Vision API
   try {
-    console.log('🔄 Attempting pdf-parse extraction...');
-    const pdfParseResult = await extractWithPdfParse(file);
+    console.log('🔄 Attempting OpenAI Vision extraction...');
+    const result = await extractWithOpenAI(buffer, 'pdf');
     
-    if (pdfParseResult.text && pdfParseResult.text.trim().length > 50) {
+    if (result.text && result.text.trim().length > 50) {
       return {
         success: true,
-        status: pdfParseResult.confidence === 'high' ? 'success' : 'fallback_used',
-        extractedText: pdfParseResult.text,
-        confidence: pdfParseResult.confidence,
-        method: 'pdf-parse',
+        status: result.confidence === 'low' ? 'fallback_used' : 'success',
+        extractedText: result.text,
+        confidence: result.confidence,
+        extractionMethod: 'openai-vision',
         metadata: {
-          pageCount: pdfParseResult.pageCount,
-          wordCount: pdfParseResult.wordCount
+          wordCount: result.text.split(/\s+/).length
         }
       };
     }
   } catch (error) {
-    console.warn('⚠️ pdf-parse extraction failed:', error);
+    console.log('⚠️ OpenAI Vision failed, trying OCR...');
   }
 
-  // Method 3: OCR (if enabled and text extraction failed)
+  // Method 3: OCR (if enabled)
   if (enableOCR) {
     try {
       console.log('🔄 Attempting OCR extraction...');
-      const ocrResult = await extractWithOCR(file, fileName);
+      const result = await extractWithOCR(buffer, fileName);
       
       return {
         success: true,
         status: 'fallback_used',
-        extractedText: ocrResult.text,
+        extractedText: result.text,
         confidence: 'low',
-        method: 'ocr',
-        errorMessage: 'Document appears to be scanned. OCR processing was used.',
+        extractionMethod: 'ocr',
         suggestions: [
-          'For better results, upload a text-based version',
-          'Convert scanned document to searchable PDF',
-          'Use higher quality scans for better OCR results'
+          'This appears to be a scanned document',
+          'Consider uploading a text-based version for better results',
+          'OCR processing was used to extract text'
         ],
         metadata: {
-          wordCount: ocrResult.text.split(/\s+/).length
+          wordCount: result.text.split(/\s+/).length
         }
       };
     } catch (error) {
-      console.warn('⚠️ OCR extraction failed:', error);
+      console.log('⚠️ OCR failed');
     }
   }
 
@@ -291,13 +306,12 @@ async function processPDF(
     status: 'error',
     extractedText: '',
     confidence: 'low',
-    method: 'all-failed',
-    errorMessage: 'Unable to extract text from PDF document',
+    extractionMethod: 'all_failed',
+    errorMessage: 'Unable to extract text from PDF',
     suggestions: [
-      'The document may be scanned or image-based',
-      'Try uploading a text-based version',
-      'Convert to searchable PDF format',
-      'Use OCR processing service',
+      'This may be a scanned document - try OCR processing',
+      'Upload a text-based version of the document',
+      'Convert to a searchable PDF format',
       'Contact support for manual processing'
     ]
   };
@@ -307,52 +321,52 @@ async function processPDF(
  * Process DOCX documents
  */
 async function processDOCX(
-  file: File | Buffer,
+  buffer: Buffer,
   fileName: string,
   options: { retryAttempts: number }
 ): Promise<DocumentProcessingResult> {
   const { retryAttempts } = options;
 
-  // Method 1: Try OpenAI Vision API (primary)
+  // Method 1: Try mammoth.js (if available)
   try {
-    console.log('🔄 Attempting OpenAI Vision extraction for DOCX...');
-    const openaiResult = await extractWithOpenAI(file, fileName);
+    console.log('🔄 Attempting mammoth.js extraction...');
+    const result = await extractWithMammoth(buffer);
     
-    if (openaiResult.text && openaiResult.text.trim().length > 50) {
+    if (result.text && result.text.trim().length > 50) {
       return {
         success: true,
         status: 'success',
-        extractedText: openaiResult.text,
+        extractedText: result.text,
         confidence: 'high',
-        method: 'openai-vision',
+        extractionMethod: 'mammoth',
         metadata: {
-          wordCount: openaiResult.text.split(/\s+/).length
+          wordCount: result.text.split(/\s+/).length
         }
       };
     }
   } catch (error) {
-    console.warn('⚠️ OpenAI Vision extraction for DOCX failed:', error);
+    console.log('⚠️ mammoth.js failed, trying OpenAI Vision...');
   }
 
-  // Method 2: Try mammoth.js (fallback)
+  // Method 2: Try OpenAI Vision API
   try {
-    console.log('🔄 Attempting mammoth.js extraction...');
-    const mammothResult = await extractWithMammoth(file);
+    console.log('🔄 Attempting OpenAI Vision extraction...');
+    const result = await extractWithOpenAI(buffer, 'docx');
     
-    if (mammothResult.text && mammothResult.text.trim().length > 50) {
+    if (result.text && result.text.trim().length > 50) {
       return {
         success: true,
         status: 'fallback_used',
-        extractedText: mammothResult.text,
+        extractedText: result.text,
         confidence: 'medium',
-        method: 'mammoth',
+        extractionMethod: 'openai-vision',
         metadata: {
-          wordCount: mammothResult.text.split(/\s+/).length
+          wordCount: result.text.split(/\s+/).length
         }
       };
     }
   } catch (error) {
-    console.warn('⚠️ mammoth.js extraction failed:', error);
+    console.log('⚠️ OpenAI Vision failed');
   }
 
   // All methods failed
@@ -361,44 +375,35 @@ async function processDOCX(
     status: 'error',
     extractedText: '',
     confidence: 'low',
-    method: 'all-failed',
+    extractionMethod: 'all_failed',
     errorMessage: 'Unable to extract text from Word document',
     suggestions: [
       'Convert the document to PDF format',
       'Save as plain text (.txt)',
       'Copy and paste content into a text file',
-      'Check that the file is not corrupted',
-      'Try a different Word document'
+      'Try a different document format'
     ]
   };
 }
 
 /**
- * Process text files
+ * Process plain text files
  */
-async function processTXT(file: File | Buffer, fileName: string): Promise<DocumentProcessingResult> {
+async function processTXT(buffer: Buffer, fileName: string): Promise<DocumentProcessingResult> {
   try {
-    console.log('🔄 Processing text file...');
+    const text = buffer.toString('utf-8');
     
-    let text: string;
-    if (file instanceof File) {
-      text = await file.text();
-    } else {
-      text = file.toString('utf-8');
-    }
-
-    if (!text || text.trim().length === 0) {
+    if (text.trim().length === 0) {
       return {
         success: false,
         status: 'error',
         extractedText: '',
         confidence: 'low',
-        method: 'empty-text',
+        extractionMethod: 'text',
         errorMessage: 'Text file is empty',
         suggestions: [
           'Check that the file contains text content',
-          'Ensure the file is not corrupted',
-          'Try a different text file'
+          'Ensure the file is not corrupted'
         ]
       };
     }
@@ -408,26 +413,23 @@ async function processTXT(file: File | Buffer, fileName: string): Promise<Docume
       status: 'success',
       extractedText: text,
       confidence: 'high',
-      method: 'direct-text',
+      extractionMethod: 'text',
       metadata: {
         wordCount: text.split(/\s+/).length
       }
     };
   } catch (error) {
-    console.error('❌ Text file processing failed:', error);
-    
     return {
       success: false,
       status: 'error',
       extractedText: '',
       confidence: 'low',
-      method: 'text-processing-failed',
-      errorMessage: 'Failed to read text file',
+      extractionMethod: 'text',
+      errorMessage: 'Unable to read text file',
       suggestions: [
         'Check file encoding (use UTF-8)',
         'Ensure the file is not corrupted',
-        'Try opening the file in a text editor first',
-        'Convert to a different format'
+        'Try saving as plain text again'
       ]
     };
   }
@@ -437,113 +439,92 @@ async function processTXT(file: File | Buffer, fileName: string): Promise<Docume
  * Process image files
  */
 async function processImage(
-  file: File | Buffer,
+  buffer: Buffer,
   fileName: string,
   options: { enableOCR: boolean }
 ): Promise<DocumentProcessingResult> {
   const { enableOCR } = options;
 
-  if (!enableOCR) {
-    return {
-      success: false,
-      status: 'error',
-      extractedText: '',
-      confidence: 'low',
-      method: 'ocr-disabled',
-      errorMessage: 'OCR processing is disabled for images',
-      suggestions: [
-        'Enable OCR processing',
-        'Upload a text-based document instead',
-        'Convert image to PDF with embedded text'
-      ]
-    };
-  }
-
+  // Method 1: Try OpenAI Vision API
   try {
-    console.log('🔄 Processing image with OCR...');
-    const ocrResult = await extractWithOCR(file, fileName);
+    console.log('🔄 Attempting OpenAI Vision extraction...');
+    const result = await extractWithOpenAI(buffer, 'image');
     
-    if (ocrResult.text && ocrResult.text.trim().length > 10) {
+    if (result.text && result.text.trim().length > 20) {
       return {
         success: true,
         status: 'fallback_used',
-        extractedText: ocrResult.text,
-        confidence: 'medium',
-        method: 'ocr',
-        errorMessage: 'Image processed with OCR. Results may vary.',
-        suggestions: [
-          'For better results, use text-based documents',
-          'Ensure image contains clear, readable text',
-          'Use higher resolution images',
-          'Convert to PDF with embedded text'
-        ],
+        extractedText: result.text,
+        confidence: result.confidence,
+        extractionMethod: 'openai-vision',
         metadata: {
-          wordCount: ocrResult.text.split(/\s+/).length
+          wordCount: result.text.split(/\s+/).length
         }
-      };
-    } else {
-      return {
-        success: false,
-        status: 'error',
-        extractedText: '',
-        confidence: 'low',
-        method: 'ocr-no-text',
-        errorMessage: 'No readable text found in image',
-        suggestions: [
-          'Ensure the image contains clear text',
-          'Use a higher resolution image',
-          'Upload a text-based document instead',
-          'Check that the image is not too blurry or low quality'
-        ]
       };
     }
   } catch (error) {
-    console.error('❌ Image OCR processing failed:', error);
-    
-    return {
-      success: false,
-      status: 'error',
-      extractedText: '',
-      confidence: 'low',
-      method: 'ocr-failed',
-      errorMessage: 'OCR processing failed',
-      suggestions: [
-        'Try a different image',
-        'Use a text-based document instead',
-        'Ensure image is clear and readable',
-        'Convert to PDF format'
-      ]
-    };
+    console.log('⚠️ OpenAI Vision failed');
   }
+
+  // Method 2: OCR (if enabled)
+  if (enableOCR) {
+    try {
+      console.log('🔄 Attempting OCR extraction...');
+      const result = await extractWithOCR(buffer, fileName);
+      
+      return {
+        success: true,
+        status: 'fallback_used',
+        extractedText: result.text,
+        confidence: 'low',
+        extractionMethod: 'ocr',
+        suggestions: [
+          'This image was processed using OCR',
+          'For better results, use higher resolution images',
+          'Consider uploading a text-based document'
+        ],
+        metadata: {
+          wordCount: result.text.split(/\s+/).length
+        }
+      };
+    } catch (error) {
+      console.log('⚠️ OCR failed');
+    }
+  }
+
+  // All methods failed
+  return {
+    success: false,
+    status: 'error',
+    extractedText: '',
+    confidence: 'low',
+    extractionMethod: 'all_failed',
+    errorMessage: 'Unable to extract text from image',
+    suggestions: [
+      'Ensure the image contains clear, readable text',
+      'Try a higher resolution image',
+      'Use a text-based document instead',
+      'Convert image to PDF with embedded text'
+    ]
+  };
 }
 
 /**
  * Extract text using OpenAI Vision API
  */
-async function extractWithOpenAI(file: File | Buffer, fileName: string): Promise<{ text: string; confidence: 'high' | 'medium' | 'low' }> {
+async function extractWithOpenAI(buffer: Buffer, fileType: string): Promise<{ text: string; confidence: 'high' | 'medium' | 'low' }> {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error('OpenAI API key not configured');
   }
 
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  
-  // Convert file to base64
-  let base64: string;
-  if (file instanceof File) {
-    const arrayBuffer = await file.arrayBuffer();
-    base64 = Buffer.from(arrayBuffer).toString('base64');
-  } else {
-    base64 = file.toString('base64');
-  }
+  const base64 = buffer.toString('base64');
 
-  // Determine MIME type
-  const extension = fileName.split('.').pop()?.toLowerCase();
-  let mimeType = 'application/octet-stream';
-  if (extension === 'pdf') mimeType = 'application/pdf';
-  else if (extension === 'docx') mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-  else if (extension === 'txt') mimeType = 'text/plain';
-  else if (['jpg', 'jpeg'].includes(extension || '')) mimeType = 'image/jpeg';
-  else if (extension === 'png') mimeType = 'image/png';
+  const prompt = fileType === 'pdf' 
+    ? "Extract all readable text from this PDF document. If it's a scanned document or image, describe what you can see. Return only the extracted text without any additional commentary."
+    : fileType === 'docx'
+    ? "Extract all the text content from this Word document. Return only the extracted text without any additional commentary or formatting."
+    : "Extract all readable text from this image. If there's no text, describe what you can see. Return only the extracted text or description without additional commentary.";
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o",
@@ -553,12 +534,12 @@ async function extractWithOpenAI(file: File | Buffer, fileName: string): Promise
         content: [
           {
             type: "text",
-            text: "Extract all readable text from this document. If it's a scanned document or image, describe what you can see. Return only the extracted text without any additional commentary or formatting. If the document appears to be scanned or image-based, mention this clearly."
+            text: prompt
           },
           {
             type: "image_url",
             image_url: {
-              url: `data:${mimeType};base64,${base64}`
+              url: `data:${fileType === 'pdf' ? 'application/pdf' : fileType === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'image/jpeg'};base64,${base64}`
             }
           }
         ]
@@ -571,9 +552,9 @@ async function extractWithOpenAI(file: File | Buffer, fileName: string): Promise
   
   // Determine confidence based on content
   let confidence: 'high' | 'medium' | 'low' = 'high';
-  if (extractedText.includes('scanned') || extractedText.includes('image')) {
+  if (extractedText.includes('scanned') || extractedText.includes('image') || extractedText.length < 100) {
     confidence = 'low';
-  } else if (extractedText.length < 100) {
+  } else if (extractedText.length < 500) {
     confidence = 'medium';
   }
 
@@ -581,112 +562,60 @@ async function extractWithOpenAI(file: File | Buffer, fileName: string): Promise
 }
 
 /**
- * Extract text using pdf-parse
+ * Extract text using mammoth.js (DOCX)
  */
-async function extractWithPdfParse(file: File | Buffer): Promise<{ text: string; confidence: 'high' | 'medium' | 'low'; pageCount?: number; wordCount?: number }> {
-  const { default: pdfParse } = await import('pdf-parse');
-  
-  let buffer: Buffer;
-  if (file instanceof File) {
-    const arrayBuffer = await file.arrayBuffer();
-    buffer = Buffer.from(arrayBuffer);
-  } else {
-    buffer = file;
+async function extractWithMammoth(buffer: Buffer): Promise<{ text: string }> {
+  try {
+    // Dynamic import to avoid SSR issues
+    const mammoth = await import('mammoth');
+    const result = await mammoth.extractRawText({ buffer });
+    return { text: result.value };
+  } catch (error) {
+    console.error('mammoth.js extraction failed:', error);
+    throw error;
   }
-
-  const pdfData = await pdfParse(buffer);
-  const extractedText = pdfData.text || '';
-  
-  // Determine confidence based on text length
-  let confidence: 'high' | 'medium' | 'low' = 'high';
-  if (extractedText.trim().length < 100) {
-    confidence = 'low';
-  } else if (extractedText.trim().length < 500) {
-    confidence = 'medium';
-  }
-
-  return {
-    text: extractedText,
-    confidence,
-    pageCount: pdfData.numpages,
-    wordCount: extractedText.split(/\s+/).length
-  };
-}
-
-/**
- * Extract text using mammoth.js for DOCX files
- */
-async function extractWithMammoth(file: File | Buffer): Promise<{ text: string; confidence: 'high' | 'medium' | 'low' }> {
-  const mammoth = await import('mammoth');
-  
-  let buffer: Buffer;
-  if (file instanceof File) {
-    const arrayBuffer = await file.arrayBuffer();
-    buffer = Buffer.from(arrayBuffer);
-  } else {
-    buffer = file;
-  }
-
-  const result = await mammoth.extractRawText({ buffer });
-  const extractedText = result.value || '';
-  
-  return {
-    text: extractedText,
-    confidence: extractedText.length > 100 ? 'high' : 'medium'
-  };
 }
 
 /**
  * Extract text using OCR (placeholder implementation)
  */
-async function extractWithOCR(file: File | Buffer, fileName: string): Promise<{ text: string; confidence: 'high' | 'medium' | 'low' }> {
-  // This is a placeholder for OCR implementation
+async function extractWithOCR(buffer: Buffer, fileName: string): Promise<{ text: string }> {
+  // This is a placeholder for OCR integration
   // In production, you would integrate with:
   // - Google Vision API
   // - Azure Computer Vision
-  // - AWS Textract
   // - Tesseract.js (client-side)
+  // - AWS Textract
   
   console.log('🔄 OCR processing placeholder - would integrate with OCR service');
   
   // For now, return a helpful message
   return {
-    text: 'OCR processing is not yet implemented. Please upload a text-based version of the document or contact support for OCR processing.',
-    confidence: 'low'
+    text: `OCR processing would be applied to ${fileName}. This is a placeholder for OCR service integration. Please contact support for OCR processing.`
   };
 }
 
 /**
- * Generate summary from extracted text
+ * Generate a summary of extracted text
  */
-export async function generateDocumentSummary(
-  extractedText: string,
-  fileName: string,
-  documentType?: string
-): Promise<string> {
-  if (!process.env.OPENAI_API_KEY) {
-    return 'Summary generation not available (OpenAI API key not configured)';
-  }
-
+async function generateSummary(text: string, fileName: string): Promise<string> {
   try {
+    if (!process.env.OPENAI_API_KEY) {
+      return 'Summary generation requires OpenAI API key';
+    }
+
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     
-    const prompt = `Please provide a concise summary of the following document. Focus on key findings, important dates, compliance requirements, and any action items.
-
-Document: ${fileName}
-Type: ${documentType || 'Unknown'}
-
-Content:
-${extractedText.substring(0, 3000)}${extractedText.length > 3000 ? '...' : ''}
-
-Please provide a 2-3 sentence summary in British English:`;
-
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
+          role: "system",
+          content: "You are a document summarization assistant. Provide a concise, 2-3 sentence summary of the document content."
+        },
+        {
           role: "user",
-          content: prompt
+          content: `Summarize this document (${fileName}):\n\n${text.substring(0, 3000)}`
         }
       ],
       max_tokens: 200
@@ -694,7 +623,7 @@ Please provide a 2-3 sentence summary in British English:`;
 
     return response.choices[0].message.content || 'Unable to generate summary';
   } catch (error) {
-    console.error('❌ Summary generation failed:', error);
-    return 'Summary generation failed. Please review the document manually.';
+    console.error('Summary generation failed:', error);
+    return 'Summary generation failed';
   }
 } 
