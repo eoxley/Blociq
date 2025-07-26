@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Building, Users, Mail, Phone, UserPlus, Calendar, PoundSterling, Home, User } from 'lucide-react'
+import { Building, Users, Mail, Phone, UserPlus, Calendar, PoundSterling, Home, User, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 import { Tables } from '@/lib/database.types'
 
@@ -30,12 +30,14 @@ type Unit = Tables<'units'> & {
 interface BuildingUnitsClientProps {
   building: Tables<'buildings'>
   units: Unit[]
+  buildingId: string
 }
 
-export default function BuildingUnitsClient({ building, units }: BuildingUnitsClientProps) {
+export default function BuildingUnitsClient({ building, units, buildingId }: BuildingUnitsClientProps) {
   console.log('BuildingUnitsClient - Received building:', building)
   console.log('BuildingUnitsClient - Received units:', units)
   console.log('BuildingUnitsClient - Units count:', units?.length || 0)
+  console.log('BuildingUnitsClient - Building ID:', buildingId)
 
   // Safety checks
   if (!building) {
@@ -59,27 +61,6 @@ export default function BuildingUnitsClient({ building, units }: BuildingUnitsCl
       </div>
     )
   }
-
-  const handleEmailLeaseholder = (email: string) => {
-    window.open(`mailto:${email}`, '_blank')
-  }
-
-  const handleCallLeaseholder = (phone: string) => {
-    window.open(`tel:${phone}`, '_blank')
-  }
-
-  const formatCurrency = (amount: number | null) => {
-    if (!amount) return 'N/A'
-    return new Intl.NumberFormat('en-GB', {
-      style: 'currency',
-      currency: 'GBP'
-    }).format(amount)
-  }
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'N/A'
-    return new Date(dateString).toLocaleDateString('en-GB')
-  }
   
   return (
     <div className="space-y-6">
@@ -92,227 +73,82 @@ export default function BuildingUnitsClient({ building, units }: BuildingUnitsCl
         </div>
       </div>
 
-      {/* Units Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {units.map((unit) => {
-          // Safety check for unit data
-          if (!unit || !unit.id) {
-            console.error('BuildingUnitsClient - Invalid unit data:', unit)
-            return null
-          }
+      {/* Units List */}
+      {units.length > 0 ? (
+        <div className="space-y-4">
+          {units.map((unit) => {
+            // Safety check for unit data
+            if (!unit || !unit.id) {
+              console.error('BuildingUnitsClient - Invalid unit data:', unit)
+              return null
+            }
 
-          const hasLeaseholder = (unit.leaseholders?.length ?? 0) > 0
-          const hasOccupier = (unit.occupiers?.length ?? 0) > 0
-          const primaryLeaseholder = hasLeaseholder ? unit.leaseholders![0] : null
-          const primaryOccupier = hasOccupier ? unit.occupiers![0] : null
-
-          return (
-            <Link 
-              key={unit.id} 
-              href={`/buildings/${building.id}/units/${unit.id}`}
-              className="block transition-transform hover:scale-105"
-            >
-              <Card className="h-full cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-teal-200">
-                <CardHeader className="pb-3">
+            return (
+              <Card key={unit.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-xl font-semibold text-gray-900">
-                      Unit {unit.unit_number || 'Unknown'}
-                    </CardTitle>
-                    <div className="flex gap-1">
-                      <Badge variant="outline" className="text-xs">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg flex items-center justify-center">
+                        <Home className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-semibold text-gray-900">
+                          Unit {unit.unit_number || 'Unknown'}
+                        </h3>
+                        {unit.floor && (
+                          <p className="text-sm text-gray-600">Floor {unit.floor}</p>
+                        )}
+                        {unit.type && (
+                          <p className="text-sm text-gray-600">{unit.type}</p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="outline" className="text-sm">
                         {unit.type || 'Residential'}
                       </Badge>
-                      {hasLeaseholder && (
-                        <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">
-                          <User className="h-3 w-3 mr-1" />
-                          Has Leaseholder
-                        </Badge>
-                      )}
-                      {hasOccupier && (
-                        <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs">
-                          <Home className="h-3 w-3 mr-1" />
-                          Occupied
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  {unit.floor && (
-                    <p className="text-sm text-gray-500">Floor {unit.floor}</p>
-                  )}
-                </CardHeader>
-                
-                <CardContent className="pt-0">
-                  {/* Leaseholder Information */}
-                  {hasLeaseholder && primaryLeaseholder ? (
-                    <div className="space-y-3">
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-2 text-sm">
-                          <Users className="h-4 w-4 text-gray-400" />
-                          <span className="font-medium text-gray-700">
-                            Leaseholder
-                          </span>
-                        </div>
-                        
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-gray-900">
-                            {primaryLeaseholder.name || 'Unknown Name'}
-                          </p>
-                          
-                          {primaryLeaseholder.email && (
-                            <div className="flex items-center space-x-2 text-sm">
-                              <Mail className="h-3 w-3 text-gray-400" />
-                              <span className="text-gray-600 truncate">
-                                {primaryLeaseholder.email}
-                              </span>
-                            </div>
-                          )}
-                          
-                          {primaryLeaseholder.phone && (
-                            <div className="flex items-center space-x-2 text-sm">
-                              <Phone className="h-3 w-3 text-gray-400" />
-                              <span className="text-gray-600">
-                                {primaryLeaseholder.phone}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <div className="text-sm text-gray-500 italic">
-                        No leaseholder assigned
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Occupier Information */}
-                  {hasOccupier && primaryOccupier && (
-                    <div className="space-y-3 mt-4 pt-4 border-t border-gray-100">
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-2 text-sm">
-                          <Home className="h-4 w-4 text-blue-400" />
-                          <span className="font-medium text-gray-700">
-                            Current Occupier
-                          </span>
-                        </div>
-                        
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-gray-900">
-                            {primaryOccupier.full_name}
-                          </p>
-                          
-                          {primaryOccupier.email && (
-                            <div className="flex items-center space-x-2 text-sm">
-                              <Mail className="h-3 w-3 text-gray-400" />
-                              <span className="text-gray-600 truncate">
-                                {primaryOccupier.email}
-                              </span>
-                            </div>
-                          )}
-                          
-                          {primaryOccupier.phone && (
-                            <div className="flex items-center space-x-2 text-sm">
-                              <Phone className="h-3 w-3 text-gray-400" />
-                              <span className="text-gray-600">
-                                {primaryOccupier.phone}
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Rent Information */}
-                          {primaryOccupier.rent_amount && (
-                            <div className="flex items-center space-x-2 text-sm">
-                              <PoundSterling className="h-3 w-3 text-green-400" />
-                              <span className="text-gray-600">
-                                {formatCurrency(primaryOccupier.rent_amount)} {primaryOccupier.rent_frequency}
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Tenancy Period */}
-                          {primaryOccupier.start_date && (
-                            <div className="flex items-center space-x-2 text-sm">
-                              <Calendar className="h-3 w-3 text-gray-400" />
-                              <span className="text-gray-600">
-                                Since {formatDate(primaryOccupier.start_date)}
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Status */}
-                          {primaryOccupier.status && (
-                            <Badge 
-                              variant={primaryOccupier.status === 'Active' ? 'default' : 'outline'}
-                              className="text-xs mt-1"
-                            >
-                              {primaryOccupier.status}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-2 pt-4 border-t border-gray-100 mt-4">
-                    {primaryLeaseholder?.email && (
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          handleEmailLeaseholder(primaryLeaseholder.email!)
-                        }}
-                        className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs hover:bg-blue-100 transition-colors"
-                        title="Email leaseholder"
+                      <Link
+                        href={`/units/${unit.id}/leaseholder`}
+                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-teal-600 bg-teal-50 rounded-lg hover:bg-teal-100 transition-colors duration-200"
                       >
-                        <Mail className="h-3 w-3" />
-                        Email
-                      </button>
-                    )}
-                    
-                    {primaryLeaseholder?.phone && (
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          handleCallLeaseholder(primaryLeaseholder.phone!)
-                        }}
-                        className="flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded text-xs hover:bg-green-100 transition-colors"
-                        title="Call leaseholder"
-                      >
-                        <Phone className="h-3 w-3" />
-                        Call
-                      </button>
-                    )}
-                    
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                      }}
-                      className="flex items-center gap-1 px-2 py-1 bg-purple-50 text-purple-700 rounded text-xs hover:bg-purple-100 transition-colors"
-                      title="Add occupier"
-                    >
-                      <UserPlus className="h-3 w-3" />
-                      Add Occupier
-                    </button>
+                        <User className="h-4 w-4" />
+                        View Leaseholder Info
+                      </Link>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
-            </Link>
-          )
-        })}
-      </div>
-
-      {/* Empty State */}
-      {units.length === 0 && (
+            )
+          })}
+        </div>
+      ) : (
         <div className="text-center py-12">
-          <Building className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No Units Found</h3>
-          <p className="text-gray-500">
-            No units have been added to this building yet.
+          <Building className="h-16 w-16 text-gray-400 mx-auto mb-6" />
+          <h3 className="text-xl font-bold text-gray-900 mb-4">No Units Found</h3>
+          <p className="text-gray-600 mb-6 max-w-md mx-auto">
+            No units have been found for this building. This could be due to:
           </p>
+          
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-2xl mx-auto mb-6">
+            <div className="flex items-start space-x-3">
+              <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+              <div className="text-left">
+                <h4 className="text-sm font-medium text-yellow-800 mb-2">Possible Issues:</h4>
+                <ul className="text-sm text-yellow-700 space-y-1">
+                  <li>• No units exist for this building in the database</li>
+                  <li>• RLS (Row Level Security) policies on the units table may be blocking access</li>
+                  <li>• Database schema mismatch between building_id types (UUID vs integer)</li>
+                  <li>• User permissions may not allow viewing units for this building</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <div className="text-sm text-gray-500">
+            <p>Building ID: {buildingId}</p>
+            <p>Check the browser console for detailed debugging information.</p>
+          </div>
         </div>
       )}
 
@@ -325,24 +161,12 @@ export default function BuildingUnitsClient({ building, units }: BuildingUnitsCl
                 Total Units: {units.length}
               </p>
               <p className="text-sm text-gray-500">
-                {building.unit_count ? `Expected: ${building.unit_count}` : ''}
-              </p>
-              <p className="text-sm text-gray-500">
-                Units with leaseholders: {units.filter(u => u.leaseholders && u.leaseholders.length > 0).length}
-              </p>
-              <p className="text-sm text-gray-500">
-                Occupied units: {units.filter(u => u.occupiers && u.occupiers.length > 0).length}
+                Building ID: {buildingId}
               </p>
             </div>
             <div className="flex gap-2">
               <Badge variant="outline" className="text-sm">
                 {units.length} Total Units
-              </Badge>
-              <Badge className="bg-green-100 text-green-700 border-green-200 text-sm">
-                {units.filter(u => u.leaseholders && u.leaseholders.length > 0).length} With Leaseholders
-              </Badge>
-              <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-sm">
-                {units.filter(u => u.occupiers && u.occupiers.length > 0).length} Occupied
               </Badge>
             </div>
           </div>
