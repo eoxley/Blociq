@@ -49,18 +49,63 @@ export async function exchangeCodeForTokens(code: string): Promise<{
   refresh_token: string;
   expires_in: number;
 }> {
+  const tenantId = process.env.OUTLOOK_TENANT_ID || 'common';
+  const tokenResponse = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      client_id: process.env.OUTLOOK_CLIENT_ID!,
+      client_secret: process.env.OUTLOOK_CLIENT_SECRET!,
+      code: code,
+      redirect_uri: process.env.OUTLOOK_REDIRECT_URI!,
+      grant_type: 'authorization_code'
+    }),
+  });
+
+  const data = await tokenResponse.json();
+  console.log('Token response:', data);
+
+  if (!tokenResponse.ok) {
+    console.error('Token exchange failed:', data);
+    throw new Error(`Token exchange failed: ${tokenResponse.status} ${tokenResponse.statusText}`);
+  }
+
+  if (data.error || !data.access_token) {
+    console.error('Invalid token response:', data);
+    throw new Error(`Invalid token response: ${data.error || 'Missing access_token'}`);
+  }
+
+  return {
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+    expires_in: data.expires_in
+  };
+}
+
+/**
+ * Exchange authorization code for tokens using PKCE
+ */
+export async function exchangeCodeForTokensWithPkce(code: string, verifier: string): Promise<{
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+}> {
   const client_id = process.env.OUTLOOK_CLIENT_ID!;
-  const client_secret = process.env.OUTLOOK_CLIENT_SECRET!;
   const redirect_uri = 'https://www.blociq.co.uk/api/auth/outlook/callback';
   const tokenUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
 
+  console.log('[exchangeCodeForTokensWithPkce] Starting PKCE token exchange...');
+  console.log('[exchangeCodeForTokensWithPkce] Code:', code);
+  console.log('[exchangeCodeForTokensWithPkce] Verifier:', verifier);
+
   const params = new URLSearchParams({
     client_id,
-    client_secret,
+    grant_type: 'authorization_code',
     code,
     redirect_uri,
-    grant_type: 'authorization_code',
-    scope: 'Mail.Read offline_access openid',
+    code_verifier: verifier,
   });
 
   const response = await fetch(tokenUrl, {
@@ -70,13 +115,19 @@ export async function exchangeCodeForTokens(code: string): Promise<{
   });
 
   const data = await response.json();
-  console.log('[exchangeCodeForTokens] Microsoft token response:', data);
+  console.log('[exchangeCodeForTokensWithPkce] Microsoft token response:', data);
+
+  if (!response.ok) {
+    console.error('[exchangeCodeForTokensWithPkce] Token exchange failed:', data);
+    throw new Error(`Token exchange failed: ${response.status} ${response.statusText}`);
+  }
 
   if (!data.access_token) {
-    console.error('[exchangeCodeForTokens] No access_token in response:', data);
+    console.error('[exchangeCodeForTokensWithPkce] No access_token in response:', data);
     throw new Error('No access_token in Microsoft response');
   }
 
+  console.log('[exchangeCodeForTokensWithPkce] Token exchange successful');
   return {
     access_token: data.access_token,
     refresh_token: data.refresh_token,
