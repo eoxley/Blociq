@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import LayoutWithSidebar from '@/components/LayoutWithSidebar';
 import DocumentAwareAI from '@/components/DocumentAwareAI';
 import EnhancedDocumentUpload from '@/components/EnhancedDocumentUpload';
+import TimeBasedGreeting from '@/components/TimeBasedGreeting';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Brain, FileText, Upload, MessageSquare, CheckCircle, AlertTriangle, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,10 @@ export default function AIAssistantPage() {
   return (
     <LayoutWithSidebar>
       <div className="space-y-8">
-        {/* Enhanced Header with Gradient Background */}
+        {/* Time-Based Greeting */}
+        <TimeBasedGreeting className="mb-6" />
+        
+        {/* AI Assistant Header */}
         <div className="relative overflow-hidden bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-2xl p-8 text-white shadow-2xl">
           <div className="absolute inset-0 bg-black/10"></div>
           <div className="relative z-10">
