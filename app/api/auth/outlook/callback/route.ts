@@ -64,14 +64,6 @@ export async function GET(req: NextRequest) {
             try {
                 console.log('[Outlook Callback] Starting token exchange...');
                 
-                // Read code_verifier from localStorage
-                const codeVerifier = localStorage.getItem('outlook_pkce_verifier');
-                console.log('[Outlook Callback] Retrieved code_verifier from localStorage:', codeVerifier ? 'found' : 'not found');
-                
-                if (!codeVerifier) {
-                    throw new Error('Code verifier not found in localStorage');
-                }
-                
                 // Get the authorization code from URL
                 const urlParams = new URLSearchParams(window.location.search);
                 const code = urlParams.get('code');
@@ -89,8 +81,7 @@ export async function GET(req: NextRequest) {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        code: code,
-                        code_verifier: codeVerifier
+                        code: code
                     })
                 });
                 
@@ -101,10 +92,6 @@ export async function GET(req: NextRequest) {
                     console.error('[Outlook Callback] Exchange failed:', errorText);
                     throw new Error('Token exchange failed: ' + errorText);
                 }
-                
-                // Clean up localStorage
-                localStorage.removeItem('outlook_pkce_verifier');
-                console.log('[Outlook Callback] Cleaned up localStorage');
                 
                 // Redirect to home page
                 console.log('[Outlook Callback] Redirecting to /');

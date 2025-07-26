@@ -2,28 +2,6 @@
 
 import { useState } from 'react';
 
-// Generate a random string for PKCE code verifier
-function generateCodeVerifier(): string {
-  const array = new Uint8Array(32);
-  crypto.getRandomValues(array);
-  return btoa(String.fromCharCode(...array))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '');
-}
-
-// Generate code challenge from verifier using SHA256
-async function generateCodeChallenge(verifier: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(verifier);
-  const digest = await crypto.subtle.digest('SHA-256', data);
-  
-  return btoa(String.fromCharCode(...new Uint8Array(digest)))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '');
-}
-
 export default function OutlookConnectPage() {
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
 
@@ -49,37 +27,21 @@ export default function OutlookConnectPage() {
         throw new Error('NEXT_PUBLIC_MICROSOFT_REDIRECT_URI environment variable is not set. Please check your .env.local file.');
       }
 
-      // Generate PKCE code verifier
-      const codeVerifier: string = generateCodeVerifier();
-      console.log('[Outlook Connect] Generated code verifier:', codeVerifier);
-
-      // Generate code challenge
-      const codeChallenge: string = await generateCodeChallenge(codeVerifier);
-      console.log('[Outlook Connect] Generated code challenge:', codeChallenge);
-
-      // Store code verifier in localStorage
-      localStorage.setItem('outlook_pkce_verifier', codeVerifier);
-      console.log('[Outlook Connect] Stored code verifier in localStorage');
-
-      // Build authorization URL with all required PKCE parameters
+      // Build authorization URL
       const authUrl: URL = new URL('https://login.microsoftonline.com/common/oauth2/v2.0/authorize');
       
-      // Set all required OAuth 2.0 PKCE parameters
+      // Set all required OAuth 2.0 parameters
       authUrl.searchParams.set('client_id', clientId);
       authUrl.searchParams.set('redirect_uri', redirectUri);
       authUrl.searchParams.set('response_type', 'code');
       authUrl.searchParams.set('response_mode', 'query');
       authUrl.searchParams.set('scope', 'Mail.Read offline_access openid');
-      authUrl.searchParams.set('code_challenge', codeChallenge);
-      authUrl.searchParams.set('code_challenge_method', 'S256');
 
       // Log the final authorization URL for debugging
       console.log('[Outlook Connect] Final authorization URL:', authUrl.toString());
-      console.log('[Outlook Connect] PKCE parameters confirmed:');
+      console.log('[Outlook Connect] OAuth parameters confirmed:');
       console.log('  - client_id:', authUrl.searchParams.get('client_id'));
       console.log('  - redirect_uri:', authUrl.searchParams.get('redirect_uri'));
-      console.log('  - code_challenge:', authUrl.searchParams.get('code_challenge'));
-      console.log('  - code_challenge_method:', authUrl.searchParams.get('code_challenge_method'));
 
       // Redirect to Microsoft's authorize endpoint
       window.location.href = authUrl.toString();
