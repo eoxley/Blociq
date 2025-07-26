@@ -92,7 +92,7 @@ export async function exchangeCodeForTokensWithPkce(code: string, verifier: stri
   refresh_token: string;
   expires_in: number;
 }> {
-  const client_id = process.env.OUTLOOK_CLIENT_ID!;
+  const client_id = process.env.NEXT_PUBLIC_OUTLOOK_CLIENT_ID!;
   const redirect_uri = 'https://www.blociq.co.uk/api/auth/outlook/callback';
   const tokenUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
 
@@ -100,9 +100,10 @@ export async function exchangeCodeForTokensWithPkce(code: string, verifier: stri
   console.log('[exchangeCodeForTokensWithPkce] Code:', code);
   console.log('[exchangeCodeForTokensWithPkce] Verifier:', verifier);
   console.log('[exchangeCodeForTokensWithPkce] Client ID:', client_id);
+  console.log('[exchangeCodeForTokensWithPkce] Redirect URI:', redirect_uri);
 
   if (!client_id) {
-    throw new Error('OUTLOOK_CLIENT_ID environment variable is not set');
+    throw new Error('NEXT_PUBLIC_OUTLOOK_CLIENT_ID environment variable is not set');
   }
 
   const params = new URLSearchParams({
@@ -111,6 +112,14 @@ export async function exchangeCodeForTokensWithPkce(code: string, verifier: stri
     code,
     redirect_uri,
     code_verifier: verifier,
+  });
+
+  console.log('[exchangeCodeForTokensWithPkce] Request parameters:', {
+    client_id,
+    grant_type: 'authorization_code',
+    code: code ? 'present' : 'missing',
+    redirect_uri,
+    code_verifier: verifier ? 'present' : 'missing'
   });
 
   const response = await fetch(tokenUrl, {
@@ -123,8 +132,14 @@ export async function exchangeCodeForTokensWithPkce(code: string, verifier: stri
   console.log('[exchangeCodeForTokensWithPkce] Microsoft token response:', data);
 
   if (!response.ok) {
-    console.error('[exchangeCodeForTokensWithPkce] Token exchange failed:', data);
-    throw new Error(`Token exchange failed: ${response.status} ${response.statusText}`);
+    console.error('[exchangeCodeForTokensWithPkce] Token exchange failed with status:', response.status);
+    console.error('[exchangeCodeForTokensWithPkce] Error response:', data);
+    
+    if (response.status === 400) {
+      throw new Error(`Microsoft OAuth error (400): ${data.error || 'Bad Request'} - ${data.error_description || 'Invalid request parameters'}`);
+    }
+    
+    throw new Error(`Token exchange failed: ${response.status} ${response.statusText} - ${data.error || 'Unknown error'}`);
   }
 
   if (!data.access_token) {
