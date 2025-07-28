@@ -5,21 +5,27 @@ import { Shield, AlertTriangle, CheckCircle, Clock, FileText, Upload, Calendar }
 
 interface ComplianceAsset {
   id: string
-  name: string
-  category: string | null
-  status: string | null
+  building_id: number
+  asset_id: string
+  status: string
+  notes: string | null
   next_due_date: string | null
-  last_updated: string | null
-  created_at: string
+  last_updated: string
+  latest_document_id: string | null
+  last_renewed_date: string | null
 }
 
 interface ComplianceDocument {
   id: string
-  asset_id: string
-  document_name: string
-  file_url: string | null
-  uploaded_at: string
+  building_id: number
+  compliance_asset_id: string
+  document_url: string
+  title: string | null
+  summary: string | null
+  extracted_date: string
+  doc_type: string | null
   created_at: string
+  updated_at: string
 }
 
 interface ComplianceTrackerProps {
@@ -33,9 +39,9 @@ export default function ComplianceTracker({ complianceAssets, complianceDocument
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [selectedAsset, setSelectedAsset] = useState<ComplianceAsset | null>(null)
 
-  // Group assets by category
+  // Group assets by category (using asset_id as category for now)
   const assetsByCategory = complianceAssets.reduce((acc, asset) => {
-    const category = asset.category || 'Other'
+    const category = asset.asset_id || 'Other'
     if (!acc[category]) {
       acc[category] = []
     }
@@ -53,7 +59,7 @@ export default function ComplianceTracker({ complianceAssets, complianceDocument
 
   // Get documents for an asset
   const getDocumentsForAsset = (assetId: string) => {
-    return complianceDocuments.filter(doc => doc.asset_id === assetId)
+    return complianceDocuments.filter(doc => doc.compliance_asset_id === assetId)
   }
 
   // Get status badge
@@ -144,7 +150,7 @@ export default function ComplianceTracker({ complianceAssets, complianceDocument
       ) : (
         <div className="space-y-4">
           {filteredAssets.map((asset) => {
-            const documents = getDocumentsForAsset(asset.id)
+            const documents = getDocumentsForAsset(asset.asset_id)
             const daysUntilDue = getDaysUntilDue(asset.next_due_date)
             const isOverdue = daysUntilDue !== null && daysUntilDue < 0
             const isDueSoon = daysUntilDue !== null && daysUntilDue <= 30 && daysUntilDue >= 0
@@ -162,13 +168,11 @@ export default function ComplianceTracker({ complianceAssets, complianceDocument
                         <Shield className="h-5 w-5 text-teal-600" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900">{asset.name}</h3>
+                        <h3 className="text-lg font-semibold text-gray-900">Asset {asset.asset_id}</h3>
                         <div className="flex items-center gap-3 text-sm text-gray-600 mt-1">
-                          {asset.category && (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                              {asset.category}
-                            </span>
-                          )}
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {asset.asset_id}
+                          </span>
                           {getStatusBadge(asset.status)}
                         </div>
                       </div>
@@ -200,6 +204,13 @@ export default function ComplianceTracker({ complianceAssets, complianceDocument
                       </div>
                     )}
 
+                    {/* Notes */}
+                    {asset.notes && (
+                      <div className="mb-3">
+                        <p className="text-sm text-gray-700">{asset.notes}</p>
+                      </div>
+                    )}
+
                     {/* Documents */}
                     {documents.length > 0 && (
                       <div className="mb-3">
@@ -209,15 +220,15 @@ export default function ComplianceTracker({ complianceAssets, complianceDocument
                             <div key={doc.id} className="flex items-center gap-2">
                               <FileText className="h-4 w-4 text-blue-600" />
                               <a 
-                                href={doc.file_url || '#'} 
+                                href={doc.document_url || '#'} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
                                 className="text-blue-600 hover:underline text-sm"
                               >
-                                {doc.document_name}
+                                {doc.title || doc.document_url}
                               </a>
                               <span className="text-xs text-gray-500">
-                                {new Date(doc.uploaded_at).toLocaleDateString()}
+                                {new Date(doc.created_at).toLocaleDateString()}
                               </span>
                             </div>
                           ))}
@@ -281,7 +292,7 @@ export default function ComplianceTracker({ complianceAssets, complianceDocument
                 {selectedAsset && (
                   <div className="bg-gray-50 rounded-lg p-3">
                     <p className="text-sm font-medium text-gray-600">Asset</p>
-                    <p className="text-gray-900">{selectedAsset.name}</p>
+                    <p className="text-gray-900">{selectedAsset.asset_id}</p>
                   </div>
                 )}
 
