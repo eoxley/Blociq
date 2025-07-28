@@ -57,10 +57,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
           id,
           name,
           email,
-          phone,
-          is_director,
-          director_since,
-          director_notes
+          phone
         )
       `)
       .eq('building_id', params.buildingId)
@@ -126,7 +123,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
     // Calculate statistics
     const totalUnits = units?.length || 0
     const totalLeaseholders = units?.filter(unit => unit.leaseholders).length || 0
-    const directors = units?.filter(unit => unit.leaseholders?.is_director).length || 0
+    const directors = 0 // Temporarily set to 0 until director fields are properly migrated
     const totalCompliance = complianceAssets?.length || 0
     const compliantCount = complianceAssets?.filter(asset => asset.status === 'compliant').length || 0
     const overdueCount = complianceAssets?.filter(asset => asset.status === 'overdue').length || 0
@@ -234,6 +231,9 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
         <div className="p-6">
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <p className="text-red-600">Error loading building details.</p>
+            <p className="text-red-500 text-sm mt-2">
+              Error: {error instanceof Error ? error.message : 'Unknown error'}
+            </p>
             <p className="text-red-500 text-sm mt-2">Please try refreshing the page or contact support if the issue persists.</p>
           </div>
         </div>
