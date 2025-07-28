@@ -3,12 +3,11 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { notFound } from 'next/navigation'
 import LayoutWithSidebar from '@/components/LayoutWithSidebar'
-import BuildingSummary from './components/BuildingSummary'
-import UnitList from './components/UnitList'
-import ComplianceTracker from './components/ComplianceTracker'
-import PropertyEvents from './components/PropertyEvents'
-import AISummaryButton from './components/AISummaryButton'
-import { Building2, AlertTriangle, CheckCircle, Clock } from 'lucide-react'
+import BuildingOverview from './components/BuildingOverview'
+import UnitLeaseholderList from './components/UnitLeaseholderList'
+import RMCDirectorsSection from './components/RMCDirectorsSection'
+import ComplianceSection from './components/ComplianceSection'
+import { Building2, AlertTriangle, CheckCircle, Clock, Users, Shield, FileText } from 'lucide-react'
 
 interface BuildingDetailPageProps {
   params: {
@@ -22,10 +21,21 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
   if (!session) redirect('/login')
 
   try {
-    // First, fetch the building with basic information
+    // Fetch building with all details
     const { data: building, error: buildingError } = await supabase
       .from('buildings')
-      .select('*')
+      .select(`
+        *,
+        building_setup (
+          structure_type,
+          operational_notes,
+          client_type,
+          client_name,
+          client_contact,
+          client_email,
+          assigned_manager
+        )
+      `)
       .eq('id', params.buildingId)
       .maybeSingle()
 
@@ -38,32 +48,42 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
       notFound()
     }
 
-    // Fetch units separately to avoid relationship issues
+    // Fetch units with leaseholder information
     const { data: units, error: unitsError } = await supabase
       .from('units')
-      .select('*')
-      .eq('building_id', parseInt(params.buildingId))
+      .select(`
+        *,
+        leaseholders (
+          id,
+          name,
+          email,
+          phone,
+          is_director,
+          director_since,
+          director_notes
+        )
+      `)
+      .eq('building_id', params.buildingId)
+      .order('unit_number')
 
     if (unitsError) {
       console.error('Error fetching units:', unitsError)
     }
 
-    // Fetch leaseholders for units
-    const leaseholderIds = units?.map(unit => unit.leaseholder_id).filter(Boolean) || []
-    const { data: leaseholders, error: leaseholdersError } = await supabase
-      .from('leaseholders')
-      .select('id, name, email, phone')
-      .in('id', leaseholderIds)
-
-    if (leaseholdersError) {
-      console.error('Error fetching leaseholders:', leaseholdersError)
-    }
-
-    // Fetch compliance assets separately
+    // Fetch compliance assets
     const { data: complianceAssets, error: complianceAssetsError } = await supabase
       .from('building_compliance_assets')
-      .select('*')
-      .eq('building_id', parseInt(params.buildingId))
+      .select(`
+        *,
+        compliance_assets (
+          id,
+          category,
+          title,
+          description,
+          frequency_months
+        )
+      `)
+      .eq('building_id', params.buildingId)
 
     if (complianceAssetsError) {
       console.error('Error fetching compliance assets:', complianceAssetsError)
@@ -73,27 +93,43 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
     const { data: complianceDocuments, error: complianceDocsError } = await supabase
       .from('compliance_documents')
       .select('*')
-      .eq('building_id', parseInt(params.buildingId))
+      .eq('building_id', params.buildingId)
 
     if (complianceDocsError) {
       console.error('Error fetching compliance documents:', complianceDocsError)
     }
 
-    // Fetch property events
-    const { data: propertyEvents, error: propertyEventsError } = await supabase
-      .from('property_events')
+    // Fetch incoming emails for correspondence
+    const { data: incomingEmails, error: emailsError } = await supabase
+      .from('incoming_emails')
       .select('*')
-      .eq('building_id', parseInt(params.buildingId))
+      .eq('building_id', params.buildingId)
+      .order('received_at', { ascending: false })
+      .limit(50)
 
-    if (propertyEventsError) {
-      console.error('Error fetching property events:', propertyEventsError)
+    if (emailsError) {
+      console.error('Error fetching incoming emails:', emailsError)
     }
 
-    // Calculate compliance statistics
+    // Fetch communications log
+    const { data: communicationsLog, error: commsError } = await supabase
+      .from('communications')
+      .select('*')
+      .eq('building_id', params.buildingId)
+      .order('created_at', { ascending: false })
+      .limit(50)
+
+    if (commsError) {
+      console.error('Error fetching communications log:', commsError)
+    }
+
+    // Calculate statistics
+    const totalUnits = units?.length || 0
+    const totalLeaseholders = units?.filter(unit => unit.leaseholders).length || 0
+    const directors = units?.filter(unit => unit.leaseholders?.is_director).length || 0
     const totalCompliance = complianceAssets?.length || 0
     const compliantCount = complianceAssets?.filter(asset => asset.status === 'compliant').length || 0
     const overdueCount = complianceAssets?.filter(asset => asset.status === 'overdue').length || 0
-    const missingCount = complianceAssets?.filter(asset => asset.status === 'missing').length || 0
 
     return (
       <LayoutWithSidebar 
@@ -101,17 +137,20 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
         subtitle="Comprehensive building management overview"
         showSearch={true}
       >
-        <div className="space-y-6">
-          {/* Building Summary */}
-          <BuildingSummary building={building} />
+        <div className="space-y-8">
+          {/* Building Overview Section */}
+          <BuildingOverview 
+            building={building} 
+            buildingSetup={building.building_setup}
+          />
 
           {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white rounded-lg border border-gray-200 p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Units</p>
-                  <p className="text-2xl font-bold text-gray-900">{units?.length || 0}</p>
+                  <p className="text-2xl font-bold text-gray-900">{totalUnits}</p>
                 </div>
                 <div className="p-2 bg-blue-100 rounded-lg">
                   <Building2 className="h-6 w-6 text-blue-600" />
@@ -122,108 +161,68 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
             <div className="bg-white rounded-lg border border-gray-200 p-4">
               <div className="flex items-center justify-between">
                 <div>
+                  <p className="text-sm font-medium text-gray-600">Leaseholders</p>
+                  <p className="text-2xl font-bold text-gray-900">{totalLeaseholders}</p>
+                </div>
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Users className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">RMC Directors</p>
+                  <p className="text-2xl font-bold text-gray-900">{directors}</p>
+                </div>
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Shield className="h-6 w-6 text-purple-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <div className="flex items-center justify-between">
+                <div>
                   <p className="text-sm font-medium text-gray-600">Compliance Items</p>
                   <p className="text-2xl font-bold text-gray-900">{totalCompliance}</p>
                 </div>
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <CheckCircle className="h-6 w-6 text-green-600" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Overdue</p>
-                  <p className="text-2xl font-bold text-red-600">{overdueCount}</p>
-                </div>
-                <div className="p-2 bg-red-100 rounded-lg">
-                  <AlertTriangle className="h-6 w-6 text-red-600" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Property Events</p>
-                  <p className="text-2xl font-bold text-gray-900">{propertyEvents?.length || 0}</p>
-                </div>
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Clock className="h-6 w-6 text-purple-600" />
+                <div className="p-2 bg-orange-100 rounded-lg">
+                  <FileText className="h-6 w-6 text-orange-600" />
                 </div>
               </div>
             </div>
           </div>
 
           {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Left Column */}
-            <div className="space-y-6">
-              {/* Units List */}
-              <div className="bg-white rounded-lg border border-gray-200">
-                <div className="p-6 border-b border-gray-200">
-                  <h2 className="text-lg font-semibold text-gray-900">Units & Leaseholders</h2>
-                  <p className="text-sm text-gray-600 mt-1">Manage units and leaseholder information</p>
-                </div>
-                <UnitList 
-                  units={units || []} 
-                  leaseholders={leaseholders || []}
-                  buildingId={params.buildingId}
-                />
-              </div>
+            <div className="space-y-8">
+              {/* Units & Leaseholders Section */}
+              <UnitLeaseholderList 
+                units={units || []}
+                buildingId={params.buildingId}
+                incomingEmails={incomingEmails || []}
+                communicationsLog={communicationsLog || []}
+              />
 
-              {/* Compliance Tracker */}
-              <div className="bg-white rounded-lg border border-gray-200">
-                <div className="p-6 border-b border-gray-200">
-                  <h2 className="text-lg font-semibold text-gray-900">Compliance Tracker</h2>
-                  <p className="text-sm text-gray-600 mt-1">Track building compliance requirements</p>
-                </div>
-                <ComplianceTracker 
-                  complianceAssets={complianceAssets || []}
-                  complianceDocuments={complianceDocuments || []}
-                  buildingId={params.buildingId}
-                />
-              </div>
+              {/* RMC Directors Section */}
+              <RMCDirectorsSection 
+                units={units || []}
+                buildingId={params.buildingId}
+              />
             </div>
 
             {/* Right Column */}
-            <div className="space-y-6">
-              {/* Property Events */}
-              <div className="bg-white rounded-lg border border-gray-200">
-                <div className="p-6 border-b border-gray-200">
-                  <h2 className="text-lg font-semibold text-gray-900">Property Events</h2>
-                  <p className="text-sm text-gray-600 mt-1">Upcoming and historic property events</p>
-                </div>
-                <PropertyEvents 
-                  propertyEvents={propertyEvents || []}
-                  manualEvents={[]} // No manual_events table in current schema
-                  buildingId={params.buildingId}
-                />
-              </div>
-
-              {/* Placeholder for Major Works (when table is available) */}
-              <div className="bg-white rounded-lg border border-gray-200">
-                <div className="p-6 border-b border-gray-200">
-                  <h2 className="text-lg font-semibold text-gray-900">Major Works</h2>
-                  <p className="text-sm text-gray-600 mt-1">Track ongoing and planned major works projects</p>
-                </div>
-                <div className="p-6 text-center">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Clock className="h-8 w-8 text-gray-400" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Major Works Coming Soon</h3>
-                  <p className="text-gray-600">
-                    Major works functionality will be available once the database schema is updated.
-                  </p>
-                </div>
-              </div>
+            <div className="space-y-8">
+              {/* Compliance Section */}
+              <ComplianceSection 
+                complianceAssets={complianceAssets || []}
+                complianceDocuments={complianceDocuments || []}
+                buildingId={params.buildingId}
+              />
             </div>
-          </div>
-
-          {/* AI Summary Button */}
-          <div className="flex justify-center">
-            <AISummaryButton buildingId={params.buildingId} buildingName={building.name} />
           </div>
         </div>
       </LayoutWithSidebar>

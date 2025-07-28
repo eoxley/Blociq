@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { Database } from '../../../../lib/database.types'
 
 const supabase = createClient<Database>(
@@ -66,6 +66,42 @@ export async function PUT(
     }
 
     return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error in building update API:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ buildingId: string }> }
+) {
+  try {
+    const { buildingId } = await params
+    const body = await request.json()
+    const { name, address, is_hrb } = body
+
+    const { data, error } = await supabase
+      .from('buildings')
+      .update({
+        name,
+        address,
+        is_hrb,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', buildingId)
+      .select()
+
+    if (error) {
+      console.error('Error updating building:', error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      building: data?.[0] 
+    })
+
   } catch (error) {
     console.error('Error in building update API:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
