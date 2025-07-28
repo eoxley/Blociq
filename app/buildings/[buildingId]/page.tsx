@@ -32,8 +32,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
           client_type,
           client_name,
           client_contact,
-          client_email,
-          assigned_manager
+          client_email
         )
       `)
       .eq('id', params.buildingId)
@@ -41,6 +40,13 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
 
     if (buildingError) {
       console.error('Error fetching building:', buildingError)
+      
+      // Check if it's a column error
+      if (buildingError.message.includes('column') && buildingError.message.includes('does not exist')) {
+        console.error('Database schema issue detected - missing column')
+        throw new Error('Database schema issue: A required column is missing. Please run database migrations.')
+      }
+      
       throw buildingError
     }
 
@@ -60,7 +66,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
           phone
         )
       `)
-      .eq('building_id', params.buildingId)
+      .eq('building_id', params.buildingId as string)
       .order('unit_number')
 
     if (unitsError) {
@@ -198,15 +204,15 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
             <div className="space-y-8">
               {/* Units & Leaseholders Section */}
               <UnitLeaseholderList 
-                units={units || []}
+                units={units ?? []}
                 buildingId={params.buildingId}
-                incomingEmails={incomingEmails || []}
-                communicationsLog={communicationsLog || []}
+                incomingEmails={incomingEmails ?? []}
+                communicationsLog={communicationsLog ?? []}
               />
 
               {/* RMC Directors Section */}
               <RMCDirectorsSection 
-                units={units || []}
+                units={units ?? []}
                 buildingId={params.buildingId}
               />
             </div>
@@ -215,8 +221,8 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
             <div className="space-y-8">
               {/* Compliance Section */}
               <ComplianceSection 
-                complianceAssets={complianceAssets || []}
-                complianceDocuments={complianceDocuments || []}
+                complianceAssets={complianceAssets ?? []}
+                complianceDocuments={complianceDocuments ?? []}
                 buildingId={params.buildingId}
               />
             </div>
@@ -226,15 +232,81 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
     )
   } catch (error) {
     console.error('Error in building detail page:', error)
+    
+    // Provide more specific error messages
+    let errorMessage = 'Unknown error'
+    let errorDetails = ''
+    
+    if (error instanceof Error) {
+      errorMessage = error.message
+      
+      // Check for specific database errors
+      if (error.message.includes('column') && error.message.includes('does not exist')) {
+        errorMessage = 'Database schema issue detected'
+        errorDetails = 'A required database column is missing. Please run database migrations.'
+      } else if (error.message.includes('relation') && error.message.includes('does not exist')) {
+        errorMessage = 'Database table issue detected'
+        errorDetails = 'A required database table is missing. Please run database migrations.'
+      } else if (error.message.includes('permission')) {
+        errorMessage = 'Permission denied'
+        errorDetails = 'You do not have permission to access this building.'
+      } else if (error.message.includes('connection')) {
+        errorMessage = 'Database connection error'
+        errorDetails = 'Unable to connect to the database. Please try again later.'
+      }
+    }
+    
     return (
       <LayoutWithSidebar>
         <div className="p-6">
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-600">Error loading building details.</p>
-            <p className="text-red-500 text-sm mt-2">
-              Error: {error instanceof Error ? error.message : 'Unknown error'}
-            </p>
-            <p className="text-red-500 text-sm mt-2">Please try refreshing the page or contact support if the issue persists.</p>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <p className="text-red-600 font-semibold">Error loading building details</p>
+                <p className="text-red-500 text-sm">{errorMessage}</p>
+              </div>
+            </div>
+            
+            {errorDetails && (
+              <p className="text-red-500 text-sm mt-2">{errorDetails}</p>
+            )}
+            
+            <div className="mt-4 flex gap-3">
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition-colors"
+              >
+                Try Again
+              </button>
+              <a
+                href="/buildings"
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg text-sm hover:bg-gray-700 transition-colors"
+              >
+                Back to Buildings
+              </a>
+            </div>
+            
+            {process.env.NODE_ENV === 'development' && (
+              <details className="mt-4">
+                <summary className="cursor-pointer text-sm font-medium text-red-700">
+                  Technical Details (Development)
+                </summary>
+                <div className="mt-2 p-3 bg-red-100 rounded text-xs font-mono text-red-800 overflow-auto max-h-32">
+                  <div className="mb-2">
+                    <strong>Error:</strong> {error instanceof Error ? error.message : String(error)}
+                  </div>
+                  {error instanceof Error && error.stack && (
+                    <div>
+                      <strong>Stack:</strong>
+                      <pre className="whitespace-pre-wrap mt-1">{error.stack}</pre>
+                    </div>
+                  )}
+                </div>
+              </details>
+            )}
           </div>
         </div>
       </LayoutWithSidebar>
