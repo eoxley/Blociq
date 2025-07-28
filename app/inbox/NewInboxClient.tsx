@@ -166,9 +166,8 @@ export default function NewInboxClient({
       let query = supabase
         .from('incoming_emails')
         .select(`
-          id, subject, from_email, received_at, body_preview, building_id, unread, handled, tag, message_id, thread_id, unit, user_id, created_at
+          id, subject, from_email, from_name, received_at, body_preview, body, building_id, is_read, is_handled, tags, outlook_id, outlook_message_id, folder, user_id, created_at
         `)
-        .neq('tag', 'deleted') // Exclude deleted emails
         .order('received_at', { ascending: false })
 
       // Apply filters based on current filter state
@@ -176,13 +175,13 @@ export default function NewInboxClient({
         // Show all emails in inbox (not just unhandled ones)
         console.log('📧 NewInboxClient - Showing all emails in inbox')
       } else if (filter === 'handled') {
-        query = query.eq('handled', true)
+        query = query.eq('is_handled', true)
         console.log('✅ NewInboxClient - Showing handled emails')
       } else if (filter === 'unhandled') {
-        query = query.eq('handled', false)
+        query = query.eq('is_handled', false)
         console.log('⏳ NewInboxClient - Showing unhandled emails')
       } else if (filter === 'unread') {
-        query = query.eq('unread', true)
+        query = query.eq('is_read', false)
         console.log('📬 NewInboxClient - Showing unread emails')
       }
 
@@ -214,15 +213,15 @@ export default function NewInboxClient({
           buildings: null, // Set to null since we're not joining buildings table
           // Map database fields to expected interface fields
           subject: email.subject || 'No Subject',
-          from_name: email.from_email || 'Unknown Sender', // Use from_email as from_name
+          from_name: email.from_name || email.from_email || 'Unknown Sender',
           from_email: email.from_email || 'unknown@example.com',
           body_preview: email.body_preview || 'No preview available',
-          body_full: email.body_preview || 'No content available', // Use body_preview as body_full
-          unread: email.unread,
-          handled: email.handled || false,
-          tags: email.tag ? [email.tag] : [], // Convert single tag to array
+          body_full: email.body || email.body_preview || 'No content available',
+          unread: !email.is_read, // Invert is_read to get unread status
+          handled: email.is_handled || false,
+          tags: email.tags || [], // Use the tags array directly
           building_id: email.building_id || null,
-          outlook_id: email.message_id || null // Use message_id as outlook_id
+          outlook_id: email.outlook_id || email.outlook_message_id || null
         }))
         
         console.log('📧 NewInboxClient - Processed emails:', processedEmails)
@@ -309,7 +308,7 @@ export default function NewInboxClient({
         const { data: newEmails, error } = await supabase
           .from('incoming_emails')
           .select(`
-            id, subject, from_email, received_at, body_preview, building_id, unread, handled, tag, message_id, thread_id, unit, user_id, created_at
+            id, subject, from_email, from_name, received_at, body_preview, body, building_id, is_read, is_handled, tags, outlook_id, outlook_message_id, folder, user_id, created_at
           `)
           .order('received_at', { ascending: false })
 
@@ -322,15 +321,15 @@ export default function NewInboxClient({
             buildings: null, // Set to null since we're not joining buildings table
             // Map database fields to expected interface fields
             subject: email.subject || 'No Subject',
-            from_name: email.from_email || 'Unknown Sender', // Use from_email as from_name
+            from_name: email.from_name || email.from_email || 'Unknown Sender',
             from_email: email.from_email || 'unknown@example.com',
             body_preview: email.body_preview || 'No preview available',
-            body_full: email.body_preview || 'No content available', // Use body_preview as body_full
-            unread: email.unread,
-            handled: email.handled || false,
-            tags: email.tag ? [email.tag] : [], // Convert single tag to array
+            body_full: email.body || email.body_preview || 'No content available',
+            unread: !email.is_read, // Invert is_read to get unread status
+            handled: email.is_handled || false,
+            tags: email.tags || [], // Use the tags array directly
             building_id: email.building_id || null,
-            outlook_id: email.message_id || null // Use message_id as outlook_id
+            outlook_id: email.outlook_id || email.outlook_message_id || null
           }))
           
           setEmails(processedEmails)
@@ -363,7 +362,7 @@ export default function NewInboxClient({
       const { error } = await supabase
         .from('incoming_emails')
         .update({ 
-          handled: true
+          is_handled: true
         })
         .eq('id', emailId)
 
@@ -394,7 +393,7 @@ export default function NewInboxClient({
     if (email.unread) {
       supabase
         .from('incoming_emails')
-        .update({ unread: false })
+        .update({ is_read: true })
         .eq('id', email.id)
         .then(() => {
           setEmails(prev => prev.map(e => 
