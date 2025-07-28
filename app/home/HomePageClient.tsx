@@ -286,8 +286,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             from_email: email.from_email,
             body_preview: email.body_preview,
             received_at: email.received_at,
-            handled: email.handled || false,
-            unread: !email.unread,
+            handled: email.is_handled || false,
+            unread: !email.is_read,
             flag_status: email.flag_status || 'none',
             categories: email.categories || []
           }));
