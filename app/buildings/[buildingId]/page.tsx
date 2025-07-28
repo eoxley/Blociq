@@ -6,7 +6,6 @@ import LayoutWithSidebar from '@/components/LayoutWithSidebar'
 import BuildingSummary from './components/BuildingSummary'
 import UnitList from './components/UnitList'
 import ComplianceTracker from './components/ComplianceTracker'
-import MajorWorksOverview from './components/MajorWorksOverview'
 import PropertyEvents from './components/PropertyEvents'
 import AISummaryButton from './components/AISummaryButton'
 import { Building2, AlertTriangle, CheckCircle, Clock } from 'lucide-react'
@@ -23,62 +22,10 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
   if (!session) redirect('/login')
 
   try {
-    // Fetch building with all related data
+    // First, fetch the building with basic information
     const { data: building, error: buildingError } = await supabase
       .from('buildings')
-      .select(`
-        *,
-        units (
-          id,
-          unit_number,
-          type,
-          floor,
-          leaseholder_email,
-          leaseholder_id,
-          created_at,
-          updated_at
-        ),
-        building_compliance_assets (
-          id,
-          name,
-          category,
-          status,
-          next_due_date,
-          last_updated,
-          created_at
-        ),
-        major_works_projects (
-          id,
-          title,
-          type,
-          start_date,
-          end_date,
-          status,
-          percentage_complete,
-          created_at
-        ),
-        property_events (
-          id,
-          title,
-          description,
-          event_type,
-          start_date,
-          end_date,
-          responsible_party,
-          outlook_event_id,
-          created_at
-        ),
-        manual_events (
-          id,
-          title,
-          description,
-          event_type,
-          start_date,
-          end_date,
-          responsible_party,
-          created_at
-        )
-      `)
+      .select('*')
       .eq('id', params.buildingId)
       .maybeSingle()
 
@@ -91,52 +38,62 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
       notFound()
     }
 
+    // Fetch units separately to avoid relationship issues
+    const { data: units, error: unitsError } = await supabase
+      .from('units')
+      .select('*')
+      .eq('building_id', parseInt(params.buildingId))
+
+    if (unitsError) {
+      console.error('Error fetching units:', unitsError)
+    }
+
     // Fetch leaseholders for units
+    const leaseholderIds = units?.map(unit => unit.leaseholder_id).filter(Boolean) || []
     const { data: leaseholders, error: leaseholdersError } = await supabase
       .from('leaseholders')
       .select('id, name, email, phone')
-      .in('id', building.units?.map(unit => unit.leaseholder_id).filter(Boolean) || [])
+      .in('id', leaseholderIds)
 
     if (leaseholdersError) {
       console.error('Error fetching leaseholders:', leaseholdersError)
+    }
+
+    // Fetch compliance assets separately
+    const { data: complianceAssets, error: complianceAssetsError } = await supabase
+      .from('building_compliance_assets')
+      .select('*')
+      .eq('building_id', parseInt(params.buildingId))
+
+    if (complianceAssetsError) {
+      console.error('Error fetching compliance assets:', complianceAssetsError)
     }
 
     // Fetch compliance documents
     const { data: complianceDocuments, error: complianceDocsError } = await supabase
       .from('compliance_documents')
       .select('*')
-      .eq('building_id', params.buildingId)
+      .eq('building_id', parseInt(params.buildingId))
 
     if (complianceDocsError) {
       console.error('Error fetching compliance documents:', complianceDocsError)
     }
 
-    // Fetch major works timeline events
-    const { data: timelineEvents, error: timelineError } = await supabase
-      .from('major_works_timeline_events')
+    // Fetch property events
+    const { data: propertyEvents, error: propertyEventsError } = await supabase
+      .from('property_events')
       .select('*')
-      .in('project_id', building.major_works_projects?.map(project => project.id) || [])
+      .eq('building_id', parseInt(params.buildingId))
 
-    if (timelineError) {
-      console.error('Error fetching timeline events:', timelineError)
-    }
-
-    // Fetch major works documents
-    const { data: majorWorksDocuments, error: majorWorksDocsError } = await supabase
-      .from('major_works_documents')
-      .select('*')
-      .in('project_id', building.major_works_projects?.map(project => project.id) || [])
-
-    if (majorWorksDocsError) {
-      console.error('Error fetching major works documents:', majorWorksDocsError)
+    if (propertyEventsError) {
+      console.error('Error fetching property events:', propertyEventsError)
     }
 
     // Calculate compliance statistics
-    const complianceAssets = building.building_compliance_assets || []
-    const totalCompliance = complianceAssets.length
-    const compliantCount = complianceAssets.filter(asset => asset.status === 'compliant').length
-    const overdueCount = complianceAssets.filter(asset => asset.status === 'overdue').length
-    const missingCount = complianceAssets.filter(asset => asset.status === 'missing').length
+    const totalCompliance = complianceAssets?.length || 0
+    const compliantCount = complianceAssets?.filter(asset => asset.status === 'compliant').length || 0
+    const overdueCount = complianceAssets?.filter(asset => asset.status === 'overdue').length || 0
+    const missingCount = complianceAssets?.filter(asset => asset.status === 'missing').length || 0
 
     return (
       <LayoutWithSidebar 
@@ -154,7 +111,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Units</p>
-                  <p className="text-2xl font-bold text-gray-900">{building.units?.length || 0}</p>
+                  <p className="text-2xl font-bold text-gray-900">{units?.length || 0}</p>
                 </div>
                 <div className="p-2 bg-blue-100 rounded-lg">
                   <Building2 className="h-6 w-6 text-blue-600" />
@@ -189,8 +146,8 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
             <div className="bg-white rounded-lg border border-gray-200 p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Major Works</p>
-                  <p className="text-2xl font-bold text-gray-900">{building.major_works_projects?.length || 0}</p>
+                  <p className="text-sm font-medium text-gray-600">Property Events</p>
+                  <p className="text-2xl font-bold text-gray-900">{propertyEvents?.length || 0}</p>
                 </div>
                 <div className="p-2 bg-purple-100 rounded-lg">
                   <Clock className="h-6 w-6 text-purple-600" />
@@ -210,7 +167,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
                   <p className="text-sm text-gray-600 mt-1">Manage units and leaseholder information</p>
                 </div>
                 <UnitList 
-                  units={building.units || []} 
+                  units={units || []} 
                   leaseholders={leaseholders || []}
                   buildingId={params.buildingId}
                 />
@@ -223,7 +180,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
                   <p className="text-sm text-gray-600 mt-1">Track building compliance requirements</p>
                 </div>
                 <ComplianceTracker 
-                  complianceAssets={building.building_compliance_assets || []}
+                  complianceAssets={complianceAssets || []}
                   complianceDocuments={complianceDocuments || []}
                   buildingId={params.buildingId}
                 />
@@ -232,20 +189,6 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
 
             {/* Right Column */}
             <div className="space-y-6">
-              {/* Major Works Overview */}
-              <div className="bg-white rounded-lg border border-gray-200">
-                <div className="p-6 border-b border-gray-200">
-                  <h2 className="text-lg font-semibold text-gray-900">Major Works</h2>
-                  <p className="text-sm text-gray-600 mt-1">Track ongoing and planned major works projects</p>
-                </div>
-                <MajorWorksOverview 
-                  projects={building.major_works_projects || []}
-                  timelineEvents={timelineEvents || []}
-                  documents={majorWorksDocuments || []}
-                  buildingId={params.buildingId}
-                />
-              </div>
-
               {/* Property Events */}
               <div className="bg-white rounded-lg border border-gray-200">
                 <div className="p-6 border-b border-gray-200">
@@ -253,10 +196,27 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
                   <p className="text-sm text-gray-600 mt-1">Upcoming and historic property events</p>
                 </div>
                 <PropertyEvents 
-                  propertyEvents={building.property_events || []}
-                  manualEvents={building.manual_events || []}
+                  propertyEvents={propertyEvents || []}
+                  manualEvents={[]} // No manual_events table in current schema
                   buildingId={params.buildingId}
                 />
+              </div>
+
+              {/* Placeholder for Major Works (when table is available) */}
+              <div className="bg-white rounded-lg border border-gray-200">
+                <div className="p-6 border-b border-gray-200">
+                  <h2 className="text-lg font-semibold text-gray-900">Major Works</h2>
+                  <p className="text-sm text-gray-600 mt-1">Track ongoing and planned major works projects</p>
+                </div>
+                <div className="p-6 text-center">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Clock className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Major Works Coming Soon</h3>
+                  <p className="text-gray-600">
+                    Major works functionality will be available once the database schema is updated.
+                  </p>
+                </div>
               </div>
             </div>
           </div>

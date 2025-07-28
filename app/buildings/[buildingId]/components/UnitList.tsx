@@ -4,14 +4,13 @@ import { useState } from 'react'
 import { Home, User, Mail, Phone, Search, AlertTriangle, FileText, Calendar } from 'lucide-react'
 
 interface Unit {
-  id: string
+  id: number
   unit_number: string
   type: string | null
   floor: string | null
-  leaseholder_email: string | null
+  building_id: number
   leaseholder_id: string | null
-  created_at: string
-  updated_at: string
+  created_at: string | null
 }
 
 interface Leaseholder {
@@ -216,7 +215,7 @@ export default function UnitList({ units, leaseholders, buildingId }: UnitListPr
                     <div>
                       <p className="text-sm font-medium text-gray-600">Created</p>
                       <p className="text-gray-900">
-                        {new Date(selectedUnit.created_at).toLocaleDateString()}
+                        {selectedUnit.created_at ? new Date(selectedUnit.created_at).toLocaleDateString() : 'Not specified'}
                       </p>
                     </div>
                   </div>
