@@ -1,66 +1,63 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from '@supabase/supabase-js'
+import { NextResponse } from 'next/server'
 
-export async function GET(req: NextRequest) {
+export async function GET(request: Request) {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
   try {
-    const supabase = createRouteHandlerClient({ cookies });
-    
-    // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      console.error("❌ User authentication failed:", userError);
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    console.log('=== TEST EMAILS API DEBUG ===')
 
-    console.log("✅ User authenticated:", user.id);
+    // Check if incoming_emails table exists and has data
+    const { data: emails, error: emailsError } = await supabase
+      .from('incoming_emails')
+      .select('*')
+      .limit(10)
 
-    // Test 1: Check if incoming_emails table exists and has data
-    const { data: emails, error: emailsError, count } = await supabase
-      .from("incoming_emails")
-      .select("*", { count: "exact", head: true });
+    console.log('Emails found:', emails?.length || 0)
+    console.log('Emails error:', emailsError)
+    console.log('Sample emails:', emails?.slice(0, 2))
 
-    console.log("📧 Emails test result:", {
-      count: count || 0,
-      error: emailsError,
-      user_id: user.id
-    });
-
-    // Test 2: Try to get actual emails for the user
-    const { data: userEmails, error: userEmailsError } = await supabase
-      .from("incoming_emails")
-      .select("id, subject, from_email, received_at, handled, unread, tag")
-      .eq("user_id", user.id)
-      .limit(5);
-
-    console.log("📧 User emails test result:", {
-      count: userEmails?.length || 0,
-      error: userEmailsError,
-      emails: userEmails
-    });
-
-    // Test 3: Check table structure
+    // Check table structure
     const { data: tableInfo, error: tableError } = await supabase
-      .rpc('get_table_info', { table_name: 'incoming_emails' })
-      .single();
+      .from('incoming_emails')
+      .select('*')
+      .limit(0)
+
+    console.log('Table info:', tableInfo)
+    console.log('Table error:', tableError)
+
+    // Check if there are any emails with buildings relation
+    const { data: emailsWithBuildings, error: buildingsError } = await supabase
+      .from('incoming_emails')
+      .select(`
+        *,
+        buildings(name)
+      `)
+      .limit(5)
+
+    console.log('Emails with buildings:', emailsWithBuildings?.length || 0)
+    console.log('Buildings error:', buildingsError)
 
     return NextResponse.json({
-      user_id: user.id,
-      total_emails_count: count || 0,
-      user_emails_count: userEmails?.length || 0,
-      user_emails: userEmails || [],
-      emails_error: emailsError,
-      user_emails_error: userEmailsError,
-      table_info: tableInfo,
-      table_error: tableError
-    });
+      success: true,
+      totalEmails: emails?.length || 0,
+      emails: emails || [],
+      emailsWithBuildings: emailsWithBuildings || [],
+      errors: {
+        emails: emailsError,
+        table: tableError,
+        buildings: buildingsError
+      }
+    })
 
   } catch (error) {
-    console.error("❌ Test emails error:", error);
+    console.error('Error in test emails API:', error)
     return NextResponse.json({ 
-      error: "Internal server error",
-      details: error instanceof Error ? error.message : "Unknown error"
-    }, { status: 500 });
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 } 

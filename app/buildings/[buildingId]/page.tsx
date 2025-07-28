@@ -1,409 +1,284 @@
-'use client'
-
-import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
-import { supabase } from '@/lib/supabaseClient'
-import { 
-  Building2, 
-  MapPin, 
-  AlertTriangle, 
-  Users, 
-  Home,
-  User,
-  Mail,
-  Phone,
-  Info
-} from 'lucide-react'
+import { cookies } from 'next/headers'
+import { createClient } from '@/utils/supabase/server'
+import { redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import LayoutWithSidebar from '@/components/LayoutWithSidebar'
+import BuildingSummary from './components/BuildingSummary'
+import UnitList from './components/UnitList'
+import ComplianceTracker from './components/ComplianceTracker'
+import MajorWorksOverview from './components/MajorWorksOverview'
+import PropertyEvents from './components/PropertyEvents'
+import AISummaryButton from './components/AISummaryButton'
+import { Building2, AlertTriangle, CheckCircle, Clock } from 'lucide-react'
 
-// Type definitions based on the actual schema
-interface Building {
-  id: string
-  name: string
-  address: string | null
-  access_notes: string | null
-  parking_info: string | null
+interface BuildingDetailPageProps {
+  params: {
+    buildingId: string
+  }
 }
 
-interface Leaseholder {
-  id: string
-  name: string | null
-  email: string | null
-  phone: string | null
-  unit_id: number | null
-}
+export default async function BuildingDetailPage({ params }: BuildingDetailPageProps) {
+  const supabase = createClient(cookies())
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) redirect('/login')
 
-interface Unit {
-  id: number
-  unit_number: string
-  floor: string | null
-  type: string | null
-  building_id: number
-  leaseholder_id: string | null
-  leaseholders?: Leaseholder | null
-}
+  try {
+    // Fetch building with all related data
+    const { data: building, error: buildingError } = await supabase
+      .from('buildings')
+      .select(`
+        *,
+        units (
+          id,
+          unit_number,
+          type,
+          floor,
+          leaseholder_email,
+          leaseholder_id,
+          created_at,
+          updated_at
+        ),
+        building_compliance_assets (
+          id,
+          name,
+          category,
+          status,
+          next_due_date,
+          last_updated,
+          created_at
+        ),
+        major_works_projects (
+          id,
+          title,
+          type,
+          start_date,
+          end_date,
+          status,
+          percentage_complete,
+          created_at
+        ),
+        property_events (
+          id,
+          title,
+          description,
+          event_type,
+          start_date,
+          end_date,
+          responsible_party,
+          outlook_event_id,
+          created_at
+        ),
+        manual_events (
+          id,
+          title,
+          description,
+          event_type,
+          start_date,
+          end_date,
+          responsible_party,
+          created_at
+        )
+      `)
+      .eq('id', params.buildingId)
+      .maybeSingle()
 
-export default function BuildingDetailPage() {
-  const params = useParams()
-  const buildingId = params?.buildingId as string
-
-  const [building, setBuilding] = useState<Building | null>(null)
-  const [units, setUnits] = useState<Unit[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!buildingId) {
-        setError('No building ID provided')
-        setLoading(false)
-        return
-      }
-
-      console.log('📌 Building ID received:', buildingId)
-
-      try {
-        // Fetch building details
-        const { data: buildingData, error: buildingError } = await supabase
-          .from('buildings')
-          .select('id, name, address, access_notes, parking_info')
-          .eq('id', buildingId)
-          .single()
-
-        console.log('🏢 Building data:', buildingData)
-        if (buildingError || !buildingData) {
-          console.error('❌ Building fetch error:', buildingError)
-          setError('Building not found')
-          setLoading(false)
-          return
-        }
-
-        console.log('🔍 Building ID type:', typeof buildingData.id, 'Value:', buildingData.id)
-
-        // Fetch units with leaseholder information
-        // Convert building ID to number since units table expects building_id as number
-        const buildingIdForUnits = parseInt(buildingData.id, 10)
-        console.log('🔍 Using building ID for units query:', buildingIdForUnits)
-        
-        const { data: unitData, error: unitError } = await supabase
-          .from('units')
-          .select(`
-            id,
-            unit_number,
-            floor,
-            type,
-            building_id,
-            leaseholder_id
-          `)
-          .eq('building_id', buildingIdForUnits)
-          .order('unit_number')
-
-        console.log('🏠 Units fetched:', unitData)
-        if (unitError) {
-          console.error('❌ Units fetch error:', unitError)
-          console.error('❌ Error details:', {
-            message: unitError.message,
-            details: unitError.details,
-            hint: unitError.hint,
-            code: unitError.code
-          })
-          // Don't set error here, just log it and continue with empty units
-        }
-
-        // If units were fetched successfully, fetch leaseholder data separately
-        let unitsWithLeaseholders = unitData || []
-        if (unitData && unitData.length > 0) {
-          // Get all unique leaseholder IDs
-          const leaseholderIds = unitData
-            .map(unit => unit.leaseholder_id)
-            .filter(id => id !== null) as string[]
-
-          if (leaseholderIds.length > 0) {
-            // Fetch leaseholders separately
-            const { data: leaseholderData, error: leaseholderError } = await supabase
-              .from('leaseholders')
-              .select('id, name, email, phone, unit_id')
-              .in('id', leaseholderIds)
-
-            if (leaseholderError) {
-              console.error('❌ Leaseholders fetch error:', leaseholderError)
-            } else {
-              console.log('👥 Leaseholders fetched:', leaseholderData)
-              
-              // Create a map of leaseholder data by ID
-              const leaseholderMap = new Map()
-              leaseholderData?.forEach(leaseholder => {
-                leaseholderMap.set(leaseholder.id, leaseholder)
-              })
-
-              // Attach leaseholder data to units
-              unitsWithLeaseholders = unitData.map(unit => ({
-                ...unit,
-                leaseholders: unit.leaseholder_id ? leaseholderMap.get(unit.leaseholder_id) || null : null
-              }))
-            }
-          }
-        }
-
-        setBuilding(buildingData)
-        setUnits(unitsWithLeaseholders)
-        setLoading(false)
-      } catch (err) {
-        console.error('❌ Unexpected error:', err)
-        setError('An unexpected error occurred')
-        setLoading(false)
-      }
+    if (buildingError) {
+      console.error('Error fetching building:', buildingError)
+      throw buildingError
     }
 
-    fetchData()
-  }, [buildingId])
+    if (!building) {
+      notFound()
+    }
 
-  if (loading) {
+    // Fetch leaseholders for units
+    const { data: leaseholders, error: leaseholdersError } = await supabase
+      .from('leaseholders')
+      .select('id, name, email, phone')
+      .in('id', building.units?.map(unit => unit.leaseholder_id).filter(Boolean) || [])
+
+    if (leaseholdersError) {
+      console.error('Error fetching leaseholders:', leaseholdersError)
+    }
+
+    // Fetch compliance documents
+    const { data: complianceDocuments, error: complianceDocsError } = await supabase
+      .from('compliance_documents')
+      .select('*')
+      .eq('building_id', params.buildingId)
+
+    if (complianceDocsError) {
+      console.error('Error fetching compliance documents:', complianceDocsError)
+    }
+
+    // Fetch major works timeline events
+    const { data: timelineEvents, error: timelineError } = await supabase
+      .from('major_works_timeline_events')
+      .select('*')
+      .in('project_id', building.major_works_projects?.map(project => project.id) || [])
+
+    if (timelineError) {
+      console.error('Error fetching timeline events:', timelineError)
+    }
+
+    // Fetch major works documents
+    const { data: majorWorksDocuments, error: majorWorksDocsError } = await supabase
+      .from('major_works_documents')
+      .select('*')
+      .in('project_id', building.major_works_projects?.map(project => project.id) || [])
+
+    if (majorWorksDocsError) {
+      console.error('Error fetching major works documents:', majorWorksDocsError)
+    }
+
+    // Calculate compliance statistics
+    const complianceAssets = building.building_compliance_assets || []
+    const totalCompliance = complianceAssets.length
+    const compliantCount = complianceAssets.filter(asset => asset.status === 'compliant').length
+    const overdueCount = complianceAssets.filter(asset => asset.status === 'overdue').length
+    const missingCount = complianceAssets.filter(asset => asset.status === 'missing').length
+
     return (
-      <LayoutWithSidebar>
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-                <Building2 className="h-8 w-8 text-teal-600" />
-              </div>
-              <p className="text-lg text-gray-600">Loading building information...</p>
-            </div>
-          </div>
-        </div>
-      </LayoutWithSidebar>
-    )
-  }
+      <LayoutWithSidebar 
+        title={building.name || 'Building Details'} 
+        subtitle="Comprehensive building management overview"
+        showSearch={true}
+      >
+        <div className="space-y-6">
+          {/* Building Summary */}
+          <BuildingSummary building={building} />
 
-  if (error || !building) {
-    return (
-      <LayoutWithSidebar>
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="bg-red-50 border border-red-200 rounded-xl p-8 text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="h-8 w-8 text-red-600" />
-            </div>
-            <h1 className="text-2xl font-bold text-red-900 mb-2">Building Not Found</h1>
-            <p className="text-red-700">{error || 'The requested building could not be found.'}</p>
-          </div>
-        </div>
-      </LayoutWithSidebar>
-    )
-  }
-
-  return (
-    <LayoutWithSidebar>
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Building Header */}
-        <div className="mb-8">
-          <div className="bg-gradient-to-r from-teal-600 to-teal-700 rounded-2xl p-8 text-white shadow-xl">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-                <Building2 className="h-8 w-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-4xl font-bold text-white mb-2">{building.name}</h1>
-                {building.address && (
-                  <div className="flex items-center gap-2 text-white/90">
-                    <MapPin className="h-5 w-5" />
-                    <span className="text-lg">{building.address}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            {/* Building Info Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-              {building.access_notes && (
-                <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Info className="h-5 w-5 text-white/80" />
-                    <h3 className="font-semibold text-white">Access Notes</h3>
-                  </div>
-                  <p className="text-white/90 text-sm">{building.access_notes}</p>
-                </div>
-              )}
-              
-              {building.parking_info && (
-                <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <MapPin className="h-5 w-5 text-white/80" />
-                    <h3 className="font-semibold text-white">Parking Information</h3>
-                  </div>
-                  <p className="text-white/90 text-sm">{building.parking_info}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Units Section */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-          <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-8 py-6 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center">
-                  <Home className="h-6 w-6 text-teal-600" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Units ({units.length})</h2>
-                  <p className="text-gray-600">
-                    {units.length} unit{units.length !== 1 ? 's' : ''} in this building
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-8">
-            {units.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Home className="h-8 w-8 text-gray-400" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">No Units Yet</h3>
-                <p className="text-gray-600">No units have been added to this building yet.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {units.map((unit) => {
-                  const leaseholder = unit.leaseholders || null
-
-                  return (
-                    <div 
-                      key={unit.id} 
-                      className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow bg-white"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          {/* Unit Header */}
-                          <div className="flex items-center gap-3 mb-4">
-                            <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
-                              <Home className="h-5 w-5 text-teal-600" />
-                            </div>
-                            <div className="flex-1">
-                              <h3 className="text-xl font-semibold text-gray-900">
-                                Unit {unit.unit_number}
-                              </h3>
-                              <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
-                                <span className="flex items-center gap-1">
-                                  <span className="font-medium">Floor:</span>
-                                  <span className="text-gray-700">
-                                    {unit.floor || "Not specified"}
-                                  </span>
-                                </span>
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                  {unit.type || "Unknown"}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Leaseholder Information */}
-                          {leaseholder ? (
-                            <div className="bg-gray-50 rounded-lg p-4">
-                              <div className="flex items-center gap-2 mb-3">
-                                <User className="h-4 w-4 text-green-600" />
-                                <h4 className="font-medium text-gray-900">
-                                  {leaseholder.name || 'Unnamed Leaseholder'}
-                                </h4>
-                              </div>
-                              
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <div className="flex items-center gap-2 text-sm text-gray-600">
-                                  <Mail className="h-4 w-4 text-gray-400" />
-                                  {leaseholder.email ? (
-                                    <a 
-                                      href={`mailto:${leaseholder.email}`}
-                                      className="text-blue-600 hover:underline"
-                                    >
-                                      {leaseholder.email}
-                                    </a>
-                                  ) : (
-                                    <span className="text-gray-500 italic">No email provided</span>
-                                  )}
-                                </div>
-                                
-                                <div className="flex items-center gap-2 text-sm text-gray-600">
-                                  <Phone className="h-4 w-4 text-gray-400" />
-                                  {leaseholder.phone ? (
-                                    <a 
-                                      href={`tel:${leaseholder.phone}`}
-                                      className="text-blue-600 hover:underline"
-                                    >
-                                      {leaseholder.phone}
-                                    </a>
-                                  ) : (
-                                    <span className="text-gray-500 italic">No phone provided</span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                              <div className="flex items-center gap-2">
-                                <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                                <span className="text-sm text-yellow-800 font-medium">
-                                  No leaseholder assigned
-                                </span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Summary Stats */}
-        {units.length > 0 && (
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                  <Home className="h-6 w-6 text-blue-600" />
-                </div>
+          {/* Quick Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Units</p>
-                  <p className="text-2xl font-bold text-gray-900">{units.length}</p>
+                  <p className="text-2xl font-bold text-gray-900">{building.units?.length || 0}</p>
+                </div>
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Building2 className="h-6 w-6 text-blue-600" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                  <User className="h-6 w-6 text-green-600" />
-                </div>
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Occupied Units</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {units.filter(unit => unit.leaseholders).length}
-                  </p>
+                  <p className="text-sm font-medium text-gray-600">Compliance Items</p>
+                  <p className="text-2xl font-bold text-gray-900">{totalCompliance}</p>
+                </div>
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <CheckCircle className="h-6 w-6 text-green-600" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
-                  <AlertTriangle className="h-6 w-6 text-yellow-600" />
-                </div>
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Vacant Units</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {units.filter(unit => !unit.leaseholders).length}
-                  </p>
+                  <p className="text-sm font-medium text-gray-600">Overdue</p>
+                  <p className="text-2xl font-bold text-red-600">{overdueCount}</p>
+                </div>
+                <div className="p-2 bg-red-100 rounded-lg">
+                  <AlertTriangle className="h-6 w-6 text-red-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Major Works</p>
+                  <p className="text-2xl font-bold text-gray-900">{building.major_works_projects?.length || 0}</p>
+                </div>
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Clock className="h-6 w-6 text-purple-600" />
                 </div>
               </div>
             </div>
           </div>
-        )}
-      </div>
-    </LayoutWithSidebar>
-  )
+
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left Column */}
+            <div className="space-y-6">
+              {/* Units List */}
+              <div className="bg-white rounded-lg border border-gray-200">
+                <div className="p-6 border-b border-gray-200">
+                  <h2 className="text-lg font-semibold text-gray-900">Units & Leaseholders</h2>
+                  <p className="text-sm text-gray-600 mt-1">Manage units and leaseholder information</p>
+                </div>
+                <UnitList 
+                  units={building.units || []} 
+                  leaseholders={leaseholders || []}
+                  buildingId={params.buildingId}
+                />
+              </div>
+
+              {/* Compliance Tracker */}
+              <div className="bg-white rounded-lg border border-gray-200">
+                <div className="p-6 border-b border-gray-200">
+                  <h2 className="text-lg font-semibold text-gray-900">Compliance Tracker</h2>
+                  <p className="text-sm text-gray-600 mt-1">Track building compliance requirements</p>
+                </div>
+                <ComplianceTracker 
+                  complianceAssets={building.building_compliance_assets || []}
+                  complianceDocuments={complianceDocuments || []}
+                  buildingId={params.buildingId}
+                />
+              </div>
+            </div>
+
+            {/* Right Column */}
+            <div className="space-y-6">
+              {/* Major Works Overview */}
+              <div className="bg-white rounded-lg border border-gray-200">
+                <div className="p-6 border-b border-gray-200">
+                  <h2 className="text-lg font-semibold text-gray-900">Major Works</h2>
+                  <p className="text-sm text-gray-600 mt-1">Track ongoing and planned major works projects</p>
+                </div>
+                <MajorWorksOverview 
+                  projects={building.major_works_projects || []}
+                  timelineEvents={timelineEvents || []}
+                  documents={majorWorksDocuments || []}
+                  buildingId={params.buildingId}
+                />
+              </div>
+
+              {/* Property Events */}
+              <div className="bg-white rounded-lg border border-gray-200">
+                <div className="p-6 border-b border-gray-200">
+                  <h2 className="text-lg font-semibold text-gray-900">Property Events</h2>
+                  <p className="text-sm text-gray-600 mt-1">Upcoming and historic property events</p>
+                </div>
+                <PropertyEvents 
+                  propertyEvents={building.property_events || []}
+                  manualEvents={building.manual_events || []}
+                  buildingId={params.buildingId}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* AI Summary Button */}
+          <div className="flex justify-center">
+            <AISummaryButton buildingId={params.buildingId} buildingName={building.name} />
+          </div>
+        </div>
+      </LayoutWithSidebar>
+    )
+  } catch (error) {
+    console.error('Error in building detail page:', error)
+    return (
+      <LayoutWithSidebar>
+        <div className="p-6">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-red-600">Error loading building details.</p>
+            <p className="text-red-500 text-sm mt-2">Please try refreshing the page or contact support if the issue persists.</p>
+          </div>
+        </div>
+      </LayoutWithSidebar>
+    )
+  }
 } 
