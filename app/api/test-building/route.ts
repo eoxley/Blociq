@@ -1,78 +1,70 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
-export async function GET(request: Request) {
+export async function GET() {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
   try {
-    const { searchParams } = new URL(request.url)
-    const buildingId = searchParams.get('buildingId')
-    
-    if (!buildingId) {
-      return NextResponse.json({ error: 'Building ID required' }, { status: 400 })
-    }
-
-    const supabase = createRouteHandlerClient({ cookies })
-    
-    // Test authentication
-    const { data: { session }, error: authError } = await supabase.auth.getSession()
-    if (authError || !session) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
-    }
-
-    console.log('🔍 Testing building ID:', buildingId)
-
-    // Test building query
-    const { data: building, error: buildingError } = await supabase
+    // Test basic building query
+    const { data: buildings, error: buildingsError } = await supabase
       .from('buildings')
       .select('*')
-      .eq('id', buildingId)
-      .single()
+      .limit(5)
 
-    if (buildingError) {
+    if (buildingsError) {
+      console.error('Error fetching buildings:', buildingsError)
       return NextResponse.json({ 
-        error: 'Building query failed', 
-        details: buildingError,
-        buildingId: buildingId
+        error: buildingsError.message,
+        code: buildingsError.code 
       }, { status: 500 })
     }
 
-    if (!building) {
+    // Test specific building query
+    const testBuildingId = '2beeec1d-a94e-4058-b881-213d74cc6830'
+    const { data: testBuilding, error: testBuildingError } = await supabase
+      .from('buildings')
+      .select('*')
+      .eq('id', testBuildingId)
+      .maybeSingle()
+
+    if (testBuildingError) {
+      console.error('Error fetching test building:', testBuildingError)
       return NextResponse.json({ 
-        error: 'Building not found',
-        buildingId: buildingId
-      }, { status: 404 })
+        error: testBuildingError.message,
+        code: testBuildingError.code 
+      }, { status: 500 })
     }
 
-    // Test basic queries
-    const { data: units } = await supabase
+    // Test units query
+    const { data: units, error: unitsError } = await supabase
       .from('units')
-      .select('count')
-      .eq('building_id', buildingId)
+      .select('*')
+      .eq('building_id', testBuildingId)
 
-    const { data: complianceAssets } = await supabase
-      .from('building_compliance_assets')
-      .select('count')
-      .eq('building_id', buildingId)
-
-    const { data: emails } = await supabase
-      .from('incoming_emails')
-      .select('count')
-      .eq('building_id', buildingId)
+    if (unitsError) {
+      console.error('Error fetching units:', unitsError)
+      return NextResponse.json({ 
+        error: unitsError.message,
+        code: unitsError.code 
+      }, { status: 500 })
+    }
 
     return NextResponse.json({
       success: true,
-      building,
-      counts: {
-        units: units?.length || 0,
-        complianceAssets: complianceAssets?.length || 0,
-        emails: emails?.length || 0
-      }
+      totalBuildings: buildings?.length || 0,
+      testBuilding: testBuilding,
+      testBuildingExists: !!testBuilding,
+      unitsForTestBuilding: units?.length || 0,
+      sampleBuildings: buildings?.slice(0, 3)
     })
 
   } catch (error) {
-    console.error('❌ Test building error:', error)
+    console.error('Error in test building API:', error)
     return NextResponse.json({ 
-      error: 'Unexpected error', 
+      error: 'Internal server error',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }
