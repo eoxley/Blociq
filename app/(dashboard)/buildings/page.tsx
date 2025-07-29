@@ -18,17 +18,22 @@ import {
 function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
   const [searchTerm, setSearchTerm] = useState('')
 
+  // Ensure initialBuildings is an array and filter out any invalid entries
+  const validBuildings = initialBuildings.filter(building => 
+    building && typeof building === 'object' && building.id && building.name
+  )
+
   // Filter buildings based on search term (case-insensitive)
   const filteredBuildings = useMemo(() => {
-    if (!searchTerm.trim()) return initialBuildings
+    if (!searchTerm.trim()) return validBuildings
     
-    return initialBuildings.filter(building => {
+    return validBuildings.filter(building => {
       const searchLower = searchTerm.toLowerCase()
-      const nameMatch = building.name?.toLowerCase().includes(searchLower)
-      const addressMatch = building.address?.toLowerCase().includes(searchLower)
+      const nameMatch = building.name && building.name.toLowerCase().includes(searchLower)
+      const addressMatch = building.address && building.address.toLowerCase().includes(searchLower)
       return nameMatch || addressMatch
     })
-  }, [initialBuildings, searchTerm])
+  }, [validBuildings, searchTerm])
 
   return (
     <div>
@@ -74,7 +79,7 @@ function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
         {/* Search Results Count */}
         {searchTerm && (
           <div className="mt-6 text-sm text-gray-600 bg-gray-50 rounded-lg px-4 py-2 inline-block">
-            Showing {filteredBuildings.length} of {initialBuildings.length} buildings
+            Showing {filteredBuildings.length} of {validBuildings.length} buildings
           </div>
         )}
       </div>
@@ -117,25 +122,22 @@ function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
 
               {/* No Units Message */}
               {(building.liveUnitCount || 0) === 0 && (
-                <div className="mb-6">
-                  <p className="text-sm text-gray-400 italic">
-                    No units yet
+                <div className="mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800">
+                    No units assigned yet
                   </p>
                 </div>
               )}
 
-              {/* View Button */}
-              <Link 
-                href={`/buildings/${building.id}`}
-                className="inline-flex items-center gap-3 bg-gradient-to-r from-teal-600 to-teal-700 text-white px-8 py-4 rounded-xl hover:from-teal-700 hover:to-teal-800 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 w-full justify-center text-lg"
-              >
-                <Eye className="h-5 w-5" />
-                View Building
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-
-              {/* View Compliance Link */}
-              <div className="mt-4">
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                <Link 
+                  href={`/buildings/${building.id}`}
+                  className="inline-flex items-center gap-2 bg-gradient-to-r from-teal-600 to-teal-700 text-white rounded-full px-6 py-3 text-sm font-medium hover:from-teal-700 hover:to-teal-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 w-full justify-center"
+                >
+                  <Eye className="h-4 w-4" />
+                  View Details
+                </Link>
                 <Link 
                   href={`/buildings/${building.id}/compliance`}
                   className="inline-flex items-center gap-2 bg-teal-50 text-teal-700 rounded-full px-4 py-2 text-sm font-medium hover:bg-teal-100 transition-colors duration-200"
@@ -166,7 +168,7 @@ function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
             Clear Search
           </button>
         </div>
-      ) : (
+      ) : validBuildings.length === 0 ? (
         /* Empty State - No Buildings - Enhanced */
         <div className="text-center py-20">
           <div className="w-24 h-24 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-lg">
@@ -199,7 +201,7 @@ function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   )
 }
@@ -228,7 +230,26 @@ export default function BuildingsPage() {
         }
         
         console.log('Buildings data:', data)
-        setBuildings(data.buildings || [])
+        console.log('Buildings data type:', typeof data.buildings)
+        console.log('Buildings data is array:', Array.isArray(data.buildings))
+        
+        // Ensure buildings is an array and handle potential undefined values
+        const buildingsData = Array.isArray(data.buildings) ? data.buildings : []
+        
+        console.log('Processed buildings data:', buildingsData)
+        
+        // Clean the data to ensure all required fields exist
+        const cleanedBuildings = buildingsData.map((building: any) => ({
+          id: building?.id || '',
+          name: building?.name || 'Unnamed Building',
+          address: building?.address || null,
+          liveUnitCount: building?.liveUnitCount || 0,
+          // Add any other fields that might be needed
+          ...building
+        }))
+        
+        console.log('Cleaned buildings data:', cleanedBuildings)
+        setBuildings(cleanedBuildings)
       } catch (err) {
         console.error('Error fetching data:', err)
         setError('Unable to load your buildings at this time. Please try again later.')

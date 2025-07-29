@@ -147,13 +147,14 @@ export default function UpcomingEventsWidget() {
     
     // Try exact matches first
     const exactMatch = buildings.find((building) => 
-      searchText.includes(building.name.toLowerCase())
+      building.name && searchText.includes(building.name.toLowerCase())
     );
     if (exactMatch) return exactMatch;
     
     // Try partial matches (building name contains words from event)
     const eventWords = searchText.split(/\s+/).filter(word => word.length > 2);
     const partialMatch = buildings.find((building) => {
+      if (!building.name) return false;
       const buildingWords = building.name.toLowerCase().split(/\s+/);
       return eventWords.some(word => 
         buildingWords.some(buildingWord => buildingWord.includes(word) || word.includes(buildingWord))

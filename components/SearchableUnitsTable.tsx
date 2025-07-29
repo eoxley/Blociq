@@ -34,12 +34,12 @@ export default function SearchableUnitsTable({ units, buildingId }: SearchableUn
     
     return units.filter(unit => {
       // Search by unit number
-      if (unit.unit_number.toLowerCase().includes(searchLower)) return true
+      if (unit.unit_number && unit.unit_number.toLowerCase().includes(searchLower)) return true
       
       // Search by leaseholder name or email
       if (unit.leaseholders && unit.leaseholders.length > 0) {
         return unit.leaseholders.some(leaseholder => 
-          leaseholder.name.toLowerCase().includes(searchLower) ||
+          (leaseholder.name && leaseholder.name.toLowerCase().includes(searchLower)) ||
           (leaseholder.email && leaseholder.email.toLowerCase().includes(searchLower))
         )
       }

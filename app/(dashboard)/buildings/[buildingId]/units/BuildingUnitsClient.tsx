@@ -186,26 +186,7 @@ export default function BuildingUnitsClient({ building, units, buildingId }: Bui
         </div>
       )}
 
-      {/* Summary */}
-      {units.length > 0 && (
-        <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-gray-700">
-                Total Units: {units.length}
-              </p>
-              <p className="text-sm text-gray-500">
-                Building ID: {buildingId}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Badge variant="outline" className="text-sm">
-                {units.length} Total Units
-              </Badge>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Removed summary section with counter cards */}
     </div>
   )
 } 
