@@ -78,6 +78,13 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
       notFound()
     }
 
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(params.buildingId)) {
+      console.error('Invalid UUID format for building ID:', params.buildingId)
+      notFound()
+    }
+
     // Fetch building with basic details first
     const { data: building, error: buildingError } = await supabase
       .from('buildings')
@@ -121,6 +128,9 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
 
     // Fetch units safely - FIXED: Use UUID directly, not parseInt
     let units: Unit[] = []
+    let unitsError: any = null
+    let unitsLoading = true
+    
     try {
       console.log('🔍 Fetching units for building:', params.buildingId)
       
@@ -149,13 +159,27 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
 
       if (unitsError) {
         console.error('❌ Error fetching units:', unitsError)
+        unitsError = unitsError
       } else {
         units = (unitsData as unknown as Unit[]) || []
         console.log('✅ Units fetched successfully:', units.length, 'units found')
         console.log('📋 Units data:', units)
+        
+        // Log individual unit details for debugging
+        units.forEach((unit, index) => {
+          console.log(`📋 Unit ${index + 1}:`, {
+            id: unit.id,
+            unit_number: unit.unit_number,
+            leaseholder_id: unit.leaseholder_id,
+            leaseholder: unit.leaseholders
+          })
+        })
       }
     } catch (unitsError) {
       console.error('❌ Could not fetch units:', unitsError)
+      unitsError = unitsError
+    } finally {
+      unitsLoading = false
     }
 
     // Fetch compliance assets safely
@@ -269,7 +293,35 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
               </div>
             </div>
 
-            <UnifiedUnitsList buildingId={params.buildingId} />
+            {/* Loading State */}
+            {unitsLoading && (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="text-gray-600 mt-2">Loading units...</p>
+              </div>
+            )}
+
+            {/* Error State */}
+            {unitsError && (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Users className="h-8 w-8 text-red-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Error loading units</h3>
+                <p className="text-gray-600 mb-4">Failed to load units for this building.</p>
+                <button 
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
+                >
+                  Try Again
+                </button>
+              </div>
+            )}
+
+            {/* Units List */}
+            {!unitsLoading && !unitsError && (
+              <UnifiedUnitsList buildingId={params.buildingId} units={units} />
+            )}
           </div>
 
           {/* RMC Directors Section */}

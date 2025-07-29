@@ -26,14 +26,12 @@ interface Unit {
 
 interface UnifiedUnitsListProps {
   buildingId: string
+  units: Unit[]
 }
 
-export default function UnifiedUnitsList({ buildingId }: UnifiedUnitsListProps) {
+export default function UnifiedUnitsList({ buildingId, units }: UnifiedUnitsListProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null)
-  const [units, setUnits] = useState<Unit[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
   // Filter units based on search term
   const filteredUnits = (units || []).filter(unit => {
@@ -89,48 +87,21 @@ export default function UnifiedUnitsList({ buildingId }: UnifiedUnitsListProps) 
       </div>
 
       {/* Loading State */}
-      {loading && (
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto"></div>
-          <p className="text-gray-600 mt-2">Loading units...</p>
-        </div>
-      )}
-
       {/* Error State */}
-      {error && (
-        <div className="text-center py-12">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Home className="h-8 w-8 text-red-600" />
-          </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">Error loading units</h3>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm hover:bg-teal-700 transition-colors"
-          >
-            Try Again
-          </button>
-        </div>
-      )}
-
       {/* Empty State */}
-      {!loading && !error && filteredUnits.length === 0 && (
+      {filteredUnits.length === 0 && (
         <div className="text-center py-12">
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Home className="h-8 w-8 text-gray-400" />
           </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            {searchTerm ? 'No units found' : 'No units yet'}
-          </h3>
-          <p className="text-gray-600 mb-4">
-            {searchTerm ? 'Try adjusting your search terms.' : 'No units have been added to this building yet.'}
-          </p>
-          {!searchTerm && (
-            <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500">
-              <Plus className="h-4 w-4 mr-2" />
-              Add your first unit
-            </button>
-          )}
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">No units found</h3>
+          <p className="text-gray-600 mb-4">This building doesn't have any units yet.</p>
+          <button 
+            onClick={() => {/* Add unit functionality */}}
+            className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm hover:bg-teal-700 transition-colors"
+          >
+            Add Unit
+          </button>
         </div>
       )}
 
