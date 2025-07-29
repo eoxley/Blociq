@@ -4,8 +4,7 @@ import { redirect } from 'next/navigation'
 import { notFound } from 'next/navigation'
 import LayoutWithSidebar from '@/components/LayoutWithSidebar'
 import BuildingOverview from './components/BuildingOverview'
-import UnitLeaseholderList from './components/UnitLeaseholderList'
-import UnitList from './components/UnitList'
+import UnifiedUnitsList from './components/UnifiedUnitsList'
 import RMCDirectorsSection from './components/RMCDirectorsSection'
 import ComplianceSection from './components/ComplianceSection'
 import { Building2, AlertTriangle, CheckCircle, Clock, Users, Shield, FileText } from 'lucide-react'
@@ -129,11 +128,15 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
           type,
           floor,
           leaseholder_id,
+          created_at,
           leaseholders (
             id,
             name,
             email,
-            phone
+            phone,
+            is_director,
+            director_since,
+            director_notes
           )
         `)
         .eq('building_id', parseInt(params.buildingId) || 0)
@@ -306,37 +309,18 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
           </div>
 
           {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Left Column */}
             <div className="space-y-8">
-              {/* Units List Section */}
+              {/* Unified Units Section */}
               <div className="bg-white rounded-lg border border-gray-200">
-                <div className="p-6 border-b border-gray-200">
-                  <h2 className="text-xl font-semibold text-gray-900">Units</h2>
-                  <p className="text-sm text-gray-600 mt-1">All units in this building</p>
-                </div>
-                <UnitList 
-                  units={units}
-                  leaseholders={units.map(unit => unit.leaseholders).filter(Boolean) as any[]}
-                  buildingId={params.buildingId}
-                />
+                <UnifiedUnitsList buildingId={params.buildingId} />
               </div>
 
               {/* RMC Directors Section */}
               <RMCDirectorsSection 
                 units={units}
                 buildingId={params.buildingId}
-              />
-            </div>
-
-            {/* Middle Column */}
-            <div className="space-y-8">
-              {/* Units & Leaseholders Section */}
-              <UnitLeaseholderList 
-                units={units}
-                buildingId={params.buildingId}
-                incomingEmails={incomingEmails}
-                communicationsLog={communicationsLog}
               />
             </div>
 
