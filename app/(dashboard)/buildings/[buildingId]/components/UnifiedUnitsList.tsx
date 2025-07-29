@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Home, User, Mail, Phone, Search, Crown, Plus, Eye, FileText, Calendar } from 'lucide-react'
+import { Home, User, Mail, Phone, Search, Crown, Eye, FileText, Calendar } from 'lucide-react'
 
 interface Leaseholder {
   id: string
@@ -74,10 +74,6 @@ export default function UnifiedUnitsList({ buildingId }: UnifiedUnitsListProps) 
           <h2 className="text-xl font-semibold text-gray-900">Units</h2>
           <p className="text-sm text-gray-600 mt-1">All units and leaseholders in this building</p>
         </div>
-        <button className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Unit
-        </button>
       </div>
 
       {/* Search Bar */}
