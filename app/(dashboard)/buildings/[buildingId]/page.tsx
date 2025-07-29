@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { AlertTriangle } from 'lucide-react'
 import BuildingDetailClient from './components/BuildingDetailClient'
+import NotFound from '@/components/NotFound'
 
 interface BuildingDetailPageProps {
   params: {
@@ -52,21 +53,6 @@ interface Unit {
   } | null
 }
 
-interface ComplianceAsset {
-  id: string
-  status: string
-  due_date: string | null
-  priority: string | null
-  notes: string | null
-  compliance_assets?: {
-    id: string
-    category: string
-    title: string
-    description: string | null
-    frequency_months: number | null
-  } | null
-}
-
 interface ComplianceSummary {
   total: number
   compliant: number
@@ -98,16 +84,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
     // Fetch building with all required fields
     const { data: building, error: buildingError } = await supabase
       .from('buildings')
-      .select(`
-        id,
-        name,
-        address,
-        unit_count,
-        notes,
-        is_hrb,
-        created_at,
-        updated_at
-      `)
+      .select('*')
       .eq('id', params.buildingId)
       .maybeSingle()
 
@@ -118,22 +95,13 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
 
     if (!building) {
       console.error('Building not found:', params.buildingId)
-      notFound()
+      return <NotFound title="Building Not Found" message="We couldn't find the building you're looking for." />
     }
 
     // Fetch building setup
     const { data: buildingSetup, error: setupError } = await supabase
       .from('building_setup')
-      .select(`
-        id,
-        building_id,
-        structure_type,
-        operational_notes,
-        client_type,
-        client_name,
-        client_contact,
-        client_email
-      `)
+      .select('*')
       .eq('building_id', params.buildingId)
       .maybeSingle()
 
@@ -192,20 +160,20 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
       console.error('Error fetching compliance assets:', complianceError)
     }
 
-    // Calculate compliance summary
+    // Calculate compliance summary with safe guards
     const complianceSummary: ComplianceSummary = {
-      total: complianceAssets.length,
-      compliant: complianceAssets.filter(asset => asset.status === 'compliant').length,
-      pending: complianceAssets.filter(asset => asset.status === 'pending').length,
-      overdue: complianceAssets.filter(asset => asset.status === 'overdue').length
+      total: complianceAssets?.length || 0,
+      compliant: complianceAssets?.filter(asset => asset.status === 'compliant').length || 0,
+      pending: complianceAssets?.filter(asset => asset.status === 'pending').length || 0,
+      overdue: complianceAssets?.filter(asset => asset.status === 'overdue').length || 0
     }
 
-    // Pass all data to the Client Component
+    // Pass all data to the Client Component with safe guards
     return (
       <BuildingDetailClient
         building={building}
         buildingSetup={buildingSetup}
-        units={units}
+        units={units || []}
         complianceSummary={complianceSummary}
         buildingId={params.buildingId}
       />
