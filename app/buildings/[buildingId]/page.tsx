@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import LayoutWithSidebar from '@/components/LayoutWithSidebar'
 import BuildingOverview from './components/BuildingOverview'
 import UnitLeaseholderList from './components/UnitLeaseholderList'
+import UnitList from './components/UnitList'
 import RMCDirectorsSection from './components/RMCDirectorsSection'
 import ComplianceSection from './components/ComplianceSection'
 import { Building2, AlertTriangle, CheckCircle, Clock, Users, Shield, FileText } from 'lucide-react'
@@ -17,11 +18,13 @@ interface BuildingDetailPageProps {
 
 // Type definitions for better type safety
 interface Unit {
-  id: string
+  id: number
   unit_number: string
-  type?: string | null
-  floor?: string | null
-  leaseholder_id?: string | null
+  type: string | null
+  floor: string | null
+  building_id: number
+  leaseholder_id: string | null
+  created_at: string | null
   leaseholders?: {
     id: string
     name: string | null
@@ -303,8 +306,30 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
           </div>
 
           {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Left Column */}
+            <div className="space-y-8">
+              {/* Units List Section */}
+              <div className="bg-white rounded-lg border border-gray-200">
+                <div className="p-6 border-b border-gray-200">
+                  <h2 className="text-xl font-semibold text-gray-900">Units</h2>
+                  <p className="text-sm text-gray-600 mt-1">All units in this building</p>
+                </div>
+                <UnitList 
+                  units={units}
+                  leaseholders={units.map(unit => unit.leaseholders).filter(Boolean) as any[]}
+                  buildingId={params.buildingId}
+                />
+              </div>
+
+              {/* RMC Directors Section */}
+              <RMCDirectorsSection 
+                units={units}
+                buildingId={params.buildingId}
+              />
+            </div>
+
+            {/* Middle Column */}
             <div className="space-y-8">
               {/* Units & Leaseholders Section */}
               <UnitLeaseholderList 
@@ -312,12 +337,6 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
                 buildingId={params.buildingId}
                 incomingEmails={incomingEmails}
                 communicationsLog={communicationsLog}
-              />
-
-              {/* RMC Directors Section */}
-              <RMCDirectorsSection 
-                units={units}
-                buildingId={params.buildingId}
               />
             </div>
 
