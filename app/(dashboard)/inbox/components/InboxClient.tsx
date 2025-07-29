@@ -7,10 +7,15 @@ interface Email {
   id: string
   subject: string | null
   from_email: string
-  to_email: string | null
-  body_preview: string | null
+  from_name: string | null
+  body: string | null
   received_at: string
-  message_id: string | null
+  handled: boolean
+  unread: boolean
+  thread_id: string | null
+  user_id: string | null
+  created_at: string
+  updated_at: string
 }
 
 interface InboxClientProps {
@@ -91,7 +96,8 @@ export default function InboxClient({ emails }: InboxClientProps) {
               <div>
                 <h1 className="text-3xl font-bold">Inbox</h1>
                 <p className="text-white/80 text-lg">
-                  {emails.length} email{emails.length !== 1 ? 's' : ''}
+                  {emails.length} email{emails.length !== 1 ? 's' : ''} • 
+                  {emails.filter(e => e.unread).length} unread
                 </p>
               </div>
             </div>
@@ -120,6 +126,10 @@ export default function InboxClient({ emails }: InboxClientProps) {
                 <h2 className="text-xl font-semibold text-gray-900">Messages</h2>
                 <div className="flex items-center space-x-2">
                   <span className="text-sm text-gray-500">
+                    {emails.filter(e => e.unread).length} unread
+                  </span>
+                  <span className="text-sm text-gray-500">•</span>
+                  <span className="text-sm text-gray-500">
                     {emails.length} total
                   </span>
                 </div>
@@ -133,18 +143,27 @@ export default function InboxClient({ emails }: InboxClientProps) {
               emails.map((email) => (
                 <div 
                   key={email.id} 
-                  className="p-6 hover:bg-gray-50 transition-colors cursor-pointer"
+                  className={`p-6 hover:bg-gray-50 transition-colors cursor-pointer ${email.unread ? 'bg-blue-50' : ''}`}
                 >
                   <div className="flex items-start space-x-4">
                     <div className="flex-shrink-0">
-                      <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                      {email.unread ? (
+                        <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                      ) : (
+                        <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          <p className="text-sm font-medium text-gray-700">
-                            {email.from_email}
+                          <p className={`text-sm font-medium ${email.unread ? 'text-gray-900' : 'text-gray-700'}`}>
+                            {email.from_name || email.from_email}
                           </p>
+                          {email.unread && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              New
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center space-x-2">
                           <span className="text-xs text-gray-500">
@@ -155,11 +174,11 @@ export default function InboxClient({ emails }: InboxClientProps) {
                           </span>
                         </div>
                       </div>
-                      <p className="text-sm font-medium mt-1 text-gray-700">
+                      <p className={`text-sm font-medium mt-1 ${email.unread ? 'text-gray-900' : 'text-gray-700'}`}>
                         {email.subject || 'No Subject'}
                       </p>
                       <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                        {email.body_preview || 'No preview available'}
+                        {email.body?.substring(0, 150) || 'No preview available'}
                       </p>
                     </div>
                   </div>

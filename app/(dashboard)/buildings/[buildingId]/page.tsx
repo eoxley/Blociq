@@ -3,7 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { AlertTriangle } from 'lucide-react'
 import BuildingDetailClient from './components/BuildingDetailClient'
-import NotFound from '@/components/NotFound'
+import NotFound from '../../../../components/NotFound'
 
 interface BuildingDetailPageProps {
   params: {
@@ -42,15 +42,6 @@ interface Unit {
   building_id: string
   leaseholder_id: string | null
   created_at: string | null
-  leaseholders?: {
-    id: string
-    name: string | null
-    email: string | null
-    phone: string | null
-    is_director: boolean | null
-    director_since: string | null
-    director_notes: string | null
-  } | null
 }
 
 interface ComplianceSummary {
@@ -109,33 +100,19 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
       console.error('Error fetching building setup:', setupError)
     }
 
-    // Fetch units with leaseholder information
+    // Fetch units with simple query (no leaseholder joins)
     const { data: units = [], error: unitsError } = await supabase
       .from('units')
-      .select(`
-        id,
-        unit_number,
-        type,
-        floor,
-        building_id,
-        leaseholder_id,
-        created_at,
-        leaseholders (
-          id,
-          name,
-          email,
-          phone,
-          is_director,
-          director_since,
-          director_notes
-        )
-      `)
+      .select('id, unit_number, type, floor, building_id, leaseholder_id, created_at')
       .eq('building_id', params.buildingId)
       .order('unit_number')
 
     if (unitsError) {
       console.error('Error fetching units:', unitsError)
     }
+
+    // Debug log for development
+    console.log("Units loaded:", units)
 
     // Fetch compliance assets for summary
     const { data: complianceAssets = [], error: complianceError } = await supabase
