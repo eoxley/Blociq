@@ -293,7 +293,7 @@ export default function NewInboxClient({
   const handleSync = async () => {
     setIsSyncing(true)
     try {
-      const response = await fetch('/api/sync-inbox', {
+      const response = await fetch('/api/sync-emails', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -347,7 +347,13 @@ export default function NewInboxClient({
       } else {
         const error = await response.json()
         console.error('Sync error:', error)
-        toast.error(error.message || 'Failed to sync emails')
+        
+        // Show specific error message for token/connection issues
+        if (error.error === 'Outlook not connected' || error.message?.includes('connect')) {
+          toast.error('Email sync failed – please reconnect Outlook in settings.')
+        } else {
+          toast.error(error.message || 'Failed to sync emails')
+        }
       }
     } catch (error) {
       console.error('Error syncing emails:', error)
@@ -517,7 +523,7 @@ export default function NewInboxClient({
               ) : (
                 <RefreshCw className="h-4 w-4 mr-2" />
               )}
-              {isSyncing ? 'Syncing...' : 'Sync Emails'}
+              {isSyncing ? 'Syncing...' : 'Sync Inbox'}
             </BlocIQButton>
             <BlocIQButton 
               onClick={() => setIsComposeModalOpen(true)}

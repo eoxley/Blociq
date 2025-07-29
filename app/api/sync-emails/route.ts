@@ -1,216 +1,200 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
-
-export async function GET(req: NextRequest) {
-  return await syncEmails(req);
-}
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/utils/supabase/server';
 
 export async function POST(req: NextRequest) {
-  return await syncEmails(req);
-}
-
-async function syncEmails(req: NextRequest) {
   try {
-    console.log("📧 Starting email sync process...");
-    
-    const supabase = createRouteHandlerClient({ cookies });
-    
-    // Get the current user
+    // ✅ 1. Supabase Auth Session
+    const supabase = createClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
-      console.error("❌ User authentication failed:", userError);
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      console.error('User not authenticated:', userError);
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    console.log("✅ User authenticated:", user.id);
+    const userId = user.id;
+    console.log('✅ User authenticated:', userId);
 
-    // Get the most recent valid token for this user
-    const { data: tokens, error: tokenError } = await supabase
+    // ✅ 2. Get Token From outlook_tokens for testbloc@blociq.co.uk
+    const { data: token, error: tokenError } = await supabase
       .from("outlook_tokens")
       .select("*")
-      .eq("user_id", user.id)
-      .order("expires_at", { ascending: false })
-      .limit(1)
+      .eq("email", "testbloc@blociq.co.uk")
       .single();
 
-    if (tokenError || !tokens) {
-      console.error("❌ No valid Outlook token found:", tokenError);
-      return NextResponse.json({ error: "No valid Outlook token found. Please connect your Outlook account first." }, { status: 401 });
+    if (tokenError || !token) {
+      console.error('No Outlook token found for testbloc@blociq.co.uk');
+      return NextResponse.json({ 
+        error: 'Outlook not connected', 
+        message: 'Please connect your Outlook account first' 
+      }, { status: 400 });
     }
 
-    console.log("✅ Outlook token found, expires at:", tokens.expires_at);
+    console.log('✅ Found Outlook token for testbloc@blociq.co.uk');
 
     // Check if token is expired
-    if (new Date(tokens.expires_at) < new Date()) {
-      console.error("❌ Outlook token has expired");
-      return NextResponse.json({ error: "Outlook token has expired. Please reconnect your account." }, { status: 401 });
+    const now = new Date();
+    const expiresAt = new Date(token.expires_at);
+    let refreshedToken = false;
+
+    if (expiresAt <= now) {
+      console.log('🔄 Token expired, refreshing...');
+      
+      // Refresh token
+      const tenantId = process.env.OUTLOOK_TENANT_ID || 'common';
+      const refreshResponse = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          client_id: process.env.OUTLOOK_CLIENT_ID!,
+          client_secret: process.env.OUTLOOK_CLIENT_SECRET!,
+          grant_type: 'refresh_token',
+          refresh_token: token.refresh_token,
+          redirect_uri: process.env.OUTLOOK_REDIRECT_URI!,
+        }),
+      });
+
+      if (!refreshResponse.ok) {
+        const errorText = await refreshResponse.text();
+        console.error('❌ Failed to refresh token:', errorText);
+        return NextResponse.json({ 
+          error: 'Failed to refresh Outlook token',
+          details: process.env.NODE_ENV === 'development' ? errorText : undefined
+        }, { status: 500 });
+      }
+
+      const refreshData = await refreshResponse.json();
+      const newExpiresAt = new Date(Date.now() + refreshData.expires_in * 1000).toISOString();
+
+      // Update the stored access_token + expires_at
+      const { error: updateError } = await supabase
+        .from("outlook_tokens")
+        .update({
+          access_token: refreshData.access_token,
+          refresh_token: refreshData.refresh_token,
+          expires_at: newExpiresAt
+        })
+        .eq("email", "testbloc@blociq.co.uk");
+
+      if (updateError) {
+        console.error('Failed to update token:', updateError);
+        return NextResponse.json({ error: 'Failed to update token' }, { status: 500 });
+      }
+
+      token.access_token = refreshData.access_token;
+      refreshedToken = true;
+      console.log('✅ Token refreshed successfully');
     }
 
-    // Fetch emails from Microsoft Graph API
-    console.log("📡 Calling Microsoft Graph API for emails...");
-    console.log("🔗 API URL: https://graph.microsoft.com/v1.0/me/messages");
+    // ✅ 3. Call Microsoft Graph for the last 50 emails
+    console.log('🔄 Fetching last 50 emails from Microsoft Graph...');
     
-    const graphApiUrl = "https://graph.microsoft.com/v1.0/me/messages?$top=50&$orderby=receivedDateTime desc&$select=id,subject,from,toRecipients,ccRecipients,body,bodyPreview,internetMessageId,conversationId,receivedDateTime,isRead,flag,categories,importance,hasAttachments";
-    
-    console.log("📋 Request parameters:");
-    console.log("  - Top: 50 emails");
-    console.log("  - Order by: receivedDateTime desc");
-    console.log("  - Select: All relevant fields");
-    
-    const response = await fetch(graphApiUrl, {
+    const graphResponse = await fetch('https://graph.microsoft.com/v1.0/me/messages?$top=50&$orderby=receivedDateTime desc', {
       headers: {
-        Authorization: `Bearer ${tokens.access_token}`,
-        "Content-Type": "application/json",
+        'Authorization': `Bearer ${token.access_token}`,
+        'Content-Type': 'application/json',
       },
     });
 
-    console.log("📡 Graph API Response Status:", response.status);
-    console.log("📡 Graph API Response Headers:", Object.fromEntries(response.headers.entries()));
+    console.log('📡 Graph API response status:', graphResponse.status, graphResponse.statusText);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("❌ Microsoft Graph API error:", errorData);
+    if (!graphResponse.ok) {
+      const errorText = await graphResponse.text();
+      console.error('❌ Failed to fetch emails from Microsoft Graph:', errorText);
+      console.error('❌ Response status:', graphResponse.status, graphResponse.statusText);
       return NextResponse.json({ 
-        error: "Failed to fetch emails from Outlook",
-        details: errorData
-      }, { status: response.status });
-    }
-
-    const result = await response.json();
-    const emails = result.value || [];
-    
-    console.log("📧 Raw emails response summary:");
-    console.log("  - Total emails received:", emails.length);
-    console.log("  - Response has @odata.nextLink:", !!result["@odata.nextLink"]);
-    
-    // Log sample emails for debugging
-    if (emails.length > 0) {
-      console.log("📧 Sample emails (first 3):");
-      emails.slice(0, 3).forEach((email: any, index: number) => {
-        console.log(`  Email ${index + 1}:`);
-        console.log(`    - ID: ${email.id}`);
-        console.log(`    - Subject: ${email.subject || 'No Subject'}`);
-        console.log(`    - From: ${email.from?.emailAddress?.address || 'No sender'}`);
-        console.log(`    - Received: ${email.receivedDateTime || 'No date'}`);
-        console.log(`    - Is Read: ${email.isRead || false}`);
-        console.log(`    - Has Attachments: ${email.hasAttachments || false}`);
-        console.log(`    - Importance: ${email.importance || 'normal'}`);
-        console.log(`    - Categories: ${email.categories?.join(', ') || 'No categories'}`);
-      });
-    } else {
-      console.log("⚠️ No emails found in the response");
-    }
-
-    // Transform emails for database insertion
-    console.log("🔄 Transforming emails for database insertion...");
-    
-    const inserts = emails.map((email: any) => {
-      const transformedEmail = {
-        outlook_message_id: email.id,
-        message_id: email.internetMessageId,
-        thread_id: email.conversationId,
-        subject: email.subject || "(No subject)",
-        from_email: email.from?.emailAddress?.address || null,
-        from_name: email.from?.emailAddress?.name || null,
-        to_email: email.toRecipients?.map((r: any) => r.emailAddress?.address).filter(Boolean) || [],
-        cc_email: email.ccRecipients?.map((r: any) => r.emailAddress?.address).filter(Boolean) || [],
-        body_full: email.body?.content || null,
-        body_preview: email.bodyPreview || null,
-        received_at: email.receivedDateTime,
-        is_read: email.isRead || false,
-        is_handled: false,
-        is_deleted: false,
-        folder: "inbox",
-        importance: email.importance || "normal",
-        has_attachments: email.hasAttachments || false,
-        flag_status: email.flag?.flagStatus || "notFlagged",
-        categories: email.categories || [],
-        user_id: user.id,
-        last_sync_at: new Date().toISOString(),
-      };
-      
-      return transformedEmail;
-    });
-
-    console.log("✅ Transformed emails for database insertion");
-    console.log(`📊 Insert summary: ${inserts.length} emails ready for upsert`);
-
-    // Log sample transformed emails
-    if (inserts.length > 0) {
-      console.log("📧 Sample transformed emails (first 2):");
-      inserts.slice(0, 2).forEach((email: any, index: number) => {
-        console.log(`  Transformed Email ${index + 1}:`);
-        console.log(`    - Outlook Message ID: ${email.outlook_message_id}`);
-        console.log(`    - Subject: ${email.subject}`);
-        console.log(`    - From Email: ${email.from_email}`);
-        console.log(`    - From Name: ${email.from_name}`);
-        console.log(`    - Received At: ${email.received_at}`);
-        console.log(`    - Is Read: ${email.is_read}`);
-        console.log(`    - Has Attachments: ${email.has_attachments}`);
-        console.log(`    - Categories: ${email.categories.length}`);
-      });
-    }
-
-    // Upsert emails to database
-    console.log("💾 Upserting emails to database...");
-    
-    const { data: upsertData, error: insertError } = await supabase
-      .from("incoming_emails")
-      .upsert(inserts, { 
-        onConflict: "outlook_message_id",
-        ignoreDuplicates: false 
-      });
-
-    if (insertError) {
-      console.error("❌ Database insert error:", insertError);
-      return NextResponse.json({ 
-        error: "Failed to save emails to database",
-        details: insertError
+        error: 'Failed to fetch emails from Outlook',
+        details: process.env.NODE_ENV === 'development' ? errorText : undefined
       }, { status: 500 });
     }
 
-    console.log("✅ Database upsert completed successfully");
-    console.log("📊 Upsert result:", upsertData);
+    const graphData = await graphResponse.json();
+    const messages = graphData.value || [];
+    console.log(`✅ Fetched ${messages.length} messages from Outlook`);
 
-    // Verify the sync by checking database count
-    const { count: dbCount, error: countError } = await supabase
-      .from("incoming_emails")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("is_deleted", false);
+    // ✅ 4. Save emails to incoming_emails table
+    let insertedCount = 0;
+    let totalProcessed = 0;
 
-    if (countError) {
-      console.error("⚠️ Could not verify database count:", countError);
-    } else {
-      console.log(`📊 Total emails in database for user: ${dbCount}`);
+    for (const message of messages) {
+      totalProcessed++;
+      const {
+        subject,
+        bodyPreview,
+        receivedDateTime,
+        from,
+        internetMessageId,
+        body
+      } = message;
+
+      const fromEmail = from?.emailAddress?.address;
+      const fromName = from?.emailAddress?.name;
+      
+      if (!fromEmail || !internetMessageId) {
+        console.warn('Skipping message without required fields:', { subject, fromEmail, internetMessageId });
+        continue;
+      }
+
+      // Check for existing row with same outlook_message_id
+      const { data: existingEmail } = await supabase
+        .from("incoming_emails")
+        .select("id")
+        .eq("outlook_message_id", internetMessageId)
+        .single();
+
+      if (existingEmail) {
+        console.log('Email already exists, skipping:', subject);
+        continue;
+      }
+
+      // Insert new email
+      const { error: insertError } = await supabase
+        .from("incoming_emails")
+        .insert({
+          outlook_message_id: internetMessageId,
+          subject: subject || '(No Subject)',
+          body_preview: bodyPreview || '',
+          body: body?.content || '',
+          from_email: fromEmail,
+          from_name: fromName || '',
+          received_at: receivedDateTime,
+          is_handled: false,
+          is_read: false,
+          user_id: userId,
+          folder: 'inbox',
+          sync_status: 'synced',
+          last_sync_at: new Date().toISOString()
+        });
+
+      if (insertError) {
+        console.error('Failed to insert email:', insertError);
+        continue;
+      }
+
+      insertedCount++;
+      console.log('✅ Inserted email:', subject);
     }
 
-    const responseData = {
+    // ✅ 5. Return a Clean JSON Response
+    const response = {
       success: true,
-      message: "Emails synced successfully",
-      count: inserts.length,
-      total_in_db: dbCount || 0,
-      synced_at: new Date().toISOString(),
-      debug_info: {
-        api_url: graphApiUrl,
-        response_status: response.status,
-        emails_received: emails.length,
-        emails_transformed: inserts.length
-      }
+      syncedCount: insertedCount,
+      totalProcessed: totalProcessed,
+      refreshedToken: refreshedToken,
+      userEmail: token.email
     };
 
-    console.log("🎉 Email sync completed successfully");
-    console.log("📊 Final sync summary:", responseData);
+    console.log('📊 Sync completed:', response);
 
-    return NextResponse.json(responseData);
+    return NextResponse.json(response);
 
   } catch (error) {
-    console.error("❌ Email sync error:", error);
+    console.error('❌ Sync emails error:', error);
     return NextResponse.json({ 
-      error: "Internal server error during email sync",
-      details: error instanceof Error ? error.message : "Unknown error"
+      error: 'Failed to sync emails',
+      details: process.env.NODE_ENV === 'development' ? error instanceof Error ? error.message : 'Unknown error' : undefined
     }, { status: 500 });
   }
 }
