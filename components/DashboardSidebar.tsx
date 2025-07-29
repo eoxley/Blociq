@@ -11,7 +11,7 @@ import { BlocIQBadge } from '@/components/ui/blociq-badge';
 
 const navItems = [
   { label: "Home", icon: "🏠", href: "/home", comingSoon: false, description: "Dashboard overview" },
-  { label: "Inbox", icon: "📥", href: "/dashboard/inbox", comingSoon: false, description: "Email management" },
+  { label: "Inbox", icon: "📥", href: "/inbox", comingSoon: false, description: "Email management" },
   { label: "Buildings", icon: "🏢", href: "/buildings", comingSoon: false, description: "Property portfolio" },
   { label: "Compliance", icon: "🛡️", href: "/compliance", comingSoon: false, description: "Regulatory tracking" },
   { label: "Communications", icon: "📣", href: "/dashboard/communications", comingSoon: false, description: "Letter & email templates" },

@@ -110,7 +110,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
       const { data: setupData } = await supabase
         .from('building_setup')
         .select('structure_type, operational_notes, client_type, client_name, client_contact, client_email')
-        .eq('building_id', parseInt(params.buildingId) || 0)
+        .eq('building_id', params.buildingId) // FIXED: Use UUID directly, not parseInt
         .maybeSingle()
       
       buildingSetup = setupData
@@ -177,7 +177,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
             frequency_months
           )
         `)
-        .eq('building_id', parseInt(params.buildingId) || 0)
+        .eq('building_id', params.buildingId) // FIXED: Use UUID directly, not parseInt
 
       if (assetsError) {
         console.warn('Error fetching compliance assets:', assetsError)
@@ -194,7 +194,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
       const { data: docsData, error: docsError } = await supabase
         .from('compliance_documents')
         .select('*')
-        .eq('building_id', parseInt(params.buildingId) || 0)
+        .eq('building_id', params.buildingId) // FIXED: Use UUID directly, not parseInt
 
       if (docsError) {
         console.warn('Error fetching compliance documents:', docsError)
@@ -263,7 +263,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
                 <div>
                   <h2 className="text-xl font-semibold text-gray-900">Units</h2>
                   <p className="text-sm text-gray-600">
-                    {units.length} unit{units.length !== 1 ? 's' : ''} in this building
+                    {(units || []).length} unit{(units || []).length !== 1 ? 's' : ''} in this building
                   </p>
                 </div>
               </div>
@@ -274,7 +274,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
 
           {/* RMC Directors Section */}
           <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
-            <RMCDirectorsSection buildingId={params.buildingId} />
+            <RMCDirectorsSection units={units} buildingId={params.buildingId} />
           </div>
         </div>
 
@@ -303,9 +303,9 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
               </div>
             </div>
 
-            {communications.length > 0 ? (
+            {(communications || []).length > 0 ? (
               <div className="space-y-4">
-                {communications.slice(0, 5).map((comm) => (
+                {(communications || []).slice(0, 5).map((comm) => (
                   <div key={comm.id} className="border-l-4 border-green-500 pl-4 py-2">
                     <h3 className="font-medium text-gray-900">{comm.subject}</h3>
                     <p className="text-sm text-gray-600">{comm.content}</p>
@@ -339,9 +339,9 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
               </div>
             </div>
 
-            {incomingEmails.length > 0 ? (
+            {(incomingEmails || []).length > 0 ? (
               <div className="space-y-4">
-                {incomingEmails.slice(0, 5).map((email) => (
+                {(incomingEmails || []).slice(0, 5).map((email) => (
                   <div key={email.id} className="border-l-4 border-purple-500 pl-4 py-2">
                     <h3 className="font-medium text-gray-900">{email.subject}</h3>
                     <p className="text-sm text-gray-600">{email.from_name} ({email.from_email})</p>

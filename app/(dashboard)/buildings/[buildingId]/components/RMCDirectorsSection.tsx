@@ -29,7 +29,7 @@ export default function RMCDirectorsSection({ units, buildingId }: RMCDirectorsS
   })
 
   // Filter units to get directors
-  const directors = units.filter(unit => unit.leaseholders?.is_director)
+  const directors = (units || []).filter(unit => unit.leaseholders?.is_director)
 
   const handleToggleDirector = async (unitId: string, leaseholderId: string, isDirector: boolean) => {
     setIsLoading(true)
