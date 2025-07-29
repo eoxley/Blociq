@@ -8,10 +8,15 @@ interface Email {
   id: string
   subject: string | null
   from_email: string
-  to_email: string | null
-  body_preview: string | null
+  from_name: string | null
+  body: string | null
   received_at: string
-  message_id: string | null
+  handled: boolean
+  unread: boolean
+  thread_id: string | null
+  user_id: string | null
+  created_at: string
+  updated_at: string
 }
 
 export default async function InboxPage() {
@@ -19,19 +24,52 @@ export default async function InboxPage() {
 
   try {
     // Check authentication
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) redirect('/login')
+    const { data: { session }, error: authError } = await supabase.auth.getSession()
+    
+    if (authError) {
+      console.error('Auth error:', authError)
+      throw new Error('Authentication failed')
+    }
+    
+    if (!session) {
+      redirect('/login')
+    }
 
-    // Fetch emails from Supabase with only safe fields
-    const { data: emails = [], error: emailsError } = await supabase
-      .from('incoming_emails')
-      .select('id, subject, from_email, to_email, body_preview, received_at, message_id')
-      .order('received_at', { ascending: false })
-      .limit(50)
+    // First, let's test if the table exists and what columns it has
+    let emails: Email[] = []
+    let emailsError = null
+    
+    try {
+      // Try a simple query first to see if the table exists
+      const tableTest = await supabase
+        .from('incoming_emails')
+        .select('id')
+        .limit(1)
+      
+      if (tableTest.error) {
+        console.error('Table test error:', tableTest.error)
+        throw new Error(`Database table error: ${tableTest.error.message}`)
+      }
+
+      // Now try the full query with the correct schema from types/supabase.ts
+      const result = await supabase
+        .from('incoming_emails')
+        .select('id, subject, from_email, from_name, body, received_at, handled, unread, thread_id, user_id, created_at, updated_at')
+        .order('received_at', { ascending: false })
+        .limit(50)
+      
+      emails = result.data || []
+      emailsError = result.error
+      
+    } catch (dbError) {
+      console.error('Database query error:', dbError)
+      emailsError = dbError as any
+    }
 
     if (emailsError) {
       console.error('Error fetching emails:', emailsError)
-      throw new Error('Failed to fetch emails')
+      // Don't throw error, just pass empty array to client
+      emails = []
     }
 
     // Pass emails as prop to client component

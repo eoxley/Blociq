@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Building2, AlertTriangle, CheckCircle, Clock, Users, Shield, FileText, Mail, Search, Edit3, Save, X, Home, Wrench, Calendar } from 'lucide-react'
 import Link from 'next/link'
-import UnitsSearch from './UnitsSearch'
+import BuildingUnitsClient from './BuildingUnitsClient'
 
 interface Building {
   id: string
@@ -35,15 +35,6 @@ interface Unit {
   building_id: string
   leaseholder_id: string | null
   created_at: string | null
-  leaseholders?: {
-    id: string
-    name: string | null
-    email: string | null
-    phone: string | null
-    is_director: boolean | null
-    director_since: string | null
-    director_notes: string | null
-  } | null
 }
 
 interface ComplianceSummary {
@@ -253,7 +244,7 @@ export default function BuildingDetailClient({
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">Units</h2>
               </div>
-              <UnitsSearch units={units || []} buildingId={buildingId} />
+              <BuildingUnitsClient units={units || []} buildingId={buildingId} />
             </div>
           </div>
 
