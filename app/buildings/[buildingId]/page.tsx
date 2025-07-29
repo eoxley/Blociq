@@ -15,36 +15,82 @@ interface BuildingDetailPageProps {
   }
 }
 
+// Type definitions for better type safety
+interface Unit {
+  id: string
+  unit_number: string
+  type?: string | null
+  floor?: string | null
+  leaseholder_id?: string | null
+  leaseholders?: {
+    id: string
+    name: string | null
+    email: string | null
+    phone?: string | null
+  } | null
+}
+
+interface ComplianceAsset {
+  id: string
+  status: string
+  due_date?: string | null
+  priority?: string | null
+  notes?: string | null
+  compliance_assets?: {
+    id: string
+    category: string
+    title: string
+    description?: string | null
+    frequency_months?: number | null
+  } | null
+}
+
+interface ComplianceDocument {
+  id: string
+  [key: string]: any
+}
+
+interface IncomingEmail {
+  id: string
+  [key: string]: any
+}
+
+interface Communication {
+  id: string
+  [key: string]: any
+}
+
 export default async function BuildingDetailPage({ params }: BuildingDetailPageProps) {
   const supabase = createClient(cookies())
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) redirect('/login')
-
+  
   try {
-    // Fetch building with all details
+    // Check authentication first
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) redirect('/login')
+
+    // Validate building ID format
+    if (!params.buildingId || typeof params.buildingId !== 'string') {
+      console.error('Invalid building ID:', params.buildingId)
+      notFound()
+    }
+
+    // Fetch building with basic details first
     const { data: building, error: buildingError } = await supabase
       .from('buildings')
-      .select(`
-        *,
-        building_setup (
-          structure_type,
-          operational_notes,
-          client_type,
-          client_name,
-          client_contact,
-          client_email
-        )
-      `)
+      .select('id, name, address, unit_count, created_at')
       .eq('id', params.buildingId)
       .maybeSingle()
 
     if (buildingError) {
       console.error('Error fetching building:', buildingError)
       
-      // Check if it's a column error
+      // Check for specific database errors
       if (buildingError.message.includes('column') && buildingError.message.includes('does not exist')) {
-        console.error('Database schema issue detected - missing column')
         throw new Error('Database schema issue: A required column is missing. Please run database migrations.')
+      } else if (buildingError.message.includes('relation') && buildingError.message.includes('does not exist')) {
+        throw new Error('Database table issue: The buildings table is missing. Please run database migrations.')
+      } else if (buildingError.message.includes('permission')) {
+        throw new Error('Permission denied: You do not have access to this building.')
       }
       
       throw buildingError
@@ -54,85 +100,143 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
       notFound()
     }
 
-    // Fetch units with leaseholder information
-    const { data: units, error: unitsError } = await supabase
-      .from('units')
-      .select(`
-        *,
-        leaseholders (
+    // Fetch additional building details safely
+    let buildingSetup = null
+    try {
+      const { data: setupData } = await supabase
+        .from('building_setup')
+        .select('structure_type, operational_notes, client_type, client_name, client_contact, client_email')
+        .eq('building_id', parseInt(params.buildingId) || 0)
+        .maybeSingle()
+      
+      buildingSetup = setupData
+    } catch (setupError) {
+      console.warn('Could not fetch building setup:', setupError)
+      // Continue without building setup data
+    }
+
+    // Fetch units safely
+    let units: Unit[] = []
+    try {
+      const { data: unitsData, error: unitsError } = await supabase
+        .from('units')
+        .select(`
           id,
-          name,
-          email,
-          phone
-        )
-      `)
-      .eq('building_id', params.buildingId as string)
-      .order('unit_number')
+          unit_number,
+          type,
+          floor,
+          leaseholder_id,
+          leaseholders (
+            id,
+            name,
+            email,
+            phone
+          )
+        `)
+        .eq('building_id', parseInt(params.buildingId) || 0)
+        .order('unit_number')
 
-    if (unitsError) {
-      console.error('Error fetching units:', unitsError)
+      if (unitsError) {
+        console.warn('Error fetching units:', unitsError)
+      } else {
+        units = (unitsData as unknown as Unit[]) || []
+      }
+    } catch (unitsError) {
+      console.warn('Could not fetch units:', unitsError)
     }
 
-    // Fetch compliance assets
-    const { data: complianceAssets, error: complianceAssetsError } = await supabase
-      .from('building_compliance_assets')
-      .select(`
-        *,
-        compliance_assets (
+    // Fetch compliance assets safely
+    let complianceAssets: ComplianceAsset[] = []
+    try {
+      const { data: assetsData, error: assetsError } = await supabase
+        .from('building_compliance_assets')
+        .select(`
           id,
-          category,
-          title,
-          description,
-          frequency_months
-        )
-      `)
-      .eq('building_id', params.buildingId)
+          status,
+          due_date,
+          priority,
+          notes,
+          compliance_assets (
+            id,
+            category,
+            title,
+            description,
+            frequency_months
+          )
+        `)
+        .eq('building_id', parseInt(params.buildingId) || 0)
 
-    if (complianceAssetsError) {
-      console.error('Error fetching compliance assets:', complianceAssetsError)
+      if (assetsError) {
+        console.warn('Error fetching compliance assets:', assetsError)
+      } else {
+        complianceAssets = (assetsData as unknown as ComplianceAsset[]) || []
+      }
+    } catch (assetsError) {
+      console.warn('Could not fetch compliance assets:', assetsError)
     }
 
-    // Fetch compliance documents
-    const { data: complianceDocuments, error: complianceDocsError } = await supabase
-      .from('compliance_documents')
-      .select('*')
-      .eq('building_id', params.buildingId)
+    // Fetch compliance documents safely
+    let complianceDocuments: ComplianceDocument[] = []
+    try {
+      const { data: docsData, error: docsError } = await supabase
+        .from('compliance_documents')
+        .select('*')
+        .eq('building_id', parseInt(params.buildingId) || 0)
 
-    if (complianceDocsError) {
-      console.error('Error fetching compliance documents:', complianceDocsError)
+      if (docsError) {
+        console.warn('Error fetching compliance documents:', docsError)
+      } else {
+        complianceDocuments = (docsData as ComplianceDocument[]) || []
+      }
+    } catch (docsError) {
+      console.warn('Could not fetch compliance documents:', docsError)
     }
 
-    // Fetch incoming emails for correspondence
-    const { data: incomingEmails, error: emailsError } = await supabase
-      .from('incoming_emails')
-      .select('*')
-      .eq('building_id', params.buildingId)
-      .order('received_at', { ascending: false })
-      .limit(50)
+    // Fetch incoming emails safely
+    let incomingEmails: IncomingEmail[] = []
+    try {
+      const { data: emailsData, error: emailsError } = await supabase
+        .from('incoming_emails')
+        .select('*')
+        .eq('building_id', parseInt(params.buildingId) || 0)
+        .order('received_at', { ascending: false })
+        .limit(50)
 
-    if (emailsError) {
-      console.error('Error fetching incoming emails:', emailsError)
+      if (emailsError) {
+        console.warn('Error fetching incoming emails:', emailsError)
+      } else {
+        incomingEmails = (emailsData as IncomingEmail[]) || []
+      }
+    } catch (emailsError) {
+      console.warn('Could not fetch incoming emails:', emailsError)
     }
 
-    // Fetch communications log
-    const { data: communicationsLog, error: commsError } = await supabase
-      .from('communications')
-      .select('*')
-      .eq('building_id', params.buildingId)
-      .order('created_at', { ascending: false })
-      .limit(50)
+    // Fetch communications log safely
+    let communicationsLog: Communication[] = []
+    try {
+      const { data: commsData, error: commsError } = await supabase
+        .from('communications')
+        .select('*')
+        .eq('building_id', params.buildingId)
+        .order('created_at', { ascending: false })
+        .limit(50)
 
-    if (commsError) {
-      console.error('Error fetching communications log:', commsError)
+      if (commsError) {
+        console.warn('Error fetching communications log:', commsError)
+      } else {
+        communicationsLog = (commsData as Communication[]) || []
+      }
+    } catch (commsError) {
+      console.warn('Could not fetch communications log:', commsError)
     }
 
-    // Calculate statistics
-    const totalUnits = units?.length || 0
-    const totalLeaseholders = units?.filter(unit => unit.leaseholders).length || 0
+    // Calculate statistics safely
+    const totalUnits = units.length
+    const totalLeaseholders = units.filter(unit => unit.leaseholders).length
     const directors = 0 // Temporarily set to 0 until director fields are properly migrated
-    const totalCompliance = complianceAssets?.length || 0
-    const compliantCount = complianceAssets?.filter(asset => asset.status === 'compliant').length || 0
-    const overdueCount = complianceAssets?.filter(asset => asset.status === 'overdue').length || 0
+    const totalCompliance = complianceAssets.length
+    const compliantCount = complianceAssets.filter(asset => asset.status === 'compliant').length
+    const overdueCount = complianceAssets.filter(asset => asset.status === 'overdue').length
 
     return (
       <LayoutWithSidebar 
@@ -144,7 +248,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
           {/* Building Overview Section */}
           <BuildingOverview 
             building={building} 
-            buildingSetup={building.building_setup}
+            buildingSetup={buildingSetup}
           />
 
           {/* Quick Stats */}
@@ -204,15 +308,15 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
             <div className="space-y-8">
               {/* Units & Leaseholders Section */}
               <UnitLeaseholderList 
-                units={units ?? []}
+                units={units}
                 buildingId={params.buildingId}
-                incomingEmails={incomingEmails ?? []}
-                communicationsLog={communicationsLog ?? []}
+                incomingEmails={incomingEmails}
+                communicationsLog={communicationsLog}
               />
 
               {/* RMC Directors Section */}
               <RMCDirectorsSection 
-                units={units ?? []}
+                units={units}
                 buildingId={params.buildingId}
               />
             </div>
@@ -221,8 +325,8 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
             <div className="space-y-8">
               {/* Compliance Section */}
               <ComplianceSection 
-                complianceAssets={complianceAssets ?? []}
-                complianceDocuments={complianceDocuments ?? []}
+                complianceAssets={complianceAssets}
+                complianceDocuments={complianceDocuments}
                 buildingId={params.buildingId}
               />
             </div>
