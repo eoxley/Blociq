@@ -22,7 +22,7 @@ export default function ComplianceSection({ complianceAssets, complianceDocument
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false)
 
   // Group assets by category
-  const groupedAssets = complianceAssets.reduce((acc, asset) => {
+  const groupedAssets = (complianceAssets || []).reduce((acc, asset) => {
     const category = asset.compliance_assets?.category || 'Uncategorized'
     if (!acc[category]) {
       acc[category] = []
@@ -32,11 +32,11 @@ export default function ComplianceSection({ complianceAssets, complianceDocument
   }, {} as Record<string, any[]>)
 
   // Calculate compliance statistics
-  const totalAssets = complianceAssets.length
-  const compliantCount = complianceAssets.filter(asset => asset.status === 'compliant').length
-  const overdueCount = complianceAssets.filter(asset => asset.status === 'overdue').length
-  const pendingCount = complianceAssets.filter(asset => asset.status === 'pending').length
-  const missingCount = complianceAssets.filter(asset => asset.status === 'missing').length
+  const totalAssets = (complianceAssets || []).length
+  const compliantCount = (complianceAssets || []).filter(asset => asset.status === 'compliant').length
+  const overdueCount = (complianceAssets || []).filter(asset => asset.status === 'overdue').length
+  const pendingCount = (complianceAssets || []).filter(asset => asset.status === 'pending').length
+  const missingCount = (complianceAssets || []).filter(asset => asset.status === 'missing').length
 
   const compliancePercentage = totalAssets > 0 ? Math.round((compliantCount / totalAssets) * 100) : 0
 
@@ -78,7 +78,7 @@ export default function ComplianceSection({ complianceAssets, complianceDocument
   }
 
   const getDocumentsForAsset = (assetId: string) => {
-    return complianceDocuments.filter(doc => doc.compliance_asset_id === assetId)
+    return (complianceDocuments || []).filter(doc => doc.compliance_asset_id === assetId)
   }
 
   return (

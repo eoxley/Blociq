@@ -36,9 +36,9 @@ export default function UnifiedUnitsList({ buildingId }: UnifiedUnitsListProps) 
   const [error, setError] = useState<string | null>(null)
 
   // Filter units based on search term
-  const filteredUnits = units.filter(unit => {
+  const filteredUnits = (units || []).filter(unit => {
     const searchLower = searchTerm.toLowerCase()
-    const unitNumber = unit.unit_number.toLowerCase()
+    const unitNumber = unit.unit_number?.toLowerCase() || ''
     const leaseholderName = unit.leaseholders?.name?.toLowerCase() || ''
     const leaseholderEmail = unit.leaseholders?.email?.toLowerCase() || ''
 
