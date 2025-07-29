@@ -8,7 +8,7 @@ import {
   getComplianceStatus, 
   getStatusBadgeColor, 
   calculateNextDueDate 
-} from '../../lib/complianceUtils'
+} from '../../../lib/complianceUtils'
 
 interface ComplianceClientProps {
   complianceAssets: ComplianceAsset[]

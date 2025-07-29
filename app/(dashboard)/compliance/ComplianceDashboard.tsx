@@ -8,7 +8,7 @@ import {
   calculateComplianceStats, 
   getUpcomingDueAssets, 
   getDaysUntilDue 
-} from '../../lib/complianceUtils'
+} from '../../../lib/complianceUtils'
 
 interface ComplianceDashboardProps {
   assets: ComplianceAsset[]
