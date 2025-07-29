@@ -100,6 +100,7 @@ export default function NewInboxClient({
   const [isPostSendTriageOpen, setIsPostSendTriageOpen] = useState(false)
   const [availableTags, setAvailableTags] = useState<string[]>([])
   const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [error, setError] = useState<string | null>(null)
 
   // Debug logging for initial data
   console.log('🚀 NewInboxClient - Initialized with:', {
@@ -166,7 +167,7 @@ export default function NewInboxClient({
       let query = supabase
         .from('incoming_emails')
         .select(`
-          id, subject, from_email, from_name, received_at, body_preview, body, building_id, is_read, is_handled, tags, outlook_id, outlook_message_id, folder, user_id, created_at
+          id, subject, from_email, from_name, received_at, body, building_id, unread, handled, user_id, created_at
         `)
         .order('received_at', { ascending: false })
 
@@ -175,13 +176,13 @@ export default function NewInboxClient({
         // Show all emails in inbox (not just unhandled ones)
         console.log('📧 NewInboxClient - Showing all emails in inbox')
       } else if (filter === 'handled') {
-        query = query.eq('is_handled', true)
+        query = query.eq('handled', true)
         console.log('✅ NewInboxClient - Showing handled emails')
       } else if (filter === 'unhandled') {
-        query = query.eq('is_handled', false)
+        query = query.eq('handled', false)
         console.log('⏳ NewInboxClient - Showing unhandled emails')
       } else if (filter === 'unread') {
-        query = query.eq('is_read', false)
+        query = query.eq('unread', true)
         console.log('📬 NewInboxClient - Showing unread emails')
       }
 
@@ -198,6 +199,7 @@ export default function NewInboxClient({
           filter: filter
         })
         toast.error(`Failed to fetch emails: ${error.message}`)
+        setError('Error loading emails')
         return
       }
 
@@ -215,17 +217,18 @@ export default function NewInboxClient({
           subject: email.subject || 'No Subject',
           from_name: email.from_name || email.from_email || 'Unknown Sender',
           from_email: email.from_email || 'unknown@example.com',
-          body_preview: email.body_preview || 'No preview available',
-          body_full: email.body || email.body_preview || 'No content available',
-          unread: !email.is_read, // Invert is_read to get unread status
-          handled: email.is_handled || false,
-          tags: email.tags || [], // Use the tags array directly
+          body_preview: email.body?.substring(0, 200) || 'No preview available',
+          body_full: email.body || 'No content available',
+          unread: email.unread || false, // Use unread field directly
+          handled: email.handled || false,
+          tags: [], // Tags are not directly available in this query
           building_id: email.building_id || null,
-          outlook_id: email.outlook_id || email.outlook_message_id || null
+          outlook_id: null // Outlook ID is not directly available in this query
         }))
         
         console.log('📧 NewInboxClient - Processed emails:', processedEmails)
         setEmails(processedEmails)
+        setError(null) // Clear any previous errors
         
         // Extract unique tags from fetched emails
         const allTags = processedEmails
@@ -269,16 +272,13 @@ export default function NewInboxClient({
 
   // Filter emails by search and tags
   const filteredEmails = emails.filter(email => {
-    const matchesSearch = searchTerm === '' ||
-      email.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      email.from_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      email.from_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      email.body_preview?.toLowerCase().includes(searchTerm.toLowerCase())
+    const searchLower = searchTerm.toLowerCase()
+    const subjectMatch = email.subject?.toLowerCase().includes(searchLower)
+    const fromMatch = email.from_name?.toLowerCase().includes(searchLower) || 
+                     email.from_email?.toLowerCase().includes(searchLower)
+    const bodyMatch = email.body_full?.toLowerCase().includes(searchLower)
     
-    const matchesTags = selectedTags.length === 0 ||
-      selectedTags.some(tag => email.tags?.includes(tag))
-    
-    return matchesSearch && matchesTags
+    return subjectMatch || fromMatch || bodyMatch
   })
 
   // Debug logging for filtered emails
@@ -308,7 +308,7 @@ export default function NewInboxClient({
         const { data: newEmails, error } = await supabase
           .from('incoming_emails')
           .select(`
-            id, subject, from_email, from_name, received_at, body_preview, body, building_id, is_read, is_handled, tags, outlook_id, outlook_message_id, folder, user_id, created_at
+            id, subject, from_email, from_name, received_at, body, building_id, unread, handled, user_id, created_at
           `)
           .order('received_at', { ascending: false })
 
@@ -323,24 +323,21 @@ export default function NewInboxClient({
             subject: email.subject || 'No Subject',
             from_name: email.from_name || email.from_email || 'Unknown Sender',
             from_email: email.from_email || 'unknown@example.com',
-            body_preview: email.body_preview || 'No preview available',
-            body_full: email.body || email.body_preview || 'No content available',
-            unread: !email.is_read, // Invert is_read to get unread status
-            handled: email.is_handled || false,
-            tags: email.tags || [], // Use the tags array directly
+            body_preview: email.body?.substring(0, 200) || 'No preview available',
+            body_full: email.body || 'No content available',
+            unread: email.unread || false, // Use unread field directly
+            handled: email.handled || false,
+            tags: [], // Tags are not directly available in this query
             building_id: email.building_id || null,
-            outlook_id: email.outlook_id || email.outlook_message_id || null
+            outlook_id: null // Outlook ID is not directly available in this query
           }))
           
           setEmails(processedEmails)
           setLastSync(new Date().toISOString())
+          setError(null) // Clear any previous errors
           
-          // Extract unique tags
-          const allTags = processedEmails
-            .flatMap(email => email.tags || [])
-            .filter((tag, index, arr) => arr.indexOf(tag) === index)
-            .filter(tag => tag && tag.trim() !== '') // Filter out empty tags
-          setAvailableTags(allTags)
+          // Extract unique tags (empty for now since tags are not in the query)
+          setAvailableTags([])
         }
 
         toast.success(`Synced ${result.syncedCount || 0} new emails`)
@@ -368,7 +365,7 @@ export default function NewInboxClient({
       const { error } = await supabase
         .from('incoming_emails')
         .update({ 
-          is_handled: true
+          handled: true
         })
         .eq('id', emailId)
 
@@ -399,7 +396,7 @@ export default function NewInboxClient({
     if (email.unread) {
       supabase
         .from('incoming_emails')
-        .update({ is_read: true })
+        .update({ unread: false })
         .eq('id', email.id)
         .then(() => {
           setEmails(prev => prev.map(e => 
@@ -587,7 +584,18 @@ export default function NewInboxClient({
         </div>
       </div>
 
-
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 text-red-600" />
+            <div>
+              <p className="text-red-600 font-semibold">Error loading emails</p>
+              <p className="text-red-500 text-sm">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex h-[calc(100vh-400px)] min-h-[600px]">
         {/* Email List */}

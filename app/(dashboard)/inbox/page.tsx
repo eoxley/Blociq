@@ -40,14 +40,11 @@ export default async function InboxPage() {
         from_email, 
         from_name, 
         received_at, 
-        body_preview, 
-        body as body_full, 
+        body,
         building_id, 
-        is_read, 
-        is_handled, 
-        tags, 
-        outlook_id, 
-        outlook_message_id,
+        unread, 
+        handled, 
+        user_id, 
         created_at
       `)
       .eq('user_id', userId)
@@ -73,13 +70,13 @@ export default async function InboxPage() {
       from_name: email.from_name || email.from_email || 'Unknown Sender',
       from_email: email.from_email || 'unknown@example.com',
       received_at: email.received_at,
-      body_preview: email.body_preview || 'No preview available',
-      body_full: email.body_full || email.body_preview || 'No content available',
+      body_preview: email.body?.substring(0, 200) || 'No preview available',
+      body_full: email.body || 'No content available',
       building_id: email.building_id,
-      unread: !email.is_read, // Invert is_read to get unread status
-      handled: email.is_handled || false,
-      tags: email.tags || [],
-      outlook_id: email.outlook_id || email.outlook_message_id || null,
+      unread: email.unread || false, // Use unread field directly
+      handled: email.handled || false,
+      tags: [], // Tags are not directly available in this query, will be populated if needed
+      outlook_id: null, // Outlook ID is not directly available in this query, will be populated if needed
       buildings: null // Will be populated if needed
     }))
 
