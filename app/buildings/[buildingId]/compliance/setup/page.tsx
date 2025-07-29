@@ -239,7 +239,7 @@ export default async function ComplianceSetupPage({
         .from("building_compliance_assets")
         .select("asset_id, status")
         .eq("building_id", building.id)
-        .eq("status", "active")
+        .eq("status", "pending")
       
       console.log("✅ Existing assets query completed")
       console.log("Existing assets result:", existingAssetsResult)

@@ -5,8 +5,16 @@ import MobileNavigation from '@/components/MobileNavigation'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import BlocIQLogo from '@/components/BlocIQLogo'
+import { ChevronRight } from 'lucide-react'
+import Link from 'next/link'
 
-export default async function DashboardLayout({ children }: { children: ReactNode }) {
+interface DashboardLayoutProps {
+  children: ReactNode
+}
+
+export default async function DashboardLayout({ 
+  children 
+}: DashboardLayoutProps) {
   const cookieStore = cookies()
   const supabase = createServerComponentClient({ cookies: () => cookieStore })
   const { data: { user } } = await supabase.auth.getUser()
@@ -34,22 +42,28 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16"></div>
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12"></div>
           
-          <div className="max-w-7xl mx-auto flex items-center justify-between relative z-10">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm shadow-lg">
-                <BlocIQLogo className="w-5 h-5 text-white" />
+          <div className="max-w-7xl mx-auto relative z-10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm shadow-lg">
+                  <BlocIQLogo className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-white">
+                    BlocIQ Dashboard
+                  </h1>
+                  <p className="text-white/80 text-sm">
+                    Manage all properties under your agency
+                  </p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-white">Your Buildings</h1>
-                <p className="text-white/80 text-sm">Manage all properties under your agency</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              {/* Status Indicator */}
-              <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1 backdrop-blur-sm">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span className="text-xs font-medium text-white">Online</span>
+              
+              <div className="flex items-center gap-4">
+                {/* Status Indicator */}
+                <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1 backdrop-blur-sm">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  <span className="text-xs font-medium text-white">Online</span>
+                </div>
               </div>
             </div>
           </div>
