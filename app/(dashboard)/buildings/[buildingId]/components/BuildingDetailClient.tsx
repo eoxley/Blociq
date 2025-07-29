@@ -101,24 +101,20 @@ export default function BuildingDetailClient({
                 <Building2 className="h-8 w-8" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold">{building.name}</h1>
+                <h1 className="text-3xl font-bold">{building.name || 'Unnamed Building'}</h1>
                 <p className="text-white/80 text-lg">
-                  {building.address || 'No address provided'}
+                  {building.address || 'No address provided'} • 
+                  {units?.length || 0} unit{(units?.length || 0) !== 1 ? 's' : ''}
                 </p>
-                <div className="flex items-center space-x-2 mt-2">
-                  <span className="text-sm bg-white/20 px-2 py-1 rounded-full">
-                    {buildingSetup?.structure_type || 'Unknown Type'}
-                  </span>
-                  {building.is_hrb && (
-                    <span className="text-sm bg-red-500/80 px-2 py-1 rounded-full">
-                      HRB
-                    </span>
-                  )}
-                  <span className="text-sm text-white/60">
-                    ID: {buildingId.slice(0, 8)}...
-                  </span>
-                </div>
               </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Link
+                href="/buildings"
+                className="bg-white/20 text-white px-4 py-2 rounded-lg hover:bg-white/30 transition-colors"
+              >
+                Back to Buildings
+              </Link>
             </div>
           </div>
         </div>
@@ -129,33 +125,41 @@ export default function BuildingDetailClient({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
           {/* Left Column - Main Content */}
-          <div className="lg:col-span-2 space-y-8">
+          <div className="lg:col-span-2 space-y-6">
             
-            {/* SECTION 1: Building Information */}
+            {/* SECTION 1: Building Overview */}
             <div className="bg-white rounded-2xl shadow-xl p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Building Information</h2>
-                <button className="text-[#008C8F] hover:text-[#7645ED] transition-colors">
-                  <Edit3 className="h-5 w-5" />
+                <h2 className="text-2xl font-bold text-gray-900">Building Overview</h2>
+                <button
+                  onClick={() => setIsEditingNotes(!isEditingNotes)}
+                  className="text-[#008C8F] hover:text-[#7645ED] text-sm font-medium transition-colors"
+                >
+                  {isEditingNotes ? 'Cancel' : 'Edit Notes'}
                 </button>
               </div>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">Structure Type</label>
-                    <p className="text-gray-900">{buildingSetup?.structure_type || 'Not specified'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">Status</label>
-                    <p className="text-gray-900">Active</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">Total Units</label>
-                    <p className="text-gray-900">{units.length}</p>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Details</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Structure Type:</span>
+                      <span className="font-medium">{buildingSetup?.structure_type || 'Not set'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Status:</span>
+                      <span className="font-medium">{building.is_hrb ? 'HRB' : 'Standard'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Units:</span>
+                      <span className="font-medium">{units?.length || 0}</span>
+                    </div>
                   </div>
                 </div>
+                
                 <div>
-                  <label className="text-sm font-medium text-gray-600">Notes</label>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Notes</h3>
                   {isEditingNotes ? (
                     <div className="space-y-3">
                       <textarea
@@ -165,35 +169,29 @@ export default function BuildingDetailClient({
                         rows={4}
                         placeholder="Add building notes..."
                       />
-                      <div className="flex space-x-3">
+                      <div className="flex space-x-2">
                         <button
                           onClick={handleSaveNotes}
                           disabled={isSaving}
                           className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
                         >
-                          {isSaving ? 'Saving...' : 'Save Notes'}
+                          {isSaving ? 'Saving...' : 'Save'}
                         </button>
                         <button
                           onClick={() => {
                             setIsEditingNotes(false)
                             setNotes(building.notes || '')
                           }}
-                          className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+                          className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
                         >
                           Cancel
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <div className="space-y-2">
-                      <p className="text-gray-900">{notes || 'No notes added yet.'}</p>
-                      <button
-                        onClick={() => setIsEditingNotes(true)}
-                        className="text-[#008C8F] hover:text-[#7645ED] text-sm transition-colors"
-                      >
-                        Edit Notes
-                      </button>
-                    </div>
+                    <p className="text-gray-600">
+                      {building.notes || 'No notes added yet. Click "Edit Notes" to add building information.'}
+                    </p>
                   )}
                 </div>
               </div>
@@ -255,7 +253,7 @@ export default function BuildingDetailClient({
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">Units</h2>
               </div>
-              <UnitsSearch units={units} buildingId={buildingId} />
+              <UnitsSearch units={units || []} buildingId={buildingId} />
             </div>
           </div>
 
@@ -301,56 +299,49 @@ export default function BuildingDetailClient({
             <div className="bg-white rounded-2xl shadow-xl p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Building Stats</h3>
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
+                <div className="flex items-center justify-between">
                   <span className="text-gray-600">Total Units</span>
-                  <span className="font-semibold text-gray-900">{units.length}</span>
+                  <span className="font-semibold">{units?.length || 0}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Leaseholders</span>
-                  <span className="font-semibold text-gray-900">
-                    {units.filter(u => u.leaseholders).length}
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Occupied Units</span>
+                  <span className="font-semibold">
+                    {units?.filter(unit => unit.leaseholder_id).length || 0}
                   </span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">RMC Directors</span>
-                  <span className="font-semibold text-gray-900">
-                    {units.filter(u => u.leaseholders?.is_director).length}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
+                <div className="flex items-center justify-between">
                   <span className="text-gray-600">Compliance Items</span>
-                  <span className="font-semibold text-gray-900">{complianceSummary.total}</span>
+                  <span className="font-semibold">{complianceSummary.total}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Overdue Items</span>
+                  <span className="font-semibold text-red-600">{complianceSummary.overdue}</span>
                 </div>
               </div>
             </div>
 
-            {/* Recent Activity */}
-            <div className="bg-white rounded-2xl shadow-xl p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Recent Activity</h3>
-              <div className="space-y-3">
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-[#008C8F] rounded-full mt-2"></div>
+            {/* Client Information */}
+            {buildingSetup && (
+              <div className="bg-white rounded-2xl shadow-xl p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Client Information</h3>
+                <div className="space-y-3">
                   <div>
-                    <p className="text-sm text-gray-900">Building information updated</p>
-                    <p className="text-xs text-gray-500">2 hours ago</p>
+                    <span className="text-sm text-gray-600">Client Type</span>
+                    <p className="font-medium">{buildingSetup.client_type || 'Not specified'}</p>
                   </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-[#7645ED] rounded-full mt-2"></div>
                   <div>
-                    <p className="text-sm text-gray-900">New unit added</p>
-                    <p className="text-xs text-gray-500">1 day ago</p>
+                    <span className="text-sm text-gray-600">Client Name</span>
+                    <p className="font-medium">{buildingSetup.client_name || 'Not specified'}</p>
                   </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
-                  <div>
-                    <p className="text-sm text-gray-900">Compliance check completed</p>
-                    <p className="text-xs text-gray-500">3 days ago</p>
-                  </div>
+                  {buildingSetup.client_email && (
+                    <div>
+                      <span className="text-sm text-gray-600">Contact Email</span>
+                      <p className="font-medium">{buildingSetup.client_email}</p>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
