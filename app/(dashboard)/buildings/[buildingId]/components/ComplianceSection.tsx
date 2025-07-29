@@ -92,24 +92,7 @@ export default function ComplianceSection({ complianceAssets, complianceDocument
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">{totalAssets}</div>
-              <div className="text-sm text-gray-600">Total Items</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{compliantCount}</div>
-              <div className="text-sm text-gray-600">Compliant</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-red-600">{overdueCount}</div>
-              <div className="text-sm text-gray-600">Overdue</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-yellow-600">{pendingCount}</div>
-              <div className="text-sm text-gray-600">Pending</div>
-            </div>
-          </div>
+          {/* Removed counter cards section */}
           
           <div className="space-y-2">
             <div className="flex justify-between text-sm">

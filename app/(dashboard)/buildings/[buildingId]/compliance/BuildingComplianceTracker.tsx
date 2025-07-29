@@ -219,59 +219,9 @@ export default function BuildingComplianceTracker({ complianceData }: BuildingCo
           </BlocIQButton>
         </div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <BlocIQCard className="bg-white border-2 border-gray-100 rounded-xl">
-            <BlocIQCardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 font-serif">Total Assets</p>
-                  <p className="text-2xl font-serif font-bold text-[#333333]">{statistics.total}</p>
-                </div>
-                <Shield className="w-8 h-8 text-[#2BBEB4]" />
-              </div>
-            </BlocIQCardContent>
-          </BlocIQCard>
+        {/* Removed statistics cards section */}
 
-          <BlocIQCard className="bg-white border-2 border-green-100 rounded-xl">
-            <BlocIQCardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 font-serif">Compliant</p>
-                  <p className="text-2xl font-serif font-bold text-green-700">{statistics.compliant}</p>
-                </div>
-                <CheckCircle className="w-8 h-8 text-green-500" />
-              </div>
-            </BlocIQCardContent>
-          </BlocIQCard>
-
-          <BlocIQCard className="bg-white border-2 border-orange-100 rounded-xl">
-            <BlocIQCardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 font-serif">Due Soon</p>
-                  <p className="text-2xl font-serif font-bold text-orange-700">{statistics.dueSoon}</p>
-                </div>
-                <Clock className="w-8 h-8 text-orange-500" />
-              </div>
-            </BlocIQCardContent>
-          </BlocIQCard>
-
-          <BlocIQCard className="bg-white border-2 border-red-100 rounded-xl">
-            <BlocIQCardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 font-serif">Overdue</p>
-                  <p className="text-2xl font-serif font-bold text-red-700">{statistics.overdue}</p>
-                </div>
-                <AlertTriangle className="w-8 h-8 text-red-500" />
-              </div>
-            </BlocIQCardContent>
-          </BlocIQCard>
-        </div>
-      </div>
-
-      {/* Compliance Assets by Category */}
+        {/* Compliance Assets by Category */}
       <div className="space-y-6">
         {Object.entries(groupedAssets).map(([category, assets]) => {
           const config = categoryConfigs[category as keyof typeof categoryConfigs] || {
