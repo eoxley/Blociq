@@ -14,14 +14,14 @@ interface ComplianceClientProps {
   complianceAssets: ComplianceAsset[]
 }
 
-export default function ComplianceClient({ complianceAssets: initialAssets }: ComplianceClientProps) {
-  const [assets, setAssets] = useState<ComplianceAsset[]>(initialAssets)
+export default function ComplianceClient({ complianceAssets: initialAssets = [] }: ComplianceClientProps) {
+  const [assets, setAssets] = useState<ComplianceAsset[]>(initialAssets || [])
   const [filter, setFilter] = useState<'all' | 'always' | 'if present' | 'if HRB'>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'setup'>('grid')
 
   // Filter assets based on search and filter
-  const filteredAssets = assets.filter(asset => {
+  const filteredAssets = (assets || []).filter(asset => {
     const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          asset.description.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesFilter = filter === 'all' || asset.required_if === filter
@@ -211,7 +211,7 @@ export default function ComplianceClient({ complianceAssets: initialAssets }: Co
               {filteredAssets.length === 0 ? (
                 <p>No compliance items found matching "{searchTerm}"</p>
               ) : (
-                <p>Showing {filteredAssets.length} of {assets.length} compliance items</p>
+                <p>Showing {filteredAssets.length} of {(assets || []).length} compliance items</p>
               )}
             </div>
           )}
