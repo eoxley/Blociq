@@ -32,6 +32,7 @@ interface Leaseholder {
   email: string | null
   phone: string | null
   is_director: boolean | null
+  correspondence_address?: string | null
 }
 
 interface Building {
@@ -122,6 +123,11 @@ export default function LeaseholderInfoClient({
                 <p className="text-white/80 text-lg">
                   {building.name} • {leaseholder?.full_name || 'No leaseholder assigned'}
                 </p>
+                {leaseholder?.email && (
+                  <p className="text-white/60 text-sm mt-1">
+                    {leaseholder.email}
+                  </p>
+                )}
               </div>
             </div>
             {leaseholder?.email && (
@@ -182,10 +188,10 @@ export default function LeaseholderInfoClient({
                 </div>
                 
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Status</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Leaseholder Information</h3>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Leaseholder:</span>
+                      <span className="text-gray-600">Name:</span>
                       <div className="flex items-center space-x-2">
                         <span className="font-medium">
                           {leaseholder?.full_name || 'Not assigned'}
@@ -197,6 +203,18 @@ export default function LeaseholderInfoClient({
                         )}
                       </div>
                     </div>
+                    {leaseholder?.email && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Email:</span>
+                        <span className="font-medium text-[#008C8F]">{leaseholder.email}</span>
+                      </div>
+                    )}
+                    {leaseholder?.correspondence_address && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Correspondence Address:</span>
+                        <span className="font-medium text-sm">{leaseholder.correspondence_address}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -493,64 +511,6 @@ export default function LeaseholderInfoClient({
                   <FileText className="h-5 w-5 text-[#008C8F] mr-3" />
                   <span className="text-gray-700">View Documents</span>
                 </Link>
-              </div>
-            </div>
-
-            {/* Unit Stats */}
-            <div className="bg-white rounded-2xl shadow-xl p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Unit Summary</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Unit Number</span>
-                  <span className="font-semibold">{unit.unit_number}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Type</span>
-                  <span className="font-semibold">{unit.type || 'Residential'}</span>
-                </div>
-                {unit.floor && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Floor</span>
-                    <span className="font-semibold">{unit.floor}</span>
-                  </div>
-                )}
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Leaseholder</span>
-                  <div className="flex items-center space-x-2">
-                    <span className="font-semibold">
-                      {leaseholder?.full_name || 'Not assigned'}
-                    </span>
-                    {leaseholder?.is_director && (
-                      <span className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white text-xs px-2 py-1 rounded-full font-medium">
-                        Director
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {leaseholder?.email && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Email</span>
-                    <span className="font-semibold text-sm text-gray-600 truncate max-w-32">
-                      {leaseholder.email}
-                    </span>
-                  </div>
-                )}
-                {leaseholder?.phone && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Phone</span>
-                    <span className="font-semibold text-sm text-gray-600">
-                      {leaseholder.phone}
-                    </span>
-                  </div>
-                )}
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Documents</span>
-                  <span className="font-semibold">{documents.length}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Emails</span>
-                  <span className="font-semibold">{emails.length}</span>
-                </div>
               </div>
             </div>
           </div>
