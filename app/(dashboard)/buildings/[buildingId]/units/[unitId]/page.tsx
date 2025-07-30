@@ -21,9 +21,6 @@ interface Unit {
     name: string | null
     email: string | null
     phone: string | null
-    is_director: boolean | null
-    director_since: string | null
-    director_notes: string | null
   } | null
 }
 
@@ -47,6 +44,18 @@ interface Email {
   from_email: string
   body_preview: string | null
   received_at: string
+}
+
+interface Lease {
+  id: string
+  building_id: number
+  unit_id: number | null
+  start_date: string | null
+  expiry_date: string | null
+  doc_type: string | null
+  is_headlease: boolean | null
+  doc_url: string | null
+  created_at: string | null
 }
 
 export default async function UnitDetailPage({ params }: UnitDetailPageProps) {
@@ -92,10 +101,7 @@ export default async function UnitDetailPage({ params }: UnitDetailPageProps) {
           id,
           name,
           email,
-          phone,
-          is_director,
-          director_since,
-          director_notes
+          phone
         )
       `)
       .eq('id', unitId)
@@ -115,6 +121,20 @@ export default async function UnitDetailPage({ params }: UnitDetailPageProps) {
 
     if (documentsError) {
       console.error('Error fetching documents:', documentsError)
+    }
+
+    // Fetch lease information for this unit
+    let leases: Lease[] = []
+    const { data: leasesData = [], error: leasesError } = await supabase
+      .from('leases')
+      .select('id, building_id, unit_id, start_date, expiry_date, doc_type, is_headlease, doc_url, created_at')
+      .eq('unit_id', unitId)
+      .order('created_at', { ascending: false })
+
+    if (leasesError) {
+      console.error('Error fetching leases:', leasesError)
+    } else {
+      leases = leasesData
     }
 
     // Fetch correspondence emails for leaseholder
@@ -140,6 +160,7 @@ export default async function UnitDetailPage({ params }: UnitDetailPageProps) {
         unit={unit}
         documents={documents}
         emails={emails}
+        leases={leases}
       />
     )
 
