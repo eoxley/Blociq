@@ -12,9 +12,7 @@ import {
   ArrowLeft, 
   Copy, 
   ExternalLink,
-  Crown,
-  Shield,
-  AlertCircle
+  Shield
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -31,9 +29,6 @@ interface Unit {
     name: string | null
     email: string | null
     phone: string | null
-    is_director: boolean | null
-    director_since: string | null
-    director_notes: string | null
   } | null
 }
 
@@ -59,18 +54,32 @@ interface Email {
   received_at: string
 }
 
+interface Lease {
+  id: string
+  building_id: number
+  unit_id: number | null
+  start_date: string | null
+  expiry_date: string | null
+  doc_type: string | null
+  is_headlease: boolean | null
+  doc_url: string | null
+  created_at: string | null
+}
+
 interface LeaseholderInfoClientProps {
   building: Building
   unit: Unit
   documents: Document[]
   emails: Email[]
+  leases: Lease[]
 }
 
 export default function LeaseholderInfoClient({ 
   building, 
   unit, 
   documents, 
-  emails 
+  emails,
+  leases
 }: LeaseholderInfoClientProps) {
   const [copiedField, setCopiedField] = useState<string | null>(null)
 
@@ -177,15 +186,7 @@ export default function LeaseholderInfoClient({
                         {unit.leaseholders?.name || 'Not assigned'}
                       </span>
                     </div>
-                    {unit.leaseholders?.is_director && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Director:</span>
-                        <div className="flex items-center space-x-2">
-                          <Crown className="h-4 w-4 text-yellow-600" />
-                          <span className="text-sm font-medium text-yellow-600">Yes</span>
-                        </div>
-                      </div>
-                    )}
+
                   </div>
                 </div>
               </div>
@@ -273,38 +274,7 @@ export default function LeaseholderInfoClient({
                         </div>
                       )}
                     </div>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Director Information</h3>
-                    <div className="space-y-4">
-                      {unit.leaseholders.is_director ? (
-                        <>
-                          <div className="flex items-center space-x-2">
-                            <Crown className="h-5 w-5 text-yellow-600" />
-                            <span className="font-medium text-gray-900">Building Director</span>
-                          </div>
-                          {unit.leaseholders.director_since && (
-                            <div>
-                              <label className="text-sm font-medium text-gray-600">Director Since</label>
-                              <p className="text-gray-900">{unit.leaseholders.director_since}</p>
-                            </div>
-                          )}
-                          {unit.leaseholders.director_notes && (
-                            <div>
-                              <label className="text-sm font-medium text-gray-600">Director Notes</label>
-                              <p className="text-gray-900">{unit.leaseholders.director_notes}</p>
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <div className="text-gray-500">
-                          <AlertCircle className="h-5 w-5 inline mr-2" />
-                          Not a building director
-                        </div>
-                      )}
-                    </div>
-                  </div>
+
                 </div>
               </div>
             )}
@@ -321,13 +291,69 @@ export default function LeaseholderInfoClient({
                 </div>
               </div>
               
-              <div className="text-center py-8">
-                <Shield className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Lease details not available</h3>
-                <p className="text-gray-600">
-                  Lease information will be displayed here when available.
-                </p>
-              </div>
+              {leases.length > 0 ? (
+                <div className="space-y-4">
+                  {leases.map((lease) => (
+                    <div key={lease.id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-3">Lease Details</h3>
+                          <div className="space-y-2">
+                            {lease.start_date && (
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Start Date:</span>
+                                <span className="font-medium">{new Date(lease.start_date).toLocaleDateString()}</span>
+                              </div>
+                            )}
+                            {lease.expiry_date && (
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Expiry Date:</span>
+                                <span className="font-medium">{new Date(lease.expiry_date).toLocaleDateString()}</span>
+                              </div>
+                            )}
+                            {lease.doc_type && (
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Document Type:</span>
+                                <span className="font-medium">{lease.doc_type}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Headlease:</span>
+                              <span className="font-medium">
+                                {lease.is_headlease ? 'Yes' : 'No'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-3">Document</h3>
+                          {lease.doc_url ? (
+                            <a
+                              href={lease.doc_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center space-x-2 text-[#008C8F] hover:text-[#7645ED] transition-colors"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                              <span>View Lease Document</span>
+                            </a>
+                          ) : (
+                            <p className="text-gray-500">No document uploaded</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Shield className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No lease information available</h3>
+                  <p className="text-gray-600">
+                    Lease information will be displayed here when available.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* SECTION 4: Linked Documents */}
