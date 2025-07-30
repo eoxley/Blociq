@@ -186,7 +186,6 @@ export default function LeaseholderInfoClient({
                         {unit.leaseholders?.name || 'Not assigned'}
                       </span>
                     </div>
-
                   </div>
                 </div>
               </div>
@@ -274,7 +273,7 @@ export default function LeaseholderInfoClient({
                         </div>
                       )}
                     </div>
-
+                  </div>
                 </div>
               </div>
             )}
