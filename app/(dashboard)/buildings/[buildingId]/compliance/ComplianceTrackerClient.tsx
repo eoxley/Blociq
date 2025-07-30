@@ -523,7 +523,7 @@ export default function ComplianceTrackerClient({ complianceData }: ComplianceTr
              assetName={selectedAssetForUpload.name}
            />
          )}
-      </div>
-    </TooltipProvider>
-  )
+       </div>
+     </TooltipProvider>
+   )
 } 
