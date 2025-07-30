@@ -220,8 +220,9 @@ export default function BuildingComplianceTracker({ complianceData }: BuildingCo
         </div>
 
         {/* Removed statistics cards section */}
+      </div>
 
-        {/* Compliance Assets by Category */}
+      {/* Compliance Assets by Category */}
       <div className="space-y-6">
         {Object.entries(groupedAssets).map(([category, assets]) => {
           const config = categoryConfigs[category as keyof typeof categoryConfigs] || {
