@@ -16,12 +16,13 @@ interface Unit {
   building_id: string
   leaseholder_id: string | null
   created_at: string | null
-  leaseholders?: {
-    id: string
-    name: string | null
-    email: string | null
-    phone: string | null
-  } | null
+}
+
+interface Leaseholder {
+  id: string
+  name: string | null
+  email: string | null
+  phone: string | null
 }
 
 interface Building {
@@ -141,13 +142,7 @@ export default async function UnitDetailPage({ params }: UnitDetailPageProps) {
         floor,
         building_id,
         leaseholder_id,
-        created_at,
-        leaseholders (
-          id,
-          name,
-          email,
-          phone
-        )
+        created_at
       `)
       .eq('id', unitId)
       .single()
@@ -198,11 +193,9 @@ export default async function UnitDetailPage({ params }: UnitDetailPageProps) {
       )
     }
 
-    console.log('✅ Unit found:', unit.unit_number)
-
-    // Verify the unit belongs to the correct building
+    // Verify unit belongs to the correct building
     if (unit.building_id !== buildingId) {
-      console.error('❌ Unit does not belong to the specified building')
+      console.error('❌ Unit does not belong to building:', { unitBuildingId: unit.building_id, requestedBuildingId: buildingId })
       return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="max-w-md mx-auto text-center">
@@ -211,7 +204,7 @@ export default async function UnitDetailPage({ params }: UnitDetailPageProps) {
             </div>
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Invalid Unit</h2>
             <p className="text-gray-600 mb-4">
-              This unit doesn't belong to the specified building.
+              This unit does not belong to the specified building.
             </p>
             <a 
               href={`/buildings/${buildingId}`}
@@ -222,6 +215,27 @@ export default async function UnitDetailPage({ params }: UnitDetailPageProps) {
           </div>
         </div>
       )
+    }
+
+    console.log('✅ Unit belongs to correct building')
+
+    // Fetch leaseholder data separately to avoid relationship ambiguity
+    let leaseholder: Leaseholder | null = null
+    if (unit.leaseholder_id) {
+      const { data: leaseholderData, error: leaseholderError } = await supabase
+        .from('leaseholders')
+        .select('id, name, email, phone')
+        .eq('id', unit.leaseholder_id)
+        .single()
+      
+      if (!leaseholderError && leaseholderData) {
+        leaseholder = leaseholderData
+        console.log('✅ Leaseholder found:', leaseholder.name)
+      } else {
+        console.warn('⚠️ Leaseholder not found or error:', leaseholderError)
+      }
+    } else {
+      console.log('ℹ️ No leaseholder assigned to this unit')
     }
 
     // Fetch linked documents for this unit
@@ -255,7 +269,6 @@ export default async function UnitDetailPage({ params }: UnitDetailPageProps) {
 
     // Fetch correspondence emails for leaseholder
     let emails: Email[] = []
-    const leaseholder = unit.leaseholders as any
     if (leaseholder?.email) {
       const { data: emailsData = [], error: emailsError } = await supabase
         .from('incoming_emails')
@@ -278,6 +291,7 @@ export default async function UnitDetailPage({ params }: UnitDetailPageProps) {
       <LeaseholderInfoClient
         building={building}
         unit={unit as any}
+        leaseholder={leaseholder}
         documents={documents}
         emails={emails}
         leases={leases}
