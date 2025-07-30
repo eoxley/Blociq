@@ -20,9 +20,10 @@ interface Unit {
 
 interface Leaseholder {
   id: string
-  name: string | null
+  full_name: string | null
   email: string | null
   phone: string | null
+  is_director: boolean | null
 }
 
 interface Building {
@@ -224,13 +225,13 @@ export default async function UnitDetailPage({ params }: UnitDetailPageProps) {
     if (unit.leaseholder_id) {
       const { data: leaseholderData, error: leaseholderError } = await supabase
         .from('leaseholders')
-        .select('id, name, email, phone')
+        .select('id, full_name, email, phone, is_director')
         .eq('id', unit.leaseholder_id)
         .single()
       
       if (!leaseholderError && leaseholderData) {
         leaseholder = leaseholderData
-        console.log('✅ Leaseholder found:', leaseholder.name)
+        console.log('✅ Leaseholder found:', leaseholder.full_name)
       } else {
         console.warn('⚠️ Leaseholder not found or error:', leaseholderError)
       }
