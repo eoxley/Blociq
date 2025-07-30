@@ -24,12 +24,13 @@ interface Unit {
   building_id: string
   leaseholder_id: string | null
   created_at: string | null
-  leaseholders?: {
-    id: string
-    name: string | null
-    email: string | null
-    phone: string | null
-  } | null
+}
+
+interface Leaseholder {
+  id: string
+  name: string | null
+  email: string | null
+  phone: string | null
 }
 
 interface Building {
@@ -69,6 +70,7 @@ interface Lease {
 interface LeaseholderInfoClientProps {
   building: Building
   unit: Unit
+  leaseholder: Leaseholder | null
   documents: Document[]
   emails: Email[]
   leases: Lease[]
@@ -77,6 +79,7 @@ interface LeaseholderInfoClientProps {
 export default function LeaseholderInfoClient({ 
   building, 
   unit, 
+  leaseholder,
   documents, 
   emails,
   leases
@@ -116,13 +119,13 @@ export default function LeaseholderInfoClient({
               <div>
                 <h1 className="text-3xl font-bold">Unit {unit.unit_number}</h1>
                 <p className="text-white/80 text-lg">
-                  {building.name} • {unit.leaseholders?.name || 'No leaseholder assigned'}
+                  {building.name} • {leaseholder?.name || 'No leaseholder assigned'}
                 </p>
               </div>
             </div>
-            {unit.leaseholders?.email && (
+            {leaseholder?.email && (
               <button
-                onClick={() => handleEmail(unit.leaseholders!.email!)}
+                onClick={() => handleEmail(leaseholder!.email!)}
                 className="bg-white/20 text-white px-6 py-3 rounded-lg hover:bg-white/30 transition-colors flex items-center space-x-2"
               >
                 <Mail className="h-5 w-5" />
@@ -183,7 +186,7 @@ export default function LeaseholderInfoClient({
                     <div className="flex justify-between">
                       <span className="text-gray-600">Leaseholder:</span>
                       <span className="font-medium">
-                        {unit.leaseholders?.name || 'Not assigned'}
+                        {leaseholder?.name || 'Not assigned'}
                       </span>
                     </div>
                   </div>
@@ -192,7 +195,7 @@ export default function LeaseholderInfoClient({
             </div>
 
             {/* SECTION 2: Leaseholder Details */}
-            {unit.leaseholders && (
+            {leaseholder && (
               <div className="bg-white rounded-2xl shadow-xl p-6">
                 <div className="flex items-center space-x-3 mb-6">
                   <div className="w-12 h-12 bg-gradient-to-r from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center">
@@ -211,25 +214,25 @@ export default function LeaseholderInfoClient({
                       <div>
                         <label className="text-sm font-medium text-gray-600">Name</label>
                         <div className="flex items-center justify-between mt-1">
-                          <span className="text-gray-900">{unit.leaseholders.name}</span>
+                          <span className="text-gray-900">{leaseholder.name}</span>
                         </div>
                       </div>
                       
-                      {unit.leaseholders.email && (
+                      {leaseholder.email && (
                         <div>
                           <label className="text-sm font-medium text-gray-600">Email</label>
                           <div className="flex items-center justify-between mt-1">
-                            <span className="text-gray-900">{unit.leaseholders.email}</span>
+                            <span className="text-gray-900">{leaseholder.email}</span>
                             <div className="flex space-x-2">
                               <button
-                                onClick={() => handleEmail(unit.leaseholders!.email!)}
+                                onClick={() => handleEmail(leaseholder!.email!)}
                                 className="p-2 text-gray-400 hover:text-[#008C8F] transition-colors"
                                 title="Send Email"
                               >
                                 <Mail className="h-4 w-4" />
                               </button>
                               <button
-                                onClick={() => handleCopy(unit.leaseholders!.email!, 'email')}
+                                onClick={() => handleCopy(leaseholder!.email!, 'email')}
                                 className="p-2 text-gray-400 hover:text-[#008C8F] transition-colors"
                                 title="Copy Email"
                               >
@@ -244,21 +247,21 @@ export default function LeaseholderInfoClient({
                         </div>
                       )}
                       
-                      {unit.leaseholders.phone && (
+                      {leaseholder.phone && (
                         <div>
                           <label className="text-sm font-medium text-gray-600">Phone</label>
                           <div className="flex items-center justify-between mt-1">
-                            <span className="text-gray-900">{unit.leaseholders.phone}</span>
+                            <span className="text-gray-900">{leaseholder.phone}</span>
                             <div className="flex space-x-2">
                               <button
-                                onClick={() => handleCall(unit.leaseholders!.phone!)}
+                                onClick={() => handleCall(leaseholder!.phone!)}
                                 className="p-2 text-gray-400 hover:text-[#008C8F] transition-colors"
                                 title="Call"
                               >
                                 <Phone className="h-4 w-4" />
                               </button>
                               <button
-                                onClick={() => handleCopy(unit.leaseholders!.phone!, 'phone')}
+                                onClick={() => handleCopy(leaseholder!.phone!, 'phone')}
                                 className="p-2 text-gray-400 hover:text-[#008C8F] transition-colors"
                                 title="Copy Phone"
                               >
@@ -457,18 +460,18 @@ export default function LeaseholderInfoClient({
             <div className="bg-white rounded-2xl shadow-xl p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
               <div className="space-y-3">
-                {unit.leaseholders?.email && (
+                {leaseholder?.email && (
                   <button
-                    onClick={() => handleEmail(unit.leaseholders!.email!)}
+                    onClick={() => handleEmail(leaseholder!.email!)}
                     className="w-full flex items-center p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
                   >
                     <Mail className="h-5 w-5 text-[#008C8F] mr-3" />
                     <span className="text-gray-700">Send Email</span>
                   </button>
                 )}
-                {unit.leaseholders?.phone && (
+                {leaseholder?.phone && (
                   <button
-                    onClick={() => handleCall(unit.leaseholders!.phone!)}
+                    onClick={() => handleCall(leaseholder!.phone!)}
                     className="w-full flex items-center p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
                   >
                     <Phone className="h-5 w-5 text-[#008C8F] mr-3" />
@@ -506,7 +509,7 @@ export default function LeaseholderInfoClient({
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Leaseholder</span>
                   <span className="font-semibold">
-                    {unit.leaseholders?.name || 'Not assigned'}
+                    {leaseholder?.name || 'Not assigned'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
