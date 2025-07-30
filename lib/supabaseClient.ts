@@ -1,5 +1,5 @@
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { Database } from '@/lib/database.types'
+import { Database } from '@/types/supabase'
 
 // Global variable to store the singleton instance
 let supabaseInstance: ReturnType<typeof createClientComponentClient<Database>> | null = null
@@ -17,7 +17,13 @@ function createSupabaseClient() {
   }
 
   // Create the client only once for client-side
-  supabaseInstance = createClientComponentClient<Database>()
+  try {
+    supabaseInstance = createClientComponentClient<Database>()
+  } catch (error) {
+    console.error('Failed to create Supabase client:', error)
+    // If we fail to create the singleton, create a new instance but don't store it
+    return createClientComponentClient<Database>()
+  }
   
   return supabaseInstance
 }

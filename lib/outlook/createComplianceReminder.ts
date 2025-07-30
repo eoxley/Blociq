@@ -1,4 +1,4 @@
-import { supabase } from '../supabase';
+import { supabase } from '@/lib/supabaseClient';
 
 /**
  * Interface for compliance reminder creation parameters

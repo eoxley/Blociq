@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Building2, AlertTriangle, CheckCircle, Clock, Users, Shield, FileText, Mail, Search, Edit3, Save, X, Home, Wrench, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import BuildingUnitsClient from './BuildingUnitsClient'
-import { createClient } from '@/utils/supabase/client'
+import { supabase } from '@/lib/supabaseClient'
 
 interface Building {
   id: string
@@ -63,7 +63,7 @@ export default function BuildingDetailClient({
   const [isEditingNotes, setIsEditingNotes] = useState(false)
   const [notes, setNotes] = useState(building.notes || '')
   const [isSaving, setIsSaving] = useState(false)
-  const supabase = createClient()
+
 
   const handleSaveNotes = async () => {
     setIsSaving(true)

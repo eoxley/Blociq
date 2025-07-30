@@ -8,7 +8,7 @@ import {
   Eye, EyeOff, Calendar, Building, AlertCircle, CheckCircle, Clock as ClockIcon,
   Wrench, Construction, Home, Save, X, Plus
 } from 'lucide-react'
-import { supabase } from '@/utils/supabase/client'
+import { supabase } from '@/lib/supabaseClient'
 import EmailAssignmentDropdowns from './components/EmailAssignmentDropdowns'
 
 // Define the Email type based on the database schema
