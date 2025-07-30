@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { createClient } from '@/utils/supabase/server'
 import { redirect, notFound } from 'next/navigation'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Home } from 'lucide-react'
 import LeaseholderInfoClient from './LeaseholderInfoClient'
 
 interface UnitDetailPageProps {
@@ -63,16 +63,59 @@ export default async function UnitDetailPage({ params }: UnitDetailPageProps) {
   const supabase = createClient(cookies())
 
   try {
+    console.log('🔍 UnitDetailPage - Starting with params:', { buildingId, unitId })
+
     // Check authentication
     const { data: { session } } = await supabase.auth.getSession()
-    if (!session) redirect('/login')
+    if (!session) {
+      console.log('❌ No session found, redirecting to login')
+      redirect('/login')
+    }
 
     // Validate UUIDs
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
     if (!uuidRegex.test(buildingId) || !uuidRegex.test(unitId)) {
-      console.error('Invalid UUID format')
+      console.error('❌ Invalid UUID format:', { buildingId, unitId })
       notFound()
     }
+
+    // First, let's check if the unit exists at all
+    const { data: unitExists, error: unitExistsError } = await supabase
+      .from('units')
+      .select('id')
+      .eq('id', unitId)
+      .single()
+
+    if (unitExistsError) {
+      console.error('❌ Unit existence check failed:', unitExistsError)
+      if (unitExistsError.code === 'PGRST116') {
+        console.log('❌ Unit not found in database')
+        return (
+          <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="max-w-md mx-auto text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Home className="h-8 w-8 text-red-600" />
+              </div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Unit Not Found</h2>
+              <p className="text-gray-600 mb-4">
+                The unit you're looking for doesn't exist in our database.
+              </p>
+              <p className="text-sm text-gray-500 mb-6">
+                Unit ID: {unitId}
+              </p>
+              <a 
+                href={`/buildings/${buildingId}`}
+                className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity inline-block"
+              >
+                Back to Building
+              </a>
+            </div>
+          </div>
+        )
+      }
+    }
+
+    console.log('✅ Unit exists in database')
 
     // Fetch building data
     const { data: building, error: buildingError } = await supabase
@@ -82,9 +125,11 @@ export default async function UnitDetailPage({ params }: UnitDetailPageProps) {
       .single()
 
     if (buildingError || !building) {
-      console.error('Building not found:', buildingError)
+      console.error('❌ Building not found:', buildingError)
       notFound()
     }
+
+    console.log('✅ Building found:', building.name)
 
     // Fetch unit data with leaseholder information
     const { data: unit, error: unitError } = await supabase
@@ -107,20 +152,90 @@ export default async function UnitDetailPage({ params }: UnitDetailPageProps) {
       .eq('id', unitId)
       .single()
 
-    if (unitError || !unit) {
-      console.error('Unit not found:', unitError)
-      notFound()
+    if (unitError) {
+      console.error('❌ Unit query error:', unitError)
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="max-w-md mx-auto text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="h-8 w-8 text-red-600" />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Unit</h2>
+            <p className="text-gray-600 mb-4">
+              {unitError.message || 'Failed to load unit data'}
+            </p>
+            <a 
+              href={`/buildings/${buildingId}`}
+              className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity inline-block"
+            >
+              Back to Building
+            </a>
+          </div>
+        </div>
+      )
+    }
+
+    if (!unit) {
+      console.error('❌ Unit not found after query')
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="max-w-md mx-auto text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Home className="h-8 w-8 text-red-600" />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Unit Not Found</h2>
+            <p className="text-gray-600 mb-4">
+              The unit you're looking for doesn't exist.
+            </p>
+            <a 
+              href={`/buildings/${buildingId}`}
+              className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity inline-block"
+            >
+              Back to Building
+            </a>
+          </div>
+        </div>
+      )
+    }
+
+    console.log('✅ Unit found:', unit.unit_number)
+
+    // Verify the unit belongs to the correct building
+    if (unit.building_id !== buildingId) {
+      console.error('❌ Unit does not belong to the specified building')
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="max-w-md mx-auto text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="h-8 w-8 text-red-600" />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Invalid Unit</h2>
+            <p className="text-gray-600 mb-4">
+              This unit doesn't belong to the specified building.
+            </p>
+            <a 
+              href={`/buildings/${buildingId}`}
+              className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity inline-block"
+            >
+              Back to Building
+            </a>
+          </div>
+        </div>
+      )
     }
 
     // Fetch linked documents for this unit
-    const { data: documents = [], error: documentsError } = await supabase
+    const { data: documentsData = [], error: documentsError } = await supabase
       .from('building_documents')
       .select('id, file_name, file_url, type, created_at')
       .eq('unit_id', unitId)
       .order('created_at', { ascending: false })
 
+    const documents = documentsData || []
     if (documentsError) {
-      console.error('Error fetching documents:', documentsError)
+      console.error('⚠️ Error fetching documents:', documentsError)
+    } else {
+      console.log('✅ Documents found:', documents.length)
     }
 
     // Fetch lease information for this unit
@@ -132,32 +247,37 @@ export default async function UnitDetailPage({ params }: UnitDetailPageProps) {
       .order('created_at', { ascending: false })
 
     if (leasesError) {
-      console.error('Error fetching leases:', leasesError)
+      console.error('⚠️ Error fetching leases:', leasesError)
     } else {
-      leases = leasesData
+      leases = leasesData || []
+      console.log('✅ Leases found:', leases.length)
     }
 
     // Fetch correspondence emails for leaseholder
     let emails: Email[] = []
-    if (unit.leaseholders?.email) {
+    const leaseholder = unit.leaseholders as any
+    if (leaseholder?.email) {
       const { data: emailsData = [], error: emailsError } = await supabase
         .from('incoming_emails')
         .select('id, subject, from_email, body_preview, received_at')
-        .eq('to_email', unit.leaseholders.email)
+        .eq('to_email', leaseholder.email)
         .order('received_at', { ascending: false })
         .limit(10)
 
       if (emailsError) {
-        console.error('Error fetching emails:', emailsError)
+        console.error('⚠️ Error fetching emails:', emailsError)
       } else {
-        emails = emailsData
+        emails = emailsData || []
+        console.log('✅ Emails found:', emails.length)
       }
     }
+
+    console.log('✅ All data fetched successfully, rendering component')
 
     return (
       <LeaseholderInfoClient
         building={building}
-        unit={unit}
+        unit={unit as any}
         documents={documents}
         emails={emails}
         leases={leases}
