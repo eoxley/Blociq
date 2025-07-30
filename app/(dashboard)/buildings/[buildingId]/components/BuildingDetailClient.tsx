@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Building2, AlertTriangle, CheckCircle, Clock, Users, Shield, FileText, Mail, Search, Edit3, Save, X, Home, Wrench, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import BuildingUnitsClient from './BuildingUnitsClient'
+import { createClient } from '@/utils/supabase/client'
 
 interface Building {
   id: string
@@ -62,13 +63,23 @@ export default function BuildingDetailClient({
   const [isEditingNotes, setIsEditingNotes] = useState(false)
   const [notes, setNotes] = useState(building.notes || '')
   const [isSaving, setIsSaving] = useState(false)
+  const supabase = createClient()
 
   const handleSaveNotes = async () => {
     setIsSaving(true)
     try {
-      // Here you would typically call an API to save the notes
-      // For now, we'll just simulate the save
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const { error } = await supabase
+        .from('buildings')
+        .update({ notes })
+        .eq('id', buildingId)
+      
+      if (error) {
+        console.error('Failed to save notes:', error)
+        throw error
+      }
+      
+      // Update the building object to reflect the saved notes
+      building.notes = notes
       setIsEditingNotes(false)
     } catch (error) {
       console.error('Failed to save notes:', error)
@@ -227,7 +238,7 @@ export default function BuildingDetailClient({
                   href={`/buildings/${buildingId}/major-works`}
                   className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
                 >
-                  Add Major Work
+                  Start Major Works Project
                 </Link>
               </div>
               <div className="text-center py-8">
