@@ -36,9 +36,6 @@ export default function BuildingUnitsClient({ units, buildingId }: BuildingUnits
         <Home className="h-16 w-16 text-gray-400 mx-auto mb-4" />
         <h3 className="text-lg font-semibold text-gray-900 mb-2">No units found</h3>
         <p className="text-gray-600 mb-4">Add your first unit to get started.</p>
-        <button className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white px-6 py-3 rounded-lg hover:opacity-90 transition-opacity">
-          Add Unit
-        </button>
       </div>
     )
   }
@@ -47,20 +44,15 @@ export default function BuildingUnitsClient({ units, buildingId }: BuildingUnits
     <div className="space-y-6">
       {/* Search Bar */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search units..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
-            />
-          </div>
-          <button className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity">
-            Add Unit
-          </button>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search units..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
+          />
         </div>
       </div>
 
@@ -78,22 +70,29 @@ export default function BuildingUnitsClient({ units, buildingId }: BuildingUnits
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="space-y-2">
           {filtered.map((unit) => (
             <Link
               key={unit.id}
               href={`/buildings/${buildingId}/units/${unit.id}`}
-              className="bg-gray-50 hover:bg-gray-100 rounded-xl p-4 transition-colors border border-gray-200"
+              className="block p-4 rounded-lg hover:bg-gray-100 transition-colors border-b border-gray-200 last:border-b-0"
             >
-              <div className="text-center">
-                <Home className="h-8 w-8 text-gray-600 mx-auto mb-2" />
-                <div className="font-semibold text-gray-900">{unit.unit_number}</div>
-                {unit.type && (
-                  <div className="text-sm text-gray-600 mt-1">{unit.type}</div>
-                )}
-                {unit.floor && (
-                  <div className="text-xs text-gray-500 mt-1">Floor {unit.floor}</div>
-                )}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <Home className="h-5 w-5 text-gray-600" />
+                  <span className="font-semibold text-gray-900">{unit.unit_number}</span>
+                  {unit.type && (
+                    <span className="text-sm text-gray-600">({unit.type})</span>
+                  )}
+                  {unit.floor && (
+                    <span className="text-sm text-gray-500">Floor {unit.floor}</span>
+                  )}
+                </div>
+                <div className="text-gray-400">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
               </div>
             </Link>
           ))}
