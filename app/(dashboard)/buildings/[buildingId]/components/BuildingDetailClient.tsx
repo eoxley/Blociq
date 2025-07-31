@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Building2, AlertTriangle, CheckCircle, Clock, Users, Shield, FileText, Mail, Search, Edit3, Save, X, Home, Wrench, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import BuildingUnitsClient from './BuildingUnitsClient'
+import BuildingStructureOverview from '@/components/BuildingStructureOverview'
 import { supabase } from '@/lib/supabaseClient'
 
 interface Building {
@@ -198,6 +199,12 @@ export default function BuildingDetailClient({
             </div>
           </div>
 
+          {/* SECTION 1.5: Building Structure & Client */}
+          <BuildingStructureOverview 
+            buildingId={buildingId} 
+            buildingName={building.name || 'Unnamed Building'} 
+          />
+
           {/* SECTION 2: Compliance Overview */}
           <div className="bg-white rounded-2xl shadow-xl p-6">
             <div className="flex items-center justify-between mb-6">
@@ -318,28 +325,7 @@ export default function BuildingDetailClient({
             </div>
           </div>
 
-          {/* Client Information */}
-          {buildingSetup && (
-            <div className="bg-white rounded-2xl shadow-xl p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Client Information</h3>
-              <div className="space-y-3">
-                <div>
-                  <span className="text-sm text-gray-600">Client Type</span>
-                  <p className="font-medium">{buildingSetup.client_type || 'Not specified'}</p>
-                </div>
-                <div>
-                  <span className="text-sm text-gray-600">Client Name</span>
-                  <p className="font-medium">{buildingSetup.client_name || 'Not specified'}</p>
-                </div>
-                {buildingSetup.client_email && (
-                  <div>
-                    <span className="text-sm text-gray-600">Contact Email</span>
-                    <p className="font-medium">{buildingSetup.client_email}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+
         </div>
       </div>
     </div>
