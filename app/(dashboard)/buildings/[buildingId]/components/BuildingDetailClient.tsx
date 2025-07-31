@@ -5,6 +5,7 @@ import { Building2, AlertTriangle, CheckCircle, Clock, Users, Shield, FileText, 
 import Link from 'next/link'
 import BuildingUnitsClient from './BuildingUnitsClient'
 import BuildingStructureOverview from '@/components/BuildingStructureOverview'
+import BuildingTodoPanel from '@/components/BuildingTodoPanel'
 import { supabase } from '@/lib/supabaseClient'
 
 interface Building {
@@ -255,6 +256,9 @@ export default function BuildingDetailClient({
               </p>
             </div>
           </div>
+
+          {/* SECTION 4: To-Do List */}
+          <BuildingTodoPanel buildingId={parseInt(buildingId)} />
         </div>
 
         {/* Right column – Stats & Units */}

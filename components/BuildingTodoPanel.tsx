@@ -23,9 +23,13 @@ type Todo = {
   id: string
   building_id: number
   title: string
-  is_complete: boolean
+  description?: string
+  status: 'pending' | 'in_progress' | 'completed'
+  is_complete: boolean // For backward compatibility
   due_date?: string
   priority?: 'Low' | 'Medium' | 'High'
+  assigned_to?: string
+  created_by?: string
   created_at: string
   updated_at: string
 }
@@ -43,7 +47,7 @@ type Summary = {
   lastUpdated: string
 }
 
-type FilterType = 'All' | 'Incomplete' | 'Completed'
+type FilterType = 'All' | 'Pending' | 'In Progress' | 'Completed'
 
 interface BuildingTodoPanelProps {
   buildingId: number
@@ -90,7 +94,7 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
   const fetchSummary = async () => {
     setSummaryLoading(true)
     try {
-      const response = await fetch(`/api/generate-summary?buildingId=${buildingId}`)
+      const response = await fetch(`/api/summarise-building-todos?building_id=${buildingId}`)
       if (response.ok) {
         const data = await response.json()
         setSummary(data)
@@ -113,21 +117,27 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
 
     // Apply filter
     switch (filter) {
-      case 'Incomplete':
-        filteredTodos = todos.filter(todo => !todo.is_complete)
+      case 'Pending':
+        filteredTodos = todos.filter(todo => todo.status === 'pending')
+        break
+      case 'In Progress':
+        filteredTodos = todos.filter(todo => todo.status === 'in_progress')
         break
       case 'Completed':
-        filteredTodos = todos.filter(todo => todo.is_complete)
+        filteredTodos = todos.filter(todo => todo.status === 'completed')
         break
       default:
         filteredTodos = todos
     }
 
-    // Sort: incomplete first, then by due date, then by priority
+    // Sort: pending first, then in progress, then completed, then by due date, then by priority
     return filteredTodos.sort((a, b) => {
-      // First: incomplete tasks first
-      if (a.is_complete !== b.is_complete) {
-        return a.is_complete ? 1 : -1
+      // First: status priority (pending > in_progress > completed)
+      const statusOrder = { 'pending': 3, 'in_progress': 2, 'completed': 1 }
+      const aStatus = statusOrder[a.status] || 1
+      const bStatus = statusOrder[b.status] || 1
+      if (aStatus !== bStatus) {
+        return bStatus - aStatus
       }
 
       // Second: by due date (earliest first, null dates last)
@@ -154,9 +164,13 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
   // Toggle todo completion
   const toggleTodo = async (todo: Todo) => {
     try {
+      const newStatus = todo.status === 'completed' ? 'pending' : 'completed'
       const { error } = await supabase
         .from('building_todos')
-        .update({ is_complete: !todo.is_complete })
+        .update({ 
+          status: newStatus,
+          is_complete: newStatus === 'completed'
+        })
         .eq('id', todo.id)
 
       if (error) {
@@ -165,7 +179,7 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
       }
 
       setTodos(prev => prev.map(t => 
-        t.id === todo.id ? { ...t, is_complete: !t.is_complete } : t
+        t.id === todo.id ? { ...t, status: newStatus, is_complete: newStatus === 'completed' } : t
       ))
 
       // Refresh summary after update
@@ -180,23 +194,27 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
     if (!newTodo.title.trim()) return
 
     try {
-      const { data, error } = await supabase
-        .from('building_todos')
-        .insert({
+      const response = await fetch('/api/create-building-todo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           building_id: buildingId,
           title: newTodo.title.trim(),
           due_date: newTodo.due_date || null,
           priority: newTodo.priority
         })
-        .select()
-        .single()
+      })
 
-      if (error) {
-        console.error('Error adding todo:', error)
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('Error adding todo:', errorData)
         return
       }
 
-      setTodos(prev => [data, ...prev])
+      const { todo } = await response.json()
+      setTodos(prev => [todo, ...prev])
       setNewTodo({ title: '', due_date: '', priority: 'Medium' })
       setShowAddModal(false)
       fetchSummary()
@@ -267,7 +285,7 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
 
   // Check if task is overdue
   const isOverdue = (todo: Todo) => {
-    if (!todo.due_date || todo.is_complete) return false
+    if (!todo.due_date || todo.status === 'completed') return false
     return new Date(todo.due_date) < new Date()
   }
 
@@ -279,13 +297,23 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
       <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-gray-900">📝 Building To-Do List</h2>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            Add Task
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={fetchSummary}
+              disabled={summaryLoading}
+              className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              <Brain className={`h-4 w-4 ${summaryLoading ? 'animate-spin' : ''}`} />
+              Summarise Tasks
+            </button>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Add Task
+            </button>
+          </div>
         </div>
 
         {/* Filter Controls */}
@@ -295,7 +323,7 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
             <span className="text-sm font-medium text-gray-700">Filter:</span>
           </div>
           <div className="flex gap-2">
-            {(['All', 'Incomplete', 'Completed'] as FilterType[]).map((filterType) => (
+            {(['All', 'Pending', 'In Progress', 'Completed'] as FilterType[]).map((filterType) => (
               <button
                 key={filterType}
                 onClick={() => setFilter(filterType)}
@@ -325,10 +353,12 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
               <div
                 key={todo.id}
                 className={`flex items-center gap-3 p-4 border rounded-lg transition-all duration-200 ${
-                  todo.is_complete 
+                  todo.status === 'completed'
                     ? 'bg-gray-50 border-gray-200' 
                     : isOverdue(todo)
                     ? 'bg-red-50 border-red-200'
+                    : todo.status === 'in_progress'
+                    ? 'bg-blue-50 border-blue-200'
                     : 'bg-white border-gray-200 hover:border-teal-300'
                 }`}
               >
@@ -337,7 +367,7 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
                   onClick={() => toggleTodo(todo)}
                   className="flex-shrink-0 transition-all duration-200 hover:scale-110"
                 >
-                  {todo.is_complete ? (
+                  {todo.status === 'completed' ? (
                     <CheckCircle className="h-5 w-5 text-green-600" />
                   ) : (
                     <Circle className="h-5 w-5 text-gray-400 hover:text-teal-600" />
@@ -375,7 +405,7 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
                     </div>
                   ) : (
                     <div>
-                      <h3 className={`font-medium ${todo.is_complete ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+                      <h3 className={`font-medium ${todo.status === 'completed' ? 'line-through text-gray-500' : 'text-gray-900'}`}>
                         {todo.title}
                       </h3>
                       <div className="flex items-center gap-3 mt-1">
@@ -384,6 +414,15 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
                             📌 {todo.priority}
                           </span>
                         )}
+                        <span className={`px-2 py-1 text-xs rounded-full border ${
+                          todo.status === 'completed' ? 'text-green-600 bg-green-100 border-green-200' :
+                          todo.status === 'in_progress' ? 'text-blue-600 bg-blue-100 border-blue-200' :
+                          'text-gray-600 bg-gray-100 border-gray-200'
+                        }`}>
+                          {todo.status === 'completed' ? '✅ Completed' :
+                           todo.status === 'in_progress' ? '🔄 In Progress' :
+                           '⏳ Pending'}
+                        </span>
                         {todo.due_date && (
                           <div className="flex items-center gap-1 text-sm text-gray-500">
                             <Calendar className="h-3 w-3" />
