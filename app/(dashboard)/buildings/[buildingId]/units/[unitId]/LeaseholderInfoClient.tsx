@@ -15,6 +15,7 @@ import {
   Shield
 } from 'lucide-react'
 import Link from 'next/link'
+import LeaseholderManagement from '@/components/LeaseholderManagement'
 
 interface Unit {
   id: string
@@ -30,9 +31,9 @@ interface Leaseholder {
   id: string
   full_name: string | null
   email: string | null
-  phone: string | null
-  is_director: boolean | null
+  phone_number: string | null
   correspondence_address?: string | null
+  is_director: boolean | null
 }
 
 interface Building {
@@ -273,21 +274,21 @@ export default function LeaseholderInfoClient({
                         </div>
                       )}
                       
-                      {leaseholder.phone && (
+                      {leaseholder.phone_number && (
                         <div>
                           <label className="text-sm font-medium text-gray-600">Phone</label>
                           <div className="flex items-center justify-between mt-1">
-                            <span className="text-gray-900">{leaseholder.phone}</span>
+                            <span className="text-gray-900">{leaseholder.phone_number}</span>
                             <div className="flex space-x-2">
                               <button
-                                onClick={() => handleCall(leaseholder!.phone!)}
+                                onClick={() => handleCall(leaseholder!.phone_number!)}
                                 className="p-2 text-gray-400 hover:text-[#008C8F] transition-colors"
                                 title="Call"
                               >
                                 <Phone className="h-4 w-4" />
                               </button>
                               <button
-                                onClick={() => handleCopy(leaseholder!.phone!, 'phone')}
+                                onClick={() => handleCopy(leaseholder!.phone_number!, 'phone')}
                                 className="p-2 text-gray-400 hover:text-[#008C8F] transition-colors"
                                 title="Copy Phone"
                               >
@@ -432,7 +433,14 @@ export default function LeaseholderInfoClient({
               )}
             </div>
 
-            {/* SECTION 5: Correspondence */}
+            {/* SECTION 5: Leaseholder Management */}
+            <LeaseholderManagement 
+              unitId={unit.id} 
+              unitNumber={unit.unit_number} 
+              className="mb-6"
+            />
+
+            {/* SECTION 6: Correspondence */}
             <div className="bg-white rounded-2xl shadow-xl p-6">
               <div className="flex items-center space-x-3 mb-6">
                 <div className="w-12 h-12 bg-gradient-to-r from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center">
@@ -495,9 +503,9 @@ export default function LeaseholderInfoClient({
                     <span className="text-gray-700">Send Email</span>
                   </button>
                 )}
-                {leaseholder?.phone && (
+                {leaseholder?.phone_number && (
                   <button
-                    onClick={() => handleCall(leaseholder!.phone!)}
+                    onClick={() => handleCall(leaseholder!.phone_number!)}
                     className="w-full flex items-center p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
                   >
                     <Phone className="h-5 w-5 text-[#008C8F] mr-3" />

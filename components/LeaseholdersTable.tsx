@@ -7,10 +7,11 @@ import { BlocIQBadge } from '@/components/ui/blociq-badge';
 
 interface Leaseholder {
   id: string;
-  name: string | null;
+  full_name: string | null;
   email: string | null;
-  phone: string | null;
-  unit_id: number | null;
+  phone_number: string | null;
+  correspondence_address: string | null;
+  unit_id: string | null;
 }
 
 interface Lease {
@@ -141,9 +142,10 @@ export default function LeaseholdersTable({ buildingId, className = "" }: Leaseh
           .from('leaseholders')
           .select(`
             id,
-            name,
+            full_name,
             email,
-            phone,
+            phone_number,
+            correspondence_address,
             unit_id
           `)
           .in('unit_id', leaseUnitIds);
@@ -196,7 +198,7 @@ export default function LeaseholdersTable({ buildingId, className = "" }: Leaseh
     const { leaseholder, unit } = leaseholderData;
 
     return (
-      (leaseholder.name && leaseholder.name.toLowerCase().includes(searchLower)) ||
+      (leaseholder.full_name && leaseholder.full_name.toLowerCase().includes(searchLower)) ||
       (leaseholder.email && leaseholder.email.toLowerCase().includes(searchLower)) ||
       (unit && unit.unit_number.toLowerCase().includes(searchLower))
     );
@@ -338,9 +340,9 @@ export default function LeaseholdersTable({ buildingId, className = "" }: Leaseh
                             <User className="h-6 w-6 text-white" />
                           </div>
                           <div>
-                            <h4 className="text-lg font-semibold text-gray-900">
-                              {leaseholder.name || 'Unnamed Leaseholder'}
-                            </h4>
+                                                      <h4 className="text-lg font-semibold text-gray-900">
+                            {leaseholder.full_name || 'Unnamed Leaseholder'}
+                          </h4>
                             <div className="flex items-center gap-4 text-sm text-gray-600">
                               {leaseholder.email && (
                                 <div className="flex items-center gap-1">
@@ -348,10 +350,10 @@ export default function LeaseholdersTable({ buildingId, className = "" }: Leaseh
                                   {leaseholder.email}
                                 </div>
                               )}
-                              {leaseholder.phone && (
+                              {leaseholder.phone_number && (
                                 <div className="flex items-center gap-1">
                                   <span>📞</span>
-                                  {leaseholder.phone}
+                                  {leaseholder.phone_number}
                                 </div>
                               )}
                             </div>
