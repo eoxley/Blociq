@@ -2,7 +2,7 @@ import { cookies } from 'next/headers'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { AlertTriangle } from 'lucide-react'
-import InboxClient from './components/InboxClient'
+import InboxClient from './InboxClient'
 
 interface Email {
   id: string
