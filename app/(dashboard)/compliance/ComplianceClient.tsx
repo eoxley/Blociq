@@ -22,8 +22,8 @@ export default function ComplianceClient({ complianceAssets: initialAssets = [] 
 
   // Filter assets based on search and filter
   const filteredAssets = (assets || []).filter(asset => {
-    const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         asset.description.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = (asset.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                         (asset.description?.toLowerCase() || '').includes(searchTerm.toLowerCase())
     const matchesFilter = filter === 'all' || asset.required_if === filter
     return matchesSearch && matchesFilter
   })

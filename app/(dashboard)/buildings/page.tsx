@@ -29,8 +29,8 @@ function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
     
     return validBuildings.filter(building => {
       const searchLower = searchTerm.toLowerCase()
-      const nameMatch = building.name && building.name.toLowerCase().includes(searchLower)
-      const addressMatch = building.address && building.address.toLowerCase().includes(searchLower)
+      const nameMatch = building.name && typeof building.name === 'string' && building.name.toLowerCase().includes(searchLower)
+      const addressMatch = building.address && typeof building.address === 'string' && building.address.toLowerCase().includes(searchLower)
       return nameMatch || addressMatch
     })
   }, [validBuildings, searchTerm])

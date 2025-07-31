@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { exchangeCodeForTokens } from '@/lib/outlook';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+import { createClient } from '@/utils/supabase/server';
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,6 +15,20 @@ export async function POST(req: NextRequest) {
       return new NextResponse('Missing code parameter', { status: 400 });
     }
     
+    // Get the authenticated user
+    const supabase = createClient();
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !session) {
+      console.error('[Outlook Exchange] No authenticated session:', sessionError);
+      return new NextResponse('Authentication required', { status: 401 });
+    }
+    
+    const userId = session.user.id;
+    const userEmail = session.user.email;
+    
+    console.log('[Outlook Exchange] Authenticated user:', { userId, userEmail });
+    
     // Exchange code for tokens
     console.log('[Outlook Exchange] Calling exchangeCodeForTokens...');
     const tokenData = await exchangeCodeForTokens(code);
@@ -29,9 +39,8 @@ export async function POST(req: NextRequest) {
     });
 
     const upsertData = {
-      user_id: 'ee16d137-2e05-4032-a852-15478ec60c3c',
-      email: 'testbloc@blociq.co.uk',
-      user_email: 'testbloc@blociq.co.uk',
+      user_id: userId,
+      email: userEmail,
       access_token: tokenData.access_token,
       refresh_token: tokenData.refresh_token,
       expires_at: new Date(Date.now() + tokenData.expires_in * 1000).toISOString(),
@@ -45,7 +54,7 @@ export async function POST(req: NextRequest) {
       console.error('[Outlook Exchange] Error upserting token:', upsertError);
       throw upsertError;
     }
-    console.log('[Outlook Exchange] Token upserted successfully for', upsertData.user_email);
+    console.log('[Outlook Exchange] Token upserted successfully for', userEmail);
 
     // Return success response
     return NextResponse.json({ 
