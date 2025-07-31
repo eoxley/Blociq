@@ -72,6 +72,12 @@ export async function PUT(
     // Add updated_at timestamp
     updateData.updated_at = new Date().toISOString()
 
+    // Log the request details for debugging
+    console.log('🔍 Building update request:')
+    console.log('  Building ID:', buildingId)
+    console.log('  Request body:', body)
+    console.log('  Mapped update data:', updateData)
+
     console.log('🔍 Updating building with ID:', buildingId)
     console.log('📝 Update data:', updateData)
 
