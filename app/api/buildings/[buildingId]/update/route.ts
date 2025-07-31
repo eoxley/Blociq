@@ -89,6 +89,42 @@ export async function PUT(
       .select()
       .single()
 
+    // If we get a schema cache error, try to refresh the connection
+    if (error && error.code === 'PGRST204') {
+      console.log('🔄 Schema cache error detected, retrying with fresh connection...')
+      
+      // Create a fresh Supabase client
+      const freshSupabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      )
+      
+      const { data: retryData, error: retryError } = await freshSupabase
+        .from('buildings')
+        .update(updateData)
+        .eq('id', buildingId)
+        .select()
+        .single()
+      
+      if (retryError) {
+        console.error('❌ Retry also failed:', retryError)
+        return NextResponse.json(
+          { 
+            error: 'Database schema is out of sync. Please contact support.',
+            details: retryError.message,
+            code: retryError.code
+          },
+          { status: 500 }
+        )
+      }
+      
+      console.log('✅ Building updated successfully on retry:', retryData)
+      return NextResponse.json({
+        success: true,
+        data: retryData
+      })
+    }
+
     if (error) {
       console.error('❌ Error updating building:', error)
       console.error('❌ Error details:', {
