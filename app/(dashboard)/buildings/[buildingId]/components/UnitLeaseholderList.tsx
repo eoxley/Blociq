@@ -81,7 +81,7 @@ export default function UnitLeaseholderList({ units, buildingId, incomingEmails,
                       <TableCell>
                         {unit.leaseholders ? (
                           <div>
-                            <div className="font-medium">{unit.leaseholders.name}</div>
+                            <div className="font-medium">{unit.leaseholders.full_name}</div>
                             {unit.leaseholders.email && (
                               <div className="text-sm text-gray-500">{unit.leaseholders.email}</div>
                             )}
@@ -91,10 +91,10 @@ export default function UnitLeaseholderList({ units, buildingId, incomingEmails,
                         )}
                       </TableCell>
                       <TableCell>
-                        {unit.leaseholders?.phone ? (
+                        {unit.leaseholders?.phone_number ? (
                           <div className="flex items-center gap-1">
                             <Phone className="h-3 w-3 text-gray-400" />
-                            <span className="text-sm">{unit.leaseholders.phone}</span>
+                            <span className="text-sm">{unit.leaseholders.phone_number}</span>
                           </div>
                         ) : (
                           <span className="text-gray-400">No phone</span>
@@ -184,7 +184,7 @@ export default function UnitLeaseholderList({ units, buildingId, incomingEmails,
                           <>
                             <div>
                               <label className="text-sm font-medium text-gray-600">Name</label>
-                              <p className="text-lg font-semibold">{selectedUnit.leaseholders.name}</p>
+                              <p className="text-lg font-semibold">{selectedUnit.leaseholders.full_name}</p>
                             </div>
                             {selectedUnit.leaseholders.email && (
                               <div>
@@ -195,12 +195,12 @@ export default function UnitLeaseholderList({ units, buildingId, incomingEmails,
                                 </p>
                               </div>
                             )}
-                            {selectedUnit.leaseholders.phone && (
+                            {selectedUnit.leaseholders.phone_number && (
                               <div>
                                 <label className="text-sm font-medium text-gray-600">Phone</label>
                                 <p className="flex items-center gap-1">
                                   <Phone className="h-4 w-4 text-gray-400" />
-                                  {selectedUnit.leaseholders.phone}
+                                  {selectedUnit.leaseholders.phone_number}
                                 </p>
                               </div>
                             )}

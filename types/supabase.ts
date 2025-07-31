@@ -158,27 +158,30 @@ export interface Database {
         Row: {
           id: string
           unit_id: string | null
-          name: string | null
+          full_name: string | null
           email: string | null
-          phone: string | null
+          phone_number: string | null
+          correspondence_address: string | null
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
           unit_id?: string | null
-          name?: string | null
+          full_name?: string | null
           email?: string | null
-          phone?: string | null
+          phone_number?: string | null
+          correspondence_address?: string | null
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
           unit_id?: string | null
-          name?: string | null
+          full_name?: string | null
           email?: string | null
-          phone?: string | null
+          phone_number?: string | null
+          correspondence_address?: string | null
           created_at?: string
           updated_at?: string
         }
