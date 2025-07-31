@@ -1,5 +1,5 @@
-import CommunicationsLaunchpad from './CommunicationsLaunchpad'
+import CommunicationsHub from './CommunicationsHub'
 
 export default function CommunicationsPage() {
-  return <CommunicationsLaunchpad />
+  return <CommunicationsHub />
 } 
