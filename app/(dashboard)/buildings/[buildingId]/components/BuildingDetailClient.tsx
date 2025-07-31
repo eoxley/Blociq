@@ -286,11 +286,11 @@ export default function BuildingDetailClient({
                 <span className="text-gray-700">Major Works</span>
               </Link>
               <Link
-                href={`/buildings/${buildingId}/calendar`}
+                href={`/buildings/${buildingId}/structure`}
                 className="flex items-center p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
               >
-                <Calendar className="h-5 w-5 text-[#008C8F] mr-3" />
-                <span className="text-gray-700">Calendar</span>
+                <Building2 className="h-5 w-5 text-[#008C8F] mr-3" />
+                <span className="text-gray-700">Building Structure</span>
               </Link>
             </div>
           </div>
