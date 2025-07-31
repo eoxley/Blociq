@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -67,22 +69,43 @@ function validateEmailData(email: any): any {
 }
 
 export async function POST() {
-  const outlookEmail = 'testbloc@blociq.co.uk'
-
   try {
-    console.log('🔄 Starting email sync for:', outlookEmail)
+    // Get the current user's session
+    const cookieStore = await cookies()
+    const supabaseAuth = createRouteHandlerClient({ cookies: () => cookieStore })
+    
+    const { data: { session }, error: sessionError } = await supabaseAuth.auth.getSession()
+    
+    if (sessionError || !session) {
+      console.error('❌ No authenticated session found')
+      return NextResponse.json(
+        { error: 'Authentication required. Please log in.' },
+        { status: 401 }
+      )
+    }
 
-    // 1. Get stored Outlook token
+    const userEmail = session.user.email
+    if (!userEmail) {
+      console.error('❌ No email found in user session')
+      return NextResponse.json(
+        { error: 'User email not found. Please log in again.' },
+        { status: 400 }
+      )
+    }
+
+    console.log('🔄 Starting email sync for:', userEmail)
+
+    // 1. Get stored Outlook token for the current user
     const { data: tokenRow, error: tokenError } = await supabase
       .from('outlook_tokens')
       .select('access_token, refresh_token, expires_at')
-      .eq('email', outlookEmail)
+      .eq('email', userEmail)
       .single()
 
     if (tokenError || !tokenRow) {
-      console.error('❌ No Outlook token found:', tokenError?.message)
+      console.error('❌ No Outlook token found for user:', userEmail, tokenError?.message)
       return NextResponse.json(
-        { error: 'No valid Outlook token found. Please reconnect Outlook.' },
+        { error: 'No valid Outlook token found. Please connect your Outlook account first.' },
         { status: 401 }
       )
     }
@@ -128,7 +151,7 @@ export async function POST() {
           refresh_token: refreshData.refresh_token,
           expires_at: new Date(Date.now() + refreshData.expires_in * 1000).toISOString(),
         })
-        .eq('email', outlookEmail)
+        .eq('email', userEmail)
 
       console.log('✅ Token refreshed successfully')
     }
@@ -194,7 +217,13 @@ export async function POST() {
           continue
         }
 
-        emailInserts.push(email)
+        // Add user_id to the email data
+        const emailWithUserId = {
+          ...email,
+          user_id: session.user.id
+        }
+
+        emailInserts.push(emailWithUserId)
         console.log(`✅ Prepared email: ${email.subject}`)
       } catch (error) {
         console.error('❌ Error processing email:', error)

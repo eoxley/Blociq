@@ -31,6 +31,15 @@ export default function InboxClient({ emails }: InboxClientProps) {
     setError(null)
     
     try {
+      // First, fix any existing emails without user_id
+      const fixResponse = await fetch('/api/fix-email-user-association', { method: 'POST' })
+      const fixResult = await fixResponse.json()
+      
+      if (fixResult.success && fixResult.updatedCount > 0) {
+        console.log(`✅ Fixed ${fixResult.updatedCount} emails without user_id`)
+      }
+
+      // Then sync new emails
       const response = await fetch('/api/sync-emails', { method: 'POST' })
       const result = await response.json()
       
@@ -110,6 +119,32 @@ export default function InboxClient({ emails }: InboxClientProps) {
                 <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
                 {isSyncing ? 'Syncing...' : 'Sync Inbox'}
               </button>
+              {emails.length === 0 && (
+                <button 
+                  onClick={async () => {
+                    setIsSyncing(true)
+                    try {
+                      const response = await fetch('/api/fix-email-user-association', { method: 'POST' })
+                      const result = await response.json()
+                      if (result.success) {
+                        showToast(result.message, 'success')
+                        setTimeout(() => window.location.reload(), 1000)
+                      } else {
+                        showToast(result.error || 'Failed to fix emails', 'error')
+                      }
+                    } catch (error) {
+                      showToast('Failed to fix emails', 'error')
+                    } finally {
+                      setIsSyncing(false)
+                    }
+                  }}
+                  disabled={isSyncing}
+                  className="bg-white/20 text-white px-4 py-2 rounded-lg hover:bg-white/30 transition-colors flex items-center disabled:opacity-50"
+                >
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  Fix Email Association
+                </button>
+              )}
             </div>
           </div>
         </div>

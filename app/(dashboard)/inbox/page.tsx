@@ -35,6 +35,9 @@ export default async function InboxPage() {
       redirect('/login')
     }
 
+    const userId = session.user.id
+    console.log('✅ User authenticated:', userId)
+
     // First, let's test if the table exists and what columns it has
     let emails: Email[] = []
     let emailsError = null
@@ -52,14 +55,18 @@ export default async function InboxPage() {
       }
 
       // Now try the full query with the correct schema from types/supabase.ts
+      // Fetch emails for the current user
       const result = await supabase
         .from('incoming_emails')
         .select('id, subject, from_email, from_name, body, received_at, handled, unread, thread_id, user_id, created_at, updated_at')
+        .eq('user_id', userId) // Only fetch emails for current user
         .order('received_at', { ascending: false })
         .limit(50)
       
       emails = result.data || []
       emailsError = result.error
+      
+      console.log(`✅ Found ${emails.length} emails for user ${userId}`)
       
     } catch (dbError) {
       console.error('Database query error:', dbError)
