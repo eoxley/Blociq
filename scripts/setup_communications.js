@@ -32,23 +32,11 @@ async function setupCommunications() {
       console.log('✅ communications_log table exists')
     }
 
-    // Check leaseholders data
+    // Check leaseholders data with simpler query to avoid relationship conflicts
     console.log('\n👥 Checking leaseholders data...')
     const { data: leaseholders, error: leaseholdersError } = await supabase
       .from('leaseholders')
-      .select(`
-        id,
-        name,
-        email,
-        phone,
-        unit:units(
-          unit_number,
-          building:buildings(
-            name,
-            address
-          )
-        )
-      `)
+      .select('id, name, email, phone')
       .limit(5)
 
     if (leaseholdersError) {
@@ -62,11 +50,21 @@ async function setupCommunications() {
           const hasEmail = lh.email ? '✅' : '❌'
           const hasPhone = lh.phone ? '✅' : '❌'
           console.log(`  ${index + 1}. ${lh.name || 'Unknown'} ${hasEmail} ${hasPhone}`)
-          if (lh.unit?.building?.name) {
-            console.log(`     Building: ${lh.unit.building.name}`)
-          }
         })
       }
+    }
+
+    // Check units data separately
+    console.log('\n🏠 Checking units data...')
+    const { data: units, error: unitsError } = await supabase
+      .from('units')
+      .select('id, unit_number, building_id')
+      .limit(5)
+
+    if (unitsError) {
+      console.error('❌ Error fetching units:', unitsError)
+    } else {
+      console.log(`✅ Found ${units?.length || 0} units`)
     }
 
     // Check buildings data
@@ -108,6 +106,9 @@ async function setupCommunications() {
         console.log('✅ Communications log API is working')
       } else {
         console.log('⚠️ Communications log API returned:', logResponse.status)
+        if (logResponse.status === 401) {
+          console.log('   This is expected - API requires authentication')
+        }
       }
     } catch (error) {
       console.log('⚠️ Could not test communications log API (server may not be running)')
@@ -115,9 +116,9 @@ async function setupCommunications() {
 
     console.log('\n✅ Communications setup check completed!')
     console.log('\n🔗 Next steps:')
-    console.log('  1. If the table doesn\'t exist, run the SQL script in Supabase dashboard')
-    console.log('  2. Test the communications hub at: http://localhost:3000/communications')
-    console.log('  3. Try sending test emails and calls')
+    console.log('  1. Test the communications hub at: http://localhost:3000/communications')
+    console.log('  2. Try sending test emails and calls')
+    console.log('  3. Check browser console for any errors')
     
   } catch (error) {
     console.error('❌ Error in communications setup:', error)

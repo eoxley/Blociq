@@ -93,10 +93,17 @@ export default function CommunicationsHub() {
         .order('created_at', { ascending: false })
         .limit(5)
 
-      if (error) throw error
+      if (error) {
+        console.error('Error loading communications log:', error)
+        // Don't throw error, just set empty array
+        setRecentCommunications([])
+        return
+      }
+      
       setRecentCommunications(data || [])
     } catch (error) {
       console.error('Error loading recent communications:', error)
+      setRecentCommunications([])
     }
   }
 
@@ -229,7 +236,13 @@ export default function CommunicationsHub() {
           status: 'sent'
         })
 
-      if (error) throw error
+      if (error) {
+        console.error('Error logging call:', error)
+        // Don't fail the call if logging fails
+        toast.warning('Call logged with warning - logging failed')
+      } else {
+        toast.success('Call logged successfully')
+      }
 
       // Open phone dialer
       window.open(`tel:${leaseholder.phone}`, '_blank')
@@ -239,8 +252,8 @@ export default function CommunicationsHub() {
       await loadRecentCommunications()
       
     } catch (error) {
-      console.error('Error logging call:', error)
-      toast.error('Failed to log call')
+      console.error('Error in call process:', error)
+      toast.error('Failed to process call')
     } finally {
       setIsLoading(false)
     }

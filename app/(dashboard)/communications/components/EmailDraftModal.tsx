@@ -61,22 +61,20 @@ export default function EmailDraftModal({
 
       if (isBulk && building) {
         // Bulk email to all leaseholders in building
+        // First get units for this building
+        const { data: units, error: unitsError } = await supabase
+          .from('units')
+          .select('id, unit_number, building_id')
+          .eq('building_id', building.id)
+
+        if (unitsError) throw unitsError
+
+        // Then get leaseholders for these units
+        const unitIds = units?.map(u => u.id) || []
         const { data: leaseholders, error } = await supabase
           .from('leaseholders')
-          .select(`
-            id,
-            name,
-            email,
-            unit:units(
-              unit_number,
-              building:buildings(
-                id,
-                name,
-                address
-              )
-            )
-          `)
-          .eq('unit.building.id', building.id)
+          .select('id, name, email, unit_id')
+          .in('unit_id', unitIds)
           .not('email', 'is', null)
 
         if (error) throw error

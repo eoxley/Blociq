@@ -89,27 +89,45 @@ export default function CallLeaseholderModal({
     try {
       setIsSearching(true)
       
-      const { data, error } = await supabase
+      // First get leaseholders
+      const { data: leaseholdersData, error: leaseholdersError } = await supabase
         .from('leaseholders')
-        .select(`
-          id,
-          name,
-          email,
-          phone,
-          unit_id,
-          unit:units(
-            unit_number,
-            building:buildings(
-              name,
-              address
-            )
-          )
-        `)
+        .select('id, name, email, phone, unit_id')
         .order('name')
 
-      if (error) throw error
+      if (leaseholdersError) throw leaseholdersError
 
-      setLeaseholders(data || [])
+      // Then get units and buildings separately
+      const { data: unitsData, error: unitsError } = await supabase
+        .from('units')
+        .select('id, unit_number, building_id')
+
+      if (unitsError) throw unitsError
+
+      const { data: buildingsData, error: buildingsError } = await supabase
+        .from('buildings')
+        .select('id, name, address')
+
+      if (buildingsError) throw buildingsError
+
+      // Combine the data
+      const combinedLeaseholders = (leaseholdersData || []).map(leaseholder => {
+        const unit = unitsData?.find(u => u.id === leaseholder.unit_id)
+        const building = unit ? buildingsData?.find(b => b.id === unit.building_id) : null
+        
+        return {
+          ...leaseholder,
+          unit: unit ? {
+            unit_number: unit.unit_number,
+            building: building ? {
+              name: building.name,
+              address: building.address
+            } : null
+          } : null
+        }
+      })
+
+      setLeaseholders(combinedLeaseholders)
     } catch (error) {
       console.error('Error loading leaseholders:', error)
       toast.error('Failed to load leaseholders')
