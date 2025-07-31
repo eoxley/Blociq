@@ -20,6 +20,8 @@ interface Email {
 }
 
 export default async function InboxPage() {
+  console.log('🚀 InboxPage: Starting to render...')
+  
   const supabase = createClient(cookies())
 
   try {
@@ -27,11 +29,12 @@ export default async function InboxPage() {
     const { data: { session }, error: authError } = await supabase.auth.getSession()
     
     if (authError) {
-      console.error('Auth error:', authError)
+      console.error('❌ Auth error:', authError)
       throw new Error('Authentication failed')
     }
     
     if (!session) {
+      console.log('❌ No session found, redirecting to login')
       redirect('/login')
     }
 
@@ -43,6 +46,8 @@ export default async function InboxPage() {
     let emailsError = null
     
     try {
+      console.log('🔍 Testing database connection...')
+      
       // Try a simple query first to see if the table exists
       const tableTest = await supabase
         .from('incoming_emails')
@@ -50,9 +55,11 @@ export default async function InboxPage() {
         .limit(1)
       
       if (tableTest.error) {
-        console.error('Table test error:', tableTest.error)
+        console.error('❌ Table test error:', tableTest.error)
         throw new Error(`Database table error: ${tableTest.error.message}`)
       }
+
+      console.log('✅ Table test successful')
 
       // Now try the full query with the correct schema from types/supabase.ts
       // Fetch emails for the current user
@@ -68,17 +75,23 @@ export default async function InboxPage() {
       
       console.log(`✅ Found ${emails.length} emails for user ${userId}`)
       
+      if (emailsError) {
+        console.error('❌ Emails query error:', emailsError)
+      }
+      
     } catch (dbError) {
-      console.error('Database query error:', dbError)
+      console.error('❌ Database query error:', dbError)
       emailsError = dbError as any
     }
 
     if (emailsError) {
-      console.error('Error fetching emails:', emailsError)
+      console.error('❌ Error fetching emails:', emailsError)
       // Don't throw error, just pass empty array to client
       emails = []
     }
 
+    console.log('🎯 About to render InboxClient with', emails.length, 'emails')
+    
     // Pass emails as prop to client component
     return <InboxClient emails={emails} />
 
@@ -86,7 +99,7 @@ export default async function InboxPage() {
     console.error('❌ Error in InboxPage:', error)
     
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex items-center justify-center min-h-[400px]">
         <div className="max-w-md mx-auto text-center">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertTriangle className="h-8 w-8 text-red-600" />

@@ -154,6 +154,15 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Fix text-size-adjust compatibility */
+    -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    /* Fix user-select compatibility */
+    -webkit-user-select: auto;
+    -moz-user-select: auto;
+    -ms-user-select: auto;
+    user-select: auto;
   }
 }
 

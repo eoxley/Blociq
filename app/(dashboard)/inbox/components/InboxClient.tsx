@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Mail, RefreshCw, AlertTriangle } from 'lucide-react'
 
 interface Email {
@@ -26,7 +26,13 @@ export default function InboxClient({ emails }: InboxClientProps) {
   const [isSyncing, setIsSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  useEffect(() => {
+    console.log('🎯 InboxClient: Component mounted with', emails.length, 'emails')
+    console.log('📧 Emails data:', emails)
+  }, [emails])
+
   const handleSyncInbox = async () => {
+    console.log('🔄 Starting inbox sync...')
     setIsSyncing(true)
     setError(null)
     
@@ -72,9 +78,12 @@ export default function InboxClient({ emails }: InboxClientProps) {
     setTimeout(() => toast.remove(), 3000)
   }
 
+  console.log('🎨 InboxClient: Rendering component...')
+
   if (error) {
+    console.log('❌ InboxClient: Rendering error state')
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex items-center justify-center min-h-[400px]">
         <div className="max-w-md mx-auto text-center">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertTriangle className="h-8 w-8 text-red-600" />
@@ -92,11 +101,13 @@ export default function InboxClient({ emails }: InboxClientProps) {
     )
   }
 
+  console.log('✅ InboxClient: Rendering main UI')
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="w-full">
       {/* TOP: Inbox Header with BlocIQ Gradient */}
-      <div className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white rounded-2xl mb-6">
+        <div className="p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
@@ -115,6 +126,7 @@ export default function InboxClient({ emails }: InboxClientProps) {
                 onClick={handleSyncInbox}
                 disabled={isSyncing}
                 className="bg-white/20 text-white px-4 py-2 rounded-lg hover:bg-white/30 transition-colors flex items-center disabled:opacity-50"
+                aria-label="Sync inbox"
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
                 {isSyncing ? 'Syncing...' : 'Sync Inbox'}
@@ -140,6 +152,7 @@ export default function InboxClient({ emails }: InboxClientProps) {
                   }}
                   disabled={isSyncing}
                   className="bg-white/20 text-white px-4 py-2 rounded-lg hover:bg-white/30 transition-colors flex items-center disabled:opacity-50"
+                  aria-label="Fix email association"
                 >
                   <AlertTriangle className="h-4 w-4 mr-2" />
                   Fix Email Association
@@ -151,92 +164,91 @@ export default function InboxClient({ emails }: InboxClientProps) {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-2xl shadow-xl">
-          
-          {/* Email List Header */}
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <h2 className="text-xl font-semibold text-gray-900">Messages</h2>
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-500">
-                    {emails.filter(e => e.unread).length} unread
-                  </span>
-                  <span className="text-sm text-gray-500">•</span>
-                  <span className="text-sm text-gray-500">
-                    {emails.length} total
-                  </span>
-                </div>
+      <div className="bg-white rounded-2xl shadow-xl">
+        
+        {/* Email List Header */}
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <h2 className="text-xl font-semibold text-gray-900">Messages</h2>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-500">
+                  {emails.filter(e => e.unread).length} unread
+                </span>
+                <span className="text-sm text-gray-500">•</span>
+                <span className="text-sm text-gray-500">
+                  {emails.length} total
+                </span>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Email List */}
-          <div className="divide-y divide-gray-200">
-            {emails.length > 0 ? (
-              emails.map((email) => (
-                <div 
-                  key={email.id} 
-                  className={`p-6 hover:bg-gray-50 transition-colors cursor-pointer ${email.unread ? 'bg-blue-50' : ''}`}
-                >
-                  <div className="flex items-start space-x-4">
-                    <div className="flex-shrink-0">
-                      {email.unread ? (
-                        <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
-                      ) : (
-                        <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <p className={`text-sm font-medium ${email.unread ? 'text-gray-900' : 'text-gray-700'}`}>
-                            {email.from_name || email.from_email}
-                          </p>
-                          {email.unread && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                              New
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-xs text-gray-500">
-                            {new Date(email.received_at).toLocaleDateString()}
+        {/* Email List */}
+        <div className="divide-y divide-gray-200">
+          {emails.length > 0 ? (
+            emails.map((email) => (
+              <div 
+                key={email.id} 
+                className={`p-6 hover:bg-gray-50 transition-colors cursor-pointer ${email.unread ? 'bg-blue-50' : ''}`}
+              >
+                <div className="flex items-start space-x-4">
+                  <div className="flex-shrink-0">
+                    {email.unread ? (
+                      <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                    ) : (
+                      <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <p className={`text-sm font-medium ${email.unread ? 'text-gray-900' : 'text-gray-700'}`}>
+                          {email.from_name || email.from_email}
+                        </p>
+                        {email.unread && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            New
                           </span>
-                          <span className="text-xs text-gray-500">
-                            {new Date(email.received_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
+                        )}
                       </div>
-                      <p className={`text-sm font-medium mt-1 ${email.unread ? 'text-gray-900' : 'text-gray-700'}`}>
-                        {email.subject || 'No Subject'}
-                      </p>
-                      <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                        {email.body?.substring(0, 150) || 'No preview available'}
-                      </p>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs text-gray-500">
+                          {new Date(email.received_at).toLocaleDateString()}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {new Date(email.received_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
                     </div>
+                    <p className={`text-sm font-medium mt-1 ${email.unread ? 'text-gray-900' : 'text-gray-700'}`}>
+                      {email.subject || 'No Subject'}
+                    </p>
+                    <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                      {email.body?.substring(0, 150) || 'No preview available'}
+                    </p>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="p-12 text-center">
-                <Mail className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No emails yet</h3>
-                <p className="text-gray-600 mb-6">
-                  Your inbox is empty. Click "Sync Inbox" to fetch emails from Outlook.
-                </p>
-                <button 
-                  onClick={handleSyncInbox}
-                  disabled={isSyncing}
-                  className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white px-6 py-3 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 inline ${isSyncing ? 'animate-spin' : ''}`} />
-                  {isSyncing ? 'Syncing...' : 'Sync Inbox'}
-                </button>
               </div>
-            )}
-          </div>
+            ))
+          ) : (
+            <div className="p-12 text-center">
+              <Mail className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No emails yet</h3>
+              <p className="text-gray-600 mb-6">
+                Your inbox is empty. Click "Sync Inbox" to fetch emails from Outlook.
+              </p>
+              <button 
+                onClick={handleSyncInbox}
+                disabled={isSyncing}
+                className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white px-6 py-3 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+                aria-label="Sync inbox"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 inline ${isSyncing ? 'animate-spin' : ''}`} />
+                {isSyncing ? 'Syncing...' : 'Sync Inbox'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
