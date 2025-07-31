@@ -61,4 +61,37 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = createClient(cookies())
+
+    // Check authentication
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Fetch all compliance assets
+    const { data: assets, error } = await supabase
+      .from('compliance_assets')
+      .select('*')
+      .order('category', { ascending: true })
+      .order('title', { ascending: true })
+
+    if (error) {
+      console.error('Error fetching compliance assets:', error)
+      return NextResponse.json({ error: 'Failed to fetch compliance assets' }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      assets: assets || [],
+      total: assets?.length || 0
+    })
+
+  } catch (error) {
+    console.error('Error in compliance-assets API:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 } 

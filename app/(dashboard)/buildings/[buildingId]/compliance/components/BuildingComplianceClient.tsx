@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
+import SetupComplianceTrackerModal from '@/components/SetupComplianceTrackerModal'
 
 // Type definitions
 interface Building {
@@ -66,6 +67,7 @@ export default function BuildingComplianceClient({
   const [isSetupMode, setIsSetupMode] = useState(!hasComplianceSetup)
   const [selectedAssets, setSelectedAssets] = useState<string[]>([])
   const [isSaving, setIsSaving] = useState(false)
+  const [showSetupModal, setShowSetupModal] = useState(false)
 
   // Group master assets by category
   const groupedMasterAssets = masterAssets.reduce((acc, asset) => {
@@ -127,6 +129,11 @@ export default function BuildingComplianceClient({
     } finally {
       setIsSaving(false)
     }
+  }
+
+  const handleSetupModalSuccess = () => {
+    // Refresh the page to show the new setup
+    window.location.reload()
   }
 
   const getStatusBadge = (status: string, dueDate: string | null) => {
@@ -433,9 +440,9 @@ export default function BuildingComplianceClient({
                   <p className="text-gray-600 mb-6">
                     This building doesn't have any compliance tracking set up yet.
                   </p>
-                  <Button onClick={() => setIsSetupMode(true)}>
+                  <Button onClick={() => setShowSetupModal(true)}>
                     <Plus className="h-4 w-4 mr-2" />
-                    Set Up Compliance
+                    Set Up Compliance Tracker
                   </Button>
                 </CardContent>
               </Card>
@@ -443,6 +450,15 @@ export default function BuildingComplianceClient({
           </div>
         )}
       </div>
+
+      {/* Setup Compliance Tracker Modal */}
+      <SetupComplianceTrackerModal
+        buildingId={building.id}
+        buildingName={building.name}
+        isOpen={showSetupModal}
+        onClose={() => setShowSetupModal(false)}
+        onSuccess={handleSetupModalSuccess}
+      />
     </div>
   )
 } 

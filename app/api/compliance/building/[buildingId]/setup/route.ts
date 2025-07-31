@@ -8,7 +8,7 @@ export async function POST(
 ) {
   try {
     const { buildingId } = await params
-    const body = await request.json()
+    const body = await req.json()
     const { assetIds } = body
 
     const supabase = createClient(cookies())
