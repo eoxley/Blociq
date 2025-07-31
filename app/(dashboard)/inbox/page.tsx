@@ -20,6 +20,7 @@ interface Email {
   unit_id: number | null
   leaseholder_id: string | null
   user_id: string | null
+  to_email: string[] | null
   created_at: string | null
   updated_at: string | null
 }
@@ -68,7 +69,7 @@ export default async function InboxPage() {
       console.log('✅ Table test successful')
 
       // Now try the full query with the correct schema
-      // Fetch emails for the current user with proper field mapping
+      // Fetch ALL emails for the current user by recipient email
       const result = await supabase
         .from('incoming_emails')
         .select(`
@@ -85,9 +86,10 @@ export default async function InboxPage() {
           updated_at,
           building_id,
           unit_id,
-          leaseholder_id
+          leaseholder_id,
+          to_email
         `)
-        .eq('user_id', userId) // Only fetch emails for current user
+        .or(`to_email.cs.{${userEmail}},to_email.ilike.%${userEmail}%`) // Fetch emails where user is recipient
         .order('received_at', { ascending: false })
         .limit(50)
       
@@ -112,6 +114,7 @@ export default async function InboxPage() {
           unit_id: email.unit_id,
           leaseholder_id: email.leaseholder_id,
           user_id: email.user_id,
+          to_email: email.to_email,
           created_at: email.created_at,
           updated_at: email.updated_at
         }))
