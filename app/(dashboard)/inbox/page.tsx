@@ -7,16 +7,21 @@ import InboxClient from './components/InboxClient'
 interface Email {
   id: string
   subject: string | null
-  from_email: string
+  from_email: string | null
   from_name: string | null
-  body: string | null
-  received_at: string
-  handled: boolean
-  unread: boolean
-  thread_id: string | null
+  body_preview: string | null
+  received_at: string | null
+  unread: boolean | null
+  handled: boolean | null
+  pinned: boolean | null
+  flag_status: string | null
+  categories: string[] | null
+  building_id: number | null
+  unit_id: number | null
+  leaseholder_id: string | null
   user_id: string | null
-  created_at: string
-  updated_at: string
+  created_at: string | null
+  updated_at: string | null
 }
 
 export default async function InboxPage() {
@@ -39,7 +44,8 @@ export default async function InboxPage() {
     }
 
     const userId = session.user.id
-    console.log('✅ User authenticated:', userId)
+    const userEmail = session.user.email
+    console.log('✅ User authenticated:', userId, 'Email:', userEmail)
 
     // First, let's test if the table exists and what columns it has
     let emails: Email[] = []
@@ -61,22 +67,56 @@ export default async function InboxPage() {
 
       console.log('✅ Table test successful')
 
-      // Now try the full query with the correct schema from types/supabase.ts
-      // Fetch emails for the current user
+      // Now try the full query with the correct schema
+      // Fetch emails for the current user with proper field mapping
       const result = await supabase
         .from('incoming_emails')
-        .select('id, subject, from_email, from_name, body, received_at, handled, unread, thread_id, user_id, created_at, updated_at')
+        .select(`
+          id, 
+          subject, 
+          from_email, 
+          from_name, 
+          body_preview, 
+          received_at, 
+          is_read, 
+          is_handled, 
+          user_id, 
+          created_at, 
+          updated_at,
+          building_id,
+          unit_id,
+          leaseholder_id
+        `)
         .eq('user_id', userId) // Only fetch emails for current user
         .order('received_at', { ascending: false })
         .limit(50)
       
-      emails = result.data || []
-      emailsError = result.error
-      
-      console.log(`✅ Found ${emails.length} emails for user ${userId}`)
-      
-      if (emailsError) {
-        console.error('❌ Emails query error:', emailsError)
+      if (result.error) {
+        console.error('❌ Emails query error:', result.error)
+        emailsError = result.error
+      } else {
+        // Map database fields to expected interface
+        emails = (result.data || []).map(email => ({
+          id: email.id,
+          subject: email.subject,
+          from_email: email.from_email,
+          from_name: email.from_name,
+          body_preview: email.body_preview,
+          received_at: email.received_at,
+          unread: !email.is_read, // Map is_read to unread (inverted)
+          handled: email.is_handled, // Map is_handled to handled
+          pinned: false, // Default value since not in schema
+          flag_status: null, // Default value since not in schema
+          categories: null, // Default value since not in schema
+          building_id: email.building_id,
+          unit_id: email.unit_id,
+          leaseholder_id: email.leaseholder_id,
+          user_id: email.user_id,
+          created_at: email.created_at,
+          updated_at: email.updated_at
+        }))
+        
+        console.log(`✅ Found ${emails.length} emails for user ${userId} (${userEmail})`)
       }
       
     } catch (dbError) {
