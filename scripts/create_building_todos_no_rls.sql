@@ -1,4 +1,4 @@
--- Create building_todos table for managing building-specific tasks
+-- Create building_todos table for managing building-specific tasks (no RLS)
 CREATE TABLE IF NOT EXISTS building_todos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   building_id UUID REFERENCES buildings(id) ON DELETE CASCADE,
@@ -22,25 +22,7 @@ CREATE INDEX IF NOT EXISTS idx_building_todos_priority ON building_todos(priorit
 CREATE INDEX IF NOT EXISTS idx_building_todos_created_at ON building_todos(created_at);
 CREATE INDEX IF NOT EXISTS idx_building_todos_is_complete ON building_todos(is_complete);
 
--- Enable Row Level Security
-ALTER TABLE building_todos ENABLE ROW LEVEL SECURITY;
-
--- Create RLS policies for secure access (simplified without profiles table)
--- Users can view todos for any building (we'll filter by user in the application)
-CREATE POLICY "Users can view todos" ON building_todos
-  FOR SELECT USING (true);
-
--- Users can insert todos for any building (we'll validate in the application)
-CREATE POLICY "Users can insert todos" ON building_todos
-  FOR INSERT WITH CHECK (true);
-
--- Users can update todos for any building (we'll validate in the application)
-CREATE POLICY "Users can update todos" ON building_todos
-  FOR UPDATE USING (true);
-
--- Users can delete todos for any building (we'll validate in the application)
-CREATE POLICY "Users can delete todos" ON building_todos
-  FOR DELETE USING (true);
+-- Note: RLS is disabled for simplicity - access control will be handled in the application
 
 -- Create function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_building_todos_updated_at()

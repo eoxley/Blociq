@@ -4,20 +4,23 @@
 The `building_todos` table doesn't exist in the database, causing "Error fetching todos" in the BuildingTodoPanel component.
 
 ## ✅ Solution
-Create the `building_todos` table using the provided SQL script.
+Create the `building_todos` table using one of the provided SQL scripts.
 
 ## 📋 Files Created
 
-### 1. `scripts/create_building_todos.sql`
+### 1. `scripts/create_building_todos.sql` (Recommended)
 Complete SQL script that creates the `building_todos` table with:
 - ✅ All required columns (id, building_id, title, description, status, etc.)
 - ✅ Proper data types and constraints
 - ✅ Indexes for performance
-- ✅ Row Level Security (RLS) policies
+- ✅ Row Level Security (RLS) with simplified policies
 - ✅ Automatic updated_at trigger
 - ✅ Sample data for testing
 
-### 2. `scripts/create_building_todos_simple.js`
+### 2. `scripts/create_building_todos_no_rls.sql` (Alternative)
+Same table structure but without Row Level Security for simpler setup.
+
+### 3. `scripts/create_building_todos_simple.js`
 Node.js script that:
 - ✅ Checks if the table exists
 - ✅ Attempts to create sample todos
@@ -29,7 +32,7 @@ Node.js script that:
 1. Go to your Supabase dashboard: https://supabase.com/dashboard
 2. Navigate to your project
 3. Go to SQL Editor
-4. Copy and paste the contents of `scripts/create_building_todos.sql`
+4. Copy and paste the contents of `scripts/create_building_todos.sql` (or `create_building_todos_no_rls.sql` if you prefer no RLS)
 5. Execute the SQL script
 
 ### Option 2: Command Line (if you have Supabase CLI)
@@ -57,9 +60,15 @@ CREATE TABLE building_todos (
 ```
 
 ## 🔒 Security Features
-- Row Level Security (RLS) enabled
-- Users can only access todos for buildings they have access to
+
+### With RLS (create_building_todos.sql):
+- Row Level Security enabled with simplified policies
+- All authenticated users can access todos (filtering done in application)
 - Proper policies for SELECT, INSERT, UPDATE, DELETE operations
+
+### Without RLS (create_building_todos_no_rls.sql):
+- No Row Level Security (simpler setup)
+- Access control handled entirely in the application layer
 
 ## 📝 Sample Data Included
 The SQL script includes 5 sample todos:
@@ -105,10 +114,14 @@ After creating the table:
 2. Check that the table was created successfully
 3. Verify the table name is exactly `building_todos`
 
+### If you get "relation 'profiles' does not exist" error:
+- Use `scripts/create_building_todos_no_rls.sql` instead
+- This version doesn't reference the profiles table
+
 ### If RLS policies don't work:
-1. Check that the `profiles` table exists
-2. Verify the user has access to the building
-3. Check the RLS policies in Supabase dashboard
+1. Use the no-RLS version if you don't need database-level security
+2. Check that the user is authenticated
+3. Verify the RLS policies in Supabase dashboard
 
 ### If sample data doesn't appear:
 1. Check that buildings exist in the database
@@ -116,10 +129,11 @@ After creating the table:
 3. Check the console for any error messages
 
 ## 📞 Next Steps
-1. Execute the SQL script in Supabase dashboard
-2. Run the verification script
-3. Test the web interface
-4. Report any remaining issues
+1. Choose the appropriate SQL script (with or without RLS)
+2. Execute the SQL script in Supabase dashboard
+3. Run the verification script
+4. Test the web interface
+5. Report any remaining issues
 
 ## 🔗 Useful Links
 - Supabase Dashboard: https://supabase.com/dashboard
