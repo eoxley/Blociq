@@ -1,5 +1,5 @@
-import CommunicationsClientNew from './CommunicationsClientNew'
+import CommunicationsLaunchpad from './CommunicationsLaunchpad'
 
 export default function CommunicationsPage() {
-  return <CommunicationsClientNew />
+  return <CommunicationsLaunchpad />
 } 

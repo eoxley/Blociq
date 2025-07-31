@@ -40,80 +40,96 @@ export async function GET(req: NextRequest) {
 
     if (communicationsError) {
       console.error("❌ Error fetching communications:", communicationsError);
-      
-      // If table doesn't exist, return empty array instead of error
-      if (communicationsError.code === '42P01') { // Table doesn't exist
-        console.log("⚠️ Communications sent table doesn't exist, returning empty array");
-        return NextResponse.json({
-          communications: [],
-          summary: {
-            total_communications: 0,
-            email_count: 0,
-            pdf_count: 0,
-            both_count: 0,
-            successful_sends: 0,
-            failed_sends: 0,
-            buildings_contacted: 0,
-            templates_used: 0,
-            last_communication_date: null
-          },
-          count: 0
-        });
-      }
-      
-      return NextResponse.json({ 
-        error: "Failed to fetch communications",
-        details: communicationsError
-      }, { status: 500 });
+      return NextResponse.json(
+        { error: "Failed to fetch communications" },
+        { status: 500 }
+      );
     }
 
-    // Group communications by building
-    const buildingGroups: any[] = [];
-    const buildingMap = new Map();
-
-    communications?.forEach((comm) => {
-      const buildingId = comm.building_id;
-      
-      if (!buildingMap.has(buildingId)) {
-        const buildingGroup = {
-          building_id: buildingId,
-          building_name: comm.buildings?.name || 'Unknown Building',
-          building_address: comm.buildings?.address || '',
-          communications: []
-        };
-        buildingGroups.push(buildingGroup);
-        buildingMap.set(buildingId, buildingGroup);
-      }
-      
-      buildingMap.get(buildingId).communications.push(comm);
-    });
-
-    // Calculate summary statistics
-    const summary = {
-      total_communications: communications?.length || 0,
-      email_count: communications?.filter(c => c.method === 'email').length || 0,
-      pdf_count: communications?.filter(c => c.method === 'pdf').length || 0,
-      both_count: communications?.filter(c => c.method === 'both').length || 0,
-      successful_sends: communications?.filter(c => c.status === 'sent').length || 0,
-      failed_sends: communications?.filter(c => c.status === 'failed').length || 0,
-      buildings_contacted: buildingGroups.length,
-      templates_used: new Set(communications?.map(c => c.template_id)).size,
-      last_communication_date: communications?.[0]?.sent_at || null
-    };
-
-    console.log(`✅ Found ${communications?.length || 0} communications across ${buildingGroups.length} buildings`);
+    console.log(`✅ Found ${communications?.length || 0} communications`);
 
     return NextResponse.json({
-      communications: buildingGroups,
-      summary,
-      count: communications?.length || 0
+      communications: communications || [],
+      total: communications?.length || 0,
+      success: true
     });
 
   } catch (error) {
-    console.error("❌ Communications log fetch error:", error);
-    return NextResponse.json({ 
-      error: "Internal server error during communications log fetch",
-      details: error instanceof Error ? error.message : "Unknown error"
-    }, { status: 500 });
+    console.error("❌ Error in communications log API:", error);
+    return NextResponse.json(
+      { 
+        success: false,
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error"
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    console.log("📝 Logging new communication...");
+    
+    const supabase = createRouteHandlerClient({ cookies });
+    
+    // Get the current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      console.error("❌ User authentication failed:", userError);
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { type, leaseholder_id, leaseholder_name, building_name, unit_number, subject, content } = body;
+
+    // Validate required fields
+    if (!leaseholder_name || !subject) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    // Insert communication record
+    const { data, error: insertError } = await supabase
+      .from("communications_sent")
+      .insert({
+        to_email: leaseholder_name,
+        subject: subject,
+        message: content || '',
+        sent_by: user.id,
+        status: 'sent'
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("❌ Error inserting communication:", insertError);
+      return NextResponse.json(
+        { error: "Failed to log communication" },
+        { status: 500 }
+      );
+    }
+
+    console.log("✅ Communication logged successfully");
+
+    return NextResponse.json({
+      success: true,
+      communication: data,
+      message: "Communication logged successfully"
+    });
+
+  } catch (error) {
+    console.error("❌ Error in communications log POST API:", error);
+    return NextResponse.json(
+      { 
+        success: false,
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error"
+      },
+      { status: 500 }
+    );
   }
 } 
