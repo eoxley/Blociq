@@ -13,6 +13,8 @@ import {
   Search,
   Shield
 } from 'lucide-react'
+import { BlocIQButton } from '@/components/ui/blociq-button'
+import { BlocIQCard, BlocIQCardContent } from '@/components/ui/blociq-card'
 
 // Client component for the buildings list with search functionality
 function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
@@ -49,26 +51,27 @@ function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
                 placeholder="Search buildings by name or address..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all bg-white shadow-sm hover:shadow-md"
+                className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#008C8F] focus:border-transparent transition-all bg-white shadow-sm hover:shadow-md"
               />
             </div>
           </div>
 
           {/* Create New Building Button */}
           <div className="relative">
-            <Link 
-              href="#"
+            <BlocIQButton
               onClick={(e) => {
                 e.preventDefault();
                 // Show coming soon message
                 alert('Building creation feature coming soon!');
               }}
-              className="inline-flex items-center gap-3 bg-gradient-to-r from-gray-400 to-gray-500 text-white px-8 py-4 rounded-xl cursor-not-allowed opacity-75 hover:opacity-75 transform transition-all shadow-lg font-semibold text-lg"
+              size="lg"
+              variant="outline"
+              className="cursor-not-allowed opacity-75"
             >
               <Plus className="h-6 w-6" />
               Create New Building
               <ArrowRight className="h-5 w-5" />
-            </Link>
+            </BlocIQButton>
             {/* Coming Soon Badge */}
             <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
               COMING SOON
@@ -88,85 +91,94 @@ function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
       {filteredBuildings.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredBuildings.map((building) => (
-            <div 
+            <BlocIQCard 
               key={building.id}
-              className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 text-center group"
+              variant="elevated"
+              className="hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 text-center group"
             >
-              {/* Building Icon */}
-              <div className="w-20 h-20 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mb-8 shadow-lg mx-auto group-hover:scale-105 transition-transform duration-300">
-                <Building2 className="h-10 w-10 text-white" />
-              </div>
+              <BlocIQCardContent className="p-8">
+                {/* Building Icon */}
+                <div className="w-20 h-20 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-2xl flex items-center justify-center mb-8 shadow-lg mx-auto group-hover:scale-105 transition-transform duration-300">
+                  <Building2 className="h-10 w-10 text-white" />
+                </div>
 
-              {/* Building Name */}
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">
-                {building.name}
-              </h3>
+                {/* Building Name */}
+                <h3 className="text-2xl font-bold text-gray-900 mb-6">
+                  {building.name}
+                </h3>
 
-              {/* Address */}
-              {building.address && (
-                <div className="flex items-start gap-3 mb-6 justify-center">
-                  <MapPin className="h-5 w-5 text-teal-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-gray-600 leading-relaxed text-sm">
-                    {building.address}
+                {/* Address */}
+                {building.address && (
+                  <div className="flex items-start gap-3 mb-6 justify-center">
+                    <MapPin className="h-5 w-5 text-[#008C8F] mt-0.5 flex-shrink-0" />
+                    <p className="text-gray-600 leading-relaxed text-sm">
+                      {building.address}
+                    </p>
+                  </div>
+                )}
+
+                {/* Live Unit Count */}
+                <div className="flex items-center gap-3 mb-8 justify-center">
+                  <Users className="h-5 w-5 text-[#008C8F]" />
+                  <p className="text-gray-600 font-medium">
+                    {building.liveUnitCount || 0} {(building.liveUnitCount || 0) === 1 ? 'unit' : 'units'}
                   </p>
                 </div>
-              )}
 
-              {/* Live Unit Count */}
-              <div className="flex items-center gap-3 mb-8 justify-center">
-                <Users className="h-5 w-5 text-teal-600" />
-                <p className="text-gray-600 font-medium">
-                  {building.liveUnitCount || 0} {(building.liveUnitCount || 0) === 1 ? 'unit' : 'units'}
-                </p>
-              </div>
+                {/* No Units Message */}
+                {(building.liveUnitCount || 0) === 0 && (
+                  <div className="mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-sm text-yellow-800">
+                      No units assigned yet
+                    </p>
+                  </div>
+                )}
 
-              {/* No Units Message */}
-              {(building.liveUnitCount || 0) === 0 && (
-                <div className="mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <p className="text-sm text-yellow-800">
-                    No units assigned yet
-                  </p>
+                {/* Action Buttons */}
+                <div className="space-y-3">
+                  <BlocIQButton 
+                    asChild
+                    size="sm"
+                    className="w-full"
+                  >
+                    <Link href={`/buildings/${building.id}`}>
+                      <Eye className="h-4 w-4" />
+                      View Details
+                    </Link>
+                  </BlocIQButton>
+                  <BlocIQButton 
+                    asChild
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Link href={`/buildings/${building.id}/compliance`}>
+                      <Shield className="h-4 w-4" />
+                      View Compliance
+                    </Link>
+                  </BlocIQButton>
                 </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="space-y-3">
-                <Link 
-                  href={`/buildings/${building.id}`}
-                  className="inline-flex items-center gap-2 bg-gradient-to-r from-teal-600 to-teal-700 text-white rounded-full px-6 py-3 text-sm font-medium hover:from-teal-700 hover:to-teal-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 w-full justify-center"
-                >
-                  <Eye className="h-4 w-4" />
-                  View Details
-                </Link>
-                <Link 
-                  href={`/buildings/${building.id}/compliance`}
-                  className="inline-flex items-center gap-2 bg-teal-50 text-teal-700 rounded-full px-4 py-2 text-sm font-medium hover:bg-teal-100 transition-colors duration-200"
-                >
-                  <Shield className="h-4 w-4" />
-                  View Compliance
-                </Link>
-              </div>
-            </div>
+              </BlocIQCardContent>
+            </BlocIQCard>
           ))}
         </div>
       ) : searchTerm ? (
         /* No Search Results - Enhanced */
         <div className="text-center py-20">
-          <div className="w-24 h-24 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-8">
-            <Search className="h-12 w-12 text-gray-400" />
-          </div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-6">
-            No buildings found
-          </h2>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            No buildings match your search for "{searchTerm}"
-          </p>
-          <button
-            onClick={() => setSearchTerm('')}
-            className="inline-flex items-center gap-3 bg-gradient-to-r from-teal-600 to-teal-700 text-white px-8 py-4 rounded-xl hover:from-teal-700 hover:to-teal-800 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 text-lg"
-          >
-            Clear Search
-          </button>
+                      <div className="w-24 h-24 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-8">
+              <Search className="h-12 w-12 text-gray-400" />
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-6">
+              No buildings found
+            </h2>
+            <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+              No buildings match your search for "{searchTerm}"
+            </p>
+            <BlocIQButton
+              onClick={() => setSearchTerm('')}
+              size="lg"
+            >
+              Clear Search
+            </BlocIQButton>
         </div>
       ) : validBuildings.length === 0 ? (
         /* Empty State - No Buildings - Enhanced */

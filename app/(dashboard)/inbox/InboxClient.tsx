@@ -9,6 +9,7 @@ import {
   Wrench, Construction, Home, Save, X, Plus
 } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
+import { BlocIQButton } from '@/components/ui/blociq-button'
 import EmailAssignmentDropdowns from './components/EmailAssignmentDropdowns'
 import EmailDetailView from './components/EmailDetailView'
 
@@ -500,14 +501,15 @@ export default function InboxClient({ emails }: InboxClientProps) {
             Your inbox is empty. Emails will appear here once they are synced from your connected account.
           </p>
           
-          <button
+          <BlocIQButton
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="inline-flex items-center gap-3 bg-gradient-to-r from-teal-600 to-teal-700 text-white px-8 py-4 rounded-xl hover:from-teal-700 hover:to-teal-800 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:opacity-50"
+            size="lg"
+            className="inline-flex items-center gap-3"
           >
             <RefreshCw className={`h-5 w-5 ${isRefreshing ? 'animate-spin' : ''}`} />
             {isRefreshing ? 'Syncing...' : 'Sync Emails'}
-          </button>
+          </BlocIQButton>
         </div>
       </div>
     )
@@ -524,14 +526,14 @@ export default function InboxClient({ emails }: InboxClientProps) {
             <p className="text-gray-600 mt-2">Triage and respond to incoming emails with AI assistance</p>
           </div>
           
-          <button
+          <BlocIQButton
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="inline-flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-xl hover:bg-teal-700 transition-colors disabled:opacity-50"
+            size="sm"
           >
             <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             {isRefreshing ? 'Syncing...' : 'Sync'}
-          </button>
+          </BlocIQButton>
         </div>
 
         {/* Search and Filters */}
@@ -543,7 +545,7 @@ export default function InboxClient({ emails }: InboxClientProps) {
               placeholder="Search emails by subject, sender, or content..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-gray-900"
+              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#008C8F] focus:border-[#008C8F] text-gray-900"
             />
           </div>
           
@@ -551,7 +553,7 @@ export default function InboxClient({ emails }: InboxClientProps) {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value as any)}
-              className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white"
+              className="px-4 py-3 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#008C8F] focus:border-[#008C8F] bg-white"
             >
               <option value="all">All ({emails.length})</option>
               <option value="unread">Unread ({unreadCount})</option>
@@ -562,7 +564,7 @@ export default function InboxClient({ emails }: InboxClientProps) {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white"
+              className="px-4 py-3 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#008C8F] focus:border-[#008C8F] bg-white"
             >
               <option value="date">Date</option>
               <option value="sender">Sender</option>

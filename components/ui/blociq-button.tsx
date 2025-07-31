@@ -5,6 +5,7 @@ interface BlocIQButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
   size?: 'sm' | 'md' | 'lg';
   children: React.ReactNode;
+  asChild?: boolean;
 }
 
 export function BlocIQButton({ 
@@ -12,14 +13,15 @@ export function BlocIQButton({
   size = 'md', 
   className, 
   children, 
+  asChild = false,
   ...props 
 }: BlocIQButtonProps) {
   const baseClasses = "inline-flex items-center justify-center rounded-xl font-medium transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
   
                 const variants = {
-                primary: "bg-gradient-to-r from-[#008C8F] to-[#007BDB] text-white hover:from-[#007BDB] hover:to-[#008C8F] shadow-lg hover:shadow-xl",
+                primary: "bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white hover:from-[#007B8A] hover:to-[#6B3FD8] shadow-lg hover:shadow-xl",
                 secondary: "bg-[#F0FDFA] text-[#0F5D5D] border border-[#008C8F] hover:bg-[#008C8F] hover:text-white",
-                outline: "bg-white text-[#333333] border border-[#E2E8F0] hover:bg-[#F0FDFA] hover:border-[#008C8F]",
+                outline: "bg-white text-[#333333] border border-gray-200 hover:bg-[#F0FDFA] hover:border-[#008C8F]",
                 ghost: "bg-transparent text-[#333333] hover:bg-[#F0FDFA] hover:text-[#0F5D5D]",
                 destructive: "bg-[#EF4444] text-white hover:bg-red-600 shadow-lg hover:shadow-xl"
               };
@@ -38,8 +40,10 @@ export function BlocIQButton({
                 destructive: "focus:ring-red-500"
               };
 
+  const Component = asChild ? 'div' : 'button';
+  
   return (
-    <button
+    <Component
       className={cn(
         baseClasses,
         variants[variant],
@@ -50,6 +54,6 @@ export function BlocIQButton({
       {...props}
     >
       {children}
-    </button>
+    </Component>
   );
 } 
