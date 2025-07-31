@@ -12,10 +12,26 @@ import {
   ArrowLeft, 
   Copy, 
   ExternalLink,
-  Shield
+  Shield,
+  Plus,
+  Edit,
+  Trash2,
+  MapPin,
+  Users,
+  Save,
+  X,
+  Crown
 } from 'lucide-react'
 import Link from 'next/link'
-import LeaseholderManagement from '@/components/LeaseholderManagement'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Badge } from '@/components/ui/badge'
+import { toast } from 'sonner'
+import { supabase } from '@/lib/supabaseClient'
 
 interface Unit {
   id: string
@@ -70,6 +86,13 @@ interface Lease {
   created_at: string | null
 }
 
+interface LeaseholderFormData {
+  full_name: string
+  email: string
+  phone_number: string
+  correspondence_address: string
+}
+
 interface LeaseholderInfoClientProps {
   building: Building
   unit: Unit
@@ -90,6 +113,15 @@ export default function LeaseholderInfoClient({
   leases
 }: LeaseholderInfoClientProps) {
   const [copiedField, setCopiedField] = useState<string | null>(null)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingLeaseholder, setEditingLeaseholder] = useState<Leaseholder | null>(null)
+  const [formData, setFormData] = useState<LeaseholderFormData>({
+    full_name: '',
+    email: '',
+    phone_number: '',
+    correspondence_address: ''
+  })
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleCopy = async (text: string, field: string) => {
     try {
@@ -107,6 +139,106 @@ export default function LeaseholderInfoClient({
 
   const handleCall = (phone: string) => {
     window.open(`tel:${phone}`, '_blank')
+  }
+
+  const resetForm = () => {
+    setFormData({
+      full_name: '',
+      email: '',
+      phone_number: '',
+      correspondence_address: ''
+    })
+    setEditingLeaseholder(null)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    
+    try {
+      const leaseholderData = {
+        unit_id: unit.id,
+        full_name: formData.full_name.trim(),
+        email: formData.email.trim() || null,
+        phone_number: formData.phone_number.trim() || null,
+        correspondence_address: formData.correspondence_address.trim() || null
+      }
+
+      if (editingLeaseholder) {
+        const { error } = await supabase
+          .from('leaseholders')
+          .update(leaseholderData)
+          .eq('id', editingLeaseholder.id)
+
+        if (error) {
+          console.error('Error updating leaseholder:', error)
+          toast.error('Failed to update leaseholder')
+        } else {
+          toast.success('Leaseholder updated successfully')
+          window.location.reload() // Refresh to get updated data
+        }
+      } else {
+        const { error } = await supabase
+          .from('leaseholders')
+          .insert([leaseholderData])
+
+        if (error) {
+          console.error('Error creating leaseholder:', error)
+          toast.error('Failed to create leaseholder')
+        } else {
+          toast.success('Leaseholder added successfully')
+          window.location.reload() // Refresh to get updated data
+        }
+      }
+
+      resetForm()
+      setIsDialogOpen(false)
+    } catch (error) {
+      console.error('Error saving leaseholder:', error)
+      toast.error('Failed to save leaseholder')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleEdit = (leaseholder: Leaseholder) => {
+    setEditingLeaseholder(leaseholder)
+    setFormData({
+      full_name: leaseholder.full_name || '',
+      email: leaseholder.email || '',
+      phone_number: leaseholder.phone_number || '',
+      correspondence_address: leaseholder.correspondence_address || ''
+    })
+    setIsDialogOpen(true)
+  }
+
+  const handleDelete = async (leaseholderId: string) => {
+    if (!confirm('Are you sure you want to delete this leaseholder?')) {
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('leaseholders')
+        .delete()
+        .eq('id', leaseholderId)
+
+      if (error) {
+        console.error('Error deleting leaseholder:', error)
+        toast.error('Failed to delete leaseholder')
+      } else {
+        toast.success('Leaseholder deleted successfully')
+        window.location.reload() // Refresh to get updated data
+      }
+    } catch (error) {
+      console.error('Error deleting leaseholder:', error)
+      toast.error('Failed to delete leaseholder')
+    }
+  }
+
+  const openAddDialog = () => {
+    resetForm()
+    setIsDialogOpen(true)
   }
 
   return (
@@ -196,18 +328,19 @@ export default function LeaseholderInfoClient({
                 </div>
                 
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Leaseholder Information</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Primary Leaseholder</h3>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Primary Leaseholder:</span>
+                      <span className="text-gray-600">Name:</span>
                       <div className="flex items-center space-x-2">
                         <span className="font-medium">
                           {leaseholder?.full_name || 'Not assigned'}
                         </span>
                         {leaseholder?.is_director && (
-                          <span className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white text-xs px-2 py-1 rounded-full font-medium">
+                          <Badge className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white">
+                            <Crown className="h-3 w-3 mr-1" />
                             Director
-                          </span>
+                          </Badge>
                         )}
                       </div>
                     </div>
@@ -217,13 +350,13 @@ export default function LeaseholderInfoClient({
                     </div>
                     {leaseholder?.email && (
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Primary Email:</span>
+                        <span className="text-gray-600">Email:</span>
                         <span className="font-medium text-[#008C8F]">{leaseholder.email}</span>
                       </div>
                     )}
                     {leaseholder?.correspondence_address && (
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Primary Address:</span>
+                        <span className="text-gray-600">Address:</span>
                         <span className="font-medium text-sm">{leaseholder.correspondence_address}</span>
                       </div>
                     )}
@@ -232,98 +365,156 @@ export default function LeaseholderInfoClient({
               </div>
             </div>
 
-            {/* SECTION 2: All Leaseholders */}
-            {leaseholders.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-xl p-6">
-                <div className="flex items-center space-x-3 mb-6">
-                  <div className="w-12 h-12 bg-gradient-to-r from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center">
-                    <User className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900">All Leaseholders</h2>
-                    <p className="text-gray-600">
-                      {leaseholders.length} leaseholder{leaseholders.length !== 1 ? 's' : ''} for this unit
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  {leaseholders.map((lh, index) => (
-                    <div key={lh.id} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg flex items-center justify-center">
-                              <User className="h-5 w-5 text-white" />
-                            </div>
-                            <div>
-                              <h3 className="text-lg font-semibold text-gray-900">
-                                {lh.full_name || 'Unnamed Leaseholder'}
-                                {lh.is_director && (
-                                  <span className="ml-2 bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white text-xs px-2 py-1 rounded-full font-medium">
-                                    Director
-                                  </span>
-                                )}
-                              </h3>
-                              <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
-                                {lh.email && (
-                                  <div className="flex items-center gap-1">
-                                    <Mail className="h-4 w-4" />
-                                    {lh.email}
-                                  </div>
-                                )}
-                                {lh.phone_number && (
-                                  <div className="flex items-center gap-1">
-                                    <Phone className="h-4 w-4" />
-                                    {lh.phone_number}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          {lh.correspondence_address && (
-                            <div className="bg-gray-50 rounded-lg p-3 mb-3">
-                              <p className="text-sm text-gray-700">{lh.correspondence_address}</p>
-                            </div>
-                          )}
-
-                          <div className="flex items-center gap-2 text-xs text-gray-500">
-                            <span>Leaseholder {index + 1}</span>
-                            {lh.id === leaseholder?.id && (
-                              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
-                                Primary
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 ml-4">
-                          {lh.email && (
-                            <button
-                              onClick={() => handleEmail(lh.email!)}
-                              className="p-2 text-gray-400 hover:text-[#008C8F] transition-colors"
-                              title="Send Email"
-                            >
-                              <Mail className="h-4 w-4" />
-                            </button>
-                          )}
-                          {lh.phone_number && (
-                            <button
-                              onClick={() => handleCall(lh.phone_number!)}
-                              className="p-2 text-gray-400 hover:text-[#008C8F] transition-colors"
-                              title="Call"
-                            >
-                              <Phone className="h-4 w-4" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
+            {/* SECTION 2: Consolidated Leaseholder Management */}
+            <div className="bg-white rounded-2xl shadow-xl">
+              {/* Header */}
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gradient-to-r from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center">
+                      <Users className="h-6 w-6 text-white" />
                     </div>
-                  ))}
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900">Leaseholders</h2>
+                      <p className="text-gray-600">
+                        {leaseholders.length} leaseholder{leaseholders.length !== 1 ? 's' : ''} for this unit
+                      </p>
+                    </div>
+                  </div>
+                  <Button onClick={openAddDialog} className="flex items-center gap-2 bg-gradient-to-r from-[#008C8F] to-[#7645ED] hover:opacity-90">
+                    <Plus className="h-4 w-4" />
+                    Add Leaseholder
+                  </Button>
                 </div>
               </div>
-            )}
+
+              {/* Content */}
+              <div className="p-6">
+                {leaseholders.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Users className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">No leaseholders found</h3>
+                    <p className="text-gray-600 mb-8 max-w-md mx-auto">
+                      No leaseholders are currently associated with this unit. Add the first leaseholder to get started.
+                    </p>
+                    <Button onClick={openAddDialog} className="flex items-center gap-2 bg-gradient-to-r from-[#008C8F] to-[#7645ED] hover:opacity-90">
+                      <Plus className="h-4 w-4" />
+                      Add First Leaseholder
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {leaseholders.map((lh, index) => (
+                      <Card key={lh.id} className="border border-gray-200 hover:shadow-lg transition-shadow">
+                        <CardContent className="p-6">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-4 mb-4">
+                                <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center">
+                                  <User className="h-6 w-6 text-white" />
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-3 mb-2">
+                                    <h4 className="text-lg font-semibold text-gray-900">
+                                      {lh.full_name || 'Unnamed Leaseholder'}
+                                    </h4>
+                                    {lh.is_director && (
+                                      <Badge className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white">
+                                        <Crown className="h-3 w-3 mr-1" />
+                                        Director
+                                      </Badge>
+                                    )}
+                                    {lh.id === leaseholder?.id && (
+                                      <Badge variant="outline" className="text-blue-600 border-blue-200">
+                                        Primary
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-4 text-sm text-gray-600">
+                                    {lh.email && (
+                                      <div className="flex items-center gap-1">
+                                        <Mail className="h-4 w-4" />
+                                        {lh.email}
+                                      </div>
+                                    )}
+                                    {lh.phone_number && (
+                                      <div className="flex items-center gap-1">
+                                        <Phone className="h-4 w-4" />
+                                        {lh.phone_number}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {lh.correspondence_address && (
+                                <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <MapPin className="h-4 w-4 text-gray-600" />
+                                    <span className="font-medium text-gray-900">Correspondence Address</span>
+                                  </div>
+                                  <p className="text-sm text-gray-700">{lh.correspondence_address}</p>
+                                </div>
+                              )}
+
+                              <div className="flex items-center gap-2 text-xs text-gray-500">
+                                <span>Leaseholder {index + 1}</span>
+                              </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center gap-2 ml-4">
+                              {lh.email && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEmail(lh.email!)}
+                                  className="flex items-center gap-1"
+                                >
+                                  <Mail className="h-4 w-4" />
+                                  Email
+                                </Button>
+                              )}
+                              {lh.phone_number && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleCall(lh.phone_number!)}
+                                  className="flex items-center gap-1"
+                                >
+                                  <Phone className="h-4 w-4" />
+                                  Call
+                                </Button>
+                              )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEdit(lh)}
+                                className="flex items-center gap-1"
+                              >
+                                <Edit className="h-4 w-4" />
+                                Edit
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDelete(lh.id)}
+                                className="flex items-center gap-1 text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                Delete
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
 
             {/* SECTION 3: Lease Information */}
             <div className="bg-white rounded-2xl shadow-xl p-6">
@@ -450,14 +641,7 @@ export default function LeaseholderInfoClient({
               )}
             </div>
 
-            {/* SECTION 5: Leaseholder Management */}
-            <LeaseholderManagement 
-              unitId={unit.id} 
-              unitNumber={unit.unit_number} 
-              className="mb-6"
-            />
-
-            {/* SECTION 6: Correspondence */}
+            {/* SECTION 5: Correspondence */}
             <div className="bg-white rounded-2xl shadow-xl p-6">
               <div className="flex items-center space-x-3 mb-6">
                 <div className="w-12 h-12 bg-gradient-to-r from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center">
@@ -512,35 +696,143 @@ export default function LeaseholderInfoClient({
               <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
               <div className="space-y-3">
                 {leaseholder?.email && (
-                  <button
+                  <Button
                     onClick={() => handleEmail(leaseholder!.email!)}
-                    className="w-full flex items-center p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="w-full flex items-center justify-start p-3 bg-gray-50 hover:bg-gray-100 transition-colors"
+                    variant="ghost"
                   >
                     <Mail className="h-5 w-5 text-[#008C8F] mr-3" />
                     <span className="text-gray-700">Send Email</span>
-                  </button>
+                  </Button>
                 )}
                 {leaseholder?.phone_number && (
-                  <button
+                  <Button
                     onClick={() => handleCall(leaseholder!.phone_number!)}
-                    className="w-full flex items-center p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="w-full flex items-center justify-start p-3 bg-gray-50 hover:bg-gray-100 transition-colors"
+                    variant="ghost"
                   >
                     <Phone className="h-5 w-5 text-[#008C8F] mr-3" />
                     <span className="text-gray-700">Call</span>
-                  </button>
+                  </Button>
                 )}
                 <Link
                   href={`/buildings/${building.id}/units/${unit.id}/documents`}
-                  className="w-full flex items-center p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="w-full flex items-center justify-start p-3 bg-gray-50 hover:bg-gray-100 transition-colors rounded-lg"
                 >
                   <FileText className="h-5 w-5 text-[#008C8F] mr-3" />
                   <span className="text-gray-700">View Documents</span>
                 </Link>
               </div>
             </div>
+
+            {/* Unit Stats */}
+            <div className="bg-white rounded-2xl shadow-xl p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Unit Stats</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Leaseholders:</span>
+                  <span className="font-medium">{leaseholders.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Documents:</span>
+                  <span className="font-medium">{documents.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Leases:</span>
+                  <span className="font-medium">{leases.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Emails:</span>
+                  <span className="font-medium">{emails.length}</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Add/Edit Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              {editingLeaseholder ? 'Edit Leaseholder' : 'Add New Leaseholder'}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="full_name">Full Name *</Label>
+                <Input
+                  id="full_name"
+                  type="text"
+                  value={formData.full_name}
+                  onChange={(e) => setFormData({...formData, full_name: e.target.value})}
+                  required
+                  placeholder="Full name"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  placeholder="email@example.com"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="phone_number">Phone Number</Label>
+                <Input
+                  id="phone_number"
+                  type="tel"
+                  value={formData.phone_number}
+                  onChange={(e) => setFormData({...formData, phone_number: e.target.value})}
+                  placeholder="Phone number"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="correspondence_address">Correspondence Address</Label>
+                <Textarea
+                  id="correspondence_address"
+                  value={formData.correspondence_address}
+                  onChange={(e) => setFormData({...formData, correspondence_address: e.target.value})}
+                  placeholder="Correspondence address"
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="flex gap-2 pt-4">
+              <Button 
+                type="submit" 
+                className="flex items-center gap-2 bg-gradient-to-r from-[#008C8F] to-[#7645ED] hover:opacity-90"
+                disabled={isLoading}
+              >
+                <Save className="h-4 w-4" />
+                {isLoading ? 'Saving...' : (editingLeaseholder ? 'Update' : 'Add') + ' Leaseholder'}
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsDialogOpen(false)}
+                className="flex items-center gap-2"
+              >
+                <X className="h-4 w-4" />
+                Cancel
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 } 
