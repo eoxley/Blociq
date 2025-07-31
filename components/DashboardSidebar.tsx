@@ -15,7 +15,7 @@ const navItems = [
   { label: "Buildings", icon: "🏢", href: "/buildings", comingSoon: false, description: "Property portfolio" },
   { label: "Compliance", icon: "🛡️", href: "/compliance", comingSoon: false, description: "Regulatory tracking" },
   { label: "Communications", icon: "📣", href: "/dashboard/communications", comingSoon: false, description: "Letter & email templates" },
-  { label: "AI Documents", icon: "🤖", href: "/ai-documents", comingSoon: false, description: "Smart document analysis" },
+  { label: "AI Assistant", icon: "🤖", href: "/ai-assistant", comingSoon: false, description: "Smart AI assistant" },
   { label: "Major Works", icon: "🔧", href: "/major-works", comingSoon: false, description: "Project management" },
   { label: "Finances", icon: "💷", href: "#", comingSoon: true, description: "Financial tracking" },
   { label: "Contractors", icon: "👷", href: "#", comingSoon: true, description: "Vendor management" },

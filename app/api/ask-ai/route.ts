@@ -671,7 +671,9 @@ Please provide your answer:`
 function detectDocumentSearchQuery(prompt: string): boolean {
   const searchKeywords = [
     'where', 'find', 'locate', 'view', 'show', 'get', 'download',
-    'see', 'access', 'retrieve', 'pull up', 'bring up', 'open'
+    'see', 'access', 'retrieve', 'pull up', 'bring up', 'open',
+    'document', 'report', 'file', 'upload', 'summary', 'extract',
+    'what does', 'tell me about', 'show me', 'find me'
   ]
   
   const documentTypes = [
@@ -684,7 +686,8 @@ function detectDocumentSearchQuery(prompt: string): boolean {
     'epc', 'energy performance',
     'pat', 'portable appliance',
     'certificate', 'cert', 'document', 'report',
-    'survey', 'assessment', 'inspection'
+    'survey', 'assessment', 'inspection', 'lease',
+    'agreement', 'contract', 'policy', 'statement'
   ]
   
   const lowerPrompt = prompt.toLowerCase()
@@ -699,56 +702,90 @@ function detectDocumentSearchQuery(prompt: string): boolean {
     lowerPrompt.includes(docType)
   )
   
-  return hasSearchKeyword && hasDocumentType
+  // Also check for general document-related terms
+  const documentTerms = ['document', 'file', 'report', 'upload', 'summary']
+  const hasDocumentTerms = documentTerms.some(term => 
+    lowerPrompt.includes(term)
+  )
+  
+  return (hasSearchKeyword && hasDocumentType) || hasDocumentTerms
 }
 
 /**
- * Search compliance documents based on user query
+ * Search documents across both building_documents and compliance_documents tables
  */
 async function searchComplianceDocuments(supabase: any, prompt: string, buildingId: string) {
   try {
-    console.log('🔍 Searching compliance documents for building:', buildingId)
+    console.log('🔍 Searching documents for building:', buildingId)
     
     // Extract search terms from the prompt
     const searchTerms = extractSearchTerms(prompt)
     
-    // Build the search query
-    let query = supabase
-      .from('compliance_docs')
+    // Search building_documents table
+    let buildingDocsQuery = supabase
+      .from('building_documents')
       .select(`
         id,
-        title,
-        summary,
-        doc_url,
-        uploaded_at,
-        expiry_date,
-        classification,
-        building_id
+        file_name,
+        type,
+        created_at,
+        building_id,
+        unit_id,
+        leaseholder_id
       `)
       .eq('building_id', buildingId)
-      .order('uploaded_at', { ascending: false })
-      .limit(5)
+      .order('created_at', { ascending: false })
+      .limit(10)
+    
+    // Search compliance_documents table
+    let complianceDocsQuery = supabase
+      .from('compliance_documents')
+      .select(`
+        id,
+        file_name,
+        type,
+        created_at,
+        building_id,
+        compliance_asset_id
+      `)
+      .eq('building_id', buildingId)
+      .order('created_at', { ascending: false })
+      .limit(10)
     
     // Add search filters based on extracted terms
     if (searchTerms.length > 0) {
       const searchConditions = searchTerms.map(term => 
-        `or(title.ilike.%${term}%,summary.ilike.%${term}%)`
+        `or(file_name.ilike.%${term}%,type.ilike.%${term}%)`
       ).join(',')
       
-      query = query.or(searchConditions)
+      buildingDocsQuery = buildingDocsQuery.or(searchConditions)
+      complianceDocsQuery = complianceDocsQuery.or(searchConditions)
     }
     
-    const { data: documents, error } = await query
+    // Execute both queries
+    const [buildingDocsResult, complianceDocsResult] = await Promise.all([
+      buildingDocsQuery,
+      complianceDocsQuery
+    ])
     
-    if (error) {
-      console.error('❌ Error searching compliance documents:', error)
-      return { found: false, response: null, documents: [] }
+    if (buildingDocsResult.error) {
+      console.error('❌ Error searching building documents:', buildingDocsResult.error)
     }
     
-    if (!documents || documents.length === 0) {
+    if (complianceDocsResult.error) {
+      console.error('❌ Error searching compliance documents:', complianceDocsResult.error)
+    }
+    
+    const buildingDocs = buildingDocsResult.data || []
+    const complianceDocs = complianceDocsResult.data || []
+    
+    // Combine and deduplicate documents
+    const allDocuments = [...buildingDocs, ...complianceDocs]
+    
+    if (allDocuments.length === 0) {
       return {
         found: true,
-        response: `I couldn't find that document for this building. Try uploading it or checking the compliance tracker.`,
+        response: `I couldn't find any documents matching your query for this building. You can upload documents in the AI Assistant section.`,
         documents: []
       }
     }
@@ -763,7 +800,10 @@ async function searchComplianceDocuments(supabase: any, prompt: string, building
     const buildingName = building?.name || 'this building'
     
     // Format the response
-    const response = formatDocumentSearchResponse(documents, buildingName, buildingId)
+    const response = formatDocumentSearchResponse(allDocuments, buildingName, buildingId)
+    
+    // Log the document search interaction
+    await logDocumentSearch(supabase, prompt, allDocuments, buildingId)
     
     return {
       found: true,
@@ -834,20 +874,22 @@ function extractSearchTerms(prompt: string): string[] {
  */
 function formatDocumentSearchResponse(documents: any[], buildingName: string, buildingId: string): string {
   if (documents.length === 0) {
-    return `I couldn't find that document for ${buildingName}. Try uploading it or checking the compliance tracker.`
+    return `I couldn't find any documents for ${buildingName}. You can upload documents in the AI Assistant section.`
   }
   
   let response = ''
   
   if (documents.length === 1) {
     const doc = documents[0]
-    const uploadDate = new Date(doc.uploaded_at).toLocaleDateString('en-GB', {
+    const fileName = doc.file_name || doc.title || 'Document'
+    const docType = doc.type || 'Document'
+    const uploadDate = new Date(doc.created_at).toLocaleDateString('en-GB', {
       day: 'numeric',
       month: 'long',
       year: 'numeric'
     })
     
-    response += `I found the ${doc.title} for ${buildingName}. It was uploaded on ${uploadDate}.`
+    response += `I found the ${docType} "${fileName}" for ${buildingName}. It was uploaded on ${uploadDate}.`
     
     if (doc.expiry_date) {
       const expiryDate = new Date(doc.expiry_date).toLocaleDateString('en-GB', {
@@ -858,20 +900,24 @@ function formatDocumentSearchResponse(documents: any[], buildingName: string, bu
       response += ` It expires on ${expiryDate}.`
     }
     
-    response += `\n\n📄 [View Document](${doc.doc_url})`
-    response += `\n🔗 [View in Compliance Tracker](/buildings/${buildingId}/compliance)`
+    if (doc.doc_url) {
+      response += `\n\n📄 [View Document](${doc.doc_url})`
+    }
+    response += `\n🔗 [View in Documents](/buildings/${buildingId}/documents)`
     
   } else {
     response += `I found ${documents.length} relevant documents for ${buildingName}:\n\n`
     
     documents.forEach((doc: any, index) => {
-      const uploadDate = new Date(doc.uploaded_at).toLocaleDateString('en-GB', {
+      const fileName = doc.file_name || doc.title || 'Document'
+      const docType = doc.type || 'Document'
+      const uploadDate = new Date(doc.created_at).toLocaleDateString('en-GB', {
         day: 'numeric',
         month: 'long',
         year: 'numeric'
       })
       
-      response += `${index + 1}. **${doc.title}** (uploaded ${uploadDate})\n`
+      response += `${index + 1}. **${docType}** - ${fileName} (uploaded ${uploadDate})\n`
       
       if (doc.expiry_date) {
         const expiryDate = new Date(doc.expiry_date).toLocaleDateString('en-GB', {
@@ -882,11 +928,45 @@ function formatDocumentSearchResponse(documents: any[], buildingName: string, bu
         response += `   Expires: ${expiryDate}\n`
       }
       
-      response += `   📄 [View Document](${doc.doc_url})\n\n`
+      if (doc.doc_url) {
+        response += `   📄 [View Document](${doc.doc_url})\n`
+      }
+      response += '\n'
     })
     
-    response += `🔗 [View All in Compliance Tracker](/buildings/${buildingId}/compliance)`
+    response += `🔗 [View All Documents](/buildings/${buildingId}/documents)`
   }
   
+  response += `\n\nYou can ask me specific questions about these documents, such as:\n`
+  response += `• "What does the fire risk assessment say about emergency exits?"\n`
+  response += `• "When does the electrical certificate expire?"\n`
+  response += `• "Summarize the lease agreement for Flat 5"\n`
+  
   return response
+}
+
+/**
+ * Log document search interactions to ai_logs table
+ */
+async function logDocumentSearch(supabase: any, prompt: string, documents: any[], buildingId: string) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    await supabase
+      .from('ai_logs')
+      .insert({
+        user_id: user?.id,
+        building_id: buildingId,
+        query: prompt,
+        response_type: 'document_search',
+        documents_used: documents.map(doc => ({
+          id: doc.id,
+          name: doc.file_name || doc.title,
+          type: doc.type
+        })),
+        created_at: new Date().toISOString()
+      })
+  } catch (error) {
+    console.error('❌ Error logging document search:', error)
+  }
 } 

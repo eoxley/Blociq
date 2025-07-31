@@ -51,7 +51,7 @@ export default function BreadcrumbNavigation() {
         case 'communications':
           icon = '📣';
           break;
-        case 'ai-documents':
+        case 'ai-assistant':
           icon = '🤖';
           break;
         case 'major-works':
