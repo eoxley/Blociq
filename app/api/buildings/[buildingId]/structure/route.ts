@@ -39,7 +39,7 @@ export async function GET(
     // 2. Get client information
     const { data: client, error: clientError } = await supabase
       .from('clients')
-      .select('id, name, email, phone, address')
+      .select('id, name, email, phone, address, client_type, contact_person, website, notes')
       .eq('building_id', buildingId)
       .single()
 
@@ -148,7 +148,11 @@ export async function POST(
           name: body.client.name,
           email: body.client.email,
           phone: body.client.phone,
-          address: body.client.address
+          address: body.client.address,
+          client_type: body.client.client_type,
+          contact_person: body.client.contact_person,
+          website: body.client.website,
+          notes: body.client.notes
         }, {
           onConflict: 'building_id'
         })

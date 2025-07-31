@@ -23,6 +23,10 @@ interface BuildingStructureData {
     email: string
     phone: string
     address: string
+    client_type: string
+    contact_person: string
+    website: string
+    notes: string
   } | null
   rmc_directors: Array<{
     id: string
@@ -38,12 +42,25 @@ interface BuildingStructureData {
   }>
 }
 
+interface Leaseholder {
+  id: string
+  full_name: string
+  email: string
+  phone_number: string
+  correspondence_address: string
+  is_director: boolean
+  director_since: string | null
+  director_notes: string | null
+  unit_number: string
+}
+
 interface BuildingStructureCardProps {
   buildingId: string
 }
 
 export default function BuildingStructureCard({ buildingId }: BuildingStructureCardProps) {
   const [data, setData] = useState<BuildingStructureData | null>(null)
+  const [leaseholders, setLeaseholders] = useState<Leaseholder[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -53,13 +70,22 @@ export default function BuildingStructureCard({ buildingId }: BuildingStructureC
   const fetchData = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`/api/buildings/${buildingId}/structure`)
-      if (!response.ok) {
+      
+      // Fetch building structure data
+      const structureResponse = await fetch(`/api/buildings/${buildingId}/structure`)
+      if (!structureResponse.ok) {
         throw new Error('Failed to fetch building structure')
       }
-      const result = await response.json()
-      setData(result)
-      setEditData(result)
+      const structureResult = await structureResponse.json()
+      setData(structureResult)
+      setEditData(structureResult)
+
+      // Fetch leaseholders for RMC directors dropdown
+      const leaseholdersResponse = await fetch(`/api/buildings/${buildingId}/leaseholders`)
+      if (leaseholdersResponse.ok) {
+        const leaseholdersResult = await leaseholdersResponse.json()
+        setLeaseholders(leaseholdersResult.leaseholders || [])
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
@@ -131,6 +157,26 @@ export default function BuildingStructureCard({ buildingId }: BuildingStructureC
     }
   }
 
+  // Initialize client data if it doesn't exist
+  const initializeClientData = () => {
+    if (!editData?.client) {
+      setEditData({
+        ...editData!,
+        client: {
+          id: '',
+          name: '',
+          email: '',
+          phone: '',
+          address: '',
+          client_type: 'Freeholder',
+          contact_person: '',
+          website: '',
+          notes: ''
+        }
+      })
+    }
+  }
+
   if (loading && !data) {
     return (
       <Card>
@@ -187,7 +233,10 @@ export default function BuildingStructureCard({ buildingId }: BuildingStructureC
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setIsEditing(true)}
+                onClick={() => {
+                  setIsEditing(true)
+                  initializeClientData()
+                }}
                 className="flex items-center gap-2"
               >
                 <Edit3 className="h-4 w-4" />
@@ -299,6 +348,25 @@ export default function BuildingStructureCard({ buildingId }: BuildingStructureC
                   />
                 </div>
                 <div>
+                  <Label htmlFor="client-type">Client Type</Label>
+                  <Select
+                    value={editData?.client?.client_type || 'Freeholder'}
+                    onValueChange={(value) => updateEditData('client.client_type', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Freeholder">Freeholder</SelectItem>
+                      <SelectItem value="Managing Agent">Managing Agent</SelectItem>
+                      <SelectItem value="RMC">RMC</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
                   <Label htmlFor="client-email">Client Email</Label>
                   <Input
                     id="client-email"
@@ -308,15 +376,36 @@ export default function BuildingStructureCard({ buildingId }: BuildingStructureC
                     placeholder="Enter client email"
                   />
                 </div>
+                <div>
+                  <Label htmlFor="client-phone">Client Phone</Label>
+                  <Input
+                    id="client-phone"
+                    value={editData?.client?.phone || ''}
+                    onChange={(e) => updateEditData('client.phone', e.target.value)}
+                    placeholder="Enter client phone"
+                  />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="client-phone">Client Phone</Label>
-                <Input
-                  id="client-phone"
-                  value={editData?.client?.phone || ''}
-                  onChange={(e) => updateEditData('client.phone', e.target.value)}
-                  placeholder="Enter client phone"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="client-contact">Contact Person</Label>
+                  <Input
+                    id="client-contact"
+                    value={editData?.client?.contact_person || ''}
+                    onChange={(e) => updateEditData('client.contact_person', e.target.value)}
+                    placeholder="Enter contact person"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="client-website">Website</Label>
+                  <Input
+                    id="client-website"
+                    type="url"
+                    value={editData?.client?.website || ''}
+                    onChange={(e) => updateEditData('client.website', e.target.value)}
+                    placeholder="Enter website URL"
+                  />
+                </div>
               </div>
               <div>
                 <Label htmlFor="client-address">Client Address</Label>
@@ -328,15 +417,35 @@ export default function BuildingStructureCard({ buildingId }: BuildingStructureC
                   rows={3}
                 />
               </div>
+              <div>
+                <Label htmlFor="client-notes">Notes</Label>
+                <Textarea
+                  id="client-notes"
+                  value={editData?.client?.notes || ''}
+                  onChange={(e) => updateEditData('client.notes', e.target.value)}
+                  placeholder="Enter additional notes"
+                  rows={2}
+                />
+              </div>
             </div>
           ) : (
             <div className="p-4 bg-gray-50 rounded-lg">
               {data.client ? (
                 <div className="space-y-2">
                   <div><strong>Name:</strong> {data.client.name}</div>
+                  <div><strong>Type:</strong> <Badge variant="outline">{data.client.client_type}</Badge></div>
                   <div><strong>Email:</strong> {data.client.email}</div>
                   <div><strong>Phone:</strong> {data.client.phone}</div>
+                  {data.client.contact_person && (
+                    <div><strong>Contact:</strong> {data.client.contact_person}</div>
+                  )}
+                  {data.client.website && (
+                    <div><strong>Website:</strong> <a href={data.client.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{data.client.website}</a></div>
+                  )}
                   <div><strong>Address:</strong> {data.client.address}</div>
+                  {data.client.notes && (
+                    <div><strong>Notes:</strong> {data.client.notes}</div>
+                  )}
                 </div>
               ) : (
                 <p className="text-gray-500">No client information available</p>
@@ -351,39 +460,73 @@ export default function BuildingStructureCard({ buildingId }: BuildingStructureC
             <Users className="h-5 w-5" />
             RMC Directors
           </h3>
-          <div className="space-y-3">
-            {data.rmc_directors.length > 0 ? (
-              data.rmc_directors.map((director) => (
-                <div key={director.id} className="p-4 border rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <div className="font-medium">{director.leaseholder.full_name}</div>
-                      <div className="text-sm text-gray-600">
-                        <strong>Position:</strong> {director.position}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        <strong>Email:</strong> {director.leaseholder.email}
-                      </div>
-                      {director.appointed_date && (
+          {isEditing ? (
+            <div className="space-y-4">
+              <div>
+                <Label>Select Directors from Leaseholders</Label>
+                <div className="mt-2 space-y-2 max-h-60 overflow-y-auto border rounded-lg p-3">
+                  {leaseholders.map((leaseholder) => (
+                    <div key={leaseholder.id} className="flex items-center space-x-3">
+                      <input
+                        type="checkbox"
+                        id={`director-${leaseholder.id}`}
+                        checked={leaseholder.is_director}
+                        onChange={(e) => {
+                          // This would need to be implemented with a separate API call
+                          // to update the leaseholder's director status
+                          console.log('Toggle director status for:', leaseholder.full_name)
+                        }}
+                        className="rounded border-gray-300"
+                      />
+                      <label htmlFor={`director-${leaseholder.id}`} className="flex-1 cursor-pointer">
+                        <div className="font-medium">{leaseholder.full_name}</div>
                         <div className="text-sm text-gray-600">
-                          <strong>Appointed:</strong> {new Date(director.appointed_date).toLocaleDateString()}
+                          {leaseholder.email} • Unit {leaseholder.unit_number}
                         </div>
-                      )}
-                      {director.notes && (
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-sm text-gray-500 mt-2">
+                  Check the boxes above to assign leaseholders as RMC directors
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {data.rmc_directors.length > 0 ? (
+                data.rmc_directors.map((director) => (
+                  <div key={director.id} className="p-4 border rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <div className="font-medium">{director.leaseholder.full_name}</div>
                         <div className="text-sm text-gray-600">
-                          <strong>Notes:</strong> {director.notes}
+                          <strong>Position:</strong> {director.position}
                         </div>
-                      )}
+                        <div className="text-sm text-gray-600">
+                          <strong>Email:</strong> {director.leaseholder.email}
+                        </div>
+                        {director.appointed_date && (
+                          <div className="text-sm text-gray-600">
+                            <strong>Appointed:</strong> {new Date(director.appointed_date).toLocaleDateString()}
+                          </div>
+                        )}
+                        {director.notes && (
+                          <div className="text-sm text-gray-600">
+                            <strong>Notes:</strong> {director.notes}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
+                ))
+              ) : (
+                <div className="p-4 bg-gray-50 rounded-lg text-center text-gray-500">
+                  No RMC directors assigned
                 </div>
-              ))
-            ) : (
-              <div className="p-4 bg-gray-50 rounded-lg text-center text-gray-500">
-                No RMC directors assigned
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
