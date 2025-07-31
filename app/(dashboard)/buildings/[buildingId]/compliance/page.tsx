@@ -3,7 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { Shield, AlertTriangle, CheckCircle, Clock, Calendar, FileText, Upload, Settings } from 'lucide-react'
 import BuildingComplianceClient from './components/BuildingComplianceClient'
-import NotFound from '../../../../components/NotFound'
+import NotFound from '../../../../../components/NotFound'
 
 interface BuildingCompliancePageProps {
   params: {
