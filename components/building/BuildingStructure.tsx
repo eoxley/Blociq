@@ -58,7 +58,8 @@ export default function BuildingStructure({ buildingId }: BuildingStructureProps
       const response = await fetch(`/api/buildings/${buildingId}/structure`)
       
       if (!response.ok) {
-        throw new Error(`Failed to fetch building structure: ${response.status}`)
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Failed to fetch building structure: ${response.status}`)
       }
 
       const structureData = await response.json()
