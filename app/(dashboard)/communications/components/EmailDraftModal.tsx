@@ -13,12 +13,17 @@ import { supabase } from '@/lib/supabaseClient'
 
 interface Leaseholder {
   id: string
-  full_name: string
-  email: string
-  phone_number: string
-  correspondence_address: string
-  unit_number: string
-  building_name: string
+  name: string | null
+  email: string | null
+  phone: string | null
+  unit_id: number | null
+  unit?: {
+    unit_number: string
+    building?: {
+      name: string
+      address: string
+    }
+  }
 }
 
 interface EmailDraftModalProps {
@@ -27,6 +32,7 @@ interface EmailDraftModalProps {
   leaseholder?: Leaseholder
   building?: { id: string; name: string; address: string }
   isBulk?: boolean
+  onSuccess?: () => void
 }
 
 export default function EmailDraftModal({
@@ -34,7 +40,8 @@ export default function EmailDraftModal({
   onOpenChange,
   leaseholder,
   building,
-  isBulk = false
+  isBulk = false,
+  onSuccess
 }: EmailDraftModalProps) {
   const [loading, setLoading] = useState(false)
   const [emailForm, setEmailForm] = useState({
@@ -58,39 +65,45 @@ export default function EmailDraftModal({
           .from('leaseholders')
           .select(`
             id,
-            full_name,
+            name,
             email,
-            units (
+            unit:units(
               unit_number,
-              buildings (id)
+              building:buildings(
+                id,
+                name,
+                address
+              )
             )
           `)
-          .eq('units.buildings.id', building.id)
+          .eq('unit.building.id', building.id)
           .not('email', 'is', null)
 
         if (error) throw error
 
-        const leaseholdersWithEmails = data?.filter(l => l.email) || []
+        const leaseholdersWithEmails = leaseholders?.filter(l => l.email) || []
         
         if (leaseholdersWithEmails.length === 0) {
           toast.error('No leaseholders with email addresses found in this building')
           return
         }
 
-        // Log each email
+        // Send emails to all leaseholders
         for (const lh of leaseholdersWithEmails) {
-          await logCommunication({
-            type: 'email',
-            leaseholder_id: lh.id,
-            leaseholder_name: lh.full_name,
-            building_name: building.name,
-            unit_number: lh.units?.unit_number || '',
+          await sendEmail({
+            to_email: lh.email!,
             subject: emailForm.subject,
-            content: emailForm.content
+            content: emailForm.content,
+            leaseholder_id: lh.id,
+            leaseholder_name: lh.name || 'Unknown',
+            building_name: building.name,
+            unit_number: lh.unit?.unit_number || 'Unknown',
+            is_bulk: true
           })
         }
 
-        toast.success(`Email prepared for ${leaseholdersWithEmails.length} leaseholders`)
+        toast.success(`Email sent to ${leaseholdersWithEmails.length} leaseholders`)
+        onSuccess?.()
       } else if (leaseholder) {
         // Individual email
         if (!leaseholder.email) {
@@ -98,17 +111,19 @@ export default function EmailDraftModal({
           return
         }
 
-        await logCommunication({
-          type: 'email',
-          leaseholder_id: leaseholder.id,
-          leaseholder_name: leaseholder.full_name,
-          building_name: leaseholder.building_name,
-          unit_number: leaseholder.unit_number,
+        await sendEmail({
+          to_email: leaseholder.email,
           subject: emailForm.subject,
-          content: emailForm.content
+          content: emailForm.content,
+          leaseholder_id: leaseholder.id,
+          leaseholder_name: leaseholder.name || 'Unknown',
+          building_name: leaseholder.unit?.building?.name || 'Unknown',
+          unit_number: leaseholder.unit?.unit_number || 'Unknown',
+          is_bulk: false
         })
 
-        toast.success(`Email sent to ${leaseholder.full_name}`)
+        toast.success(`Email sent to ${leaseholder.name || 'leaseholder'}`)
+        onSuccess?.()
       }
 
       // Reset form and close modal
@@ -122,29 +137,34 @@ export default function EmailDraftModal({
     }
   }
 
-  const logCommunication = async (communication: {
-    type: 'email'
+  const sendEmail = async (emailData: {
+    to_email: string
+    subject: string
+    content: string
     leaseholder_id: string
     leaseholder_name: string
     building_name: string
     unit_number: string
-    subject: string
-    content: string
+    is_bulk: boolean
   }) => {
     try {
-      const { error } = await supabase
-        .from('communications_sent')
-        .insert({
-          to_email: communication.leaseholder_name,
-          subject: communication.subject,
-          message: communication.content,
-          sent_by: 'system',
-          status: 'sent'
-        })
+      const response = await fetch('/api/communications/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(emailData),
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to send email')
+      }
+
+      return await response.json()
     } catch (error) {
-      console.error('Error logging communication:', error)
+      console.error('Error sending email:', error)
+      throw error
     }
   }
 
@@ -157,8 +177,8 @@ export default function EmailDraftModal({
       }
     } else if (leaseholder) {
       return {
-        title: `To: ${leaseholder.full_name}`,
-        subtitle: leaseholder.email,
+        title: `To: ${leaseholder.name || 'Unknown'}`,
+        subtitle: leaseholder.email || 'No email available',
         emailCount: leaseholder.email ? '1 recipient' : 'No email available'
       }
     }
