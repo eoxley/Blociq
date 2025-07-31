@@ -1,10 +1,18 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import { Send, Loader2, Sparkles, MessageCircle, Upload, FileText, X } from 'lucide-react'
+import { Send, Loader2, Sparkles, MessageCircle, Upload, FileText, X, Plus, Copy, Check } from 'lucide-react'
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
 import { toast } from 'sonner'
+
+type Message = {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: Date
+  files?: UploadedFile[]
+}
 
 type AIResponse = {
   success: boolean
@@ -30,63 +38,40 @@ type UploadedFile = {
 }
 
 export default function AskBlocIQHomepage() {
+  const [messages, setMessages] = useState<Message[]>([])
   const [prompt, setPrompt] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [aiResponse, setAiResponse] = useState<AIResponse | null>(null)
-  const [documentResults, setDocumentResults] = useState<DocumentSearchResult[]>([])
-  const [isDocumentSearch, setIsDocumentSearch] = useState(false)
-  const [showSuggestions, setShowSuggestions] = useState(true)
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const [isDragOver, setIsDragOver] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null)
+  
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const resultsRef = useRef<HTMLDivElement>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const chatContainerRef = useRef<HTMLDivElement>(null)
 
-  // Rotating placeholder suggestions
-  const placeholderSuggestions = [
-    "When is the next fire risk assessment due at Ashwood House?",
-    "Find the gas safety cert for Kings Court",
-    "Summarise the latest leak report",
-    "Send an insurance reminder to all directors",
-    "What's the status of the lift maintenance?",
-    "Show me all compliance documents for this month",
-    "Create a meeting agenda for the AGM",
-    "What's the current service charge balance?"
-  ]
-
-  const [currentPlaceholder, setCurrentPlaceholder] = useState(placeholderSuggestions[0])
-
-  // Rotate placeholder text
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentPlaceholder(prev => {
-        const currentIndex = placeholderSuggestions.indexOf(prev)
-        const nextIndex = (currentIndex + 1) % placeholderSuggestions.length
-        return placeholderSuggestions[nextIndex]
-      })
-    }, 3000)
-
-    return () => clearInterval(interval)
-  }, [])
-
-  // Quick suggestion buttons
-  const quickSuggestions = [
-    "When is the next fire risk assessment due at Ashwood House?",
-    "Find the gas safety cert for Kings Court",
-    "Summarise the latest leak report",
-    "Send an insurance reminder to all directors"
-  ]
-
-  const handleSuggestionClick = (suggestion: string) => {
-    setPrompt(suggestion)
-    setShowSuggestions(false)
-    inputRef.current?.focus()
+  // Auto-resize textarea
+  const adjustTextareaHeight = () => {
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto'
+      inputRef.current.style.height = `${Math.min(inputRef.current.scrollHeight, 120)}px`
+    }
   }
+
+  useEffect(() => {
+    adjustTextareaHeight()
+  }, [prompt])
+
+  // Scroll to bottom when new messages are added
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   // File handling functions
   const acceptedFileTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
   const maxFileSize = 10 * 1024 * 1024 // 10MB
+  const maxFiles = 5
 
   const validateFile = (file: File): boolean => {
     if (!acceptedFileTypes.includes(file.type)) {
@@ -96,6 +81,11 @@ export default function AskBlocIQHomepage() {
     
     if (file.size > maxFileSize) {
       toast.error(`File too large. Please upload files smaller than 10MB.`)
+      return false
+    }
+    
+    if (uploadedFiles.length >= maxFiles) {
+      toast.error(`Maximum ${maxFiles} files allowed.`)
       return false
     }
     
@@ -146,11 +136,18 @@ export default function AskBlocIQHomepage() {
     e.preventDefault()
     if ((!prompt.trim() && uploadedFiles.length === 0) || isLoading) return
 
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: prompt.trim(),
+      timestamp: new Date(),
+      files: uploadedFiles.length > 0 ? [...uploadedFiles] : undefined
+    }
+
+    setMessages(prev => [...prev, userMessage])
+    setPrompt('')
+    setUploadedFiles([])
     setIsLoading(true)
-    setAiResponse(null)
-    setDocumentResults([])
-    setIsDocumentSearch(false)
-    setShowSuggestions(false)
 
     try {
       // Create FormData if files are uploaded
@@ -159,22 +156,21 @@ export default function AskBlocIQHomepage() {
         'Content-Type': 'application/json',
       }
 
-      if (uploadedFiles.length > 0) {
+      if (userMessage.files && userMessage.files.length > 0) {
         requestBody = new FormData()
-        requestBody.append('prompt', prompt.trim())
-        requestBody.append('building_id', 'null') // Homepage doesn't have specific building context
+        requestBody.append('prompt', userMessage.content)
+        requestBody.append('building_id', 'null')
         
-        uploadedFiles.forEach((uploadedFile, index) => {
+        userMessage.files.forEach((uploadedFile) => {
           requestBody.append(`file`, uploadedFile.file)
           requestBody.append(`fileName`, uploadedFile.name)
         })
         
-        // Remove Content-Type header to let browser set it with boundary
         delete headers['Content-Type']
       } else {
         requestBody = JSON.stringify({
-          prompt: prompt.trim(),
-          building_id: null // Homepage doesn't have specific building context
+          prompt: userMessage.content,
+          building_id: null
         })
       }
 
@@ -187,23 +183,14 @@ export default function AskBlocIQHomepage() {
       const data: AIResponse = await response.json()
 
       if (data.success) {
-        setAiResponse(data)
-        
-        if (data.documentSearch && data.documents) {
-          setIsDocumentSearch(true)
-          setDocumentResults(data.documents)
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: data.response,
+          timestamp: new Date()
         }
 
-        // Clear uploaded files after successful submission
-        setUploadedFiles([])
-
-        // Scroll to results
-        setTimeout(() => {
-          resultsRef.current?.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start' 
-          })
-        }, 100)
+        setMessages(prev => [...prev, assistantMessage])
       } else {
         toast.error('Failed to get AI response')
       }
@@ -216,9 +203,20 @@ export default function AskBlocIQHomepage() {
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault()
       handleSubmit(e as any)
+    }
+  }
+
+  const copyToClipboard = async (content: string, messageId: string) => {
+    try {
+      await navigator.clipboard.writeText(content)
+      setCopiedMessageId(messageId)
+      toast.success('Copied to clipboard')
+      setTimeout(() => setCopiedMessageId(null), 2000)
+    } catch (error) {
+      toast.error('Failed to copy to clipboard')
     }
   }
 
@@ -237,237 +235,217 @@ export default function AskBlocIQHomepage() {
     return '📎'
   }
 
+  const formatTimestamp = (date: Date) => {
+    return date.toLocaleTimeString('en-GB', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    })
+  }
+
   return (
-    <div className="space-y-6">
-      {/* Main Input Section */}
-      <BlocIQCard variant="elevated">
-        <BlocIQCardHeader>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center">
-              <Sparkles className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-semibold text-[#333333]">Ask BlocIQ AI</h2>
-              <p className="text-sm text-[#64748B]">Get instant answers about your properties</p>
+    <div className="flex flex-col h-[600px] bg-white rounded-2xl shadow-xl border border-gray-200">
+      {/* Chat Header */}
+      <div className="flex items-center gap-3 p-4 border-b border-gray-200 bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white rounded-t-2xl">
+        <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+          <Sparkles className="h-5 w-5" />
+        </div>
+        <div>
+          <h2 className="font-semibold">Ask BlocIQ</h2>
+          <p className="text-xs text-white/80">AI-powered property management assistant</p>
+        </div>
+      </div>
+
+      {/* Chat Messages */}
+      <div 
+        ref={chatContainerRef}
+        className="flex-1 overflow-y-auto p-4 space-y-4"
+      >
+        {messages.map((message) => (
+          <div
+            key={message.id}
+            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} transition-all duration-300 ease-in-out`}
+          >
+            <div className={`max-w-[80%] ${message.role === 'user' ? 'order-2' : 'order-1'}`}>
+              <div className={`rounded-2xl px-4 py-3 ${
+                message.role === 'user' 
+                  ? 'bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white' 
+                  : 'bg-gray-100 text-gray-900'
+              }`}>
+                {/* Message Content */}
+                <div className="whitespace-pre-wrap leading-relaxed">
+                  {message.content}
+                </div>
+                
+                {/* Files */}
+                {message.files && message.files.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {message.files.map((file) => (
+                      <div key={file.id} className="flex items-center gap-2 text-sm">
+                        <span>{getFileIcon(file.type)}</span>
+                        <span className="truncate">{file.name}</span>
+                        <span className="text-xs opacity-70">({formatFileSize(file.size)})</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Timestamp */}
+                <div className={`text-xs mt-2 ${
+                  message.role === 'user' ? 'text-white/70' : 'text-gray-500'
+                }`}>
+                  {formatTimestamp(message.timestamp)}
+                </div>
+              </div>
+              
+              {/* Copy Button for Assistant Messages */}
+              {message.role === 'assistant' && (
+                <div className="flex justify-end mt-2">
+                  <button
+                    onClick={() => copyToClipboard(message.content, message.id)}
+                    className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                    title="Copy to clipboard"
+                  >
+                    {copiedMessageId === message.id ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
-        </BlocIQCardHeader>
-        
-        <BlocIQCardContent>
+        ))}
 
-          {/* Chat-style Input */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="relative">
-              <input
-                ref={inputRef}
-                type="text"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder={currentPlaceholder}
-                className="w-full px-4 py-4 pr-12 bg-white border-2 border-[#E2E8F0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent transition-all duration-200 text-[#333333] placeholder-[#94A3B8]"
-                disabled={isLoading}
-              />
-              <button
-                type="submit"
-                disabled={isLoading || (!prompt.trim() && uploadedFiles.length === 0)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 p-2 bg-gradient-to-r from-[#008C8F] to-[#2BBEB4] hover:from-[#007B8A] hover:to-[#2BBEB4] disabled:from-gray-300 disabled:to-gray-400 text-white rounded-lg transition-all duration-200 disabled:cursor-not-allowed"
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </button>
+        {/* Loading Message */}
+        {isLoading && (
+          <div className="flex justify-start transition-all duration-300 ease-in-out">
+            <div className="max-w-[80%]">
+              <div className="bg-gray-100 rounded-2xl px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-gradient-to-r from-[#008C8F] to-[#7645ED] rounded-lg flex items-center justify-center">
+                    <Sparkles className="h-3 w-3 text-white" />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Loader2 className="h-4 w-4 animate-spin text-[#008C8F]" />
+                    <span className="text-sm text-gray-600">BlocIQ is thinking...</span>
+                  </div>
+                </div>
+              </div>
             </div>
+          </div>
+        )}
 
-            {/* File Upload Zone */}
-            <div
-              className={`border-2 border-dashed rounded-xl p-4 text-center transition-all duration-200 ${
-                isDragOver 
-                  ? 'border-teal-500 bg-teal-50' 
-                  : 'border-teal-400 hover:bg-teal-50'
-              }`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input Area */}
+      <div className="border-t border-gray-200 p-4 bg-gray-50 rounded-b-2xl">
+        <form onSubmit={handleSubmit} className="space-y-3">
+          {/* File Upload Zone */}
+          {uploadedFiles.length > 0 && (
+            <div className="flex flex-wrap gap-2 transition-all duration-300 ease-in-out">
+              {uploadedFiles.map((file) => (
+                <div
+                  key={file.id}
+                  className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                >
+                  <span>{getFileIcon(file.type)}</span>
+                  <span className="truncate max-w-[150px]">{file.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(file.id)}
+                    className="text-gray-400 hover:text-red-500 transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Main Input */}
+          <div className="relative">
+            <textarea
+              ref={inputRef}
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              onKeyDown={handleKeyPress}
+              placeholder="Ask BlocIQ anything..."
+              className="w-full px-4 py-3 pr-20 bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent transition-all duration-200 resize-none text-gray-900 placeholder-gray-500"
+              rows={1}
+              disabled={isLoading}
+              style={{ minHeight: '48px', maxHeight: '120px' }}
+            />
+            
+            {/* File Upload Button */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isLoading || uploadedFiles.length >= maxFiles}
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
+              title="Attach a document"
             >
-              <div className="flex flex-col items-center gap-2">
-                <Upload className="h-6 w-6 text-teal-600" />
-                <p className="text-sm text-gray-600">
-                  Drag & drop a file here or{' '}
-                  <span 
-                    className="text-teal-600 underline cursor-pointer hover:text-teal-700"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    click to upload
-                  </span>
-                </p>
-                <p className="text-xs text-gray-500">
-                  Supports PDF, DOCX, TXT (max 10MB)
-                </p>
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept=".pdf,.docx,.txt"
-                onChange={(e) => handleFileSelect(e.target.files)}
-                className="hidden"
-              />
+              <Plus className="h-4 w-4" />
+            </button>
+            
+            {/* Send Button */}
+            <button
+              type="submit"
+              disabled={isLoading || (!prompt.trim() && uploadedFiles.length === 0)}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 p-2 bg-gradient-to-r from-[#008C8F] to-[#7645ED] hover:from-[#007B8A] hover:to-[#6B3FD8] disabled:from-gray-300 disabled:to-gray-400 text-white rounded-xl transition-all duration-200 disabled:cursor-not-allowed shadow-sm"
+              title="Send with BlocIQ"
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+
+          {/* Drag & Drop Zone */}
+          <div
+            className={`border-2 border-dashed rounded-xl p-4 text-center transition-all duration-200 ${
+              isDragOver 
+                ? 'border-[#008C8F] bg-[#008C8F]/5' 
+                : 'border-gray-300 hover:border-[#008C8F] hover:bg-[#008C8F]/5'
+            }`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            <div className="flex flex-col items-center gap-2">
+              <Upload className="h-5 w-5 text-gray-400" />
+              <p className="text-sm text-gray-600">
+                Drag & drop files here or{' '}
+                <span 
+                  className="text-[#008C8F] underline cursor-pointer hover:text-[#007B8A]"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  click to upload
+                </span>
+              </p>
+              <p className="text-xs text-gray-500">
+                Supports PDF, DOCX, TXT (max 10MB, up to {maxFiles} files)
+              </p>
             </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".pdf,.docx,.txt"
+              onChange={(e) => handleFileSelect(e.target.files)}
+              className="hidden"
+            />
+          </div>
 
-            {/* Uploaded Files List */}
-            {uploadedFiles.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-700">Uploaded files:</p>
-                {uploadedFiles.map((uploadedFile) => (
-                  <div
-                    key={uploadedFile.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg">{getFileIcon(uploadedFile.type)}</span>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{uploadedFile.name}</p>
-                        <p className="text-xs text-gray-500">{formatFileSize(uploadedFile.size)}</p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeFile(uploadedFile.id)}
-                      className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Quick Suggestions */}
-            {showSuggestions && (
-              <div className="space-y-3">
-                <p className="text-sm text-[#64748B] font-medium">Try asking:</p>
-                <div className="grid grid-cols-1 gap-2">
-                  {quickSuggestions.map((suggestion, index) => (
-                    <button
-                      key={index}
-                      type="button"
-                      onClick={() => handleSuggestionClick(suggestion)}
-                      className="w-full text-left px-3 py-2 bg-white border border-[#E2E8F0] hover:border-[#008C8F] hover:bg-[#F0FDFA] rounded-lg text-sm text-[#333333] transition-all duration-200 hover:shadow-sm"
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </form>
-        </BlocIQCardContent>
-      </BlocIQCard>
-
-      {/* AI Response Section */}
-      {isLoading && (
-        <BlocIQCard variant="elevated" className="bg-gradient-to-br from-[#F0FDFA] to-emerald-50">
-          <BlocIQCardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-lg flex items-center justify-center">
-                <Sparkles className="h-4 w-4 text-white" />
-              </div>
-              <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin text-[#008C8F]" />
-                <span className="text-[#333333] font-medium">BlocIQ is thinking...</span>
-              </div>
-            </div>
-          </BlocIQCardContent>
-        </BlocIQCard>
-      )}
-
-      {/* Results Section */}
-      {aiResponse && (
-        <div ref={resultsRef} className="space-y-4">
-          {/* AI Response */}
-          <BlocIQCard variant="elevated" className="bg-gradient-to-br from-white to-[#FAFAFA] border-l-4 border-[#008C8F]">
-            <BlocIQCardContent className="p-6">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-                  <Sparkles className="h-4 w-4 text-white" />
-                </div>
-                <div className="flex-1">
-                  <div className="prose prose-sm max-w-none">
-                    <div className="whitespace-pre-wrap text-[#333333] leading-relaxed">
-                      {aiResponse.response}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </BlocIQCardContent>
-          </BlocIQCard>
-
-          {/* Document Search Results */}
-          {isDocumentSearch && documentResults.length > 0 && (
-            <BlocIQCard variant="elevated" className="bg-gradient-to-br from-[#F0FDFA] to-emerald-50">
-              <BlocIQCardContent className="p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 bg-gradient-to-br from-[#2BBEB4] to-[#008C8F] rounded-lg flex items-center justify-center">
-                    <MessageCircle className="h-4 w-4 text-white" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-[#333333]">Found Documents</h3>
-                </div>
-                <div className="space-y-3">
-                  {documentResults.map((doc, index) => (
-                    <div key={index} className="bg-white rounded-lg p-4 border border-[#E2E8F0] hover:shadow-md transition-shadow">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-[#333333] mb-1">{doc.title}</h4>
-                          <p className="text-sm text-[#64748B] mb-2">{doc.summary}</p>
-                          <div className="flex items-center gap-4 text-xs text-[#64748B]">
-                            <span>📅 {new Date(doc.extracted_date).toLocaleDateString()}</span>
-                            <a
-                              href={doc.document_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[#008C8F] hover:text-[#007B8A] font-medium"
-                            >
-                              📎 View Document
-                            </a>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </BlocIQCardContent>
-            </BlocIQCard>
-          )}
-
-          {/* No Documents Found */}
-          {isDocumentSearch && documentResults.length === 0 && (
-            <BlocIQCard variant="elevated" className="bg-gradient-to-br from-amber-50 to-orange-50 border-l-4 border-amber-400">
-              <BlocIQCardContent className="p-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center">
-                    <MessageCircle className="h-4 w-4 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-[#333333] mb-1">No Documents Found</h3>
-                    <p className="text-sm text-[#64748B]">
-                      I couldn't find that document. Would you like to upload one now?
-                    </p>
-                    <BlocIQButton
-                      size="sm"
-                      className="mt-3 bg-gradient-to-r from-[#008C8F] to-[#2BBEB4] hover:from-[#007B8A] hover:to-[#2BBEB4] text-white"
-                    >
-                      📤 Upload Document
-                    </BlocIQButton>
-                  </div>
-                </div>
-              </BlocIQCardContent>
-            </BlocIQCard>
-          )}
-        </div>
-      )}
+          {/* Keyboard Shortcut Hint */}
+          <p className="text-xs text-gray-500 text-center">
+            Press Cmd+Enter to send
+          </p>
+        </form>
+      </div>
     </div>
   )
 } 
