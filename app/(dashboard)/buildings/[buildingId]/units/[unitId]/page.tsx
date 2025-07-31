@@ -221,23 +221,32 @@ export default async function UnitDetailPage({ params }: UnitDetailPageProps) {
 
     console.log('✅ Unit belongs to correct building')
 
-    // Fetch leaseholder data separately to avoid relationship ambiguity
-    let leaseholder: Leaseholder | null = null
-    if (unit.leaseholder_id) {
-      const { data: leaseholderData, error: leaseholderError } = await supabase
-        .from('leaseholders')
-        .select('id, full_name, email, phone_number, is_director, correspondence_address')
-        .eq('id', unit.leaseholder_id)
-        .single()
-      
-      if (!leaseholderError && leaseholderData) {
-        leaseholder = leaseholderData
-        console.log('✅ Leaseholder found:', leaseholder.full_name)
-      } else {
-        console.warn('⚠️ Leaseholder not found or error:', leaseholderError)
-      }
+    // Fetch all leaseholders for this unit (supporting multiple leaseholders per unit)
+    const { data: leaseholdersData = [], error: leaseholdersError } = await supabase
+      .from('leaseholders')
+      .select('id, full_name, email, phone_number, is_director, correspondence_address')
+      .eq('unit_id', unitId)
+      .order('created_at', { ascending: true })
+    
+    const leaseholders = leaseholdersData || []
+    if (leaseholdersError) {
+      console.error('⚠️ Error fetching leaseholders:', leaseholdersError)
     } else {
-      console.log('ℹ️ No leaseholder assigned to this unit')
+      console.log('✅ Leaseholders found:', leaseholders.length)
+    }
+
+    // For backward compatibility, keep the primary leaseholder (first one or the one with leaseholder_id)
+    let leaseholder: Leaseholder | null = null
+    if (leaseholders.length > 0) {
+      // If there's a specific leaseholder_id, find that one, otherwise use the first
+      if (unit.leaseholder_id) {
+        leaseholder = leaseholders.find(l => l.id === unit.leaseholder_id) || leaseholders[0]
+      } else {
+        leaseholder = leaseholders[0]
+      }
+      console.log('✅ Primary leaseholder:', leaseholder.full_name)
+    } else {
+      console.log('ℹ️ No leaseholders assigned to this unit')
     }
 
     // Fetch linked documents for this unit
@@ -294,6 +303,7 @@ export default async function UnitDetailPage({ params }: UnitDetailPageProps) {
         building={building}
         unit={unit as any}
         leaseholder={leaseholder}
+        leaseholders={leaseholders}
         documents={documents}
         emails={emails}
         leases={leases}

@@ -74,6 +74,7 @@ interface LeaseholderInfoClientProps {
   building: Building
   unit: Unit
   leaseholder: Leaseholder | null
+  leaseholders: Leaseholder[]
   documents: Document[]
   emails: Email[]
   leases: Lease[]
@@ -83,6 +84,7 @@ export default function LeaseholderInfoClient({
   building, 
   unit, 
   leaseholder,
+  leaseholders,
   documents, 
   emails,
   leases
@@ -122,7 +124,12 @@ export default function LeaseholderInfoClient({
               <div>
                 <h1 className="text-3xl font-bold">Unit {unit.unit_number}</h1>
                 <p className="text-white/80 text-lg">
-                  {building.name} • {leaseholder?.full_name || 'No leaseholder assigned'}
+                  {building.name} • {leaseholders.length > 0 
+                    ? leaseholders.length === 1 
+                      ? leaseholder?.full_name 
+                      : `${leaseholders.length} leaseholders`
+                    : 'No leaseholders assigned'
+                  }
                 </p>
                 {leaseholder?.email && (
                   <p className="text-white/60 text-sm mt-1">
@@ -192,7 +199,7 @@ export default function LeaseholderInfoClient({
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">Leaseholder Information</h3>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Name:</span>
+                      <span className="text-gray-600">Primary Leaseholder:</span>
                       <div className="flex items-center space-x-2">
                         <span className="font-medium">
                           {leaseholder?.full_name || 'Not assigned'}
@@ -204,15 +211,19 @@ export default function LeaseholderInfoClient({
                         )}
                       </div>
                     </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Total Leaseholders:</span>
+                      <span className="font-medium">{leaseholders.length}</span>
+                    </div>
                     {leaseholder?.email && (
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Email:</span>
+                        <span className="text-gray-600">Primary Email:</span>
                         <span className="font-medium text-[#008C8F]">{leaseholder.email}</span>
                       </div>
                     )}
                     {leaseholder?.correspondence_address && (
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Correspondence Address:</span>
+                        <span className="text-gray-600">Primary Address:</span>
                         <span className="font-medium text-sm">{leaseholder.correspondence_address}</span>
                       </div>
                     )}
@@ -221,89 +232,95 @@ export default function LeaseholderInfoClient({
               </div>
             </div>
 
-            {/* SECTION 2: Leaseholder Details */}
-            {leaseholder && (
+            {/* SECTION 2: All Leaseholders */}
+            {leaseholders.length > 0 && (
               <div className="bg-white rounded-2xl shadow-xl p-6">
                 <div className="flex items-center space-x-3 mb-6">
                   <div className="w-12 h-12 bg-gradient-to-r from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center">
                     <User className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Leaseholder Information</h2>
-                    <p className="text-gray-600">Contact details and leaseholder profile</p>
+                    <h2 className="text-2xl font-bold text-gray-900">All Leaseholders</h2>
+                    <p className="text-gray-600">
+                      {leaseholders.length} leaseholder{leaseholders.length !== 1 ? 's' : ''} for this unit
+                    </p>
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h3>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">Name</label>
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="text-gray-900">{leaseholder.full_name}</span>
+                <div className="space-y-4">
+                  {leaseholders.map((lh, index) => (
+                    <div key={lh.id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg flex items-center justify-center">
+                              <User className="h-5 w-5 text-white" />
+                            </div>
+                            <div>
+                              <h3 className="text-lg font-semibold text-gray-900">
+                                {lh.full_name || 'Unnamed Leaseholder'}
+                                {lh.is_director && (
+                                  <span className="ml-2 bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white text-xs px-2 py-1 rounded-full font-medium">
+                                    Director
+                                  </span>
+                                )}
+                              </h3>
+                              <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                                {lh.email && (
+                                  <div className="flex items-center gap-1">
+                                    <Mail className="h-4 w-4" />
+                                    {lh.email}
+                                  </div>
+                                )}
+                                {lh.phone_number && (
+                                  <div className="flex items-center gap-1">
+                                    <Phone className="h-4 w-4" />
+                                    {lh.phone_number}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {lh.correspondence_address && (
+                            <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                              <p className="text-sm text-gray-700">{lh.correspondence_address}</p>
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <span>Leaseholder {index + 1}</span>
+                            {lh.id === leaseholder?.id && (
+                              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
+                                Primary
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 ml-4">
+                          {lh.email && (
+                            <button
+                              onClick={() => handleEmail(lh.email!)}
+                              className="p-2 text-gray-400 hover:text-[#008C8F] transition-colors"
+                              title="Send Email"
+                            >
+                              <Mail className="h-4 w-4" />
+                            </button>
+                          )}
+                          {lh.phone_number && (
+                            <button
+                              onClick={() => handleCall(lh.phone_number!)}
+                              className="p-2 text-gray-400 hover:text-[#008C8F] transition-colors"
+                              title="Call"
+                            >
+                              <Phone className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
                       </div>
-                      
-                      {leaseholder.email && (
-                        <div>
-                          <label className="text-sm font-medium text-gray-600">Email</label>
-                          <div className="flex items-center justify-between mt-1">
-                            <span className="text-gray-900">{leaseholder.email}</span>
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => handleEmail(leaseholder!.email!)}
-                                className="p-2 text-gray-400 hover:text-[#008C8F] transition-colors"
-                                title="Send Email"
-                              >
-                                <Mail className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleCopy(leaseholder!.email!, 'email')}
-                                className="p-2 text-gray-400 hover:text-[#008C8F] transition-colors"
-                                title="Copy Email"
-                              >
-                                {copiedField === 'email' ? (
-                                  <div className="h-4 w-4 bg-green-500 rounded-full"></div>
-                                ) : (
-                                  <Copy className="h-4 w-4" />
-                                )}
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {leaseholder.phone_number && (
-                        <div>
-                          <label className="text-sm font-medium text-gray-600">Phone</label>
-                          <div className="flex items-center justify-between mt-1">
-                            <span className="text-gray-900">{leaseholder.phone_number}</span>
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => handleCall(leaseholder!.phone_number!)}
-                                className="p-2 text-gray-400 hover:text-[#008C8F] transition-colors"
-                                title="Call"
-                              >
-                                <Phone className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleCopy(leaseholder!.phone_number!, 'phone')}
-                                className="p-2 text-gray-400 hover:text-[#008C8F] transition-colors"
-                                title="Copy Phone"
-                              >
-                                {copiedField === 'phone' ? (
-                                  <div className="h-4 w-4 bg-green-500 rounded-full"></div>
-                                ) : (
-                                  <Copy className="h-4 w-4" />
-                                )}
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </div>
-                  </div>
+                  ))}
                 </div>
               </div>
             )}
