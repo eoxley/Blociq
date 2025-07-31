@@ -13,15 +13,15 @@ export function BlocIQCard({
   ...props 
 }: BlocIQCardProps) {
                 const variants = {
-                default: "bg-white border border-[#E2E8F0] shadow-sm hover:shadow-md",
-                elevated: "bg-white border border-[#E2E8F0] shadow-lg hover:shadow-xl",
-                outlined: "bg-white border-2 border-[#008C8F]/20 shadow-sm"
+                default: "bg-white border border-gray-200 shadow-sm hover:shadow-md rounded-2xl",
+                elevated: "bg-white border border-gray-200 shadow-lg hover:shadow-xl rounded-2xl",
+                outlined: "bg-white border-2 border-[#008C8F]/20 shadow-sm rounded-2xl"
               };
 
   return (
     <div
       className={cn(
-        "rounded-xl transition-all duration-300",
+        "transition-all duration-300",
         variants[variant],
         className
       )}

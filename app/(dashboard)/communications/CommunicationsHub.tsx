@@ -17,9 +17,9 @@ import {
   CheckCircle,
   Clock
 } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { BlocIQCard, BlocIQCardContent } from '@/components/ui/blociq-card'
+import { BlocIQButton } from '@/components/ui/blociq-button'
+import { BlocIQBadge } from '@/components/ui/blociq-badge'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabaseClient'
 import LeaseholderSearchModal from './components/LeaseholderSearchModal'
@@ -292,9 +292,9 @@ export default function CommunicationsHub() {
           </div>
           
           <div className="flex items-center gap-3">
-            <Badge variant="secondary" className="text-sm">
+            <BlocIQBadge variant="secondary" size="sm">
               {recentCommunications.length} recent communications
-            </Badge>
+            </BlocIQBadge>
           </div>
         </div>
       </div>
@@ -302,12 +302,13 @@ export default function CommunicationsHub() {
       {/* Action Tiles Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
         {actionTiles.map((tile) => (
-          <Card 
+          <BlocIQCard 
             key={tile.id}
+            variant="elevated"
             className={`cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105 border-2 ${tile.borderColor} ${tile.bgColor} hover:shadow-lg`}
             onClick={() => handleTileClick(tile.id)}
           >
-            <CardContent className="p-8">
+            <BlocIQCardContent className="p-8">
               <div className="flex flex-col items-center text-center space-y-4">
                 <div className={`p-4 rounded-2xl bg-gradient-to-r ${tile.color} text-white shadow-lg`}>
                   <tile.icon className="h-8 w-8" />
@@ -317,8 +318,8 @@ export default function CommunicationsHub() {
                   <p className="text-sm text-gray-600">{tile.description}</p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </BlocIQCardContent>
+          </BlocIQCard>
         ))}
       </div>
 
@@ -327,20 +328,20 @@ export default function CommunicationsHub() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold text-gray-900">Recent Communications</h2>
-            <Button 
+            <BlocIQButton 
               variant="outline" 
               onClick={() => setShowCommunicationsLog(true)}
               className="flex items-center gap-2"
             >
               <History className="h-4 w-4" />
               View All
-            </Button>
+            </BlocIQButton>
           </div>
           
           <div className="grid gap-4">
             {recentCommunications.slice(0, 5).map((comm) => (
-              <Card key={comm.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
+              <BlocIQCard key={comm.id} variant="elevated" className="hover:shadow-md transition-shadow">
+                <BlocIQCardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className={`p-2 rounded-lg ${
@@ -355,9 +356,9 @@ export default function CommunicationsHub() {
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-gray-900">{comm.leaseholder_name}</span>
-                          <Badge variant="outline" className="text-xs">
+                          <BlocIQBadge variant="outline" size="sm">
                             {comm.unit_number}
-                          </Badge>
+                          </BlocIQBadge>
                         </div>
                         <p className="text-sm text-gray-600">{comm.subject}</p>
                         <p className="text-xs text-gray-500">{comm.building_name}</p>
@@ -368,8 +369,8 @@ export default function CommunicationsHub() {
                       <span className="text-xs text-gray-500">{formatDate(comm.created_at)}</span>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </BlocIQCardContent>
+              </BlocIQCard>
             ))}
           </div>
         </div>

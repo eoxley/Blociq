@@ -58,8 +58,6 @@ type UserData = {
   email: string
 }
 
-
-
 type Email = {
   id: string
   subject: string
@@ -81,8 +79,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const [showAddEventForm, setShowAddEventForm] = useState(false)
   const [recentEmails, setRecentEmails] = useState<Email[]>([])
   const [loadingEmails, setLoadingEmails] = useState(true)
-
-
 
   // Dynamic welcome messages - rotating pool of positive, motivational, humorous, and informative messages
   const welcomeMessages = [
@@ -304,8 +300,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     fetchEmails();
   }, [supabase]);
 
-
-
   const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsAddingEvent(true)
@@ -442,8 +436,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     }
   };
 
-
-
   return (
     <div className="space-y-8">
       {/* Enhanced Header with BlocIQ Gradient Background */}
@@ -463,274 +455,274 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         </div>
       </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Upcoming Events Section */}
-              <BlocIQCard variant="elevated">
-                <BlocIQCardHeader>
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center">
-                        <Calendar className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <h2 className="text-2xl font-semibold text-[#333333]">Property Events</h2>
-                        <p className="text-sm text-[#64748B]">Manage your property events</p>
-                      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Upcoming Events Section */}
+        <BlocIQCard variant="elevated" className="rounded-2xl shadow-lg">
+          <BlocIQCardHeader>
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center">
+                  <Calendar className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Property Events</h2>
+                  <p className="text-sm text-gray-600">Manage your property events</p>
+                </div>
+              </div>
+              
+              {/* Outlook Integration Status */}
+              <div className="flex items-center gap-2">
+                {outlookConnected ? (
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span>Outlook Connected</span>
                     </div>
-                    
-                    {/* Outlook Integration Status */}
-                    <div className="flex items-center gap-2">
-                      {outlookConnected ? (
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                            <span>Outlook Connected</span>
-                          </div>
-                          <BlocIQButton
-                            onClick={handleSyncOutlook}
-                            disabled={syncingOutlook}
-                            size="sm"
-                            variant="outline"
-                            className="text-[#008C8F] border-[#008C8F] hover:bg-[#F0FDFA]"
-                          >
-                            {syncingOutlook ? (
-                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                            ) : (
-                              <RefreshCw className="h-3 w-3 mr-1" />
-                            )}
-                            {syncingOutlook ? 'Syncing...' : 'Sync'}
-                          </BlocIQButton>
-                        </div>
+                    <BlocIQButton
+                      onClick={handleSyncOutlook}
+                      disabled={syncingOutlook}
+                      size="sm"
+                      variant="outline"
+                      className="text-[#008C8F] border-[#008C8F] hover:bg-[#F0FDFA]"
+                    >
+                      {syncingOutlook ? (
+                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
                       ) : (
-                        <BlocIQButton
-                          onClick={handleConnectOutlook}
-                          size="sm"
-                          variant="outline"
-                          className="text-[#008C8F] border-[#008C8F] hover:bg-[#F0FDFA]"
-                        >
-                          <ExternalLink className="h-3 w-3 mr-1" />
-                          Connect Outlook
-                        </BlocIQButton>
+                        <RefreshCw className="h-3 w-3 mr-1" />
                       )}
-                    </div>
+                      {syncingOutlook ? 'Syncing...' : 'Sync'}
+                    </BlocIQButton>
                   </div>
-                </BlocIQCardHeader>
-                
-                <BlocIQCardContent>
-                  <div className="space-y-4">
-                    {/* Add Event Button */}
-                    {!showAddEventForm && (
-                      <div className="text-center">
-                        <BlocIQButton
-                          onClick={() => setShowAddEventForm(true)}
-                          size="sm"
-                          className="bg-gradient-to-r from-[#008C8F] to-[#2BBEB4] hover:from-[#007B8A] hover:to-[#2BBEB4] text-white"
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add New Event
-                        </BlocIQButton>
-                      </div>
-                    )}
-
-                    {/* Manual Event Input Form */}
-                    {showAddEventForm && (
-                      <div className="bg-gradient-to-r from-[#F0FDFA] to-emerald-50 rounded-xl p-4 border border-[#2BBEB4]/20">
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="font-semibold text-[#0F5D5D]">Add New Event</h3>
-                          <button
-                            type="button"
-                            onClick={() => setShowAddEventForm(false)}
-                            className="text-[#64748B] hover:text-[#333333] transition-colors"
-                          >
-                            <X className="h-5 w-5" />
-                          </button>
-                        </div>
-                        <form onSubmit={handleAddEvent} className="space-y-3">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-sm font-medium text-[#333333] mb-1">Event Title</label>
-                              <input
-                                type="text"
-                                name="title"
-                                required
-                                className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
-                                placeholder="Enter event title"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-[#333333] mb-1">Date & Time</label>
-                              <input
-                                type="datetime-local"
-                                name="date"
-                                required
-                                min={new Date().toISOString().slice(0, 16)}
-                                className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
-                              />
-                            </div>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-[#333333] mb-1">Building (Optional)</label>
-                            <select
-                              name="building"
-                              className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
-                            >
-                              <option value="">Select a building</option>
-                              {buildings.map(building => (
-                                <option key={building.id} value={building.name}>{building.name}</option>
-                              ))}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-[#333333] mb-1">Description (Optional)</label>
-                            <textarea
-                              name="description"
-                              rows={3}
-                              className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
-                              placeholder="Enter event description"
-                            />
-                          </div>
-                          <div className="flex justify-end gap-2">
-                            <BlocIQButton
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setShowAddEventForm(false)}
-                              disabled={isAddingEvent}
-                            >
-                              Cancel
-                            </BlocIQButton>
-                            <BlocIQButton
-                              type="submit"
-                              disabled={isAddingEvent}
-                              size="sm"
-                              className="bg-gradient-to-r from-[#008C8F] to-[#2BBEB4] hover:from-[#007B8A] hover:to-[#2BBEB4] text-white"
-                            >
-                              {isAddingEvent ? (
-                                <>
-                                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                  Adding...
-                                </>
-                              ) : (
-                                <>
-                                  <Plus className="h-4 w-4 mr-2" />
-                                  Add Event
-                                </>
-                              )}
-                            </BlocIQButton>
-                          </div>
-                        </form>
-                      </div>
-                    )}
-
-                    {/* Events List */}
-                    {(loadingEvents || (outlookConnected && loadingOutlook)) ? (
-                      <div className="text-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#008C8F] mx-auto mb-2"></div>
-                        <p className="text-[#64748B] text-sm">
-                          {loadingEvents ? 'Loading events...' : 'Loading Outlook events...'}
-                        </p>
-                      </div>
-                    ) : upcomingEvents.length > 0 ? (
-                      <div className="space-y-3">
-                        {upcomingEvents.map((event, index) => {
-                          const { date, time } = formatEventDate(event.date)
-                          const eventDate = new Date(event.date)
-                          const isToday = !isNaN(eventDate.getTime()) && eventDate.toDateString() === new Date().toDateString()
-                          const isTomorrow = !isNaN(eventDate.getTime()) && eventDate.toDateString() === new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString()
-                          const isOutlookEvent = event.source === 'outlook'
-                          
-                          return (
-                            <div 
-                              key={`${event.source}-${index}`} 
-                              className={`rounded-xl p-4 hover:shadow-lg text-sm border-l-4 transition-all duration-200 ${
-                                isOutlookEvent 
-                                  ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-400' 
-                                  : 'bg-gradient-to-r from-[#F0FDFA] to-emerald-50 border-[#2BBEB4]'
-                              }`}
-                            >
-                              <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <div className="font-bold text-[#333333]">
-                                      {event.title || 'Untitled Event'}
-                                    </div>
-                                    {isOutlookEvent && (
-                                      <BlocIQBadge variant="secondary" size="sm">
-                                        Outlook
-                                      </BlocIQBadge>
-                                    )}
-                                    {(isToday || isTomorrow) && (
-                                      <BlocIQBadge variant={isToday ? "destructive" : "warning"} size="sm">
-                                        {isToday ? 'Today' : 'Tomorrow'}
-                                      </BlocIQBadge>
-                                    )}
-                                  </div>
-                                  {event.category && (
-                                    <div className="text-[#64748B] mb-1">
-                                      📋 {event.category}
-                                    </div>
-                                  )}
-                                  <div className="text-[#64748B] mb-1">
-                                    📍 {event.building || 'General'}
-                                  </div>
-                                  {event.location && (
-                                    <div className="text-[#64748B] mb-1">
-                                      🏢 {event.location}
-                                    </div>
-                                  )}
-                                  {event.organiser_name && (
-                                    <div className="text-[#64748B] mb-1">
-                                      👤 {event.organiser_name}
-                                    </div>
-                                  )}
-                                  {event.online_meeting && (
-                                    <div className="text-blue-600 mb-1">
-                                      🎥 Online meeting available
-                                    </div>
-                                  )}
-                                  <div className="text-[#64748B]">
-                                    🕒 {date} at {time}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <Calendar className="h-12 w-12 text-[#64748B] mx-auto mb-3" />
-                        <p className="text-[#64748B] text-sm">No events yet</p>
-                        <p className="text-[#64748B] text-xs mt-1">
-                          {outlookConnected 
-                            ? 'Add property events or sync your Outlook calendar'
-                            : 'Add property events or connect your Outlook calendar'
-                          }
-                        </p>
-                        {!outlookConnected && (
-                          <div className="mt-4">
-                            <BlocIQButton
-                              onClick={handleConnectOutlook}
-                              size="sm"
-                              variant="outline"
-                              className="text-[#008C8F] border-[#008C8F] hover:bg-[#F0FDFA]"
-                            >
-                              <ExternalLink className="h-3 w-3 mr-1" />
-                              Connect Outlook Calendar
-                            </BlocIQButton>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </BlocIQCardContent>
-              </BlocIQCard>
-
-              {/* Ask BlocIQ AI Assistant */}
-              <div>
-                <AskBlocIQHomepage />
+                ) : (
+                  <BlocIQButton
+                    onClick={handleConnectOutlook}
+                    size="sm"
+                    variant="outline"
+                    className="text-[#008C8F] border-[#008C8F] hover:bg-[#F0FDFA]"
+                  >
+                    <ExternalLink className="h-3 w-3 mr-1" />
+                    Connect Outlook
+                  </BlocIQButton>
+                )}
               </div>
             </div>
+          </BlocIQCardHeader>
+          
+          <BlocIQCardContent>
+            <div className="space-y-4">
+              {/* Add Event Button */}
+              {!showAddEventForm && (
+                <div className="text-center">
+                  <BlocIQButton
+                    onClick={() => setShowAddEventForm(true)}
+                    size="sm"
+                    className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] hover:from-[#007B8A] hover:to-[#6B3FD8] text-white"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add New Event
+                  </BlocIQButton>
+                </div>
+              )}
+
+              {/* Manual Event Input Form */}
+              {showAddEventForm && (
+                <div className="bg-gradient-to-r from-[#F0FDFA] to-emerald-50 rounded-xl p-4 border border-[#2BBEB4]/20">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-[#0F5D5D]">Add New Event</h3>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddEventForm(false)}
+                      className="text-[#64748B] hover:text-[#333333] transition-colors"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+                  <form onSubmit={handleAddEvent} className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-[#333333] mb-1">Event Title</label>
+                        <input
+                          type="text"
+                          name="title"
+                          required
+                          className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
+                          placeholder="Enter event title"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-[#333333] mb-1">Date & Time</label>
+                        <input
+                          type="datetime-local"
+                          name="date"
+                          required
+                          min={new Date().toISOString().slice(0, 16)}
+                          className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#333333] mb-1">Building (Optional)</label>
+                      <select
+                        name="building"
+                        className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
+                      >
+                        <option value="">Select a building</option>
+                        {buildings.map(building => (
+                          <option key={building.id} value={building.name}>{building.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#333333] mb-1">Description (Optional)</label>
+                      <textarea
+                        name="description"
+                        rows={3}
+                        className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
+                        placeholder="Enter event description"
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <BlocIQButton
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAddEventForm(false)}
+                        disabled={isAddingEvent}
+                      >
+                        Cancel
+                      </BlocIQButton>
+                      <BlocIQButton
+                        type="submit"
+                        disabled={isAddingEvent}
+                        size="sm"
+                        className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] hover:from-[#007B8A] hover:to-[#6B3FD8] text-white"
+                      >
+                        {isAddingEvent ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Adding...
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Event
+                          </>
+                        )}
+                      </BlocIQButton>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* Events List */}
+              {(loadingEvents || (outlookConnected && loadingOutlook)) ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#008C8F] mx-auto mb-2"></div>
+                  <p className="text-[#64748B] text-sm">
+                    {loadingEvents ? 'Loading events...' : 'Loading Outlook events...'}
+                  </p>
+                </div>
+              ) : upcomingEvents.length > 0 ? (
+                <div className="space-y-3">
+                  {upcomingEvents.map((event, index) => {
+                    const { date, time } = formatEventDate(event.date)
+                    const eventDate = new Date(event.date)
+                    const isToday = !isNaN(eventDate.getTime()) && eventDate.toDateString() === new Date().toDateString()
+                    const isTomorrow = !isNaN(eventDate.getTime()) && eventDate.toDateString() === new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString()
+                    const isOutlookEvent = event.source === 'outlook'
+                    
+                    return (
+                      <div 
+                        key={`${event.source}-${index}`} 
+                        className={`rounded-xl p-4 hover:shadow-lg text-sm border-l-4 transition-all duration-200 ${
+                          isOutlookEvent 
+                            ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-400' 
+                            : 'bg-gradient-to-r from-[#F0FDFA] to-emerald-50 border-[#2BBEB4]'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="font-bold text-[#333333]">
+                                {event.title || 'Untitled Event'}
+                              </div>
+                              {isOutlookEvent && (
+                                <BlocIQBadge variant="secondary" size="sm">
+                                  Outlook
+                                </BlocIQBadge>
+                              )}
+                              {(isToday || isTomorrow) && (
+                                <BlocIQBadge variant={isToday ? "destructive" : "warning"} size="sm">
+                                  {isToday ? 'Today' : 'Tomorrow'}
+                                </BlocIQBadge>
+                              )}
+                            </div>
+                            {event.category && (
+                              <div className="text-[#64748B] mb-1">
+                                📋 {event.category}
+                              </div>
+                            )}
+                            <div className="text-[#64748B] mb-1">
+                              📍 {event.building || 'General'}
+                            </div>
+                            {event.location && (
+                              <div className="text-[#64748B] mb-1">
+                                🏢 {event.location}
+                              </div>
+                            )}
+                            {event.organiser_name && (
+                              <div className="text-[#64748B] mb-1">
+                                👤 {event.organiser_name}
+                              </div>
+                            )}
+                            {event.online_meeting && (
+                              <div className="text-blue-600 mb-1">
+                                🎥 Online meeting available
+                              </div>
+                            )}
+                            <div className="text-[#64748B]">
+                              🕒 {date} at {time}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Calendar className="h-12 w-12 text-[#64748B] mx-auto mb-3" />
+                  <p className="text-[#64748B] text-sm">No events yet</p>
+                  <p className="text-[#64748B] text-xs mt-1">
+                    {outlookConnected 
+                      ? 'Add property events or sync your Outlook calendar'
+                      : 'Add property events or connect your Outlook calendar'
+                    }
+                  </p>
+                  {!outlookConnected && (
+                    <div className="mt-4">
+                      <BlocIQButton
+                        onClick={handleConnectOutlook}
+                        size="sm"
+                        variant="outline"
+                        className="text-[#008C8F] border-[#008C8F] hover:bg-[#F0FDFA]"
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        Connect Outlook Calendar
+                      </BlocIQButton>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </BlocIQCardContent>
+        </BlocIQCard>
+
+        {/* Ask BlocIQ AI Assistant */}
+        <div>
+          <AskBlocIQHomepage />
+        </div>
+      </div>
 
       {/* Daily Summary Section */}
       <DailySummary />
