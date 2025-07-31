@@ -1,11 +1,15 @@
 import { redirect } from 'next/navigation'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
-import MajorWorksClient from './MajorWorksClient'
-import LayoutWithSidebar from '@/components/LayoutWithSidebar'
+import MajorWorksPortfolio from './MajorWorksPortfolio'
 
 interface MajorWorksPageProps {
-  searchParams: Promise<{ building?: string }>
+  searchParams: Promise<{ 
+    building?: string
+    status?: string
+    contractor?: string
+    dateRange?: string
+  }>
 }
 
 export default async function MajorWorksPage({ searchParams }: MajorWorksPageProps) {
@@ -15,7 +19,7 @@ export default async function MajorWorksPage({ searchParams }: MajorWorksPagePro
 
   if (!session) redirect('/login')
 
-  const { building } = await searchParams
+  const { building, status, contractor, dateRange } = await searchParams
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -29,8 +33,14 @@ export default async function MajorWorksPage({ searchParams }: MajorWorksPagePro
   }
 
   return (
-    <LayoutWithSidebar>
-      <MajorWorksClient userData={userData} selectedBuildingId={building} />
-    </LayoutWithSidebar>
+    <MajorWorksPortfolio 
+      userData={userData}
+      filters={{
+        buildingId: building,
+        status,
+        contractor,
+        dateRange
+      }}
+    />
   )
 } 
