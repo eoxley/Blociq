@@ -1,17 +1,19 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { 
   Mail, Clock, User, RefreshCw, ExternalLink, ChevronDown, ChevronUp, History, 
   MessageSquare, Loader2, Send, Edit3, Check, Tag, Flag, Search, Filter, 
   Archive, Trash2, Star, MoreHorizontal, Reply, Forward, Delete, Pin, 
   Eye, EyeOff, Calendar, Building, AlertCircle, CheckCircle, Clock as ClockIcon,
-  Wrench, Construction, Home, Save, X, Plus
+  Wrench, Construction, Home, Save, X, Plus, Bell
 } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import EmailAssignmentDropdowns from './components/EmailAssignmentDropdowns'
 import EmailDetailView from './components/EmailDetailView'
+import LiveInboxStatus from '@/components/LiveInboxStatus'
+import { toast } from 'sonner'
 
 // Define the Email type based on the database schema
 type Email = {
@@ -36,12 +38,16 @@ type Email = {
 
 interface InboxClientProps {
   emails: Email[]
+  userEmail?: string // Actually user_id from session
 }
 
-export default function InboxClient({ emails }: InboxClientProps) {
+export default function InboxClient({ emails: initialEmails, userEmail }: InboxClientProps) {
   console.log('🎨 InboxClient: Rendering component...')
-  console.log('📧 Emails data:', emails)
+  console.log('📧 Initial emails data:', initialEmails)
+  console.log('👤 User email:', userEmail)
   
+  // ✅ STEP 1: Real-time email state management
+  const [emails, setEmails] = useState<Email[]>(initialEmails)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [selectedEmail, setSelectedEmail] = useState<string | null>(null)
   const [emailHistory, setEmailHistory] = useState<Record<string, Email[]>>({})
@@ -73,26 +79,157 @@ export default function InboxClient({ emails }: InboxClientProps) {
     assignmentLabel: string;
   }>>({})
 
+  // Real-time subscription management
+  const subscriptionRef = useRef<any>(null)
+  const [isSubscribed, setIsSubscribed] = useState(false)
+  const [newEmailCount, setNewEmailCount] = useState(0)
+
   // Calculate email statistics
   const unreadCount = emails.filter(email => email.unread).length
   const flaggedCount = emails.filter(email => email.flag_status === 'flagged').length
   const handledCount = emails.filter(email => email.handled).length
 
+  // ✅ STEP 1: Enable Supabase Realtime for Inbox Page
+  useEffect(() => {
+    if (!userEmail) {
+      console.log('⏳ Waiting for user email before starting real-time subscription...')
+      return
+    }
+
+    console.log('🔌 Starting real-time inbox subscription for user ID:', userEmail)
+    
+    // Create real-time subscription for new emails
+    const inboxChannel = supabase
+      .channel('inbox-updates')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'incoming_emails',
+        filter: `user_id=eq.${userEmail}` // Filter by user_id from session
+      }, (payload) => {
+        console.log('📨 New email received via real-time:', payload)
+        
+        const newEmail = payload.new as Email
+        
+        // Check if email already exists to prevent duplicates
+        const emailExists = emails.some(email => email.id === newEmail.id)
+        if (emailExists) {
+          console.log('⚠️ Email already exists, skipping duplicate:', newEmail.id)
+          return
+        }
+
+        // Add new email to the top of the list
+        setEmails(prev => [newEmail, ...prev])
+        
+        // Show notification
+        toast.success(`📩 New message from ${newEmail.from_email}`, {
+          description: newEmail.subject || 'No subject',
+          duration: 5000,
+        })
+        
+        // Increment new email counter
+        setNewEmailCount(prev => prev + 1)
+        
+        // Auto-scroll to top if user is viewing email list
+        if (selectedEmail === null) {
+          // Could add auto-scroll logic here if needed
+        }
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'incoming_emails',
+        filter: `user_id=eq.${userEmail}`
+      }, (payload) => {
+        console.log('📝 Email updated via real-time:', payload)
+        
+        const updatedEmail = payload.new as Email
+        
+        // Update email in the list
+        setEmails(prev => prev.map(email => 
+          email.id === updatedEmail.id ? updatedEmail : email
+        ))
+      })
+      .on('postgres_changes', {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'incoming_emails',
+        filter: `user_id=eq.${userEmail}`
+      }, (payload) => {
+        console.log('🗑️ Email deleted via real-time:', payload)
+        
+        const deletedEmailId = payload.old.id
+        
+        // Remove email from the list
+        setEmails(prev => prev.filter(email => email.id !== deletedEmailId))
+      })
+      .subscribe((status) => {
+        console.log('📡 Real-time subscription status:', status)
+        setIsSubscribed(status === 'SUBSCRIBED')
+        
+        if (status === 'SUBSCRIBED') {
+          toast.success('🔗 Live inbox connected', {
+            description: 'You\'ll receive real-time updates for new emails',
+            duration: 3000,
+          })
+        } else if (status === 'CHANNEL_ERROR') {
+          toast.error('❌ Live inbox connection failed', {
+            description: 'Falling back to manual refresh',
+            duration: 5000,
+          })
+        }
+      })
+
+    subscriptionRef.current = inboxChannel
+
+    // Cleanup subscription on unmount
+    return () => {
+      console.log('🔌 Cleaning up real-time subscription')
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current)
+      }
+    }
+  }, [userEmail, emails.length]) // Re-run when user email changes
+
+  // Update emails when initialEmails prop changes
+  useEffect(() => {
+    setEmails(initialEmails)
+  }, [initialEmails])
+
+  // ✅ STEP 4: UI & UX Adjustments - Remove manual refresh dependency
   const handleRefresh = async () => {
     setIsRefreshing(true)
     try {
       const response = await fetch('/api/sync-inbox')
       if (response.ok) {
-        window.location.reload()
+        toast.success('📥 Inbox synced successfully', {
+          description: 'Latest emails have been fetched',
+          duration: 3000,
+        })
+        // Note: No longer reloading the page - real-time updates handle this
       } else {
-        console.error('Failed to sync emails')
+        toast.error('❌ Failed to sync emails', {
+          description: 'Please try again',
+          duration: 5000,
+        })
       }
     } catch (error) {
       console.error('Error syncing emails:', error)
+      toast.error('❌ Network error while syncing', {
+        description: 'Please check your connection',
+        duration: 5000,
+      })
     } finally {
       setIsRefreshing(false)
     }
   }
+
+  // Clear new email count when user views the inbox
+  useEffect(() => {
+    if (newEmailCount > 0) {
+      setNewEmailCount(0)
+    }
+  }, [emails.length])
 
   const toggleEmailSelection = async (emailId: string, fromEmail: string | null) => {
     if (selectedEmail === emailId) {
@@ -523,18 +660,44 @@ export default function InboxClient({ emails }: InboxClientProps) {
         <div className="mb-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Email Inbox</h1>
-            <p className="text-gray-600 mt-2">Triage and respond to incoming emails with AI assistance</p>
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl font-bold text-gray-900">Email Inbox</h1>
+              {/* Live Status Indicator */}
+              <LiveInboxStatus 
+                isSubscribed={isSubscribed}
+                onSetupWebhook={() => {
+                  // Refresh the page to restart real-time subscription
+                  window.location.reload()
+                }}
+              />
+              {newEmailCount > 0 && (
+                <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium animate-pulse">
+                  <Bell className="h-3 w-3" />
+                  <span>{newEmailCount} new</span>
+                </div>
+              )}
+            </div>
+            <p className="text-gray-600">
+              {isSubscribed 
+                ? "Live inbox - emails update automatically" 
+                : "Triage and respond to incoming emails with AI assistance"
+              }
+            </p>
           </div>
           
-          <BlocIQButton
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            size="sm"
-          >
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {isRefreshing ? 'Syncing...' : 'Sync'}
-          </BlocIQButton>
+          <div className="flex items-center gap-3">
+            {/* Manual sync button - now secondary to real-time */}
+            <BlocIQButton
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              size="sm"
+              variant="outline"
+              className="text-gray-600 border-gray-300 hover:bg-gray-50"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? 'Syncing...' : 'Manual Sync'}
+            </BlocIQButton>
+          </div>
         </div>
 
         {/* Search and Filters */}

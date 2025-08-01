@@ -132,8 +132,8 @@ export default async function InboxPage() {
 
     console.log('🎯 About to render InboxClient with', emails.length, 'emails')
     
-    // Pass emails as prop to client component
-    return <InboxClient emails={emails} />
+    // Pass emails and user ID as props to client component
+    return <InboxClient emails={emails} userEmail={userId} />
 
   } catch (error) {
     console.error('❌ Error in InboxPage:', error)
