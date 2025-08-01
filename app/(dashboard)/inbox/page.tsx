@@ -88,7 +88,7 @@ export default async function InboxPage() {
           `)
           .eq('user_id', userId) // Fetch all emails for current user
           .order('received_at', { ascending: false })
-          .limit(50)
+          // Removed .limit(50) to show ALL emails
       
       if (result.error) {
         console.error('❌ Emails query error:', result.error)
