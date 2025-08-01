@@ -97,6 +97,7 @@ export default function InboxClient({ emails: initialEmails, userEmail }: InboxC
     }
 
     console.log('🔌 Starting real-time inbox subscription for user ID:', userEmail)
+    console.log('📧 Current emails count:', emails.length)
     
     // Create real-time subscription for new emails
     const inboxChannel = supabase
@@ -108,6 +109,13 @@ export default function InboxClient({ emails: initialEmails, userEmail }: InboxC
         filter: `user_id=eq.${userEmail}` // Filter by user_id from session
       }, (payload) => {
         console.log('📨 New email received via real-time:', payload)
+        console.log('📨 Payload details:', {
+          new: payload.new,
+          old: payload.old,
+          eventType: payload.eventType,
+          schema: payload.schema,
+          table: payload.table
+        })
         
         const newEmail = payload.new as Email
         
@@ -118,8 +126,14 @@ export default function InboxClient({ emails: initialEmails, userEmail }: InboxC
           return
         }
 
+        console.log('✅ Adding new email to inbox:', newEmail.subject)
+        
         // Add new email to the top of the list
-        setEmails(prev => [newEmail, ...prev])
+        setEmails(prev => {
+          const updated = [newEmail, ...prev]
+          console.log('📧 Updated emails list, new count:', updated.length)
+          return updated
+        })
         
         // Show notification
         toast.success(`📩 New message from ${newEmail.from_email}`, {
@@ -165,6 +179,11 @@ export default function InboxClient({ emails: initialEmails, userEmail }: InboxC
       })
       .subscribe((status) => {
         console.log('📡 Real-time subscription status:', status)
+        console.log('📡 Subscription details:', {
+          status,
+          userEmail,
+          currentEmailsCount: emails.length
+        })
         setIsSubscribed(status === 'SUBSCRIBED')
         
         if (status === 'SUBSCRIBED') {
@@ -189,7 +208,7 @@ export default function InboxClient({ emails: initialEmails, userEmail }: InboxC
         supabase.removeChannel(subscriptionRef.current)
       }
     }
-  }, [userEmail, emails.length]) // Re-run when user email changes
+  }, [userEmail]) // Removed emails.length dependency to prevent re-subscription
 
   // Update emails when initialEmails prop changes
   useEffect(() => {
