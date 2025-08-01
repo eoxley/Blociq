@@ -24,6 +24,9 @@ export async function GET(req: NextRequest) {
       .select('*', { count: 'exact', head: true })
       .eq('recipient_email', userEmail)
     
+    console.log('🔍 Debug: Querying emails for recipient_email:', userEmail)
+    console.log('🔍 Debug: Total count result:', totalCount, 'Error:', countError)
+    
     if (countError) {
       console.error('❌ Error counting emails:', countError)
       return NextResponse.json({ error: 'Failed to count emails' }, { status: 500 })
@@ -37,6 +40,8 @@ export async function GET(req: NextRequest) {
       .order('received_at', { ascending: false })
       .limit(10)
     
+    console.log('🔍 Debug: Sample emails query result:', sampleEmails?.length || 0, 'Error:', sampleError)
+    
     if (sampleError) {
       console.error('❌ Error fetching sample emails:', sampleError)
       return NextResponse.json({ error: 'Failed to fetch sample emails' }, { status: 500 })
@@ -49,12 +54,25 @@ export async function GET(req: NextRequest) {
       .neq('recipient_email', userEmail)
       .limit(5)
     
+    console.log('🔍 Debug: Other user emails:', otherUserEmails?.length || 0)
+    
     // Check for emails without recipient_email
     const { data: noUserEmails, error: noUserError } = await supabase
       .from('incoming_emails')
       .select('id, recipient_email, from_email, subject')
       .is('recipient_email', null)
       .limit(5)
+    
+    console.log('🔍 Debug: Emails without recipient_email:', noUserEmails?.length || 0)
+    
+    // Check ALL emails in the table to see what's there
+    const { data: allEmails, error: allEmailsError } = await supabase
+      .from('incoming_emails')
+      .select('id, recipient_email, from_email, subject, user_id')
+      .limit(20)
+    
+    console.log('🔍 Debug: All emails in table:', allEmails?.length || 0)
+    console.log('🔍 Debug: Sample of all emails:', allEmails?.slice(0, 5))
     
     // Get database schema info
     const { data: schemaInfo, error: schemaError } = await supabase
@@ -73,6 +91,7 @@ export async function GET(req: NextRequest) {
         sampleEmails: sampleEmails || [],
         otherUserEmails: otherUserEmails || [],
         noUserEmails: noUserEmails || [],
+        allEmails: allEmails || [], // Add all emails to see what's in the table
         schemaColumns: schemaInfo ? Object.keys(schemaInfo[0] || {}) : []
       },
       debug: {
