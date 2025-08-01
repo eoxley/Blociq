@@ -168,6 +168,31 @@ async function processEmailNotification(notification: any) {
   }
 }
 
+// Helper function to test webhook URL accessibility
+async function testWebhookUrl(webhookUrl: string): Promise<boolean> {
+  try {
+    console.log('🧪 Testing webhook URL accessibility:', webhookUrl)
+    
+    const response = await fetch(webhookUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+    
+    if (response.ok) {
+      console.log('✅ Webhook URL is accessible')
+      return true
+    } else {
+      console.error('❌ Webhook URL not accessible:', response.status, response.statusText)
+      return false
+    }
+  } catch (error) {
+    console.error('❌ Error testing webhook URL:', error)
+    return false
+  }
+}
+
 // Helper function to create webhook subscription
 export async function createWebhookSubscription() {
   try {
@@ -176,12 +201,24 @@ export async function createWebhookSubscription() {
       throw new Error('No valid access token')
     }
 
-    // Get the correct webhook URL
-    const webhookUrl = process.env.NEXT_PUBLIC_SITE_URL 
-      ? `${process.env.NEXT_PUBLIC_SITE_URL}/api/outlook/webhook`
-      : 'https://blociq.co.uk/api/outlook/webhook' // Fallback to production URL
+    // Get the correct webhook URL - use localhost for development
+    let webhookUrl = 'https://blociq.co.uk/api/outlook/webhook' // Default production URL
+    
+    if (process.env.NODE_ENV === 'development') {
+      webhookUrl = 'http://localhost:3000/api/outlook/webhook'
+    } else if (process.env.NEXT_PUBLIC_SITE_URL) {
+      webhookUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/outlook/webhook`
+    }
 
     console.log('🔗 Using webhook URL:', webhookUrl)
+    console.log('🌍 Environment:', process.env.NODE_ENV)
+    console.log('🏠 Site URL:', process.env.NEXT_PUBLIC_SITE_URL)
+
+    // Test webhook URL accessibility
+    const isAccessible = await testWebhookUrl(webhookUrl)
+    if (!isAccessible) {
+      throw new Error(`Webhook URL is not accessible: ${webhookUrl}`)
+    }
 
     const subscriptionData = {
       changeType: 'created',
@@ -206,6 +243,7 @@ export async function createWebhookSubscription() {
       const errorText = await response.text()
       console.error('❌ Failed to create webhook subscription:', errorText)
       console.error('❌ Response status:', response.status, response.statusText)
+      console.error('❌ Webhook URL used:', webhookUrl)
       throw new Error(`Failed to create subscription: ${errorText}`)
     }
 
