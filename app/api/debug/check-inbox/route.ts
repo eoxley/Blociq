@@ -15,13 +15,14 @@ export async function GET(req: NextRequest) {
     }
     
     const userId = user.id
-    console.log('👤 Checking inbox for user:', userId)
+    const userEmail = user.email
+    console.log('👤 Checking inbox for user:', userId, 'Email:', userEmail)
     
-    // Get total count of emails for this user
+    // Get total count of emails for this user by recipient_email
     const { count: totalCount, error: countError } = await supabase
       .from('incoming_emails')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
+      .eq('recipient_email', userEmail)
     
     if (countError) {
       console.error('❌ Error counting emails:', countError)
@@ -32,7 +33,7 @@ export async function GET(req: NextRequest) {
     const { data: sampleEmails, error: sampleError } = await supabase
       .from('incoming_emails')
       .select('*')
-      .eq('user_id', userId)
+      .eq('recipient_email', userEmail)
       .order('received_at', { ascending: false })
       .limit(10)
     
@@ -41,18 +42,18 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch sample emails' }, { status: 500 })
     }
     
-    // Check for emails with different user_id (potential data issues)
+    // Check for emails with different recipient_email (potential data issues)
     const { data: otherUserEmails, error: otherUserError } = await supabase
       .from('incoming_emails')
-      .select('user_id, count')
-      .neq('user_id', userId)
+      .select('recipient_email, count')
+      .neq('recipient_email', userEmail)
       .limit(5)
     
-    // Check for emails without user_id
+    // Check for emails without recipient_email
     const { data: noUserEmails, error: noUserError } = await supabase
       .from('incoming_emails')
-      .select('id, user_id, from_email, subject')
-      .is('user_id', null)
+      .select('id, recipient_email, from_email, subject')
+      .is('recipient_email', null)
       .limit(5)
     
     // Get database schema info

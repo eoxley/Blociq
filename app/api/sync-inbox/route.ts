@@ -223,6 +223,7 @@ export async function POST(req: NextRequest) {
           is_handled: false,
           is_read: false,
           user_id: userId,
+          recipient_email: token.email, // Add recipient_email to match user's email
           folder: 'inbox',
           sync_status: 'synced',
           last_sync_at: new Date().toISOString()
