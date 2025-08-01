@@ -1,20 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export async function POST(req: NextRequest) {
   try {
-    console.log('🧪 Test: Inserting test email...')
+    console.log('🧪 Simple test: Inserting test email...')
     
-    // Get current user session using server-side client
-    const supabase = createClient()
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    // Get the user ID from the request body
+    const { userId } = await req.json()
     
-    if (userError || !user) {
-      console.error('❌ User not authenticated:', userError)
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    if (!userId) {
+      return NextResponse.json({ error: 'No userId provided' }, { status: 400 })
     }
     
-    const userId = user.id
     console.log('👤 Test email for user:', userId)
     
     // Insert a test email
@@ -59,7 +61,7 @@ export async function POST(req: NextRequest) {
     })
     
   } catch (error) {
-    console.error('❌ Test email error:', error)
+    console.error('❌ Simple test email error:', error)
     return NextResponse.json({ 
       error: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined
