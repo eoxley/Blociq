@@ -300,6 +300,66 @@ export default function InboxClient({ emails: initialEmails, userEmail }: InboxC
     }
   }
 
+  // Cleanup function to remove test emails and sync all real emails
+  const handleCleanup = async () => {
+    try {
+      console.log('🧹 Starting inbox cleanup...')
+      
+      // First, clean up test emails
+      const cleanupResponse = await fetch('/api/debug/cleanup-emails', {
+        method: 'POST'
+      })
+      
+      if (cleanupResponse.ok) {
+        const cleanupData = await cleanupResponse.json()
+        console.log('✅ Cleanup completed:', cleanupData)
+        
+        toast.success('🧹 Test emails cleaned up', {
+          description: `Removed ${cleanupData.deleted.total} test emails`,
+          duration: 3000,
+        })
+        
+        // Then sync all real emails from Outlook
+        const syncResponse = await fetch('/api/sync-inbox')
+        
+        if (syncResponse.ok) {
+          const syncData = await syncResponse.json()
+          console.log('✅ Sync completed:', syncData)
+          
+          toast.success('📥 All emails synced', {
+            description: `Fetched ${syncData.synced_count || 0} emails from Outlook`,
+            duration: 3000,
+          })
+          
+          // Reload the page to show the cleaned inbox
+          window.location.reload()
+        } else {
+          const errorData = await syncResponse.json()
+          console.error('❌ Sync failed:', errorData)
+          
+          toast.error('❌ Sync failed', {
+            description: errorData.message || errorData.error || 'Please try again',
+            duration: 5000,
+          })
+        }
+      } else {
+        const errorData = await cleanupResponse.json()
+        console.error('❌ Cleanup failed:', errorData)
+        
+        toast.error('❌ Cleanup failed', {
+          description: errorData.error || 'Unknown error',
+          duration: 5000,
+        })
+      }
+    } catch (error) {
+      console.error('❌ Cleanup error:', error)
+      toast.error('❌ Cleanup error', {
+        description: 'Network error',
+        duration: 5000,
+      })
+    }
+  }
+
   const toggleEmailSelection = async (emailId: string, fromEmail: string | null) => {
     if (selectedEmail === emailId) {
       setSelectedEmail(null)
@@ -775,6 +835,17 @@ export default function InboxClient({ emails: initialEmails, userEmail }: InboxC
           >
             <TestTube className="h-4 w-4" />
             Test Real-time
+          </BlocIQButton>
+
+          {/* Cleanup button for removing test emails and syncing all */}
+          <BlocIQButton
+            onClick={handleCleanup}
+            size="sm"
+            variant="outline"
+            className="text-red-600 border-red-300 hover:bg-red-50"
+          >
+            <Trash2 className="h-4 w-4" />
+            Cleanup & Sync All
           </BlocIQButton>
         </div>
       </div>
