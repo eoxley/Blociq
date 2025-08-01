@@ -264,8 +264,16 @@ export default function InboxClient({ emails: initialEmails, userEmail }: InboxC
   const testRealTime = async () => {
     try {
       console.log('🧪 Testing real-time subscription...')
-      const response = await fetch('/api/debug/test-email', {
-        method: 'POST'
+      console.log('👤 Current user ID:', userEmail)
+      
+      const response = await fetch('/api/debug/test-email-simple', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: userEmail
+        })
       })
       
       if (response.ok) {
@@ -279,7 +287,7 @@ export default function InboxClient({ emails: initialEmails, userEmail }: InboxC
         const errorData = await response.json()
         console.error('❌ Test failed:', errorData)
         toast.error('❌ Test failed', {
-          description: errorData.error || 'Unknown error',
+          description: errorData.error || errorData.message || 'Unknown error',
           duration: 5000,
         })
       }
