@@ -28,7 +28,7 @@ type Email = {
   building_id: number | null
   unit_id: number | null
   leaseholder_id: string | null
-  to_email: string[] | null
+  to_email: string[] | null // May be null if column doesn't exist
   buildings?: { name: string } | null
   units?: { unit_number: string } | null
   leaseholders?: { name: string; email: string } | null
