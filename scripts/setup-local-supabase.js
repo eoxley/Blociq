@@ -10,17 +10,17 @@ const envLocalDevPath = path.join(process.cwd(), '.env.local.dev')
 // Local Supabase configuration
 const localSupabaseConfig = `# Local Supabase Development Settings
 NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-local-anon-key-here
+SUPABASE_SERVICE_ROLE_KEY=your-local-service-role-key-here
 
 # Other settings (keeping existing ones)
-OPENAI_API_KEY=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
-MICROSOFT_TENANT_ID=558a1a95-d1ce-42bf-875e-9e9af0c15d56
-MICROSOFT_CLIENT_ID=f8033f58-1b3b-40a7-8f0c-86678499cc74
-MICROSOFT_CLIENT_SECRET=-V_8Q~vfM31wtpeSmnjndGESekdY7KHULaK2ua-R
-MICROSOFT_USER_EMAIL=testbloc@blociq.co.uk
+OPENAI_API_KEY=your-openai-api-key-here
+MICROSOFT_TENANT_ID=your-tenant-id-here
+MICROSOFT_CLIENT_ID=your-client-id-here
+MICROSOFT_CLIENT_SECRET=your-client-secret-here
+MICROSOFT_USER_EMAIL=your-email-here
 GOOGLE_APPLICATION_CREDENTIALS=./gcloud-key.json
-SYNC_API_KEY=secure-blociq-key-123
+SYNC_API_KEY=your-sync-api-key-here
 MICROSOFT_REDIRECT_URI=http://localhost:3000/api/outlook/callback
 NEXT_PUBLIC_MICROSOFT_REDIRECT_URI=http://localhost:3000/api/outlook/callback
 `
@@ -98,7 +98,7 @@ async function testConnection() {
   try {
     const supabase = createClient(
       'http://localhost:54321',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
+      'your-local-anon-key-here'
     )
     
     const { data, error } = await supabase.from('buildings').select('*').limit(1)
