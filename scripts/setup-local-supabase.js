@@ -14,13 +14,13 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-local-anon-key-here
 SUPABASE_SERVICE_ROLE_KEY=your-local-service-role-key-here
 
 # Other settings (keeping existing ones)
-OPENAI_API_KEY=your-openai-api-key-here
-MICROSOFT_TENANT_ID=your-tenant-id-here
-MICROSOFT_CLIENT_ID=your-client-id-here
-MICROSOFT_CLIENT_SECRET=your-client-secret-here
-MICROSOFT_USER_EMAIL=your-email-here
+OPENAI_API_KEY=sk-placeholder-replace-with-actual-key
+MICROSOFT_TENANT_ID=placeholder-tenant-id
+MICROSOFT_CLIENT_ID=placeholder-client-id
+MICROSOFT_CLIENT_SECRET=placeholder-client-secret
+MICROSOFT_USER_EMAIL=placeholder-email@example.com
 GOOGLE_APPLICATION_CREDENTIALS=./gcloud-key.json
-SYNC_API_KEY=your-sync-api-key-here
+SYNC_API_KEY=placeholder-sync-api-key
 MICROSOFT_REDIRECT_URI=http://localhost:3000/api/outlook/callback
 NEXT_PUBLIC_MICROSOFT_REDIRECT_URI=http://localhost:3000/api/outlook/callback
 `
@@ -98,7 +98,7 @@ async function testConnection() {
   try {
     const supabase = createClient(
       'http://localhost:54321',
-      'your-local-anon-key-here'
+      'placeholder-local-anon-key'
     )
     
     const { data, error } = await supabase.from('buildings').select('*').limit(1)
