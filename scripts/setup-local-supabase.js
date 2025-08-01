@@ -10,8 +10,8 @@ const envLocalDevPath = path.join(process.cwd(), '.env.local.dev')
 // Local Supabase configuration
 const localSupabaseConfig = `# Local Supabase Development Settings
 NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-local-anon-key-here
-SUPABASE_SERVICE_ROLE_KEY=your-local-service-role-key-here
+NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder-local-anon-key
+SUPABASE_SERVICE_ROLE_KEY=placeholder-local-service-role-key
 
 # Other settings (keeping existing ones)
 OPENAI_API_KEY=sk-placeholder-replace-with-actual-key
