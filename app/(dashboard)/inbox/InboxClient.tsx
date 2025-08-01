@@ -83,6 +83,7 @@ export default function InboxClient({ emails: initialEmails, userEmail }: InboxC
   const subscriptionRef = useRef<any>(null)
   const [isSubscribed, setIsSubscribed] = useState(false)
   const [newEmailCount, setNewEmailCount] = useState(0)
+  const [isReloading, setIsReloading] = useState(false)
 
   // Calculate email statistics
   const unreadCount = emails.filter(email => email.unread).length
@@ -217,35 +218,52 @@ export default function InboxClient({ emails: initialEmails, userEmail }: InboxC
 
   // ✅ STEP 4: UI & UX Adjustments - Remove manual refresh dependency
   const handleRefresh = async () => {
-    setIsRefreshing(true)
     try {
+      setIsRefreshing(true)
       console.log('🔄 Starting manual sync...')
+      
       const response = await fetch('/api/sync-inbox')
       
       if (response.ok) {
         const data = await response.json()
-        console.log('✅ Sync successful:', data)
+        console.log('✅ Manual sync completed:', data)
         
-        toast.success('📥 Inbox synced successfully', {
-          description: `Fetched ${data.synced_count || 0} new emails`,
+        toast.success('📥 Sync completed', {
+          description: `Synced ${data.synced_count || 0} emails from Outlook`,
           duration: 3000,
         })
         
-        // Reload the page to show updated emails
-        window.location.reload()
-      } else {
-        const errorData = await response.json()
-        console.error('❌ Sync failed:', errorData)
-        
-        toast.error('❌ Failed to sync emails', {
-          description: errorData.message || errorData.error || 'Please try again',
-          duration: 5000,
+        // Force page reload to show all synced emails
+        console.log('🔄 Reloading page to show all emails...')
+        setIsReloading(true)
+        toast.success('🔄 Reloading inbox...', {
+          description: 'Showing all synced emails',
+          duration: 2000,
         })
+        setTimeout(() => {
+          window.location.reload()
+        }, 1000)
+      } else {
+        const errorText = await response.text()
+        console.error('❌ Manual sync failed:', errorText)
+        
+        try {
+          const errorData = JSON.parse(errorText)
+          toast.error('❌ Sync failed', {
+            description: errorData.message || errorData.error || 'Please try again',
+            duration: 5000,
+          })
+        } catch (parseError) {
+          toast.error('❌ Sync failed', {
+            description: `HTTP ${response.status}: ${errorText.substring(0, 100)}`,
+            duration: 5000,
+          })
+        }
       }
     } catch (error) {
-      console.error('❌ Network error while syncing:', error)
-      toast.error('❌ Network error while syncing', {
-        description: 'Please check your connection',
+      console.error('❌ Manual sync error:', error)
+      toast.error('❌ Sync error', {
+        description: error instanceof Error ? error.message : 'Network error',
         duration: 5000,
       })
     } finally {
@@ -333,8 +351,16 @@ export default function InboxClient({ emails: initialEmails, userEmail }: InboxC
             duration: 3000,
           })
           
-          // Reload the page to show the cleaned inbox
-          window.location.reload()
+          // Reload the page to show the cleaned inbox with all emails
+          console.log('🔄 Reloading page to show all emails...')
+          setIsReloading(true)
+          toast.success('🔄 Reloading inbox...', {
+            description: 'Showing all synced emails',
+            duration: 2000,
+          })
+          setTimeout(() => {
+            window.location.reload()
+          }, 1000)
         } else {
           const errorText = await syncResponse.text()
           console.error('❌ Sync failed:', errorText)
@@ -835,13 +861,13 @@ export default function InboxClient({ emails: initialEmails, userEmail }: InboxC
           {/* Manual sync button - now secondary to real-time */}
           <BlocIQButton
             onClick={handleRefresh}
-            disabled={isRefreshing}
+            disabled={isRefreshing || isReloading}
             size="sm"
             variant="outline"
             className="text-gray-600 border-gray-300 hover:bg-gray-50"
           >
             <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {isRefreshing ? 'Syncing...' : 'Manual Sync'}
+            {isReloading ? 'Reloading...' : isRefreshing ? 'Syncing...' : 'Manual Sync'}
           </BlocIQButton>
           
           {/* Debug button for testing real-time */}
