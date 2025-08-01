@@ -31,7 +31,7 @@ export default async function InboxPage() {
   const supabase = createClient(cookies())
 
   try {
-    // Check authentication
+    // ✅ STEP 1: SESSION HANDLING
     const { data: { session }, error: authError } = await supabase.auth.getSession()
     
     if (authError) {
@@ -44,79 +44,65 @@ export default async function InboxPage() {
       redirect('/login')
     }
 
-    const userId = session.user.id
     const userEmail = session.user.email
-    console.log('✅ User authenticated:', userId, 'Email:', userEmail)
+    console.log('✅ User authenticated:', userEmail)
 
-    // First, let's test if the table exists and what columns it has
+    // ✅ STEP 2: FETCH EMAILS FOR THIS USER
     let emails: Email[] = []
     let emailsError = null
     
     try {
-      console.log('🔍 Testing database connection...')
+      console.log('🔍 Fetching all emails for user:', userEmail)
       
-      // Try a simple query first to see if the table exists
-      const tableTest = await supabase
+      // Query the incoming_emails table using recipient_email column
+      const result = await supabase
         .from('incoming_emails')
-        .select('id')
-        .limit(1)
-      
-      if (tableTest.error) {
-        console.error('❌ Table test error:', tableTest.error)
-        throw new Error(`Database table error: ${tableTest.error.message}`)
-      }
-
-      console.log('✅ Table test successful')
-
-              // Fetch ALL emails for the current user
-        // Using the actual database schema columns
-        const result = await supabase
-          .from('incoming_emails')
-          .select(`
-            id, 
-            subject, 
-            from_email, 
-            from_name, 
-            body_preview, 
-            received_at, 
-            is_read, 
-            is_handled, 
-            user_id, 
-            created_at,
-            building_id,
-            related_unit_id
-          `)
-          .eq('user_id', userId) // Fetch all emails for current user
-          .order('received_at', { ascending: false })
-          // Removed .limit(50) to show ALL emails
+        .select(`
+          id, 
+          subject, 
+          from_email, 
+          from_name, 
+          body_preview, 
+          received_at, 
+          is_read, 
+          is_handled, 
+          user_id, 
+          created_at,
+          building_id,
+          related_unit_id,
+          recipient_email
+        `)
+        .eq('recipient_email', userEmail) // Use recipient_email to match user's email
+        .order('received_at', { ascending: false }) // Show newest first
+        // No limit - show ALL emails
       
       if (result.error) {
         console.error('❌ Emails query error:', result.error)
         emailsError = result.error
       } else {
         // Map database fields to expected interface
-                  emails = (result.data || []).map(email => ({
-            id: email.id,
-            subject: email.subject,
-            from_email: email.from_email,
-            from_name: email.from_name,
-            body_preview: email.body_preview,
-            received_at: email.received_at,
-            unread: !email.is_read, // Map is_read to unread (inverted)
-            handled: email.is_handled, // Map is_handled to handled
-            pinned: false, // Default value since not in schema
-            flag_status: null, // Default value since not in schema
-            categories: null, // Default value since not in schema
-            building_id: email.building_id,
-            unit_id: email.related_unit_id, // Map related_unit_id to unit_id
-            leaseholder_id: null, // leaseholder_id doesn't exist in current schema
-            user_id: email.user_id,
-            to_email: null, // to_email column doesn't exist in current schema
-            created_at: email.created_at,
-            updated_at: null // updated_at column doesn't exist in current schema
-          }))
+        emails = (result.data || []).map(email => ({
+          id: email.id,
+          subject: email.subject,
+          from_email: email.from_email,
+          from_name: email.from_name,
+          body_preview: email.body_preview,
+          received_at: email.received_at,
+          unread: !email.is_read, // Map is_read to unread (inverted)
+          handled: email.is_handled, // Map is_handled to handled
+          pinned: false, // Default value since not in schema
+          flag_status: null, // Default value since not in schema
+          categories: null, // Default value since not in schema
+          building_id: email.building_id,
+          unit_id: email.related_unit_id, // Map related_unit_id to unit_id
+          leaseholder_id: null, // leaseholder_id doesn't exist in current schema
+          user_id: email.user_id,
+          to_email: null, // to_email column doesn't exist in current schema
+          created_at: email.created_at,
+          updated_at: null // updated_at column doesn't exist in current schema
+        }))
         
-        console.log(`✅ Found ${emails.length} emails for user ${userId} (${userEmail})`)
+        console.log(`✅ Found ${emails.length} emails for user ${userEmail}`)
       }
       
     } catch (dbError) {
@@ -132,8 +118,8 @@ export default async function InboxPage() {
 
     console.log('🎯 About to render InboxClient with', emails.length, 'emails')
     
-    // Pass emails and user ID as props to client component
-    return <InboxClient emails={emails} userEmail={userId} />
+    // Pass emails and user email as props to client component
+    return <InboxClient emails={emails} userEmail={userEmail} />
 
   } catch (error) {
     console.error('❌ Error in InboxPage:', error)

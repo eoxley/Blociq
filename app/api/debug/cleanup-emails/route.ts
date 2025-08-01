@@ -15,13 +15,14 @@ export async function POST(req: NextRequest) {
     }
     
     const userId = user.id
-    console.log('👤 Cleaning emails for user:', userId)
+    const userEmail = user.email
+    console.log('👤 Cleaning emails for user:', userId, 'Email:', userEmail)
     
     // Delete test emails (from test endpoints)
     const { data: testEmails, error: testError } = await supabase
       .from('incoming_emails')
       .delete()
-      .eq('user_id', userId)
+      .eq('recipient_email', userEmail)
       .eq('sync_status', 'test_inserted')
       .select()
     
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
     const { data: fakeEmails, error: fakeError } = await supabase
       .from('incoming_emails')
       .delete()
-      .eq('user_id', userId)
+      .eq('recipient_email', userEmail)
       .eq('from_email', 'test@example.com')
       .select()
     
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
     const { data: testSubjectEmails, error: subjectError } = await supabase
       .from('incoming_emails')
       .delete()
-      .eq('user_id', userId)
+      .eq('recipient_email', userEmail)
       .like('subject', 'Test Email%')
       .select()
     
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
     const { data: remainingEmails, error: countError } = await supabase
       .from('incoming_emails')
       .select('id')
-      .eq('user_id', userId)
+      .eq('recipient_email', userEmail)
     
     if (countError) {
       console.error('❌ Error counting remaining emails:', countError)
