@@ -1,6 +1,0 @@
-[33m9eb8514[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Fresh start - reset Vercel deploy pipeline
-[33m9e75ada[m[33m ([m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmaster[m[33m)[m Trigger production deploy for major works + AI
-[33m684155c[m Trigger production deployment from Cursor
-[33m588bbbd[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m feat: Implement safe read-only Outlook calendar integration and fix manual events errors
-[33m1211ef0[m Fix inbox page UI: update InboxInner to use InboxClient component and fix data fetching
-[33m9dd55de[m Fix home page layout: position Ask AI section next to Property Events and improve font consistency
