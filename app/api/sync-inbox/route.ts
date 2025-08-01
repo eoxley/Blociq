@@ -113,32 +113,56 @@ export async function POST(req: NextRequest) {
     const inboxData = await inboxResponse.json();
     console.log('✅ Found main inbox folder:', inboxData.displayName);
 
-    // Fetch ALL emails from the main inbox - no filtering by read status or date
-    const graphResponse = await fetch(`https://graph.microsoft.com/v1.0/me/mailfolders/inbox/messages?$top=100&$orderby=receivedDateTime desc`, {
-      headers: {
-        'Authorization': `Bearer ${token.access_token}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    // Fetch ALL emails from the main inbox using pagination
+    let allMessages: any[] = [];
+    let nextLink: string | null = `https://graph.microsoft.com/v1.0/me/mailfolders/inbox/messages?$top=50&$orderby=receivedDateTime desc`;
+    let pageCount = 0;
+    const maxPages = 20; // Safety limit to prevent infinite loops
 
-    console.log('📡 Graph API response status:', graphResponse.status, graphResponse.statusText);
+    while (nextLink && pageCount < maxPages) {
+      pageCount++;
+      console.log(`📄 Fetching page ${pageCount}...`);
+      
+      const graphResponse: Response = await fetch(nextLink, {
+        headers: {
+          'Authorization': `Bearer ${token.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-    if (!graphResponse.ok) {
-      const errorText = await graphResponse.text();
-      console.error('❌ Failed to fetch emails from Microsoft Graph:', errorText);
-      console.error('❌ Response status:', graphResponse.status, graphResponse.statusText);
-      return NextResponse.json({ 
-        error: 'Failed to fetch emails from Outlook',
-        details: process.env.NODE_ENV === 'development' ? errorText : undefined
-      }, { status: 500 });
+      console.log(`📡 Graph API response status (page ${pageCount}):`, graphResponse.status, graphResponse.statusText);
+
+      if (!graphResponse.ok) {
+        const errorText = await graphResponse.text();
+        console.error(`❌ Failed to fetch emails from Microsoft Graph (page ${pageCount}):`, errorText);
+        console.error('❌ Response status:', graphResponse.status, graphResponse.statusText);
+        return NextResponse.json({ 
+          error: 'Failed to fetch emails from Outlook',
+          details: process.env.NODE_ENV === 'development' ? errorText : undefined
+        }, { status: 500 });
+      }
+
+      const graphData: any = await graphResponse.json();
+      const messages = graphData.value || [];
+      allMessages = allMessages.concat(messages);
+      
+      console.log(`✅ Fetched ${messages.length} messages from page ${pageCount} (total: ${allMessages.length})`);
+      
+      // Check if there are more pages
+      nextLink = graphData['@odata.nextLink'] || null;
+      
+      if (nextLink) {
+        console.log(`📄 More pages available, continuing...`);
+      } else {
+        console.log(`✅ No more pages, completed fetching`);
+        break;
+      }
     }
 
-    const graphData = await graphResponse.json();
-    const messages = graphData.value || [];
-    console.log(`✅ Fetched ${messages.length} messages from Outlook`);
+    console.log(`✅ Total emails fetched: ${allMessages.length} from ${pageCount} pages`);
 
     // ✅ 4. Filter messages to ensure they're from main inbox only (but include ALL emails)
-    const filteredMessages = messages.filter((message: any) => {
+    const filteredMessages = allMessages.filter((message: any) => {
       // Only include emails that are in the main inbox
       // Exclude emails that might be in subfolders or deleted items
       const isInMainInbox = !message.parentFolderId || message.parentFolderId === inboxData.id;
@@ -213,18 +237,16 @@ export async function POST(req: NextRequest) {
       console.log('✅ Inserted email:', subject);
     }
 
-    // ✅ 5. Return a Clean JSON Response
-    const response = {
+    // ✅ 6. Return success response with detailed information
+    return NextResponse.json({
       success: true,
-      synced_count: insertedCount,
-      total_processed: totalProcessed,
-      refreshedToken: refreshedToken,
-      userEmail: token.email
-    };
-
-    console.log('📊 Sync completed:', response);
-
-    return NextResponse.json(response);
+      message: `Successfully synced ${filteredMessages.length} emails from Outlook`,
+      synced_count: filteredMessages.length,
+      total_fetched: allMessages.length,
+      pages_fetched: pageCount,
+      user_id: userId,
+      timestamp: new Date().toISOString()
+    });
 
   } catch (error) {
     console.error('❌ Sync inbox error:', error);
