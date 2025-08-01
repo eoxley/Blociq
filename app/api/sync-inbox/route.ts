@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ✅ 3. Call Microsoft Graph for main inbox only
-    console.log('🔄 Fetching emails from main inbox only...');
+    console.log('🔄 Fetching ALL emails from main inbox...');
     
     // First, get the main inbox folder to ensure we're targeting the correct folder
     const inboxResponse = await fetch('https://graph.microsoft.com/v1.0/me/mailfolders/inbox', {
@@ -113,8 +113,8 @@ export async function POST(req: NextRequest) {
     const inboxData = await inboxResponse.json();
     console.log('✅ Found main inbox folder:', inboxData.displayName);
 
-    // Fetch emails from the main inbox only, excluding deleted items and subfolders
-    const graphResponse = await fetch(`https://graph.microsoft.com/v1.0/me/mailfolders/inbox/messages?$top=50&$orderby=receivedDateTime desc&$filter=isRead eq false or receivedDateTime ge ${new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()}`, {
+    // Fetch ALL emails from the main inbox - no filtering by read status or date
+    const graphResponse = await fetch(`https://graph.microsoft.com/v1.0/me/mailfolders/inbox/messages?$top=100&$orderby=receivedDateTime desc`, {
       headers: {
         'Authorization': `Bearer ${token.access_token}`,
         'Content-Type': 'application/json',
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
     const messages = graphData.value || [];
     console.log(`✅ Fetched ${messages.length} messages from Outlook`);
 
-    // ✅ 4. Filter messages to ensure they're from main inbox only
+    // ✅ 4. Filter messages to ensure they're from main inbox only (but include ALL emails)
     const filteredMessages = messages.filter((message: any) => {
       // Only include emails that are in the main inbox
       // Exclude emails that might be in subfolders or deleted items
