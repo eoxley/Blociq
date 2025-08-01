@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createWebhookSubscription, refreshWebhookSubscription } from '../webhook/route'
+import { hasOutlookConnection } from '@/lib/outlookAuth'
 
 // ✅ STEP 2: Setup Outlook Webhook Subscription
 export async function POST(req: NextRequest) {
   try {
     console.log('🔧 Setting up Outlook webhook subscription...')
+    
+    // Check if Outlook is connected first
+    const isConnected = await hasOutlookConnection()
+    if (!isConnected) {
+      console.log('❌ Outlook not connected')
+      return NextResponse.json({
+        success: false,
+        error: 'Outlook not connected',
+        message: 'Please connect your Outlook account first'
+      }, { status: 400 })
+    }
     
     // Create new webhook subscription
     const subscription = await createWebhookSubscription()
@@ -19,9 +31,24 @@ export async function POST(req: NextRequest) {
     
   } catch (error) {
     console.error('❌ Failed to setup webhook subscription:', error)
+    
+    // Provide more specific error messages
+    let errorMessage = 'Unknown error'
+    if (error instanceof Error) {
+      if (error.message.includes('No Outlook tokens found')) {
+        errorMessage = 'Outlook account not connected. Please connect your Outlook account first.'
+      } else if (error.message.includes('Microsoft OAuth configuration missing')) {
+        errorMessage = 'Outlook integration not configured properly.'
+      } else if (error.message.includes('Failed to refresh token')) {
+        errorMessage = 'Outlook token expired. Please reconnect your account.'
+      } else {
+        errorMessage = error.message
+      }
+    }
+    
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: errorMessage
     }, { status: 500 })
   }
 }
