@@ -7,6 +7,15 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+// Handle GET requests (for validation or health checks)
+export async function GET(req: NextRequest) {
+  console.log('🔍 Webhook GET request received')
+  return new NextResponse('Webhook endpoint is active', {
+    status: 200,
+    headers: { 'Content-Type': 'text/plain' }
+  })
+}
+
 // ✅ STEP 2: Add Outlook Webhook Subscription for True Real-Time Sync
 // ✅ FIXED: Make user-specific instead of using most recent token
 export async function POST(req: NextRequest) {
@@ -14,12 +23,16 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     console.log('📨 Outlook webhook received:', JSON.stringify(body, null, 2))
 
-    // Handle subscription validation
+    // Handle subscription validation - Microsoft Graph sends this to verify the endpoint
     if (body.validationToken) {
       console.log('✅ Webhook validation token received:', body.validationToken)
+      // Return the validation token as plain text with 200 status
       return new NextResponse(body.validationToken, {
         status: 200,
-        headers: { 'Content-Type': 'text/plain' }
+        headers: { 
+          'Content-Type': 'text/plain',
+          'Content-Length': body.validationToken.length.toString()
+        }
       })
     }
 
@@ -32,10 +45,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true })
+    // Always return 200 OK for notifications
+    return new NextResponse('OK', {
+      status: 200,
+      headers: { 'Content-Type': 'text/plain' }
+    })
   } catch (error) {
     console.error('❌ Webhook processing error:', error)
-    return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 })
+    // Still return 200 OK even on error to prevent subscription deletion
+    return new NextResponse('OK', {
+      status: 200,
+      headers: { 'Content-Type': 'text/plain' }
+    })
   }
 }
 
@@ -155,13 +176,22 @@ export async function createWebhookSubscription() {
       throw new Error('No valid access token')
     }
 
+    // Get the correct webhook URL
+    const webhookUrl = process.env.NEXT_PUBLIC_SITE_URL 
+      ? `${process.env.NEXT_PUBLIC_SITE_URL}/api/outlook/webhook`
+      : 'https://blociq.co.uk/api/outlook/webhook' // Fallback to production URL
+
+    console.log('🔗 Using webhook URL:', webhookUrl)
+
     const subscriptionData = {
       changeType: 'created',
-      notificationUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/api/outlook/webhook`,
+      notificationUrl: webhookUrl,
       resource: '/me/mailFolders(\'Inbox\')/messages',
       expirationDateTime: new Date(Date.now() + 4230 * 1000).toISOString(), // 70.5 minutes
       clientState: 'blociq-webhook-subscription'
     }
+
+    console.log('📋 Creating subscription with data:', JSON.stringify(subscriptionData, null, 2))
 
     const response = await fetch('https://graph.microsoft.com/v1.0/subscriptions', {
       method: 'POST',
@@ -173,9 +203,10 @@ export async function createWebhookSubscription() {
     })
 
     if (!response.ok) {
-      const error = await response.text()
-      console.error('❌ Failed to create webhook subscription:', error)
-      throw new Error(`Failed to create subscription: ${error}`)
+      const errorText = await response.text()
+      console.error('❌ Failed to create webhook subscription:', errorText)
+      console.error('❌ Response status:', response.status, response.statusText)
+      throw new Error(`Failed to create subscription: ${errorText}`)
     }
 
     const subscription = await response.json()

@@ -71,15 +71,36 @@ export default function LiveInboxStatus({ isSubscribed, onSetupWebhook }: LiveIn
         onSetupWebhook?.()
       } else {
         const error = await response.json()
+        console.error('Webhook setup failed:', error)
+        
+        // Provide specific error messages
+        let errorMessage = error.error || 'Failed to setup webhook'
+        if (error.error?.includes('ValidationError')) {
+          errorMessage = 'Webhook validation failed. Please try again in a few minutes.'
+        } else if (error.error?.includes('Outlook not connected')) {
+          errorMessage = 'Please connect your Outlook account first'
+        }
+        
         toast.error('❌ Failed to setup webhook', {
-          description: error.error || 'Please try again',
-          duration: 5000,
+          description: errorMessage,
+          duration: 8000,
         })
+        
+        // Retry automatically after 30 seconds for validation errors
+        if (error.error?.includes('ValidationError')) {
+          setTimeout(() => {
+            toast.info('🔄 Retrying webhook setup...', {
+              description: 'Attempting to setup webhook again',
+              duration: 5000,
+            })
+            handleSetupWebhook()
+          }, 30000)
+        }
       }
     } catch (error) {
       console.error('Error setting up webhook:', error)
       toast.error('❌ Network error', {
-        description: 'Failed to setup webhook subscription',
+        description: 'Failed to setup webhook subscription. Please try again.',
         duration: 5000,
       })
     } finally {
