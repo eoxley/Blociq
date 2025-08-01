@@ -310,6 +310,8 @@ export default function InboxClient({ emails: initialEmails, userEmail }: InboxC
         method: 'POST'
       })
       
+      console.log('🧹 Cleanup response status:', cleanupResponse.status, cleanupResponse.statusText)
+      
       if (cleanupResponse.ok) {
         const cleanupData = await cleanupResponse.json()
         console.log('✅ Cleanup completed:', cleanupData)
@@ -334,27 +336,43 @@ export default function InboxClient({ emails: initialEmails, userEmail }: InboxC
           // Reload the page to show the cleaned inbox
           window.location.reload()
         } else {
-          const errorData = await syncResponse.json()
-          console.error('❌ Sync failed:', errorData)
+          const errorText = await syncResponse.text()
+          console.error('❌ Sync failed:', errorText)
           
-          toast.error('❌ Sync failed', {
-            description: errorData.message || errorData.error || 'Please try again',
+          try {
+            const errorData = JSON.parse(errorText)
+            toast.error('❌ Sync failed', {
+              description: errorData.message || errorData.error || 'Please try again',
+              duration: 5000,
+            })
+          } catch (parseError) {
+            toast.error('❌ Sync failed', {
+              description: `HTTP ${syncResponse.status}: ${errorText.substring(0, 100)}`,
+              duration: 5000,
+            })
+          }
+        }
+      } else {
+        const errorText = await cleanupResponse.text()
+        console.error('❌ Cleanup failed:', errorText)
+        
+        try {
+          const errorData = JSON.parse(errorText)
+          toast.error('❌ Cleanup failed', {
+            description: errorData.error || 'Unknown error',
+            duration: 5000,
+          })
+        } catch (parseError) {
+          toast.error('❌ Cleanup failed', {
+            description: `HTTP ${cleanupResponse.status}: ${errorText.substring(0, 100)}`,
             duration: 5000,
           })
         }
-      } else {
-        const errorData = await cleanupResponse.json()
-        console.error('❌ Cleanup failed:', errorData)
-        
-        toast.error('❌ Cleanup failed', {
-          description: errorData.error || 'Unknown error',
-          duration: 5000,
-        })
       }
     } catch (error) {
       console.error('❌ Cleanup error:', error)
       toast.error('❌ Cleanup error', {
-        description: 'Network error',
+        description: error instanceof Error ? error.message : 'Network error',
         duration: 5000,
       })
     }
