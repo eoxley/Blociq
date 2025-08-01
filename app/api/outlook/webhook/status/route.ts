@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getValidAccessToken } from '@/lib/outlookAuth'
+import { getValidAccessToken, hasOutlookConnection } from '@/lib/outlookAuth'
 
 export async function GET(req: NextRequest) {
   try {
     console.log('🔍 Checking webhook subscription status...')
+    
+    // Check if Outlook is connected first
+    const isConnected = await hasOutlookConnection()
+    if (!isConnected) {
+      console.log('❌ Outlook not connected')
+      return NextResponse.json({
+        active: false,
+        error: 'Outlook not connected',
+        message: 'Please connect your Outlook account first'
+      })
+    }
     
     const accessToken = await getValidAccessToken()
     if (!accessToken) {
@@ -57,9 +68,24 @@ export async function GET(req: NextRequest) {
 
   } catch (error) {
     console.error('❌ Error checking webhook status:', error)
+    
+    // Provide more specific error messages
+    let errorMessage = 'Unknown error'
+    if (error instanceof Error) {
+      if (error.message.includes('No Outlook tokens found')) {
+        errorMessage = 'Outlook account not connected'
+      } else if (error.message.includes('Microsoft OAuth configuration missing')) {
+        errorMessage = 'Outlook integration not configured'
+      } else if (error.message.includes('Failed to refresh token')) {
+        errorMessage = 'Outlook token expired'
+      } else {
+        errorMessage = error.message
+      }
+    }
+    
     return NextResponse.json({
       active: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: errorMessage
     }, { status: 500 })
   }
 } 
