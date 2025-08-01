@@ -68,56 +68,53 @@ export default async function InboxPage() {
 
       console.log('✅ Table test successful')
 
-      // Now try the full query with the correct schema
-      // Fetch ALL emails for the current user by recipient email
-      const result = await supabase
-        .from('incoming_emails')
-        .select(`
-          id, 
-          subject, 
-          from_email, 
-          from_name, 
-          body_preview, 
-          received_at, 
-          is_read, 
-          is_handled, 
-          user_id, 
-          created_at, 
-          updated_at,
-          building_id,
-          unit_id,
-          leaseholder_id,
-          to_email
-        `)
-        .or(`to_email.cs.{${userEmail}},to_email.ilike.%${userEmail}%`) // Fetch emails where user is recipient
-        .order('received_at', { ascending: false })
-        .limit(50)
+              // Fetch ALL emails for the current user
+        // Using the actual database schema columns
+        const result = await supabase
+          .from('incoming_emails')
+          .select(`
+            id, 
+            subject, 
+            from_email, 
+            from_name, 
+            body_preview, 
+            received_at, 
+            is_read, 
+            is_handled, 
+            user_id, 
+            created_at,
+            building_id,
+            related_unit_id
+          `)
+          .eq('user_id', userId) // Fetch all emails for current user
+          .order('received_at', { ascending: false })
+          .limit(50)
       
       if (result.error) {
         console.error('❌ Emails query error:', result.error)
         emailsError = result.error
       } else {
         // Map database fields to expected interface
-        emails = (result.data || []).map(email => ({
-          id: email.id,
-          subject: email.subject,
-          from_email: email.from_email,
-          from_name: email.from_name,
-          body_preview: email.body_preview,
-          received_at: email.received_at,
-          unread: !email.is_read, // Map is_read to unread (inverted)
-          handled: email.is_handled, // Map is_handled to handled
-          pinned: false, // Default value since not in schema
-          flag_status: null, // Default value since not in schema
-          categories: null, // Default value since not in schema
-          building_id: email.building_id,
-          unit_id: email.unit_id,
-          leaseholder_id: email.leaseholder_id,
-          user_id: email.user_id,
-          to_email: email.to_email,
-          created_at: email.created_at,
-          updated_at: email.updated_at
-        }))
+                  emails = (result.data || []).map(email => ({
+            id: email.id,
+            subject: email.subject,
+            from_email: email.from_email,
+            from_name: email.from_name,
+            body_preview: email.body_preview,
+            received_at: email.received_at,
+            unread: !email.is_read, // Map is_read to unread (inverted)
+            handled: email.is_handled, // Map is_handled to handled
+            pinned: false, // Default value since not in schema
+            flag_status: null, // Default value since not in schema
+            categories: null, // Default value since not in schema
+            building_id: email.building_id,
+            unit_id: email.related_unit_id, // Map related_unit_id to unit_id
+            leaseholder_id: null, // leaseholder_id doesn't exist in current schema
+            user_id: email.user_id,
+            to_email: null, // to_email column doesn't exist in current schema
+            created_at: email.created_at,
+            updated_at: null // updated_at column doesn't exist in current schema
+          }))
         
         console.log(`✅ Found ${emails.length} emails for user ${userId} (${userEmail})`)
       }
