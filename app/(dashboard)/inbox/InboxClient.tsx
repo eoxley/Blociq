@@ -6,7 +6,7 @@ import {
   MessageSquare, Loader2, Send, Edit3, Check, Tag, Flag, Search, Filter, 
   Archive, Trash2, Star, MoreHorizontal, Reply, Forward, Delete, Pin, 
   Eye, EyeOff, Calendar, Building, AlertCircle, CheckCircle, Clock as ClockIcon,
-  Wrench, Construction, Home, Save, X, Plus, Bell
+  Wrench, Construction, Home, Save, X, Plus, Bell, TestTube
 } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 import { BlocIQButton } from '@/components/ui/blociq-button'
@@ -219,21 +219,31 @@ export default function InboxClient({ emails: initialEmails, userEmail }: InboxC
   const handleRefresh = async () => {
     setIsRefreshing(true)
     try {
+      console.log('🔄 Starting manual sync...')
       const response = await fetch('/api/sync-inbox')
+      
       if (response.ok) {
+        const data = await response.json()
+        console.log('✅ Sync successful:', data)
+        
         toast.success('📥 Inbox synced successfully', {
-          description: 'Latest emails have been fetched',
+          description: `Fetched ${data.synced_count || 0} new emails`,
           duration: 3000,
         })
-        // Note: No longer reloading the page - real-time updates handle this
+        
+        // Reload the page to show updated emails
+        window.location.reload()
       } else {
+        const errorData = await response.json()
+        console.error('❌ Sync failed:', errorData)
+        
         toast.error('❌ Failed to sync emails', {
-          description: 'Please try again',
+          description: errorData.message || errorData.error || 'Please try again',
           duration: 5000,
         })
       }
     } catch (error) {
-      console.error('Error syncing emails:', error)
+      console.error('❌ Network error while syncing:', error)
       toast.error('❌ Network error while syncing', {
         description: 'Please check your connection',
         duration: 5000,
@@ -249,6 +259,38 @@ export default function InboxClient({ emails: initialEmails, userEmail }: InboxC
       setNewEmailCount(0)
     }
   }, [emails.length])
+
+  // Debug function to test real-time subscription
+  const testRealTime = async () => {
+    try {
+      console.log('🧪 Testing real-time subscription...')
+      const response = await fetch('/api/debug/test-email', {
+        method: 'POST'
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        console.log('✅ Test email inserted:', data)
+        toast.success('🧪 Test email sent', {
+          description: 'Check if it appears in the inbox',
+          duration: 3000,
+        })
+      } else {
+        const errorData = await response.json()
+        console.error('❌ Test failed:', errorData)
+        toast.error('❌ Test failed', {
+          description: errorData.error || 'Unknown error',
+          duration: 5000,
+        })
+      }
+    } catch (error) {
+      console.error('❌ Test error:', error)
+      toast.error('❌ Test error', {
+        description: 'Network error',
+        duration: 5000,
+      })
+    }
+  }
 
   const toggleEmailSelection = async (emailId: string, fromEmail: string | null) => {
     if (selectedEmail === emailId) {
@@ -672,245 +714,232 @@ export default function InboxClient({ emails: initialEmails, userEmail }: InboxC
     )
   }
 
-  try {
-    return (
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Header */}
-        <div className="mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold text-gray-900">Email Inbox</h1>
-              {/* Live Status Indicator */}
-              <LiveInboxStatus 
-                isSubscribed={isSubscribed}
-                onSetupWebhook={() => {
-                  // Refresh the page to restart real-time subscription
-                  window.location.reload()
-                }}
-              />
-              {newEmailCount > 0 && (
-                <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium animate-pulse">
-                  <Bell className="h-3 w-3" />
-                  <span>{newEmailCount} new</span>
-                </div>
-              )}
-            </div>
-            <p className="text-gray-600">
-              {isSubscribed 
-                ? "Live inbox - emails update automatically" 
-                : "Triage and respond to incoming emails with AI assistance"
-              }
-            </p>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            {/* Manual sync button - now secondary to real-time */}
-            <BlocIQButton
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              size="sm"
-              variant="outline"
-              className="text-gray-600 border-gray-300 hover:bg-gray-50"
-            >
-              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              {isRefreshing ? 'Syncing...' : 'Manual Sync'}
-            </BlocIQButton>
-          </div>
-        </div>
-
-        {/* Search and Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search emails by subject, sender, or content..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#008C8F] focus:border-[#008C8F] text-gray-900"
+  return (
+    <div className="max-w-7xl mx-auto px-6 py-8">
+      {/* Header */}
+      <div className="mb-8">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-3xl font-bold text-gray-900">Email Inbox</h1>
+            {/* Live Status Indicator */}
+            <LiveInboxStatus 
+              isSubscribed={isSubscribed}
+              onSetupWebhook={() => {
+                // Refresh the page to restart real-time subscription
+                window.location.reload()
+              }}
             />
+            {newEmailCount > 0 && (
+              <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium animate-pulse">
+                <Bell className="h-3 w-3" />
+                <span>{newEmailCount} new</span>
+              </div>
+            )}
           </div>
+          <p className="text-gray-600">
+            {isSubscribed 
+              ? "Live inbox - emails update automatically" 
+              : "Triage and respond to incoming emails with AI assistance"
+            }
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          {/* Manual sync button - now secondary to real-time */}
+          <BlocIQButton
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            size="sm"
+            variant="outline"
+            className="text-gray-600 border-gray-300 hover:bg-gray-50"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Syncing...' : 'Manual Sync'}
+          </BlocIQButton>
           
-          <div className="flex gap-2">
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as any)}
-              className="px-4 py-3 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#008C8F] focus:border-[#008C8F] bg-white"
-            >
-              <option value="all">All ({emails.length})</option>
-              <option value="unread">Unread ({unreadCount})</option>
-              <option value="flagged">Flagged ({flaggedCount})</option>
-              <option value="handled">Handled ({handledCount})</option>
-            </select>
-            
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-4 py-3 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#008C8F] focus:border-[#008C8F] bg-white"
-            >
-              <option value="date">Date</option>
-              <option value="sender">Sender</option>
-              <option value="subject">Subject</option>
-            </select>
-          </div>
+          {/* Debug button for testing real-time */}
+          <BlocIQButton
+            onClick={testRealTime}
+            size="sm"
+            variant="outline"
+            className="text-purple-600 border-purple-300 hover:bg-purple-50"
+          >
+            <TestTube className="h-4 w-4" />
+            Test Real-time
+          </BlocIQButton>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Email List */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-            <div className="p-4 border-b border-gray-200 bg-gray-50">
-              <h2 className="text-lg font-semibold text-gray-900">Recent Emails</h2>
-              <p className="text-sm text-gray-600 mt-1">{filteredEmails.length} emails</p>
-            </div>
-            
-            <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
-              {filteredEmails.map((email) => {
-                const isSelected = selectedEmail === email.id
-                
-                return (
-                  <div
-                    key={email.id}
-                    onClick={() => toggleEmailSelection(email.id, email.from_email)}
-                    className={`p-4 border-b border-gray-100 cursor-pointer transition-all hover:bg-gray-50 ${
-                      isSelected ? 'bg-teal-50 border-l-4 border-l-teal-500' : ''
-                    } ${email.unread ? 'bg-blue-50' : ''}`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <span className="text-white font-semibold text-sm">
-                          {getSenderInitials(email.from_email)}
-                        </span>
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className={`font-medium truncate ${
-                            email.unread ? 'text-gray-900' : 'text-gray-700'
-                          }`}>
-                            {getSenderName(email.from_email)}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            {email.flag_status === 'flagged' && (
-                              <Flag className="h-4 w-4 text-orange-500" />
-                            )}
-                            <span className="text-xs text-gray-500">
-                              {formatDate(email.received_at)}
-                            </span>
-                          </div>
-                        </div>
-                        
-                        <h3 className={`font-medium mb-2 line-clamp-2 ${
-                          email.unread ? 'text-gray-900' : 'text-gray-700'
-                        }`}>
-                          {email.subject || 'No subject'}
-                        </h3>
-                        
-                        <p className="text-sm text-gray-600 line-clamp-2 mb-3">
-                          {email.body_preview || 'No preview available'}
-                        </p>
-                        
-                        <div className="flex items-center gap-2">
-                          {email.unread && (
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                          )}
-                          {email.handled && (
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                          )}
-                          <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded-full">
-                            {getAssignmentLabel(email)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search emails by subject, sender, or content..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#008C8F] focus:border-[#008C8F] text-gray-900"
+          />
         </div>
-
-        {/* Email Content */}
-        <div className="lg:col-span-2">
-          {selectedEmail ? (
-            <EmailDetailView 
-              email={emails.find(e => e.id === selectedEmail)!}
-              emailHistory={emailHistory[selectedEmail] || []}
-              isLoadingHistory={loadingHistory.has(selectedEmail)}
-              isGeneratingReply={generatingReplies.has(selectedEmail)}
-              replyResponse={replyResponses[selectedEmail]}
-              replyError={replyErrors[selectedEmail]}
-              isEditingReply={editingReplies.has(selectedEmail)}
-              editedReply={editedReplies[selectedEmail]}
-              isSendingEmail={sendingEmails.has(selectedEmail)}
-              sendResult={sendResults[selectedEmail]}
-              onToggleFlag={toggleFlag}
-              onGenerateReply={handleGenerateReply}
-              onEditReply={handleEditReply}
-              onSaveEdit={handleSaveEdit}
-              onSendEmail={handleSendEmail}
-              onCancelReply={() => {
-                setReplyResponses(prev => {
-                  const newResponses = { ...prev }
-                  delete newResponses[selectedEmail]
-                  return newResponses
-                })
-                setEditedReplies(prev => {
-                  const newReplies = { ...prev }
-                  delete newReplies[selectedEmail]
-                  return newReplies
-                })
-              }}
-              onUpdateEditedReply={(value) => setEditedReplies(prev => ({
-                ...prev,
-                [selectedEmail]: value
-              }))}
-              getSenderInitials={getSenderInitials}
-              formatDate={formatDate}
-              getAssignmentLabel={getAssignmentLabel}
-            />
-          ) : (
-            /* Empty State */
-            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-12">
-              <div className="text-center">
-                <div className="w-20 h-20 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-                  <Mail className="h-10 w-10 text-white" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Select an email</h3>
-                <p className="text-gray-600 max-w-md mx-auto">
-                  Choose an email from the list to view its details and generate AI-powered replies
-                </p>
-              </div>
-            </div>
-          )}
+        
+        <div className="flex gap-2">
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value as any)}
+            className="px-4 py-3 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#008C8F] focus:border-[#008C8F] bg-white"
+          >
+            <option value="all">All ({emails.length})</option>
+            <option value="unread">Unread ({unreadCount})</option>
+            <option value="flagged">Flagged ({flaggedCount})</option>
+            <option value="handled">Handled ({handledCount})</option>
+          </select>
+          
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+            className="px-4 py-3 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#008C8F] focus:border-[#008C8F] bg-white"
+          >
+            <option value="date">Date</option>
+            <option value="sender">Sender</option>
+            <option value="subject">Subject</option>
+          </select>
         </div>
       </div>
     </div>
-  )
-  } catch (error) {
-    console.error('❌ InboxClient: Rendering error:', error)
-    return (
-      <div className="max-w-7xl mx-auto px-6 py-12">
-        <div className="text-center">
-          <div className="w-20 h-20 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-lg">
-            <AlertCircle className="h-10 w-10 text-red-600" />
+
+    {/* Main Content */}
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* Email List */}
+      <div className="lg:col-span-1">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+          <div className="p-4 border-b border-gray-200 bg-gray-50">
+            <h2 className="text-lg font-semibold text-gray-900">Recent Emails</h2>
+            <p className="text-sm text-gray-600 mt-1">{filteredEmails.length} emails</p>
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-6">Error loading inbox</h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            There was an error loading the inbox. Please try refreshing the page.
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="inline-flex items-center gap-3 bg-gradient-to-r from-red-600 to-red-700 text-white px-8 py-4 rounded-xl hover:from-red-700 hover:to-red-800 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-          >
-            <RefreshCw className="h-5 w-5" />
-            Refresh Page
-          </button>
+          
+          <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
+            {filteredEmails.map((email) => {
+              const isSelected = selectedEmail === email.id
+              
+              return (
+                <div
+                  key={email.id}
+                  onClick={() => toggleEmailSelection(email.id, email.from_email)}
+                  className={`p-4 border-b border-gray-100 cursor-pointer transition-all hover:bg-gray-50 ${
+                    isSelected ? 'bg-teal-50 border-l-4 border-l-teal-500' : ''
+                  } ${email.unread ? 'bg-blue-50' : ''}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <span className="text-white font-semibold text-sm">
+                        {getSenderInitials(email.from_email)}
+                      </span>
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`font-medium truncate ${
+                          email.unread ? 'text-gray-900' : 'text-gray-700'
+                        }`}>
+                          {getSenderName(email.from_email)}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {email.flag_status === 'flagged' && (
+                            <Flag className="h-4 w-4 text-orange-500" />
+                          )}
+                          <span className="text-xs text-gray-500">
+                            {formatDate(email.received_at)}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <h3 className={`font-medium mb-2 line-clamp-2 ${
+                        email.unread ? 'text-gray-900' : 'text-gray-700'
+                      }`}>
+                        {email.subject || 'No subject'}
+                      </h3>
+                      
+                      <p className="text-sm text-gray-600 line-clamp-2 mb-3">
+                        {email.body_preview || 'No preview available'}
+                      </p>
+                      
+                      <div className="flex items-center gap-2">
+                        {email.unread && (
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        )}
+                        {email.handled && (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        )}
+                        <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded-full">
+                          {getAssignmentLabel(email)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       </div>
-    )
-  }
+
+      {/* Email Content */}
+      <div className="lg:col-span-2">
+        {selectedEmail ? (
+          <EmailDetailView 
+            email={emails.find(e => e.id === selectedEmail)!}
+            emailHistory={emailHistory[selectedEmail] || []}
+            isLoadingHistory={loadingHistory.has(selectedEmail)}
+            isGeneratingReply={generatingReplies.has(selectedEmail)}
+            replyResponse={replyResponses[selectedEmail]}
+            replyError={replyErrors[selectedEmail]}
+            isEditingReply={editingReplies.has(selectedEmail)}
+            editedReply={editedReplies[selectedEmail]}
+            isSendingEmail={sendingEmails.has(selectedEmail)}
+            sendResult={sendResults[selectedEmail]}
+            onToggleFlag={toggleFlag}
+            onGenerateReply={handleGenerateReply}
+            onEditReply={handleEditReply}
+            onSaveEdit={handleSaveEdit}
+            onSendEmail={handleSendEmail}
+            onCancelReply={() => {
+              setReplyResponses(prev => {
+                const newResponses = { ...prev }
+                delete newResponses[selectedEmail]
+                return newResponses
+              })
+              setEditedReplies(prev => {
+                const newReplies = { ...prev }
+                delete newReplies[selectedEmail]
+                return newReplies
+              })
+            }}
+            onUpdateEditedReply={(value) => setEditedReplies(prev => ({
+              ...prev,
+              [selectedEmail]: value
+            }))}
+            getSenderInitials={getSenderInitials}
+            formatDate={formatDate}
+            getAssignmentLabel={getAssignmentLabel}
+          />
+        ) : (
+          /* Empty State */
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-12">
+            <div className="text-center">
+              <div className="w-20 h-20 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <Mail className="h-10 w-10 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Select an email</h3>
+              <p className="text-gray-600 max-w-md mx-auto">
+                Choose an email from the list to view its details and generate AI-powered replies
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+)
 } 
