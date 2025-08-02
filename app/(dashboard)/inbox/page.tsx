@@ -44,6 +44,7 @@ export default async function InboxPage() {
       redirect('/login')
     }
 
+    const userId = session.user.id
     const userEmail = session.user.email
     console.log('✅ User authenticated:', userEmail)
 
@@ -54,7 +55,7 @@ export default async function InboxPage() {
     try {
       console.log('🔍 Fetching all emails for user:', userEmail)
       
-      // Query the incoming_emails table using recipient_email column
+      // Query the incoming_emails table using user_id column
       const result = await supabase
         .from('incoming_emails')
         .select(`
@@ -69,10 +70,9 @@ export default async function InboxPage() {
           user_id, 
           created_at,
           building_id,
-          related_unit_id,
-          recipient_email
+          related_unit_id
         `)
-        .eq('recipient_email', userEmail) // Use recipient_email to match user's email
+        .eq('user_id', userId) // Use user_id to match user
         .order('received_at', { ascending: false }) // Show newest first
         // No limit - show ALL emails
       
