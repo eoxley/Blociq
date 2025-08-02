@@ -28,19 +28,20 @@ export default function AccountPage() {
         <div className="text-center space-y-6">
           <h1 className="text-2xl font-bold text-[#0F5D5D]">⚙️ Account Settings</h1>
 
-        {email ? (
-          <p className="text-gray-700">Logged in as <strong>{email}</strong></p>
-        ) : (
-          <p className="text-gray-500">Loading user info...</p>
-        )}
+          {email ? (
+            <p className="text-gray-700">Logged in as <strong>{email}</strong></p>
+          ) : (
+            <p className="text-gray-500">Loading user info...</p>
+          )}
 
-        <div className="mt-10 text-sm text-gray-500">
-          <p>Coming soon:</p>
-          <ul className="mt-2 list-disc list-inside text-left">
-            <li>🔄 Switch agency</li>
-            <li>📝 Update profile</li>
-            <li>🗑️ Delete account</li>
-          </ul>
+          <div className="mt-10 text-sm text-gray-500">
+            <p>Coming soon:</p>
+            <ul className="mt-2 list-disc list-inside text-left">
+              <li>🔄 Switch agency</li>
+              <li>📝 Update profile</li>
+              <li>🗑️ Delete account</li>
+            </ul>
+          </div>
         </div>
       </div>
     </LayoutWithSidebar>

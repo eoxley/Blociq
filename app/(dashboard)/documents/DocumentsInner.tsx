@@ -52,16 +52,16 @@ export default function DocumentsInner() {
             <h1 className="text-2xl font-bold text-gray-900">Documents</h1>
             <p className="text-gray-600 mt-1">View and manage all uploaded documents</p>
           </div>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/compliance/documents"
-            className="inline-flex items-center px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Upload Document
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/compliance/documents"
+              className="inline-flex items-center px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Upload Document
+            </Link>
+          </div>
         </div>
-      </div>
 
       {/* Documents Table */}
       <div className="bg-white rounded-lg shadow-sm border">
