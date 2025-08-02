@@ -93,123 +93,40 @@ export default function InboxClient({ emails: initialEmails, userEmail }: InboxC
   // ✅ STEP 1: Enable Supabase Realtime for Inbox Page
   useEffect(() => {
     if (!userEmail) {
-      console.log('⏳ Waiting for user email before starting real-time subscription...')
       return
     }
 
     console.log('🔌 Starting real-time inbox subscription for user ID:', userEmail)
-    console.log('📧 Current emails count:', emails.length)
     
-    // Create real-time subscription for new emails
-    const inboxChannel = supabase
+    // Create real-time subscription
+    const channel = supabase
       .channel('inbox-updates')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
         table: 'incoming_emails',
-        filter: `user_id=eq.${userEmail}` // Filter by user_id from session
-      }, (payload) => {
-        console.log('📨 New email received via real-time:', payload)
-        console.log('📨 Payload details:', {
-          new: payload.new,
-          old: payload.old,
-          eventType: payload.eventType,
-          schema: payload.schema,
-          table: payload.table
-        })
-        
-        const newEmail = payload.new as Email
-        
-        // Check if email already exists to prevent duplicates
-        const emailExists = emails.some(email => email.id === newEmail.id)
-        if (emailExists) {
-          console.log('⚠️ Email already exists, skipping duplicate:', newEmail.id)
-          return
-        }
-
-        console.log('✅ Adding new email to inbox:', newEmail.subject)
-        
-        // Add new email to the top of the list
-        setEmails(prev => {
-          const updated = [newEmail, ...prev]
-          console.log('📧 Updated emails list, new count:', updated.length)
-          return updated
-        })
-        
-        // Show notification
-        toast.success(`📩 New message from ${newEmail.from_email}`, {
-          description: newEmail.subject || 'No subject',
-          duration: 5000,
-        })
-        
-        // Increment new email counter
+        filter: `user_id=eq.${userEmail}`
+      }, (payload: any) => {
+        console.log('📧 Real-time email received:', payload.new)
         setNewEmailCount(prev => prev + 1)
         
-        // Auto-scroll to top if user is viewing email list
-        if (selectedEmail === null) {
-          // Could add auto-scroll logic here if needed
-        }
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'incoming_emails',
-        filter: `user_id=eq.${userEmail}`
-      }, (payload) => {
-        console.log('📝 Email updated via real-time:', payload)
-        
-        const updatedEmail = payload.new as Email
-        
-        // Update email in the list
-        setEmails(prev => prev.map(email => 
-          email.id === updatedEmail.id ? updatedEmail : email
-        ))
-      })
-      .on('postgres_changes', {
-        event: 'DELETE',
-        schema: 'public',
-        table: 'incoming_emails',
-        filter: `user_id=eq.${userEmail}`
-      }, (payload) => {
-        console.log('🗑️ Email deleted via real-time:', payload)
-        
-        const deletedEmailId = payload.old.id
-        
-        // Remove email from the list
-        setEmails(prev => prev.filter(email => email.id !== deletedEmailId))
+        // Add new email to the list
+        const newEmail = payload.new as Email
+        setEmails(prev => [newEmail, ...prev])
       })
       .subscribe((status) => {
         console.log('📡 Real-time subscription status:', status)
-        console.log('📡 Subscription details:', {
-          status,
-          userEmail,
-          currentEmailsCount: emails.length
-        })
         setIsSubscribed(status === 'SUBSCRIBED')
-        
-        if (status === 'SUBSCRIBED') {
-          toast.success('🔗 Live inbox connected', {
-            description: 'You\'ll receive real-time updates for new emails',
-            duration: 3000,
-          })
-        } else if (status === 'CHANNEL_ERROR') {
-          toast.error('❌ Live inbox connection failed', {
-            description: 'Falling back to manual refresh',
-            duration: 5000,
-          })
-        }
       })
 
-    subscriptionRef.current = inboxChannel
+    subscriptionRef.current = channel
 
-    // Cleanup subscription on unmount
     return () => {
-      console.log('🔌 Cleaning up real-time subscription')
       if (subscriptionRef.current) {
         supabase.removeChannel(subscriptionRef.current)
       }
     }
-  }, [userEmail]) // Removed emails.length dependency to prevent re-subscription
+  }, [userEmail])
 
   // Update emails when initialEmails prop changes
   useEffect(() => {
@@ -804,7 +721,7 @@ export default function InboxClient({ emails: initialEmails, userEmail }: InboxC
     return (
       <div className="max-w-7xl mx-auto px-6 py-12">
         <div className="text-center">
-          <div className="w-20 h-20 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-lg">
+          <div className="w-20 h-20 bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-lg">
             <Mail className="h-10 w-10 text-white" />
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-6">No emails found</h1>
@@ -955,7 +872,7 @@ export default function InboxClient({ emails: initialEmails, userEmail }: InboxC
                   } ${email.unread ? 'bg-blue-50' : ''}`}
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
                       <span className="text-white font-semibold text-sm">
                         {getSenderInitials(email.from_email)}
                       </span>
@@ -1051,7 +968,7 @@ export default function InboxClient({ emails: initialEmails, userEmail }: InboxC
           /* Empty State */
           <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-12">
             <div className="text-center">
-              <div className="w-20 h-20 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <div className="w-20 h-20 bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
                 <Mail className="h-10 w-10 text-white" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-4">Select an email</h3>

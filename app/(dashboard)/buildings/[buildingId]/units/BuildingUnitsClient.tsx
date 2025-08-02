@@ -110,7 +110,7 @@ export default function BuildingUnitsClient({ building, units, buildingId }: Bui
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg flex items-center justify-center">
+                      <div className="w-12 h-12 bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
                         <Home className="h-6 w-6 text-white" />
                       </div>
                       <div>

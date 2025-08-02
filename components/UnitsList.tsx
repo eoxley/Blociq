@@ -111,7 +111,7 @@ export default function UnitsList({ units, buildingId }: UnitsListProps) {
                 <div className="flex items-start justify-between">
                   {/* Unit Info */}
                   <div className="flex items-start gap-4 flex-1">
-                    <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <div className="w-12 h-12 bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
                       <Home className="h-6 w-6 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">

@@ -160,7 +160,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     fetchBuildings();
   }, []);
 
-  // Fetch real property events from database
+    // Fetch real property events from database
   useEffect(() => {
     const fetchEvents = async () => {
       try {
@@ -169,29 +169,35 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           .select('*')
           .gte('start_time', new Date().toISOString())
           .order('start_time', { ascending: true })
-          .limit(10);
+          .limit(5);
 
         if (error) {
-          console.error('Error fetching events:', error?.message || JSON.stringify(error));
+          console.error('Error fetching events:', error);
           setUpcomingEvents([]);
         } else {
-          // Transform database events to match PropertyEvent type
-          const transformedEvents: PropertyEvent[] = (events || []).map(event => {
-            // Find building name from buildings array
-            const building = buildings.find(b => b.id === event.building_id);
-            return {
-              building: building ? building.name : 'General',
-              date: event.start_time,
-              title: event.title,
-              category: event.category || event.event_type || '📅 Event',
-              source: 'property',
-              event_type: 'manual'
-            };
-          });
+          // Transform database events to match PropertyEvent type and filter out past events
+          const transformedEvents: PropertyEvent[] = (events || [])
+            .filter(event => {
+              const eventDate = new Date(event.start_time);
+              const now = new Date();
+              return eventDate >= now; // Only include future events
+            })
+            .map(event => {
+              // Find building name from buildings array
+              const building = buildings.find(b => b.id === event.building_id);
+              return {
+                building: building ? building.name : 'General',
+                date: event.start_time,
+                title: event.title,
+                category: event.category || event.event_type || '📅 Event',
+                source: 'property',
+                event_type: 'manual'
+              };
+            });
           setUpcomingEvents(transformedEvents);
         }
       } catch (error) {
-        console.error('Error fetching events:', error?.message || JSON.stringify(error));
+        console.error('Error fetching events:', error);
         setUpcomingEvents([]);
       } finally {
         setLoadingEvents(false);
@@ -239,10 +245,20 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           online_meeting: event.online_meeting
         }));
 
-        // Combine with existing property events and sort by date
+        // Combine with existing property events, filter out past events, and sort by date
         setUpcomingEvents(prev => {
-          const combined = [...prev, ...transformedOutlookEvents];
-          return combined.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+          const now = new Date();
+          const propertyEvents = prev.filter(event => event.source === 'property');
+          const futureOutlookEvents = transformedOutlookEvents.filter(event => {
+            const eventDate = new Date(event.date);
+            return eventDate >= now; // Only include future events
+          });
+          
+          const combined = [...propertyEvents, ...futureOutlookEvents];
+          const sorted = combined.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+          
+          // Limit to 5 items total
+          return sorted.slice(0, 5);
         });
 
       } catch (error) {
@@ -336,20 +352,28 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           .select('*')
           .gte('start_time', new Date().toISOString())
           .order('start_time', { ascending: true })
-          .limit(10);
+          .limit(5);
 
         if (!error && events) {
-          // Transform database events to match PropertyEvent type
-          const transformedEvents: PropertyEvent[] = (events || []).map(event => {
-            // Find building name from buildings array
-            const building = buildings.find(b => b.id === event.building_id);
-            return {
-              building: building ? building.name : 'General',
-              date: event.start_time,
-              title: event.title,
-              category: event.category || event.event_type || '📅 Event'
-            };
-          });
+          // Transform database events to match PropertyEvent type and filter out past events
+          const now = new Date();
+          const transformedEvents: PropertyEvent[] = (events || [])
+            .filter(event => {
+              const eventDate = new Date(event.start_time);
+              return eventDate >= now; // Only include future events
+            })
+            .map(event => {
+              // Find building name from buildings array
+              const building = buildings.find(b => b.id === event.building_id);
+              return {
+                building: building ? building.name : 'General',
+                date: event.start_time,
+                title: event.title,
+                category: event.category || event.event_type || '📅 Event',
+                source: 'property',
+                event_type: 'manual'
+              };
+            });
           setUpcomingEvents(transformedEvents);
         }
       } else {
@@ -420,11 +444,20 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         online_meeting: event.online_meeting
       }));
 
-      // Replace existing Outlook events with new ones
+      // Replace existing Outlook events with new ones, filter out past events
       setUpcomingEvents(prev => {
+        const now = new Date();
         const propertyEvents = prev.filter(event => event.source === 'property');
-        const combined = [...propertyEvents, ...transformedOutlookEvents];
-        return combined.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const futureOutlookEvents = transformedOutlookEvents.filter(event => {
+          const eventDate = new Date(event.date);
+          return eventDate >= now; // Only include future events
+        });
+        
+        const combined = [...propertyEvents, ...futureOutlookEvents];
+        const sorted = combined.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        
+        // Limit to 5 items total
+        return sorted.slice(0, 5);
       });
 
       toast.success('Outlook calendar synced successfully!');

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Search, Eye } from 'lucide-react'
+import { Search, Eye, Home } from 'lucide-react'
 
 interface Leaseholder {
   id: string
@@ -125,8 +125,8 @@ export default function SearchableUnitsTable({ units, buildingId }: SearchableUn
                   {/* Unit Number */}
                   <div className="col-span-2 flex items-center">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg flex items-center justify-center">
-                        <span className="text-white text-sm font-semibold">{unit.unit_number}</span>
+                      <div className="w-8 h-8 bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                        <Home className="h-4 w-4 text-white" />
                       </div>
                       <span className="text-gray-900 font-medium">Unit {unit.unit_number}</span>
                     </div>
