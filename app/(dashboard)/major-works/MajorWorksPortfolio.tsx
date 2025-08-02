@@ -30,6 +30,7 @@ import { toast } from 'sonner'
 import { supabase } from '@/lib/supabaseClient'
 import NewProjectModal from './components/NewProjectModal'
 import ProjectDetailModal from './components/ProjectDetailModal'
+import PageHero from '@/components/PageHero'
 
 interface UserData {
   name: string
@@ -282,240 +283,216 @@ export default function MajorWorksPortfolio({ userData, filters }: MajorWorksPor
   const stats = getProjectStats()
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Major Works Portfolio</h1>
-          <p className="text-gray-600 mt-2">Track and manage all major works projects across your portfolio</p>
-        </div>
-        <Button onClick={() => setShowNewProjectModal(true)} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Start New Project
-        </Button>
-      </div>
+    <div className="space-y-8">
+      <PageHero
+        title="Major Works Portfolio"
+        subtitle="Manage and track all major works projects"
+        icon={<Construction className="h-8 w-8 text-white" />}
+      />
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Construction className="h-5 w-5 text-blue-600" />
+      <div className="p-6 space-y-8">
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white shadow-lg">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Projects</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                <p className="text-blue-100 text-sm font-medium">Total Projects</p>
+                <p className="text-3xl font-bold">{projects.length}</p>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <TrendingUp className="h-5 w-5 text-yellow-600" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Active</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.active}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Completed</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.completed}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <AlertCircle className="h-5 w-5 text-red-600" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Overdue</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.overdue}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <DollarSign className="h-5 w-5 text-purple-600" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Budget</p>
-                <p className="text-2xl font-bold text-gray-900">£{(stats.totalCost / 1000000).toFixed(1)}M</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700">Search</label>
-              <Input
-                placeholder="Search projects..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-700">Status</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="planned">Planned</SelectItem>
-                  <SelectItem value="ongoing">Ongoing</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-700">Building</label>
-              <Select value={buildingFilter} onValueChange={setBuildingFilter}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Buildings</SelectItem>
-                  {buildings.map((building) => (
-                    <SelectItem key={building.id} value={building.id}>
-                      {building.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-700">Contractor</label>
-              <Input
-                placeholder="Filter by contractor..."
-                value={contractorFilter}
-                onChange={(e) => setContractorFilter(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-700">Date Range</label>
-              <Select value={dateRangeFilter} onValueChange={setDateRangeFilter}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Time</SelectItem>
-                  <SelectItem value="overdue">Overdue</SelectItem>
-                  <SelectItem value="upcoming">Upcoming (30 days)</SelectItem>
-                  <SelectItem value="recent">Recent (7 days)</SelectItem>
-                </SelectContent>
-              </Select>
+              <Construction className="h-8 w-8 text-blue-200" />
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Projects Grid */}
-      {loading ? (
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="text-gray-600 mt-2">Loading major works projects...</p>
+          
+          <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl p-6 text-white shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-green-100 text-sm font-medium">Active</p>
+                <p className="text-3xl font-bold">{projects.filter(p => p.status === 'active').length}</p>
+              </div>
+              <Target className="h-8 w-8 text-green-200" />
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-r from-orange-600 to-red-600 rounded-xl p-6 text-white shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-orange-100 text-sm font-medium">In Progress</p>
+                <p className="text-3xl font-bold">{projects.filter(p => p.status === 'in_progress').length}</p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-orange-200" />
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl p-6 text-white shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-purple-100 text-sm font-medium">Completed</p>
+                <p className="text-3xl font-bold">{projects.filter(p => p.status === 'completed').length}</p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-purple-200" />
+            </div>
+          </div>
         </div>
-      ) : filteredProjects.length === 0 ? (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <Construction className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No major works projects yet</h3>
-            <p className="text-gray-600 mb-4">Start your first major works project to begin tracking capital projects across your portfolio.</p>
-            <Button onClick={() => setShowNewProjectModal(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Start New Project
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        {/* Controls */}
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Project Management</h2>
+              <p className="text-gray-600">Track and manage major works projects</p>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search projects..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              
+              <Button
+                onClick={() => setShowNewProjectModal(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                New Project
+              </Button>
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="on_hold">On Hold</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={buildingFilter} onValueChange={setBuildingFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by building" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Buildings</SelectItem>
+                {buildings.map((building) => (
+                  <SelectItem key={building.id} value={building.id}>
+                    {building.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={contractorFilter} onValueChange={setContractorFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by contractor" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Contractors</SelectItem>
+                {Array.from(new Set(projects.map(p => p.contractor_name))).map((contractor) => (
+                  <SelectItem key={contractor} value={contractor}>
+                    {contractor}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={dateRangeFilter} onValueChange={setDateRangeFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by date" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Dates</SelectItem>
+                <SelectItem value="this_month">This Month</SelectItem>
+                <SelectItem value="this_quarter">This Quarter</SelectItem>
+                <SelectItem value="this_year">This Year</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Projects Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {filteredProjects.map((project) => (
-            <Card key={project.id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleViewProject(project)}>
-              <CardHeader className="pb-3">
+            <Card key={project.id} className="hover:shadow-xl transition-all duration-300 cursor-pointer" onClick={() => handleViewProject(project)}>
+              <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <CardTitle className="text-lg">{project.title}</CardTitle>
-                    <p className="text-sm text-gray-600 mt-1">{project.buildings?.name}</p>
+                    <CardTitle className="text-lg font-semibold text-gray-900 mb-2">{project.title}</CardTitle>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Badge className={getStatusColor(project.status)}>
+                        {project.status.replace('_', ' ')}
+                      </Badge>
+                      <Badge className={getPriorityColor(project.priority)}>
+                        {project.priority}
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="flex flex-col items-end space-y-1">
-                    <Badge className={getStatusColor(project.status)}>
-                      {project.status}
-                    </Badge>
-                    <Badge className={getPriorityColor(project.priority)}>
-                      {project.priority}
+                  <div className="flex items-center gap-2">
+                    {/* getPriorityIndicator(project) - This function is not defined in the original file */}
+                    <Badge className={getHealthColor(project.project_health)}>
+                      {project.project_health}
                     </Badge>
                   </div>
                 </div>
               </CardHeader>
-              
-              <CardContent className="space-y-4">
-                <p className="text-sm text-gray-600 line-clamp-2">{project.description}</p>
+              <CardContent>
+                <p className="text-gray-600 mb-4 line-clamp-2">{project.description}</p>
                 
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <p className="text-gray-500">Contractor</p>
-                    <p className="font-medium">{project.contractor_name || 'Not assigned'}</p>
+                    <p className="text-xs text-gray-500">Estimated Cost</p>
+                    <p className="font-semibold text-gray-900">£{project.estimated_cost.toLocaleString()}</p>
                   </div>
                   <div>
-                    <p className="text-gray-500">Budget</p>
-                    <p className="font-medium">£{(project.estimated_cost || 0).toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Progress</p>
-                    <p className="font-medium">{project.completion_percentage}%</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Health</p>
-                    <Badge className={getHealthColor(project.project_health)}>
-                      {project.project_health.replace('_', ' ')}
-                    </Badge>
+                    <p className="text-xs text-gray-500">Completion</p>
+                    <p className="font-semibold text-gray-900">{project.completion_percentage}%</p>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                  <div className="flex items-center space-x-4">
-                    <span className="flex items-center">
-                      <FileText className="h-3 w-3 mr-1" />
-                      {project.statistics.total_documents}
-                    </span>
-                    <span className="flex items-center">
-                      <Clock className="h-3 w-3 mr-1" />
-                      {project.statistics.total_logs}
-                    </span>
-                  </div>
-                  <Button variant="ghost" size="sm">
-                    <Eye className="h-4 w-4" />
-                  </Button>
+                <div className="flex items-center justify-between text-sm text-gray-500">
+                  <span>{project.contractor_name}</span>
+                  <span>{project.buildings?.name}</span>
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
-      )}
+
+        {loading && (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading projects...</p>
+          </div>
+        )}
+
+        {!loading && filteredProjects.length === 0 && (
+          <div className="text-center py-12 bg-white rounded-xl shadow-lg">
+            <Construction className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No projects found</h3>
+            <p className="text-gray-500 mb-6">
+              {searchTerm ? 'Try adjusting your search terms.' : 'Get started by creating your first project.'}
+            </p>
+            <Button
+              onClick={() => setShowNewProjectModal(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Project
+            </Button>
+          </div>
+        )}
+      </div>
 
       {/* Modals */}
       <NewProjectModal
