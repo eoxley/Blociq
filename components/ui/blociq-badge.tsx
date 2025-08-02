@@ -17,9 +17,9 @@ export function BlocIQBadge({
   const baseClasses = "inline-flex items-center justify-center rounded-full font-medium transition-all duration-300";
   
                 const variants = {
-                default: "bg-[#F3F4F6] text-[#64748B]",
-                primary: "bg-gradient-to-r from-[#008C8F] to-[#007BDB] text-white",
-                secondary: "bg-[#F0FDFA] text-[#0F5D5D] border border-[#008C8F]",
+                default: "bg-gray-100 text-gray-700",
+                primary: "bg-gradient-to-r from-blue-600 to-purple-600 text-white",
+                secondary: "bg-blue-50 text-blue-700 border border-blue-200",
                 success: "bg-green-100 text-green-800",
                 warning: "bg-yellow-100 text-yellow-800",
                 destructive: "bg-red-100 text-red-800"

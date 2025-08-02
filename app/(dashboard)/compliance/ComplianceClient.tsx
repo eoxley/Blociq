@@ -160,7 +160,7 @@ export default function ComplianceClient({ complianceAssets: initialAssets = [] 
   }, [assets, searchTerm])
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Compliance Tracking</h2>
@@ -175,7 +175,7 @@ export default function ComplianceClient({ complianceAssets: initialAssets = [] 
               placeholder="Search compliance items..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
           
@@ -252,7 +252,7 @@ export default function ComplianceClient({ complianceAssets: initialAssets = [] 
                       className={`w-full px-3 py-2 text-sm rounded-md transition-colors ${
                         asset.applies 
                           ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                          : 'bg-teal-600 text-white hover:bg-teal-700'
+                          : 'bg-purple-600 text-white hover:bg-purple-700'
                       }`}
                     >
                       {asset.applies ? 'Update Tracking' : 'Start Tracking'}
@@ -272,7 +272,7 @@ export default function ComplianceClient({ complianceAssets: initialAssets = [] 
               </p>
               <button
                 onClick={() => setSearchTerm('')}
-                className="mt-4 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Clear Search
               </button>
