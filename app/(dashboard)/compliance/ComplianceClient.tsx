@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { Shield, AlertTriangle, Clock, CheckCircle, Filter, Settings, Calendar, CheckSquare, BarChart3 } from 'lucide-react'
 import ComplianceDashboard from './ComplianceDashboard'
+import PageHero from '@/components/PageHero'
 import { 
   ComplianceAsset, 
   getComplianceStatus, 
@@ -138,13 +139,21 @@ export default function ComplianceClient({ complianceAssets: initialAssets = [] 
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header with Dashboard */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Compliance Management</h1>
-          <p className="text-gray-600">Track and manage building compliance requirements</p>
-        </div>
+    <div className="space-y-8">
+      {/* Hero Banner */}
+      <PageHero
+        title="Compliance Management"
+        subtitle="Track and manage building compliance requirements"
+        icon={<Shield className="h-8 w-8 text-white" />}
+      />
+
+      <div className="space-y-6">
+        {/* Header with Dashboard */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Compliance Management</h1>
+            <p className="text-gray-600">Track and manage building compliance requirements</p>
+          </div>
         
         <div className="flex items-center space-x-4">
           <button

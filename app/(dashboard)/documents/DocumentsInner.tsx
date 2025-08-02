@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Upload, Plus } from "lucide-react";
+import { Upload, Plus, FileText } from "lucide-react";
 import Link from "next/link";
+import PageHero from '@/components/PageHero';
 
 type Document = {
   id: string;
@@ -36,13 +37,21 @@ export default function DocumentsInner() {
   }, []);
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Documents</h1>
-          <p className="text-gray-600 mt-1">View and manage all uploaded documents</p>
-        </div>
+    <div className="space-y-8">
+      {/* Hero Banner */}
+      <PageHero
+        title="Documents"
+        subtitle="View and manage all uploaded documents"
+        icon={<FileText className="h-8 w-8 text-white" />}
+      />
+
+      <div className="p-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Documents</h1>
+            <p className="text-gray-600 mt-1">View and manage all uploaded documents</p>
+          </div>
         <div className="flex items-center gap-3">
           <Link
             href="/compliance/documents"

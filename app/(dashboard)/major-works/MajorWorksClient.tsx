@@ -27,6 +27,7 @@ import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui
 import { BlocIQBadge } from '@/components/ui/blociq-badge'
 import BlocIQLogo from '@/components/BlocIQLogo'
 import MajorWorksDashboard from '@/components/MajorWorksDashboard'
+import PageHero from '@/components/PageHero'
 import { toast } from 'sonner'
 
 interface UserData {
@@ -59,13 +60,22 @@ export default function MajorWorksClient({ userData, selectedBuildingId }: Major
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      {/* Major Works Dashboard */}
-      <MajorWorksDashboard 
-        showAllBuildings={true}
-        limit={selectedBuildingId ? undefined : 20} // Show more projects on dedicated page
-        showAddButton={true}
+    <div className="space-y-8">
+      {/* Hero Banner */}
+      <PageHero
+        title="Major Works"
+        subtitle="Track and manage major property works and projects"
+        icon={<Building className="h-8 w-8 text-white" />}
       />
+
+      <div className="max-w-7xl mx-auto p-6">
+        {/* Major Works Dashboard */}
+        <MajorWorksDashboard 
+          showAllBuildings={true}
+          limit={selectedBuildingId ? undefined : 20} // Show more projects on dedicated page
+          showAddButton={true}
+        />
+      </div>
     </div>
   )
 } 

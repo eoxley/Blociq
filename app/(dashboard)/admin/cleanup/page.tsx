@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Trash2, AlertTriangle, CheckCircle, Loader2, Eye, Shield } from 'lucide-react'
 import LayoutWithSidebar from '@/components/LayoutWithSidebar'
+import PageHero from '@/components/PageHero'
 
 interface CleanupResults {
   buildings: number
@@ -105,15 +106,23 @@ export default function CleanupPage() {
 
   return (
     <LayoutWithSidebar>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Database Cleanup</h1>
-            <p className="text-gray-600 mt-2">
-              Remove all test and demo data from the BlocIQ database
-            </p>
-          </div>
+      <div className="space-y-8">
+        {/* Hero Banner */}
+        <PageHero
+          title="Database Cleanup"
+          subtitle="Remove all test and demo data from the BlocIQ database"
+          icon={<Shield className="h-8 w-8 text-white" />}
+        />
+
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Database Cleanup</h1>
+              <p className="text-gray-600 mt-2">
+                Remove all test and demo data from the BlocIQ database
+              </p>
+            </div>
           <div className="flex items-center space-x-2">
             <Shield className="h-6 w-6 text-amber-600" />
             <Badge variant="outline" className="text-amber-700 border-amber-300">

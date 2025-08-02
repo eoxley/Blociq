@@ -1,8 +1,9 @@
 import { cookies } from 'next/headers'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Mail } from 'lucide-react'
 import InboxClient from './InboxClient'
+import PageHero from '@/components/PageHero'
 
 interface Email {
   id: string
@@ -119,7 +120,18 @@ export default async function InboxPage() {
     console.log('🎯 About to render InboxClient with', emails.length, 'emails')
     
     // Pass emails and user email as props to client component
-    return <InboxClient emails={emails} userEmail={userEmail} />
+    return (
+      <div className="space-y-6">
+        {/* Hero Banner */}
+        <PageHero
+          title="Email Inbox"
+          subtitle="Manage and respond to all your property-related emails in one place"
+          icon={<Mail className="h-8 w-8 text-white" />}
+        />
+        
+        <InboxClient emails={emails} userEmail={userEmail} />
+      </div>
+    )
 
   } catch (error) {
     console.error('❌ Error in InboxPage:', error)

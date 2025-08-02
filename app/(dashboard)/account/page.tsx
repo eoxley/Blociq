@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import LayoutWithSidebar from '@/components/LayoutWithSidebar';
+import PageHero from '@/components/PageHero';
+import { Settings } from 'lucide-react';
 
 export default function AccountPage() {
   const [email, setEmail] = useState<string | null>(null);
@@ -15,8 +17,16 @@ export default function AccountPage() {
 
   return (
     <LayoutWithSidebar>
-      <div className="text-center space-y-6">
-        <h1 className="text-2xl font-bold text-[#0F5D5D]">⚙️ Account Settings</h1>
+      <div className="space-y-8">
+        {/* Hero Banner */}
+        <PageHero
+          title="Account Settings"
+          subtitle="Manage your account preferences and settings"
+          icon={<Settings className="h-8 w-8 text-white" />}
+        />
+
+        <div className="text-center space-y-6">
+          <h1 className="text-2xl font-bold text-[#0F5D5D]">⚙️ Account Settings</h1>
 
         {email ? (
           <p className="text-gray-700">Logged in as <strong>{email}</strong></p>

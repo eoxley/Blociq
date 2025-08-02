@@ -16,6 +16,7 @@ import BlocIQLogo from '@/components/BlocIQLogo'
 import { toast } from 'sonner'
 import { checkOutlookConnection, fetchOutlookEvents, getOutlookAuthUrl } from '@/lib/outlookUtils'
 import { getTimeBasedGreeting } from '@/utils/greeting'
+import PageHero from '@/components/PageHero'
 
 type PropertyEvent = {
   building: string
@@ -471,22 +472,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
   return (
     <div className="space-y-8">
-      {/* Enhanced Header with BlocIQ Gradient Background */}
-      <div className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] rounded-2xl p-8 text-white shadow-xl">
-        <div className="flex items-center justify-between">
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                <BlocIQLogo className="h-7 w-7 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold">{getTimeBasedGreeting(userData.name)}</h1>
-                <p className="text-white/90 text-lg">{currentWelcomeMessage}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Hero Banner */}
+      <PageHero
+        title={getTimeBasedGreeting(userData.name)}
+        subtitle={currentWelcomeMessage}
+        icon={<BlocIQLogo className="h-8 w-8 text-white" />}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Upcoming Events Section */}
