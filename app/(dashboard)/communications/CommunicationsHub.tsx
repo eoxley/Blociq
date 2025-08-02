@@ -273,93 +273,112 @@ export default function CommunicationsHub() {
         icon={<Phone className="h-8 w-8 text-white" />}
       />
 
-      <div className="p-6 max-w-7xl mx-auto">
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-4xl font-bold text-gray-900">Communications Hub</h1>
-              <p className="text-xl text-gray-600 mt-2">Manage all leaseholder contact from one place</p>
+      <div className="p-6 max-w-7xl mx-auto space-y-8">
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-blue-100 text-sm font-medium">Recent Communications</p>
+                <p className="text-3xl font-bold">{recentCommunications.length}</p>
+              </div>
+              <Phone className="h-8 w-8 text-blue-200" />
             </div>
-            
-            <div className="flex items-center gap-3">
-              <BlocIQBadge variant="secondary" size="sm">
-                {recentCommunications.length} recent communications
-              </BlocIQBadge>
+          </div>
+          
+          <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl p-6 text-white shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-green-100 text-sm font-medium">Successful</p>
+                <p className="text-3xl font-bold">{recentCommunications.filter(comm => comm.status === 'sent').length}</p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-green-200" />
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl p-6 text-white shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-purple-100 text-sm font-medium">Pending</p>
+                <p className="text-3xl font-bold">{recentCommunications.filter(comm => comm.status === 'pending').length}</p>
+              </div>
+              <Clock className="h-8 w-8 text-purple-200" />
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+        {/* Action Tiles */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {actionTiles.map((tile) => (
-            <BlocIQCard 
+            <div 
               key={tile.id}
-              variant="elevated"
-              className={`cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105 border-2 ${tile.borderColor} ${tile.bgColor} hover:shadow-lg`}
+              className={`cursor-pointer group hover:shadow-xl transition-all duration-300 hover:scale-105 border-2 ${tile.borderColor} ${tile.bgColor} rounded-xl p-6 hover:shadow-lg`}
               onClick={() => handleTileClick(tile.id)}
             >
-              <BlocIQCardContent className="p-8">
-                <div className="flex flex-col items-center text-center space-y-4">
-                  <div className={`p-4 rounded-2xl bg-gradient-to-r ${tile.color} text-white shadow-lg`}>
-                    <tile.icon className="h-8 w-8" />
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="text-xl font-bold text-gray-900">{tile.title}</h3>
-                    <p className="text-sm text-gray-600">{tile.description}</p>
-                  </div>
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className={`p-4 rounded-2xl bg-gradient-to-r ${tile.color} text-white shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                  <tile.icon className="h-8 w-8" />
                 </div>
-              </BlocIQCardContent>
-            </BlocIQCard>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-bold text-gray-900">{tile.title}</h3>
+                  <p className="text-sm text-gray-600">{tile.description}</p>
+                </div>
+              </div>
+            </div>
           ))}
         </div>
 
+        {/* Recent Communications */}
         {recentCommunications.length > 0 && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900">Recent Communications</h2>
-              <BlocIQButton 
-                variant="outline" 
-                onClick={() => setShowCommunicationsLog(true)}
-                className="flex items-center gap-2"
-              >
-                <History className="h-4 w-4" />
-                View All
-              </BlocIQButton>
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Recent Communications</h2>
+                  <p className="text-gray-600">Latest leaseholder interactions</p>
+                </div>
+                <button 
+                  onClick={() => setShowCommunicationsLog(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                >
+                  <History className="h-4 w-4" />
+                  View All
+                </button>
+              </div>
             </div>
             
-            <div className="grid gap-4">
-              {recentCommunications.slice(0, 5).map((comm) => (
-                <BlocIQCard key={comm.id} variant="elevated" className="hover:shadow-md transition-shadow">
-                  <BlocIQCardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className={`p-2 rounded-lg ${
-                          comm.type === 'call' ? 'bg-green-100 text-green-700' :
-                          comm.type === 'email' ? 'bg-blue-100 text-blue-700' :
-                          'bg-purple-100 text-purple-700'
-                        }`}>
-                          {comm.type === 'call' ? <Phone className="h-4 w-4" /> :
-                           comm.type === 'email' ? <Mail className="h-4 w-4" /> :
-                           <FileText className="h-4 w-4" />}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-gray-900">{comm.leaseholder_name}</span>
-                            <BlocIQBadge variant="outline" size="sm">
-                              {comm.unit_number}
-                            </BlocIQBadge>
-                          </div>
-                          <p className="text-sm text-gray-600">{comm.subject}</p>
-                          <p className="text-xs text-gray-500">{comm.building_name}</p>
-                        </div>
+            <div className="p-6">
+              <div className="space-y-4">
+                {recentCommunications.slice(0, 5).map((comm) => (
+                  <div key={comm.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className={`p-3 rounded-lg ${
+                        comm.type === 'call' ? 'bg-green-100 text-green-700' :
+                        comm.type === 'email' ? 'bg-blue-100 text-blue-700' :
+                        'bg-purple-100 text-purple-700'
+                      }`}>
+                        {comm.type === 'call' ? <Phone className="h-5 w-5" /> :
+                         comm.type === 'email' ? <Mail className="h-5 w-5" /> :
+                         <FileText className="h-5 w-5" />}
                       </div>
-                      <div className="flex items-center gap-2">
-                        {getStatusIcon(comm.status)}
-                        <span className="text-xs text-gray-500">{formatDate(comm.created_at)}</span>
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-gray-900">{comm.leaseholder_name}</span>
+                          <span className="px-2 py-1 bg-gray-200 text-gray-700 rounded-full text-xs">
+                            {comm.unit_number}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600">{comm.subject}</p>
+                        <p className="text-xs text-gray-500">{comm.building_name}</p>
                       </div>
                     </div>
-                  </BlocIQCardContent>
-                </BlocIQCard>
-              ))}
+                    <div className="flex items-center gap-3">
+                      {getStatusIcon(comm.status)}
+                      <span className="text-xs text-gray-500">{formatDate(comm.created_at)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}

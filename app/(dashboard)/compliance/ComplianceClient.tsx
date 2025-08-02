@@ -1,7 +1,9 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { Shield, Search, Filter, Calendar, AlertTriangle, CheckCircle, Clock } from 'lucide-react'
+import { Shield, Search, Filter, Calendar, AlertTriangle, CheckCircle, Clock, TrendingUp, FileText, Building, Users } from 'lucide-react'
+import PageHero from '@/components/PageHero'
+import LayoutWithSidebar from '@/components/LayoutWithSidebar'
 
 interface ComplianceAsset {
   id: string
@@ -55,15 +57,15 @@ export default function ComplianceClient({ complianceAssets: initialAssets = [] 
   const getCategoryColor = (category: string) => {
     switch (category.toLowerCase()) {
       case 'fire safety':
-        return { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700' }
+        return { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', icon: 'text-red-600' }
       case 'electrical':
-        return { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700' }
+        return { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', icon: 'text-blue-600' }
       case 'plumbing':
-        return { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700' }
+        return { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700', icon: 'text-green-600' }
       case 'structural':
-        return { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700' }
+        return { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', icon: 'text-purple-600' }
       default:
-        return { bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-700' }
+        return { bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-700', icon: 'text-gray-600' }
     }
   }
 
@@ -159,188 +161,274 @@ export default function ComplianceClient({ complianceAssets: initialAssets = [] 
     })
   }, [assets, searchTerm])
 
+  const getComplianceStats = () => {
+    const total = assets.length
+    const active = assets.filter(asset => asset.applies).length
+    const compliant = assets.filter(asset => {
+      const status = getComplianceStatus(asset)
+      return status === 'compliant'
+    }).length
+    const overdue = assets.filter(asset => {
+      const status = getComplianceStatus(asset)
+      return status === 'overdue'
+    }).length
+
+    return { total, active, compliant, overdue }
+  }
+
+  const stats = getComplianceStats()
+
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Compliance Tracking</h2>
-          <p className="text-gray-600">Manage and track compliance requirements</p>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search compliance items..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-          
-          <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
-            <button
-              onClick={() => setViewMode('tracking')}
-              className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                viewMode === 'tracking' 
-                  ? 'bg-white text-gray-900 shadow-sm' 
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Tracking
-            </button>
-            <button
-              onClick={() => setViewMode('setup')}
-              className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                viewMode === 'setup' 
-                  ? 'bg-white text-gray-900 shadow-sm' 
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Setup
-            </button>
-          </div>
-        </div>
-      </div>
+    <LayoutWithSidebar>
+      <div className="space-y-8">
+        <PageHero
+          title="Compliance Management"
+          subtitle="Track and manage all building compliance requirements"
+          icon={<Shield className="h-8 w-8 text-white" />}
+        />
 
-      {viewMode === 'tracking' ? (
-        <>
-          <div className="grid gap-4">
-            {filteredAssets.filter(asset => asset.applies).map((asset) => {
-              const categoryColors = getCategoryColor(asset.category)
-              const status = getComplianceStatus(asset)
-              
-              return (
-                <div key={asset.id} className={`flex items-start justify-between py-4 px-4 rounded-lg border ${categoryColors.border} ${categoryColors.bg}`}>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      {getPriorityIndicator(asset)}
-                      <p className="font-medium text-gray-900">{asset.name}</p>
-                      {getRequirementBadge(asset.required_if)}
-                      {getStatusBadge(status)}
-                    </div>
-                    <p className="text-sm text-gray-600 mb-2">{asset.description}</p>
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
-                      <span className={`font-medium ${getFrequencyColor(asset.default_frequency)}`}>
-                        Frequency: {asset.default_frequency}
-                      </span>
-                      <span className={`font-medium ${categoryColors.text}`}>
-                        Category: {asset.category}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col items-end gap-2">
-                    <div className="text-right">
-                      {asset.last_checked && (
-                        <div className="text-xs text-gray-500">
-                          Last checked: {new Date(asset.last_checked).toLocaleDateString()}
-                        </div>
-                      )}
-                      {asset.next_due && (
-                        <div className="text-xs text-gray-500">
-                          Next due: {new Date(asset.next_due).toLocaleDateString()}
-                        </div>
-                      )}
-                    </div>
-                    
-                    <button
-                      onClick={() => {
-                        setViewMode('setup')
-                      }}
-                      className={`w-full px-3 py-2 text-sm rounded-md transition-colors ${
-                        asset.applies 
-                          ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                          : 'bg-purple-600 text-white hover:bg-purple-700'
-                      }`}
-                    >
-                      {asset.applies ? 'Update Tracking' : 'Start Tracking'}
-                    </button>
-                  </div>
+        <div className="p-6 space-y-8">
+          {/* Stats Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white shadow-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-blue-100 text-sm font-medium">Total Requirements</p>
+                  <p className="text-3xl font-bold">{assets.length}</p>
                 </div>
-              )
-            })}
-          </div>
-
-          {searchTerm && filteredAssets.length === 0 && (
-            <div className="text-center py-12">
-              <Shield className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No matching compliance items</h3>
-              <p className="text-gray-500">
-                Try adjusting your search terms or browse all compliance items.
-              </p>
-              <button
-                onClick={() => setSearchTerm('')}
-                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Clear Search
-              </button>
+                <Shield className="h-8 w-8 text-blue-200" />
+              </div>
             </div>
-          )}
-        </>
-      ) : (
-        <div className="space-y-6">
-          <h2 className="text-xl font-semibold">Building Compliance Setup</h2>
-
-          {assets.map((asset) => {
-            const categoryColors = getCategoryColor(asset.category)
-            const status = getComplianceStatus(asset)
             
-            return (
-              <div key={asset.id} className={`flex items-start justify-between py-4 px-4 rounded-lg border ${categoryColors.border} ${categoryColors.bg}`}>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <p className="font-medium text-gray-900">{asset.name}</p>
-                    {getRequirementBadge(asset.required_if)}
-                    {getStatusBadge(status)}
-                  </div>
-                  <p className="text-sm text-gray-600 mb-2">{asset.description}</p>
-                  <div className="flex items-center gap-4 text-xs text-gray-500">
-                    <span className={`font-medium ${getFrequencyColor(asset.default_frequency)}`}>
-                      Frequency: {asset.default_frequency}
-                    </span>
-                    <span className={`font-medium ${categoryColors.text}`}>
-                      Category: {asset.category}
-                    </span>
-                  </div>
+            <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl p-6 text-white shadow-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-green-100 text-sm font-medium">Active Tracking</p>
+                  <p className="text-3xl font-bold">{assets.filter(asset => asset.applies).length}</p>
                 </div>
+                <TrendingUp className="h-8 w-8 text-green-200" />
+              </div>
+            </div>
+            
+            <div className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl p-6 text-white shadow-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-emerald-100 text-sm font-medium">Compliant</p>
+                  <p className="text-3xl font-bold">{assets.filter(asset => getComplianceStatus(asset) === 'compliant').length}</p>
+                </div>
+                <CheckCircle className="h-8 w-8 text-emerald-200" />
+              </div>
+            </div>
+            
+            <div className="bg-gradient-to-r from-red-600 to-pink-600 rounded-xl p-6 text-white shadow-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-red-100 text-sm font-medium">Overdue</p>
+                  <p className="text-3xl font-bold">{assets.filter(asset => getComplianceStatus(asset) === 'overdue').length}</p>
+                </div>
+                <AlertTriangle className="h-8 w-8 text-red-200" />
+              </div>
+            </div>
+          </div>
 
-                <div className="flex flex-col items-end gap-2">
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={asset.applies}
-                      onChange={() => toggleAsset(asset.id)}
-                      className="accent-teal-600"
-                    />
-                    Applies
-                  </label>
-
-                  {asset.applies && (
-                    <div className="flex flex-col gap-2">
-                      <input
-                        type="date"
-                        value={asset.last_checked || ''}
-                        onChange={(e) => updateLastChecked(asset.id, e.target.value)}
-                        className="text-xs border px-2 py-1 rounded bg-white"
-                        placeholder="Last checked"
-                      />
-                      <input
-                        type="date"
-                        value={asset.next_due || ''}
-                        onChange={(e) => updateNextDue(asset.id, e.target.value)}
-                        className="text-xs border px-2 py-1 rounded bg-white"
-                        placeholder="Next due"
-                      />
-                    </div>
-                  )}
+          {/* Controls */}
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Compliance Tracking</h2>
+                <p className="text-gray-600">Manage and track compliance requirements</p>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search compliance items..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                
+                <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setViewMode('tracking')}
+                    className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                      viewMode === 'tracking' 
+                        ? 'bg-white text-gray-900 shadow-sm' 
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Tracking
+                  </button>
+                  <button
+                    onClick={() => setViewMode('setup')}
+                    className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                      viewMode === 'setup' 
+                        ? 'bg-white text-gray-900 shadow-sm' 
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Setup
+                  </button>
                 </div>
               </div>
-            )
-          })}
+            </div>
+          </div>
+
+          {viewMode === 'tracking' ? (
+            <>
+              <div className="grid gap-6">
+                {filteredAssets.filter(asset => asset.applies).map((asset) => {
+                  const categoryColors = getCategoryColor(asset.category)
+                  const status = getComplianceStatus(asset)
+                  
+                  return (
+                    <div key={asset.id} className={`bg-white rounded-xl shadow-lg border ${categoryColors.border} hover:shadow-xl transition-all duration-300`}>
+                      <div className="p-6">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-3">
+                              {getPriorityIndicator(asset)}
+                              <h3 className="text-lg font-semibold text-gray-900">{asset.name}</h3>
+                              {getRequirementBadge(asset.required_if)}
+                              {getStatusBadge(status)}
+                            </div>
+                            <p className="text-gray-600 mb-4">{asset.description}</p>
+                            <div className="flex items-center gap-6 text-sm">
+                              <span className={`font-medium ${getFrequencyColor(asset.default_frequency)} flex items-center gap-1`}>
+                                <Calendar className="h-4 w-4" />
+                                {asset.default_frequency}
+                              </span>
+                              <span className={`font-medium ${categoryColors.text} flex items-center gap-1`}>
+                                <Building className="h-4 w-4" />
+                                {asset.category}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col items-end gap-3">
+                            <div className="text-right text-sm text-gray-500">
+                              {asset.last_checked && (
+                                <div className="mb-1">
+                                  Last checked: {new Date(asset.last_checked).toLocaleDateString()}
+                                </div>
+                              )}
+                              {asset.next_due && (
+                                <div>
+                                  Next due: {new Date(asset.next_due).toLocaleDateString()}
+                                </div>
+                              )}
+                            </div>
+                            
+                            <button
+                              onClick={() => {
+                                setViewMode('setup')
+                              }}
+                              className={`px-4 py-2 text-sm rounded-lg transition-colors font-medium ${
+                                asset.applies 
+                                  ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg' 
+                                  : 'bg-purple-600 text-white hover:bg-purple-700 shadow-lg'
+                              }`}
+                            >
+                              {asset.applies ? 'Update Tracking' : 'Start Tracking'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {searchTerm && filteredAssets.length === 0 && (
+                <div className="text-center py-12 bg-white rounded-xl shadow-lg">
+                  <Shield className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">No matching compliance items</h3>
+                  <p className="text-gray-500 mb-6">
+                    Try adjusting your search terms or browse all compliance items.
+                  </p>
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-lg"
+                  >
+                    Clear Search
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="space-y-6">
+              <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">Building Compliance Setup</h2>
+                <p className="text-gray-600 mb-6">Configure which compliance requirements apply to your building and set tracking dates.</p>
+
+                <div className="grid gap-4">
+                  {assets.map((asset) => {
+                    const categoryColors = getCategoryColor(asset.category)
+                    const status = getComplianceStatus(asset)
+                    
+                    return (
+                      <div key={asset.id} className={`rounded-lg border ${categoryColors.border} ${categoryColors.bg} p-4`}>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h3 className="font-semibold text-gray-900">{asset.name}</h3>
+                              {getRequirementBadge(asset.required_if)}
+                              {getStatusBadge(status)}
+                            </div>
+                            <p className="text-gray-600 mb-3">{asset.description}</p>
+                            <div className="flex items-center gap-4 text-sm text-gray-500">
+                              <span className={`font-medium ${getFrequencyColor(asset.default_frequency)}`}>
+                                Frequency: {asset.default_frequency}
+                              </span>
+                              <span className={`font-medium ${categoryColors.text}`}>
+                                Category: {asset.category}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col items-end gap-3">
+                            <label className="flex items-center gap-2 text-sm font-medium">
+                              <input
+                                type="checkbox"
+                                checked={asset.applies}
+                                onChange={() => toggleAsset(asset.id)}
+                                className="accent-blue-600"
+                              />
+                              Applies
+                            </label>
+
+                            {asset.applies && (
+                              <div className="flex flex-col gap-2">
+                                <input
+                                  type="date"
+                                  value={asset.last_checked || ''}
+                                  onChange={(e) => updateLastChecked(asset.id, e.target.value)}
+                                  className="text-xs border px-3 py-2 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  placeholder="Last checked"
+                                />
+                                <input
+                                  type="date"
+                                  value={asset.next_due || ''}
+                                  onChange={(e) => updateNextDue(asset.id, e.target.value)}
+                                  className="text-xs border px-3 py-2 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  placeholder="Next due"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      )}
-    </div>
+      </div>
+    </LayoutWithSidebar>
   )
 }
