@@ -216,7 +216,7 @@ export async function POST(req: NextRequest) {
           outlook_message_id: internetMessageId,
           subject: subject || '(No Subject)',
           body_preview: bodyPreview || '',
-          body_full: body?.content || '',
+          body: body?.content || '', // Use 'body' instead of 'body_full'
           from_email: fromEmail,
           from_name: fromName || '',
           received_at: receivedDateTime,
