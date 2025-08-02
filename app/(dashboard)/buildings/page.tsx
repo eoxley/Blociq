@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import { BlocIQCard, BlocIQCardContent } from '@/components/ui/blociq-card'
+import PageHero from '@/components/PageHero'
 
 // Client component for the buildings list with search functionality
 function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
@@ -41,6 +42,13 @@ function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
 
   return (
     <div>
+      {/* Hero Banner */}
+      <PageHero
+        title="Property Buildings"
+        subtitle="Manage and monitor all your property buildings in one place"
+        icon={<Building2 className="h-8 w-8 text-white" />}
+      />
+
       {/* Search and Create Section - Enhanced */}
       <div className="mb-16">
         <div className="flex flex-col lg:flex-row gap-8 items-start lg:items-center justify-between">

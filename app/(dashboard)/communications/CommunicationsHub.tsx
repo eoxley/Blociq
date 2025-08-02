@@ -20,6 +20,7 @@ import {
 import { BlocIQCard, BlocIQCardContent } from '@/components/ui/blociq-card'
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import { BlocIQBadge } from '@/components/ui/blociq-badge'
+import PageHero from '@/components/PageHero'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabaseClient'
 import LeaseholderSearchModal from './components/LeaseholderSearchModal'
@@ -282,22 +283,30 @@ export default function CommunicationsHub() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900">Communications Hub</h1>
-            <p className="text-xl text-gray-600 mt-2">Manage all leaseholder contact from one place</p>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <BlocIQBadge variant="secondary" size="sm">
-              {recentCommunications.length} recent communications
-            </BlocIQBadge>
+    <div className="space-y-8">
+      {/* Hero Banner */}
+      <PageHero
+        title="Communications Hub"
+        subtitle="Manage all leaseholder contact from one place"
+        icon={<Phone className="h-8 w-8 text-white" />}
+      />
+
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900">Communications Hub</h1>
+              <p className="text-xl text-gray-600 mt-2">Manage all leaseholder contact from one place</p>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <BlocIQBadge variant="secondary" size="sm">
+                {recentCommunications.length} recent communications
+              </BlocIQBadge>
+            </div>
           </div>
         </div>
-      </div>
 
       {/* Action Tiles Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
