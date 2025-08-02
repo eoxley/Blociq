@@ -122,7 +122,7 @@ export default function BuildingOverview({ building, buildingSetup }: BuildingOv
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
                 <Building2 className="h-6 w-6 text-white" />
               </div>
               <div>

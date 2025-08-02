@@ -11,7 +11,9 @@ import {
   Edit3,
   Save,
   X,
-  Loader2
+  Loader2,
+  Building,
+  Wrench
 } from 'lucide-react'
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import { toast } from 'sonner'
@@ -92,7 +94,7 @@ export default function EditableBuildingInfo({ building, onUpdate }: EditableBui
     return (
       <div className="space-y-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
             {icon}
           </div>
           <span className="text-lg font-semibold text-gray-900">{title}</span>
@@ -130,7 +132,7 @@ export default function EditableBuildingInfo({ building, onUpdate }: EditableBui
       {/* Header with Edit Button */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
             <BookOpen className="h-5 w-5 text-white" />
           </div>
           <div>
@@ -221,7 +223,7 @@ export default function EditableBuildingInfo({ building, onUpdate }: EditableBui
         {/* Read-only Created Date */}
         <div className="space-y-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
               <Calendar className="h-5 w-5 text-white" />
             </div>
             <span className="text-lg font-semibold text-gray-900">Added</span>

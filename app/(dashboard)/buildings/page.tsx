@@ -11,7 +11,9 @@ import {
   Eye,
   ArrowRight,
   Search,
-  Shield
+  Shield,
+  Loader2,
+  AlertCircle
 } from 'lucide-react'
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import { BlocIQCard, BlocIQCardContent } from '@/components/ui/blociq-card'
@@ -183,7 +185,7 @@ function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
       ) : validBuildings.length === 0 ? (
         /* Empty State - No Buildings - Enhanced */
         <div className="text-center py-20">
-          <div className="w-24 h-24 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-lg">
+          <div className="w-24 h-24 bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-lg">
             <Building2 className="h-12 w-12 text-white" />
           </div>
           <h2 className="text-4xl font-bold text-gray-900 mb-6">
@@ -277,8 +279,8 @@ export default function BuildingsPage() {
     return (
       <div className="space-y-8">
         <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg animate-pulse">
-            <Building2 className="h-8 w-8 text-white" />
+          <div className="w-16 h-16 bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg animate-pulse">
+            <Loader2 className="h-8 w-8 text-white animate-spin" />
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             Loading Buildings...
@@ -295,8 +297,8 @@ export default function BuildingsPage() {
     return (
       <div className="space-y-6">
         <div className="text-center">
-          <div className="w-20 h-20 bg-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-            <Building2 className="h-10 w-10 text-white" />
+          <div className="w-20 h-20 bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-lg">
+            <AlertCircle className="h-10 w-10 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-4">
             Error Loading Buildings

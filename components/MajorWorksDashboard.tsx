@@ -276,7 +276,7 @@ export default function MajorWorksDashboard({
                 </div>
                 <div className="text-sm text-teal-600 font-medium">Total Projects</div>
               </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <div className="w-12 h-12 bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
                 <Construction className="h-6 w-6 text-white" />
               </div>
             </div>
