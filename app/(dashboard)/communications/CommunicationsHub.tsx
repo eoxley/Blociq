@@ -66,7 +66,6 @@ interface CommunicationLog {
 }
 
 export default function CommunicationsHub() {
-  // Modal states
   const [showLeaseholderSearch, setShowLeaseholderSearch] = useState(false)
   const [showBuildingSearch, setShowBuildingSearch] = useState(false)
   const [showEmailDraft, setShowEmailDraft] = useState(false)
@@ -74,14 +73,12 @@ export default function CommunicationsHub() {
   const [showCommunicationsLog, setShowCommunicationsLog] = useState(false)
   const [showCallLeaseholder, setShowCallLeaseholder] = useState(false)
 
-  // Selected data
   const [selectedAction, setSelectedAction] = useState<string | null>(null)
   const [selectedLeaseholder, setSelectedLeaseholder] = useState<Leaseholder | null>(null)
   const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null)
   const [recentCommunications, setRecentCommunications] = useState<CommunicationLog[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
-  // Load recent communications
   useEffect(() => {
     loadRecentCommunications()
   }, [])
@@ -96,78 +93,71 @@ export default function CommunicationsHub() {
 
       if (error) {
         console.error('Error loading communications log:', error)
-        // Don't throw error, just set empty array
         setRecentCommunications([])
         return
       }
-      
+
       setRecentCommunications(data || [])
     } catch (error) {
-      console.error('Error loading recent communications:', error)
+      console.error('Error loading communications log:', error)
       setRecentCommunications([])
     }
   }
 
   const actionTiles = [
     {
-      id: 'call',
-      title: 'Call a Leaseholder',
-      description: 'Search and call individual leaseholders',
-      icon: Phone,
-      color: 'from-green-500 to-green-600',
-      bgColor: 'bg-green-50',
-      borderColor: 'border-green-200',
-      textColor: 'text-green-700'
-    },
-    {
-      id: 'email',
-      title: 'Send an Email',
-      description: 'Send email to individual leaseholders',
+      id: 'email-leaseholder',
+      title: 'Email Leaseholder',
+      description: 'Send an email to a specific leaseholder',
       icon: Mail,
       color: 'from-blue-500 to-blue-600',
       bgColor: 'bg-blue-50',
-      borderColor: 'border-blue-200',
-      textColor: 'text-blue-700'
+      borderColor: 'border-blue-200'
     },
     {
-      id: 'letter',
-      title: 'Send a Letter',
-      description: 'Generate and send letters to leaseholders',
+      id: 'call-leaseholder',
+      title: 'Call Leaseholder',
+      description: 'Make a phone call to a leaseholder',
+      icon: Phone,
+      color: 'from-green-500 to-green-600',
+      bgColor: 'bg-green-50',
+      borderColor: 'border-green-200'
+    },
+    {
+      id: 'letter-leaseholder',
+      title: 'Send Letter',
+      description: 'Draft and send a letter to a leaseholder',
       icon: FileText,
       color: 'from-purple-500 to-purple-600',
       bgColor: 'bg-purple-50',
-      borderColor: 'border-purple-200',
-      textColor: 'text-purple-700'
+      borderColor: 'border-purple-200'
     },
     {
       id: 'email-all',
-      title: 'Email All Leaseholders',
-      description: 'Send bulk emails to building leaseholders',
+      title: 'Email All',
+      description: 'Send an email to all leaseholders in a building',
       icon: Building,
       color: 'from-orange-500 to-orange-600',
       bgColor: 'bg-orange-50',
-      borderColor: 'border-orange-200',
-      textColor: 'text-orange-700'
+      borderColor: 'border-orange-200'
     },
     {
       id: 'letter-all',
-      title: 'Send Letter to All',
-      description: 'Generate bulk letters for building leaseholders',
+      title: 'Letter All',
+      description: 'Send a letter to all leaseholders in a building',
       icon: Users,
-      color: 'from-red-500 to-red-600',
-      bgColor: 'bg-red-50',
-      borderColor: 'border-red-200',
-      textColor: 'text-red-700'
+      color: 'from-indigo-500 to-indigo-600',
+      bgColor: 'bg-indigo-50',
+      borderColor: 'border-indigo-200'
     },
     {
-      id: 'log',
-      title: 'View Communications Log',
-      description: 'View all communication history',
+      id: 'communications-log',
+      title: 'View Log',
+      description: 'View all past communications',
       icon: History,
       color: 'from-gray-500 to-gray-600',
       bgColor: 'bg-gray-50',
-      borderColor: 'border-gray-200',
-      textColor: 'text-gray-700'
+      borderColor: 'border-gray-200'
     }
   ]
 
@@ -175,37 +165,39 @@ export default function CommunicationsHub() {
     setSelectedAction(tileId)
     
     switch (tileId) {
-      case 'call':
-        setShowCallLeaseholder(true)
-        break
-      case 'email':
-      case 'letter':
+      case 'email-leaseholder':
+      case 'letter-leaseholder':
         setShowLeaseholderSearch(true)
         break
       case 'email-all':
       case 'letter-all':
         setShowBuildingSearch(true)
         break
-      case 'log':
+      case 'call-leaseholder':
+        setShowCallLeaseholder(true)
+        break
+      case 'communications-log':
         setShowCommunicationsLog(true)
         break
       default:
-        toast.info(`${tileId} functionality coming soon!`)
+        toast.error('Feature coming soon!')
     }
   }
 
   const handleLeaseholderSelect = (leaseholder: Leaseholder) => {
     setSelectedLeaseholder(leaseholder)
+    setShowLeaseholderSearch(false)
     
-    if (selectedAction === 'email') {
+    if (selectedAction === 'email-leaseholder') {
       setShowEmailDraft(true)
-    } else if (selectedAction === 'letter') {
+    } else if (selectedAction === 'letter-leaseholder') {
       setShowLetterDraft(true)
     }
   }
 
   const handleBuildingSelect = (building: Building) => {
     setSelectedBuilding(building)
+    setShowBuildingSearch(false)
     
     if (selectedAction === 'email-all') {
       setShowEmailDraft(true)
@@ -215,15 +207,13 @@ export default function CommunicationsHub() {
   }
 
   const handleCallLeaseholder = async (leaseholder: Leaseholder) => {
-    if (!leaseholder.phone) {
-      toast.error('No phone number available for this leaseholder')
-      return
-    }
-
+    setIsLoading(true)
+    
     try {
-      setIsLoading(true)
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000))
       
-      // Log the call
+      // Log the communication
       const { error } = await supabase
         .from('communications_log')
         .insert({
@@ -238,25 +228,17 @@ export default function CommunicationsHub() {
         })
 
       if (error) {
-        console.error('Error logging call:', error)
-        // Don't fail the call if logging fails
-        toast.warning('Call logged with warning - logging failed')
-      } else {
-        toast.success('Call logged successfully')
+        console.error('Error logging communication:', error)
       }
 
-      // Open phone dialer
-      window.open(`tel:${leaseholder.phone}`, '_blank')
-      toast.success(`Calling ${leaseholder.name}`)
-      
-      // Refresh recent communications
-      await loadRecentCommunications()
-      
+      toast.success(`Call logged for ${leaseholder.name}`)
+      loadRecentCommunications()
     } catch (error) {
-      console.error('Error in call process:', error)
-      toast.error('Failed to process call')
+      console.error('Error making call:', error)
+      toast.error('Failed to log call')
     } finally {
       setIsLoading(false)
+      setShowCallLeaseholder(false)
     }
   }
 
@@ -276,7 +258,8 @@ export default function CommunicationsHub() {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-GB', {
       day: '2-digit',
-      month: 'short',
+      month: '2-digit',
+      year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     })
@@ -284,7 +267,6 @@ export default function CommunicationsHub() {
 
   return (
     <div className="space-y-8">
-      {/* Hero Banner */}
       <PageHero
         title="Communications Hub"
         subtitle="Manage all leaseholder contact from one place"
@@ -292,7 +274,6 @@ export default function CommunicationsHub() {
       />
 
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -308,127 +289,125 @@ export default function CommunicationsHub() {
           </div>
         </div>
 
-      {/* Action Tiles Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-        {actionTiles.map((tile) => (
-          <BlocIQCard 
-            key={tile.id}
-            variant="elevated"
-            className={`cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105 border-2 ${tile.borderColor} ${tile.bgColor} hover:shadow-lg`}
-            onClick={() => handleTileClick(tile.id)}
-          >
-            <BlocIQCardContent className="p-8">
-              <div className="flex flex-col items-center text-center space-y-4">
-                <div className={`p-4 rounded-2xl bg-gradient-to-r ${tile.color} text-white shadow-lg`}>
-                  <tile.icon className="h-8 w-8" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-xl font-bold text-gray-900">{tile.title}</h3>
-                  <p className="text-sm text-gray-600">{tile.description}</p>
-                </div>
-              </div>
-            </BlocIQCardContent>
-          </BlocIQCard>
-        ))}
-      </div>
-
-      {/* Recent Communications */}
-      {recentCommunications.length > 0 && (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-gray-900">Recent Communications</h2>
-            <BlocIQButton 
-              variant="outline" 
-              onClick={() => setShowCommunicationsLog(true)}
-              className="flex items-center gap-2"
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+          {actionTiles.map((tile) => (
+            <BlocIQCard 
+              key={tile.id}
+              variant="elevated"
+              className={`cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105 border-2 ${tile.borderColor} ${tile.bgColor} hover:shadow-lg`}
+              onClick={() => handleTileClick(tile.id)}
             >
-              <History className="h-4 w-4" />
-              View All
-            </BlocIQButton>
-          </div>
-          
-          <div className="grid gap-4">
-            {recentCommunications.slice(0, 5).map((comm) => (
-              <BlocIQCard key={comm.id} variant="elevated" className="hover:shadow-md transition-shadow">
-                <BlocIQCardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className={`p-2 rounded-lg ${
-                        comm.type === 'call' ? 'bg-green-100 text-green-700' :
-                        comm.type === 'email' ? 'bg-blue-100 text-blue-700' :
-                        'bg-purple-100 text-purple-700'
-                      }`}>
-                        {comm.type === 'call' ? <Phone className="h-4 w-4" /> :
-                         comm.type === 'email' ? <Mail className="h-4 w-4" /> :
-                         <FileText className="h-4 w-4" />}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-gray-900">{comm.leaseholder_name}</span>
-                          <BlocIQBadge variant="outline" size="sm">
-                            {comm.unit_number}
-                          </BlocIQBadge>
-                        </div>
-                        <p className="text-sm text-gray-600">{comm.subject}</p>
-                        <p className="text-xs text-gray-500">{comm.building_name}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(comm.status)}
-                      <span className="text-xs text-gray-500">{formatDate(comm.created_at)}</span>
-                    </div>
+              <BlocIQCardContent className="p-8">
+                <div className="flex flex-col items-center text-center space-y-4">
+                  <div className={`p-4 rounded-2xl bg-gradient-to-r ${tile.color} text-white shadow-lg`}>
+                    <tile.icon className="h-8 w-8" />
                   </div>
-                </BlocIQCardContent>
-              </BlocIQCard>
-            ))}
-          </div>
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-bold text-gray-900">{tile.title}</h3>
+                    <p className="text-sm text-gray-600">{tile.description}</p>
+                  </div>
+                </div>
+              </BlocIQCardContent>
+            </BlocIQCard>
+          ))}
         </div>
-      )}
 
-      {/* Modals */}
-      <CallLeaseholderModal
-        open={showCallLeaseholder}
-        onOpenChange={setShowCallLeaseholder}
-        onLeaseholderSelect={handleCallLeaseholder}
-        isLoading={isLoading}
-      />
+        {recentCommunications.length > 0 && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900">Recent Communications</h2>
+              <BlocIQButton 
+                variant="outline" 
+                onClick={() => setShowCommunicationsLog(true)}
+                className="flex items-center gap-2"
+              >
+                <History className="h-4 w-4" />
+                View All
+              </BlocIQButton>
+            </div>
+            
+            <div className="grid gap-4">
+              {recentCommunications.slice(0, 5).map((comm) => (
+                <BlocIQCard key={comm.id} variant="elevated" className="hover:shadow-md transition-shadow">
+                  <BlocIQCardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className={`p-2 rounded-lg ${
+                          comm.type === 'call' ? 'bg-green-100 text-green-700' :
+                          comm.type === 'email' ? 'bg-blue-100 text-blue-700' :
+                          'bg-purple-100 text-purple-700'
+                        }`}>
+                          {comm.type === 'call' ? <Phone className="h-4 w-4" /> :
+                           comm.type === 'email' ? <Mail className="h-4 w-4" /> :
+                           <FileText className="h-4 w-4" />}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-gray-900">{comm.leaseholder_name}</span>
+                            <BlocIQBadge variant="outline" size="sm">
+                              {comm.unit_number}
+                            </BlocIQBadge>
+                          </div>
+                          <p className="text-sm text-gray-600">{comm.subject}</p>
+                          <p className="text-xs text-gray-500">{comm.building_name}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {getStatusIcon(comm.status)}
+                        <span className="text-xs text-gray-500">{formatDate(comm.created_at)}</span>
+                      </div>
+                    </div>
+                  </BlocIQCardContent>
+                </BlocIQCard>
+              ))}
+            </div>
+          </div>
+        )}
 
-      <LeaseholderSearchModal
-        open={showLeaseholderSearch}
-        onOpenChange={setShowLeaseholderSearch}
-        action={selectedAction as 'email' | 'letter'}
-        onLeaseholderSelect={handleLeaseholderSelect}
-      />
+        <CallLeaseholderModal
+          open={showCallLeaseholder}
+          onOpenChange={setShowCallLeaseholder}
+          onLeaseholderSelect={handleCallLeaseholder}
+          isLoading={isLoading}
+        />
 
-      <BuildingSearchModal
-        open={showBuildingSearch}
-        onOpenChange={setShowBuildingSearch}
-        action={selectedAction as 'email-all' | 'letter-all'}
-        onBuildingSelect={handleBuildingSelect}
-      />
+        <LeaseholderSearchModal
+          open={showLeaseholderSearch}
+          onOpenChange={setShowLeaseholderSearch}
+          action={selectedAction as 'email' | 'letter'}
+          onLeaseholderSelect={handleLeaseholderSelect}
+        />
 
-      <EmailDraftModal
-        open={showEmailDraft}
-        onOpenChange={setShowEmailDraft}
-        leaseholder={selectedLeaseholder || undefined}
-        building={selectedBuilding || undefined}
-        isBulk={selectedAction === 'email-all'}
-        onSuccess={loadRecentCommunications}
-      />
+        <BuildingSearchModal
+          open={showBuildingSearch}
+          onOpenChange={setShowBuildingSearch}
+          action={selectedAction as 'email-all' | 'letter-all'}
+          onBuildingSelect={handleBuildingSelect}
+        />
 
-      <LetterDraftModal
-        open={showLetterDraft}
-        onOpenChange={setShowLetterDraft}
-        leaseholder={selectedLeaseholder || undefined}
-        building={selectedBuilding || undefined}
-        isBulk={selectedAction === 'letter-all'}
-        onSuccess={loadRecentCommunications}
-      />
+        <EmailDraftModal
+          open={showEmailDraft}
+          onOpenChange={setShowEmailDraft}
+          leaseholder={selectedLeaseholder || undefined}
+          building={selectedBuilding || undefined}
+          isBulk={selectedAction === 'email-all'}
+          onSuccess={loadRecentCommunications}
+        />
 
-      <CommunicationsLogModal
-        open={showCommunicationsLog}
-        onOpenChange={setShowCommunicationsLog}
-      />
+        <LetterDraftModal
+          open={showLetterDraft}
+          onOpenChange={setShowLetterDraft}
+          leaseholder={selectedLeaseholder || undefined}
+          building={selectedBuilding || undefined}
+          isBulk={selectedAction === 'letter-all'}
+          onSuccess={loadRecentCommunications}
+        />
+
+        <CommunicationsLogModal
+          open={showCommunicationsLog}
+          onOpenChange={setShowCommunicationsLog}
+        />
+      </div>
     </div>
   )
-} 
+}
