@@ -110,7 +110,7 @@ export default function CommunicationsHub() {
       title: 'Email Leaseholder',
       description: 'Send an email to a specific leaseholder',
       icon: Mail,
-      color: 'from-blue-500 to-blue-600',
+      color: 'from-blue-600 to-purple-600',
       bgColor: 'bg-blue-50',
       borderColor: 'border-blue-200'
     },
@@ -119,16 +119,16 @@ export default function CommunicationsHub() {
       title: 'Call Leaseholder',
       description: 'Make a phone call to a leaseholder',
       icon: Phone,
-      color: 'from-green-500 to-green-600',
-      bgColor: 'bg-green-50',
-      borderColor: 'border-green-200'
+      color: 'from-blue-600 to-indigo-600',
+      bgColor: 'bg-blue-50',
+      borderColor: 'border-blue-200'
     },
     {
       id: 'letter-leaseholder',
       title: 'Send Letter',
       description: 'Draft and send a letter to a leaseholder',
       icon: FileText,
-      color: 'from-purple-500 to-purple-600',
+      color: 'from-purple-600 to-indigo-600',
       bgColor: 'bg-purple-50',
       borderColor: 'border-purple-200'
     },
@@ -137,16 +137,16 @@ export default function CommunicationsHub() {
       title: 'Email All',
       description: 'Send an email to all leaseholders in a building',
       icon: Building,
-      color: 'from-orange-500 to-orange-600',
-      bgColor: 'bg-orange-50',
-      borderColor: 'border-orange-200'
+      color: 'from-blue-600 to-purple-600',
+      bgColor: 'bg-blue-50',
+      borderColor: 'border-blue-200'
     },
     {
       id: 'letter-all',
       title: 'Letter All',
       description: 'Send a letter to all leaseholders in a building',
       icon: Users,
-      color: 'from-indigo-500 to-indigo-600',
+      color: 'from-indigo-600 to-purple-600',
       bgColor: 'bg-indigo-50',
       borderColor: 'border-indigo-200'
     },
@@ -155,7 +155,7 @@ export default function CommunicationsHub() {
       title: 'View Log',
       description: 'View all past communications',
       icon: History,
-      color: 'from-gray-500 to-gray-600',
+      color: 'from-gray-600 to-gray-700',
       bgColor: 'bg-gray-50',
       borderColor: 'border-gray-200'
     }
@@ -273,7 +273,7 @@ export default function CommunicationsHub() {
         icon={<Phone className="h-8 w-8 text-white" />}
       />
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="p-6 max-w-7xl mx-auto">
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
             <div>

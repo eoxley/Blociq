@@ -19,11 +19,11 @@ export function BlocIQButton({
   const baseClasses = "inline-flex items-center justify-center rounded-xl font-medium transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
   
                 const variants = {
-                primary: "bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white hover:from-[#007B8A] hover:to-[#6B3FD8] shadow-lg hover:shadow-xl",
-                secondary: "bg-[#F0FDFA] text-[#0F5D5D] border border-[#008C8F] hover:bg-[#008C8F] hover:text-white",
-                outline: "bg-white text-[#333333] border border-gray-200 hover:bg-[#F0FDFA] hover:border-[#008C8F]",
-                ghost: "bg-transparent text-[#333333] hover:bg-[#F0FDFA] hover:text-[#0F5D5D]",
-                destructive: "bg-[#EF4444] text-white hover:bg-red-600 shadow-lg hover:shadow-xl"
+                primary: "bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl",
+                secondary: "bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100",
+                outline: "bg-white text-gray-700 border border-gray-200 hover:bg-blue-50 hover:border-blue-300",
+                ghost: "bg-transparent text-gray-700 hover:bg-blue-50 hover:text-blue-700",
+                destructive: "bg-red-600 text-white hover:bg-red-700 shadow-lg hover:shadow-xl"
               };
   
   const sizes = {
@@ -33,10 +33,10 @@ export function BlocIQButton({
   };
   
                 const focusRing = {
-                primary: "focus:ring-[#008C8F]",
-                secondary: "focus:ring-[#008C8F]",
-                outline: "focus:ring-[#008C8F]",
-                ghost: "focus:ring-[#008C8F]",
+                primary: "focus:ring-blue-500",
+                secondary: "focus:ring-blue-500",
+                outline: "focus:ring-blue-500",
+                ghost: "focus:ring-blue-500",
                 destructive: "focus:ring-red-500"
               };
 
