@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     const { data: testEmails, error: testError } = await supabase
       .from('incoming_emails')
       .delete()
-      .eq('recipient_email', userEmail)
+      .eq('user_id', userId)
       .eq('sync_status', 'test_inserted')
       .select()
     
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     const { data: fakeEmails, error: fakeError } = await supabase
       .from('incoming_emails')
       .delete()
-      .eq('recipient_email', userEmail)
+      .eq('user_id', userId)
       .eq('from_email', 'test@example.com')
       .select()
     
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     const { data: testSubjectEmails, error: subjectError } = await supabase
       .from('incoming_emails')
       .delete()
-      .eq('recipient_email', userEmail)
+      .eq('user_id', userId)
       .like('subject', 'Test Email%')
       .select()
     
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
     const { data: remainingEmails, error: countError } = await supabase
       .from('incoming_emails')
       .select('id')
-      .eq('recipient_email', userEmail)
+      .eq('user_id', userId)
     
     if (countError) {
       console.error('❌ Error counting remaining emails:', countError)
