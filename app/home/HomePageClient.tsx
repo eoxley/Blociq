@@ -100,356 +100,126 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     "Today's forecast: 80% chance of leaseholder emails before lunch.",
     "Another invoice, another mystery charge to decode. You've trained for this.",
     "Your building's compliance status: 'It's complicated' (but you're handling it).",
-    "You've mastered the art of explaining service charges without causing riots.",
-    "Your superpower: Making building regulations sound exciting.",
-    "You're not just managing properties — you're managing expectations.",
-    "Today's goal: Keep the building standing and the leaseholders happy.",
-    "You've got this. The building's got this. BlocIQ's got this.",
-    "Your building's maintenance schedule: 'When it breaks' (but you're working on it).",
-    "You're the reason the building doesn't have a 'Days Since Last Incident' counter.",
+    "You've mastered the art of explaining why the lift is 'temporarily' out of service.",
+    "Your superpower: Making Section 20 notices sound exciting.",
+    "You're the person who knows every resident's preferred complaint format.",
+    "Your building runs on coffee, compliance, and your last nerve.",
+    "You've learned to smile while reading passive-aggressive emails.",
+    "Your building's maintenance schedule: 'When it breaks' (but you're on it).",
+    "You're the reason the building hasn't descended into chaos (yet).",
 
-    // 💡 Informative & Professional
-    "Your portfolio compliance score is looking sharp today.",
-    "All systems operational. All leaseholders accounted for.",
-    "Your building's safety protocols are up to date and ready.",
-    "Today's agenda: Excellence in property management.",
-    "Your attention to detail is what keeps buildings running smoothly.",
-    "You're not just managing properties — you're building communities.",
-    "Your proactive approach to maintenance saves time and money.",
-    "Today's focus: Delivering exceptional property management services.",
-    "Your building's compliance status: Green across the board.",
-    "You're the backbone of successful property management.",
-
-    // 🌟 Encouraging & Positive
-    "Today's the day to make your buildings shine.",
-    "You're not just managing properties — you're creating value.",
-    "Your dedication to excellence shows in every detail.",
-    "Today's opportunities: Endless. Your potential: Unlimited.",
-    "You're the reason buildings feel like homes.",
-    "Your expertise makes the complex simple.",
-    "Today's mission: Property management excellence.",
-    "You're building more than properties — you're building trust.",
-    "Your attention to detail sets the standard.",
-    "Today's goal: Making property management look easy."
+    // 💪 Encouraging Messages
+    "You're not just managing properties — you're managing communities.",
+    "Every email you answer is one less crisis tomorrow.",
+    "Your attention to detail keeps residents safe and compliant.",
+    "You're the bridge between residents and regulations.",
+    "Your work makes buildings better places to live.",
+    "You're the unsung hero of property management.",
+    "Your patience with leaseholders is legendary.",
+    "You turn building problems into solutions daily.",
+    "Your compliance knowledge is your superpower.",
+    "You're making property management look easy (it's not)."
   ]
 
-  const [currentWelcomeMessage, setCurrentWelcomeMessage] = useState(welcomeMessages[0])
+  const [currentWelcomeMessage, setCurrentWelcomeMessage] = useState('')
+  const [upcomingEvents, setUpcomingEvents] = useState<PropertyEvent[]>([])
+  const [buildings, setBuildings] = useState<Building[]>([])
+  const [outlookConnected, setOutlookConnected] = useState(false)
+  const [syncingOutlook, setSyncingOutlook] = useState(false)
+  const [newEvent, setNewEvent] = useState({
+    title: '',
+    date: '',
+    category: 'General'
+  })
 
-  // Rotate welcome messages every 30 seconds
+  // Rotate welcome messages
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentWelcomeMessage(welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)])
-    }, 30000)
+      const randomIndex = Math.floor(Math.random() * welcomeMessages.length)
+      setCurrentWelcomeMessage(welcomeMessages[randomIndex])
+    }, 10000) // Change every 10 seconds
+
+    // Set initial message
+    setCurrentWelcomeMessage(welcomeMessages[0])
 
     return () => clearInterval(interval)
-  }, [welcomeMessages])
+  }, [])
 
-  // Real upcoming events from database
-  const [upcomingEvents, setUpcomingEvents] = useState<PropertyEvent[]>([]);
-  const [loadingEvents, setLoadingEvents] = useState(true);
-  const [buildings, setBuildings] = useState<Building[]>([]);
-  
-  // Outlook integration
-  const [outlookConnected, setOutlookConnected] = useState(false);
-  const [outlookEmail, setOutlookEmail] = useState<string | null>(null);
-  const [loadingOutlook, setLoadingOutlook] = useState(false);
-  const [syncingOutlook, setSyncingOutlook] = useState(false);
-
-  // Fetch buildings for event form
   useEffect(() => {
-    const fetchBuildings = async () => {
-      try {
-        const { data: buildingsData, error } = await supabase
-          .from('buildings')
-          .select('id, name')
-          .order('name');
+    fetchBuildings()
+    fetchEvents()
+    checkOutlook()
+    fetchEmails()
+  }, [])
 
-        if (error) {
-          console.error('Error fetching buildings:', error);
-        } else {
-          setBuildings(buildingsData || []);
-        }
-      } catch (error) {
-        console.error('Error fetching buildings:', error);
-      }
-    };
-
-    fetchBuildings();
-  }, []);
-
-    // Fetch real property events from database
-  useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const { data: events, error } = await supabase
-          .from('property_events')
-          .select('*')
-          .gte('start_time', new Date().toISOString())
-          .order('start_time', { ascending: true })
-          .limit(5);
-
-        if (error) {
-          console.error('Error fetching events:', error);
-          setUpcomingEvents([]);
-        } else {
-          // Transform database events to match PropertyEvent type and filter out past events
-          const transformedEvents: PropertyEvent[] = (events || [])
-            .filter(event => {
-              const eventDate = new Date(event.start_time);
-              const now = new Date();
-              return eventDate >= now; // Only include future events
-            })
-            .map(event => {
-              // Find building name from buildings array
-              const building = buildings.find(b => b.id === event.building_id);
-              return {
-                building: building ? building.name : 'General',
-                date: event.start_time,
-                title: event.title,
-                category: event.category || event.event_type || '📅 Event',
-                source: 'property',
-                event_type: 'manual'
-              };
-            });
-          setUpcomingEvents(transformedEvents);
-        }
-      } catch (error) {
-        console.error('Error fetching events:', error);
-        setUpcomingEvents([]);
-      } finally {
-        setLoadingEvents(false);
-      }
-    };
-
-    fetchEvents();
-  }, [supabase, buildings]); // Add buildings as dependency
-
-  // Check Outlook connection status
-  useEffect(() => {
-    const checkOutlook = async () => {
-      try {
-        const status = await checkOutlookConnection();
-        setOutlookConnected(status.connected);
-        setOutlookEmail(status.email || null);
-      } catch (error) {
-        console.error('Error checking Outlook connection:', error);
-        setOutlookConnected(false);
-      }
-    };
-
-    checkOutlook();
-  }, []);
-
-  // Fetch Outlook events if connected
-  useEffect(() => {
-    const loadOutlookEvents = async () => {
-      if (!outlookConnected) return;
-
-      setLoadingOutlook(true);
-      try {
-        const outlookEvents = await fetchOutlookEvents();
-        
-        // Transform Outlook events to match PropertyEvent type
-        const transformedOutlookEvents: PropertyEvent[] = outlookEvents.map((event: any) => ({
-          building: 'Outlook Calendar',
-          date: event.start_time,
-          title: event.title || event.subject || 'Untitled Event',
-          category: event.categories?.join(', ') || '📅 Outlook Event',
-          source: 'outlook',
-          event_type: 'outlook',
-          location: event.location,
-          organiser_name: event.organiser_name,
-          online_meeting: event.online_meeting
-        }));
-
-        // Combine with existing property events, filter out past events, and sort by date
-        setUpcomingEvents(prev => {
-          const now = new Date();
-          const propertyEvents = prev.filter(event => event.source === 'property');
-          const futureOutlookEvents = transformedOutlookEvents.filter(event => {
-            const eventDate = new Date(event.date);
-            return eventDate >= now; // Only include future events
-          });
-          
-          const combined = [...propertyEvents, ...futureOutlookEvents];
-          const sorted = combined.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-          
-          // Limit to 5 items total
-          return sorted.slice(0, 5);
-        });
-
-      } catch (error) {
-        console.error('Error fetching Outlook events:', error);
-        // Don't show error toast for Outlook connection issues - just log it
-        // This prevents spam when Outlook is not connected
-        if (error instanceof Error && error.message.includes('Please reconnect')) {
-          console.log('Outlook not connected - skipping events fetch');
-        } else {
-          toast.error('Failed to load Outlook events');
-        }
-      } finally {
-        setLoadingOutlook(false);
-      }
-    };
-
-    loadOutlookEvents();
-  }, [outlookConnected]);
-
-  // Fetch recent emails
-  useEffect(() => {
-    const fetchEmails = async () => {
-      try {
-        const { data: emails, error } = await supabase
-          .from('incoming_emails')
-          .select('*')
-          .order('received_at', { ascending: false })
-          .limit(5);
-
-        if (error) {
-          console.error('Error fetching emails:', error);
-          setRecentEmails([]);
-        } else {
-          const transformedEmails: Email[] = (emails || []).map(email => ({
-            id: email.id,
-            subject: email.subject,
-            from_email: email.from_email,
-            body_preview: email.body_preview,
-            received_at: email.received_at,
-            handled: email.is_handled || false,
-            unread: !email.is_read,
-            flag_status: email.flag_status || 'none',
-            categories: email.categories || []
-          }));
-          setRecentEmails(transformedEmails);
-        }
-      } catch (error) {
-        console.error('Error fetching emails:', error);
-        setRecentEmails([]);
-      } finally {
-        setLoadingEmails(false);
-      }
-    };
-
-    fetchEmails();
-  }, [supabase]);
-
-  const handleAddEvent = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsAddingEvent(true)
-    
+  const fetchBuildings = async () => {
     try {
-      const formData = new FormData(e.target as HTMLFormElement)
-      const eventData = {
-        title: formData.get('title') as string,
-        date: formData.get('date') as string,
-        building: formData.get('building') as string,
-        description: formData.get('description') as string,
+      const { data, error } = await supabase
+        .from('buildings')
+        .select('id, name')
+        .order('name')
+
+      if (error) {
+        console.error('Error fetching buildings:', error)
+        return
       }
 
-      console.log('Adding event:', eventData)
-
-      const response = await fetch('/api/create-event', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(eventData),
-      })
-
-      const result = await response.json()
-
-      if (response.ok && result.success) {
-        toast.success('Event created successfully!')
-        // Reset form and hide it
-        ;(e.target as HTMLFormElement).reset()
-        setShowAddEventForm(false)
-        // Refresh events list
-        const { data: events, error } = await supabase
-          .from('property_events')
-          .select('*')
-          .gte('start_time', new Date().toISOString())
-          .order('start_time', { ascending: true })
-          .limit(5);
-
-        if (!error && events) {
-          // Transform database events to match PropertyEvent type and filter out past events
-          const now = new Date();
-          const transformedEvents: PropertyEvent[] = (events || [])
-            .filter(event => {
-              const eventDate = new Date(event.start_time);
-              return eventDate >= now; // Only include future events
-            })
-            .map(event => {
-              // Find building name from buildings array
-              const building = buildings.find(b => b.id === event.building_id);
-              return {
-                building: building ? building.name : 'General',
-                date: event.start_time,
-                title: event.title,
-                category: event.category || event.event_type || '📅 Event',
-                source: 'property',
-                event_type: 'manual'
-              };
-            });
-          setUpcomingEvents(transformedEvents);
-        }
-      } else {
-        toast.error(result.error || 'Failed to create event')
-      }
+      setBuildings(data || [])
     } catch (error) {
-      console.error('Error creating event:', error)
-      toast.error('Failed to create event')
-    } finally {
-      setIsAddingEvent(false)
+      console.error('Error in fetchBuildings:', error)
     }
   }
 
-  const formatEventDate = (dateString: string) => {
-    if (!dateString) {
-      return {
-        date: 'Unknown Date',
-        time: 'Unknown Time'
+  const fetchEvents = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('property_events')
+        .select('*')
+        .gte('date', new Date().toISOString().split('T')[0])
+        .order('date', { ascending: true })
+        .limit(5)
+
+      if (error) {
+        console.error('Error fetching events:', error)
+        return
       }
-    }
-    
-    const date = new Date(dateString)
-    if (isNaN(date.getTime())) {
-      return {
-        date: 'Invalid Date',
-        time: 'Invalid Time'
-      }
-    }
-    
-    return {
-      date: date.toLocaleDateString('en-GB', { 
-        weekday: 'short', 
-        day: 'numeric', 
-        month: 'short' 
-      }),
-      time: date.toLocaleTimeString('en-GB', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      })
+
+      const transformedEvents: PropertyEvent[] = (data || []).map(event => ({
+        building: event.building_name || 'General',
+        date: event.date,
+        title: event.title,
+        category: event.category || 'General',
+        source: 'property',
+        event_type: 'manual',
+        location: event.location,
+        organiser_name: event.organiser_name
+      }))
+
+      setUpcomingEvents(transformedEvents)
+    } catch (error) {
+      console.error('Error in fetchEvents:', error)
     }
   }
 
-  const handleConnectOutlook = () => {
+  const checkOutlook = async () => {
     try {
-      const authUrl = getOutlookAuthUrl();
-      window.location.href = authUrl;
+      const status = await checkOutlookConnection()
+      setOutlookConnected(status.connected)
+      
+      if (status.connected) {
+        await loadOutlookEvents()
+      }
     } catch (error) {
-      console.error('Error getting Outlook auth URL:', error);
-      toast.error('Failed to connect Outlook. Please try again.');
+      console.error('Error checking Outlook connection:', error)
     }
-  };
+  }
 
-  const handleSyncOutlook = async () => {
-    setSyncingOutlook(true);
+  const loadOutlookEvents = async () => {
     try {
-      const outlookEvents = await fetchOutlookEvents();
+      const events = await fetchOutlookEvents()
       
       // Transform Outlook events to match PropertyEvent type
-      const transformedOutlookEvents: PropertyEvent[] = outlookEvents.map((event: any) => ({
+      const transformedOutlookEvents: PropertyEvent[] = events.map((event: any) => ({
         building: 'Outlook Calendar',
         date: event.start_time,
         title: event.title || event.subject || 'Untitled Event',
@@ -459,32 +229,119 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         location: event.location,
         organiser_name: event.organiser_name,
         online_meeting: event.online_meeting
-      }));
+      }))
 
       // Replace existing Outlook events with new ones, filter out past events
       setUpcomingEvents(prev => {
-        const now = new Date();
-        const propertyEvents = prev.filter(event => event.source === 'property');
+        const now = new Date()
+        const propertyEvents = prev.filter(event => event.source === 'property')
         const futureOutlookEvents = transformedOutlookEvents.filter(event => {
-          const eventDate = new Date(event.date);
-          return eventDate >= now; // Only include future events
-        });
+          const eventDate = new Date(event.date)
+          return eventDate >= now // Only include future events
+        })
         
-        const combined = [...propertyEvents, ...futureOutlookEvents];
-        const sorted = combined.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const combined = [...propertyEvents, ...futureOutlookEvents]
+        const sorted = combined.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
         
         // Limit to 5 items total
-        return sorted.slice(0, 5);
-      });
+        return sorted.slice(0, 5)
+      })
 
-      toast.success('Outlook calendar synced successfully!');
+      toast.success('Outlook calendar synced successfully!')
     } catch (error) {
-      console.error('Error syncing Outlook:', error);
-      toast.error('Failed to sync Outlook calendar');
+      console.error('Error syncing Outlook:', error)
+      toast.error('Failed to sync Outlook calendar')
     } finally {
-      setSyncingOutlook(false);
+      setSyncingOutlook(false)
     }
-  };
+  }
+
+  const fetchEmails = async () => {
+    try {
+      setLoadingEmails(true)
+      const { data, error } = await supabase
+        .from('incoming_emails')
+        .select('*')
+        .eq('is_read', false)
+        .order('received_at', { ascending: false })
+        .limit(5)
+
+      if (error) {
+        console.error('Error fetching emails:', error)
+        return
+      }
+
+      setRecentEmails(data || [])
+    } catch (error) {
+      console.error('Error in fetchEmails:', error)
+    } finally {
+      setLoadingEmails(false)
+    }
+  }
+
+  const handleAddEvent = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsAddingEvent(true)
+
+    try {
+      const formData = new FormData(e.currentTarget as HTMLFormElement)
+      const title = formData.get('title') as string
+      const date = formData.get('date') as string
+
+      const { error } = await supabase
+        .from('property_events')
+        .insert({
+          title,
+          date,
+          category: 'General',
+          building_name: 'General'
+        })
+
+      if (error) {
+        console.error('Error adding event:', error)
+        toast.error('Failed to add event')
+        return
+      }
+
+      toast.success('Event added successfully!')
+      setShowAddEventForm(false)
+      setNewEvent({ title: '', date: '', category: 'General' })
+      fetchEvents() // Refresh events
+    } catch (error) {
+      console.error('Error in handleAddEvent:', error)
+      toast.error('Failed to add event')
+    } finally {
+      setIsAddingEvent(false)
+    }
+  }
+
+  const formatEventDate = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const tomorrow = new Date(now)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    const isToday = date.toDateString() === now.toDateString()
+    const isTomorrow = date.toDateString() === tomorrow.toDateString()
+
+    if (isToday) return 'Today'
+    if (isTomorrow) return 'Tomorrow'
+    return date.toLocaleDateString('en-GB', { 
+      weekday: 'short', 
+      month: 'short', 
+      day: 'numeric' 
+    })
+  }
+
+  const handleConnectOutlook = () => {
+    const authUrl = getOutlookAuthUrl()
+    window.open(authUrl, '_blank')
+  }
+
+  const handleSyncOutlook = async () => {
+    setSyncingOutlook(true)
+    await loadOutlookEvents()
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -513,57 +370,76 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       </section>
 
       <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
-        {/* MAIN GRID - Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* PROPERTY EVENTS WIDGET - Enhanced */}
-          <div className="bg-white rounded-2xl shadow-lg border-0 overflow-hidden">
-            <div className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                    <Calendar className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold">Property Events</h2>
-                    <p className="text-sm text-white/80">Manage your property events</p>
-                  </div>
+        {/* Daily Overview Section */}
+        <DailyOverview />
+
+        {/* Search and AI Assistant Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Smart Search */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-2xl shadow-lg border-0 p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-gradient-to-r from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center text-white">
+                  <Search className="h-5 w-5" />
                 </div>
-                
-                {/* Outlook Integration Status */}
-                <div className="flex items-center gap-2">
-                  {outlookConnected ? (
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1 text-xs bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
-                        <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                        <span>Outlook Connected</span>
-                      </div>
-                      <button
-                        onClick={handleSyncOutlook}
-                        disabled={syncingOutlook}
-                        className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-3 py-1 rounded-full text-xs transition-all duration-200"
-                      >
-                        {syncingOutlook ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <RefreshCw className="h-3 w-3" />
-                        )}
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={handleConnectOutlook}
-                      className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-3 py-1 rounded-full text-xs transition-all duration-200"
-                    >
-                      <ExternalLink className="h-3 w-3 mr-1" />
-                      Connect Outlook
-                    </button>
-                  )}
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">Quick Search</h2>
+                  <p className="text-sm text-gray-600">Find buildings, leaseholders, or units</p>
                 </div>
               </div>
+              <SmartSearch />
             </div>
-            
-            <div className="p-6">
-              <div className="space-y-4">
+          </div>
+
+          {/* Property Events Widget */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-2xl shadow-lg border-0 overflow-hidden">
+              <div className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                      <Calendar className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold">Property Events</h2>
+                      <p className="text-sm text-white/80">Manage your property events</p>
+                    </div>
+                  </div>
+                  
+                  {/* Outlook Integration Status */}
+                  <div className="flex items-center gap-2">
+                    {outlookConnected ? (
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 text-xs bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
+                          <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                          <span>Outlook Connected</span>
+                        </div>
+                        <button
+                          onClick={handleSyncOutlook}
+                          disabled={syncingOutlook}
+                          className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-3 py-1 rounded-full text-xs transition-all duration-200"
+                        >
+                          {syncingOutlook ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-3 w-3" />
+                          )}
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={handleConnectOutlook}
+                        className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-3 py-1 rounded-full text-xs transition-all duration-200"
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        Connect Outlook
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="p-6">
                 {/* Add Event Button */}
                 {!showAddEventForm && (
                   <div className="text-center">
@@ -613,52 +489,25 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                           />
                         </div>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Building (Optional)</label>
-                        <select
-                          name="building"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
-                        >
-                          <option value="">Select a building</option>
-                          {buildings.map(building => (
-                            <option key={building.id} value={building.name}>{building.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
-                        <textarea
-                          name="description"
-                          rows={3}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
-                          placeholder="Enter event description"
-                        />
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setShowAddEventForm(false)}
-                          disabled={isAddingEvent}
-                          className="px-4 py-2 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors"
-                        >
-                          Cancel
-                        </button>
+                      <div className="flex items-center gap-2">
                         <button
                           type="submit"
                           disabled={isAddingEvent}
-                          className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-4 py-2 rounded-xl font-medium shadow-lg transition-all duration-200"
+                          className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-4 py-2 rounded-lg font-medium shadow-lg transition-all duration-200 disabled:opacity-50"
                         >
                           {isAddingEvent ? (
-                            <>
-                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                              Adding...
-                            </>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
                           ) : (
-                            <>
-                              <Plus className="h-4 w-4 mr-2" />
-                              Add Event
-                            </>
+                            <Plus className="h-4 w-4 mr-2" />
                           )}
+                          Add Event
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddEventForm(false)}
+                          className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                        >
+                          Cancel
                         </button>
                       </div>
                     </form>
@@ -666,177 +515,150 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 )}
 
                 {/* Events List */}
-                {(loadingEvents || (outlookConnected && loadingOutlook)) ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4f46e5] mx-auto mb-2"></div>
-                    <p className="text-gray-600 text-sm">
-                      {loadingEvents ? 'Loading events...' : 'Loading Outlook events...'}
-                    </p>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900">Upcoming Events</h3>
+                    <button
+                      onClick={() => setShowAddEventForm(!showAddEventForm)}
+                      className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-lg transition-all duration-200"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Event
+                    </button>
                   </div>
-                ) : upcomingEvents.length > 0 ? (
-                  <div className="space-y-3">
-                    {upcomingEvents.map((event, index) => {
-                      const { date, time } = formatEventDate(event.date)
-                      const eventDate = new Date(event.date)
-                      const isToday = !isNaN(eventDate.getTime()) && eventDate.toDateString() === new Date().toDateString()
-                      const isTomorrow = !isNaN(eventDate.getTime()) && eventDate.toDateString() === new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString()
-                      const isOutlookEvent = event.source === 'outlook'
-                      
-                      return (
-                        <div 
-                          key={`${event.source}-${index}`} 
-                          className={`rounded-xl p-4 hover:shadow-lg text-sm border-l-4 transition-all duration-200 ${
-                            isOutlookEvent 
-                              ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-400' 
-                              : 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-400'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <div className="font-bold text-gray-900">
-                                  {event.title || 'Untitled Event'}
-                                </div>
-                                {isOutlookEvent && (
-                                  <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs">
-                                    Outlook
-                                  </span>
-                                )}
-                                {(isToday || isTomorrow) && (
-                                  <span className={`px-2 py-1 rounded-full text-xs ${
-                                    isToday 
-                                      ? 'bg-red-100 text-red-700' 
-                                      : 'bg-yellow-100 text-yellow-700'
-                                  }`}>
-                                    {isToday ? 'Today' : 'Tomorrow'}
-                                  </span>
-                                )}
+
+                  {upcomingEvents.length > 0 ? (
+                    <div className="space-y-3">
+                      {upcomingEvents.map((event, index) => {
+                        const eventDate = new Date(event.date)
+                        const now = new Date()
+                        const tomorrow = new Date(now)
+                        tomorrow.setDate(tomorrow.getDate() + 1)
+                        
+                        const isToday = eventDate.toDateString() === now.toDateString()
+                        const isTomorrow = eventDate.toDateString() === tomorrow.toDateString()
+                        
+                        const date = formatEventDate(event.date)
+                        const time = eventDate.toLocaleTimeString('en-GB', { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })
+
+                        return (
+                          <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-lg flex items-center justify-center text-white">
+                                <Calendar className="h-5 w-5" />
                               </div>
-                              {event.category && (
+                              <div>
+                                <h4 className="font-semibold text-gray-900">{event.title}</h4>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm text-gray-600">
+                                    {date} at {time}
+                                  </span>
+                                  {(isToday || isTomorrow) && (
+                                    <span className={`px-2 py-1 rounded-full text-xs ${
+                                      isToday 
+                                        ? 'bg-red-100 text-red-700' 
+                                        : 'bg-yellow-100 text-yellow-700'
+                                    }`}>
+                                      {isToday ? 'Today' : 'Tomorrow'}
+                                    </span>
+                                  )}
+                                </div>
+                                {event.category && (
+                                  <div className="text-gray-600 mb-1">
+                                    📋 {event.category}
+                                  </div>
+                                )}
                                 <div className="text-gray-600 mb-1">
-                                  📋 {event.category}
+                                  📍 {event.building || 'General'}
                                 </div>
-                              )}
-                              <div className="text-gray-600 mb-1">
-                                📍 {event.building || 'General'}
-                              </div>
-                              {event.location && (
-                                <div className="text-gray-600 mb-1">
-                                  🏢 {event.location}
+                                {event.location && (
+                                  <div className="text-gray-600 mb-1">
+                                    🏢 {event.location}
+                                  </div>
+                                )}
+                                {event.organiser_name && (
+                                  <div className="text-gray-600 mb-1">
+                                    👤 {event.organiser_name}
+                                  </div>
+                                )}
+                                {event.online_meeting && (
+                                  <div className="text-blue-600 mb-1">
+                                    🎥 Online meeting available
+                                  </div>
+                                )}
+                                <div className="text-gray-600">
+                                  🕒 {date} at {time}
                                 </div>
-                              )}
-                              {event.organiser_name && (
-                                <div className="text-gray-600 mb-1">
-                                  👤 {event.organiser_name}
-                                </div>
-                              )}
-                              {event.online_meeting && (
-                                <div className="text-blue-600 mb-1">
-                                  🎥 Online meeting available
-                                </div>
-                              )}
-                              <div className="text-gray-600">
-                                🕒 {date} at {time}
                               </div>
                             </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                {event.category}
+                              </span>
+                              {event.source === 'outlook' && (
+                                <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
+                                  Outlook
+                                </span>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="w-16 h-16 bg-gradient-to-r from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                      <Calendar className="h-8 w-8 text-gray-400" />
+                        )
+                      })}
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No events yet</h3>
-                    <p className="text-gray-500 mb-4 max-w-sm mx-auto">
-                      {outlookConnected 
-                        ? 'Add property events or sync your Outlook calendar to get started.'
-                        : 'Add property events or connect your Outlook calendar to get started.'
-                      }
-                    </p>
-                    {!outlookConnected && (
-                      <button
-                        onClick={handleConnectOutlook}
-                        className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-4 py-2 rounded-xl font-medium shadow-lg transition-all duration-200"
-                      >
-                        <ExternalLink className="h-3 w-3 mr-2" />
-                        Connect Outlook Calendar
-                      </button>
-                    )}
-                  </div>
-                )}
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="w-16 h-16 bg-gradient-to-r from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <Calendar className="h-8 w-8 text-gray-400" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">No events yet</h3>
+                      <p className="text-gray-500 mb-4 max-w-sm mx-auto">
+                        {outlookConnected 
+                          ? 'Add property events or sync your Outlook calendar to get started.'
+                          : 'Add property events or connect your Outlook calendar to get started.'
+                        }
+                      </p>
+                      {!outlookConnected && (
+                        <button
+                          onClick={handleConnectOutlook}
+                          className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-4 py-2 rounded-xl font-medium shadow-lg transition-all duration-200"
+                        >
+                          <ExternalLink className="h-3 w-3 mr-2" />
+                          Connect Outlook Calendar
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* ASK BLOCIQ WIDGET - Enhanced */}
-          <div className="bg-white rounded-2xl shadow-lg border-0 overflow-hidden">
-            <div className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                    <Bot className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold">Ask BlocIQ</h2>
-                    <p className="text-sm text-white/80">AI-powered assistant</p>
-                  </div>
+        {/* AI Assistant Section */}
+        <div className="bg-white rounded-2xl shadow-lg border-0 overflow-hidden">
+          <div className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] p-6 text-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                  <Bot className="h-6 w-6 text-white" />
                 </div>
-                <div className="flex items-center gap-1 text-xs bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
-                  <Sparkles className="h-3 w-3" />
-                  <span>AI Assistant</span>
+                <div>
+                  <h2 className="text-xl font-bold">Ask BlocIQ</h2>
+                  <p className="text-sm text-white/80">AI-powered assistant</p>
                 </div>
               </div>
-            </div>
-            
-            <div className="p-6">
-              <div className="space-y-4">
-                {/* AI Tips */}
-                <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-4 border border-purple-200">
-                  <div className="flex items-start gap-2">
-                    <Sparkles className="h-4 w-4 text-purple-600 mt-0.5" />
-                    <div className="text-sm">
-                      <p className="font-medium text-gray-900 mb-1">💡 Try asking:</p>
-                      <p className="text-gray-600">"When is the next EICR inspection?" or "What's the service charge for Flat 3?"</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Chat Interface */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      placeholder="Ask BlocIQ anything..."
-                      className="flex-1 border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
-                    />
-                    <button className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 p-3 rounded-xl text-white shadow-lg transition-all duration-200">
-                      <Send className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* File Upload Area */}
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-[#4f46e5] transition-colors">
-                  <div className="w-12 h-12 bg-gradient-to-r from-gray-100 to-gray-200 rounded-xl flex items-center justify-center mx-auto mb-3">
-                    <Upload className="h-6 w-6 text-gray-400" />
-                  </div>
-                  <p className="text-sm text-gray-600 mb-1">
-                    Drag & drop files here or <span className="text-[#4f46e5] underline cursor-pointer">click to upload</span>
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    Supports PDF, DOCX, TXT • Max 10MB • Up to 5 files
-                  </p>
-                </div>
-
-                                 {/* AI Assistant Component */}
-                 <div className="mt-4">
-                   <AskBlocIQHomepage />
-                 </div>
+              <div className="flex items-center gap-1 text-xs bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
+                <Sparkles className="h-3 w-3" />
+                <span>AI Assistant</span>
               </div>
             </div>
+          </div>
+          
+          <div className="p-6">
+            <AskBlocIQHomepage />
           </div>
         </div>
 
