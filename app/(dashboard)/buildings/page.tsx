@@ -13,11 +13,12 @@ import {
   Search,
   Shield,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Clipboard,
+  Sparkles
 } from 'lucide-react'
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import { BlocIQCard, BlocIQCardContent } from '@/components/ui/blociq-card'
-import PageHero from '@/components/PageHero'
 
 // Client component for the buildings list with search functionality
 function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
@@ -42,16 +43,33 @@ function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
 
   return (
     <div>
-      {/* Hero Banner */}
-      <PageHero
-        title="Property Buildings"
-        subtitle="Manage and monitor all your property buildings in one place"
-        icon={<Building2 className="h-8 w-8 text-white" />}
-      />
+      {/* Enhanced Hero Banner - BlocIQ Landing Page Style */}
+      <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center">
+            <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
+              <Building2 className="h-10 w-10 text-white" />
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
+              Manage Your Buildings
+            </h1>
+            <p className="text-xl text-white/90 max-w-3xl mx-auto leading-relaxed">
+              Track compliance, view documents, and manage your portfolio effortlessly.
+            </p>
+          </div>
+        </div>
+        
+        {/* Decorative Elements */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-10 right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-white/5 rounded-full blur-2xl"></div>
+        </div>
+      </section>
 
       {/* Search and Create Section - Enhanced */}
-      <div className="mb-16">
-        <div className="flex flex-col lg:flex-row gap-8 items-start lg:items-center justify-between">
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        <div className="flex flex-col lg:flex-row gap-8 items-start lg:items-center justify-between mb-12">
           {/* Search Bar */}
           <div className="flex-1 max-w-lg">
             <div className="relative">
@@ -61,12 +79,12 @@ function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
                 placeholder="Search buildings by name or address..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#008C8F] focus:border-transparent transition-all bg-white shadow-sm hover:shadow-md"
+                className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] transition-all bg-white shadow-sm hover:shadow-md"
               />
             </div>
           </div>
 
-          {/* Create New Building Button */}
+          {/* Create New Building Button - Enhanced */}
           <div className="relative">
             <BlocIQButton
               onClick={(e) => {
@@ -75,12 +93,11 @@ function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
                 alert('Building creation feature coming soon!');
               }}
               size="lg"
-              variant="outline"
-              className="cursor-not-allowed opacity-75"
+              className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white border-0 shadow-lg hover:shadow-xl hover:brightness-110 transition-all duration-200 rounded-xl"
             >
-              <Plus className="h-6 w-6" />
+              <Plus className="h-6 w-6 mr-2" />
               Create New Building
-              <ArrowRight className="h-5 w-5" />
+              <ArrowRight className="h-5 w-5 ml-2" />
             </BlocIQButton>
             {/* Coming Soon Badge */}
             <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
@@ -91,7 +108,7 @@ function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
 
         {/* Search Results Count */}
         {searchTerm && (
-          <div className="mt-6 text-sm text-gray-600 bg-gray-50 rounded-lg px-4 py-2 inline-block">
+          <div className="mb-8 text-sm text-gray-600 bg-gray-50 rounded-lg px-4 py-2 inline-block">
             Showing {filteredBuildings.length} of {validBuildings.length} buildings
           </div>
         )}
@@ -99,82 +116,85 @@ function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
 
       {/* Buildings Grid - Enhanced Landing Page Style */}
       {filteredBuildings.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredBuildings.map((building) => (
-            <BlocIQCard 
-              key={building.id}
-              variant="elevated"
-              className="hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 text-center group"
-            >
-              <BlocIQCardContent className="p-8">
-                {/* Building Icon */}
-                <div className="w-20 h-20 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-2xl flex items-center justify-center mb-8 shadow-lg mx-auto group-hover:scale-105 transition-transform duration-300">
-                  <Building2 className="h-10 w-10 text-white" />
-                </div>
+        <div className="max-w-7xl mx-auto px-6 pb-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {filteredBuildings.map((building) => (
+              <div 
+                key={building.id}
+                className="bg-white rounded-2xl shadow-lg border border-gray-100 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 text-center group overflow-hidden"
+              >
+                <div className="p-8">
+                  {/* Building Icon */}
+                  <div className="w-20 h-20 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-2xl flex items-center justify-center mb-8 shadow-lg mx-auto group-hover:scale-110 transition-transform duration-300">
+                    <Building2 className="h-10 w-10 text-white" />
+                  </div>
 
-                {/* Building Name */}
-                <h3 className="text-2xl font-bold text-gray-900 mb-6">
-                  {building.name}
-                </h3>
+                  {/* Building Name */}
+                  <h3 className="text-2xl font-bold text-gray-900 mb-6">
+                    {building.name}
+                  </h3>
 
-                {/* Address */}
-                {building.address && (
-                  <div className="flex items-start gap-3 mb-6 justify-center">
-                    <MapPin className="h-5 w-5 text-[#008C8F] mt-0.5 flex-shrink-0" />
-                    <p className="text-gray-600 leading-relaxed text-sm">
-                      {building.address}
+                  {/* Address */}
+                  {building.address && (
+                    <div className="flex items-start gap-3 mb-6 justify-center">
+                      <MapPin className="h-5 w-5 text-[#4f46e5] mt-0.5 flex-shrink-0" />
+                      <p className="text-gray-600 leading-relaxed text-sm">
+                        {building.address}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Live Unit Count */}
+                  <div className="flex items-center gap-3 mb-8 justify-center">
+                    <Users className="h-5 w-5 text-[#4f46e5]" />
+                    <p className="text-gray-600 font-medium">
+                      {building.liveUnitCount || 0} {(building.liveUnitCount || 0) === 1 ? 'unit' : 'units'}
                     </p>
                   </div>
-                )}
 
-                {/* Live Unit Count */}
-                <div className="flex items-center gap-3 mb-8 justify-center">
-                  <Users className="h-5 w-5 text-[#008C8F]" />
-                  <p className="text-gray-600 font-medium">
-                    {building.liveUnitCount || 0} {(building.liveUnitCount || 0) === 1 ? 'unit' : 'units'}
-                  </p>
-                </div>
+                  {/* No Units Message */}
+                  {(building.liveUnitCount || 0) === 0 && (
+                    <div className="mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-sm text-yellow-800">
+                        No units assigned yet
+                      </p>
+                    </div>
+                  )}
 
-                {/* No Units Message */}
-                {(building.liveUnitCount || 0) === 0 && (
-                  <div className="mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p className="text-sm text-yellow-800">
-                      No units assigned yet
-                    </p>
+                  {/* Action Buttons - Enhanced with BlocIQ Gradient */}
+                  <div className="space-y-3">
+                    <BlocIQButton 
+                      asChild
+                      size="sm"
+                      className="w-full bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white border-0 shadow-lg hover:shadow-xl hover:brightness-110 transition-all duration-200 rounded-xl"
+                    >
+                      <Link href={`/buildings/${building.id}`}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Details
+                      </Link>
+                    </BlocIQButton>
+                    <BlocIQButton 
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-[#4f46e5] text-[#4f46e5] hover:bg-[#4f46e5] hover:text-white transition-all duration-200 rounded-xl"
+                    >
+                      <Link href={`/buildings/${building.id}/compliance`}>
+                        <Shield className="h-4 w-4 mr-2" />
+                        View Compliance
+                      </Link>
+                    </BlocIQButton>
                   </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="space-y-3">
-                  <BlocIQButton 
-                    asChild
-                    size="sm"
-                    className="w-full"
-                  >
-                    <Link href={`/buildings/${building.id}`}>
-                      <Eye className="h-4 w-4" />
-                      View Details
-                    </Link>
-                  </BlocIQButton>
-                  <BlocIQButton 
-                    asChild
-                    variant="outline"
-                    size="sm"
-                  >
-                    <Link href={`/buildings/${building.id}/compliance`}>
-                      <Shield className="h-4 w-4" />
-                      View Compliance
-                    </Link>
-                  </BlocIQButton>
                 </div>
-              </BlocIQCardContent>
-            </BlocIQCard>
-          ))}
+              </div>
+            ))}
+          </div>
         </div>
       ) : searchTerm ? (
         /* No Search Results - Enhanced */
-        <div className="text-center py-20">
-                      <div className="w-24 h-24 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-8">
+        <div className="max-w-4xl mx-auto px-6 py-20">
+          <div className="text-center">
+            <div className="w-24 h-24 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-8">
               <Search className="h-12 w-12 text-gray-400" />
             </div>
             <h2 className="text-3xl font-bold text-gray-900 mb-6">
@@ -186,40 +206,42 @@ function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
             <BlocIQButton
               onClick={() => setSearchTerm('')}
               size="lg"
+              className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white border-0 shadow-lg hover:shadow-xl hover:brightness-110 transition-all duration-200 rounded-xl"
             >
               Clear Search
             </BlocIQButton>
+          </div>
         </div>
       ) : validBuildings.length === 0 ? (
         /* Empty State - No Buildings - Enhanced */
-        <div className="text-center py-20">
-          <div className="w-24 h-24 bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-lg">
-            <Building2 className="h-12 w-12 text-white" />
-          </div>
-          <h2 className="text-4xl font-bold text-gray-900 mb-6">
-            No Buildings Yet
-          </h2>
-          <p className="text-xl text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed">
-            Get started by adding your first building to your portfolio. 
-            You'll be able to manage units, compliance, and communications all in one place with BlocIQ's intelligent platform.
-          </p>
-          <div className="relative inline-block">
-            <Link 
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                // Show coming soon message
-                alert('Building creation feature coming soon!');
-              }}
-              className="inline-flex items-center gap-3 bg-gradient-to-r from-gray-400 to-gray-500 text-white px-8 py-4 rounded-xl cursor-not-allowed opacity-75 hover:opacity-75 transition-all duration-200 font-semibold text-lg shadow-lg transform"
-            >
-              <Plus className="h-6 w-6" />
-              Create Your First Building
-              <ArrowRight className="h-5 w-5" />
-            </Link>
-            {/* Coming Soon Badge */}
-            <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
-              COMING SOON
+        <div className="max-w-4xl mx-auto px-6 py-20">
+          <div className="text-center">
+            <div className="w-24 h-24 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
+              <Building2 className="h-12 w-12 text-white" />
+            </div>
+            <h2 className="text-4xl font-bold text-gray-900 mb-6">
+              No Buildings Yet
+            </h2>
+            <p className="text-xl text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed">
+              Get started by adding your first building to your portfolio. 
+              You'll be able to manage units, compliance, and communications all in one place with BlocIQ's intelligent platform.
+            </p>
+            <div className="relative inline-block">
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  alert('Building creation feature coming soon!');
+                }}
+                className="inline-flex items-center gap-3 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white px-8 py-4 rounded-xl cursor-not-allowed opacity-75 hover:opacity-75 transition-all duration-200 font-semibold text-lg shadow-lg transform"
+              >
+                <Plus className="h-6 w-6" />
+                Create Your First Building
+                <ArrowRight className="h-5 w-5" />
+              </button>
+              {/* Coming Soon Badge */}
+              <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
+                COMING SOON
+              </div>
             </div>
           </div>
         </div>
@@ -285,17 +307,19 @@ export default function BuildingsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-8">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg animate-pulse">
-            <Loader2 className="h-8 w-8 text-white animate-spin" />
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="max-w-4xl mx-auto px-6 py-20">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl animate-pulse">
+              <Loader2 className="h-8 w-8 text-white animate-spin" />
+            </div>
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+              Loading Buildings...
+            </h1>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Please wait while we load your properties
+            </p>
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Loading Buildings...
-          </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Please wait while we load your properties
-          </p>
         </div>
       </div>
     )
@@ -303,25 +327,26 @@ export default function BuildingsPage() {
 
   if (error) {
     return (
-      <div className="space-y-6">
-        <div className="text-center">
-          <div className="w-20 h-20 bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-lg">
-            <AlertCircle className="h-10 w-10 text-white" />
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="max-w-4xl mx-auto px-6 py-20">
+          <div className="text-center">
+            <div className="w-20 h-20 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
+              <AlertCircle className="h-10 w-10 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">
+              Error Loading Buildings
+            </h1>
+            <p className="text-lg text-gray-600">
+              {error}
+            </p>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
-            Error Loading Buildings
-          </h1>
-          <p className="text-lg text-gray-600">
-            {error}
-          </p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-12">
-      <PageHero title="Buildings" subtitle="Manage your property portfolio and building details." />
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Buildings List */}
       <BuildingsList initialBuildings={buildings} />
 
@@ -330,7 +355,7 @@ export default function BuildingsPage() {
         <section className="py-20 bg-gradient-to-br from-gray-50 to-gray-100">
           <div className="max-w-4xl mx-auto px-6">
             <div className="bg-white rounded-2xl p-12 shadow-xl border border-gray-100 text-center">
-              <div className="w-20 h-20 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-lg">
+              <div className="w-20 h-20 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
                 <Plus className="h-10 w-10 text-white" />
               </div>
               <h2 className="text-3xl font-bold text-gray-900 mb-6">
@@ -340,19 +365,17 @@ export default function BuildingsPage() {
                 Expand your portfolio by adding more properties to manage with BlocIQ's intelligent platform.
               </p>
               <div className="relative inline-block">
-                <Link 
-                  href="#"
+                <button
                   onClick={(e) => {
                     e.preventDefault();
-                    // Show coming soon message
                     alert('Building creation feature coming soon!');
                   }}
-                  className="inline-flex items-center gap-3 bg-gradient-to-r from-gray-400 to-gray-500 text-white px-8 py-4 rounded-xl cursor-not-allowed opacity-75 hover:opacity-75 transition-all duration-200 font-semibold text-lg shadow-lg transform"
+                  className="inline-flex items-center gap-3 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white px-8 py-4 rounded-xl cursor-not-allowed opacity-75 hover:opacity-75 transition-all duration-200 font-semibold text-lg shadow-lg transform"
                 >
                   <Plus className="h-6 w-6" />
                   Add New Building
                   <ArrowRight className="h-5 w-5" />
-                </Link>
+                </button>
                 {/* Coming Soon Badge */}
                 <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
                   COMING SOON

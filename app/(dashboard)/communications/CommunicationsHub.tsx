@@ -15,12 +15,14 @@ import {
   User,
   AlertCircle,
   CheckCircle,
-  Clock
+  Clock,
+  ArrowRight,
+  MessageSquare,
+  Send
 } from 'lucide-react'
 import { BlocIQCard, BlocIQCardContent } from '@/components/ui/blociq-card'
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import { BlocIQBadge } from '@/components/ui/blociq-badge'
-import PageHero from '@/components/PageHero'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabaseClient'
 import LeaseholderSearchModal from './components/LeaseholderSearchModal'
@@ -107,57 +109,63 @@ export default function CommunicationsHub() {
   const actionTiles = [
     {
       id: 'email-leaseholder',
-      title: 'Email Leaseholder',
+      title: 'Send Email',
       description: 'Send an email to a specific leaseholder',
       icon: Mail,
-      color: 'from-blue-600 to-purple-600',
-      bgColor: 'bg-blue-50',
-      borderColor: 'border-blue-200'
+      gradient: 'from-[#4f46e5] to-[#a855f7]',
+      bgColor: 'bg-white',
+      borderColor: 'border-gray-200',
+      iconColor: 'text-[#4f46e5]'
     },
     {
       id: 'call-leaseholder',
       title: 'Call Leaseholder',
       description: 'Make a phone call to a leaseholder',
       icon: Phone,
-      color: 'from-blue-600 to-indigo-600',
-      bgColor: 'bg-blue-50',
-      borderColor: 'border-blue-200'
+      gradient: 'from-teal-600 to-blue-600',
+      bgColor: 'bg-white',
+      borderColor: 'border-gray-200',
+      iconColor: 'text-teal-600'
     },
     {
       id: 'letter-leaseholder',
       title: 'Send Letter',
       description: 'Draft and send a letter to a leaseholder',
       icon: FileText,
-      color: 'from-purple-600 to-indigo-600',
-      bgColor: 'bg-purple-50',
-      borderColor: 'border-purple-200'
+      gradient: 'from-purple-600 to-pink-600',
+      bgColor: 'bg-white',
+      borderColor: 'border-gray-200',
+      iconColor: 'text-purple-600'
     },
     {
       id: 'email-all',
       title: 'Email All',
       description: 'Send an email to all leaseholders in a building',
       icon: Building,
-      color: 'from-blue-600 to-purple-600',
-      bgColor: 'bg-blue-50',
-      borderColor: 'border-blue-200'
+      gradient: 'from-[#4f46e5] to-[#a855f7]',
+      bgColor: 'bg-white',
+      borderColor: 'border-gray-200',
+      iconColor: 'text-[#4f46e5]'
     },
     {
       id: 'letter-all',
       title: 'Letter All',
       description: 'Send a letter to all leaseholders in a building',
       icon: Users,
-      color: 'from-indigo-600 to-purple-600',
-      bgColor: 'bg-indigo-50',
-      borderColor: 'border-indigo-200'
+      gradient: 'from-orange-500 to-red-500',
+      bgColor: 'bg-white',
+      borderColor: 'border-gray-200',
+      iconColor: 'text-orange-600'
     },
     {
       id: 'communications-log',
-      title: 'View Log',
-      description: 'View all past communications',
+      title: 'View Communications Log',
+      description: 'View all past communications and history',
       icon: History,
-      color: 'from-gray-600 to-gray-700',
-      bgColor: 'bg-gray-50',
-      borderColor: 'border-gray-200'
+      gradient: 'from-gray-800 to-gray-900',
+      bgColor: 'bg-gray-900',
+      borderColor: 'border-gray-700',
+      iconColor: 'text-white'
     }
   ]
 
@@ -267,55 +275,89 @@ export default function CommunicationsHub() {
 
   return (
     <>
-      <PageHero title="Communications" subtitle="Centralize and manage all your property communications." />
-      <div className="p-6 max-w-7xl mx-auto space-y-8">
-        {/* Stats Overview */}
+      {/* Enhanced Hero Banner - BlocIQ Landing Page Style */}
+      <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center">
+            <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
+              <MessageSquare className="h-10 w-10 text-white" />
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
+              Communications Hub
+            </h1>
+            <p className="text-xl text-white/90 max-w-3xl mx-auto leading-relaxed">
+              Manage all leaseholder contact from one place
+            </p>
+          </div>
+        </div>
+        
+        {/* Decorative Elements */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-10 right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-white/5 rounded-full blur-2xl"></div>
+        </div>
+      </section>
+
+      <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
+        {/* Enhanced Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white shadow-lg">
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-blue-100 text-sm font-medium">Recent Communications</p>
-                <p className="text-3xl font-bold">{recentCommunications.length}</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <Phone className="h-5 w-5 text-[#4f46e5]" />
+                  <p className="text-gray-600 text-sm font-medium">Recent Communications</p>
+                </div>
+                <p className="text-3xl font-bold text-gray-900">{recentCommunications.length}</p>
               </div>
-              <Phone className="h-8 w-8 text-blue-200" />
             </div>
           </div>
           
-          <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl p-6 text-white shadow-lg">
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-green-100 text-sm font-medium">Successful</p>
-                <p className="text-3xl font-bold">{recentCommunications.filter(comm => comm.status === 'sent').length}</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <p className="text-gray-600 text-sm font-medium">Successful</p>
+                </div>
+                <p className="text-3xl font-bold text-gray-900">{recentCommunications.filter(comm => comm.status === 'sent').length}</p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-200" />
             </div>
           </div>
           
-          <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl p-6 text-white shadow-lg">
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-purple-100 text-sm font-medium">Pending</p>
-                <p className="text-3xl font-bold">{recentCommunications.filter(comm => comm.status === 'pending').length}</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="h-5 w-5 text-yellow-600" />
+                  <p className="text-gray-600 text-sm font-medium">Pending</p>
+                </div>
+                <p className="text-3xl font-bold text-gray-900">{recentCommunications.filter(comm => comm.status === 'pending').length}</p>
               </div>
-              <Clock className="h-8 w-8 text-purple-200" />
             </div>
           </div>
         </div>
 
-        {/* Action Tiles */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Enhanced Action Tiles */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {actionTiles.map((tile) => (
             <div 
               key={tile.id}
-              className={`cursor-pointer group hover:shadow-xl transition-all duration-300 hover:scale-105 border-2 ${tile.borderColor} ${tile.bgColor} rounded-xl p-6 hover:shadow-lg`}
+              className={`cursor-pointer group hover:shadow-xl transition-all duration-300 hover:scale-105 border ${tile.borderColor} ${tile.bgColor} rounded-xl p-6 min-h-[140px] w-full`}
               onClick={() => handleTileClick(tile.id)}
             >
-              <div className="flex flex-col items-center text-center space-y-4">
-                <div className={`p-4 rounded-2xl bg-gradient-to-r ${tile.color} text-white shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                  <tile.icon className="h-8 w-8" />
+              <div className="flex flex-col h-full">
+                <div className="flex items-start justify-between mb-4">
+                  <div className={`p-3 rounded-xl bg-gradient-to-r ${tile.gradient} text-white shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                    <tile.icon className="h-6 w-6" />
+                  </div>
+                  {tile.id === 'communications-log' && (
+                    <ArrowRight className="h-5 w-5 text-white group-hover:translate-x-1 transition-transform duration-200" />
+                  )}
                 </div>
-                <div className="space-y-2">
-                  <h3 className="text-xl font-bold text-gray-900">{tile.title}</h3>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{tile.title}</h3>
                   <p className="text-sm text-gray-600">{tile.description}</p>
                 </div>
               </div>
@@ -323,9 +365,9 @@ export default function CommunicationsHub() {
           ))}
         </div>
 
-        {/* Recent Communications */}
+        {/* Enhanced Recent Communications */}
         {recentCommunications.length > 0 && (
-          <div className="bg-white rounded-xl shadow-lg border border-gray-200">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <div>
@@ -334,7 +376,7 @@ export default function CommunicationsHub() {
                 </div>
                 <button 
                   onClick={() => setShowCommunicationsLog(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white rounded-xl hover:brightness-110 transition-all duration-200 font-medium shadow-sm"
                 >
                   <History className="h-4 w-4" />
                   View All
@@ -345,9 +387,9 @@ export default function CommunicationsHub() {
             <div className="p-6">
               <div className="space-y-4">
                 {recentCommunications.slice(0, 5).map((comm) => (
-                  <div key={comm.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <div key={comm.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
                     <div className="flex items-center gap-4">
-                      <div className={`p-3 rounded-lg ${
+                      <div className={`p-3 rounded-xl ${
                         comm.type === 'call' ? 'bg-green-100 text-green-700' :
                         comm.type === 'email' ? 'bg-blue-100 text-blue-700' :
                         'bg-purple-100 text-purple-700'
