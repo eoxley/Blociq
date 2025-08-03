@@ -3,96 +3,87 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+interface SummariseEmailRequest {
+  emailId: string;
+  subject: string | null;
+  body: string | null;
+}
 
 export async function POST(req: NextRequest) {
-  const supabase = createRouteHandlerClient({ cookies: () => cookies() });
-  const { email_id } = await req.json();
-
-  // Get the current user's session
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-  
-  if (sessionError || !session) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-  }
-
-  if (!email_id) {
-    return NextResponse.json({ error: 'Email ID is required' }, { status: 400 });
-  }
-
   try {
-    // Fetch the email from Supabase
-    const { data: email, error: fetchError } = await supabase
-      .from('incoming_emails')
-      .select('subject, body_full, body_preview, from_name, from_email, buildings(name)')
-      .eq('id', email_id)
-      .single();
-
-    if (fetchError || !email) {
-      console.error('Email not found:', fetchError?.message);
-      return NextResponse.json({ error: 'Email not found' }, { status: 404 });
+    const { emailId, subject, body }: SummariseEmailRequest = await req.json();
+    
+    if (!emailId) {
+      return NextResponse.json({ error: 'Email ID is required' }, { status: 400 });
     }
 
-    // Prepare the email content for summarization
-    const emailContent = `
-Subject: ${email.subject || 'No Subject'}
-From: ${email.from_name || 'Unknown'} (${email.from_email || 'No email'})
-Building: ${email.buildings?.name || 'No building specified'}
+    const supabase = createRouteHandlerClient({ cookies });
 
-Body:
-${email.body_full || email.body_preview || 'No content available'}
-    `.trim();
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    // Create the prompt for OpenAI
-    const prompt = `Summarise the following email in 3 bullet points for the property manager using British English. Focus on key actions, issues, or important information that needs attention.
+    // Initialize OpenAI client
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
 
-${emailContent}
+    // Create the prompt for email summarization
+    const systemPrompt = `You are a professional property management assistant. Your task is to provide a concise, bullet-point summary of emails related to property management, leasehold issues, and building maintenance.
 
-Provide a concise summary with 3 bullet points using British English spelling and terminology:`;
+Guidelines for summarization:
+- Extract the key points and main issues
+- Identify any urgent matters or deadlines
+- Highlight action items or required responses
+- Note any specific building or leaseholder references
+- Keep the summary clear and actionable
+- Use British English spelling and terminology
+- Focus on property management context
 
-    // Call OpenAI for summarization
+Format the summary as clear bullet points with appropriate categorization.`;
+
+    const userPrompt = `Please summarize the following email:
+
+Subject: ${subject || 'No subject'}
+
+Content:
+${body || 'No content available'}
+
+Provide a concise bullet-point summary focusing on:
+1. Main issues or concerns
+2. Any urgent matters or deadlines
+3. Required actions or responses
+4. Building or leaseholder context
+5. Key details for property management`;
+
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4",
       messages: [
-        {
-          role: "system",
-          content: "You are a helpful assistant that summarises emails for property managers using British English. Provide clear, actionable bullet points with British spelling and terminology."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
       ],
-      max_tokens: 300,
+      max_tokens: 500,
       temperature: 0.3,
     });
 
-    const summary = completion.choices[0]?.message?.content || 'Unable to generate summary';
+    const summary = completion.choices[0]?.message?.content || 'No summary generated';
 
-    // Log the summarization for analytics
-    try {
-      await supabase.from('email_summaries').insert({
-        email_id: email_id,
-        user_id: session.user.id,
-        summary: summary,
-        created_at: new Date().toISOString()
-      });
-    } catch (logError) {
-      console.error('Error logging summary:', logError);
-      // Don't fail the request if logging fails
-    }
+    // Log the summarization for debugging
+    console.log(`📝 Email ${emailId} summarized successfully`);
 
     return NextResponse.json({ 
+      success: true,
       summary: summary,
-      success: true
+      emailId: emailId
     });
 
   } catch (error) {
-    console.error('Error summarising email:', error);
+    console.error('❌ Error in summarise-email:', error);
+    
     return NextResponse.json({ 
-      error: 'Failed to summarise email',
+      error: 'Failed to summarize email',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }

@@ -11,12 +11,18 @@ import {
   Loader2,
   Send,
   Edit3,
-  X
+  X,
+  Sparkles,
+  FileText,
+  AlertTriangle,
+  Info,
+  Zap
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { toast } from 'sonner'
 
 interface Email {
   id: string
@@ -37,25 +43,83 @@ interface Email {
 interface AIActionBarProps {
   email: Email
   onMarkHandled: () => void
+  onGenerateReply?: (emailId: string, subject: string | null, bodyPreview: string | null) => Promise<void>
+  onSummarizeEmail?: (emailId: string, subject: string | null, bodyPreview: string | null) => Promise<void>
+  onClassifyEmail?: (emailId: string, subject: string | null, bodyPreview: string | null) => Promise<void>
+  isGeneratingReply?: boolean
+  isSummarizing?: boolean
+  isClassifying?: boolean
+  replyResponse?: string
+  summary?: string
+  replyError?: string
 }
 
-export default function AIActionBar({ email, onMarkHandled }: AIActionBarProps) {
-  const [isGeneratingReply, setIsGeneratingReply] = useState(false)
-  const [isSummarizing, setIsSummarizing] = useState(false)
-  const [isCreatingEvent, setIsCreatingEvent] = useState(false)
-  const [isCreatingTodo, setIsCreatingTodo] = useState(false)
+export default function AIActionBar({ 
+  email, 
+  onMarkHandled,
+  onGenerateReply,
+  onSummarizeEmail,
+  onClassifyEmail,
+  isGeneratingReply = false,
+  isSummarizing = false,
+  isClassifying = false,
+  replyResponse,
+  summary,
+  replyError
+}: AIActionBarProps) {
   const [showReplyDraft, setShowReplyDraft] = useState(false)
   const [replyDraft, setReplyDraft] = useState('')
-  const [summary, setSummary] = useState('')
+  const [showSummary, setShowSummary] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Generate AI draft reply
   const handleGenerateReply = async () => {
-    setIsGeneratingReply(true)
-    setError(null)
+    if (!onGenerateReply) return
     
+    setError(null)
     try {
-      const response = await fetch('/api/generate-email-draft', {
+      await onGenerateReply(email.id, email.subject, email.body_full || email.body_preview)
+      if (replyResponse) {
+        setReplyDraft(replyResponse)
+        setShowReplyDraft(true)
+      }
+    } catch (err) {
+      console.error('Error generating reply:', err)
+      setError('Failed to generate reply. Please try again.')
+    }
+  }
+
+  // Summarise email
+  const handleSummarise = async () => {
+    if (!onSummarizeEmail) return
+    
+    setError(null)
+    try {
+      await onSummarizeEmail(email.id, email.subject, email.body_full || email.body_preview)
+      setShowSummary(true)
+    } catch (err) {
+      console.error('Error summarizing email:', err)
+      setError('Failed to summarize email. Please try again.')
+    }
+  }
+
+  // Classify email
+  const handleClassify = async () => {
+    if (!onClassifyEmail) return
+    
+    setError(null)
+    try {
+      await onClassifyEmail(email.id, email.subject, email.body_full || email.body_preview)
+    } catch (err) {
+      console.error('Error classifying email:', err)
+      setError('Failed to classify email. Please try again.')
+    }
+  }
+
+  // Create calendar event
+  const handleCreateEvent = async () => {
+    try {
+      const response = await fetch('/api/create-event', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -70,27 +134,21 @@ export default function AIActionBar({ email, onMarkHandled }: AIActionBarProps) 
       })
 
       if (!response.ok) {
-        throw new Error('Failed to generate reply')
+        throw new Error('Failed to create event')
       }
 
       const data = await response.json()
-      setReplyDraft(data.draft || 'No reply generated')
-      setShowReplyDraft(true)
+      toast.success('Calendar event created successfully')
     } catch (err) {
-      console.error('Error generating reply:', err)
-      setError('Failed to generate reply. Please try again.')
-    } finally {
-      setIsGeneratingReply(false)
+      console.error('Error creating event:', err)
+      toast.error('Failed to create calendar event')
     }
   }
 
-  // Summarise email
-  const handleSummarise = async () => {
-    setIsSummarizing(true)
-    setError(null)
-    
+  // Create todo
+  const handleCreateTodo = async () => {
     try {
-      const response = await fetch('/api/summarise-email', {
+      const response = await fetch('/api/create-task-from-suggestion', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -99,75 +157,8 @@ export default function AIActionBar({ email, onMarkHandled }: AIActionBarProps) 
           emailId: email.id,
           subject: email.subject,
           body: email.body_full || email.body_preview,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to summarise email')
-      }
-
-      const data = await response.json()
-      setSummary(data.summary || 'No summary generated')
-    } catch (err) {
-      console.error('Error summarising email:', err)
-      setError('Failed to summarise email. Please try again.')
-    } finally {
-      setIsSummarizing(false)
-    }
-  }
-
-  // Create calendar event
-  const handleCreateEvent = async () => {
-    setIsCreatingEvent(true)
-    setError(null)
-    
-    try {
-      const response = await fetch('/api/create-event', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: `Follow up: ${email.subject}`,
-          date: new Date().toISOString().split('T')[0], // Today
-          building: email.buildings?.name || undefined,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to create event')
-      }
-
-      const data = await response.json()
-      if (data.success) {
-        // Show success feedback
-        console.log('Event created successfully:', data.event)
-      }
-    } catch (err) {
-      console.error('Error creating event:', err)
-      setError('Failed to create event. Please try again.')
-    } finally {
-      setIsCreatingEvent(false)
-    }
-  }
-
-  // Create todo
-  const handleCreateTodo = async () => {
-    setIsCreatingTodo(true)
-    setError(null)
-    
-    try {
-      const response = await fetch('/api/building-tasks', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: `Follow up: ${email.subject}`,
-          description: `Email from ${email.from_name || email.from_email}: ${email.body_preview}`,
-          building_id: email.building_id,
-          due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 7 days from now
-          priority: 'medium',
+          buildingContext: email.buildings?.name,
+          tags: email.tags || []
         }),
       })
 
@@ -176,15 +167,10 @@ export default function AIActionBar({ email, onMarkHandled }: AIActionBarProps) 
       }
 
       const data = await response.json()
-      if (data.success) {
-        // Show success feedback
-        console.log('Todo created successfully:', data.task)
-      }
+      toast.success('Todo created successfully')
     } catch (err) {
       console.error('Error creating todo:', err)
-      setError('Failed to create todo. Please try again.')
-    } finally {
-      setIsCreatingTodo(false)
+      toast.error('Failed to create todo')
     }
   }
 
@@ -198,8 +184,9 @@ export default function AIActionBar({ email, onMarkHandled }: AIActionBarProps) 
         },
         body: JSON.stringify({
           emailId: email.id,
-          draft: replyDraft,
-          buildingId: email.building_id,
+          toEmail: email.from_email,
+          subject: email.subject,
+          content: replyDraft
         }),
       })
 
@@ -208,168 +195,242 @@ export default function AIActionBar({ email, onMarkHandled }: AIActionBarProps) 
       }
 
       const data = await response.json()
-      if (data.status === 'sent') {
-        setShowReplyDraft(false)
-        setReplyDraft('')
-        onMarkHandled() // Mark as handled after sending
-      }
+      setShowReplyDraft(false)
+      onMarkHandled()
+      toast.success('Reply sent successfully')
     } catch (err) {
-      console.error('Error sending email:', err)
-      setError('Failed to send email. Please try again.')
+      console.error('Error sending reply:', err)
+      toast.error('Failed to send reply')
     }
   }
 
   return (
-    <div className="border-t bg-gray-50 p-4">
-      {/* AI Action Buttons */}
-      <div className="flex items-center gap-2 mb-4">
-        <Button
-          onClick={handleGenerateReply}
-          disabled={isGeneratingReply}
-          variant="outline"
-          size="sm"
-          className="flex items-center gap-2"
-        >
-          {isGeneratingReply ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <MessageSquare className="h-4 w-4" />
-          )}
-          ✍️ AI Draft Reply
-        </Button>
-
-        <Button
-                      onClick={handleSummarise}
-          disabled={isSummarizing}
-          variant="outline"
-          size="sm"
-          className="flex items-center gap-2"
-        >
-          {isSummarizing ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Brain className="h-4 w-4" />
-          )}
-          🧠 Summarise
-        </Button>
-
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex items-center gap-2"
-          disabled
-        >
-          <Tag className="h-4 w-4" />
-          📌 Tag (Coming Soon)
-        </Button>
-
-        <Button
-          onClick={handleCreateEvent}
-          disabled={isCreatingEvent}
-          variant="outline"
-          size="sm"
-          className="flex items-center gap-2"
-        >
-          {isCreatingEvent ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Calendar className="h-4 w-4" />
-          )}
-          📆 Add to Calendar
-        </Button>
-
-        <Button
-          onClick={handleCreateTodo}
-          disabled={isCreatingTodo}
-          variant="outline"
-          size="sm"
-          className="flex items-center gap-2"
-        >
-          {isCreatingTodo ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <CheckSquare className="h-4 w-4" />
-          )}
-          📝 Create To-Do
-        </Button>
-
-        <Button
-          onClick={onMarkHandled}
-          variant="outline"
-          size="sm"
-          className="flex items-center gap-2 ml-auto"
-        >
-          <Check className="h-4 w-4" />
-          ✅ Mark as Handled
-        </Button>
-      </div>
-
+    <div className="space-y-6">
       {/* Error Display */}
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-700">{error}</p>
-        </div>
-      )}
-
-      {/* Reply Draft */}
-      {showReplyDraft && (
-        <Card className="mb-4">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm">AI Draft Reply</CardTitle>
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-red-700">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="text-sm">{error}</span>
               <Button
-                onClick={() => setShowReplyDraft(false)}
                 variant="ghost"
                 size="sm"
+                onClick={() => setError(null)}
+                className="ml-auto h-6 w-6 p-0"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* AI Actions Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Generate Reply */}
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-blue-50 to-blue-100">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                <MessageSquare className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Generate Reply</h3>
+                <p className="text-xs text-gray-600">AI-powered response</p>
+              </div>
+            </div>
+            <Button
+              onClick={handleGenerateReply}
+              disabled={isGeneratingReply}
+              className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-0 shadow-lg"
+            >
+              {isGeneratingReply ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Sparkles className="h-4 w-4 mr-2" />
+              )}
+              {isGeneratingReply ? 'Generating...' : 'Generate Reply'}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Summarize Email */}
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-green-50 to-green-100">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg">
+                <FileText className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Summarize</h3>
+                <p className="text-xs text-gray-600">Key points extract</p>
+              </div>
+            </div>
+            <Button
+              onClick={handleSummarise}
+              disabled={isSummarizing}
+              className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white border-0 shadow-lg"
+            >
+              {isSummarizing ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Brain className="h-4 w-4 mr-2" />
+              )}
+              {isSummarizing ? 'Summarizing...' : 'Summarize'}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Classify Email */}
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-purple-50 to-purple-100">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                <Tag className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Classify</h3>
+                <p className="text-xs text-gray-600">Auto-categorize</p>
+              </div>
+            </div>
+            <Button
+              onClick={handleClassify}
+              disabled={isClassifying}
+              className="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white border-0 shadow-lg"
+            >
+              {isClassifying ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Zap className="h-4 w-4 mr-2" />
+              )}
+              {isClassifying ? 'Classifying...' : 'Classify'}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Create Event */}
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-orange-50 to-orange-100">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
+                <Calendar className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Create Event</h3>
+                <p className="text-xs text-gray-600">Add to calendar</p>
+              </div>
+            </div>
+            <Button
+              onClick={handleCreateEvent}
+              className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white border-0 shadow-lg"
+            >
+              <Calendar className="h-4 w-4 mr-2" />
+              Create Event
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Reply Draft Modal */}
+      {showReplyDraft && (
+        <Card className="border-0 shadow-2xl bg-gradient-to-br from-blue-50 to-blue-100">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-blue-600" />
+                AI Generated Reply
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowReplyDraft(false)}
+                className="h-8 w-8 p-0"
               >
                 <X className="h-4 w-4" />
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
             <Textarea
               value={replyDraft}
               onChange={(e) => setReplyDraft(e.target.value)}
-              placeholder="AI-generated reply..."
-              className="min-h-[120px]"
+              placeholder="Edit the AI-generated reply..."
+              className="min-h-[200px] resize-none border-gray-200 focus:border-blue-500 focus:ring-blue-500"
             />
-            <div className="flex items-center gap-2">
+            <div className="flex gap-3">
               <Button
                 onClick={handleSendReply}
-                size="sm"
-                className="flex items-center gap-2"
+                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-0 shadow-lg"
               >
-                <Send className="h-4 w-4" />
+                <Send className="h-4 w-4 mr-2" />
                 Send Reply
               </Button>
               <Button
-                onClick={() => setReplyDraft('')}
                 variant="outline"
-                size="sm"
+                onClick={() => setShowReplyDraft(false)}
+                className="border-gray-300 hover:bg-gray-50"
               >
-                Clear
+                Cancel
               </Button>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Summary */}
-      {summary && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Brain className="h-4 w-4" />
-              Email Summary
-            </CardTitle>
+      {/* Summary Modal */}
+      {showSummary && summary && (
+        <Card className="border-0 shadow-2xl bg-gradient-to-br from-green-50 to-green-100">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <FileText className="h-5 w-5 text-green-600" />
+                Email Summary
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowSummary(false)}
+                className="h-8 w-8 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-sm text-gray-700 whitespace-pre-line">
-              {summary}
+            <div className="bg-white rounded-lg p-4 border border-green-200">
+              <div className="flex items-center gap-2 mb-3">
+                <Info className="h-4 w-4 text-green-600" />
+                <span className="text-sm font-medium text-green-700">Key Points</span>
+              </div>
+              <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                {summary}
+              </div>
             </div>
           </CardContent>
         </Card>
       )}
+
+      {/* Quick Actions */}
+      <div className="flex flex-wrap gap-3">
+        <Button
+          onClick={handleCreateTodo}
+          variant="outline"
+          className="border-gray-300 hover:bg-gray-50"
+        >
+          <CheckSquare className="h-4 w-4 mr-2" />
+          Create Todo
+        </Button>
+        
+        <Button
+          onClick={onMarkHandled}
+          variant="outline"
+          className="border-green-300 text-green-600 hover:bg-green-50"
+        >
+          <Check className="h-4 w-4 mr-2" />
+          Mark Handled
+        </Button>
+      </div>
     </div>
   )
 } 
