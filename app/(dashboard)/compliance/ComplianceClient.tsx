@@ -54,7 +54,7 @@ export default function ComplianceClient({ complianceAssets: initialAssets = [] 
   }
 
   const getCategoryColor = (category: string) => {
-    switch (category.toLowerCase()) {
+    switch (category?.toLowerCase() || '') {
       case 'fire safety':
         return { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', icon: 'text-red-600' }
       case 'electrical':
@@ -69,7 +69,7 @@ export default function ComplianceClient({ complianceAssets: initialAssets = [] 
   }
 
   const getFrequencyColor = (frequency: string) => {
-    switch (frequency.toLowerCase()) {
+    switch (frequency?.toLowerCase() || '') {
       case 'monthly':
         return 'text-blue-600'
       case 'quarterly':
@@ -145,9 +145,9 @@ export default function ComplianceClient({ complianceAssets: initialAssets = [] 
 
   const filteredAssets = useMemo(() => {
     return assets.filter(asset => 
-      asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      asset.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      asset.category.toLowerCase().includes(searchTerm.toLowerCase())
+      (asset.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (asset.description?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (asset.category?.toLowerCase() || '').includes(searchTerm.toLowerCase())
     )
   }, [assets, searchTerm])
 

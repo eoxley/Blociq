@@ -3,7 +3,7 @@
 // Home page client component - Major works dashboard removed for cleaner interface
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2, ExternalLink, RefreshCw } from 'lucide-react'
+import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2, ExternalLink, RefreshCw, MessageCircle, Sparkles, Upload, FileText, Send, Bot } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 import DailySummary from '@/components/DailySummary'
 import AskBlocIQHomepage from '@/components/AskBlocIQHomepage'
@@ -16,7 +16,6 @@ import BlocIQLogo from '@/components/BlocIQLogo'
 import { toast } from 'sonner'
 import { checkOutlookConnection, fetchOutlookEvents, getOutlookAuthUrl } from '@/lib/outlookUtils'
 import { getTimeBasedGreeting } from '@/utils/greeting'
-import PageHero from '@/components/PageHero'
 
 type PropertyEvent = {
   building: string
@@ -98,35 +97,50 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     // 😅 Humorous Management Quotes
     "Today's forecast: 80% chance of leaseholder emails before lunch.",
     "Another invoice, another mystery charge to decode. You've trained for this.",
-    "Yes, you still remember the gate code from six buildings ago. 🧠",
-    "You've explained 'communal areas' three times this week. That's law now.",
-    "Someone's going to mention 'right to manage' today — take a breath.",
-    "Your service charge breakdowns are more accurate than the Met Office.",
-    "If someone says 'I pay your salary' — congrats, you're in mid-season form.",
+    "Your building's compliance status: 'It's complicated' (but you're handling it).",
+    "You've mastered the art of explaining service charges without causing riots.",
+    "Your superpower: Making building regulations sound exciting.",
+    "You're not just managing properties — you're managing expectations.",
+    "Today's goal: Keep the building standing and the leaseholders happy.",
+    "You've got this. The building's got this. BlocIQ's got this.",
+    "Your building's maintenance schedule: 'When it breaks' (but you're working on it).",
+    "You're the reason the building doesn't have a 'Days Since Last Incident' counter.",
 
-    // 🤓 "Did You Know?" Facts
-    "Did you know? The world's tallest residential building is over 1,500 feet high.",
-    "Did you know? UK property law dates back over 800 years — and still confuses everyone.",
-    "Did you know? Pigeons can identify themselves in mirrors. Some residents can't.",
-    "Did you know? London has over 70 fire stations — and you've probably emailed half of them.",
-    "Did you know? The first lease ever recorded in England was in 1066. Still no communal cleaning.",
-    "Did you know? The average person spends 87% of their time indoors — that includes your inbox.",
-    "Did you know? Ancient Romans had property managers. They were called *curatores domus*.",
-    "Did you know? More than 20% of UK homes are flats — and every single one comes with questions.",
+    // 💡 Informative & Professional
+    "Your portfolio compliance score is looking sharp today.",
+    "All systems operational. All leaseholders accounted for.",
+    "Your building's safety protocols are up to date and ready.",
+    "Today's agenda: Excellence in property management.",
+    "Your attention to detail is what keeps buildings running smoothly.",
+    "You're not just managing properties — you're building communities.",
+    "Your proactive approach to maintenance saves time and money.",
+    "Today's focus: Delivering exceptional property management services.",
+    "Your building's compliance status: Green across the board.",
+    "You're the backbone of successful property management.",
 
-    // 🧠 Bonus inspiration
-    "Order, calm, and coffee. You're 2 out of 3 already.",
-    "Excellence is quiet. So is successful block management.",
-    "You don't need to chase perfection — just service charge reconciliation.",
-    "Trust the process. And the fire alarm service provider (mostly).",
-    "One task at a time. One leaseholder at a time. BlocIQ's got your back."
+    // 🌟 Encouraging & Positive
+    "Today's the day to make your buildings shine.",
+    "You're not just managing properties — you're creating value.",
+    "Your dedication to excellence shows in every detail.",
+    "Today's opportunities: Endless. Your potential: Unlimited.",
+    "You're the reason buildings feel like homes.",
+    "Your expertise makes the complex simple.",
+    "Today's mission: Property management excellence.",
+    "You're building more than properties — you're building trust.",
+    "Your attention to detail sets the standard.",
+    "Today's goal: Making property management look easy."
   ]
 
-  // Get random welcome message once on component mount
-  const [currentWelcomeMessage] = useState(() => {
-    const randomIndex = Math.floor(Math.random() * welcomeMessages.length)
-    return welcomeMessages[randomIndex]
-  })
+  const [currentWelcomeMessage, setCurrentWelcomeMessage] = useState(welcomeMessages[0])
+
+  // Rotate welcome messages every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentWelcomeMessage(welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)])
+    }, 30000)
+
+    return () => clearInterval(interval)
+  }, [welcomeMessages])
 
   // Real upcoming events from database
   const [upcomingEvents, setUpcomingEvents] = useState<PropertyEvent[]>([]);
@@ -471,285 +485,362 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   };
 
   return (
-    <div className="space-y-8">
-      {/* Hero Banner */}
-      <PageHero
-        title={getTimeBasedGreeting(userData.name)}
-        subtitle={currentWelcomeMessage}
-        icon={<BlocIQLogo className="h-8 w-8 text-white" />}
-      />
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Enhanced Hero Banner - BlocIQ Landing Page Style */}
+      <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center">
+            <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
+              <BlocIQLogo className="h-10 w-10 text-white" />
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
+              {getTimeBasedGreeting(userData.name)}
+            </h1>
+            <p className="text-xl text-white/90 max-w-3xl mx-auto leading-relaxed">
+              {currentWelcomeMessage}
+            </p>
+          </div>
+        </div>
+        
+        {/* Decorative Elements */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-10 right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-white/5 rounded-full blur-2xl"></div>
+        </div>
+      </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Upcoming Events Section */}
-        <BlocIQCard variant="elevated" className="rounded-2xl shadow-lg">
-          <BlocIQCardHeader>
-            <div className="flex items-center justify-between w-full">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center">
-                  <Calendar className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Property Events</h2>
-                  <p className="text-sm text-gray-600">Manage your property events</p>
-                </div>
-              </div>
-              
-              {/* Outlook Integration Status */}
-              <div className="flex items-center gap-2">
-                {outlookConnected ? (
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span>Outlook Connected</span>
-                    </div>
-                    <BlocIQButton
-                      onClick={handleSyncOutlook}
-                      disabled={syncingOutlook}
-                      size="sm"
-                      variant="outline"
-                      className="text-[#008C8F] border-[#008C8F] hover:bg-[#F0FDFA]"
-                    >
-                      {syncingOutlook ? (
-                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                      ) : (
-                        <RefreshCw className="h-3 w-3 mr-1" />
-                      )}
-                      {syncingOutlook ? 'Syncing...' : 'Sync'}
-                    </BlocIQButton>
+      <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
+        {/* MAIN GRID - Two Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* PROPERTY EVENTS WIDGET - Enhanced */}
+          <div className="bg-white rounded-2xl shadow-lg border-0 overflow-hidden">
+            <div className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                    <Calendar className="h-6 w-6 text-white" />
                   </div>
-                ) : (
-                  <BlocIQButton
-                    onClick={handleConnectOutlook}
-                    size="sm"
-                    variant="outline"
-                    className="text-[#008C8F] border-[#008C8F] hover:bg-[#F0FDFA]"
-                  >
-                    <ExternalLink className="h-3 w-3 mr-1" />
-                    Connect Outlook
-                  </BlocIQButton>
-                )}
+                  <div>
+                    <h2 className="text-xl font-bold">Property Events</h2>
+                    <p className="text-sm text-white/80">Manage your property events</p>
+                  </div>
+                </div>
+                
+                {/* Outlook Integration Status */}
+                <div className="flex items-center gap-2">
+                  {outlookConnected ? (
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 text-xs bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
+                        <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                        <span>Outlook Connected</span>
+                      </div>
+                      <button
+                        onClick={handleSyncOutlook}
+                        disabled={syncingOutlook}
+                        className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-3 py-1 rounded-full text-xs transition-all duration-200"
+                      >
+                        {syncingOutlook ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-3 w-3" />
+                        )}
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleConnectOutlook}
+                      className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-3 py-1 rounded-full text-xs transition-all duration-200"
+                    >
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                      Connect Outlook
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
-          </BlocIQCardHeader>
-          
-          <BlocIQCardContent>
-            <div className="space-y-4">
-              {/* Add Event Button */}
-              {!showAddEventForm && (
-                <div className="text-center">
-                  <BlocIQButton
-                    onClick={() => setShowAddEventForm(true)}
-                    size="sm"
-                    className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] hover:from-[#007B8A] hover:to-[#6B3FD8] text-white"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add New Event
-                  </BlocIQButton>
-                </div>
-              )}
-
-              {/* Manual Event Input Form */}
-              {showAddEventForm && (
-                <div className="bg-gradient-to-r from-[#F0FDFA] to-emerald-50 rounded-xl p-4 border border-[#2BBEB4]/20">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-[#0F5D5D]">Add New Event</h3>
+            
+            <div className="p-6">
+              <div className="space-y-4">
+                {/* Add Event Button */}
+                {!showAddEventForm && (
+                  <div className="text-center">
                     <button
-                      type="button"
-                      onClick={() => setShowAddEventForm(false)}
-                      className="text-[#64748B] hover:text-[#333333] transition-colors"
+                      onClick={() => setShowAddEventForm(true)}
+                      className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-6 py-3 rounded-xl font-medium shadow-lg transition-all duration-200"
                     >
-                      <X className="h-5 w-5" />
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add New Event
                     </button>
                   </div>
-                  <form onSubmit={handleAddEvent} className="space-y-3">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-sm font-medium text-[#333333] mb-1">Event Title</label>
-                        <input
-                          type="text"
-                          name="title"
-                          required
-                          className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
-                          placeholder="Enter event title"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-[#333333] mb-1">Date & Time</label>
-                        <input
-                          type="datetime-local"
-                          name="date"
-                          required
-                          min={new Date().toISOString().slice(0, 16)}
-                          className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#333333] mb-1">Building (Optional)</label>
-                      <select
-                        name="building"
-                        className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
-                      >
-                        <option value="">Select a building</option>
-                        {buildings.map(building => (
-                          <option key={building.id} value={building.name}>{building.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#333333] mb-1">Description (Optional)</label>
-                      <textarea
-                        name="description"
-                        rows={3}
-                        className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent"
-                        placeholder="Enter event description"
-                      />
-                    </div>
-                    <div className="flex justify-end gap-2">
-                      <BlocIQButton
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowAddEventForm(false)}
-                        disabled={isAddingEvent}
-                      >
-                        Cancel
-                      </BlocIQButton>
-                      <BlocIQButton
-                        type="submit"
-                        disabled={isAddingEvent}
-                        size="sm"
-                        className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] hover:from-[#007B8A] hover:to-[#6B3FD8] text-white"
-                      >
-                        {isAddingEvent ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            Adding...
-                          </>
-                        ) : (
-                          <>
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Event
-                          </>
-                        )}
-                      </BlocIQButton>
-                    </div>
-                  </form>
-                </div>
-              )}
+                )}
 
-              {/* Events List */}
-              {(loadingEvents || (outlookConnected && loadingOutlook)) ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#008C8F] mx-auto mb-2"></div>
-                  <p className="text-[#64748B] text-sm">
-                    {loadingEvents ? 'Loading events...' : 'Loading Outlook events...'}
-                  </p>
-                </div>
-              ) : upcomingEvents.length > 0 ? (
-                <div className="space-y-3">
-                  {upcomingEvents.map((event, index) => {
-                    const { date, time } = formatEventDate(event.date)
-                    const eventDate = new Date(event.date)
-                    const isToday = !isNaN(eventDate.getTime()) && eventDate.toDateString() === new Date().toDateString()
-                    const isTomorrow = !isNaN(eventDate.getTime()) && eventDate.toDateString() === new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString()
-                    const isOutlookEvent = event.source === 'outlook'
-                    
-                    return (
-                      <div 
-                        key={`${event.source}-${index}`} 
-                        className={`rounded-xl p-4 hover:shadow-lg text-sm border-l-4 transition-all duration-200 ${
-                          isOutlookEvent 
-                            ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-400' 
-                            : 'bg-gradient-to-r from-[#F0FDFA] to-emerald-50 border-[#2BBEB4]'
-                        }`}
+                {/* Manual Event Input Form */}
+                {showAddEventForm && (
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold text-gray-900">Add New Event</h3>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddEventForm(false)}
+                        className="text-gray-500 hover:text-gray-700 transition-colors"
                       >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <div className="font-bold text-[#333333]">
-                                {event.title || 'Untitled Event'}
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+                    <form onSubmit={handleAddEvent} className="space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Event Title</label>
+                          <input
+                            type="text"
+                            name="title"
+                            required
+                            className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
+                            placeholder="Enter event title"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Date & Time</label>
+                          <input
+                            type="datetime-local"
+                            name="date"
+                            required
+                            min={new Date().toISOString().slice(0, 16)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Building (Optional)</label>
+                        <select
+                          name="building"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
+                        >
+                          <option value="">Select a building</option>
+                          {buildings.map(building => (
+                            <option key={building.id} value={building.name}>{building.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
+                        <textarea
+                          name="description"
+                          rows={3}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
+                          placeholder="Enter event description"
+                        />
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowAddEventForm(false)}
+                          disabled={isAddingEvent}
+                          className="px-4 py-2 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={isAddingEvent}
+                          className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-4 py-2 rounded-xl font-medium shadow-lg transition-all duration-200"
+                        >
+                          {isAddingEvent ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              Adding...
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add Event
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
+                {/* Events List */}
+                {(loadingEvents || (outlookConnected && loadingOutlook)) ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4f46e5] mx-auto mb-2"></div>
+                    <p className="text-gray-600 text-sm">
+                      {loadingEvents ? 'Loading events...' : 'Loading Outlook events...'}
+                    </p>
+                  </div>
+                ) : upcomingEvents.length > 0 ? (
+                  <div className="space-y-3">
+                    {upcomingEvents.map((event, index) => {
+                      const { date, time } = formatEventDate(event.date)
+                      const eventDate = new Date(event.date)
+                      const isToday = !isNaN(eventDate.getTime()) && eventDate.toDateString() === new Date().toDateString()
+                      const isTomorrow = !isNaN(eventDate.getTime()) && eventDate.toDateString() === new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString()
+                      const isOutlookEvent = event.source === 'outlook'
+                      
+                      return (
+                        <div 
+                          key={`${event.source}-${index}`} 
+                          className={`rounded-xl p-4 hover:shadow-lg text-sm border-l-4 transition-all duration-200 ${
+                            isOutlookEvent 
+                              ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-400' 
+                              : 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-400'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <div className="font-bold text-gray-900">
+                                  {event.title || 'Untitled Event'}
+                                </div>
+                                {isOutlookEvent && (
+                                  <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs">
+                                    Outlook
+                                  </span>
+                                )}
+                                {(isToday || isTomorrow) && (
+                                  <span className={`px-2 py-1 rounded-full text-xs ${
+                                    isToday 
+                                      ? 'bg-red-100 text-red-700' 
+                                      : 'bg-yellow-100 text-yellow-700'
+                                  }`}>
+                                    {isToday ? 'Today' : 'Tomorrow'}
+                                  </span>
+                                )}
                               </div>
-                              {isOutlookEvent && (
-                                <BlocIQBadge variant="secondary" size="sm">
-                                  Outlook
-                                </BlocIQBadge>
+                              {event.category && (
+                                <div className="text-gray-600 mb-1">
+                                  📋 {event.category}
+                                </div>
                               )}
-                              {(isToday || isTomorrow) && (
-                                <BlocIQBadge variant={isToday ? "destructive" : "warning"} size="sm">
-                                  {isToday ? 'Today' : 'Tomorrow'}
-                                </BlocIQBadge>
+                              <div className="text-gray-600 mb-1">
+                                📍 {event.building || 'General'}
+                              </div>
+                              {event.location && (
+                                <div className="text-gray-600 mb-1">
+                                  🏢 {event.location}
+                                </div>
                               )}
-                            </div>
-                            {event.category && (
-                              <div className="text-[#64748B] mb-1">
-                                📋 {event.category}
+                              {event.organiser_name && (
+                                <div className="text-gray-600 mb-1">
+                                  👤 {event.organiser_name}
+                                </div>
+                              )}
+                              {event.online_meeting && (
+                                <div className="text-blue-600 mb-1">
+                                  🎥 Online meeting available
+                                </div>
+                              )}
+                              <div className="text-gray-600">
+                                🕒 {date} at {time}
                               </div>
-                            )}
-                            <div className="text-[#64748B] mb-1">
-                              📍 {event.building || 'General'}
-                            </div>
-                            {event.location && (
-                              <div className="text-[#64748B] mb-1">
-                                🏢 {event.location}
-                              </div>
-                            )}
-                            {event.organiser_name && (
-                              <div className="text-[#64748B] mb-1">
-                                👤 {event.organiser_name}
-                              </div>
-                            )}
-                            {event.online_meeting && (
-                              <div className="text-blue-600 mb-1">
-                                🎥 Online meeting available
-                              </div>
-                            )}
-                            <div className="text-[#64748B]">
-                              🕒 {date} at {time}
                             </div>
                           </div>
                         </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Calendar className="h-12 w-12 text-[#64748B] mx-auto mb-3" />
-                  <p className="text-[#64748B] text-sm">No events yet</p>
-                  <p className="text-[#64748B] text-xs mt-1">
-                    {outlookConnected 
-                      ? 'Add property events or sync your Outlook calendar'
-                      : 'Add property events or connect your Outlook calendar'
-                    }
-                  </p>
-                  {!outlookConnected && (
-                    <div className="mt-4">
-                      <BlocIQButton
-                        onClick={handleConnectOutlook}
-                        size="sm"
-                        variant="outline"
-                        className="text-[#008C8F] border-[#008C8F] hover:bg-[#F0FDFA]"
-                      >
-                        <ExternalLink className="h-3 w-3 mr-1" />
-                        Connect Outlook Calendar
-                      </BlocIQButton>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 bg-gradient-to-r from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <Calendar className="h-8 w-8 text-gray-400" />
                     </div>
-                  )}
-                </div>
-              )}
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No events yet</h3>
+                    <p className="text-gray-500 mb-4 max-w-sm mx-auto">
+                      {outlookConnected 
+                        ? 'Add property events or sync your Outlook calendar to get started.'
+                        : 'Add property events or connect your Outlook calendar to get started.'
+                      }
+                    </p>
+                    {!outlookConnected && (
+                      <button
+                        onClick={handleConnectOutlook}
+                        className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-4 py-2 rounded-xl font-medium shadow-lg transition-all duration-200"
+                      >
+                        <ExternalLink className="h-3 w-3 mr-2" />
+                        Connect Outlook Calendar
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          </BlocIQCardContent>
-        </BlocIQCard>
+          </div>
 
-        {/* Ask BlocIQ AI Assistant */}
-        <div>
-          <AskBlocIQHomepage />
+          {/* ASK BLOCIQ WIDGET - Enhanced */}
+          <div className="bg-white rounded-2xl shadow-lg border-0 overflow-hidden">
+            <div className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                    <Bot className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold">Ask BlocIQ</h2>
+                    <p className="text-sm text-white/80">AI-powered assistant</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 text-xs bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
+                  <Sparkles className="h-3 w-3" />
+                  <span>AI Assistant</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              <div className="space-y-4">
+                {/* AI Tips */}
+                <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-4 border border-purple-200">
+                  <div className="flex items-start gap-2">
+                    <Sparkles className="h-4 w-4 text-purple-600 mt-0.5" />
+                    <div className="text-sm">
+                      <p className="font-medium text-gray-900 mb-1">💡 Try asking:</p>
+                      <p className="text-gray-600">"When is the next EICR inspection?" or "What's the service charge for Flat 3?"</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Chat Interface */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="Ask BlocIQ anything..."
+                      className="flex-1 border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
+                    />
+                    <button className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 p-3 rounded-xl text-white shadow-lg transition-all duration-200">
+                      <Send className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* File Upload Area */}
+                <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-[#4f46e5] transition-colors">
+                  <div className="w-12 h-12 bg-gradient-to-r from-gray-100 to-gray-200 rounded-xl flex items-center justify-center mx-auto mb-3">
+                    <Upload className="h-6 w-6 text-gray-400" />
+                  </div>
+                  <p className="text-sm text-gray-600 mb-1">
+                    Drag & drop files here or <span className="text-[#4f46e5] underline cursor-pointer">click to upload</span>
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Supports PDF, DOCX, TXT • Max 10MB • Up to 5 files
+                  </p>
+                </div>
+
+                                 {/* AI Assistant Component */}
+                 <div className="mt-4">
+                   <AskBlocIQHomepage />
+                 </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Daily Summary Section */}
-      <DailySummary />
+        {/* Daily Summary Section */}
+        <DailySummary />
+      </div>
     </div>
   )
 } 

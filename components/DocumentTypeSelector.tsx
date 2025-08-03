@@ -133,8 +133,8 @@ export default function DocumentTypeSelector({
 
   // Filter compliance items
   const filteredItems = complianceItems.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(filter.toLowerCase()) ||
-                         item.description.toLowerCase().includes(filter.toLowerCase());
+    const matchesSearch = (item.name?.toLowerCase() || '').includes(filter.toLowerCase()) ||
+                         (item.description?.toLowerCase() || '').includes(filter.toLowerCase());
     const matchesCategory = category === "all" || item.category === category;
     return matchesSearch && matchesCategory;
   });

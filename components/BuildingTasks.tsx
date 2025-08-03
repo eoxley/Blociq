@@ -190,7 +190,7 @@ export default function BuildingTasks({ buildingId }: BuildingTasksProps) {
   };
 
   const filteredTasks = tasks.filter(task => {
-    const matchesSearch = task.task.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch = (task.task?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
                          (task.assigned_to && task.assigned_to.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesSearch;
   });
