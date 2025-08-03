@@ -5,27 +5,6 @@ import { AlertTriangle, Mail } from 'lucide-react'
 import InboxClient from './InboxClient'
 import PageHero from '@/components/PageHero'
 
-interface Email {
-  id: string
-  subject: string | null
-  from_email: string | null
-  from_name: string | null
-  body_preview: string | null
-  received_at: string | null
-  unread: boolean | null
-  handled: boolean | null
-  pinned: boolean | null
-  flag_status: string | null
-  categories: string[] | null
-  building_id: number | null
-  unit_id: number | null
-  leaseholder_id: string | null
-  user_id: string | null
-  to_email: string[] | null
-  created_at: string | null
-  updated_at: string | null
-}
-
 export default async function InboxPage() {
   console.log('🚀 InboxPage: Starting to render...')
   
@@ -49,77 +28,9 @@ export default async function InboxPage() {
     const userEmail = session.user.email
     console.log('✅ User authenticated:', userEmail)
 
-    // ✅ STEP 2: FETCH EMAILS FOR THIS USER
-    let emails: Email[] = []
-    let emailsError = null
+    console.log('🎯 About to render InboxClient')
     
-    try {
-      console.log('🔍 Fetching all emails for user:', userEmail)
-      
-      // Query the incoming_emails table using user_id column
-      const result = await supabase
-        .from('incoming_emails')
-        .select(`
-          id, 
-          subject, 
-          from_email, 
-          from_name, 
-          body_preview, 
-          received_at, 
-          is_read, 
-          is_handled, 
-          user_id, 
-          created_at,
-          building_id,
-          related_unit_id
-        `)
-        .eq('user_id', userId) // Use user_id to match user
-        .order('received_at', { ascending: false }) // Show newest first
-        // No limit - show ALL emails
-      
-      if (result.error) {
-        console.error('❌ Emails query error:', result.error)
-        emailsError = result.error
-      } else {
-        // Map database fields to expected interface
-        emails = (result.data || []).map(email => ({
-          id: email.id,
-          subject: email.subject,
-          from_email: email.from_email,
-          from_name: email.from_name,
-          body_preview: email.body_preview,
-          received_at: email.received_at,
-          unread: !email.is_read, // Map is_read to unread (inverted)
-          handled: email.is_handled, // Map is_handled to handled
-          pinned: false, // Default value since not in schema
-          flag_status: null, // Default value since not in schema
-          categories: null, // Default value since not in schema
-          building_id: email.building_id,
-          unit_id: email.related_unit_id, // Map related_unit_id to unit_id
-          leaseholder_id: null, // leaseholder_id doesn't exist in current schema
-          user_id: email.user_id,
-          to_email: null, // to_email column doesn't exist in current schema
-          created_at: email.created_at,
-          updated_at: null // updated_at column doesn't exist in current schema
-        }))
-        
-        console.log(`✅ Found ${emails.length} emails for user ${userEmail}`)
-      }
-      
-    } catch (dbError) {
-      console.error('❌ Database query error:', dbError)
-      emailsError = dbError as any
-    }
-
-    if (emailsError) {
-      console.error('❌ Error fetching emails:', emailsError)
-      // Don't throw error, just pass empty array to client
-      emails = []
-    }
-
-    console.log('🎯 About to render InboxClient with', emails.length, 'emails')
-    
-    // Pass emails and user email as props to client component
+    // InboxClient uses useInbox hook to fetch its own data
     return (
       <div className="space-y-6">
         {/* Hero Banner */}
@@ -129,7 +40,7 @@ export default async function InboxPage() {
           icon={<Mail className="h-8 w-8 text-white" />}
         />
         
-        <InboxClient emails={emails} userEmail={userEmail} />
+        <InboxClient />
       </div>
     )
 
