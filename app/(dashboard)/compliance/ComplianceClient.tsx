@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo } from 'react'
 import { Shield, Search, Filter, Calendar, AlertTriangle, CheckCircle, Clock, TrendingUp, FileText, Building, Users, Sparkles, Target, BarChart3 } from 'lucide-react'
-import LayoutWithSidebar from '@/components/LayoutWithSidebar'
 
 interface ComplianceAsset {
   id: string
@@ -154,7 +153,7 @@ export default function ComplianceClient({ complianceAssets: initialAssets = [] 
   const stats = getComplianceStats()
 
   return (
-    <LayoutWithSidebar>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Enhanced Hero Banner - BlocIQ Landing Page Style */}
       <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16">
         <div className="max-w-7xl mx-auto px-6">
@@ -424,6 +423,6 @@ export default function ComplianceClient({ complianceAssets: initialAssets = [] 
           </div>
         )}
       </div>
-    </LayoutWithSidebar>
+    </div>
   )
 }

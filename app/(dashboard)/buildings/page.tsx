@@ -166,22 +166,22 @@ function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
                     <BlocIQButton 
                       asChild
                       size="sm"
-                      className="w-full bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white border-0 shadow-lg hover:shadow-xl hover:brightness-110 transition-all duration-200 rounded-xl"
+                      className="w-full bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white border-0 shadow-lg hover:shadow-xl hover:brightness-110 transition-all duration-200 rounded-xl font-semibold text-base"
                     >
                       <Link href={`/buildings/${building.id}`}>
-                        <Eye className="h-4 w-4 mr-2" />
-                        View Details
+                        <Eye className="h-5 w-5 mr-2" />
+                        👁 View Details
                       </Link>
                     </BlocIQButton>
                     <BlocIQButton 
                       asChild
                       variant="outline"
                       size="sm"
-                      className="w-full border-[#4f46e5] text-[#4f46e5] hover:bg-[#4f46e5] hover:text-white transition-all duration-200 rounded-xl"
+                      className="w-full border-[#4f46e5] text-[#4f46e5] hover:bg-[#4f46e5] hover:text-white transition-all duration-200 rounded-xl font-semibold text-base"
                     >
                       <Link href={`/buildings/${building.id}/compliance`}>
-                        <Shield className="h-4 w-4 mr-2" />
-                        View Compliance
+                        <Shield className="h-5 w-5 mr-2" />
+                        🛡️ View Compliance
                       </Link>
                     </BlocIQButton>
                   </div>
