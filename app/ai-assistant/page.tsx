@@ -15,12 +15,8 @@ import PageHero from '@/components/PageHero';
 export default function AIAssistantPage() {
   return (
     <LayoutWithSidebar>
+      <PageHero title="AI Assistant" subtitle="Upload documents and ask questions with AI that understands your building context" icon={<Brain className="h-8 w-8 text-white" />} />
       <div className="space-y-8">
-        <PageHero
-          title="AI Assistant"
-          subtitle="Upload documents and ask questions with AI that understands your building context"
-          icon={<Brain className="h-8 w-8 text-white" />}
-        />
 
         <div className="p-6 space-y-8">
           {/* AI Assistant Header */}

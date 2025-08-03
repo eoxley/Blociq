@@ -321,6 +321,7 @@ export default function BuildingsPage() {
 
   return (
     <div className="space-y-12">
+      <PageHero title="Buildings" subtitle="Manage your property portfolio and building details." />
       {/* Buildings List */}
       <BuildingsList initialBuildings={buildings} />
 
