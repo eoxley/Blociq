@@ -12,16 +12,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { leaseholder_id, building_id, subject, body, is_bulk = false } = await req.json()
+    const { leaseholder_id, building_id, subject, body, template_id, is_bulk = false } = await req.json()
 
     if (!subject || !body) {
       return NextResponse.json({ error: 'Subject and body are required' }, { status: 400 })
     }
 
     if (is_bulk) {
-      // Send email to all leaseholders in a building
+      // Send letter to all leaseholders in a building
       if (!building_id) {
-        return NextResponse.json({ error: 'Building ID is required for bulk emails' }, { status: 400 })
+        return NextResponse.json({ error: 'Building ID is required for bulk letters' }, { status: 400 })
       }
 
       // Get all leaseholders for the building
@@ -43,10 +43,11 @@ export async function POST(req: NextRequest) {
       const communicationsLogs = leaseholders.map(leaseholder => ({
         leaseholder_id: leaseholder.id,
         building_id,
-        type: 'email',
+        type: 'letter',
         subject,
         content: body,
         status: 'pending',
+        template_id: template_id || null,
         created_at: new Date().toISOString()
       }))
 
@@ -61,12 +62,12 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({ 
         success: true, 
-        message: `Email queued for ${leaseholders.length} leaseholders`,
+        message: `Letter queued for ${leaseholders.length} leaseholders`,
         data 
       })
 
     } else {
-      // Send email to a specific leaseholder
+      // Send letter to a specific leaseholder
       if (!leaseholder_id) {
         return NextResponse.json({ error: 'Leaseholder ID is required' }, { status: 400 })
       }
@@ -77,10 +78,11 @@ export async function POST(req: NextRequest) {
         .insert({
           leaseholder_id,
           building_id,
-          type: 'email',
+          type: 'letter',
           subject,
           content: body,
           status: 'pending',
+          template_id: template_id || null,
           created_at: new Date().toISOString()
         })
 
@@ -91,13 +93,13 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({ 
         success: true, 
-        message: 'Email queued successfully',
+        message: 'Letter queued successfully',
         data 
       })
     }
 
   } catch (error) {
-    console.error('Error in send-email API:', error)
+    console.error('Error in send-letter API:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+} 

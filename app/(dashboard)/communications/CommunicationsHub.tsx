@@ -300,45 +300,6 @@ export default function CommunicationsHub() {
       </section>
 
       <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
-        {/* Enhanced Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Phone className="h-5 w-5 text-[#4f46e5]" />
-                  <p className="text-gray-600 text-sm font-medium">Recent Communications</p>
-                </div>
-                <p className="text-3xl font-bold text-gray-900">{recentCommunications.length}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <p className="text-gray-600 text-sm font-medium">Successful</p>
-                </div>
-                <p className="text-3xl font-bold text-gray-900">{recentCommunications.filter(comm => comm.status === 'sent').length}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Clock className="h-5 w-5 text-yellow-600" />
-                  <p className="text-gray-600 text-sm font-medium">Pending</p>
-                </div>
-                <p className="text-3xl font-bold text-gray-900">{recentCommunications.filter(comm => comm.status === 'pending').length}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Enhanced Action Tiles */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {actionTiles.map((tile) => (
