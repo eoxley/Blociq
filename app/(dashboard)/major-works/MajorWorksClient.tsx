@@ -60,14 +60,8 @@ export default function MajorWorksClient({ userData, selectedBuildingId }: Major
   }
 
   return (
-    <div className="space-y-8">
-      {/* Hero Banner */}
-      <PageHero
-        title="Major Works"
-        subtitle="Track and manage major property works and projects"
-        icon={<Building className="h-8 w-8 text-white" />}
-      />
-
+    <>
+      <PageHero title="Major Works" subtitle="Track and manage major works projects across your portfolio." />
       <div className="max-w-7xl mx-auto p-6">
         {/* Major Works Dashboard */}
         <MajorWorksDashboard 
@@ -76,6 +70,6 @@ export default function MajorWorksClient({ userData, selectedBuildingId }: Major
           showAddButton={true}
         />
       </div>
-    </div>
+    </>
   )
 } 

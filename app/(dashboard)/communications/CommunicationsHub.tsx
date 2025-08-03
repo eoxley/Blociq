@@ -266,13 +266,8 @@ export default function CommunicationsHub() {
   }
 
   return (
-    <div className="space-y-8">
-      <PageHero
-        title="Communications Hub"
-        subtitle="Manage all leaseholder contact from one place"
-        icon={<Phone className="h-8 w-8 text-white" />}
-      />
-
+    <>
+      <PageHero title="Communications" subtitle="Centralize and manage all your property communications." />
       <div className="p-6 max-w-7xl mx-auto space-y-8">
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -386,7 +381,7 @@ export default function CommunicationsHub() {
         <CallLeaseholderModal
           open={showCallLeaseholder}
           onOpenChange={setShowCallLeaseholder}
-          onLeaseholderSelect={handleCallLeaseholder}
+          onLeaseholderSelect={(leaseholder: any) => handleCallLeaseholder(leaseholder)}
           isLoading={isLoading}
         />
 
@@ -394,7 +389,7 @@ export default function CommunicationsHub() {
           open={showLeaseholderSearch}
           onOpenChange={setShowLeaseholderSearch}
           action={selectedAction as 'email' | 'letter'}
-          onLeaseholderSelect={handleLeaseholderSelect}
+          onLeaseholderSelect={(leaseholder: any) => handleLeaseholderSelect(leaseholder)}
         />
 
         <BuildingSearchModal
@@ -407,7 +402,7 @@ export default function CommunicationsHub() {
         <EmailDraftModal
           open={showEmailDraft}
           onOpenChange={setShowEmailDraft}
-          leaseholder={selectedLeaseholder || undefined}
+          leaseholder={selectedLeaseholder as any || undefined}
           building={selectedBuilding || undefined}
           isBulk={selectedAction === 'email-all'}
           onSuccess={loadRecentCommunications}
@@ -416,10 +411,9 @@ export default function CommunicationsHub() {
         <LetterDraftModal
           open={showLetterDraft}
           onOpenChange={setShowLetterDraft}
-          leaseholder={selectedLeaseholder || undefined}
+          leaseholder={selectedLeaseholder as any || undefined}
           building={selectedBuilding || undefined}
           isBulk={selectedAction === 'letter-all'}
-          onSuccess={loadRecentCommunications}
         />
 
         <CommunicationsLogModal
@@ -427,6 +421,6 @@ export default function CommunicationsHub() {
           onOpenChange={setShowCommunicationsLog}
         />
       </div>
-    </div>
+    </>
   )
 }
