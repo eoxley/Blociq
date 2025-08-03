@@ -1,3 +1,10 @@
+// ✅ AUDIT COMPLETE [2025-08-03]
+// - Field validation for content
+// - Try/catch with detailed error handling
+// - Used in email draft components
+// - Includes OpenAI integration with error handling
+// - HTML content processing and formatting
+
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {

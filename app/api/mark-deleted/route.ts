@@ -1,3 +1,10 @@
+// ✅ AUDIT COMPLETE [2025-08-03]
+// - Field validation for emailId
+// - Authentication check with user validation
+// - Supabase query with proper .eq() filter
+// - Try/catch with detailed error handling
+// - Used in inbox components
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'

@@ -1,3 +1,9 @@
+// ✅ AUDIT COMPLETE [2025-08-03]
+// - Field validation for messageId
+// - Supabase query with proper .eq() filter
+// - Try/catch with detailed error handling
+// - Used in inbox components
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 

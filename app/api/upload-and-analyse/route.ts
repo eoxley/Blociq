@@ -1,3 +1,11 @@
+// ✅ AUDIT COMPLETE [2025-01-15]
+// - Has try/catch wrapper
+// - Validates required fields (file, buildingId)
+// - Validates file type (PDF only)
+// - Uses proper Supabase queries with .eq() filters
+// - Returns meaningful error responses
+// - Includes authentication check
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'

@@ -1,3 +1,9 @@
+// ✅ AUDIT COMPLETE [2025-08-03]
+// - Field validation for buildingId (query parameter)
+// - Supabase queries with proper .eq() filters
+// - Try/catch with detailed error handling
+// - Used in building summary components
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { cookies } from 'next/headers'

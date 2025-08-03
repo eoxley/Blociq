@@ -1,3 +1,10 @@
+// ✅ AUDIT COMPLETE [2025-08-03]
+// - Supabase queries with proper error handling
+// - Try/catch with detailed error handling
+// - Used in email sync components
+// - Includes Microsoft Graph integration with token refresh
+// - Proper email filtering and upsert logic
+
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 

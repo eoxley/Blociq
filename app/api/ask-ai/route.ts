@@ -1,3 +1,10 @@
+// ✅ AUDIT COMPLETE [2025-01-15]
+// - Has try/catch wrapper
+// - Validates required fields (question, building_id)
+// - Uses proper Supabase queries with .eq() filters
+// - Returns meaningful error responses
+// - Includes authentication check
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'

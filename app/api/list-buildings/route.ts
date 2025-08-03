@@ -1,3 +1,9 @@
+// ✅ AUDIT COMPLETE [2025-08-03]
+// - Authentication check with session validation
+// - Supabase query with proper error handling
+// - Try/catch with detailed error handling
+// - Used in building list components
+
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'

@@ -1,3 +1,11 @@
+// ✅ AUDIT COMPLETE [2025-08-03]
+// - Field validation for building_id (query parameter)
+// - Authentication check with session validation
+// - Supabase queries with proper .eq() filters
+// - Try/catch with detailed error handling
+// - Used in building summary components
+// - Includes OpenAI integration with error handling
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { cookies } from 'next/headers'
