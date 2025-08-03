@@ -25,6 +25,7 @@ type Email = {
   unit_id: number | null
   leaseholder_id: string | null
   outlook_id: string | null
+  user_id: string | null
   buildings?: { name: string } | null
   units?: { unit_number: string } | null
   leaseholders?: { name: string; email: string } | null
@@ -43,6 +44,7 @@ export function useInbox() {
   const [loading, setLoading] = useState(true)
   const [isRealTimeEnabled, setIsRealTimeEnabled] = useState(false)
   const [folders, setFolders] = useState<Folder[]>([])
+  const [error, setError] = useState<string | null>(null)
   
   const subscriptionRef = useRef<any>(null)
 
@@ -50,6 +52,26 @@ export function useInbox() {
   const fetchEmails = async () => {
     try {
       setLoading(true)
+      setError(null)
+      
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      
+      if (userError) {
+        console.error('Error getting user:', userError)
+        setError('Authentication error')
+        toast.error('Authentication failed')
+        return
+      }
+      
+      if (!user) {
+        console.error('No user found')
+        setError('No user found')
+        toast.error('Please log in to view emails')
+        return
+      }
+
+      console.log('Fetching emails for user:', user.id)
       
       const { data, error } = await supabase
         .from('incoming_emails')
@@ -59,17 +81,21 @@ export function useInbox() {
           units (unit_number),
           leaseholders (name, email)
         `)
+        .eq('user_id', user.id)
         .order('received_at', { ascending: false })
 
       if (error) {
         console.error('Error fetching emails:', error)
+        setError(error.message)
         toast.error('Failed to load emails')
         return
       }
 
+      console.log('Emails fetched successfully:', data?.length || 0)
       setEmails(data || [])
     } catch (error) {
       console.error('Error in fetchEmails:', error)
+      setError(error instanceof Error ? error.message : 'Unknown error')
       toast.error('Failed to load emails')
     } finally {
       setLoading(false)
@@ -101,7 +127,14 @@ export function useInbox() {
         await supabase.removeChannel(subscriptionRef.current)
       }
 
-      // Create new subscription
+      // Get current user for filtering
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        console.error('No user found for real-time subscription')
+        return
+      }
+
+      // Create new subscription with user filter
       const channel = supabase
         .channel('incoming_emails_changes')
         .on(
@@ -109,7 +142,8 @@ export function useInbox() {
           {
             event: '*',
             schema: 'public',
-            table: 'incoming_emails'
+            table: 'incoming_emails',
+            filter: `user_id=eq.${user.id}`
           },
           (payload) => {
             console.log('Real-time update received:', payload)
@@ -151,7 +185,7 @@ export function useInbox() {
       {
         id: 'unread',
         label: 'Unread',
-        count: emails.filter(e => e.unread).length,
+        count: emails.filter(e => e.unread || !e.is_read).length,
         icon: '📬'
       },
       {
@@ -163,7 +197,7 @@ export function useInbox() {
       {
         id: 'handled',
         label: 'Handled',
-        count: emails.filter(e => e.handled).length,
+        count: emails.filter(e => e.handled || e.is_handled).length,
         icon: '✅'
       }
     ]
@@ -206,6 +240,7 @@ export function useInbox() {
     manualSync,
     isRealTimeEnabled,
     folders,
-    loading
+    loading,
+    error
   }
 } 
