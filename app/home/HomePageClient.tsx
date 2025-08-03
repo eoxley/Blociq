@@ -3,10 +3,12 @@
 // Home page client component - Major works dashboard removed for cleaner interface
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2, ExternalLink, RefreshCw, MessageCircle, Sparkles, Upload, FileText, Send, Bot } from 'lucide-react'
+import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2, ExternalLink, RefreshCw, MessageCircle, Sparkles, Upload, FileText, Send, Bot, Search } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 import DailySummary from '@/components/DailySummary'
 import AskBlocIQHomepage from '@/components/AskBlocIQHomepage'
+import DailyOverview from '@/components/DailyOverview'
+import SmartSearch from '@/components/SmartSearch'
 
 import BreadcrumbNavigation from '@/components/BreadcrumbNavigation'
 import { BlocIQButton } from '@/components/ui/blociq-button'
