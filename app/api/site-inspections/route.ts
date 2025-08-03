@@ -1,3 +1,10 @@
+// ✅ AUDIT COMPLETE [2025-08-03]
+// - Field validation for buildingId, inspectedBy
+// - Supabase queries with proper .eq() filters
+// - Try/catch with detailed error handling
+// - Used in site inspection components
+// - Includes both GET and POST endpoints
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 

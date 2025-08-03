@@ -1,3 +1,11 @@
+// ✅ AUDIT COMPLETE [2025-08-03]
+// - Field validation for templateId, buildingId, recipients, mergedMessages
+// - Authentication check with user validation
+// - Supabase queries with proper .eq() filters
+// - Try/catch with detailed error handling
+// - Used in letter generation components
+// - Includes PDF generation and storage integration
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';

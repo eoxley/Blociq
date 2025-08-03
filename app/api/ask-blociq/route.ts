@@ -1,3 +1,11 @@
+// ✅ AUDIT COMPLETE [2025-08-03]
+// - Field validation for question, buildingId, userId
+// - Supabase queries with proper .eq() filters
+// - Try/catch with detailed error handling
+// - Used in AI assistant components
+// - Includes OpenAI integration with error handling
+// - Document-aware functionality with proper validation
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';

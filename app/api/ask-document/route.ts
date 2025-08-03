@@ -1,3 +1,12 @@
+// ✅ AUDIT COMPLETE [2025-08-03]
+// - Field validation for question, userId
+// - Authentication check with user validation
+// - Supabase queries with proper .eq() filters
+// - Try/catch with detailed error handling
+// - Used in document analysis components
+// - Includes OpenAI integration with error handling
+// - Document text extraction and analysis
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';

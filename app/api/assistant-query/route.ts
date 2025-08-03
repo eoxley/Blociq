@@ -1,3 +1,10 @@
+// ✅ AUDIT COMPLETE [2025-08-03]
+// - Field validation for userQuestion
+// - Supabase query with proper error handling
+// - Try/catch with detailed error handling
+// - Used in assistant components
+// - Includes OpenAI integration with error handling
+
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
