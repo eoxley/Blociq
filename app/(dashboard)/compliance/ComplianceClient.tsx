@@ -1,8 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { Shield, Search, Filter, Calendar, AlertTriangle, CheckCircle, Clock, TrendingUp, FileText, Building, Users } from 'lucide-react'
-import PageHero from '@/components/PageHero'
+import { Shield, Search, Filter, Calendar, AlertTriangle, CheckCircle, Clock, TrendingUp, FileText, Building, Users, Sparkles, Target, BarChart3 } from 'lucide-react'
 import LayoutWithSidebar from '@/components/LayoutWithSidebar'
 
 interface ComplianceAsset {
@@ -156,53 +155,84 @@ export default function ComplianceClient({ complianceAssets: initialAssets = [] 
 
   return (
     <LayoutWithSidebar>
-      <PageHero title="Compliance" subtitle="Stay on top of compliance tasks and requirements." />
-      <div className="space-y-8">
-        {/* Stats Overview */}
+      {/* Enhanced Hero Banner - BlocIQ Landing Page Style */}
+      <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center">
+            <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
+              <Shield className="h-10 w-10 text-white" />
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
+              Compliance Management
+            </h1>
+            <p className="text-xl text-white/90 max-w-3xl mx-auto leading-relaxed">
+              Track and manage building compliance requirements
+            </p>
+          </div>
+        </div>
+        
+        {/* Decorative Elements */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-10 right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-white/5 rounded-full blur-2xl"></div>
+        </div>
+      </section>
+
+      <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
+        {/* Enhanced Stats Overview Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white shadow-lg">
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-blue-100 text-sm font-medium">Total Requirements</p>
-                <p className="text-3xl font-bold">{stats.total}</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <Shield className="h-5 w-5 text-[#4f46e5]" />
+                  <p className="text-gray-600 text-sm font-medium">Total Requirements</p>
+                </div>
+                <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
               </div>
-              <Shield className="h-8 w-8 text-blue-200" />
             </div>
           </div>
           
-          <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl p-6 text-white shadow-lg">
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-green-100 text-sm font-medium">Active Tracking</p>
-                <p className="text-3xl font-bold">{stats.active}</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp className="h-5 w-5 text-[#4f46e5]" />
+                  <p className="text-gray-600 text-sm font-medium">Active Tracking</p>
+                </div>
+                <p className="text-3xl font-bold text-gray-900">{stats.active}</p>
               </div>
-              <TrendingUp className="h-8 w-8 text-green-200" />
             </div>
           </div>
           
-          <div className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl p-6 text-white shadow-lg">
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-emerald-100 text-sm font-medium">Compliant</p>
-                <p className="text-3xl font-bold">{stats.compliant}</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <p className="text-gray-600 text-sm font-medium">Compliant</p>
+                </div>
+                <p className="text-3xl font-bold text-gray-900">{stats.compliant}</p>
               </div>
-              <CheckCircle className="h-8 w-8 text-emerald-200" />
             </div>
           </div>
           
-          <div className="bg-gradient-to-r from-red-600 to-pink-600 rounded-xl p-6 text-white shadow-lg">
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-red-100 text-sm font-medium">Overdue</p>
-                <p className="text-3xl font-bold">{stats.overdue}</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                  <p className="text-gray-600 text-sm font-medium">Overdue</p>
+                </div>
+                <p className="text-3xl font-bold text-gray-900">{stats.overdue}</p>
               </div>
-              <AlertTriangle className="h-8 w-8 text-red-200" />
             </div>
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+        {/* Enhanced Controls */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
             <div>
               <h2 className="text-2xl font-bold text-gray-900">Compliance Tracking</h2>
@@ -217,7 +247,7 @@ export default function ComplianceClient({ complianceAssets: initialAssets = [] 
                   placeholder="Search compliance items..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] transition-all"
                 />
               </div>
               
@@ -255,7 +285,7 @@ export default function ComplianceClient({ complianceAssets: initialAssets = [] 
                 const status = getComplianceStatus(asset)
                 
                 return (
-                  <div key={asset.id} className={`bg-white rounded-xl shadow-lg border ${categoryColors.border} hover:shadow-xl transition-all duration-300`}>
+                  <div key={asset.id} className={`bg-white rounded-xl shadow-sm border ${categoryColors.border} hover:shadow-md transition-all duration-300`}>
                     <div className="p-6">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
@@ -296,11 +326,7 @@ export default function ComplianceClient({ complianceAssets: initialAssets = [] 
                             onClick={() => {
                               setViewMode('setup')
                             }}
-                            className={`px-4 py-2 text-sm rounded-lg transition-colors font-medium ${
-                              asset.applies 
-                                ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg' 
-                                : 'bg-purple-600 text-white hover:bg-purple-700 shadow-lg'
-                            }`}
+                            className="px-4 py-2 text-sm rounded-xl transition-all duration-200 font-medium bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white hover:brightness-110 shadow-sm hover:shadow-md"
                           >
                             {asset.applies ? 'Update Tracking' : 'Start Tracking'}
                           </button>
@@ -313,7 +339,7 @@ export default function ComplianceClient({ complianceAssets: initialAssets = [] 
             </div>
 
             {searchTerm && filteredAssets.length === 0 && (
-              <div className="text-center py-12 bg-white rounded-xl shadow-lg">
+              <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-gray-200">
                 <Shield className="mx-auto h-16 w-16 text-gray-400 mb-4" />
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">No matching compliance items</h3>
                 <p className="text-gray-500 mb-6">
@@ -321,7 +347,7 @@ export default function ComplianceClient({ complianceAssets: initialAssets = [] 
                 </p>
                 <button
                   onClick={() => setSearchTerm('')}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-lg"
+                  className="px-6 py-3 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white rounded-xl hover:brightness-110 transition-all duration-200 font-medium shadow-sm"
                 >
                   Clear Search
                 </button>
@@ -330,7 +356,7 @@ export default function ComplianceClient({ complianceAssets: initialAssets = [] 
           </>
         ) : (
           <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Building Compliance Setup</h2>
               <p className="text-gray-600 mb-6">Configure which compliance requirements apply to your building and set tracking dates.</p>
 
@@ -340,7 +366,7 @@ export default function ComplianceClient({ complianceAssets: initialAssets = [] 
                   const status = getComplianceStatus(asset)
                   
                   return (
-                    <div key={asset.id} className={`rounded-lg border ${categoryColors.border} ${categoryColors.bg} p-4`}>
+                    <div key={asset.id} className={`rounded-xl border ${categoryColors.border} ${categoryColors.bg} p-4`}>
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
@@ -365,7 +391,7 @@ export default function ComplianceClient({ complianceAssets: initialAssets = [] 
                               type="checkbox"
                               checked={asset.applies}
                               onChange={() => toggleAsset(asset.id)}
-                              className="accent-blue-600"
+                              className="accent-[#4f46e5]"
                             />
                             Applies
                           </label>
@@ -376,14 +402,14 @@ export default function ComplianceClient({ complianceAssets: initialAssets = [] 
                                 type="date"
                                 value={asset.last_checked || ''}
                                 onChange={(e) => updateLastChecked(asset.id, e.target.value)}
-                                className="text-xs border px-3 py-2 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="text-xs border px-3 py-2 rounded-xl bg-white focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] transition-all"
                                 placeholder="Last checked"
                               />
                               <input
                                 type="date"
                                 value={asset.next_due || ''}
                                 onChange={(e) => updateNextDue(asset.id, e.target.value)}
-                                className="text-xs border px-3 py-2 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="text-xs border px-3 py-2 rounded-xl bg-white focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] transition-all"
                                 placeholder="Next due"
                               />
                             </div>
