@@ -513,17 +513,17 @@ export default function ComplianceTrackerClient({ complianceData }: ComplianceTr
           )}
         </div>
 
-                 {/* Upload Compliance Modal */}
-         {selectedAssetForUpload && (
-           <UploadComplianceModal
-             isOpen={!!selectedAssetForUpload}
-             onClose={() => setSelectedAssetForUpload(null)}
-             buildingId={complianceData.building.id}
-             complianceAssetId={selectedAssetForUpload.id}
-             assetName={selectedAssetForUpload.name}
-           />
-         )}
-       </div>
-     </TooltipProvider>
-   )
+        {/* Upload Compliance Modal */}
+        {selectedAssetForUpload && (
+          <UploadComplianceModal
+            isOpen={!!selectedAssetForUpload}
+            onClose={() => setSelectedAssetForUpload(null)}
+            buildingId={complianceData.building.id}
+            complianceAssetId={selectedAssetForUpload.id}
+            assetName={selectedAssetForUpload.name}
+          />
+        )}
+      </div>
+    </TooltipProvider>
+  )
 } 
