@@ -200,7 +200,7 @@ export default function LeaseholdersTable({ buildingId, className = "" }: Leaseh
     return (
       (leaseholder.full_name && leaseholder.full_name.toLowerCase().includes(searchLower)) ||
       (leaseholder.email && leaseholder.email.toLowerCase().includes(searchLower)) ||
-      (unit && unit.unit_number.toLowerCase().includes(searchLower))
+      (unit && unit.unit_number?.toLowerCase().includes(searchLower))
     );
   });
 

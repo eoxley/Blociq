@@ -46,7 +46,7 @@ export default function UnitsList({ units, buildingId }: UnitsListProps) {
     
     return units.filter(unit => {
       // Search by unit number
-      if (unit.unit_number.toLowerCase().includes(searchLower)) return true
+      if (unit.unit_number?.toLowerCase().includes(searchLower)) return true
       
       // Search by leaseholder name
       if (unit.leaseholders && unit.leaseholders.length > 0) {

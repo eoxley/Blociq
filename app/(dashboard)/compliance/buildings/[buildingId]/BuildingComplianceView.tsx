@@ -271,8 +271,8 @@ export default function BuildingComplianceView({ buildingId, buildingName }: Bui
 
   const filteredAssets = assets.filter(asset => {
     const matchesStatus = filterStatus === 'all' || asset.status === filterStatus
-    const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         asset.description.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = (asset.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                         (asset.description?.toLowerCase() || '').includes(searchTerm.toLowerCase())
     return matchesSearch && matchesStatus
   })
 
