@@ -9,6 +9,7 @@ import DailySummary from '@/components/DailySummary'
 import AskBlocIQHomepage from '@/components/AskBlocIQHomepage'
 import DailyOverview from '@/components/DailyOverview'
 import SmartSearch from '@/components/SmartSearch'
+import BuildingTodoList from '@/components/BuildingTodoList'
 
 import BreadcrumbNavigation from '@/components/BreadcrumbNavigation'
 import { BlocIQButton } from '@/components/ui/blociq-button'
@@ -373,27 +374,25 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         {/* Daily Overview Section */}
         <DailyOverview />
 
-        {/* Search and AI Assistant Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Smart Search */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl shadow-lg border-0 p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-gradient-to-r from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center text-white">
-                  <Search className="h-5 w-5" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900">Quick Search</h2>
-                  <p className="text-sm text-gray-600">Find buildings, leaseholders, or units</p>
-                </div>
-              </div>
-              <SmartSearch />
+        {/* Search Section */}
+        <div className="bg-white rounded-2xl shadow-lg border-0 p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-gradient-to-r from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center text-white">
+              <Search className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Quick Search</h2>
+              <p className="text-sm text-gray-600">Find buildings, leaseholders, or units</p>
             </div>
           </div>
+          <SmartSearch />
+        </div>
 
+        {/* Property Events and Building To-Do Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Property Events Widget */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow-lg border-0 overflow-hidden">
+          <div className="h-full">
+            <div className="bg-white rounded-2xl shadow-lg border-0 overflow-hidden h-full flex flex-col">
               <div className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] p-6 text-white">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -439,7 +438,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 </div>
               </div>
               
-              <div className="p-6">
+              <div className="p-6 flex-1 overflow-y-auto">
                 {/* Add Event Button */}
                 {!showAddEventForm && (
                   <div className="text-center">
@@ -634,6 +633,11 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Building To-Do Widget */}
+          <div className="h-full">
+            <BuildingTodoList maxItems={5} showBuildingName={true} className="h-full" />
           </div>
         </div>
 
