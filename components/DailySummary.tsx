@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import { Brain, RefreshCw, Loader2, Sparkles, TrendingUp, AlertCircle, CheckCircle, Clock } from 'lucide-react'
+import { getTimeBasedGreeting } from '@/utils/greeting'
 
 interface DailySummaryProps {
   className?: string;
@@ -14,6 +15,11 @@ export default function DailySummary({ className = "" }: DailySummaryProps) {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Dynamic greeting based on time of day
+  const getGreeting = () => {
+    return getTimeBasedGreeting()
+  }
 
   const fetchSummary = async (isRefresh = false) => {
     if (isRefresh) {
@@ -35,7 +41,7 @@ export default function DailySummary({ className = "" }: DailySummaryProps) {
     } catch (err) {
       console.error('Error fetching daily summary:', err)
       setError('Unable to load summary. Please try again.')
-      setSummary('Good morning! I\'m having trouble generating your summary right now, but you can check your tasks and emails manually. Have a productive day! 🌅')
+      setSummary(`${getGreeting()} I'm having trouble generating your summary right now, but you can check your tasks and emails manually. Have a productive day! 🌅`)
     } finally {
       setLoading(false)
       setRefreshing(false)

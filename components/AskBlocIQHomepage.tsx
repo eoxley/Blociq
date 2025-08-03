@@ -244,21 +244,10 @@ export default function AskBlocIQHomepage() {
 
   return (
     <div className="flex flex-col h-[600px] bg-white rounded-2xl shadow-xl border border-gray-200">
-      {/* Chat Header */}
-      <div className="flex items-center gap-3 p-4 border-b border-gray-200 bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white rounded-t-2xl">
-        <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
-          <Sparkles className="h-5 w-5" />
-        </div>
-        <div>
-          <h2 className="font-semibold">Ask BlocIQ</h2>
-          <p className="text-xs text-white/80">AI-powered property management assistant</p>
-        </div>
-      </div>
-
       {/* Chat Messages */}
       <div 
         ref={chatContainerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-4"
+        className="flex-1 overflow-y-auto p-6 space-y-4"
       >
         {messages.map((message) => (
           <div
@@ -340,7 +329,7 @@ export default function AskBlocIQHomepage() {
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-gray-200 p-4 bg-gray-50 rounded-b-2xl">
+      <div className="border-t border-gray-200 p-6 bg-gray-50 rounded-b-2xl">
         <form onSubmit={handleSubmit} className="space-y-3">
           {/* File Upload Zone */}
           {uploadedFiles.length > 0 && (

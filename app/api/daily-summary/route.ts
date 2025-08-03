@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { cookies } from 'next/headers';
+import { getTimeBasedGreeting } from '@/utils/greeting';
 
 export async function GET(req: NextRequest) {
   try {
     const supabase = createClient(cookies());
+    
+    // Dynamic greeting based on time of day
+    const getGreeting = () => {
+      return getTimeBasedGreeting()
+    }
     
     // Get the current user's session
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -128,7 +134,7 @@ export async function GET(req: NextRequest) {
 
     if (!hasData) {
       return NextResponse.json({
-        summary: "Good morning! You're all caught up today. No upcoming events, unread emails, or compliance alerts to address. Enjoy your day! 🌟"
+        summary: `${getGreeting()} You're all caught up today. No upcoming events, unread emails, or compliance alerts to address. Enjoy your day! 🌟`
       });
     }
 
@@ -196,7 +202,7 @@ export async function GET(req: NextRequest) {
     if (!openaiApiKey) {
       console.error('OpenAI API key not found');
       return NextResponse.json({
-        summary: "Good morning! I'm having trouble accessing the AI service right now, but you can check your events and emails manually. Have a great day! 🌅"
+        summary: `${getGreeting()} I'm having trouble accessing the AI service right now, but you can check your events and emails manually. Have a great day! 🌅`
       });
     }
 
@@ -226,7 +232,7 @@ export async function GET(req: NextRequest) {
     if (!openaiResponse.ok) {
       console.error('OpenAI API error:', await openaiResponse.text());
       return NextResponse.json({
-        summary: "Good morning! I'm having trouble generating your summary right now, but you can check your events and emails manually. Have a productive day! 🌅"
+        summary: `${getGreeting()} I'm having trouble generating your summary right now, but you can check your events and emails manually. Have a productive day! 🌅`
       });
     }
 
@@ -237,8 +243,12 @@ export async function GET(req: NextRequest) {
 
   } catch (error) {
     console.error('Error generating daily summary:', error);
+    
+    // Dynamic greeting for error case
+    const greeting = getTimeBasedGreeting()
+    
     return NextResponse.json({
-      summary: "Good morning! I'm having trouble generating your summary right now, but you can check your events and emails manually. Have a productive day! 🌅"
+      summary: `${greeting} I'm having trouble generating your summary right now, but you can check your events and emails manually. Have a productive day! 🌅`
     });
   }
 } 
