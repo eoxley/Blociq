@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
+// ✅ VERIFIED: Used by SmartSearch component on homepage
 export async function POST(request: NextRequest) {
   try {
     const { query } = await request.json()
     
+    // 🔴 VALIDATION: Check for required fields
     if (!query || typeof query !== 'string' || query.trim().length < 2) {
       return NextResponse.json({ 
         error: 'Query must be at least 2 characters long' 
@@ -15,7 +17,7 @@ export async function POST(request: NextRequest) {
     const cookieStore = cookies()
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
 
-    // Check authentication
+    // 🔴 SECURITY: Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -31,7 +33,10 @@ export async function POST(request: NextRequest) {
       .ilike('name', searchQuery)
       .limit(5)
 
-    if (!buildingsError && buildings) {
+    if (buildingsError) {
+      console.error('Error searching buildings:', buildingsError)
+      // Continue with other searches even if buildings fail
+    } else if (buildings) {
       buildings.forEach(building => {
         results.push({
           id: building.id.toString(),
@@ -49,7 +54,10 @@ export async function POST(request: NextRequest) {
       .ilike('name', searchQuery)
       .limit(5)
 
-    if (!leaseholdersError && leaseholders) {
+    if (leaseholdersError) {
+      console.error('Error searching leaseholders:', leaseholdersError)
+      // Continue with other searches even if leaseholders fail
+    } else if (leaseholders) {
       leaseholders.forEach(leaseholder => {
         const buildingName = leaseholder.buildings?.name || 'Unknown Building'
         results.push({
@@ -68,7 +76,10 @@ export async function POST(request: NextRequest) {
       .ilike('unit_number', searchQuery)
       .limit(5)
 
-    if (!unitsError && units) {
+    if (unitsError) {
+      console.error('Error searching units:', unitsError)
+      // Continue with other searches even if units fail
+    } else if (units) {
       units.forEach(unit => {
         const buildingName = unit.buildings?.name || 'Unknown Building'
         results.push({
