@@ -15,6 +15,25 @@ import {
 import { BlocIQCard, BlocIQCardContent } from '@/components/ui/blociq-card'
 import { BlocIQBadge } from '@/components/ui/blociq-badge'
 
+/**
+ * BuildingTodoList Component
+ * 
+ * A responsive widget that displays building tasks from the building_todos table.
+ * Shows overdue and due today tasks with interactive completion toggling.
+ * 
+ * Features:
+ * - Fetches tasks from Supabase building_todos table
+ * - Filters for overdue and due today tasks only
+ * - Interactive completion toggling
+ * - Priority badges (High, Medium, Low)
+ * - Overdue task highlighting
+ * - Building name display (optional)
+ * - Responsive design with equal height layout
+ * 
+ * @param className - Additional CSS classes
+ * @param maxItems - Maximum number of tasks to display (default: 5)
+ * @param showBuildingName - Whether to show building names (default: true)
+ */
 type Todo = {
   id: string
   building_id: number
