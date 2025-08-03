@@ -517,13 +517,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold text-gray-900">Upcoming Events</h3>
-                    <button
-                      onClick={() => setShowAddEventForm(!showAddEventForm)}
-                      className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-lg transition-all duration-200"
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Add Event
-                    </button>
                   </div>
 
                   {upcomingEvents.length > 0 ? (

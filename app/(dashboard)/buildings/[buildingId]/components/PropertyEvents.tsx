@@ -209,15 +209,12 @@ export default function PropertyEvents({ propertyEvents, manualEvents, buildingI
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <h3 className="text-lg font-semibold text-gray-900">{event.title}</h3>
-                          {isOutlookEvent && (
-                            <ExternalLink className="h-4 w-4 text-blue-600" />
-                          )}
                         </div>
                         <div className="flex items-center gap-3 text-sm text-gray-600 mt-1">
                           {getEventTypeBadge(event.event_type)}
                           {event.source === 'outlook' && (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                              Outlook
+                              Outlook Event
                             </span>
                           )}
                           {event.source === 'manual' && (
