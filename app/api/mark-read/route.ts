@@ -26,7 +26,10 @@ export async function POST(req: NextRequest) {
 
     const { error } = await supabase
       .from('incoming_emails')
-      .update({ unread: false })
+      .update({ 
+        unread: false,
+        is_read: true 
+      })
       .eq('id', emailId);
 
     if (error) {
