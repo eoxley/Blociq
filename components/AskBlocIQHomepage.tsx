@@ -61,7 +61,6 @@ export default function AskBlocIQHomepage() {
   
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
 
   // Auto-resize textarea
@@ -76,10 +75,7 @@ export default function AskBlocIQHomepage() {
     adjustTextareaHeight()
   }, [prompt])
 
-  // Scroll to bottom when new messages are added
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  // Auto-scroll removed - let users control their own scrolling
 
   // File handling functions
   const acceptedFileTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
@@ -408,10 +404,8 @@ export default function AskBlocIQHomepage() {
               </div>
             </div>
           </div>
-        )}
-
-        <div ref={messagesEndRef} />
-      </div>
+                 )}
+       </div>
 
       {/* Search Results Section */}
       {searchResults.length > 0 && (
