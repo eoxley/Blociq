@@ -617,6 +617,7 @@ export default function BuildingTodoList({
                 </div>
               ))}
             </div>
+            </div>
           )}
 
           {todos.length > 0 && (
