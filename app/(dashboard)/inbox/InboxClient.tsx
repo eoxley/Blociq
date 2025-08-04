@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 import { useLiveInbox } from '@/hooks/useLiveInbox';
 import EnhancedEmailDetailView from './components/EnhancedEmailDetailView';
 import SimpleFolderSidebar from './components/SimpleFolderSidebar';
+import TriageModal from './components/TriageModal';
 import { useUser } from '@supabase/auth-helpers-react';
-import { AlertTriangle, RefreshCw, Mail, Wifi, WifiOff } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Mail, Wifi, WifiOff, X } from 'lucide-react';
 
 export default function InboxClient() {
   const {
@@ -25,6 +26,7 @@ export default function InboxClient() {
 
   const [search, setSearch] = useState('');
   const [selectedFolder, setSelectedFolder] = useState('inbox');
+  const [showTriageModal, setShowTriageModal] = useState(false);
   const user = useUser();
 
   // Generate folders based on email data
@@ -55,6 +57,17 @@ export default function InboxClient() {
     }
   ];
 
+  // AI-generated folders based on triage categories
+  const aiFolders = [
+    { id: 'complaints', label: 'Complaints', count: 0, icon: '⚠️' },
+    { id: 's20-notices', label: 'S20 Notices', count: 0, icon: '📋' },
+    { id: 'insurance', label: 'Insurance Queries', count: 0, icon: '🛡️' },
+    { id: 'leaks', label: 'Leaks & Maintenance', count: 0, icon: '🔧' }
+  ];
+
+  // Get unread emails for triage
+  const unreadEmails = emails.filter(e => e.unread || !e.is_read);
+
   // Filter emails based on search and folder
   const filteredEmails = emails.filter(email => {
     // First filter by folder
@@ -68,6 +81,18 @@ export default function InboxClient() {
         break;
       case 'handled':
         folderMatch = Boolean(email.handled || email.is_handled);
+        break;
+      case 'complaints':
+        folderMatch = email.ai_tag === 'complaint' || email.triage_category === 'complaint';
+        break;
+      case 's20-notices':
+        folderMatch = email.ai_tag === 's20' || email.triage_category === 's20';
+        break;
+      case 'insurance':
+        folderMatch = email.ai_tag === 'insurance' || email.triage_category === 'insurance';
+        break;
+      case 'leaks':
+        folderMatch = email.ai_tag === 'leak' || email.triage_category === 'leak';
         break;
       case 'inbox':
       default:
@@ -97,8 +122,16 @@ export default function InboxClient() {
     }
   };
 
+  const handleEmailSelect = async (email: any) => {
+    // Mark as read when email is selected
+    if (email && (email.unread || !email.is_read)) {
+      await markAsRead(email.id);
+    }
+    selectEmail(email);
+  };
+
   return (
-    <div className="max-w-[1600px] mx-auto px-6 py-8 space-y-6">
+    <div className="w-full max-w-[1440px] mx-auto px-6 py-8 space-y-6">
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -109,6 +142,16 @@ export default function InboxClient() {
               {newEmailCount} new
             </span>
           )}
+          {/* AI Triage Button */}
+          <button
+            onClick={() => setShowTriageModal(true)}
+            className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm hover:bg-gray-50 transition-colors"
+          >
+            <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+              <X className="h-3 w-3 text-white" />
+            </div>
+            <span>AI Triage</span>
+          </button>
         </div>
         <div className="flex items-center gap-4 text-sm">
           <div className="flex items-center gap-2">
@@ -157,7 +200,7 @@ export default function InboxClient() {
         {/* Sidebar */}
         <div className="w-full">
           <SimpleFolderSidebar 
-            folders={folders} 
+            folders={[...folders, ...aiFolders]} 
             selectedFolder={selectedFolder}
             onFolderSelect={handleFolderSelect}
           />
@@ -197,7 +240,7 @@ export default function InboxClient() {
                   {filteredEmails.map((email) => (
                     <li
                       key={email.id}
-                      onClick={() => selectEmail(email)}
+                      onClick={() => handleEmailSelect(email)}
                       className={`p-3 rounded-xl cursor-pointer transition hover:bg-indigo-50 ${
                         selectedEmail?.id === email.id ? 'bg-indigo-100 border border-indigo-200' : ''
                       }`}
@@ -255,6 +298,13 @@ export default function InboxClient() {
           </div>
         </div>
       </div>
+
+      {/* AI Triage Modal */}
+      <TriageModal
+        isOpen={showTriageModal}
+        onClose={() => setShowTriageModal(false)}
+        unreadEmails={unreadEmails}
+      />
     </div>
   );
 } 

@@ -26,6 +26,8 @@ interface Email {
   leaseholder_id: string | null;
   outlook_id: string | null;
   user_id: string | null;
+  ai_tag?: string | null;
+  triage_category?: string | null;
 }
 
 interface EnhancedEmailDetailViewProps {
@@ -176,30 +178,40 @@ export default function EnhancedEmailDetailView({
           </div>
         </div>
 
-        {/* Categories/Tags */}
-        {(email.categories || email.tags) && (
-          <div className="space-y-2">
-            <h3 className="font-medium text-gray-900">Categories & Tags</h3>
-            <div className="flex flex-wrap gap-2">
-              {email.categories?.map((category, index) => (
-                <span
-                  key={index}
-                  className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs"
-                >
-                  {category}
-                </span>
-              ))}
-              {email.tags?.map((tag, index) => (
-                <span
-                  key={index}
-                  className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
+                 {/* Categories/Tags */}
+         {(email.categories || email.tags || email.ai_tag || email.triage_category) && (
+           <div className="space-y-2">
+             <h3 className="font-medium text-gray-900">Categories & Tags</h3>
+             <div className="flex flex-wrap gap-2">
+               {email.categories?.map((category, index) => (
+                 <span
+                   key={index}
+                   className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs"
+                 >
+                   {category}
+                 </span>
+               ))}
+               {email.tags?.map((tag, index) => (
+                 <span
+                   key={index}
+                   className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs"
+                 >
+                   {tag}
+                 </span>
+               ))}
+               {email.ai_tag && (
+                 <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                   AI: {email.ai_tag}
+                 </span>
+               )}
+               {email.triage_category && (
+                 <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs">
+                   Triage: {email.triage_category}
+                 </span>
+               )}
+             </div>
+           </div>
+         )}
       </div>
 
       {/* Action Buttons */}
