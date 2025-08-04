@@ -174,6 +174,8 @@ export function useLiveInbox(): UseLiveInboxReturn {
   // Mark email as read
   const markAsRead = useCallback(async (emailId: string) => {
     try {
+      console.log('📧 Marking email as read:', emailId);
+      
       const { error } = await supabase
         .from('incoming_emails')
         .update({ 
@@ -184,6 +186,7 @@ export function useLiveInbox(): UseLiveInboxReturn {
 
       if (error) {
         console.error('❌ Error marking email as read:', error);
+        console.error('❌ Error details:', JSON.stringify(error, null, 2));
         toast.error('Failed to mark email as read');
         return;
       }
@@ -200,6 +203,7 @@ export function useLiveInbox(): UseLiveInboxReturn {
       console.log('✅ Email marked as read successfully');
     } catch (error) {
       console.error('❌ Error in markAsRead:', error);
+      console.error('❌ Error object:', JSON.stringify(error, null, 2));
       toast.error('Failed to mark email as read');
     }
   }, []);

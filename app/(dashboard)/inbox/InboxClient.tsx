@@ -8,7 +8,7 @@ import TriageModal from './components/TriageModal';
 import ComposeEmailModal from './components/ComposeEmailModal';
 import ReplyModal from './components/ReplyModal';
 import { useUser } from '@supabase/auth-helpers-react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 import { AlertTriangle, RefreshCw, Mail, Wifi, WifiOff, X, Plus, FolderOpen } from 'lucide-react';
 import TriageIcon from '@/components/icons/TriageIcon';
 import { toast } from 'sonner';
@@ -41,11 +41,7 @@ export default function InboxClient() {
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
   const user = useUser();
   
-  // Initialize Supabase client
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+
 
   // Generate folders based on email data
   const folders = [
@@ -332,6 +328,37 @@ export default function InboxClient() {
           >
             <span>🔍</span>
             <span>Debug</span>
+          </button>
+          
+          {/* Email Debug Button */}
+          <button
+            onClick={async () => {
+              try {
+                const response = await fetch('/api/debug-emails');
+                const result = await response.json();
+                console.log('Email Debug:', result);
+                
+                if (result.success) {
+                  const { emailStats, analysis } = result;
+                  let message = `Emails: ${emailStats.total} total`;
+                  message += ` | Real: ${emailStats.real}`;
+                  message += ` | Test: ${emailStats.test}`;
+                  message += ` | Dummy: ${emailStats.dummy}`;
+                  message += ` | Source: ${analysis.primarySource}`;
+                  
+                  toast.success(message);
+                } else {
+                  toast.error(result.message || 'Failed to check emails');
+                }
+              } catch (error) {
+                console.error('Email debug error:', error);
+                toast.error('Failed to check email status');
+              }
+            }}
+            className="flex items-center gap-2 bg-white border border-green-300 rounded-lg px-3 py-2 text-sm hover:bg-green-50 transition-colors"
+          >
+            <span>📧</span>
+            <span>Email Debug</span>
           </button>
           
           {/* Outlook Status Button */}

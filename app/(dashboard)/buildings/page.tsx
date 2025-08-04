@@ -21,7 +21,7 @@ import { BlocIQButton } from '@/components/ui/blociq-button'
 import { BlocIQCard, BlocIQCardContent } from '@/components/ui/blociq-card'
 
 // Client component for the buildings list with search functionality
-function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
+function BuildingsList({ initialBuildings, isDummyData = false }: { initialBuildings: any[], isDummyData?: boolean }) {
   const [searchTerm, setSearchTerm] = useState('')
 
   // Ensure initialBuildings is an array and filter out any invalid entries
@@ -56,6 +56,14 @@ function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
             <p className="text-xl text-white/90 max-w-3xl mx-auto leading-relaxed">
               Track compliance, view documents, and manage your portfolio effortlessly.
             </p>
+            {isDummyData && (
+              <div className="mt-6 bg-white/20 backdrop-blur-sm rounded-xl p-4 max-w-2xl mx-auto">
+                <div className="flex items-center justify-center gap-2 text-white/90">
+                  <Sparkles className="h-5 w-5" />
+                  <span className="text-sm font-medium">Showing sample buildings for demonstration</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
         
@@ -130,9 +138,18 @@ function BuildingsList({ initialBuildings }: { initialBuildings: any[] }) {
                   </div>
 
                   {/* Building Name */}
-                  <h3 className="text-2xl font-bold text-gray-900 mb-6">
-                    {building.name}
-                  </h3>
+                  <div className="mb-6">
+                    <div className="flex items-center justify-center gap-2">
+                      <h3 className="text-2xl font-bold text-gray-900">
+                        {building.name}
+                      </h3>
+                      {building.isDummy && (
+                        <span className="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-full font-medium">
+                          Demo
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
                   {/* Address */}
                   {building.address && (
@@ -255,6 +272,7 @@ export default function BuildingsPage() {
   const [buildings, setBuildings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isDummyData, setIsDummyData] = useState(false)
 
   // Fetch buildings with live unit counts from the units table
   React.useEffect(() => {
@@ -294,6 +312,11 @@ export default function BuildingsPage() {
         
         console.log('Cleaned buildings data:', cleanedBuildings)
         setBuildings(cleanedBuildings)
+        
+        // Check if this is dummy data
+        if (data.isDummyData) {
+          setIsDummyData(true)
+        }
       } catch (err) {
         console.error('Error fetching data:', err)
         setError('Unable to load your buildings at this time. Please try again later.')
@@ -348,7 +371,7 @@ export default function BuildingsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Buildings List */}
-      <BuildingsList initialBuildings={buildings} />
+      <BuildingsList initialBuildings={buildings} isDummyData={isDummyData} />
 
       {/* Enhanced CTA Section - Matching Landing Page Style */}
       {buildings && buildings.length > 0 && (
