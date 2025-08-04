@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
     console.log('✅ OpenAI response received');
 
     // Log the AI interaction
-    await insertAiLog({
+    const logId = await insertAiLog({
       user_id: user.id,
       question,
       response: aiResponse,
@@ -81,6 +81,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ 
       success: true,
       result: aiResponse,
+      ai_log_id: logId,
       context_type: contextType,
       building_id: buildingId,
       document_count: documentIds.length,

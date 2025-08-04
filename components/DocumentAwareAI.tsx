@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { getTimeBasedGreeting } from '@/utils/greeting';
+import AIFeedback from './AIFeedback';
 import { 
   MessageSquare, 
   Upload, 
@@ -67,6 +68,7 @@ export default function DocumentAwareAI({
   const [showDocumentUpload, setShowDocumentUpload] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadLoading, setUploadLoading] = useState(false);
+  const [aiLogId, setAiLogId] = useState<string | null>(null);
 
   useEffect(() => {
     const getSession = async () => {
@@ -131,6 +133,7 @@ export default function DocumentAwareAI({
 
       const data = await response.json();
       setResponse(data);
+      setAiLogId(data.ai_log_id || null);
       toast.success('AI response generated successfully');
 
     } catch (error: any) {
@@ -418,6 +421,11 @@ export default function DocumentAwareAI({
                   </div>
                 )}
               </div>
+              
+              {/* Feedback */}
+              {aiLogId && (
+                <AIFeedback aiLogId={aiLogId} />
+              )}
             </div>
           )}
         </CardContent>

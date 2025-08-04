@@ -23,9 +23,9 @@ export async function insertAiLog({
   document_ids?: string[];
   leaseholder_id?: string;
   email_thread_id?: string;
-}) {
+}): Promise<string | null> {
   try {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('ai_logs')
       .insert({
         user_id,
@@ -37,14 +37,19 @@ export async function insertAiLog({
         leaseholder_id,
         email_thread_id,
         timestamp: new Date().toISOString(),
-      });
+      })
+      .select('id')
+      .single();
 
     if (error) {
       console.error('Error inserting AI log:', error);
+      return null;
     } else {
       console.log('✅ AI interaction logged successfully');
+      return data?.id || null;
     }
   } catch (error) {
     console.error('Error in insertAiLog:', error);
+    return null;
   }
 } 
