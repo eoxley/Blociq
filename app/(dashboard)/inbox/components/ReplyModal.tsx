@@ -1,375 +1,333 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
-import { supabase } from '@/lib/supabaseClient';
-import { toast } from "sonner";
-import { BlocIQButton } from "@/components/ui/blociq-button";
-import { Paperclip, X, Sparkles } from "lucide-react";
-import AIResponseModal from "./AIResponseModal";
+
+import { useState, useEffect } from 'react';
+import { X, Send, Save, Maximize2, Minimize2, Mail, Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 interface Email {
   id: string;
-  subject: string | null;
-  from_name: string | null;
   from_email: string | null;
-  received_at: string | null;
+  from_name: string | null;
+  subject: string | null;
   body_preview: string | null;
   body_full: string | null;
-  building_id: string | null;
+  received_at: string | null;
   unread: boolean | null;
+  is_read: boolean | null;
   handled: boolean | null;
+  is_handled: boolean | null;
+  pinned: boolean | null;
+  flag_status: string | null;
+  categories: string[] | null;
   tags: string[] | null;
+  building_id: number | null;
+  unit_id: number | null;
+  leaseholder_id: string | null;
   outlook_id: string | null;
-  buildings?: { name: string } | null;
-  cc_email?: string | null; // Added for replyAll
-}
-
-interface Attachment {
-  file: File;
-  id: string;
-  name: string;
-  size: number;
+  user_id: string | null;
+  ai_tag?: string | null;
+  triage_category?: string | null;
 }
 
 interface ReplyModalProps {
-  mode: "reply" | "replyAll" | "forward";
-  email: Email;
+  isOpen: boolean;
   onClose: () => void;
-  onEmailSent?: () => void;
+  email: Email | null;
+  action: 'reply' | 'reply-all' | 'forward';
 }
 
-export default function ReplyModal({ mode, email, onClose, onEmailSent }: ReplyModalProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [to, setTo] = useState("");
-  const [cc, setCc] = useState("");
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [generatingAI, setGeneratingAI] = useState(false);
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const [showAIModal, setShowAIModal] = useState(false);
+type ReplyAction = 'reply' | 'reply-all' | 'forward';
 
+export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModalProps) {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [to, setTo] = useState<string[]>([]);
+  const [cc, setCc] = useState<string[]>([]);
+  const [subject, setSubject] = useState('');
+  const [body, setBody] = useState('');
+  const [signature, setSignature] = useState('');
+
+  // Load user signature on mount
   useEffect(() => {
-    const toList = [email.from_email];
-    const ccList = email.cc_email ? email.cc_email.split(",") : [];
-
-    if (mode === "reply") {
-      setTo(toList.join(", "));
-      setSubject(`RE: ${email.subject}`);
-    }
-    if (mode === "replyAll") {
-      setTo(toList.join(", "));
-      setCc(ccList.join(", "));
-      setSubject(`RE: ${email.subject}`);
-    }
-    if (mode === "forward") {
-      setTo("");
-      setSubject(`FWD: ${email.subject}`);
-      setBody(`\n\n---------- Forwarded message ----------\nFrom: ${email.from_name || email.from_email}\nSubject: ${email.subject}\n\n${email.body_full || email.body_preview}`);
-    }
-  }, [mode, email]);
-
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files) {
-      const newAttachments: Attachment[] = Array.from(files).map(file => ({
-        file,
-        id: Math.random().toString(36).substr(2, 9),
-        name: file.name,
-        size: file.size
-      }));
-      
-      setAttachments(prev => [...prev, ...newAttachments]);
-    }
-    // Reset the input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const removeAttachment = (id: string) => {
-    setAttachments(prev => prev.filter(att => att.id !== id));
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const handleAIResponseGenerated = (response: string) => {
-    setBody(response);
-    setShowAIModal(false);
-  };
-
-  const generateAIResponse = async () => {
-    setGeneratingAI(true);
-    try {
-      const res = await fetch("/api/generate-email-draft", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          emailId: email.id,
-          subject: email.subject,
-          body: email.body_full || email.body_preview,
-          buildingContext: email.buildings?.name,
-          tags: email.tags || [],
-          mode: mode
-        }),
-      });
-      
-      if (res.ok) {
-        const { draft } = await res.json();
-        setBody(draft);
-        toast.success("AI response generated successfully");
-      } else {
-        toast.error("Failed to generate AI response");
+    const loadSignature = async () => {
+      try {
+        const response = await fetch('/api/get-signature');
+        if (response.ok) {
+          const data = await response.json();
+          setSignature(data.signature);
+        }
+      } catch (error) {
+        console.error('Error loading signature:', error);
       }
-    } catch (error) {
-      console.error("Error generating AI response:", error);
-      toast.error("Failed to generate AI response");
-    } finally {
-      setGeneratingAI(false);
+    };
+
+    if (isOpen) {
+      loadSignature();
     }
-  };
+  }, [isOpen]);
+
+  // Initialize form when email changes
+  useEffect(() => {
+    if (!email || !isOpen) return;
+
+    let newTo: string[] = [];
+    let newCc: string[] = [];
+    let newSubject = '';
+
+    switch (action) {
+      case 'reply':
+        newTo = [email.from_email || ''];
+        newSubject = email.subject?.startsWith('RE:') ? email.subject : `RE: ${email.subject}`;
+        break;
+      case 'reply-all':
+        // For reply-all, we'd need to parse the original email headers
+        // For now, just reply to sender
+        newTo = [email.from_email || ''];
+        newSubject = email.subject?.startsWith('RE:') ? email.subject : `RE: ${email.subject}`;
+        break;
+      case 'forward':
+        newSubject = email.subject?.startsWith('FWD:') ? email.subject : `FWD: ${email.subject}`;
+        break;
+    }
+
+    setTo(newTo);
+    setCc(newCc);
+    setSubject(newSubject || '');
+
+    // Set initial body with signature
+    const originalMessage = email.body_full || email.body_preview || '';
+    const quotedMessage = `\n\n--- Original Message ---\nFrom: ${email.from_name || email.from_email}\nDate: ${new Date(email.received_at || '').toLocaleString()}\nSubject: ${email.subject}\n\n${originalMessage}`;
+    
+    setBody(action === 'forward' ? quotedMessage : quotedMessage);
+  }, [email, action, isOpen]);
 
   const handleSend = async () => {
-    if (!to.trim() || !subject.trim() || !body.trim()) {
-      toast.error("Please fill in all required fields");
+    if (!email || to.length === 0 || !subject.trim() || !body.trim()) {
+      toast.error('Please fill in all required fields');
       return;
     }
 
-    setLoading(true);
+    setIsSending(true);
     try {
-      // Create FormData for attachments
-      const formData = new FormData();
-      formData.append('to', JSON.stringify(to.split(',').map(email => email.trim())));
-      formData.append('cc', JSON.stringify(cc ? cc.split(',').map(email => email.trim()) : []));
-      formData.append('subject', subject);
-      formData.append('body', body);
-      formData.append('replyTo', email.from_email || '');
-      
-      // Add attachments
-      attachments.forEach((attachment, index) => {
-        formData.append(`attachment_${index}`, attachment.file);
+      const response = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to,
+          cc,
+          subject: subject.trim(),
+          body: body.trim(),
+          relatedEmailId: action !== 'forward' ? email.id : null,
+          status: 'sent'
+        }),
       });
 
-      const response = await fetch("/api/send-email", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (response.ok) {
-        await supabase
-          .from("incoming_emails")
-          .update({ handled: true, handled_at: new Date().toISOString() })
-          .eq("id", email.id);
-
-        toast.success("Email sent successfully");
-        onEmailSent?.();
-        onClose();
-      } else {
-        const error = await response.json();
-        toast.error(error.message || "Failed to send email");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send email');
       }
+
+      const data = await response.json();
+      toast.success(data.message || 'Email sent successfully');
+      onClose();
     } catch (error) {
-      console.error("Error sending email:", error);
-      toast.error("Failed to send email");
+      console.error('Error sending email:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to send email');
     } finally {
-      setLoading(false);
+      setIsSending(false);
     }
   };
 
+  const handleSaveDraft = async () => {
+    if (!email || to.length === 0 || !subject.trim() || !body.trim()) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const response = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to,
+          cc,
+          subject: subject.trim(),
+          body: body.trim(),
+          relatedEmailId: action !== 'forward' ? email.id : null,
+          status: 'draft'
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save draft');
+      }
+
+      const data = await response.json();
+      toast.success(data.message || 'Draft saved successfully');
+      onClose();
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to save draft');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handlePopOut = () => {
+    // TODO: Implement pop-out functionality
+    // This could open a new window or route to a dedicated compose page
+    toast.info('Pop-out functionality coming soon');
+  };
+
+  const getActionLabel = () => {
+    switch (action) {
+      case 'reply': return 'Reply';
+      case 'reply-all': return 'Reply All';
+      case 'forward': return 'Forward';
+      default: return 'Compose';
+    }
+  };
+
+  const getActionIcon = () => {
+    switch (action) {
+      case 'reply': return <Mail className="h-4 w-4" />;
+      case 'reply-all': return <Users className="h-4 w-4" />;
+      case 'forward': return <Mail className="h-4 w-4" />;
+      default: return <Mail className="h-4 w-4" />;
+    }
+  };
+
+  if (!isOpen || !email) return null;
+
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-[#333333] capitalize">
-            {mode.replace("All", " All")}
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-[#64748B] hover:text-[#333333] transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className={`bg-white rounded-xl shadow-xl ${isFullscreen ? 'w-full h-full m-0' : 'max-w-4xl w-full mx-4 max-h-[90vh]'} overflow-hidden`}>
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            {getActionIcon()}
+            <h2 className="text-xl font-semibold text-gray-900">
+              {getActionLabel()} to: {email.from_name || email.from_email}
+            </h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-[#333333] mb-2">
-              To
-            </label>
+        {/* Content */}
+        <div className="p-6 space-y-4 overflow-y-auto max-h-[calc(90vh-200px)]">
+          {/* To Field */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">To</label>
             <input
               type="text"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              placeholder="Recipient email addresses"
-              className="w-full border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-[#2BBEB4] focus:ring-2 focus:ring-[#2BBEB4]/20 outline-none transition-colors"
+              value={to.join(', ')}
+              onChange={(e) => setTo(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+              placeholder="Enter email addresses separated by commas"
             />
           </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-[#333333] mb-2">
-              CC
-            </label>
+
+          {/* CC Field */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">CC</label>
             <input
               type="text"
-              value={cc}
-              onChange={(e) => setCc(e.target.value)}
-              placeholder="CC email addresses"
-              className="w-full border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-[#2BBEB4] focus:ring-2 focus:ring-[#2BBEB4]/20 outline-none transition-colors"
+              value={cc.join(', ')}
+              onChange={(e) => setCc(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+              placeholder="Enter email addresses separated by commas"
             />
           </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-[#333333] mb-2">
-              Subject
-            </label>
+
+          {/* Subject Field */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">Subject</label>
             <input
               type="text"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              placeholder="Email subject"
-              className="w-full border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-[#2BBEB4] focus:ring-2 focus:ring-[#2BBEB4]/20 outline-none transition-colors"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+              placeholder="Enter subject"
             />
           </div>
-          
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-[#333333]">
-                Message
-              </label>
-              <div className="flex gap-2">
-                <BlocIQButton
-                  onClick={() => setShowAIModal(true)}
-                  variant="outline"
-                  size="sm"
-                  className="text-xs"
-                >
-                  <Sparkles className="w-3 h-3 mr-1" />
-                  AI Assistant
-                </BlocIQButton>
-                <BlocIQButton
-                  onClick={generateAIResponse}
-                  disabled={generatingAI}
-                  variant="outline"
-                  size="sm"
-                  className="text-xs"
-                >
-                  {generatingAI ? (
-                    <>
-                      <div className="w-3 h-3 border-2 border-[#2BBEB4] border-t-transparent rounded-full animate-spin mr-1"></div>
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                      </svg>
-                      Quick AI
-                    </>
-                  )}
-                </BlocIQButton>
-              </div>
-            </div>
+
+          {/* Body Field */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">Message</label>
             <textarea
-              rows={12}
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              className="w-full border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm focus:border-[#2BBEB4] focus:ring-2 focus:ring-[#2BBEB4]/20 outline-none transition-colors resize-none"
-              placeholder="Type your message or use AI Assistant for advanced help..."
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent resize-none"
+              rows={12}
+              placeholder="Enter your message..."
             />
           </div>
 
-          {/* Attachments */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-[#333333]">
-                Attachments
-              </label>
-              <BlocIQButton
-                onClick={() => fileInputRef.current?.click()}
-                variant="outline"
-                size="sm"
-                className="text-xs"
-              >
-                <Paperclip className="w-3 h-3 mr-1" />
-                Add Files
-              </BlocIQButton>
+          {/* Signature */}
+          {signature && (
+            <div className="text-sm text-gray-500 border-t border-gray-200 pt-2">
+              <div className="whitespace-pre-wrap">{signature}</div>
             </div>
-            
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              onChange={handleFileSelect}
-              className="hidden"
-              accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
-            />
-            
-            {attachments.length > 0 && (
-              <div className="space-y-2">
-                {attachments.map((attachment) => (
-                  <div
-                    key={attachment.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Paperclip className="w-4 h-4 text-gray-500" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{attachment.name}</p>
-                        <p className="text-xs text-gray-500">{formatFileSize(attachment.size)}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => removeAttachment(attachment.id)}
-                      className="text-gray-400 hover:text-red-500 transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          )}
         </div>
 
-        <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-[#E2E8F0]">
-          <BlocIQButton
-            onClick={onClose}
-            variant="outline"
-            className="px-6 py-3"
-          >
-            Cancel
-          </BlocIQButton>
-          <BlocIQButton
-            onClick={handleSend}
-            disabled={loading}
-            className="px-6 py-3 disabled:opacity-50"
-          >
-            {loading ? "Loading..." : "Send Email"}
-          </BlocIQButton>
+        {/* Footer */}
+        <div className="flex items-center justify-between p-6 border-t border-gray-200">
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handlePopOut}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Maximize2 className="h-4 w-4" />
+              Pop Out
+            </Button>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleSaveDraft}
+              disabled={isSaving}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Save className="h-4 w-4" />
+              {isSaving ? 'Saving...' : 'Save Draft'}
+            </Button>
+            <Button
+              onClick={handleSend}
+              disabled={isSending}
+              className="flex items-center gap-2"
+            >
+              <Send className="h-4 w-4" />
+              {isSending ? 'Sending...' : 'Send'}
+            </Button>
+          </div>
         </div>
       </div>
-
-      {/* AI Response Modal */}
-      <AIResponseModal
-        isOpen={showAIModal}
-        onClose={() => setShowAIModal(false)}
-        onResponseGenerated={handleAIResponseGenerated}
-        originalEmail={{
-          subject: email.subject,
-          body_full: email.body_full,
-          body_preview: email.body_preview,
-          buildings: email.buildings,
-          tags: email.tags
-        }}
-        mode={mode}
-      />
     </div>
   );
 } 

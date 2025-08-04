@@ -16,11 +16,13 @@ interface TriageModalProps {
   isOpen: boolean;
   onClose: () => void;
   unreadEmails: any[];
+  onTriageComplete?: (results: any) => void;
 }
 
-export default function TriageModal({ isOpen, onClose, unreadEmails }: TriageModalProps) {
+export default function TriageModal({ isOpen, onClose, unreadEmails, onTriageComplete }: TriageModalProps) {
   const [isRunning, setIsRunning] = useState(false);
-  const [results, setResults] = useState<TriageResult[]>([]);
+  const [results, setResults] = useState<any>(null);
+  const [triageData, setTriageData] = useState<any>(null);
 
   const handleRunTriage = async () => {
     if (unreadEmails.length === 0) {
@@ -29,47 +31,36 @@ export default function TriageModal({ isOpen, onClose, unreadEmails }: TriageMod
     }
 
     setIsRunning(true);
-    setResults([]);
+    setResults(null);
+    setTriageData(null);
 
     try {
       toast.loading('Running AI triage on emails...');
 
-      // Call the AI triage API for each unread email
-      const triagePromises = unreadEmails.map(async (email) => {
-        const response = await fetch('/api/generate-draft', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            emailId: email.id,
-            prompt_type: 'triage',
-            email_content: email.body_preview || email.body_full || '',
-            email_subject: email.subject || '',
-            from_email: email.from_email || ''
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to triage email: ${email.subject}`);
-        }
-
-        const data = await response.json();
-        return {
-          emailId: email.id,
-          subject: email.subject || 'No subject',
-          tag: data.tag || 'General',
-          category: data.category || 'Other'
-        };
+      // Call the comprehensive triage API
+      const response = await fetch('/api/triage-inbox', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
-      const triageResults = await Promise.all(triagePromises);
-      setResults(triageResults);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to run triage');
+      }
+
+      const data = await response.json();
+      setTriageData(data);
+      setResults(data.draft_emails);
       
-      toast.success(`AI triage completed for ${triageResults.length} emails`);
+      // Notify parent component
+      onTriageComplete?.(data);
+      
+      toast.success(`✅ Inbox triaged – ${data.draft_emails.length} draft replies saved and ${data.suggested_actions.length} actions suggested`);
     } catch (error) {
       console.error('Error running triage:', error);
-      toast.error('Failed to run AI triage');
+      toast.error(error instanceof Error ? error.message : 'Failed to run AI triage');
     } finally {
       setIsRunning(false);
     }
@@ -98,73 +89,139 @@ export default function TriageModal({ isOpen, onClose, unreadEmails }: TriageMod
 
         {/* Content */}
         <div className="p-6 space-y-4">
-          <div className="text-gray-600">
-            <p>AI will analyze {unreadEmails.length} unread emails and categorize them by:</p>
-            <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
-              <li>Complaints & Issues</li>
-              <li>S20 Notices</li>
-              <li>Insurance Queries</li>
-              <li>Leaks & Maintenance</li>
-              <li>General Inquiries</li>
-            </ul>
-          </div>
-
-          {/* Action Button */}
-          <div className="flex justify-center">
-            <Button
-              onClick={handleRunTriage}
-              disabled={isRunning || unreadEmails.length === 0}
-              className="bg-red-500 hover:bg-red-600 text-white px-6 py-3"
-            >
-              {isRunning ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Running Triage...
-                </>
-              ) : (
-                <>
-                  <Tag className="h-4 w-4 mr-2" />
-                  Run Triage Now
-                </>
-              )}
-            </Button>
-          </div>
-
-          {/* Results */}
-          {results.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="font-medium text-gray-900">Triage Results</h3>
-              <div className="max-h-60 overflow-y-auto space-y-2">
-                {results.map((result, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                  >
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {result.subject}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                          <Tag className="h-3 w-3" />
-                          {result.tag}
-                        </span>
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
-                          <FolderOpen className="h-3 w-3" />
-                          {result.category}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+          {!triageData ? (
+            <>
+              <div className="text-gray-600">
+                <p>AI will analyze {unreadEmails.length} unread emails and:</p>
+                <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
+                  <li>📊 Summarise inbox and categorize emails</li>
+                  <li>🔥 Mark urgent emails automatically</li>
+                  <li>📝 Generate draft replies for actionable emails</li>
+                  <li>🗂️ Suggest AI folders and tags</li>
+                  <li>⚡ Recommend actions (notes, events, todos)</li>
+                </ul>
               </div>
-            </div>
-          )}
 
-          {/* Empty State */}
-          {unreadEmails.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              <p>No unread emails to triage</p>
+              {/* Action Button */}
+              <div className="flex justify-center">
+                <Button
+                  onClick={handleRunTriage}
+                  disabled={isRunning || unreadEmails.length === 0}
+                  className="bg-red-500 hover:bg-red-600 text-white px-6 py-3"
+                >
+                  {isRunning ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Running Triage...
+                    </>
+                  ) : (
+                    <>
+                      <Tag className="h-4 w-4 mr-2" />
+                      Run Triage Now
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* Empty State */}
+              {unreadEmails.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No unread emails to triage</p>
+                </div>
+              )}
+            </>
+          ) : (
+            /* Triage Results */
+            <div className="space-y-6">
+              {/* Summary */}
+              <div className="bg-blue-50 rounded-lg p-4">
+                <h3 className="font-medium text-blue-900 mb-2">📊 Triage Summary</h3>
+                <p className="text-blue-700">{triageData.summary}</p>
+              </div>
+
+              {/* Suggested Tags/Folders */}
+              {triageData.suggested_tags.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="font-medium text-gray-900">🗂️ Suggested Folders</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {triageData.suggested_tags.map((tag: string, index: number) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 text-sm rounded-full"
+                      >
+                        <FolderOpen className="h-3 w-3" />
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Draft Emails */}
+              {triageData.draft_emails.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="font-medium text-gray-900">📝 Draft Replies ({triageData.draft_emails.length})</h3>
+                  <div className="max-h-60 overflow-y-auto space-y-2">
+                    {triageData.draft_emails.map((draft: any, index: number) => (
+                      <div
+                        key={index}
+                        className="p-3 bg-green-50 rounded-lg border border-green-200"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-green-800">
+                            {draft.category}
+                          </span>
+                          <span className="text-xs text-green-600">
+                            {Math.round(draft.confidence * 100)}% confidence
+                          </span>
+                        </div>
+                        <p className="text-sm text-green-700 line-clamp-2">
+                          {draft.draft.substring(0, 150)}...
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Suggested Actions */}
+              {triageData.suggested_actions.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="font-medium text-gray-900">⚡ Suggested Actions</h3>
+                  <div className="space-y-2">
+                    {triageData.suggested_actions.map((action: any, index: number) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg border border-orange-200"
+                      >
+                        <div className="flex-shrink-0">
+                          {action.type === 'event' && <span className="text-orange-600">📅</span>}
+                          {action.type === 'note' && <span className="text-orange-600">📝</span>}
+                          {action.type === 'todo' && <span className="text-orange-600">✅</span>}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-orange-800">
+                            {action.type.charAt(0).toUpperCase() + action.type.slice(1)}
+                          </p>
+                          <p className="text-sm text-orange-700">{action.content}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Urgent Emails */}
+              {triageData.urgent_ids.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="font-medium text-gray-900">🔥 Urgent Emails ({triageData.urgent_ids.length})</h3>
+                  <div className="p-3 bg-red-50 rounded-lg border border-red-200">
+                    <p className="text-sm text-red-700">
+                      {triageData.urgent_ids.length} email{triageData.urgent_ids.length > 1 ? 's' : ''} marked as urgent and require immediate attention.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

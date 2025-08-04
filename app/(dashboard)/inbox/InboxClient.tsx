@@ -5,8 +5,10 @@ import { useLiveInbox } from '@/hooks/useLiveInbox';
 import EnhancedEmailDetailView from './components/EnhancedEmailDetailView';
 import SimpleFolderSidebar from './components/SimpleFolderSidebar';
 import TriageModal from './components/TriageModal';
+import ComposeEmailModal from './components/ComposeEmailModal';
+import ReplyModal from './components/ReplyModal';
 import { useUser } from '@supabase/auth-helpers-react';
-import { AlertTriangle, RefreshCw, Mail, Wifi, WifiOff, X } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Mail, Wifi, WifiOff, X, Plus } from 'lucide-react';
 
 export default function InboxClient() {
   const {
@@ -27,6 +29,10 @@ export default function InboxClient() {
   const [search, setSearch] = useState('');
   const [selectedFolder, setSelectedFolder] = useState('inbox');
   const [showTriageModal, setShowTriageModal] = useState(false);
+  const [showComposeModal, setShowComposeModal] = useState(false);
+  const [showReplyModal, setShowReplyModal] = useState(false);
+  const [replyEmail, setReplyEmail] = useState<any>(null);
+  const [replyAction, setReplyAction] = useState<'reply' | 'reply-all' | 'forward'>('reply');
   const user = useUser();
 
   // Generate folders based on email data
@@ -130,6 +136,19 @@ export default function InboxClient() {
     selectEmail(email);
   };
 
+  const handleReply = (action: 'reply' | 'reply-all' | 'forward') => {
+    if (selectedEmail) {
+      setReplyEmail(selectedEmail);
+      setReplyAction(action);
+      setShowReplyModal(true);
+    }
+  };
+
+  const handleTriageComplete = (results: any) => {
+    // Refresh emails to show new AI tags and categories
+    refreshEmails();
+  };
+
   return (
     <div className="w-full max-w-[1440px] mx-auto px-6 py-8 space-y-6">
 
@@ -145,12 +164,20 @@ export default function InboxClient() {
           {/* AI Triage Button */}
           <button
             onClick={() => setShowTriageModal(true)}
-            className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-2 bg-white border border-red-300 rounded-lg px-3 py-2 text-sm hover:bg-red-50 transition-colors"
           >
             <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
               <X className="h-3 w-3 text-white" />
             </div>
             <span>AI Triage</span>
+          </button>
+          {/* Compose New Email Button */}
+          <button
+            onClick={() => setShowComposeModal(true)}
+            className="flex items-center gap-2 bg-indigo-600 text-white rounded-lg px-3 py-2 text-sm hover:bg-indigo-700 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            <span>New Email</span>
           </button>
         </div>
         <div className="flex items-center gap-4 text-sm">
@@ -279,12 +306,13 @@ export default function InboxClient() {
             {/* Email Detail Panel */}
             <div className="bg-white rounded-xl shadow p-6 min-h-[300px]">
               {selectedEmail ? (
-                <EnhancedEmailDetailView 
-                  email={selectedEmail}
-                  onMarkAsRead={markAsRead}
-                  onMarkAsHandled={markAsHandled}
-                  onFlagEmail={flagEmail}
-                />
+                                 <EnhancedEmailDetailView 
+                   email={selectedEmail}
+                   onMarkAsRead={markAsRead}
+                   onMarkAsHandled={markAsHandled}
+                   onFlagEmail={flagEmail}
+                   onReply={handleReply}
+                 />
               ) : (
                 <div className="flex flex-col items-center justify-center text-center text-gray-500 h-full">
                   <div className="text-4xl mb-2">📥</div>
@@ -304,6 +332,21 @@ export default function InboxClient() {
         isOpen={showTriageModal}
         onClose={() => setShowTriageModal(false)}
         unreadEmails={unreadEmails}
+        onTriageComplete={handleTriageComplete}
+      />
+
+      {/* Compose Email Modal */}
+      <ComposeEmailModal
+        isOpen={showComposeModal}
+        onClose={() => setShowComposeModal(false)}
+      />
+
+      {/* Reply Modal */}
+      <ReplyModal
+        isOpen={showReplyModal}
+        onClose={() => setShowReplyModal(false)}
+        email={replyEmail}
+        action={replyAction}
       />
     </div>
   );
