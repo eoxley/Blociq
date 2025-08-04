@@ -370,69 +370,119 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       </section>
 
       <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
-        {/* 🧠 Central Ask BlocIQ Brain Component */}
-        <div className="bg-white rounded-2xl shadow-xl border-0 overflow-hidden">
-          <div className="relative">
-            {/* Brain Outline Container */}
-            <div className="relative bg-gradient-to-r from-[#4f46e5] to-[#a855f7] p-8">
-              {/* Brain Shape SVG */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <svg 
-                  viewBox="0 0 200 120" 
-                  className="w-full h-full opacity-10"
-                  style={{ filter: 'drop-shadow(0 0 20px rgba(255,255,255,0.3))' }}
-                >
-                  <path 
-                    d="M40 60 Q60 20 100 20 Q140 20 160 60 Q140 100 100 100 Q60 100 40 60 Z M60 40 Q80 30 100 30 Q120 30 140 40 Q120 50 100 50 Q80 50 60 40 Z M70 70 Q85 60 100 60 Q115 60 130 70 Q115 80 100 80 Q85 80 70 70 Z"
-                    fill="none" 
-                    stroke="white" 
-                    strokeWidth="2"
-                    className="animate-pulse"
-                  />
-                </svg>
-              </div>
+        {/* 🧠 Brain-Shaped Ask BlocIQ Component */}
+        <div className="relative flex justify-center">
+          {/* Brain Shape Container */}
+          <div className="relative w-full max-w-4xl">
+            {/* Brain Outline SVG */}
+            <svg 
+              viewBox="0 0 800 400" 
+              className="w-full h-auto"
+              style={{ filter: 'drop-shadow(0 0 30px rgba(79, 70, 229, 0.3))' }}
+            >
+              {/* Brain Shape Path */}
+              <defs>
+                <linearGradient id="brainGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" style={{ stopColor: '#4f46e5', stopOpacity: 1 }} />
+                  <stop offset="100%" style={{ stopColor: '#a855f7', stopOpacity: 1 }} />
+                </linearGradient>
+                <filter id="glow">
+                  <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                  <feMerge> 
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                  </feMerge>
+                </filter>
+              </defs>
               
-              {/* Content */}
-              <div className="relative z-10 text-center text-white">
-                <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-                  <HelpCircle className="h-8 w-8 text-white" />
+              {/* Brain Outline */}
+              <path 
+                d="M150 200 Q200 100 400 100 Q600 100 650 200 Q600 300 400 300 Q200 300 150 200 Z M200 150 Q250 120 400 120 Q550 120 600 150 Q550 180 400 180 Q250 180 200 150 Z M250 200 Q300 180 400 180 Q500 180 550 200 Q500 220 400 220 Q300 220 250 200 Z M180 250 Q220 230 400 230 Q580 230 620 250 Q580 270 400 270 Q220 270 180 250 Z"
+                fill="url(#brainGradient)"
+                stroke="white"
+                strokeWidth="3"
+                filter="url(#glow)"
+                className="animate-pulse"
+              />
+              
+              {/* Brain Folds/Details */}
+              <path 
+                d="M250 160 Q300 150 400 150 Q500 150 550 160 M250 180 Q300 170 400 170 Q500 170 550 180 M250 200 Q300 190 400 190 Q500 190 550 200 M250 220 Q300 210 400 210 Q500 210 550 220"
+                fill="none"
+                stroke="rgba(255,255,255,0.3)"
+                strokeWidth="1"
+              />
+            </svg>
+            
+            {/* Content Overlay */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center text-white max-w-3xl px-8">
+                {/* Question Mark Icon */}
+                <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg border border-white/30">
+                  <HelpCircle className="h-10 w-10 text-white" />
                 </div>
-                <h2 className="text-3xl font-bold mb-4">Ask BlocIQ</h2>
-                <p className="text-lg text-white/90 max-w-2xl mx-auto mb-8">
+                
+                {/* Title */}
+                <h2 className="text-4xl font-bold mb-4 text-white drop-shadow-lg">
+                  Ask BlocIQ
+                </h2>
+                
+                {/* Subtitle */}
+                <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed">
                   Your leasehold management assistant — ask anything, upload a document, or get a summary.
                 </p>
                 
                 {/* Input Field */}
-                <div className="max-w-2xl mx-auto">
+                <div className="max-w-2xl mx-auto mb-8">
                   <div className="relative">
                     <input
                       type="text"
                       placeholder="Ask me anything about your properties..."
-                      className="w-full px-6 py-4 bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition-all duration-200"
+                      className="w-full px-6 py-4 bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition-all duration-200 text-lg"
                     />
                     <button className="absolute right-3 top-1/2 transform -translate-y-1/2 p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-all duration-200">
-                      <ArrowRight className="h-5 w-5 text-white" />
+                      <ArrowRight className="h-6 w-6 text-white" />
                     </button>
                   </div>
-                  
-                  {/* Example Prompts */}
-                  <div className="flex flex-wrap justify-center gap-3 mt-6">
-                    <button className="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl text-sm transition-all duration-200">
-                      Summarise today's inbox
-                    </button>
-                    <button className="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl text-sm transition-all duration-200">
-                      Update the directors
-                    </button>
-                    <button className="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl text-sm transition-all duration-200">
-                      Show overdue compliance
-                    </button>
-                  </div>
+                </div>
+                
+                {/* Example Prompts */}
+                <div className="flex flex-wrap justify-center gap-4">
+                  <button className="px-6 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl text-sm font-medium transition-all duration-200 border border-white/30 hover:border-white/50">
+                    Summarise today's inbox
+                  </button>
+                  <button className="px-6 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl text-sm font-medium transition-all duration-200 border border-white/30 hover:border-white/50">
+                    Update the directors
+                  </button>
+                  <button className="px-6 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl text-sm font-medium transition-all duration-200 border border-white/30 hover:border-white/50">
+                    Show overdue compliance
+                  </button>
                 </div>
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Full Ask BlocIQ Interface */}
+        <div className="bg-white rounded-2xl shadow-xl border-0 overflow-hidden">
+          <div className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] p-6 text-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                  <HelpCircle className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">Ask BlocIQ</h2>
+                  <p className="text-sm text-white/80">AI-powered assistant</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 text-xs bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
+                <Sparkles className="h-3 w-3" />
+                <span>AI Assistant</span>
+              </div>
+            </div>
+          </div>
           
-          {/* Full Ask BlocIQ Interface */}
           <div className="p-6">
             <AskBlocIQHomepage />
           </div>
