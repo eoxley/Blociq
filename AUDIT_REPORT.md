@@ -72,8 +72,10 @@ This report identifies UI components, pages, buttons, and features that exist vi
   - TODO: add actual upload logic here
 
 ### Static Counters/Data
-- **AI Documents Page** (`app/ai-documents/page.tsx`)
-  - Hardcoded stats: 24 Documents, 18 Analyzed, 156 Chat Messages, 12 AI Insights
+- **AI Documents Page** - ✅ MIGRATED TO AI ASSISTANT
+  - Functionality moved to `/ai-assistant` with integrated document upload and search
+  - Document upload now integrated into DocumentAwareAI component
+  - Added document search functionality with `/api/search-documents`
 - **Buildings Client** (`app/buildings/BuildingsClient.tsx`)
   - Demo data fallback when no real buildings found
 

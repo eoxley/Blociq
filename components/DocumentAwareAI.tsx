@@ -73,6 +73,8 @@ export default function DocumentAwareAI({
   const [aiLogId, setAiLogId] = useState<string | null>(null);
   const [usedComplianceData, setUsedComplianceData] = useState(false);
   const [usedMajorWorksData, setUsedMajorWorksData] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     const getSession = async () => {
@@ -117,6 +119,19 @@ export default function DocumentAwareAI({
 
     setLoading(true);
     try {
+      // Check if this is a document search command
+      const searchCommands = ['show me', 'find', 'search for', 'look for', 'find the', 'show the'];
+      const isSearchCommand = searchCommands.some(cmd => 
+        question.toLowerCase().includes(cmd)
+      );
+
+      if (isSearchCommand) {
+        await handleDocumentSearch(question);
+        setQuestion('');
+        setLoading(false);
+        return;
+      }
+
       const response = await fetch('/api/ask-blociq', {
         method: 'POST',
         headers: {
@@ -257,8 +272,209 @@ export default function DocumentAwareAI({
     }
   };
 
+  const handleDocumentSearch = async (searchQuery: string) => {
+    if (!userId) {
+      toast.error('Please log in to search documents');
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const response = await fetch('/api/search-documents', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: searchQuery,
+          buildingId: buildingId,
+          userId: userId,
+          limit: 5
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to search documents');
+      }
+
+      const data = await response.json();
+      setSearchResults(data.documents || []);
+      
+      if (data.documents && data.documents.length > 0) {
+        toast.success(`Found ${data.documents.length} relevant documents`);
+      } else {
+        toast.info('No documents found matching your search');
+      }
+    } catch (error) {
+      console.error('Error searching documents:', error);
+      toast.error('Failed to search documents');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   return (
     <div className={`space-y-6 ${className}`}>
+      {/* Document Upload Section - Enhanced */}
+      <Card className="border-0 shadow-sm bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-gray-900">
+            <Upload className="h-5 w-5 text-green-600" />
+            Upload Documents for AI Analysis
+          </CardTitle>
+          <p className="text-sm text-gray-600">
+            Upload PDFs, images, or documents to provide context for AI questions. Documents will be automatically analyzed and made searchable.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {/* File Upload Area */}
+            <div className="border-2 border-dashed border-green-200 rounded-lg p-6 text-center hover:border-green-300 transition-colors">
+              <input
+                type="file"
+                id="document-upload"
+                accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <label htmlFor="document-upload" className="cursor-pointer">
+                <Upload className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                <p className="text-sm font-medium text-gray-700 mb-1">
+                  Click to upload or drag and drop
+                </p>
+                <p className="text-xs text-gray-500">
+                  PDF, DOC, DOCX, TXT, JPG, PNG (max 10MB)
+                </p>
+              </label>
+            </div>
+
+            {/* Upload Button */}
+            {uploadedFile && (
+              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-medium">{uploadedFile.name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={handleDocumentUpload}
+                    disabled={uploadLoading}
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {uploadLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Brain className="h-4 w-4 mr-2" />
+                        Analyze Document
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setUploadedFile(null);
+                      const input = document.getElementById('document-upload') as HTMLInputElement;
+                      if (input) input.value = '';
+                    }}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Document Context Display */}
+            {documentContext && (
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-medium text-blue-900 flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Active Document: {documentContext.fileName}
+                  </h4>
+                  <Button
+                    onClick={clearDocumentContext}
+                    variant="outline"
+                    size="sm"
+                    className="text-blue-600 hover:text-blue-700"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+                <div className="text-sm text-blue-800">
+                  <p><strong>Type:</strong> {documentContext.type}</p>
+                  {documentContext.summary && (
+                    <p><strong>Summary:</strong> {documentContext.summary}</p>
+                  )}
+                  {documentContext.inspection_date && (
+                    <p><strong>Inspection Date:</strong> {documentContext.inspection_date}</p>
+                  )}
+                  {documentContext.next_due_date && (
+                    <p><strong>Next Due:</strong> {documentContext.next_due_date}</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Search Results Section */}
+      {searchResults.length > 0 && (
+        <Card className="border-0 shadow-sm bg-blue-50 rounded-xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-blue-900">
+              <Search className="h-5 w-5" />
+              Document Search Results
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {searchResults.map((doc, index) => (
+                <div key={doc.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-blue-200">
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-4 w-4 text-blue-600" />
+                    <div>
+                      <p className="font-medium text-gray-900">{doc.file_name}</p>
+                      <p className="text-sm text-gray-600">{doc.type} • {doc.building_name}</p>
+                      <p className="text-xs text-gray-500">
+                        Uploaded {new Date(doc.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs">
+                      Score: {doc.relevance_score}
+                    </Badge>
+                    <Button
+                      onClick={() => {
+                        // Set this document as context for AI questions
+                        setDocumentContext({
+                          fileName: doc.file_name,
+                          type: doc.type,
+                          summary: `Document found via search: ${doc.file_name}`,
+                        });
+                        setSearchResults([]);
+                        toast.success(`Now asking about: ${doc.file_name}`);
+                      }}
+                      size="sm"
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      Ask About This
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Document Context Banner */}
       {documentContext && (
         <Card className="border-green-200 bg-green-50">
@@ -349,7 +565,7 @@ export default function DocumentAwareAI({
                 placeholder={
                   documentContext 
                     ? `Ask about ${documentContext.fileName} or any building-related question...`
-                    : "Ask about your building, upload a document first for context-aware responses..."
+                    : "Ask about your building, upload a document, or search for documents (e.g., 'Find the EWS1 for Ashwood House')..."
                 }
                 rows={3}
                 className="resize-none"

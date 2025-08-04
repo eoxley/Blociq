@@ -44,33 +44,21 @@ export default function AIAssistantPage() {
           <TimeBasedGreeting className="text-sm font-light text-gray-600" />
         </div>
 
-        {/* Upload Document Section */}
+        {/* AI Assistant Integration */}
         <Card className="border-0 shadow-sm bg-white rounded-xl">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-gray-900">
-              <Upload className="h-5 w-5 text-[#4f46e5]" />
-              Upload Documents for AI Analysis
+              <Brain className="h-5 w-5 text-[#4f46e5]" />
+              Ask BlocIQ Assistant
             </CardTitle>
             <p className="text-sm text-gray-600">
-              Upload PDFs, images, or documents. AI will extract text and make them searchable.
+              Upload documents and ask questions with full building context awareness.
             </p>
           </CardHeader>
           <CardContent>
-            <EnhancedDocumentUpload
-              multiple={true}
-              acceptedFileTypes={['.pdf', '.doc', '.docx', '.txt', '.jpg', '.jpeg', '.png']}
-              maxFileSize={10}
-              onUploadComplete={(document) => {
-                console.log('Document uploaded:', document);
-                toast.success(`Document "${document.file_name}" uploaded successfully!`);
-              }}
-              onUploadError={(error) => {
-                console.error('Upload error:', error);
-                toast.error(`Upload failed: ${error}`);
-              }}
-            />
-            <p className="text-xs text-gray-500 mt-3">
-              Supports PDF, DOC, JPG, and image formats. Max 10MB each.
+            <p className="text-sm text-gray-600 mb-4">
+              The document upload feature is now integrated directly into the AI assistant below. 
+              You can upload documents and ask questions in one seamless interface.
             </p>
           </CardContent>
         </Card>
@@ -156,19 +144,19 @@ export default function AIAssistantPage() {
                 <div className="space-y-2 text-sm">
                   <div className="flex items-start gap-2">
                     <CheckCircle className="h-3 w-3 text-green-600 mt-0.5" />
-                    <span>"Summarise this Fire Risk Assessment"</span>
+                    <span>"Upload and summarise this document"</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <CheckCircle className="h-3 w-3 text-green-600 mt-0.5" />
-                    <span>"What are the actions from this EICR?"</span>
+                    <span>"Is this lease compliant?"</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <CheckCircle className="h-3 w-3 text-green-600 mt-0.5" />
-                    <span>"When is the next lift inspection due?"</span>
+                    <span>"What's the service charge apportionment?"</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <CheckCircle className="h-3 w-3 text-green-600 mt-0.5" />
-                    <span>"Is this insurance certificate up to date?"</span>
+                    <span>"What is this document about?"</span>
                   </div>
                 </div>
               </div>
