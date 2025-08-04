@@ -9,7 +9,7 @@ import ComposeEmailModal from './components/ComposeEmailModal';
 import ReplyModal from './components/ReplyModal';
 import { useUser } from '@supabase/auth-helpers-react';
 import { createClient } from '@supabase/supabase-js';
-import { AlertTriangle, RefreshCw, Mail, Wifi, WifiOff, X, Plus } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Mail, Wifi, WifiOff, X, Plus, FolderOpen } from 'lucide-react';
 import TriageIcon from '@/components/icons/TriageIcon';
 
 export default function InboxClient() {
@@ -36,6 +36,7 @@ export default function InboxClient() {
   const [replyEmail, setReplyEmail] = useState<any>(null);
   const [replyAction, setReplyAction] = useState<'reply' | 'reply-all' | 'forward'>('reply');
   const [draftsCount, setDraftsCount] = useState(0);
+  const [showMobileFolders, setShowMobileFolders] = useState(false);
   const user = useUser();
   
   // Initialize Supabase client
@@ -207,7 +208,7 @@ export default function InboxClient() {
   };
 
   return (
-    <div className="w-full max-w-[1600px] mx-auto px-6 xl:px-12 py-8 space-y-6">
+    <div className="w-full max-w-[1600px] mx-auto px-6 xl:px-12 py-8 space-y-6 overflow-x-hidden">
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -218,6 +219,14 @@ export default function InboxClient() {
               {newEmailCount} new
             </span>
           )}
+          {/* Mobile Folder Toggle */}
+          <button
+            onClick={() => setShowMobileFolders(!showMobileFolders)}
+            className="lg:hidden flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm hover:bg-gray-50 transition-colors"
+          >
+            <FolderOpen className="h-4 w-4" />
+            <span>Folders</span>
+          </button>
           {/* AI Triage Button */}
           <button
             onClick={() => setShowTriageModal(true)}
@@ -278,18 +287,21 @@ export default function InboxClient() {
       )}
 
       {/* Main Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] xl:grid-cols-[280px_1fr_1.5fr] gap-6 lg:gap-8">
-        {/* Sidebar */}
-        <div className="w-full">
+      <div className="grid xl:grid-cols-[240px_360px_1fr] lg:grid-cols-[280px_1fr] grid-cols-1 gap-6 w-full overflow-x-hidden">
+        {/* Folder List - Fixed Width */}
+        <div className={`w-full xl:w-[240px] lg:w-[280px] ${showMobileFolders ? 'block' : 'hidden'} lg:block`}>
           <SimpleFolderSidebar 
             folders={[...folders, ...aiFolders]} 
             selectedFolder={selectedFolder}
-            onFolderSelect={handleFolderSelect}
+            onFolderSelect={(folderId) => {
+              handleFolderSelect(folderId);
+              setShowMobileFolders(false); // Close mobile folders after selection
+            }}
           />
         </div>
 
-        {/* Email List Column */}
-        <div className="flex flex-col gap-4">
+        {/* Email List Column - Fixed Width on Desktop */}
+        <div className="flex flex-col gap-4 w-full xl:w-[360px] lg:w-full">
           {/* Search & Filter Bar */}
           <div className="flex items-center gap-4">
             <input
@@ -300,7 +312,7 @@ export default function InboxClient() {
               className="w-full border border-gray-300 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-400"
             />
             {(search || selectedFolder !== 'inbox') && (
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-gray-500 hidden lg:block">
                 {filteredEmails.length} of {emails.length} emails
               </span>
             )}
@@ -365,8 +377,8 @@ export default function InboxClient() {
           </div>
         </div>
 
-        {/* Email Detail Panel */}
-        <div className="bg-white rounded-xl shadow p-6 min-h-[300px] hidden lg:block xl:block">
+        {/* Email Detail Panel - Flexible Width */}
+        <div className="bg-white rounded-xl shadow p-6 min-h-[300px] flex-1 min-w-[600px] max-w-[1000px] overflow-y-auto hidden lg:block">
           {selectedEmail ? (
             <EnhancedEmailDetailView 
               email={selectedEmail}
@@ -385,6 +397,28 @@ export default function InboxClient() {
             </div>
           )}
         </div>
+
+        {/* Mobile Email Detail Panel */}
+        {selectedEmail && (
+          <div className="lg:hidden bg-white rounded-xl shadow p-4 mt-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Email Details</h3>
+              <button
+                onClick={() => selectEmail(null)}
+                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <EnhancedEmailDetailView 
+              email={selectedEmail}
+              onMarkAsRead={markAsRead}
+              onMarkAsHandled={markAsHandled}
+              onFlagEmail={flagEmail}
+              onReply={handleReply}
+            />
+          </div>
+        )}
       </div>
 
       {/* AI Triage Modal */}
