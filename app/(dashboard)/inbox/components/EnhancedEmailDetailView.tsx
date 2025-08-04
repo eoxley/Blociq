@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Mail, Flag, CheckCircle, Reply, Forward, Archive, Trash2, Clock, Building, User } from 'lucide-react';
+import { Mail, Flag, CheckCircle, Reply, Forward, Archive, Trash2, Clock, Building, User, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
