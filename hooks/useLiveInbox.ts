@@ -71,6 +71,21 @@ export function useLiveInbox(): UseLiveInboxReturn {
       console.log('📧 Fetching emails for user:', user.id);
       setError(null);
 
+      // First, let's check if we can access the table at all
+      const { count: totalCount, error: countError } = await supabase
+        .from('incoming_emails')
+        .select('*', { count: 'exact', head: true });
+
+      if (countError) {
+        console.error('❌ Error counting emails:', countError);
+        setError(`Database access error: ${countError.message}`);
+        toast.error('Database access error');
+        return;
+      }
+
+      console.log('📊 Total emails in database:', totalCount);
+
+      // Now fetch emails for this user
       const { data, error } = await supabase
         .from('incoming_emails')
         .select('*')
@@ -85,7 +100,7 @@ export function useLiveInbox(): UseLiveInboxReturn {
         return;
       }
 
-      console.log('✅ Emails loaded:', data?.length || 0, 'items');
+      console.log('✅ Emails loaded:', data?.length || 0, 'items for user');
       
       // Calculate new emails since last sync
       if (lastSyncTime.current && data) {
@@ -132,7 +147,15 @@ export function useLiveInbox(): UseLiveInboxReturn {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to sync emails');
+        
+        // Handle specific error cases
+        if (errorData.code === 'OUTLOOK_NOT_CONNECTED') {
+          toast.error('Outlook not connected. Please connect your Outlook account first.');
+          setError('Outlook not connected');
+        } else {
+          throw new Error(errorData.error || 'Failed to sync emails');
+        }
+        return;
       }
 
       // Refresh emails after sync
