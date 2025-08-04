@@ -102,6 +102,8 @@ Answer:
       context: {
         building: buildingId ? 'Building context available' : null,
         documentsFound: matchedDocs?.length || 0,
+        complianceUsed: false, // This API doesn't use compliance data
+        majorWorksUsed: false, // This API doesn't use major works data
       }
     });
 

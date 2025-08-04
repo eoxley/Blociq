@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Calendar, Loader2, Send, Upload, FileText, X, Check, Sparkles, File, FileText as FileTextIcon } from 'lucide-react';
+import { Plus, Calendar, Loader2, Send, Upload, FileText, X, Check, Sparkles, File, FileText as FileTextIcon, Building2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Message = {
@@ -46,6 +47,10 @@ type AIResponse = {
   documentSearch?: boolean;
   documents?: DocumentSearchResult[];
   suggested_action?: SuggestedAction;
+  context?: {
+    majorWorksUsed?: boolean;
+    complianceUsed?: boolean;
+  };
 };
 
 interface AskBlocIQProps {
@@ -56,8 +61,26 @@ interface AskBlocIQProps {
   className?: string;
 }
 
-// Suggested prompts based on building context
-const getSuggestedPrompts = (buildingName?: string) => {
+// Extract project ID from pathname
+const extractProjectId = (pathname: string): string | null => {
+  const majorWorksMatch = pathname.match(/\/major-works\/([^\/]+)/);
+  return majorWorksMatch ? majorWorksMatch[1] : null;
+};
+
+// Suggested prompts based on building context and major works
+const getSuggestedPrompts = (buildingName?: string, isMajorWorksContext?: boolean, projectId?: string) => {
+  if (isMajorWorksContext && projectId) {
+    return [
+      "Generate a Section 20 notice for this project",
+      "Summarise this Major Works Project",
+      "What's the current project timeline?",
+      "Show me all project documents",
+      "What are the next milestones?",
+      "Calculate the cost breakdown",
+      "Generate a project status report"
+    ];
+  }
+
   const basePrompts = [
     "What are the overdue tasks?",
     "Summarise the last fire inspection",
@@ -86,6 +109,10 @@ export default function AskBlocIQ({
   placeholder = "Ask BlocIQ anything...",
   className = ""
 }: AskBlocIQProps) {
+  const pathname = usePathname();
+  const projectId = extractProjectId(pathname || '');
+  const isMajorWorksContext = pathname?.includes('major-works') && projectId;
+  
   const [messages, setMessages] = useState<Message[]>([]);
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
@@ -98,6 +125,7 @@ export default function AskBlocIQ({
   const [userId, setUserId] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [usedMajorWorksData, setUsedMajorWorksData] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -250,20 +278,23 @@ export default function AskBlocIQ({
       };
 
       if (uploadedFiles.length > 0) {
-        requestBody = new FormData();
-        requestBody.append('prompt', question.trim());
-        requestBody.append('building_id', buildingId || 'null');
+        const formData = new FormData();
+        formData.append('prompt', question.trim());
+        formData.append('building_id', buildingId || 'null');
         
         uploadedFiles.forEach((uploadedFile) => {
-          requestBody.append(`file`, uploadedFile.file);
-          requestBody.append(`fileName`, uploadedFile.name);
+          formData.append(`file`, uploadedFile.file);
+          formData.append(`fileName`, uploadedFile.name);
         });
         
+        requestBody = formData;
         delete headers['Content-Type'];
       } else {
         requestBody = JSON.stringify({
           prompt: question.trim(),
           building_id: buildingId,
+          contextType: isMajorWorksContext ? 'major_works' : 'general',
+          projectId: isMajorWorksContext ? projectId : undefined,
         });
       }
 
@@ -280,6 +311,9 @@ export default function AskBlocIQ({
       const data: AIResponse = await response.json();
       
       if (data.success && data.response) {
+        // Check if Major Works data was used
+        setUsedMajorWorksData(data.context?.majorWorksUsed || false);
+        
         // Add assistant message to history
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
@@ -391,7 +425,7 @@ export default function AskBlocIQ({
     }
   };
 
-  const suggestedPrompts = getSuggestedPrompts(buildingName);
+  const suggestedPrompts = getSuggestedPrompts(buildingName, !!isMajorWorksContext, projectId || undefined);
 
   return (
     <div className={`flex flex-col h-full ${className}`}>
@@ -439,6 +473,16 @@ export default function AskBlocIQ({
                   <div className="whitespace-pre-wrap leading-relaxed">
                     {message.content}
                   </div>
+                  
+                  {/* Major Works Badge */}
+                  {message.role === 'assistant' && usedMajorWorksData && (
+                    <div className="mt-3 flex items-center gap-2">
+                      <div className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium border border-blue-200">
+                        <Building2 className="w-3 h-3" />
+                        <span>Live major works data used</span>
+                      </div>
+                    </div>
+                  )}
                   
                   {/* Files */}
                   {message.files && message.files.length > 0 && (

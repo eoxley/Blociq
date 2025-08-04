@@ -11,6 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { toast } from 'sonner';
 import { getTimeBasedGreeting } from '@/utils/greeting';
 import AIFeedback from './AIFeedback';
+import ComplianceBadge from './ComplianceBadge';
+import MajorWorksBadge from './MajorWorksBadge';
 import { 
   MessageSquare, 
   Upload, 
@@ -69,6 +71,8 @@ export default function DocumentAwareAI({
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadLoading, setUploadLoading] = useState(false);
   const [aiLogId, setAiLogId] = useState<string | null>(null);
+  const [usedComplianceData, setUsedComplianceData] = useState(false);
+  const [usedMajorWorksData, setUsedMajorWorksData] = useState(false);
 
   useEffect(() => {
     const getSession = async () => {
@@ -134,6 +138,8 @@ export default function DocumentAwareAI({
       const data = await response.json();
       setResponse(data);
       setAiLogId(data.ai_log_id || null);
+      setUsedComplianceData(data.context?.complianceUsed || false);
+      setUsedMajorWorksData(data.context?.majorWorksUsed || false);
       toast.success('AI response generated successfully');
 
     } catch (error: any) {
@@ -390,7 +396,17 @@ export default function DocumentAwareAI({
                 <div className="flex items-start gap-2 mb-3">
                   <Brain className="h-5 w-5 text-blue-600 mt-0.5" />
                   <div className="flex-1">
-                    <h4 className="font-semibold text-blue-900 mb-2">AI Response</h4>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-semibold text-blue-900">AI Response</h4>
+                      <div className="flex gap-2">
+                        {usedComplianceData && (
+                          <ComplianceBadge />
+                        )}
+                        {usedMajorWorksData && (
+                          <MajorWorksBadge />
+                        )}
+                      </div>
+                    </div>
                     <div className="text-blue-800 whitespace-pre-wrap">
                       {response.answer}
                     </div>

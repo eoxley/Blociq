@@ -86,7 +86,11 @@ export async function POST(req: NextRequest) {
       building_id: buildingId,
       document_count: documentIds.length,
       has_email_thread: !!emailThreadId,
-      has_leaseholder: !!leaseholderId
+      has_leaseholder: !!leaseholderId,
+      context: {
+        complianceUsed: false, // This API doesn't use compliance data by default
+        majorWorksUsed: false // This API doesn't use major works data by default
+      }
     });
 
   } catch (error) {

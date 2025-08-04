@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import AIFeedback from './AIFeedback';
+import ComplianceBadge from './ComplianceBadge';
+import MajorWorksBadge from './MajorWorksBadge';
 
 interface EnhancedAIInputProps {
   buildingId?: string;
@@ -22,6 +24,8 @@ export default function EnhancedAIInput({
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [aiLogId, setAiLogId] = useState<string | null>(null);
+  const [usedComplianceData, setUsedComplianceData] = useState(false);
+  const [usedMajorWorksData, setUsedMajorWorksData] = useState(false);
 
   useEffect(() => {
     const getSession = async () => {
@@ -64,9 +68,13 @@ export default function EnhancedAIInput({
       if (data.answer) {
         setAnswer(data.answer);
         setAiLogId(data.ai_log_id || null);
+        setUsedComplianceData(data.context?.complianceUsed || false);
+        setUsedMajorWorksData(data.context?.majorWorksUsed || false);
       } else {
         setAnswer('Error: No response from AI service');
         setAiLogId(null);
+        setUsedComplianceData(false);
+        setUsedMajorWorksData(false);
       }
     } catch (error) {
       setAnswer('Error: Failed to connect to AI service. Please check your internet connection and try again.');
@@ -98,7 +106,17 @@ export default function EnhancedAIInput({
       {answer && (
         <div className="space-y-4">
           <div className="bg-gray-50 p-4 rounded-md">
-            <h3 className="font-semibold mb-2">AI Response:</h3>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-semibold">AI Response:</h3>
+              <div className="flex gap-2">
+                {usedComplianceData && (
+                  <ComplianceBadge />
+                )}
+                {usedMajorWorksData && (
+                  <MajorWorksBadge />
+                )}
+              </div>
+            </div>
             <div className="max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400 pr-2">
               <p className="text-gray-700 whitespace-pre-wrap break-words">{answer}</p>
             </div>
