@@ -35,13 +35,15 @@ interface EnhancedEmailDetailViewProps {
   onMarkAsRead?: (emailId: string) => Promise<void>;
   onMarkAsHandled?: (emailId: string) => Promise<void>;
   onFlagEmail?: (emailId: string, flagged: boolean) => Promise<void>;
+  onReply?: (action: 'reply' | 'reply-all' | 'forward') => void;
 }
 
 export default function EnhancedEmailDetailView({ 
   email, 
   onMarkAsRead, 
   onMarkAsHandled, 
-  onFlagEmail 
+  onFlagEmail,
+  onReply
 }: EnhancedEmailDetailViewProps) {
   const [isHandling, setIsHandling] = useState(false);
 
@@ -79,13 +81,15 @@ export default function EnhancedEmailDetailView({
   };
 
   const handleReply = () => {
-    // TODO: Implement reply functionality
-    toast.info('Reply functionality coming soon');
+    onReply?.('reply');
+  };
+
+  const handleReplyAll = () => {
+    onReply?.('reply-all');
   };
 
   const handleForward = () => {
-    // TODO: Implement forward functionality
-    toast.info('Forward functionality coming soon');
+    onReply?.('forward');
   };
 
   return (
@@ -217,26 +221,35 @@ export default function EnhancedEmailDetailView({
       {/* Action Buttons */}
       <div className="border-t border-gray-200 pt-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={handleReply}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <Reply className="h-4 w-4" />
-              Reply
-            </Button>
-            <Button
-              onClick={handleForward}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <Forward className="h-4 w-4" />
-              Forward
-            </Button>
-          </div>
+                     <div className="flex items-center gap-2">
+             <Button
+               onClick={handleReply}
+               variant="outline"
+               size="sm"
+               className="flex items-center gap-2"
+             >
+               <Reply className="h-4 w-4" />
+               Reply
+             </Button>
+             <Button
+               onClick={handleReplyAll}
+               variant="outline"
+               size="sm"
+               className="flex items-center gap-2"
+             >
+               <Users className="h-4 w-4" />
+               Reply All
+             </Button>
+             <Button
+               onClick={handleForward}
+               variant="outline"
+               size="sm"
+               className="flex items-center gap-2"
+             >
+               <Forward className="h-4 w-4" />
+               Forward
+             </Button>
+           </div>
           
           <div className="flex items-center gap-2">
             <Button
