@@ -333,6 +333,76 @@ export default function InboxClient() {
             <span>🔍</span>
             <span>Debug</span>
           </button>
+          
+          {/* Outlook Status Button */}
+          <button
+            onClick={async () => {
+              try {
+                const response = await fetch('/api/debug-outlook-status');
+                const result = await response.json();
+                console.log('Outlook Status:', result);
+                
+                if (result.success) {
+                  const { tokenStatus, emailStatus, envStatus } = result;
+                  
+                  let message = `Status: ${tokenStatus.exists ? '✅ Connected' : '❌ Not Connected'}`;
+                  if (tokenStatus.exists) {
+                    message += ` (${tokenStatus.email})`;
+                    message += ` | Emails: ${emailStatus.count}`;
+                    if (tokenStatus.isExpired) {
+                      message += ' | ⚠️ Token Expired';
+                    }
+                  }
+                  
+                  toast.success(message);
+                } else {
+                  toast.error(result.message || 'Failed to check status');
+                }
+              } catch (error) {
+                console.error('Outlook status error:', error);
+                toast.error('Failed to check Outlook status');
+              }
+            }}
+            className="flex items-center gap-2 bg-white border border-purple-300 rounded-lg px-3 py-2 text-sm hover:bg-purple-50 transition-colors"
+          >
+            <span>📧</span>
+            <span>Outlook Status</span>
+          </button>
+          
+          {/* Connect Outlook Button */}
+          <button
+            onClick={async () => {
+              try {
+                const response = await fetch('/api/connect-outlook', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                  if (result.connected) {
+                    toast.success(`Already connected to ${result.email}`);
+                  } else if (result.authUrl) {
+                    // Open Microsoft OAuth in new window
+                    window.open(result.authUrl, '_blank', 'width=600,height=700');
+                    toast.success('Opening Microsoft login...');
+                  }
+                } else {
+                  toast.error(result.message || 'Failed to connect Outlook');
+                }
+              } catch (error) {
+                console.error('Error connecting Outlook:', error);
+                toast.error('Failed to connect Outlook');
+              }
+            }}
+            className="flex items-center gap-2 bg-white border border-green-300 rounded-lg px-3 py-2 text-sm hover:bg-green-50 transition-colors"
+          >
+            <span>🔗</span>
+            <span>Connect Outlook</span>
+          </button>
           {/* Compose New Email Button */}
           <button
             onClick={() => setShowComposeModal(true)}
