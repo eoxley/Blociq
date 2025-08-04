@@ -374,13 +374,13 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         <div className="relative flex justify-center">
           {/* Brain Shape Container */}
           <div className="relative w-full max-w-4xl">
-            {/* Brain Outline SVG */}
+            {/* Brain Outline SVG - Side Profile */}
             <svg 
-              viewBox="0 0 800 400" 
+              viewBox="0 0 800 500" 
               className="w-full h-auto"
               style={{ filter: 'drop-shadow(0 0 30px rgba(79, 70, 229, 0.3))' }}
             >
-              {/* Brain Shape Path */}
+              {/* Brain Shape Path - Side Profile */}
               <defs>
                 <linearGradient id="brainGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                   <stop offset="0%" style={{ stopColor: '#4f46e5', stopOpacity: 1 }} />
@@ -395,21 +395,65 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 </filter>
               </defs>
               
-              {/* Brain Outline */}
+              {/* Side Profile Brain Outline */}
               <path 
-                d="M150 200 Q200 100 400 100 Q600 100 650 200 Q600 300 400 300 Q200 300 150 200 Z M200 150 Q250 120 400 120 Q550 120 600 150 Q550 180 400 180 Q250 180 200 150 Z M250 200 Q300 180 400 180 Q500 180 550 200 Q500 220 400 220 Q300 220 250 200 Z M180 250 Q220 230 400 230 Q580 230 620 250 Q580 270 400 270 Q220 270 180 250 Z"
+                d="M200 250 
+                   C200 200, 220 180, 250 170 
+                   C280 160, 320 150, 350 155 
+                   C380 160, 400 170, 420 180 
+                   C440 190, 450 210, 460 230 
+                   C470 250, 475 270, 470 290 
+                   C465 310, 450 330, 430 340 
+                   C410 350, 380 355, 350 350 
+                   C320 345, 290 335, 270 320 
+                   C250 305, 240 285, 230 270 
+                   C220 255, 210 240, 200 250 Z
+                   
+                   M220 200 
+                   C240 190, 260 185, 280 190 
+                   C300 195, 320 205, 340 220 
+                   C360 235, 370 250, 375 265 
+                   C380 280, 375 295, 365 305 
+                   C355 315, 340 320, 325 315 
+                   C310 310, 295 300, 285 285 
+                   C275 270, 270 255, 265 240 
+                   C260 225, 250 210, 220 200 Z
+                   
+                   M240 180 
+                   C260 175, 280 180, 300 190 
+                   C320 200, 335 215, 345 230 
+                   C355 245, 355 260, 350 270 
+                   C345 280, 335 285, 320 280 
+                   C305 275, 290 265, 280 250 
+                   C270 235, 265 220, 260 205 
+                   C255 190, 250 185, 240 180 Z"
                 fill="url(#brainGradient)"
                 stroke="white"
-                strokeWidth="3"
+                strokeWidth="2"
                 filter="url(#glow)"
                 className="animate-pulse"
               />
               
-              {/* Brain Folds/Details */}
+              {/* Brain Folds/Details - Side Profile */}
               <path 
-                d="M250 160 Q300 150 400 150 Q500 150 550 160 M250 180 Q300 170 400 170 Q500 170 550 180 M250 200 Q300 190 400 190 Q500 190 550 200 M250 220 Q300 210 400 210 Q500 210 550 220"
+                d="M250 190 Q270 185 290 190 Q310 195 330 205
+                   M260 210 Q280 205 300 215 Q320 225 340 235
+                   M270 230 Q290 225 310 235 Q330 245 350 255
+                   M280 250 Q300 245 320 255 Q340 265 360 275
+                   M290 270 Q310 265 330 275 Q350 285 370 295
+                   M300 290 Q320 285 340 295 Q360 305 380 315
+                   M310 310 Q330 305 350 315 Q370 325 390 335"
                 fill="none"
-                stroke="rgba(255,255,255,0.3)"
+                stroke="rgba(255,255,255,0.4)"
+                strokeWidth="1"
+              />
+              
+              {/* Brain Stem */}
+              <path 
+                d="M180 280 Q190 290 200 300 Q210 310 220 320
+                   L200 330 L180 320 Q190 310 200 300 Q210 290 220 280"
+                fill="url(#brainGradient)"
+                stroke="white"
                 strokeWidth="1"
               />
             </svg>
@@ -418,43 +462,43 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center text-white max-w-3xl px-8">
                 {/* Question Mark Icon */}
-                <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg border border-white/30">
-                  <HelpCircle className="h-10 w-10 text-white" />
+                <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg border border-white/30">
+                  <HelpCircle className="h-8 w-8 text-white" />
                 </div>
                 
                 {/* Title */}
-                <h2 className="text-4xl font-bold mb-4 text-white drop-shadow-lg">
+                <h2 className="text-3xl font-bold mb-4 text-white drop-shadow-lg">
                   Ask BlocIQ
                 </h2>
                 
                 {/* Subtitle */}
-                <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed">
+                <p className="text-lg text-white/90 mb-6 max-w-2xl mx-auto leading-relaxed">
                   Your leasehold management assistant — ask anything, upload a document, or get a summary.
                 </p>
                 
                 {/* Input Field */}
-                <div className="max-w-2xl mx-auto mb-8">
+                <div className="max-w-2xl mx-auto mb-6">
                   <div className="relative">
                     <input
                       type="text"
                       placeholder="Ask me anything about your properties..."
-                      className="w-full px-6 py-4 bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition-all duration-200 text-lg"
+                      className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition-all duration-200 text-base"
                     />
-                    <button className="absolute right-3 top-1/2 transform -translate-y-1/2 p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-all duration-200">
-                      <ArrowRight className="h-6 w-6 text-white" />
+                    <button className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-all duration-200">
+                      <ArrowRight className="h-5 w-5 text-white" />
                     </button>
                   </div>
                 </div>
                 
                 {/* Example Prompts */}
-                <div className="flex flex-wrap justify-center gap-4">
-                  <button className="px-6 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl text-sm font-medium transition-all duration-200 border border-white/30 hover:border-white/50">
+                <div className="flex flex-wrap justify-center gap-3">
+                  <button className="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-sm font-medium transition-all duration-200 border border-white/30 hover:border-white/50">
                     Summarise today's inbox
                   </button>
-                  <button className="px-6 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl text-sm font-medium transition-all duration-200 border border-white/30 hover:border-white/50">
+                  <button className="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-sm font-medium transition-all duration-200 border border-white/30 hover:border-white/50">
                     Update the directors
                   </button>
-                  <button className="px-6 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl text-sm font-medium transition-all duration-200 border border-white/30 hover:border-white/50">
+                  <button className="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-sm font-medium transition-all duration-200 border border-white/30 hover:border-white/50">
                     Show overdue compliance
                   </button>
                 </div>
