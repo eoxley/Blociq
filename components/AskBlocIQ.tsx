@@ -1,10 +1,27 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Calendar, Loader2 } from 'lucide-react';
+import { Plus, Calendar, Loader2, Send, Upload, FileText, X, Check, Sparkles, File, FileText as FileTextIcon } from 'lucide-react';
+import { toast } from 'sonner';
+
+type Message = {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  files?: UploadedFile[];
+};
+
+type UploadedFile = {
+  file: File;
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+};
 
 type SuggestedAction = {
   type: 'todo';
@@ -39,6 +56,29 @@ interface AskBlocIQProps {
   className?: string;
 }
 
+// Suggested prompts based on building context
+const getSuggestedPrompts = (buildingName?: string) => {
+  const basePrompts = [
+    "What are the overdue tasks?",
+    "Summarise the last fire inspection",
+    "What's the next EICR due?",
+    "Show me recent compliance alerts",
+    "What maintenance is scheduled this month?"
+  ];
+
+  if (buildingName) {
+    return [
+      `What are the overdue tasks for ${buildingName}?`,
+      `Summarise the last fire inspection for ${buildingName}`,
+      `What's the next EICR due for ${buildingName}?`,
+      `Show me recent compliance alerts for ${buildingName}`,
+      `What maintenance is scheduled for ${buildingName} this month?`
+    ];
+  }
+
+  return basePrompts;
+};
+
 export default function AskBlocIQ({ 
   buildingId, 
   buildingName,
@@ -46,6 +86,7 @@ export default function AskBlocIQ({
   placeholder = "Ask BlocIQ anything...",
   className = ""
 }: AskBlocIQProps) {
+  const [messages, setMessages] = useState<Message[]>([]);
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
   const [suggestedAction, setSuggestedAction] = useState<SuggestedAction | null>(null);
@@ -55,6 +96,18 @@ export default function AskBlocIQ({
   const [addingToTodo, setAddingToTodo] = useState(false);
   const [addingToCalendar, setAddingToCalendar] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [isDragOver, setIsDragOver] = useState(false);
+  
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // File handling
+  const acceptedFileTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+  const maxFileSize = 10 * 1024 * 1024; // 10MB
+  const maxFiles = 5;
 
   useEffect(() => {
     const getSession = async () => {
@@ -64,32 +117,160 @@ export default function AskBlocIQ({
     getSession();
   }, []);
 
+  // Auto-focus input field on mount
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  // Scroll to bottom when new messages are added
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const validateFile = (file: File): boolean => {
+    if (!acceptedFileTypes.includes(file.type)) {
+      toast.error(`File type not supported. Please upload PDF, DOCX, or TXT files.`);
+      return false;
+    }
+    
+    if (file.size > maxFileSize) {
+      toast.error(`File too large. Please upload files smaller than 10MB.`);
+      return false;
+    }
+    
+    if (uploadedFiles.length >= maxFiles) {
+      toast.error(`Maximum ${maxFiles} files allowed.`);
+      return false;
+    }
+    
+    return true;
+  };
+
+  const handleFileSelect = (files: FileList | null) => {
+    if (!files) return;
+    
+    Array.from(files).forEach(file => {
+      if (validateFile(file)) {
+        const fileId = Math.random().toString(36).substr(2, 9);
+        const uploadedFile: UploadedFile = {
+          file,
+          id: fileId,
+          name: file.name,
+          size: file.size,
+          type: file.type
+        };
+        
+        setUploadedFiles(prev => [...prev, uploadedFile]);
+        toast.success(`✅ ${file.name} uploaded. You can now ask questions about it.`);
+      }
+    });
+  };
+
+  const removeFile = (fileId: string) => {
+    setUploadedFiles(prev => prev.filter(f => f.id !== fileId));
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    handleFileSelect(e.dataTransfer.files);
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const getFileIcon = (fileType: string) => {
+    if (fileType.includes('pdf')) return '📄';
+    if (fileType.includes('word') || fileType.includes('document')) return '📝';
+    if (fileType.includes('text')) return '📄';
+    return '📎';
+  };
+
+  const getFileIconComponent = (fileType: string) => {
+    if (fileType.includes('pdf')) return <FileTextIcon className="h-4 w-4 text-red-500" />;
+    if (fileType.includes('word') || fileType.includes('document')) return <FileTextIcon className="h-4 w-4 text-blue-500" />;
+    if (fileType.includes('text')) return <FileTextIcon className="h-4 w-4 text-gray-500" />;
+    return <File className="h-4 w-4 text-gray-500" />;
+  };
+
+  const cleanFileName = (fileName: string) => {
+    return fileName.replace(/\.[^/.]+$/, "");
+  };
+
+  const handleSuggestedPrompt = (prompt: string) => {
+    setQuestion(prompt);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!question.trim()) {
-      setAnswer('Please enter a question.');
+    if (!question.trim() && uploadedFiles.length === 0) {
+      toast.error('Please enter a question or upload a file.');
       return;
     }
     if (!userId) {
-      setAnswer('User not authenticated. Please log in.');
+      toast.error('User not authenticated. Please log in.');
       return;
     }
 
+    // Add user message to history
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: question.trim(),
+      timestamp: new Date(),
+      files: uploadedFiles.length > 0 ? [...uploadedFiles] : undefined
+    };
+
+    setMessages(prev => [...prev, userMessage]);
     setLoading(true);
-    setSuggestedAction(null); // Clear previous suggestions
-    setDocumentResults([]); // Clear previous document results
-    setIsDocumentSearch(false); // Reset document search flag
+    setSuggestedAction(null);
+    setDocumentResults([]);
+    setIsDocumentSearch(false);
     
     try {
+      // Create FormData if files are uploaded
+      let requestBody: FormData | string;
+      let headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (uploadedFiles.length > 0) {
+        requestBody = new FormData();
+        requestBody.append('prompt', question.trim());
+        requestBody.append('building_id', buildingId || 'null');
+        
+        uploadedFiles.forEach((uploadedFile) => {
+          requestBody.append(`file`, uploadedFile.file);
+          requestBody.append(`fileName`, uploadedFile.name);
+        });
+        
+        delete headers['Content-Type'];
+      } else {
+        requestBody = JSON.stringify({
+          prompt: question.trim(),
+          building_id: buildingId,
+        });
+      }
+
       const response = await fetch('/api/ask-ai', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          prompt: question,
-          building_id: buildingId, // Note: API expects building_id
-        }),
+        headers,
+        body: requestBody,
       });
 
       if (!response.ok) {
@@ -99,6 +280,15 @@ export default function AskBlocIQ({
       const data: AIResponse = await response.json();
       
       if (data.success && data.response) {
+        // Add assistant message to history
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: data.response,
+          timestamp: new Date()
+        };
+
+        setMessages(prev => [...prev, assistantMessage]);
         setAnswer(data.response);
         
         // Handle document search results
@@ -118,7 +308,7 @@ export default function AskBlocIQ({
             .from('ai_logs')
             .insert({
               user_id: userId,
-              question: question,
+              question: question.trim(),
               response: data.response,
               timestamp: new Date().toISOString(),
               building_id: buildingId,
@@ -129,12 +319,14 @@ export default function AskBlocIQ({
           console.error('Failed to log AI interaction:', logError);
         }
       } else {
-        setAnswer('Error: No response from AI service');
+        toast.error('Error: No response from AI service');
       }
     } catch (error) {
-      setAnswer('Error: Failed to connect to AI service. Please check your internet connection and try again.');
+      toast.error('Error: Failed to connect to AI service. Please check your internet connection and try again.');
     } finally {
       setLoading(false);
+      setQuestion('');
+      setUploadedFiles([]);
     }
   };
 
@@ -155,13 +347,14 @@ export default function AskBlocIQ({
       });
 
       if (response.ok) {
-        setSuggestedAction(null); // Hide the suggestion after adding
-        setAnswer(prev => prev + '\n\n✅ Task added to your building to-do list!');
+        setSuggestedAction(null);
+        toast.success('✅ Task added to your building to-do list!');
       } else {
-        console.error('Failed to create task');
+        toast.error('Failed to create task');
       }
     } catch (error) {
       console.error('Error creating task:', error);
+      toast.error('Failed to create task');
     } finally {
       setAddingToTodo(false);
     }
@@ -185,63 +378,248 @@ export default function AskBlocIQ({
       });
 
       if (response.ok) {
-        setSuggestedAction(null); // Hide the suggestion after adding
-        setAnswer(prev => prev + '\n\n📅 Event added to your Outlook calendar!');
+        setSuggestedAction(null);
+        toast.success('📅 Event added to your Outlook calendar!');
       } else {
-        console.error('Failed to add to calendar');
+        toast.error('Failed to add to calendar');
       }
     } catch (error) {
       console.error('Error adding to calendar:', error);
+      toast.error('Failed to add to calendar');
     } finally {
       setAddingToCalendar(false);
     }
   };
 
-  return (
-    <div className={`space-y-4 ${className}`}>
-      <form onSubmit={handleSubmit} className="flex gap-2">
-        <div className="flex-1 relative">
-          <input
-            type="text"
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            placeholder={placeholder}
-            className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-12"
-            disabled={loading}
-          />
-          <button
-            type="submit"
-            disabled={loading || !question.trim()}
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 w-8 h-8 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-          >
-            {loading ? (
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            ) : (
-              <span className="text-sm">→</span>
-            )}
-          </button>
-        </div>
-      </form>
+  const suggestedPrompts = getSuggestedPrompts(buildingName);
 
-      {answer && (
-        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-sm font-semibold">AI</span>
+  return (
+    <div className={`flex flex-col h-full ${className}`}>
+      {/* Chat Messages */}
+      <div 
+        ref={chatContainerRef}
+        className="flex-1 overflow-y-auto p-4 space-y-4"
+      >
+        {messages.length === 0 ? (
+          <div className="text-center py-8">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Sparkles className="h-8 w-8 text-white" />
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm text-gray-500 mb-1">BlocIQ Assistant</div>
-              <div className="prose prose-sm max-w-none">
-                <p className="text-gray-800 whitespace-pre-wrap break-words leading-relaxed">{answer}</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Welcome to BlocIQ Assistant</h3>
+            <p className="text-gray-600 mb-6">Ask me anything about your properties, compliance, or upload documents for analysis.</p>
+            
+            {/* Suggested Prompts */}
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-gray-700">Try asking:</p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {suggestedPrompts.slice(0, 3).map((prompt, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleSuggestedPrompt(prompt)}
+                    className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm border border-blue-200"
+                  >
+                    {prompt}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
-        </div>
-      )}
+        ) : (
+          messages.map((message) => (
+            <div
+              key={message.id}
+              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} transition-all duration-300 ease-in-out`}
+            >
+              <div className={`max-w-[80%] ${message.role === 'user' ? 'order-2' : 'order-1'}`}>
+                <div className={`rounded-2xl px-4 py-3 ${
+                  message.role === 'user' 
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white' 
+                    : 'bg-gray-100 text-gray-900'
+                }`}>
+                  <div className="whitespace-pre-wrap leading-relaxed">
+                    {message.content}
+                  </div>
+                  
+                  {/* Files */}
+                  {message.files && message.files.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {message.files.map((file) => (
+                        <div key={file.id} className="flex items-center gap-2 text-sm">
+                          <span>{getFileIcon(file.type)}</span>
+                          <span className="truncate">{file.name}</span>
+                          <span className="text-xs opacity-70">({formatFileSize(file.size)})</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+
+        {/* Loading Message */}
+        {loading && (
+          <div className="flex justify-start transition-all duration-300 ease-in-out">
+            <div className="max-w-[80%]">
+              <div className="bg-gray-100 rounded-2xl px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <Sparkles className="h-3 w-3 text-white" />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                    <span className="text-sm text-gray-600">BlocIQ is thinking...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input Area */}
+      <div className="border-t border-gray-200 p-4 bg-gray-50">
+        {/* Smart Summary Chips */}
+        {uploadedFiles.length > 0 && (
+          <div className="mb-3">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xs font-medium text-gray-600">📄 Included in AI context:</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {uploadedFiles.map((file) => (
+                <div
+                  key={file.id}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer group"
+                  title={`${file.name} (${formatFileSize(file.size)})`}
+                >
+                  {getFileIconComponent(file.type)}
+                  <span className="font-medium">{cleanFileName(file.name)}</span>
+                  <span className="text-xs text-blue-500 opacity-70">({formatFileSize(file.size)})</span>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(file.id)}
+                    className="ml-1 text-blue-400 hover:text-blue-600 transition-colors opacity-0 group-hover:opacity-100"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-3">
+          {/* File Upload Zone */}
+          {uploadedFiles.length > 0 && (
+            <div className="space-y-2">
+              <div className="text-xs font-medium text-gray-600 mb-2">📎 Attached files:</div>
+              <div className="flex flex-wrap gap-2">
+                {uploadedFiles.map((file) => (
+                  <div
+                    key={file.id}
+                    className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-gray-200 text-sm shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    {getFileIconComponent(file.type)}
+                    <div className="flex flex-col">
+                      <span className="font-medium text-gray-900 truncate max-w-[150px]">{file.name}</span>
+                      <span className="text-xs text-gray-500">{formatFileSize(file.size)}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(file.id)}
+                      className="text-gray-400 hover:text-red-500 transition-colors ml-2"
+                      title="Remove file"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Main Input */}
+          <div className="relative">
+            <input
+              ref={inputRef}
+              type="text"
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              placeholder={placeholder}
+              className="w-full px-4 py-3 pr-20 bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-500"
+              disabled={loading}
+            />
+            
+            {/* File Upload Button */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading || uploadedFiles.length >= maxFiles}
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
+              title="Attach a document"
+            >
+              <Upload className="h-4 w-4" />
+            </button>
+            
+            {/* Send Button */}
+            <button
+              type="submit"
+              disabled={loading || (!question.trim() && uploadedFiles.length === 0)}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 p-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 text-white rounded-xl transition-all duration-200 disabled:cursor-not-allowed shadow-sm"
+              title="Send with BlocIQ"
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+
+          {/* Drag & Drop Zone */}
+          <div
+            className={`border-2 border-dashed rounded-xl p-4 text-center transition-all duration-200 ${
+              isDragOver 
+                ? 'border-blue-500 bg-blue-50' 
+                : 'border-gray-300 hover:border-blue-500 hover:bg-blue-50'
+            }`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            <div className="flex flex-col items-center gap-2">
+              <Upload className="h-5 w-5 text-gray-400" />
+              <p className="text-sm text-gray-600">
+                Drag & drop files here or{' '}
+                <span 
+                  className="text-blue-500 underline cursor-pointer hover:text-blue-600"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  click to upload
+                </span>
+              </p>
+              <p className="text-xs text-gray-500">
+                Supports PDF, DOCX, TXT (max 10MB, up to {maxFiles} files)
+              </p>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".pdf,.docx,.txt"
+              onChange={(e) => handleFileSelect(e.target.files)}
+              className="hidden"
+            />
+          </div>
+        </form>
+      </div>
 
       {/* Document Search Results */}
       {isDocumentSearch && documentResults.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm mx-4 mb-4">
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
               <span className="text-white text-sm">📄</span>
@@ -291,35 +669,9 @@ export default function AskBlocIQ({
         </div>
       )}
 
-      {/* No Documents Found - Upload Prompt */}
-      {isDocumentSearch && documentResults.length === 0 && (
-        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-sm">⚠️</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm text-gray-500 mb-2">Document Search</div>
-              <p className="text-gray-800 mb-3">
-                No document found. Want to upload one?
-              </p>
-              <button
-                onClick={() => {
-                  // TODO: Open UploadComplianceModal
-                  setAnswer(prev => prev + '\n\n💡 Tip: You can upload compliance documents using the Upload button in the compliance tracker.');
-                }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm"
-              >
-                📤 Upload Document
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Suggested Action Panel */}
       {suggestedAction && (
-        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm mx-4 mb-4">
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
               <span className="text-white text-sm">🧠</span>
