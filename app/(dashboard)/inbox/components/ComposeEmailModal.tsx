@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X, Send, Save, Plus } from 'lucide-react';
+import { X, Send, Save, Plus, User, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
@@ -9,6 +9,13 @@ interface ComposeEmailModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
+
+const resetForm = () => {
+  setTo([]);
+  setCc([]);
+  setSubject('');
+  setBody('');
+};
 
 export default function ComposeEmailModal({ isOpen, onClose }: ComposeEmailModalProps) {
   const [isSending, setIsSending] = useState(false);
@@ -18,23 +25,28 @@ export default function ComposeEmailModal({ isOpen, onClose }: ComposeEmailModal
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [signature, setSignature] = useState('');
+  const [userProfile, setUserProfile] = useState<any>(null);
 
-  // Load user signature on mount
+  // Load user signature and profile on mount
   useEffect(() => {
-    const loadSignature = async () => {
+    const loadUserData = async () => {
       try {
         const response = await fetch('/api/get-signature');
         if (response.ok) {
           const data = await response.json();
           setSignature(data.signature);
+          setUserProfile({
+            fullName: data.fullName,
+            email: data.email
+          });
         }
       } catch (error) {
-        console.error('Error loading signature:', error);
+        console.error('Error loading user data:', error);
       }
     };
 
     if (isOpen) {
-      loadSignature();
+      loadUserData();
     }
   }, [isOpen]);
 
@@ -46,6 +58,9 @@ export default function ComposeEmailModal({ isOpen, onClose }: ComposeEmailModal
 
     setIsSending(true);
     try {
+      // Combine body with signature
+      const fullBody = signature ? `${body.trim()}\n\n${signature}` : body.trim();
+      
       const response = await fetch('/api/send-email', {
         method: 'POST',
         headers: {
@@ -55,7 +70,7 @@ export default function ComposeEmailModal({ isOpen, onClose }: ComposeEmailModal
           to,
           cc,
           subject: subject.trim(),
-          body: body.trim(),
+          body: fullBody,
           status: 'sent'
         }),
       });
@@ -67,6 +82,7 @@ export default function ComposeEmailModal({ isOpen, onClose }: ComposeEmailModal
 
       const data = await response.json();
       toast.success(data.message || 'Email sent successfully');
+      resetForm();
       onClose();
     } catch (error) {
       console.error('Error sending email:', error);
@@ -84,6 +100,9 @@ export default function ComposeEmailModal({ isOpen, onClose }: ComposeEmailModal
 
     setIsSaving(true);
     try {
+      // Combine body with signature
+      const fullBody = signature ? `${body.trim()}\n\n${signature}` : body.trim();
+      
       const response = await fetch('/api/send-email', {
         method: 'POST',
         headers: {
@@ -93,7 +112,7 @@ export default function ComposeEmailModal({ isOpen, onClose }: ComposeEmailModal
           to,
           cc,
           subject: subject.trim(),
-          body: body.trim(),
+          body: fullBody,
           status: 'draft'
         }),
       });
@@ -105,6 +124,7 @@ export default function ComposeEmailModal({ isOpen, onClose }: ComposeEmailModal
 
       const data = await response.json();
       toast.success(data.message || 'Draft saved successfully');
+      resetForm();
       onClose();
     } catch (error) {
       console.error('Error saving draft:', error);
@@ -126,7 +146,10 @@ export default function ComposeEmailModal({ isOpen, onClose }: ComposeEmailModal
             <h2 className="text-xl font-semibold text-gray-900">Compose New Email</h2>
           </div>
           <button
-            onClick={onClose}
+            onClick={() => {
+              resetForm();
+              onClose();
+            }}
             className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
           >
             <X className="h-5 w-5" />
@@ -135,28 +158,48 @@ export default function ComposeEmailModal({ isOpen, onClose }: ComposeEmailModal
 
         {/* Content */}
         <div className="p-6 space-y-4 overflow-y-auto max-h-[calc(90vh-200px)]">
+          {/* From Field */}
+          {userProfile && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">From</label>
+              <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <User className="h-4 w-4 text-gray-500" />
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-gray-900">{userProfile.fullName}</div>
+                  <div className="text-xs text-gray-500">{userProfile.email}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* To Field */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">To *</label>
-            <input
-              type="text"
-              value={to.join(', ')}
-              onChange={(e) => setTo(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
-              placeholder="Enter email addresses separated by commas"
-            />
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                value={to.join(', ')}
+                onChange={(e) => setTo(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                placeholder="Enter email addresses separated by commas"
+              />
+            </div>
           </div>
 
           {/* CC Field */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">CC</label>
-            <input
-              type="text"
-              value={cc.join(', ')}
-              onChange={(e) => setCc(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
-              placeholder="Enter email addresses separated by commas"
-            />
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                value={cc.join(', ')}
+                onChange={(e) => setCc(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                placeholder="Enter email addresses separated by commas"
+              />
+            </div>
           </div>
 
           {/* Subject Field */}
@@ -181,14 +224,13 @@ export default function ComposeEmailModal({ isOpen, onClose }: ComposeEmailModal
               rows={12}
               placeholder="Enter your message..."
             />
+            {/* Signature Preview */}
+            {signature && (
+              <div className="text-sm text-gray-500 border-t border-gray-200 pt-2 mt-2">
+                <div className="whitespace-pre-wrap text-gray-400">{signature}</div>
+              </div>
+            )}
           </div>
-
-          {/* Signature */}
-          {signature && (
-            <div className="text-sm text-gray-500 border-t border-gray-200 pt-2">
-              <div className="whitespace-pre-wrap">{signature}</div>
-            </div>
-          )}
         </div>
 
         {/* Footer */}
@@ -199,7 +241,10 @@ export default function ComposeEmailModal({ isOpen, onClose }: ComposeEmailModal
           
           <div className="flex items-center gap-2">
             <Button
-              onClick={onClose}
+              onClick={() => {
+                resetForm();
+                onClose();
+              }}
               variant="outline"
               size="sm"
             >
