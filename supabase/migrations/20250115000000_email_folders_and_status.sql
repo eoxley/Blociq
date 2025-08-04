@@ -23,8 +23,8 @@ CREATE INDEX IF NOT EXISTS idx_incoming_emails_folder_id ON incoming_emails(fold
 -- Update existing emails to have proper status
 UPDATE incoming_emails 
 SET status = CASE 
-  WHEN unread = true THEN 'unread'
-  WHEN handled = true THEN 'handled'
+  WHEN is_read = false THEN 'unread'
+  WHEN is_handled = true THEN 'handled'
   ELSE 'read'
 END
 WHERE status IS NULL;
