@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const { 
-      prompt, // AskBlocIQ sends 'prompt' instead of 'question'
+      prompt: userPrompt, // AskBlocIQ sends 'prompt' instead of 'question'
       question, // Keep for backward compatibility
       contextType = 'general',
       buildingId, 
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       projectId // New field for Major Works
     } = body;
 
-    const actualQuestion = prompt || question;
+    const actualQuestion = userPrompt || question;
     const actualBuildingId = buildingId || building_id;
 
     if (!actualQuestion) {
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     console.log('🤖 Building unified prompt for:', contextType);
 
     // Build unified prompt with all context
-    const prompt = await buildPrompt({
+    const unifiedPrompt = await buildPrompt({
       question: actualQuestion,
       contextType,
       buildingId: actualBuildingId,
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
     // Call OpenAI
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
-      messages: [{ role: 'system', content: prompt }],
+      messages: [{ role: 'system', content: unifiedPrompt }],
       temperature: 0.3,
       max_tokens: 1500,
     });
