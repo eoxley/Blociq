@@ -33,7 +33,7 @@ export default function PageHero({
       <div className="absolute top-8 right-8 w-32 h-32 bg-white/10 rounded-full"></div>
       <div className="absolute bottom-8 left-8 w-24 h-24 bg-white/5 rounded-full"></div>
       
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="relative w-full max-w-[1600px] mx-auto px-6 xl:px-12">
         <div className="text-center text-white">
           {/* Icon */}
           {icon && (
