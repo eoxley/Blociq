@@ -5,6 +5,7 @@ export interface OutlookConnectionStatus {
   email?: string;
   tokenExpired?: boolean;
   expiresAt?: string;
+  needsReconnect?: boolean;
 }
 
 /**
@@ -31,21 +32,107 @@ export async function checkOutlookConnection(): Promise<OutlookConnectionStatus>
       return { connected: false };
     }
 
-    // Check if token is expired
+    // Check if token is expired or will expire soon (within 5 minutes)
     const now = new Date();
     const expiresAt = new Date(tokens.expires_at);
+    const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
     const isExpired = expiresAt <= now;
+    const willExpireSoon = expiresAt <= fiveMinutesFromNow;
 
     return {
       connected: true,
       email: tokens.email,
       tokenExpired: isExpired,
-      expiresAt: tokens.expires_at
+      expiresAt: tokens.expires_at,
+      needsReconnect: isExpired || willExpireSoon
     };
 
   } catch (error) {
     console.error('Error checking Outlook connection:', error);
     return { connected: false };
+  }
+}
+
+/**
+ * Refresh Outlook token if needed
+ */
+export async function refreshOutlookToken(): Promise<boolean> {
+  try {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !session) {
+      throw new Error('No active session');
+    }
+
+    // Get current tokens
+    const { data: tokens, error: tokenError } = await supabase
+      .from('outlook_tokens')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .single();
+
+    if (tokenError || !tokens) {
+      throw new Error('No Outlook tokens found');
+    }
+
+    // Check if token needs refresh (expired or expires within 5 minutes)
+    const now = new Date();
+    const expiresAt = new Date(tokens.expires_at);
+    const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
+    
+    if (expiresAt > fiveMinutesFromNow) {
+      console.log('✅ Token is still valid, no refresh needed');
+      return true;
+    }
+
+    console.log('🔄 Refreshing Outlook token...');
+
+    // Refresh the token
+    const tenantId = process.env.OUTLOOK_TENANT_ID || 'common';
+    const refreshResponse = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        client_id: process.env.OUTLOOK_CLIENT_ID!,
+        client_secret: process.env.OUTLOOK_CLIENT_SECRET!,
+        grant_type: 'refresh_token',
+        refresh_token: tokens.refresh_token,
+        redirect_uri: process.env.OUTLOOK_REDIRECT_URI!,
+      }),
+    });
+
+    if (!refreshResponse.ok) {
+      const errorText = await refreshResponse.text();
+      console.error('❌ Failed to refresh token:', errorText);
+      throw new Error('Token refresh failed');
+    }
+
+    const refreshData = await refreshResponse.json();
+    const newExpiresAt = new Date(Date.now() + refreshData.expires_in * 1000).toISOString();
+
+    // Update the stored tokens
+    const { error: updateError } = await supabase
+      .from('outlook_tokens')
+      .update({
+        access_token: refreshData.access_token,
+        refresh_token: refreshData.refresh_token,
+        expires_at: newExpiresAt
+      })
+      .eq('user_id', session.user.id);
+
+    if (updateError) {
+      console.error('❌ Failed to update token in database:', updateError);
+      throw new Error('Failed to update token');
+    }
+
+    console.log('✅ Token refreshed successfully');
+    return true;
+
+  } catch (error) {
+    console.error('❌ Error refreshing token:', error);
+    return false;
   }
 }
 
@@ -83,6 +170,12 @@ export function getOutlookAuthUrl(): string {
  */
 export async function fetchOutlookEvents() {
   try {
+    // First try to refresh token if needed
+    const refreshSuccess = await refreshOutlookToken();
+    if (!refreshSuccess) {
+      throw new Error('Your Outlook session has expired. Please reconnect your account.');
+    }
+
     const response = await fetch('/api/outlook/calendar');
     
     if (!response.ok) {

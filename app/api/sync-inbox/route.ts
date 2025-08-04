@@ -47,10 +47,11 @@ export async function POST(req: NextRequest) {
     // ✅ 3. Check if token is expired and refresh if needed
     const now = new Date();
     const expiresAt = new Date(token.expires_at);
+    const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
     let refreshedToken = false;
 
-    if (expiresAt <= now) {
-      console.log('🔄 Token expired, refreshing...');
+    if (expiresAt <= fiveMinutesFromNow) {
+      console.log('🔄 Token expired or expiring soon, refreshing...');
       
       try {
         const tenantId = process.env.OUTLOOK_TENANT_ID || 'common';
@@ -71,11 +72,13 @@ export async function POST(req: NextRequest) {
         if (!refreshResponse.ok) {
           const errorText = await refreshResponse.text();
           console.error('❌ Failed to refresh token:', errorText);
+          
+          // If refresh fails, the user needs to reconnect
           return NextResponse.json({ 
-            error: 'Failed to refresh Outlook token',
-            message: 'Please reconnect your Outlook account',
-            details: process.env.NODE_ENV === 'development' ? errorText : undefined
-          }, { status: 500 });
+            error: 'Token refresh failed',
+            message: 'Your Outlook session has expired. Please reconnect your account.',
+            code: 'TOKEN_REFRESH_FAILED'
+          }, { status: 401 });
         }
 
         const refreshData = await refreshResponse.json();
@@ -106,8 +109,9 @@ export async function POST(req: NextRequest) {
         console.error('❌ Error refreshing token:', error);
         return NextResponse.json({ 
           error: 'Token refresh failed',
-          message: 'Please reconnect your Outlook account'
-        }, { status: 500 });
+          message: 'Your Outlook session has expired. Please reconnect your account.',
+          code: 'TOKEN_REFRESH_FAILED'
+        }, { status: 401 });
       }
     }
 
@@ -132,6 +136,16 @@ export async function POST(req: NextRequest) {
       if (!emailsResponse.ok) {
         const errorText = await emailsResponse.text();
         console.error('❌ Failed to fetch emails:', errorText);
+        
+        // Check if it's an authentication error
+        if (emailsResponse.status === 401 || emailsResponse.status === 403) {
+          return NextResponse.json({ 
+            error: 'Authentication failed',
+            message: 'Your Outlook session has expired. Please reconnect your account.',
+            code: 'AUTH_FAILED'
+          }, { status: 401 });
+        }
+        
         return NextResponse.json({ 
           error: 'Failed to fetch emails',
           message: 'Unable to retrieve emails from Outlook',
@@ -227,7 +241,8 @@ export async function POST(req: NextRequest) {
           processed: processedCount,
           new: newEmailsCount,
           updated: updatedEmailsCount,
-          syncTime: `${syncTime}ms`
+          syncTime: `${syncTime}ms`,
+          tokenRefreshed: refreshedToken
         }
       });
 
