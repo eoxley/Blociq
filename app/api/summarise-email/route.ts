@@ -9,88 +9,116 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import OpenAI from 'openai';
+import { buildPrompt } from '@/lib/buildPrompt';
+import { insertAiLog } from '@/lib/supabase/ai_logs';
 
-interface SummariseEmailRequest {
-  emailId: string;
-  subject: string | null;
-  body: string | null;
-}
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req: NextRequest) {
   try {
-    const { emailId, subject, body }: SummariseEmailRequest = await req.json();
-    
-    if (!emailId) {
-      return NextResponse.json({ error: 'Email ID is required' }, { status: 400 });
-    }
-
     const supabase = createRouteHandlerClient({ cookies });
-
+    
     // Get current user
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Initialize OpenAI client
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    const body = await req.json();
+    const { 
+      emailContent, 
+      emailSubject, 
+      fromEmail, 
+      buildingId, 
+      documentIds = [], 
+      emailThreadId, 
+      manualContext, 
+      leaseholderId 
+    } = body;
 
-    // Create the prompt for email summarization
-    const systemPrompt = `You are a professional property management assistant. Your task is to provide a concise, bullet-point summary of emails related to property management, leasehold issues, and building maintenance.
+    if (!emailContent) {
+      return NextResponse.json({ error: 'Email content is required' }, { status: 400 });
+    }
 
-Guidelines for summarization:
-- Extract the key points and main issues
-- Identify any urgent matters or deadlines
-- Highlight action items or required responses
-- Note any specific building or leaseholder references
-- Keep the summary clear and actionable
-- Use British English spelling and terminology
-- Focus on property management context
+    console.log('🤖 Building unified prompt for email summarisation');
 
-Format the summary as clear bullet points with appropriate categorization.`;
-
-    const userPrompt = `Please summarize the following email:
-
-Subject: ${subject || 'No subject'}
-
+    // Build the email content for context
+    const emailContext = `
+Email Subject: ${emailSubject || 'No subject'}
+From: ${fromEmail || 'Unknown sender'}
 Content:
-${body || 'No content available'}
+${emailContent}
+`;
 
-Provide a concise bullet-point summary focusing on:
-1. Main issues or concerns
-2. Any urgent matters or deadlines
-3. Required actions or responses
-4. Building or leaseholder context
-5. Key details for property management`;
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      max_tokens: 500,
-      temperature: 0.3,
+    // Build unified prompt with all context
+    const prompt = await buildPrompt({
+      question: `Please summarise this email and identify key actions required: ${emailContext}`,
+      contextType: 'email_summarisation',
+      buildingId,
+      documentIds,
+      emailThreadId,
+      manualContext: emailContext + (manualContext ? '\n\n' + manualContext : ''),
+      leaseholderId,
     });
 
-    const summary = completion.choices[0]?.message?.content || 'No summary generated';
+    // Add email-specific instructions
+    const emailInstructions = `
+IMPORTANT: You are summarising an email for a property manager. Please:
 
-    // Log the summarization for debugging
-    console.log(`📝 Email ${emailId} summarized successfully`);
+1. Provide a concise summary of the email content
+2. Identify any urgent matters or deadlines
+3. List specific actions required
+4. Note any compliance or legal implications
+5. Suggest appropriate responses or next steps
+6. Highlight any building-specific concerns
+7. Use professional British English
+8. Format your response clearly with sections
+
+Email Summary:
+`;
+
+    const finalPrompt = prompt + '\n\n' + emailInstructions;
+
+    console.log('📝 Prompt built, calling OpenAI...');
+
+    // Call OpenAI
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [{ role: 'system', content: finalPrompt }],
+      temperature: 0.3,
+      max_tokens: 1000,
+    });
+
+    const aiResponse = completion.choices[0]?.message?.content || 'No summary generated';
+
+    console.log('✅ OpenAI response received');
+
+    // Log the AI interaction
+    await insertAiLog({
+      user_id: user.id,
+      question: `Summarise email: ${emailSubject || 'No subject'}`,
+      response: aiResponse,
+      context_type: 'email_summarisation',
+      building_id: buildingId,
+      document_ids: documentIds,
+      leaseholder_id: leaseholderId,
+      email_thread_id: emailThreadId,
+    });
 
     return NextResponse.json({ 
       success: true,
-      summary: summary,
-      emailId: emailId
+      summary: aiResponse,
+      context_type: 'email_summarisation',
+      building_id: buildingId,
+      document_count: documentIds.length,
+      has_email_thread: !!emailThreadId,
+      has_leaseholder: !!leaseholderId
     });
 
   } catch (error) {
-    console.error('❌ Error in summarise-email:', error);
-    
+    console.error('❌ Error in summarise-email route:', error);
     return NextResponse.json({ 
-      error: 'Failed to summarize email',
+      error: 'Failed to summarise email',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
