@@ -26,7 +26,6 @@ export async function POST(req: NextRequest) {
         body_preview: 'The heating system is not working properly in my flat. Can someone please check it?',
         body_full: 'Dear Property Manager,\n\nThe heating system in my flat (Flat 1) is not working properly. The radiators are cold and the thermostat is not responding. This is quite urgent as the weather is getting colder.\n\nCould you please arrange for someone to check this as soon as possible?\n\nThank you,\nJohn Smith',
         received_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
-        unread: true,
         is_read: false,
         handled: false,
         is_handled: false,
@@ -45,7 +44,6 @@ export async function POST(req: NextRequest) {
         body_preview: 'There is excessive noise coming from the flat above. Can this be addressed?',
         body_full: 'Hello,\n\nI am writing to report excessive noise coming from the flat above mine (Flat 2). There has been loud music and banging sounds for the past few days, especially in the evenings.\n\nThis is affecting my ability to work from home and get proper rest. Could you please investigate this matter?\n\nRegards,\nSarah Johnson',
         received_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
-        unread: true,
         is_read: false,
         handled: false,
         is_handled: false,
@@ -64,7 +62,6 @@ export async function POST(req: NextRequest) {
         body_preview: 'The kitchen tap is leaking. Please send a plumber.',
         body_full: 'Hi,\n\nThe kitchen tap in my flat (Flat 3) has been leaking for the past week. The water is dripping constantly and has started to cause some damage to the cabinet below.\n\nCould you please arrange for a plumber to fix this issue?\n\nThanks,\nMichael Brown',
         received_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), // 4 days ago
-        unread: false,
         is_read: true,
         handled: true,
         is_handled: true,
@@ -83,7 +80,6 @@ export async function POST(req: NextRequest) {
         body_preview: 'I would like to request a parking space for my vehicle.',
         body_full: 'Dear Property Manager,\n\nI am a resident in Flat 4 and would like to request a parking space for my vehicle. I currently have to park on the street which is inconvenient and sometimes unsafe.\n\nIs there any availability for a dedicated parking space?\n\nBest regards,\nEmma Davis',
         received_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
-        unread: false,
         is_read: true,
         handled: false,
         is_handled: false,
@@ -102,7 +98,6 @@ export async function POST(req: NextRequest) {
         body_preview: 'The internet connection in my flat is very slow. Can this be investigated?',
         body_full: 'Hello,\n\nThe internet connection in my flat (Flat 5) has been extremely slow for the past few days. I work from home and this is affecting my productivity significantly.\n\nCould you please investigate this issue? I have tried restarting the router but the problem persists.\n\nThank you,\nDavid Wilson',
         received_at: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(), // 6 days ago
-        unread: true,
         is_read: false,
         handled: false,
         is_handled: false,

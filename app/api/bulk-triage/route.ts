@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
               await supabase
                 .from('incoming_emails')
                 .update({ 
-                  unread: false,
+                  is_read: true,
                   updated_at: new Date().toISOString()
                 })
                 .eq('id', email.id);

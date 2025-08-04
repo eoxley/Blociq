@@ -182,7 +182,6 @@ export function useLiveInbox(): UseLiveInboxReturn {
       const { error } = await supabase
         .from('incoming_emails')
         .update({ 
-          unread: false, 
           is_read: true 
         })
         .eq('id', emailId);

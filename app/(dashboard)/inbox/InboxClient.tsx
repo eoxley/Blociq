@@ -400,6 +400,28 @@ export default function InboxClient() {
           <button
             onClick={async () => {
               try {
+                const { data: { user }, error } = await supabase.auth.getUser();
+                if (user) {
+                  console.log('👤 Your User ID:', user.id);
+                  toast.success(`User ID: ${user.id}`);
+                } else {
+                  console.log('❌ No user found');
+                  toast.error('No user found');
+                }
+              } catch (error) {
+                console.error('Error getting user ID:', error);
+                toast.error('Failed to get user ID');
+              }
+            }}
+            className="flex items-center gap-2 bg-white border border-orange-300 rounded-lg px-3 py-2 text-sm hover:bg-orange-50 transition-colors"
+          >
+            <span>👤</span>
+            <span>Get User ID</span>
+          </button>
+          
+          <button
+            onClick={async () => {
+              try {
                 const response = await fetch('/api/connect-outlook', {
                   method: 'POST',
                   headers: {
