@@ -7,20 +7,20 @@ import LayoutWithSidebar from '@/components/LayoutWithSidebar'
 export default async function HomePage() {
   const cookieStore = cookies()
   const supabase = createServerComponentClient({ cookies: () => cookieStore })
-  const { data: { session } } = await supabase.auth.getSession()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  if (!session) redirect('/login')
+  if (!user) redirect('/login')
 
   // Get user profile data
   const { data: profile } = await supabase
     .from('profiles')
     .select('full_name, email')
-    .eq('id', session.user.id)
+    .eq('id', user.id)
     .single()
 
   const userData = {
-    name: profile?.full_name || session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Property Manager',
-    email: session.user.email || ''
+    name: profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Property Manager',
+    email: user.email || ''
   }
 
   return (

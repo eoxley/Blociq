@@ -12,10 +12,10 @@ export async function GET(req: NextRequest) {
       return getTimeBasedGreeting()
     }
     
-    // Get the current user's session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    // Get the current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
     
-    if (sessionError || !session) {
+    if (userError || !user) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
