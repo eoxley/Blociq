@@ -151,7 +151,7 @@ export default function InboxClient() {
   };
 
   return (
-    <div className="w-full max-w-[1440px] mx-auto px-6 py-8 space-y-6">
+    <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -222,7 +222,7 @@ export default function InboxClient() {
       )}
 
       {/* Main Layout */}
-      <div className="grid grid-cols-[320px_1fr] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] xl:grid-cols-[280px_1fr_1.5fr] gap-6 lg:gap-8">
         {/* Sidebar */}
         <div className="w-full">
           <SimpleFolderSidebar 
@@ -232,7 +232,7 @@ export default function InboxClient() {
           />
         </div>
 
-        {/* Main Content */}
+        {/* Email List Column */}
         <div className="flex flex-col gap-4">
           {/* Search & Filter Bar */}
           <div className="flex items-center gap-4">
@@ -250,79 +250,76 @@ export default function InboxClient() {
             )}
           </div>
 
-          {/* Email List & Details */}
-          <div className="grid grid-cols-2 gap-6">
-            {/* Email List */}
-            <div className="bg-white rounded-xl shadow p-4 overflow-y-auto max-h-[calc(100vh-220px)]">
-              {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="flex items-center gap-3 text-gray-500">
-                    <RefreshCw className="h-5 w-5 animate-spin" />
-                    <span>Loading emails...</span>
-                  </div>
+          {/* Email List */}
+          <div className="bg-white rounded-xl shadow p-4 overflow-y-auto max-h-[calc(100vh-220px)]">
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="flex items-center gap-3 text-gray-500">
+                  <RefreshCw className="h-5 w-5 animate-spin" />
+                  <span>Loading emails...</span>
                 </div>
-              ) : filteredEmails.length > 0 ? (
-                <ul className="space-y-3">
-                  {filteredEmails.map((email) => (
-                    <li
-                      key={email.id}
-                      onClick={() => handleEmailSelect(email)}
-                      className={`p-3 rounded-xl cursor-pointer transition hover:bg-indigo-50 ${
-                        selectedEmail?.id === email.id ? 'bg-indigo-100 border border-indigo-200' : ''
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-sm text-indigo-800 truncate">
-                            {email.from_name || email.from_email || 'Unknown sender'}
-                          </div>
-                          <div className="text-xs text-gray-500 truncate mt-1">
-                            {email.subject || 'No subject'}
-                          </div>
-                          <div className="text-xs text-gray-400 mt-1">
-                            {email.received_at ? new Date(email.received_at).toLocaleDateString() : 'Unknown date'}
-                          </div>
+              </div>
+            ) : filteredEmails.length > 0 ? (
+              <ul className="space-y-3">
+                {filteredEmails.map((email) => (
+                  <li
+                    key={email.id}
+                    onClick={() => handleEmailSelect(email)}
+                    className={`p-3 rounded-xl cursor-pointer transition hover:bg-indigo-50 ${
+                      selectedEmail?.id === email.id ? 'bg-indigo-100 border border-indigo-200' : ''
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-sm text-indigo-800 truncate">
+                          {email.from_name || email.from_email || 'Unknown sender'}
                         </div>
-                        <div className="flex items-center gap-1 ml-2">
-                          {(email.unread || !email.is_read) && (
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                          )}
-                          {email.flag_status === 'flagged' && (
-                            <span className="text-red-500">🚩</span>
-                          )}
+                        <div className="text-xs text-gray-500 truncate mt-1">
+                          {email.subject || 'No subject'}
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          {email.received_at ? new Date(email.received_at).toLocaleDateString() : 'Unknown date'}
                         </div>
                       </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  {search ? 'No emails match your search.' : `No emails in ${selectedFolder}.`}
-                </div>
-              )}
-            </div>
-
-            {/* Email Detail Panel */}
-            <div className="bg-white rounded-xl shadow p-6 min-h-[300px]">
-              {selectedEmail ? (
-                                 <EnhancedEmailDetailView 
-                   email={selectedEmail}
-                   onMarkAsRead={markAsRead}
-                   onMarkAsHandled={markAsHandled}
-                   onFlagEmail={flagEmail}
-                   onReply={handleReply}
-                 />
-              ) : (
-                <div className="flex flex-col items-center justify-center text-center text-gray-500 h-full">
-                  <div className="text-4xl mb-2">📥</div>
-                  <h2 className="text-lg font-semibold">Select an email</h2>
-                  <p className="text-sm text-gray-400">
-                    Choose an email from the list to view its details and generate AI-powered replies.
-                  </p>
-                </div>
-              )}
-            </div>
+                      <div className="flex items-center gap-1 ml-2">
+                        {(email.unread || !email.is_read) && (
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        )}
+                        {email.flag_status === 'flagged' && (
+                          <span className="text-red-500">🚩</span>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                {search ? 'No emails match your search.' : `No emails in ${selectedFolder}.`}
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* Email Detail Panel */}
+        <div className="bg-white rounded-xl shadow p-6 min-h-[300px] hidden lg:block xl:block">
+          {selectedEmail ? (
+            <EnhancedEmailDetailView 
+              email={selectedEmail}
+              onMarkAsRead={markAsRead}
+              onMarkAsHandled={markAsHandled}
+              onFlagEmail={flagEmail}
+              onReply={handleReply}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center text-center text-gray-500 h-full">
+              <div className="text-4xl mb-2">📥</div>
+              <h2 className="text-lg font-semibold">Select an email</h2>
+              <p className="text-sm text-gray-400">
+                Choose an email from the list to view its details and generate AI-powered replies.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
