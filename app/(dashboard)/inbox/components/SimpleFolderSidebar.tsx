@@ -1,53 +1,172 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
+import { Plus, Folder, FolderOpen, Trash2 } from 'lucide-react'
+import CreateFolderModal from './CreateFolderModal'
 
 interface Folder {
   id: string
   label: string
   count: number
   icon: string
+  isCustom?: boolean
 }
 
 interface SimpleFolderSidebarProps {
   folders: Folder[]
   selectedFolder?: string
   onFolderSelect?: (folderId: string) => void
+  onEmailDrop?: (emailId: string, folderId: string) => void
 }
 
 export default function SimpleFolderSidebar({ 
   folders, 
   selectedFolder = 'inbox',
-  onFolderSelect 
+  onFolderSelect,
+  onEmailDrop
 }: SimpleFolderSidebarProps) {
+  const [customFolders, setCustomFolders] = useState<Folder[]>([]);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
+
+  // Fetch custom folders on component mount
+  useEffect(() => {
+    const fetchCustomFolders = async () => {
+      try {
+        const response = await fetch('/api/folders');
+        if (response.ok) {
+          const data = await response.json();
+          const customFoldersData = data.folders.map((folder: any) => ({
+            id: folder.id,
+            label: folder.name,
+            count: 0, // Will be calculated separately
+            icon: '📁',
+            isCustom: true
+          }));
+          setCustomFolders(customFoldersData);
+        }
+      } catch (error) {
+        console.error('Failed to fetch custom folders:', error);
+      }
+    };
+
+    fetchCustomFolders();
+  }, []);
+
+  const handleFolderCreated = (newFolder: any) => {
+    const folderData = {
+      id: newFolder.id,
+      label: newFolder.name,
+      count: 0,
+      icon: '📁',
+      isCustom: true
+    };
+    setCustomFolders(prev => [...prev, folderData]);
+  };
+
+  const handleDragOver = (e: React.DragEvent, folderId: string) => {
+    e.preventDefault();
+    setDragOverFolder(folderId);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverFolder(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, folderId: string) => {
+    e.preventDefault();
+    setDragOverFolder(null);
+    
+    const emailId = e.dataTransfer.getData('emailId');
+    if (emailId && onEmailDrop) {
+      onEmailDrop(emailId, folderId);
+    }
+  };
+
+  const allFolders = [...folders, ...customFolders];
+
   return (
-    <div className="bg-white rounded-xl shadow p-4">
-      <h3 className="text-lg font-semibold mb-4">Folders</h3>
-      <div className="space-y-2">
-        {folders.map((folder) => (
-          <div
-            key={folder.id}
-            onClick={() => onFolderSelect?.(folder.id)}
-            className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
-              selectedFolder === folder.id 
-                ? 'bg-indigo-100 border border-indigo-200' 
-                : 'hover:bg-gray-50'
-            }`}
+    <>
+      <div className="bg-white rounded-xl shadow p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Folders</h3>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+            title="Create new folder"
           >
-            <div className="flex items-center gap-3">
-              <span className="text-lg">{folder.icon}</span>
-              <span className="font-medium">{folder.label}</span>
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
+        
+        <div className="space-y-2">
+          {allFolders.map((folder) => (
+            <div
+              key={folder.id}
+              onClick={() => onFolderSelect?.(folder.id)}
+              onDragOver={(e) => handleDragOver(e, folder.id)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, folder.id)}
+              className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                selectedFolder === folder.id 
+                  ? 'bg-indigo-100 border border-indigo-200' 
+                  : dragOverFolder === folder.id
+                  ? 'bg-blue-50 border border-blue-200'
+                  : 'hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                {folder.isCustom ? (
+                  <FolderOpen className="h-4 w-4 text-blue-600" />
+                ) : (
+                  <span className="text-lg">{folder.icon}</span>
+                )}
+                <span className="font-medium">{folder.label}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`text-sm px-2 py-1 rounded-full ${
+                  selectedFolder === folder.id
+                    ? 'bg-indigo-200 text-indigo-800'
+                    : 'bg-gray-100 text-gray-500'
+                }`}>
+                  {folder.count}
+                </span>
+                {folder.isCustom && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Handle folder deletion
+                    }}
+                    className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                    title="Delete folder"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
             </div>
-            <span className={`text-sm px-2 py-1 rounded-full ${
-              selectedFolder === folder.id
-                ? 'bg-indigo-200 text-indigo-800'
-                : 'bg-gray-100 text-gray-500'
-            }`}>
-              {folder.count}
-            </span>
+          ))}
+        </div>
+
+        {allFolders.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            <Folder className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+            <p className="text-sm">No folders yet</p>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="mt-2 text-blue-600 hover:text-blue-700 text-sm"
+            >
+              Create your first folder
+            </button>
           </div>
-        ))}
+        )}
       </div>
-    </div>
+
+      <CreateFolderModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onFolderCreated={handleFolderCreated}
+      />
+    </>
   )
 } 

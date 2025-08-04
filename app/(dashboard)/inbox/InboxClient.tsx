@@ -11,6 +11,7 @@ import { useUser } from '@supabase/auth-helpers-react';
 import { createClient } from '@supabase/supabase-js';
 import { AlertTriangle, RefreshCw, Mail, Wifi, WifiOff, X, Plus, FolderOpen } from 'lucide-react';
 import TriageIcon from '@/components/icons/TriageIcon';
+import { toast } from 'sonner';
 
 export default function InboxClient() {
   const {
@@ -37,6 +38,7 @@ export default function InboxClient() {
   const [replyAction, setReplyAction] = useState<'reply' | 'reply-all' | 'forward'>('reply');
   const [draftsCount, setDraftsCount] = useState(0);
   const [showMobileFolders, setShowMobileFolders] = useState(false);
+  const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
   const user = useUser();
   
   // Initialize Supabase client
@@ -207,6 +209,52 @@ export default function InboxClient() {
     }
   };
 
+  const handleDeleteEmail = async (emailId: string) => {
+    try {
+      const response = await fetch('/api/delete-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ emailId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete email');
+      }
+
+      // Remove email from local state
+      const updatedEmails = emails.filter(email => email.id !== emailId);
+      // You'll need to update your email state management here
+      
+    } catch (error) {
+      console.error('Error deleting email:', error);
+      toast.error('Failed to delete email');
+    }
+  };
+
+  const handleEmailDrop = async (emailId: string, folderId: string) => {
+    try {
+      const response = await fetch('/api/move-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ emailId, folderId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to move email');
+      }
+
+      toast.success('Email moved successfully');
+      
+    } catch (error) {
+      console.error('Error moving email:', error);
+      toast.error('Failed to move email');
+    }
+  };
+
   return (
     <div className="w-full max-w-[1600px] mx-auto px-6 xl:px-12 py-8 space-y-6 overflow-x-hidden">
 
@@ -297,6 +345,7 @@ export default function InboxClient() {
               handleFolderSelect(folderId);
               setShowMobileFolders(false); // Close mobile folders after selection
             }}
+            onEmailDrop={handleEmailDrop}
           />
         </div>
 
@@ -332,6 +381,10 @@ export default function InboxClient() {
                 {filteredEmails.map((email) => (
                   <li
                     key={email.id}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('emailId', email.id);
+                    }}
                     onClick={() => handleEmailSelect(email)}
                     className={`p-3 rounded-xl cursor-pointer transition hover:bg-indigo-50 ${
                       selectedEmail?.id === email.id ? 'bg-indigo-100 border border-indigo-200' : ''
@@ -386,6 +439,7 @@ export default function InboxClient() {
               onMarkAsHandled={markAsHandled}
               onFlagEmail={flagEmail}
               onReply={handleReply}
+              onDelete={handleDeleteEmail}
             />
           ) : (
             <div className="flex flex-col items-center justify-center text-center text-gray-500 h-full">
@@ -416,6 +470,7 @@ export default function InboxClient() {
               onMarkAsHandled={markAsHandled}
               onFlagEmail={flagEmail}
               onReply={handleReply}
+              onDelete={handleDeleteEmail}
             />
           </div>
         )}
