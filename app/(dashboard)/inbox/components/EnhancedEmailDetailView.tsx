@@ -26,9 +26,6 @@ interface Email {
   leaseholder_id: string | null;
   outlook_id: string | null;
   user_id: string | null;
-  buildings?: { name: string } | null;
-  units?: { unit_number: string } | null;
-  leaseholders?: { name: string; email: string } | null;
 }
 
 interface EnhancedEmailDetailViewProps {
@@ -131,34 +128,32 @@ export default function EnhancedEmailDetailView({
         </div>
       </div>
 
-      {/* Email Content */}
-      <div className="space-y-4">
-        {/* Building/Unit Info */}
-        {(email.buildings || email.units || email.leaseholders) && (
-          <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-            <h3 className="font-medium text-gray-900">Related Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-              {email.buildings && (
-                <div className="flex items-center gap-2">
-                  <Building className="h-4 w-4 text-gray-500" />
-                  <span className="text-gray-700">{email.buildings.name}</span>
-                </div>
-              )}
-              {email.units && (
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-500">🏠</span>
-                  <span className="text-gray-700">Unit {email.units.unit_number}</span>
-                </div>
-              )}
-              {email.leaseholders && (
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-gray-500" />
-                  <span className="text-gray-700">{email.leaseholders.name}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+             {/* Email Content */}
+       <div className="space-y-4">
+         {/* Building/Unit Info - Only show if we have building_id */}
+         {email.building_id && (
+           <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+             <h3 className="font-medium text-gray-900">Related Information</h3>
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+               <div className="flex items-center gap-2">
+                 <Building className="h-4 w-4 text-gray-500" />
+                 <span className="text-gray-700">Building ID: {email.building_id}</span>
+               </div>
+               {email.unit_id && (
+                 <div className="flex items-center gap-2">
+                   <span className="text-gray-500">🏠</span>
+                   <span className="text-gray-700">Unit ID: {email.unit_id}</span>
+                 </div>
+               )}
+               {email.leaseholder_id && (
+                 <div className="flex items-center gap-2">
+                   <User className="h-4 w-4 text-gray-500" />
+                   <span className="text-gray-700">Leaseholder ID: {email.leaseholder_id}</span>
+                 </div>
+               )}
+             </div>
+           </div>
+         )}
 
         {/* Email Body */}
         <div className="space-y-4">

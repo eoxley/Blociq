@@ -26,9 +26,6 @@ interface Email {
   leaseholder_id: string | null;
   outlook_id: string | null;
   user_id: string | null;
-  buildings?: { name: string } | null;
-  units?: { unit_number: string } | null;
-  leaseholders?: { name: string; email: string } | null;
 }
 
 interface UseLiveInboxReturn {
@@ -74,12 +71,7 @@ export function useLiveInbox(): UseLiveInboxReturn {
 
       const { data, error } = await supabase
         .from('incoming_emails')
-        .select(`
-          *,
-          buildings (name),
-          units (unit_number),
-          leaseholders (name, email)
-        `)
+        .select('*')
         .eq('user_id', user.id)
         .order('received_at', { ascending: false })
         .limit(100); // Limit to prevent performance issues
