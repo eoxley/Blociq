@@ -48,6 +48,7 @@ export function useBuildingEmails(): UseBuildingEmailsReturn {
         .from('incoming_emails')
         .select('*')
         .eq('unread', false)
+        .eq('is_deleted', false) // Filter out deleted emails
         .order('received_at', { ascending: false })
         .limit(10)
 

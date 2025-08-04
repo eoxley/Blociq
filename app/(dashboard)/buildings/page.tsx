@@ -60,7 +60,7 @@ function BuildingsList({ initialBuildings, isDummyData = false }: { initialBuild
               <div className="mt-6 bg-white/20 backdrop-blur-sm rounded-xl p-4 max-w-2xl mx-auto">
                 <div className="flex items-center justify-center gap-2 text-white/90">
                   <Sparkles className="h-5 w-5" />
-                  <span className="text-sm font-medium">Showing sample buildings for demonstration</span>
+                  <span className="text-sm font-medium">Showing 13 sample buildings for demonstration</span>
                 </div>
               </div>
             )}
@@ -129,7 +129,11 @@ function BuildingsList({ initialBuildings, isDummyData = false }: { initialBuild
             {filteredBuildings.map((building) => (
               <div 
                 key={building.id}
-                className="bg-white rounded-2xl shadow-lg border border-gray-100 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 text-center group overflow-hidden"
+                className={`bg-white rounded-2xl shadow-lg border transition-all duration-300 transform hover:scale-105 text-center group overflow-hidden ${
+                  building.isDummy 
+                    ? 'border-purple-200 hover:shadow-purple-200/50 hover:shadow-2xl' 
+                    : 'border-gray-100 hover:shadow-2xl'
+                }`}
               >
                 <div className="p-8">
                   {/* Building Icon */}
@@ -144,8 +148,8 @@ function BuildingsList({ initialBuildings, isDummyData = false }: { initialBuild
                         {building.name}
                       </h3>
                       {building.isDummy && (
-                        <span className="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-full font-medium">
-                          Demo
+                        <span className="bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 text-xs px-3 py-1 rounded-full font-semibold border border-purple-200 shadow-sm animate-pulse">
+                          ✨ Demo
                         </span>
                       )}
                     </div>
