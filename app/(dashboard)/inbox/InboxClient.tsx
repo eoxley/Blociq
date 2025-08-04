@@ -252,7 +252,7 @@ export default function InboxClient() {
   };
 
   return (
-    <div className="w-full max-w-[1600px] mx-auto px-6 xl:px-12 py-8 space-y-6 overflow-x-hidden">
+    <div className="w-full max-w-[1800px] mx-auto px-4 lg:px-6 xl:px-8 py-6 lg:py-8 space-y-6 overflow-x-hidden">
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -482,9 +482,9 @@ export default function InboxClient() {
       )}
 
       {/* Main Layout */}
-      <div className="grid xl:grid-cols-[240px_360px_1fr] lg:grid-cols-[280px_1fr] grid-cols-1 gap-6 w-full overflow-x-hidden">
+      <div className="grid xl:grid-cols-[280px_400px_1fr] lg:grid-cols-[320px_1fr] grid-cols-1 gap-6 w-full overflow-x-hidden">
         {/* Folder List - Fixed Width */}
-        <div className={`w-full xl:w-[240px] lg:w-[280px] ${showMobileFolders ? 'block' : 'hidden'} lg:block`}>
+        <div className={`w-full xl:w-[280px] lg:w-[320px] ${showMobileFolders ? 'block' : 'hidden'} lg:block`}>
           <SimpleFolderSidebar 
             folders={[...folders, ...aiFolders]} 
             selectedFolder={selectedFolder}
@@ -497,7 +497,7 @@ export default function InboxClient() {
         </div>
 
         {/* Email List Column - Fixed Width on Desktop */}
-        <div className="flex flex-col gap-4 w-full xl:w-[360px] lg:w-full">
+        <div className="flex flex-col gap-4 w-full xl:w-[400px] lg:w-full">
           {/* Search & Filter Bar */}
           <div className="flex items-center gap-4">
             <input
@@ -578,7 +578,7 @@ export default function InboxClient() {
         </div>
 
         {/* Email Detail Panel - Flexible Width */}
-        <div className="bg-white rounded-xl shadow p-6 min-h-[300px] flex-1 min-w-[600px] max-w-[1000px] overflow-y-auto hidden lg:block">
+        <div className="bg-white rounded-xl shadow p-6 min-h-[300px] flex-1 min-w-[700px] max-w-[1200px] overflow-y-auto hidden lg:block">
           {selectedEmail ? (
             <EnhancedEmailDetailView 
               email={selectedEmail}

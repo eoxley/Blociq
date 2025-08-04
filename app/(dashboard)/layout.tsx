@@ -33,8 +33,8 @@ export default async function DashboardLayout({
       
       <main className="flex-1 overflow-y-auto">
         {/* Main Content */}
-        <div className="p-6">
-          <div className="w-full max-w-[1600px] mx-auto px-6 xl:px-12">
+        <div className="p-4 lg:p-6">
+          <div className="w-full max-w-[1800px] mx-auto px-4 lg:px-6 xl:px-8">
             {children}
           </div>
         </div>

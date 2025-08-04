@@ -75,8 +75,8 @@ function BuildingsList({ initialBuildings, isDummyData = false }: { initialBuild
         </div>
       </section>
 
-      {/* Search and Create Section - Enhanced */}
-      <div className="max-w-7xl mx-auto px-6 py-12">
+             {/* Search and Create Section - Enhanced */}
+       <div className="max-w-8xl mx-auto px-4 lg:px-6 xl:px-8 py-12">
         <div className="flex flex-col lg:flex-row gap-8 items-start lg:items-center justify-between mb-12">
           {/* Search Bar */}
           <div className="flex-1 max-w-lg">
@@ -122,10 +122,10 @@ function BuildingsList({ initialBuildings, isDummyData = false }: { initialBuild
         )}
       </div>
 
-      {/* Buildings Grid - Enhanced Landing Page Style */}
-      {filteredBuildings.length > 0 ? (
-        <div className="max-w-7xl mx-auto px-6 pb-16">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+             {/* Buildings Grid - Enhanced Landing Page Style */}
+       {filteredBuildings.length > 0 ? (
+         <div className="max-w-8xl mx-auto px-4 lg:px-6 xl:px-8 pb-16">
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
             {filteredBuildings.map((building) => (
               <div 
                 key={building.id}
