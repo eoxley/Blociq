@@ -147,49 +147,7 @@ export default function DashboardSidebar() {
         })}
       </nav>
 
-      {/* Quick Actions Section */}
-      <div className="border-t border-[#E2E8F0] pt-3 mb-3">
-        <div className="px-2 mb-2">
-          <h3 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider">Quick Actions</h3>
-        </div>
-        
-        <div className="space-y-1">
-          <Link
-            href="/inbox"
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium hover:bg-[#F0FDFA] transition-all duration-300 group text-[#333333]"
-          >
-            <div className="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-all duration-300 relative">
-              <Bell className="h-3 w-3 text-blue-600" />
-              {notifications > 0 && (
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
-                  <span className="text-xs text-white font-bold">{notifications}</span>
-                </div>
-              )}
-            </div>
-            <span className="font-medium text-xs">Notifications</span>
-          </Link>
-          
-          <Link
-            href="/ai-assistant"
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium hover:bg-[#F0FDFA] transition-all duration-300 group text-[#333333]"
-          >
-            <div className="w-7 h-7 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-all duration-300">
-              <span className="text-sm">🤖</span>
-            </div>
-            <span className="font-medium text-xs">AI Assistant</span>
-          </Link>
-          
-          <Link
-            href="/help"
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium hover:bg-[#F0FDFA] transition-all duration-300 group text-[#333333]"
-          >
-            <div className="w-7 h-7 bg-green-100 rounded-lg flex items-center justify-center group-hover:bg-green-200 transition-all duration-300">
-              <HelpCircle className="h-3 w-3 text-green-600" />
-            </div>
-            <span className="font-medium text-xs">Help & Support</span>
-          </Link>
-        </div>
-      </div>
+
 
       {/* Enhanced Logout Section */}
       <div className="border-t border-[#E2E8F0] pt-3">

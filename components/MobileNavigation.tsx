@@ -68,26 +68,7 @@ export default function MobileNavigation() {
                   </div>
                 </div>
                 
-                {/* Quick Actions */}
-                <div className="flex gap-2">
-                  <BlocIQButton
-                    variant="outline"
-                    size="sm"
-                    className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
-                    onClick={() => router.push('/inbox')}
-                  >
-                    <Bell className="h-4 w-4 mr-2" />
-                    Inbox
-                  </BlocIQButton>
-                  <BlocIQButton
-                    variant="outline"
-                    size="sm"
-                    className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
-                    onClick={() => router.push('/ai-assistant')}
-                  >
-                    🤖 AI
-                  </BlocIQButton>
-                </div>
+
               </div>
 
               {/* Navigation */}
@@ -156,47 +137,7 @@ export default function MobileNavigation() {
                   })}
                 </div>
 
-                {/* Quick Actions */}
-                <div className="mt-6 pt-6 border-t border-[#E2E8F0]">
-                  <h3 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider px-2 mb-3">
-                    Quick Actions
-                  </h3>
-                  
-                  <div className="space-y-2">
-                    <Link
-                      href="/inbox"
-                      onClick={closeMenu}
-                      className="flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#F0FDFA] transition-all text-[#333333]"
-                    >
-                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <Bell className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <span className="font-medium">Notifications</span>
-                    </Link>
-                    
-                    <Link
-                      href="/ai-assistant"
-                      onClick={closeMenu}
-                      className="flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#F0FDFA] transition-all text-[#333333]"
-                    >
-                      <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                        <span className="text-lg">🤖</span>
-                      </div>
-                      <span className="font-medium">AI Assistant</span>
-                    </Link>
-                    
-                    <Link
-                      href="/help"
-                      onClick={closeMenu}
-                      className="flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#F0FDFA] transition-all text-[#333333]"
-                    >
-                      <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                        <HelpCircle className="h-4 w-4 text-green-600" />
-                      </div>
-                      <span className="font-medium">Help & Support</span>
-                    </Link>
-                  </div>
-                </div>
+
               </div>
 
               {/* Footer */}

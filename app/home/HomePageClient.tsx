@@ -7,7 +7,6 @@ import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2, 
 import { supabase } from '@/lib/supabaseClient'
 import DailySummary from '@/components/DailySummary'
 import AskBlocIQHomepage from '@/components/AskBlocIQHomepage'
-import DailyOverview from '@/components/DailyOverview'
 import SmartSearch from '@/components/SmartSearch'
 import BuildingTodoList from '@/components/BuildingTodoList'
 
@@ -371,9 +370,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       </section>
 
       <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
-        {/* Daily Overview Section */}
-        <DailyOverview />
-
         {/* Search Section */}
         <div className="bg-white rounded-2xl shadow-lg border-0 p-6">
           <div className="flex items-center gap-3 mb-4">
