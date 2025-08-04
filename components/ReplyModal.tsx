@@ -232,7 +232,7 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
       };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-40">
+          <div className="fixed inset-0 bg-white/60 backdrop-blur-sm z-40 transition-all duration-300 ease-in-out">
       <div 
         ref={modalRef}
         className={modalClasses}
