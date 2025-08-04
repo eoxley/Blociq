@@ -3,12 +3,18 @@ import { NextResponse } from 'next/server'
 import { dummyBuildings } from '@/lib/dummyBuildings'
 
 export async function GET() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-
   try {
+    // Check if Supabase environment variables are available
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.log('Supabase environment variables not found, using dummy data')
+      return getDummyBuildingsResponse()
+    }
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    )
+
     // Fetch all buildings
     const { data: buildings, error: buildingsError } = await supabase
       .from('buildings')
@@ -16,33 +22,15 @@ export async function GET() {
       .order('name')
 
     if (buildingsError) {
-      console.error('Error fetching buildings:', buildingsError)
-      return NextResponse.json({ error: buildingsError.message }, { status: 500 })
+      console.error('Error fetching buildings from Supabase:', buildingsError)
+      console.log('Falling back to dummy data due to Supabase error')
+      return getDummyBuildingsResponse()
     }
 
     // If no buildings found in database, use dummy data
     if (!buildings || buildings.length === 0) {
       console.log('No buildings found in database, using dummy data')
-      
-      const dummyBuildingsWithIds = dummyBuildings.map((building, index) => ({
-        id: `dummy-${index + 1}`,
-        name: building.name,
-        address: building.address,
-        unit_count: building.units,
-        liveUnitCount: building.units,
-        postcode: building.postcode,
-        image: building.image,
-        isDummy: true, // Flag to identify dummy data
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }))
-
-      return NextResponse.json({ 
-        buildings: dummyBuildingsWithIds,
-        totalBuildings: dummyBuildingsWithIds.length,
-        totalUnits: dummyBuildings.reduce((total, building) => total + building.units, 0),
-        isDummyData: true
-      })
+      return getDummyBuildingsResponse()
     }
 
     // Fetch all units to get unit counts
@@ -52,8 +40,9 @@ export async function GET() {
       .order('building_id')
 
     if (unitsError) {
-      console.error('Error fetching units:', unitsError)
-      return NextResponse.json({ error: unitsError.message }, { status: 500 })
+      console.error('Error fetching units from Supabase:', unitsError)
+      console.log('Falling back to dummy data due to units error')
+      return getDummyBuildingsResponse()
     }
 
     // Create a map of building_id to unit count
@@ -86,6 +75,30 @@ export async function GET() {
 
   } catch (error) {
     console.error('Error in buildings API:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.log('Falling back to dummy data due to unexpected error')
+    return getDummyBuildingsResponse()
   }
+}
+
+// Helper function to return dummy buildings response
+function getDummyBuildingsResponse() {
+  const dummyBuildingsWithIds = dummyBuildings.map((building, index) => ({
+    id: `dummy-${index + 1}`,
+    name: building.name,
+    address: building.address,
+    unit_count: building.units,
+    liveUnitCount: building.units,
+    postcode: building.postcode,
+    image: building.image,
+    isDummy: true, // Flag to identify dummy data
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }))
+
+  return NextResponse.json({ 
+    buildings: dummyBuildingsWithIds,
+    totalBuildings: dummyBuildingsWithIds.length,
+    totalUnits: dummyBuildings.reduce((total, building) => total + building.units, 0),
+    isDummyData: true
+  })
 } 

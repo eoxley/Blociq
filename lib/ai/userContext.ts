@@ -78,6 +78,7 @@ export async function fetchUserContext(userId: string, supabase: any): Promise<U
         .from('incoming_emails')
         .select('id, subject, sender, created_at')
         .eq('building_id', userProfile.building_id)
+        .eq('is_deleted', false) // Filter out deleted emails
         .order('created_at', { ascending: false })
         .limit(3);
       

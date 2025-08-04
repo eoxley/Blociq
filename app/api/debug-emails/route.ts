@@ -15,11 +15,12 @@ export async function GET(req: NextRequest) {
 
     console.log('🔍 Debugging emails for user:', user.email);
 
-    // Get email count and sample data
+    // Get email count and sample data (excluding deleted emails)
     const { data: emails, error: emailsError, count } = await supabase
       .from('incoming_emails')
       .select('*')
       .eq('user_id', user.id)
+      .eq('is_deleted', false) // Filter out deleted emails
       .order('received_at', { ascending: false })
       .limit(10);
 

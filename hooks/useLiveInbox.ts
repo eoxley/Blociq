@@ -28,6 +28,8 @@ interface Email {
   user_id: string | null;
   ai_tag?: string | null;
   triage_category?: string | null;
+  is_deleted?: boolean | null;
+  deleted_at?: string | null;
 }
 
 interface UseLiveInboxReturn {
@@ -85,11 +87,12 @@ export function useLiveInbox(): UseLiveInboxReturn {
 
       console.log('📊 Total emails in database:', totalCount);
 
-      // Now fetch emails for this user
+      // Now fetch emails for this user (excluding deleted emails)
       const { data, error } = await supabase
         .from('incoming_emails')
         .select('*')
         .eq('user_id', user.id)
+        .eq('is_deleted', false) // Filter out deleted emails
         .order('received_at', { ascending: false })
         .limit(100); // Limit to prevent performance issues
 
@@ -315,13 +318,21 @@ export function useLiveInbox(): UseLiveInboxReturn {
               setNewEmailCount(prev => prev + 1);
               toast.success('New email received!');
             } else if (payload.eventType === 'UPDATE') {
-              // Email updated
+              // Email updated - check if it was marked as deleted
               const updatedEmail = payload.new as Email;
-              setEmails(prev => 
-                prev.map(email => 
-                  email.id === updatedEmail.id ? updatedEmail : email
-                )
-              );
+              if (updatedEmail.is_deleted) {
+                // Remove from inbox if marked as deleted
+                setEmails(prev => 
+                  prev.filter(email => email.id !== updatedEmail.id)
+                );
+              } else {
+                // Update the email in the list
+                setEmails(prev => 
+                  prev.map(email => 
+                    email.id === updatedEmail.id ? updatedEmail : email
+                  )
+                );
+              }
             } else if (payload.eventType === 'DELETE') {
               // Email deleted
               const deletedEmail = payload.old as Email;
