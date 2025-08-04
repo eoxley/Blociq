@@ -58,7 +58,7 @@ export default function TriageModal({ isOpen, onClose, unreadEmails, onTriageCom
       // Notify parent component
       onTriageComplete?.(data);
       
-      toast.success(`✅ Inbox triaged – ${data.draft_emails.length} draft replies saved and ${data.suggested_actions.length} actions suggested`);
+      toast.success(`${data.summary} – ${data.drafts_ready} drafts, ${data.urgent_count} urgent`);
     } catch (error) {
       console.error('Error running triage:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to run AI triage');

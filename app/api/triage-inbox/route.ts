@@ -1,224 +1,199 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
-import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+import { OpenAI } from 'openai'
 
-interface TriageResult {
-  email_id: string;
-  category: string;
-  urgency: 'low' | 'medium' | 'high';
-  confidence: number;
-  draft?: string;
-  suggested_actions?: Array<{
-    type: 'note' | 'todo' | 'event';
-    content: string;
-    building_id?: string;
-  }>;
-}
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
-interface TriageResponse {
-  summary: string;
-  urgent_ids: string[];
-  suggested_tags: string[];
-  draft_emails: Array<{
-    email_id: string;
-    draft: string;
-    category: string;
-    confidence: number;
-  }>;
-  suggested_actions: Array<{
-    type: 'note' | 'todo' | 'event';
-    content: string;
-    building_id?: string;
-  }>;
-  triage_results: TriageResult[];
-}
-
-export async function POST(req: NextRequest) {
+export async function POST() {
   try {
-    const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = createRouteHandlerClient({ cookies })
     
-    // Get user session
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Get authenticated user
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (userError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get unread/untriaged emails
+    // Step 1: Get all untriaged inbox emails
     const { data: emails, error: emailsError } = await supabase
       .from('incoming_emails')
       .select('*')
       .eq('user_id', user.id)
-      .or('unread.eq.true,is_read.eq.false,ai_tag.is.null')
-      .order('received_at', { ascending: false })
-      .limit(50); // Limit to prevent timeout
+      .is('triaged', null) // triaged = boolean
+      .limit(25)
 
     if (emailsError) {
-      console.error('❌ Error fetching emails:', emailsError);
-      return NextResponse.json({ error: 'Failed to fetch emails' }, { status: 500 });
+      console.error('❌ Error fetching emails:', emailsError)
+      return NextResponse.json({ error: 'Failed to fetch emails' }, { status: 500 })
     }
 
     if (!emails || emails.length === 0) {
-      return NextResponse.json({
-        summary: 'No emails to triage',
-        urgent_ids: [],
-        suggested_tags: [],
-        draft_emails: [],
-        suggested_actions: [],
-        triage_results: []
-      });
+      return NextResponse.json({ summary: 'No new emails to triage.' })
     }
 
-    // AI Triage Analysis
-    const triageResults: TriageResult[] = [];
-    const draftEmails: Array<{
-      email_id: string;
-      draft: string;
-      category: string;
-      confidence: number;
-    }> = [];
-    const suggestedActions: Array<{
-      type: 'note' | 'todo' | 'event';
-      content: string;
-      building_id?: string;
-    }> = [];
-    const allTags = new Set<string>();
-    const urgentIds: string[] = [];
+    const triageResults = []
+    const draftsToSave = []
+    const urgentIds = []
+    const suggestedActions = []
 
-    // Process each email with AI
+    // Step 2: Process each email with AI
     for (const email of emails) {
       try {
-        // AI Classification
-        const classificationResponse = await fetch('/api/generate-draft', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            emailId: email.id,
-            prompt_type: 'triage',
-            email_content: email.body_full || email.body_preview || '',
-            email_subject: email.subject || '',
-            from_email: email.from_email || ''
-          }),
-        });
+        const prompt = `
+You are a leasehold block management assistant. Your job is to categorise and respond to incoming leaseholder emails.
 
-        if (classificationResponse.ok) {
-          const classificationData = await classificationResponse.json();
-          
-          const category = classificationData.category || 'general';
-          const urgency = classificationData.urgency || 'medium';
-          const confidence = classificationData.confidence || 0.7;
-          
-          allTags.add(category);
-          
-          if (urgency === 'high') {
-            urgentIds.push(email.id);
-          }
+Please return JSON in this format:
+{
+  "triage_category": "Complaints" | "S20" | "Service Charge" | "Maintenance" | "Insurance" | "Lease Query" | "General",
+  "is_urgent": true | false,
+  "suggested_action": [
+    { "type": "note" | "event" | "todo", "content": "string", "building_id": "optional" }
+  ],
+  "draft_reply": "AI-generated professional email reply"
+}
 
-          const triageResult: TriageResult = {
-            email_id: email.id,
-            category,
-            urgency,
-            confidence
-          };
+Here is the email:
+Subject: ${email.subject || 'No subject'}
+Body:
+${email.body_full || email.body_preview || 'No content'}
 
-          // Generate draft reply for actionable emails
-          if (confidence > 0.6 && category !== 'general') {
-            const draftResponse = await fetch('/api/generate-draft', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                emailId: email.id,
-                prompt_type: 'reply',
-                email_content: email.body_full || email.body_preview || '',
-                email_subject: email.subject || '',
-                from_email: email.from_email || ''
-              }),
-            });
+Special instructions:
+- If the email refers to repairs, highlight urgency and suggest adding a building event.
+- If the email is threatening legal action or service charge withholding, mark as urgent and generate a complaint draft.
+- For maintenance issues, consider creating a building event or todo.
+- For complaints, create a note and potentially mark as urgent.
+- For S20 notices, create a todo with appropriate follow-up timeline.
+- For insurance queries, create a note and potentially a todo for follow-up.
+- For lease queries, create a note for documentation.
+- For service charge issues, assess urgency and create appropriate action items.
+`
 
-            if (draftResponse.ok) {
-              const draftData = await draftResponse.json();
-              triageResult.draft = draftData.draft;
-              
-              draftEmails.push({
-                email_id: email.id,
-                draft: draftData.draft,
-                category,
-                confidence
-              });
+        const aiResponse = await openai.chat.completions.create({
+          model: 'gpt-4',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.4
+        })
 
-              // Save draft to database
-              await supabase
-                .from('ai_generated_drafts')
-                .upsert({
-                  email_id: email.id,
-                  draft_text: draftData.draft,
-                  category,
-                  confidence,
-                  created_at: new Date().toISOString()
-                });
-            }
-          }
-
-          // Generate suggested actions
-          if (category === 'leak' || category === 'maintenance') {
-            suggestedActions.push({
-              type: 'event',
-              content: `${category} issue reported in ${email.subject}`,
-              building_id: email.building_id?.toString()
-            });
-          } else if (category === 'complaint') {
-            suggestedActions.push({
-              type: 'note',
-              content: `Complaint: ${email.subject}`,
-              building_id: email.building_id?.toString()
-            });
-          } else if (category === 's20' || category === 'insurance') {
-            suggestedActions.push({
-              type: 'todo',
-              content: `Follow up on ${category}: ${email.subject}`,
-              building_id: email.building_id?.toString()
-            });
-          }
-
-          triageResults.push(triageResult);
-
-          // Update email with AI tag
-          await supabase
-            .from('incoming_emails')
-            .update({ 
-              ai_tag: category,
-              triage_category: category
-            })
-            .eq('id', email.id);
-
-        } else {
-          console.error('❌ Error classifying email:', email.id);
+        const responseContent = aiResponse.choices[0]?.message?.content
+        if (!responseContent) {
+          console.error('❌ No response from OpenAI for email:', email.id)
+          continue
         }
+
+        let parsed
+        try {
+          parsed = JSON.parse(responseContent)
+        } catch (parseError) {
+          console.error('❌ Failed to parse AI response for email:', email.id, parseError)
+          continue
+        }
+
+        // Mark urgent emails
+        if (parsed.is_urgent) {
+          urgentIds.push(email.id)
+        }
+
+        // Save draft reply
+        if (parsed.draft_reply) {
+          draftsToSave.push({
+            email_id: email.id,
+            user_id: user.id,
+            triage_category: parsed.triage_category || 'General',
+            draft_text: parsed.draft_reply,
+            confidence_score: 0.95,
+            created_at: new Date().toISOString()
+          })
+        }
+
+        // Queue suggested actions
+        if (Array.isArray(parsed.suggested_action)) {
+          suggestedActions.push(...parsed.suggested_action.map((action: any) => ({
+            ...action,
+            related_email_id: email.id,
+            user_id: user.id,
+            created_at: new Date().toISOString()
+          })))
+        }
+
+        // Store result for UI return
+        triageResults.push({
+          email_id: email.id,
+          subject: email.subject || 'No subject',
+          category: parsed.triage_category || 'General',
+          is_urgent: parsed.is_urgent || false
+        })
+
       } catch (error) {
-        console.error('❌ Error processing email:', email.id, error);
+        console.error('❌ Error processing email:', email.id, error)
       }
     }
 
-    // Generate summary
-    const summary = `${emails.length} emails scanned • ${urgentIds.length} marked urgent • ${draftEmails.length} draft replies ready`;
+    // Step 3: Save all data to database
+    try {
+      // Save AI generated drafts
+      if (draftsToSave.length > 0) {
+        const { error: draftsError } = await supabase
+          .from('ai_generated_drafts')
+          .insert(draftsToSave)
+        
+        if (draftsError) {
+          console.error('❌ Error saving drafts:', draftsError)
+        }
+      }
 
-    const response: TriageResponse = {
-      summary,
-      urgent_ids: urgentIds,
-      suggested_tags: Array.from(allTags),
-      draft_emails: draftEmails,
-      suggested_actions: suggestedActions,
-      triage_results: triageResults
-    };
+      // Mark urgent emails
+      if (urgentIds.length > 0) {
+        const { error: urgentError } = await supabase
+          .from('incoming_emails')
+          .update({ is_urgent: true, triaged: true })
+          .in('id', urgentIds)
+        
+        if (urgentError) {
+          console.error('❌ Error marking urgent emails:', urgentError)
+        }
+      }
 
-    return NextResponse.json(response);
+      // Mark non-urgent emails as triaged
+      const nonUrgentIds = emails.map(e => e.id).filter(id => !urgentIds.includes(id))
+      if (nonUrgentIds.length > 0) {
+        const { error: triagedError } = await supabase
+          .from('incoming_emails')
+          .update({ triaged: true })
+          .in('id', nonUrgentIds)
+        
+        if (triagedError) {
+          console.error('❌ Error marking emails as triaged:', triagedError)
+        }
+      }
+
+      // Save suggested actions
+      if (suggestedActions.length > 0) {
+        const { error: actionsError } = await supabase
+          .from('suggested_building_actions')
+          .insert(suggestedActions)
+        
+        if (actionsError) {
+          console.error('❌ Error saving suggested actions:', actionsError)
+        }
+      }
+
+    } catch (dbError) {
+      console.error('❌ Database error:', dbError)
+      return NextResponse.json({ error: 'Failed to save triage results' }, { status: 500 })
+    }
+
+    // Step 4: Return summary for UI
+    return NextResponse.json({
+      summary: `✅ Inbox triaged: ${emails.length} scanned`,
+      drafts_ready: draftsToSave.length,
+      urgent_count: urgentIds.length,
+      actions: suggestedActions.length,
+      triageResults
+    })
 
   } catch (error) {
-    console.error('❌ Error in triage-inbox API:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('❌ Error in triage-inbox API:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 } 
