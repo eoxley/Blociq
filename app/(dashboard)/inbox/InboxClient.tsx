@@ -8,6 +8,7 @@ import TriageModal from './components/TriageModal';
 import ComposeEmailModal from './components/ComposeEmailModal';
 import ReplyModal from './components/ReplyModal';
 import { useUser } from '@supabase/auth-helpers-react';
+import { createClient } from '@supabase/supabase-js';
 import { AlertTriangle, RefreshCw, Mail, Wifi, WifiOff, X, Plus } from 'lucide-react';
 import TriageIcon from '@/components/icons/TriageIcon';
 
@@ -34,7 +35,14 @@ export default function InboxClient() {
   const [showReplyModal, setShowReplyModal] = useState(false);
   const [replyEmail, setReplyEmail] = useState<any>(null);
   const [replyAction, setReplyAction] = useState<'reply' | 'reply-all' | 'forward'>('reply');
+  const [draftsCount, setDraftsCount] = useState(0);
   const user = useUser();
+  
+  // Initialize Supabase client
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
   // Generate folders based on email data
   const folders = [
@@ -69,11 +77,34 @@ export default function InboxClient() {
     { id: 'complaints', label: 'Complaints', count: 0, icon: '⚠️' },
     { id: 's20-notices', label: 'S20 Notices', count: 0, icon: '📋' },
     { id: 'insurance', label: 'Insurance Queries', count: 0, icon: '🛡️' },
-    { id: 'leaks', label: 'Leaks & Maintenance', count: 0, icon: '🔧' }
+    { id: 'leaks', label: 'Leaks & Maintenance', count: 0, icon: '🔧' },
+    { id: 'drafts', label: 'Drafts', count: draftsCount, icon: '📝' }
   ];
 
   // Get unread emails for triage
   const unreadEmails = emails.filter(e => e.unread || !e.is_read);
+
+  // Fetch drafts count
+  useEffect(() => {
+    const fetchDraftsCount = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('ai_generated_drafts')
+          .select('id', { count: 'exact' })
+          .eq('user_id', user?.id);
+        
+        if (!error && data) {
+          setDraftsCount(data.length);
+        }
+      } catch (error) {
+        console.error('Error fetching drafts count:', error);
+      }
+    };
+
+    if (user?.id) {
+      fetchDraftsCount();
+    }
+  }, [user?.id]);
 
   // Filter emails based on search and folder
   const filteredEmails = emails.filter(email => {
@@ -100,6 +131,11 @@ export default function InboxClient() {
         break;
       case 'leaks':
         folderMatch = email.ai_tag === 'leak' || email.triage_category === 'leak';
+        break;
+      case 'drafts':
+        // For drafts folder, we'll show emails that have AI-generated drafts
+        // This will be handled separately since drafts are in a different table
+        folderMatch = false; // We'll filter this differently
         break;
       case 'inbox':
       default:
@@ -148,6 +184,26 @@ export default function InboxClient() {
   const handleTriageComplete = (results: any) => {
     // Refresh emails to show new AI tags and categories
     refreshEmails();
+    
+    // Refresh drafts count
+    const fetchDraftsCount = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('ai_generated_drafts')
+          .select('id', { count: 'exact' })
+          .eq('user_id', user?.id);
+        
+        if (!error && data) {
+          setDraftsCount(data.length);
+        }
+      } catch (error) {
+        console.error('Error fetching drafts count:', error);
+      }
+    };
+
+    if (user?.id) {
+      fetchDraftsCount();
+    }
   };
 
   return (
@@ -285,8 +341,16 @@ export default function InboxClient() {
                         {(email.unread || !email.is_read) && (
                           <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                         )}
+                        {email.is_urgent && (
+                          <span className="text-red-500 text-sm">🔥</span>
+                        )}
                         {email.flag_status === 'flagged' && (
                           <span className="text-red-500">🚩</span>
+                        )}
+                        {email.triage_category && (
+                          <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                            {email.triage_category}
+                          </span>
                         )}
                       </div>
                     </div>
