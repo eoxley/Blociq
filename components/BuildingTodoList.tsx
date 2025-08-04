@@ -509,9 +509,6 @@ export default function BuildingTodoList({
                 <CheckCircle className="h-8 w-8 text-gray-400" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">All caught up!</h3>
-              <p className="text-gray-500 mb-4">
-                No overdue or due tasks found.
-              </p>
             </div>
           ) : (
             <div className="space-y-3">
