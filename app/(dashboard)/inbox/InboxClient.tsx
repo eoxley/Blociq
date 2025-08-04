@@ -408,6 +408,15 @@ export default function InboxClient() {
         email={replyEmail}
         action={replyAction}
       />
+
+      {/* Floating New Email Button */}
+      <button 
+        onClick={() => setShowComposeModal(true)}
+        className="fixed bottom-6 right-6 bg-[#2563eb] text-white p-4 rounded-full shadow-xl hover:bg-blue-700 transition-all duration-200 hover:scale-105 z-40"
+        title="Compose New Email"
+      >
+        <Plus className="h-6 w-6" />
+      </button>
     </div>
   );
 } 
