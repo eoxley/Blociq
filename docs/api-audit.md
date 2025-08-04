@@ -120,6 +120,7 @@ _Last updated: 3 August 2025_
 | `/api/seed-compliance`       | ✅ Complete [Aug 3]   | Validates existing assets, try/catch, error handling, used in compliance|
 | `/api/remove-duplicate-ashwood` | ✅ Complete [Aug 3] | Validates data existence, try/catch, error handling, used in cleanup   |
 | `/api/match-building`        | ✅ Complete [Aug 3]   | Validates input fields, try/catch, error handling, used in building match|
+| `/api/add-building-todo`     | ✅ Complete [Aug 3]   | Validates task fields, try/catch, auth, error handling, used in BuildingTodoList|
 
 ## 📊 Summary
 - **Total Routes**: 200+
