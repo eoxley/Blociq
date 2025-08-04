@@ -385,7 +385,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         </div>
 
         {/* Property Events and Building To-Do Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[600px]">
           {/* Property Events Widget */}
           <div className="h-full">
             <div className="bg-white rounded-2xl shadow-lg border-0 overflow-hidden h-full flex flex-col">
@@ -437,7 +437,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               <div className="p-6 flex-1 overflow-y-auto">
                 {/* Add Event Button */}
                 {!showAddEventForm && (
-                  <div className="text-center">
+                  <div className="text-center mb-6">
                     <button
                       onClick={() => setShowAddEventForm(true)}
                       className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-6 py-3 rounded-xl font-medium shadow-lg transition-all duration-200"
@@ -511,8 +511,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
                 {/* Events List */}
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-gray-900">Upcoming Events</h3>
+                    <span className="text-sm text-gray-500">{upcomingEvents.length} event{upcomingEvents.length !== 1 ? 's' : ''}</span>
                   </div>
 
                   {upcomingEvents.length > 0 ? (
@@ -533,64 +534,73 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                         })
 
                         return (
-                          <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-lg flex items-center justify-center text-white">
-                                <Calendar className="h-5 w-5" />
-                              </div>
-                              <div>
-                                <h4 className="font-semibold text-gray-900">{event.title}</h4>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm text-gray-600">
-                                    {date} at {time}
-                                  </span>
-                                  {(isToday || isTomorrow) && (
-                                    <span className={`px-2 py-1 rounded-full text-xs ${
-                                      isToday 
-                                        ? 'bg-red-100 text-red-700' 
-                                        : 'bg-yellow-100 text-yellow-700'
-                                    }`}>
-                                      {isToday ? 'Today' : 'Tomorrow'}
-                                    </span>
-                                  )}
+                          <div key={index} className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200 hover:shadow-md transition-all duration-200">
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-start gap-3 flex-1">
+                                <div className="w-10 h-10 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-lg flex items-center justify-center text-white flex-shrink-0">
+                                  <Calendar className="h-5 w-5" />
                                 </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <h4 className="font-semibold text-gray-900 truncate">{event.title}</h4>
+                                    {(isToday || isTomorrow) && (
+                                      <span className={`px-2 py-1 rounded-full text-xs flex-shrink-0 ${
+                                        isToday 
+                                          ? 'bg-red-100 text-red-700' 
+                                          : 'bg-yellow-100 text-yellow-700'
+                                      }`}>
+                                        {isToday ? 'Today' : 'Tomorrow'}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="space-y-1 text-sm text-gray-600">
+                                    <div className="flex items-center gap-1">
+                                      <span>🕒</span>
+                                      <span>{date} at {time}</span>
+                                    </div>
+                                    {event.category && (
+                                      <div className="flex items-center gap-1">
+                                        <span>📋</span>
+                                        <span>{event.category}</span>
+                                      </div>
+                                    )}
+                                    <div className="flex items-center gap-1">
+                                      <span>📍</span>
+                                      <span>{event.building || 'General'}</span>
+                                    </div>
+                                    {event.location && (
+                                      <div className="flex items-center gap-1">
+                                        <span>🏢</span>
+                                        <span>{event.location}</span>
+                                      </div>
+                                    )}
+                                    {event.organiser_name && (
+                                      <div className="flex items-center gap-1">
+                                        <span>👤</span>
+                                        <span>{event.organiser_name}</span>
+                                      </div>
+                                    )}
+                                    {event.online_meeting && (
+                                      <div className="flex items-center gap-1 text-blue-600">
+                                        <span>🎥</span>
+                                        <span>Online meeting available</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0 ml-3">
                                 {event.category && (
-                                  <div className="text-gray-600 mb-1">
-                                    📋 {event.category}
-                                  </div>
+                                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                    {event.category}
+                                  </span>
                                 )}
-                                <div className="text-gray-600 mb-1">
-                                  📍 {event.building || 'General'}
-                                </div>
-                                {event.location && (
-                                  <div className="text-gray-600 mb-1">
-                                    🏢 {event.location}
-                                  </div>
+                                {event.source === 'outlook' && (
+                                  <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
+                                    Outlook
+                                  </span>
                                 )}
-                                {event.organiser_name && (
-                                  <div className="text-gray-600 mb-1">
-                                    👤 {event.organiser_name}
-                                  </div>
-                                )}
-                                {event.online_meeting && (
-                                  <div className="text-blue-600 mb-1">
-                                    🎥 Online meeting available
-                                  </div>
-                                )}
-                                <div className="text-gray-600">
-                                  🕒 {date} at {time}
-                                </div>
                               </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                                {event.category}
-                              </span>
-                              {event.source === 'outlook' && (
-                                <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
-                                  Outlook
-                                </span>
-                              )}
                             </div>
                           </div>
                         )

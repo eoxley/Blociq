@@ -511,46 +511,58 @@ export default function BuildingTodoList({
               <h3 className="text-lg font-semibold text-gray-900 mb-2">All caught up!</h3>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Active Tasks</h3>
+                <span className="text-sm text-gray-500">{todos.length} task{todos.length !== 1 ? 's' : ''}</span>
+              </div>
+              <div className="space-y-3">
               {todos.map((todo) => (
                 <div 
                   key={todo.id} 
-                  className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
+                  className={`bg-gradient-to-r rounded-xl p-4 border transition-all duration-200 hover:shadow-md ${
                     todo.status === 'completed' 
-                      ? 'bg-gray-50 border-gray-200' 
+                      ? 'from-gray-50 to-gray-100 border-gray-200' 
                       : isOverdue(todo)
-                      ? 'bg-red-50 border-red-200'
-                      : 'bg-white border-gray-200 hover:bg-gray-50'
+                      ? 'from-red-50 to-pink-50 border-red-200'
+                      : 'from-green-50 to-emerald-50 border-green-200'
                   }`}
                 >
-                  <button
-                    onClick={() => toggleTodo(todo)}
-                    className={`mt-1 flex-shrink-0 ${
-                      todo.status === 'completed' 
-                        ? 'text-green-600' 
-                        : 'text-gray-400 hover:text-gray-600'
-                    }`}
-                  >
-                    {todo.status === 'completed' ? (
-                      <CheckCircle className="h-5 w-5" />
-                    ) : (
-                      <Circle className="h-5 w-5" />
-                    )}
-                  </button>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <h4 className={`font-medium text-sm ${
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3 flex-1">
+                      <button
+                        onClick={() => toggleTodo(todo)}
+                        className={`mt-1 flex-shrink-0 ${
                           todo.status === 'completed' 
-                            ? 'text-gray-500 line-through' 
-                            : 'text-gray-900'
-                        }`}>
-                          {todo.title}
-                        </h4>
+                            ? 'text-green-600' 
+                            : 'text-gray-400 hover:text-gray-600'
+                        }`}
+                      >
+                        {todo.status === 'completed' ? (
+                          <CheckCircle className="h-5 w-5" />
+                        ) : (
+                          <Circle className="h-5 w-5" />
+                        )}
+                      </button>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h4 className={`font-semibold text-sm ${
+                            todo.status === 'completed' 
+                              ? 'text-gray-500 line-through' 
+                              : 'text-gray-900'
+                          }`}>
+                            {todo.title}
+                          </h4>
+                          {isOverdue(todo) && (
+                            <span className="px-2 py-1 rounded-full text-xs bg-red-100 text-red-700 flex-shrink-0">
+                              Overdue
+                            </span>
+                          )}
+                        </div>
                         
                         {todo.description && (
-                          <p className={`text-xs mt-1 ${
+                          <p className={`text-xs mb-2 ${
                             todo.status === 'completed' 
                               ? 'text-gray-400' 
                               : 'text-gray-600'
@@ -559,16 +571,16 @@ export default function BuildingTodoList({
                           </p>
                         )}
 
-                        <div className="flex items-center gap-2 mt-2">
+                        <div className="space-y-1 text-sm text-gray-600">
                           {showBuildingName && todo.building?.name && (
-                            <div className="flex items-center gap-1 text-xs text-gray-500">
+                            <div className="flex items-center gap-1">
                               <Building className="h-3 w-3" />
                               <span>{todo.building.name}</span>
                             </div>
                           )}
                           
                           {todo.due_date && (
-                            <div className={`flex items-center gap-1 text-xs ${
+                            <div className={`flex items-center gap-1 ${
                               isOverdue(todo) 
                                 ? 'text-red-600' 
                                 : 'text-gray-500'
@@ -582,32 +594,24 @@ export default function BuildingTodoList({
                           )}
                         </div>
                       </div>
+                    </div>
 
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {todo.priority && (
-                          <BlocIQBadge 
-                            className={`text-xs ${getPriorityColor(todo.priority)}`}
-                          >
-                            {todo.priority}
-                          </BlocIQBadge>
-                        )}
-                        
-                        {isOverdue(todo) && (
-                          <BlocIQBadge 
-                            className="text-xs text-red-600 bg-red-100 border-red-200"
-                          >
-                            Overdue
-                          </BlocIQBadge>
-                        )}
-                        
-                        <button
-                          onClick={() => handleDeleteTask(todo.id)}
-                          className="text-red-400 hover:text-red-600 transition-colors p-1"
-                          title="Delete task"
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                      {todo.priority && (
+                        <BlocIQBadge 
+                          className={`text-xs ${getPriorityColor(todo.priority)}`}
                         >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
+                          {todo.priority}
+                        </BlocIQBadge>
+                      )}
+                      
+                      <button
+                        onClick={() => handleDeleteTask(todo.id)}
+                        className="text-red-400 hover:text-red-600 transition-colors p-1"
+                        title="Delete task"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
                 </div>

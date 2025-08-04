@@ -1,9 +1,10 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import { Send, Loader2, Sparkles, MessageCircle, Upload, FileText, X, Plus, Copy, Check } from 'lucide-react'
+import { Send, Loader2, Sparkles, MessageCircle, Upload, FileText, X, Plus, Copy, Check, Search } from 'lucide-react'
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
+import { BlocIQBadge } from '@/components/ui/blociq-badge'
 import { toast } from 'sonner'
 
 type Message = {
@@ -424,9 +425,9 @@ export default function AskBlocIQHomepage() {
                   <h4 className="font-medium text-sm text-gray-900 truncate">
                     {doc.file_name || doc.title || 'Document'}
                   </h4>
-                  <Badge variant="secondary" className="text-xs">
+                  <BlocIQBadge className="text-xs bg-gray-100 text-gray-700">
                     {doc.doc_type || 'Document'}
-                  </Badge>
+                  </BlocIQBadge>
                 </div>
                 {doc.summary && (
                   <p className="text-xs text-gray-600 mb-2 line-clamp-2">
