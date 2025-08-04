@@ -26,6 +26,8 @@ interface Email {
   leaseholder_id: string | null;
   outlook_id: string | null;
   user_id: string | null;
+  ai_tag?: string | null;
+  triage_category?: string | null;
 }
 
 interface UseLiveInboxReturn {
