@@ -19,6 +19,16 @@ type AIResponse = {
   response: string
   documentSearch?: boolean
   documents?: any[]
+  ai_log_id?: string
+  context_type?: string
+  building_id?: string
+  document_count?: number
+  has_email_thread?: boolean
+  has_leaseholder?: boolean
+  context?: {
+    complianceUsed?: boolean
+    majorWorksUsed?: boolean
+  }
 }
 
 type DocumentSearchResult = {
@@ -45,6 +55,8 @@ export default function AskBlocIQHomepage() {
   const [isDragOver, setIsDragOver] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null)
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [isSearching, setIsSearching] = useState(false)
   
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -136,6 +148,17 @@ export default function AskBlocIQHomepage() {
     e.preventDefault()
     if ((!prompt.trim() && uploadedFiles.length === 0) || isLoading) return
 
+    // Check if this is a document search command
+    const searchCommands = ['show me', 'find', 'search for', 'locate', 'where is']
+    const isSearchCommand = searchCommands.some(cmd => 
+      prompt.toLowerCase().includes(cmd.toLowerCase())
+    )
+
+    if (isSearchCommand) {
+      await handleDocumentSearch(prompt.trim())
+      return
+    }
+
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -199,6 +222,44 @@ export default function AskBlocIQHomepage() {
       toast.error('Failed to connect to AI assistant')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleDocumentSearch = async (searchQuery: string) => {
+    setIsSearching(true)
+    setSearchResults([])
+    
+    try {
+      const response = await fetch('/api/search-documents', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query: searchQuery }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Search failed')
+      }
+
+      const data = await response.json()
+      setSearchResults(data.results || [])
+      
+      // Add search results to messages
+      const searchMessage: Message = {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: `Found ${data.results?.length || 0} documents matching your search.`,
+        timestamp: new Date()
+      }
+      
+      setMessages(prev => [...prev, searchMessage])
+      setPrompt('')
+    } catch (error) {
+      console.error('Search error:', error)
+      toast.error('Search failed. Please try again.')
+    } finally {
+      setIsSearching(false)
     }
   }
 
@@ -334,6 +395,50 @@ export default function AskBlocIQHomepage() {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Search Results Section */}
+      {searchResults.length > 0 && (
+        <div className="border-t border-gray-200 p-4 bg-gray-50">
+          <h3 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
+            <Search className="h-4 w-4 text-blue-600" />
+            Search Results ({searchResults.length})
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {searchResults.map((doc, index) => (
+              <div
+                key={doc.id || index}
+                className="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow"
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <h4 className="font-medium text-sm text-gray-900 truncate">
+                    {doc.file_name || doc.title || 'Document'}
+                  </h4>
+                  <Badge variant="secondary" className="text-xs">
+                    {doc.doc_type || 'Document'}
+                  </Badge>
+                </div>
+                {doc.summary && (
+                  <p className="text-xs text-gray-600 mb-2 line-clamp-2">
+                    {doc.summary}
+                  </p>
+                )}
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>{doc.building_name || 'Unknown Building'}</span>
+                  <span>{new Date(doc.uploaded_at || doc.created_at).toLocaleDateString()}</span>
+                </div>
+                <button
+                  onClick={() => {
+                    setPrompt(`Tell me about the document "${doc.file_name || doc.title}"`)
+                  }}
+                  className="mt-2 w-full text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 px-2 py-1 rounded transition-colors"
+                >
+                  Ask About This
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Input Area */}
       <div className="border-t border-gray-200 p-6 bg-gray-50 rounded-b-2xl">
         <form onSubmit={handleSubmit} className="space-y-3">
@@ -366,7 +471,7 @@ export default function AskBlocIQHomepage() {
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               onKeyDown={handleKeyPress}
-              placeholder="Ask BlocIQ anything..."
+              placeholder="Ask BlocIQ anything, upload documents, or search for files (e.g., 'show me the last FRA')..."
               className="w-full px-4 py-3 pr-20 bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent transition-all duration-200 resize-none text-gray-900 placeholder-gray-500"
               rows={1}
               disabled={isLoading}
