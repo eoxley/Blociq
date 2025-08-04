@@ -11,21 +11,21 @@ export default async function InboxPage() {
   const supabase = createClient(cookies())
 
   try {
-    // ✅ STEP 1: SESSION HANDLING
-    const { data: { session }, error: authError } = await supabase.auth.getSession()
+    // ✅ STEP 1: USER AUTHENTICATION
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError) {
       console.error('❌ Auth error:', authError)
       throw new Error('Authentication failed')
     }
     
-    if (!session) {
-      console.log('❌ No session found, redirecting to login')
+    if (!user) {
+      console.log('❌ No user found, redirecting to login')
       redirect('/login')
     }
 
-    const userId = session.user.id
-    const userEmail = session.user.email
+    const userId = user.id
+    const userEmail = user.email
     console.log('✅ User authenticated:', userEmail)
 
     console.log('🎯 About to render InboxClient')
