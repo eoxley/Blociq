@@ -26,7 +26,8 @@ export default function InboxClient() {
     newEmailCount,
     markAsRead,
     markAsHandled,
-    flagEmail
+    flagEmail,
+    refreshEmails
   } = useLiveInbox();
 
   const [search, setSearch] = useState('');
