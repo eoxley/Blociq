@@ -9,6 +9,7 @@ import ComposeEmailModal from './components/ComposeEmailModal';
 import ReplyModal from './components/ReplyModal';
 import { useUser } from '@supabase/auth-helpers-react';
 import { AlertTriangle, RefreshCw, Mail, Wifi, WifiOff, X, Plus } from 'lucide-react';
+import TriageIcon from '@/components/icons/TriageIcon';
 
 export default function InboxClient() {
   const {
@@ -166,9 +167,7 @@ export default function InboxClient() {
             onClick={() => setShowTriageModal(true)}
             className="flex items-center gap-2 bg-white border border-red-300 rounded-lg px-3 py-2 text-sm hover:bg-red-50 transition-colors"
           >
-            <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
-              <X className="h-3 w-3 text-white" />
-            </div>
+            <TriageIcon className="w-5 h-5" />
             <span>AI Triage</span>
           </button>
           {/* Compose New Email Button */}
