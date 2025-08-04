@@ -64,13 +64,12 @@ export default function LandingPage() {
                 Log in to your account
                 <ArrowRight className="h-5 w-5" />
               </Link>
-              <Link 
-                href="#features"
+              <button 
                 className="inline-flex items-center gap-3 bg-white/10 hover:bg-white/20 text-white px-8 py-4 rounded-xl transition-all duration-200 font-semibold text-lg backdrop-blur-sm border border-white/20"
               >
                 Explore Features
                 <ArrowRight className="h-5 w-5" />
-              </Link>
+              </button>
             </div>
           </div>
         </div>
