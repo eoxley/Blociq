@@ -503,7 +503,8 @@ export default function BuildingTodoList({
           )}
 
           {/* Tasks List */}
-          {todos.length === 0 ? (
+          <div className="flex-1">
+            {todos.length === 0 ? (
             <div className="text-center py-8 flex-1 flex items-center justify-center">
               <div className="w-16 h-16 bg-gradient-to-r from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <CheckCircle className="h-8 w-8 text-gray-400" />
@@ -617,7 +618,8 @@ export default function BuildingTodoList({
                 </div>
               ))}
             </div>
-          )}
+            )}
+          </div>
 
           {todos.length > 0 && (
             <div className="mt-4 pt-4 border-t border-gray-200">
