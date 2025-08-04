@@ -111,31 +111,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ✅ 4. Call Microsoft Graph for main inbox
+    // ✅ 4. Call Microsoft Graph for main inbox with better filtering
     console.log('🔄 Fetching emails from main inbox...');
     
     try {
-      // First, get the main inbox folder to ensure we're targeting the correct folder
-      const inboxResponse = await fetch('https://graph.microsoft.com/v1.0/me/mailfolders/inbox', {
-        headers: {
-          'Authorization': `Bearer ${token.access_token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!inboxResponse.ok) {
-        const errorText = await inboxResponse.text();
-        console.error('❌ Failed to get inbox folder:', errorText);
-        return NextResponse.json({ 
-          error: 'Failed to access inbox',
-          message: 'Unable to access your Outlook inbox',
-          details: process.env.NODE_ENV === 'development' ? errorText : undefined
-        }, { status: 500 });
-      }
-
-      // Get emails from the main inbox
+      // Get emails from the main inbox with better filtering
+      // Fetch more emails and filter by recent date to ensure we get new emails
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      
       const emailsResponse = await fetch(
-        'https://graph.microsoft.com/v1.0/me/mailfolders/inbox/messages?$top=50&$orderby=receivedDateTime desc&$select=id,subject,bodyPreview,body,from,receivedDateTime,isRead,flag,importance,categories,hasAttachments',
+        `https://graph.microsoft.com/v1.0/me/mailfolders/inbox/messages?$top=100&$orderby=receivedDateTime desc&$filter=receivedDateTime ge '${thirtyDaysAgo}'&$select=id,subject,bodyPreview,body,from,receivedDateTime,isRead,flag,importance,categories,hasAttachments,internetMessageId`,
         {
           headers: {
             'Authorization': `Bearer ${token.access_token}`,
@@ -159,23 +144,24 @@ export async function POST(req: NextRequest) {
       
       console.log(`✅ Fetched ${emails.length} emails from Outlook`);
 
-      // ✅ 5. Process and store emails in Supabase
+      // ✅ 5. Process and store emails in Supabase with better conflict resolution
       let processedCount = 0;
       let newEmailsCount = 0;
       let updatedEmailsCount = 0;
 
       for (const email of emails) {
         try {
-          // Check if email already exists
+          // Check if email already exists by outlook_id OR internetMessageId
           const { data: existingEmail } = await supabase
             .from('incoming_emails')
-            .select('id')
-            .eq('outlook_id', email.id)
+            .select('id, outlook_id, outlook_message_id')
+            .or(`outlook_id.eq.${email.id},outlook_message_id.eq.${email.internetMessageId}`)
             .eq('user_id', userId)
             .single();
 
           const emailData = {
             outlook_id: email.id,
+            outlook_message_id: email.internetMessageId,
             user_id: userId,
             from_email: email.from?.emailAddress?.address || null,
             from_name: email.from?.emailAddress?.name || null,
@@ -189,6 +175,8 @@ export async function POST(req: NextRequest) {
             categories: email.categories || null,
             importance: email.importance || null,
             has_attachments: email.hasAttachments || false,
+            sync_status: 'manual_synced',
+            last_sync_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           };
 
@@ -203,6 +191,7 @@ export async function POST(req: NextRequest) {
               console.error('❌ Error updating email:', updateError);
             } else {
               updatedEmailsCount++;
+              console.log('✅ Updated email:', email.subject);
             }
           } else {
             // Insert new email
@@ -217,6 +206,7 @@ export async function POST(req: NextRequest) {
               console.error('❌ Error inserting email:', insertError);
             } else {
               newEmailsCount++;
+              console.log('✅ New email added:', email.subject);
             }
           }
 

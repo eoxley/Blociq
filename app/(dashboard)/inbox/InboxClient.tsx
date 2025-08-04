@@ -361,6 +361,38 @@ export default function InboxClient() {
             <span>Email Debug</span>
           </button>
           
+          {/* Test Email Sync Button */}
+          <button
+            onClick={async () => {
+              try {
+                const response = await fetch('/api/test-email-sync');
+                const result = await response.json();
+                console.log('Email Sync Test:', result);
+                
+                if (result.success) {
+                  const { user, outlook, emails, sync } = result.data;
+                  let message = `User: ${user.email}`;
+                  message += ` | Outlook: ${outlook.connected ? '✅ Connected' : '❌ Not Connected'}`;
+                  message += ` | Emails: ${emails.total} total, ${emails.recent} recent`;
+                  if (emails.latest) {
+                    message += ` | Latest: ${emails.latest.subject}`;
+                  }
+                  
+                  toast.success(message);
+                } else {
+                  toast.error(result.message || 'Failed to test email sync');
+                }
+              } catch (error) {
+                console.error('Email sync test error:', error);
+                toast.error('Failed to test email sync');
+              }
+            }}
+            className="flex items-center gap-2 bg-white border border-blue-300 rounded-lg px-3 py-2 text-sm hover:bg-blue-50 transition-colors"
+          >
+            <span>🔄</span>
+            <span>Test Sync</span>
+          </button>
+          
           {/* Outlook Status Button */}
           <button
             onClick={async () => {
