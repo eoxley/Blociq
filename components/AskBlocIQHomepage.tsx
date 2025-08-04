@@ -16,7 +16,8 @@ type Message = {
 
 type AIResponse = {
   success: boolean
-  response: string
+  response?: string
+  result?: string
   documentSearch?: boolean
   documents?: any[]
   ai_log_id?: string
@@ -197,7 +198,7 @@ export default function AskBlocIQHomepage() {
         })
       }
 
-      const response = await fetch('/api/ask-ai', {
+      const response = await fetch('/api/ask-ai-public', {
         method: 'POST',
         headers,
         body: requestBody,
@@ -209,17 +210,34 @@ export default function AskBlocIQHomepage() {
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: data.response,
+          content: data.result || data.response, // Handle both response formats
           timestamp: new Date()
         }
 
+        setMessages(prev => [...prev, assistantMessage])
+      } else if (response.status === 401) {
+        // Handle authentication error gracefully
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: "I'd be happy to help! Please log in to use the full AI features, or try asking a general question about property management.",
+          timestamp: new Date()
+        }
         setMessages(prev => [...prev, assistantMessage])
       } else {
         toast.error('Failed to get AI response')
       }
     } catch (error) {
       console.error('Error asking AI:', error)
-      toast.error('Failed to connect to AI assistant')
+      
+      // Provide a helpful response even when AI fails
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: "I'm having trouble connecting right now. Please try again in a moment, or contact support if the issue persists.",
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, assistantMessage])
     } finally {
       setIsLoading(false)
     }
