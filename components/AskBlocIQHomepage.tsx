@@ -206,6 +206,12 @@ export default function AskBlocIQHomepage() {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault()
       handleSubmit(e as any)
+    } else if (e.key === 'Enter' && !e.shiftKey) {
+      // Submit on Enter (but not Shift+Enter for new lines)
+      e.preventDefault()
+      if (prompt.trim() || uploadedFiles.length > 0) {
+        handleSubmit(e as any)
+      }
     }
   }
 

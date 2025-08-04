@@ -24,14 +24,50 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { question, building_id } = await req.json()
+    let question: string
+    let building_id: string | number
+    let files: File[] = []
 
-    if (!question || !question.trim()) {
-      return NextResponse.json({ error: 'Question is required' }, { status: 400 })
+    // Handle both JSON and FormData
+    const contentType = req.headers.get('content-type')
+    
+    if (contentType?.includes('multipart/form-data')) {
+      const formData = await req.formData()
+      question = formData.get('prompt') as string
+      building_id = formData.get('building_id') as string
+      
+      // Handle files if present
+      const fileEntries = formData.getAll('file')
+      files = fileEntries.filter(entry => entry instanceof File) as File[]
+    } else {
+      const body = await req.json()
+      question = body.question || body.prompt
+      building_id = body.building_id
     }
 
-    if (!building_id) {
-      return NextResponse.json({ error: 'Building ID is required' }, { status: 400 })
+    if (!question || !question.trim()) {
+      return NextResponse.json({ error: 'Question/prompt is required' }, { status: 400 })
+    }
+
+    // Handle null building_id for homepage queries
+    if (!building_id || building_id === 'null' || building_id === null) {
+      // For homepage queries without specific building context
+      const systemPrompt = `You are a helpful property management assistant. You can help with general property management questions, compliance, leaseholder management, and building operations.`
+      
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: question }
+        ],
+        max_tokens: 1000,
+        temperature: 0.7
+      })
+
+      return NextResponse.json({
+        success: true,
+        response: completion.choices[0]?.message?.content || 'No response generated'
+      })
     }
 
     // Get building information for context
@@ -126,7 +162,7 @@ Please respond to the user's question using this information. If the question is
 
     // Get AI response
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
@@ -139,7 +175,7 @@ Please respond to the user's question using this information. If the question is
 
     return NextResponse.json({
       success: true,
-      answer: answer,
+      response: answer,
       context_used: {
         building: building.name,
         documents_count: documents?.length || 0,
