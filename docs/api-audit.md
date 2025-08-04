@@ -354,3 +354,146 @@ Review all AI logic files for embedded founder guidance, UK-specific property la
 5. **Add compliance alerts** - Integrate real-time compliance checking
 
 The audit reveals a **comprehensive and well-structured AI guidance system** with strong UK property management focus, consistent British English enforcement, and real-world founder knowledge integration.
+
+## 🚀 UNIFIED AI PROMPT SYSTEM
+
+### ✅ **New Unified System Implemented**
+
+#### **lib/buildPrompt.ts** - Centralized Prompt Builder
+**Status**: ✅ Complete
+**Purpose**: Unified prompt building system that consolidates all AI context gathering
+**Features**:
+- **Founder Guidance Integration**: Automatically includes relevant founder knowledge
+- **Building Context**: Fetches comprehensive building data
+- **Document Summaries**: Includes relevant document context
+- **Email Thread History**: Provides conversation continuity
+- **Leaseholder Information**: Contextual leaseholder data
+- **Compliance Context**: Building-specific compliance information
+- **Manual Override**: Allows custom context injection
+
+#### **Supporting Utility Functions**:
+- **`lib/supabase/buildings.ts`**: Building data retrieval
+- **`lib/supabase/leaseholders.ts`**: Leaseholder information
+- **`lib/supabase/documents.ts`**: Document summaries
+- **`lib/supabase/emails.ts`**: Email thread context
+- **`lib/supabase/compliance.ts`**: Compliance information
+- **`lib/ai/founder.ts`**: Founder guidance integration
+- **`lib/supabase/ai_logs.ts`**: Comprehensive AI logging
+
+#### **Updated `/api/ask-ai/route.ts`** - Unified Endpoint
+**Status**: ✅ Complete
+**Improvements**:
+- **Unified Context Gathering**: Uses buildPrompt() for all context
+- **Comprehensive Logging**: Logs all AI interactions with full context
+- **Flexible Parameters**: Supports all context types (general, compliance, email, etc.)
+- **Error Handling**: Robust error handling and user feedback
+- **Response Metadata**: Returns context information for transparency
+
+### 📊 **Benefits of Unified System**
+
+#### ✅ **Consistency**:
+- All AI features now use the same prompt building logic
+- Consistent British English enforcement
+- Unified founder guidance integration
+- Standardized error handling
+
+#### ✅ **Comprehensive Logging**:
+- Every AI interaction logged to `ai_logs` table
+- Full context tracking (building, documents, emails, leaseholders)
+- Audit trail for all AI responses
+- Performance monitoring capabilities
+
+#### ✅ **Context Awareness**:
+- Automatic founder guidance based on question content
+- Building-specific compliance information
+- Email thread history for conversation continuity
+- Document relevance scoring and inclusion
+
+#### ✅ **Maintainability**:
+- Single source of truth for prompt building
+- Centralized context gathering logic
+- Easy to extend with new context types
+- Consistent error handling across all AI features
+
+### 🔄 **Migration Path**
+
+#### **Phase 1**: ✅ Complete
+- Implemented unified buildPrompt system
+- Updated main `/api/ask-ai` endpoint
+- Created all supporting utility functions
+- **Migrated existing AI endpoints**:
+  - ✅ `/api/ask-blociq` - Now uses unified system
+  - ✅ `/api/generate-draft` - Now uses unified system  
+  - ✅ `/api/summarise-email` - Now uses unified system
+  - ✅ `/api/ask-ai` - Updated with comprehensive logging
+
+#### **Phase 2**: ✅ Complete
+- **Updated frontend components**:
+  - ✅ `components/AIInput.tsx` - Now supports all context parameters
+  - ✅ `components/AISummary.tsx` - Now supports all context parameters
+  - ✅ All components now use unified `/api/ask-ai` endpoint
+  - ✅ Comprehensive error handling and user feedback
+  - ✅ Loading states and progress indicators
+  - ✅ Toast notifications for success/error states
+
+#### **Phase 3**: 📋 Planned
+- Implement context-aware routing
+- Add real-time compliance checking
+- Enhance document-to-AI response linking
+- Add user feedback and improvement system
+
+### 📈 **Updated AI Audit Results**
+
+#### **Before Unified System**:
+- **Using Unified API**: 2/6 (33%)
+- **Proper Logging**: 2/6 (33%)
+- **Full Context**: 2/6 (33%)
+- **Fallback Handling**: 2/6 (33%)
+
+#### **After Unified System (Phase 1 & 2 Complete)**:
+- **Using Unified API**: 6/6 (100%) ✅
+- **Proper Logging**: 6/6 (100%) ✅
+- **Full Context**: 6/6 (100%) ✅
+- **Fallback Handling**: 6/6 (100%) ✅
+
+### 🎯 **Migration Status**
+
+#### **✅ Completed Endpoints**:
+| Endpoint | Status | Unified System | Logging | Context |
+|----------|--------|----------------|---------|---------|
+| `/api/ask-ai` | ✅ Complete | ✅ Yes | ✅ Comprehensive | ✅ Full |
+| `/api/ask-blociq` | ✅ Complete | ✅ Yes | ✅ Comprehensive | ✅ Full |
+| `/api/generate-draft` | ✅ Complete | ✅ Yes | ✅ Comprehensive | ✅ Full |
+| `/api/summarise-email` | ✅ Complete | ✅ Yes | ✅ Comprehensive | ✅ Full |
+
+#### **✅ Completed Components**:
+| Component | Status | Unified API | Context Support | Error Handling |
+|-----------|--------|-------------|----------------|----------------|
+| `AIInput.tsx` | ✅ Complete | ✅ Yes | ✅ All Parameters | ✅ Comprehensive |
+| `AISummary.tsx` | ✅ Complete | ✅ Yes | ✅ All Parameters | ✅ Comprehensive |
+
+### 🚀 **Benefits Achieved**
+
+#### **Consistency**: ✅ Complete
+- All AI features now use the same prompt building logic
+- Consistent British English enforcement
+- Unified founder guidance integration
+- Standardized error handling
+
+#### **Comprehensive Logging**: ✅ Complete
+- Every AI interaction logged to `ai_logs` table
+- Full context tracking (building, documents, emails, leaseholders)
+- Audit trail for all AI responses
+- Performance monitoring capabilities
+
+#### **Context Awareness**: ✅ Complete
+- Automatic founder guidance based on question content
+- Building-specific compliance information
+- Email thread history for conversation continuity
+- Document relevance scoring and inclusion
+
+#### **Maintainability**: ✅ Complete
+- Single source of truth for prompt building
+- Centralized context gathering logic
+- Easy to extend with new context types
+- Consistent error handling across all AI features
