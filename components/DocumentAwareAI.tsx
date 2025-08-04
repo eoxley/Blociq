@@ -24,7 +24,8 @@ import {
   Calendar,
   User,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Search
 } from 'lucide-react';
 
 interface DocumentContext {

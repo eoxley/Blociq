@@ -17,6 +17,14 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req: NextRequest) {
   try {
+    // Check if OpenAI API key is configured
+    if (!process.env.OPENAI_API_KEY) {
+      console.error('❌ OPENAI_API_KEY environment variable is missing');
+      return NextResponse.json({ 
+        error: 'OpenAI API key not configured. Please check environment variables.' 
+      }, { status: 500 });
+    }
+
     const supabase = createRouteHandlerClient({ cookies });
     
     // Get current user
@@ -32,11 +40,16 @@ export async function POST(req: NextRequest) {
       documentIds = [], 
       emailThreadId, 
       manualContext, 
+      documentContext,
       leaseholderId 
     } = body;
 
     if (!question) {
       return NextResponse.json({ error: 'Question is required' }, { status: 400 });
+    }
+
+    if (!buildingId) {
+      return NextResponse.json({ error: 'Building ID is required' }, { status: 400 });
     }
 
     console.log('🤖 Building unified prompt for BlocIQ assistant');
@@ -48,19 +61,43 @@ export async function POST(req: NextRequest) {
       buildingId,
       documentIds,
       emailThreadId,
-      manualContext,
+      manualContext: documentContext ? JSON.stringify(documentContext) : manualContext,
       leaseholderId,
     });
 
     console.log('📝 Prompt built, calling OpenAI...');
 
     // Call OpenAI
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [{ role: 'system', content: prompt }],
-      temperature: 0.3,
-      max_tokens: 1500,
-    });
+    let completion;
+    try {
+      completion = await openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [{ role: 'system', content: prompt }],
+        temperature: 0.3,
+        max_tokens: 1500,
+      });
+    } catch (openaiError: any) {
+      console.error('❌ OpenAI API error:', openaiError);
+      
+      if (openaiError.status === 401) {
+        return NextResponse.json({ 
+          error: 'OpenAI API key is invalid or expired. Please check your configuration.' 
+        }, { status: 500 });
+      } else if (openaiError.status === 429) {
+        return NextResponse.json({ 
+          error: 'OpenAI API rate limit exceeded. Please try again in a moment.' 
+        }, { status: 500 });
+      } else if (openaiError.status === 500) {
+        return NextResponse.json({ 
+          error: 'OpenAI service is temporarily unavailable. Please try again later.' 
+        }, { status: 500 });
+      } else {
+        return NextResponse.json({ 
+          error: 'Failed to generate AI response. Please try again.',
+          details: openaiError.message || 'Unknown OpenAI error'
+        }, { status: 500 });
+      }
+    }
 
     const aiResponse = completion.choices[0]?.message?.content || 'No response generated';
 
@@ -79,12 +116,12 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ 
-      success: true,
-      result: aiResponse,
+      answer: aiResponse,
+      sources: [], // No document sources for this general API
+      documentCount: documentIds.length,
       ai_log_id: logId,
       context_type: 'blociq_assistant',
       building_id: buildingId,
-      document_count: documentIds.length,
       has_email_thread: !!emailThreadId,
       has_leaseholder: !!leaseholderId,
       context: {
