@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
         *,
         buildings(name)
       `)
-      .eq('unread', true) // Changed from is_read to unread
+      .eq('is_read', false) // Use is_read = false for unread emails
       .order('received_at', { ascending: false });
 
     if (emailsError) {
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
 
     // 3. Query compliance documents expiring soon (next 7 days)
     const { data: complianceAlerts, error: complianceError } = await supabase
-      .from('compliance_docs')
+      .from('compliance_assets')
       .select(`
         *,
         buildings(name)
@@ -79,8 +79,7 @@ export async function GET(req: NextRequest) {
         id,
         name,
         address,
-        unit_count,
-        demo_ready
+        unit_count
       `)
       .order('name');
 
