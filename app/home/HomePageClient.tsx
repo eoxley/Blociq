@@ -3,11 +3,11 @@
 // Home page client component - Major works dashboard removed for cleaner interface
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2, ExternalLink, RefreshCw, MessageCircle, Sparkles, Upload, FileText, Send, Bot, Search } from 'lucide-react'
+import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2, ExternalLink, RefreshCw, MessageCircle, Sparkles, Upload, FileText, Send, Bot, ArrowRight, HelpCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
-import DailySummary from '@/components/DailySummary'
+
 import AskBlocIQHomepage from '@/components/AskBlocIQHomepage'
-import SmartSearch from '@/components/SmartSearch'
+
 import BuildingTodoList from '@/components/BuildingTodoList'
 
 import BreadcrumbNavigation from '@/components/BreadcrumbNavigation'
@@ -370,303 +370,336 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       </section>
 
       <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
-        {/* Search Section */}
-        <div className="bg-white rounded-2xl shadow-lg border-0 p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-r from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center text-white">
-              <Search className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-gray-900">Quick Search</h2>
-              <p className="text-sm text-gray-600">Find buildings, leaseholders, or units</p>
-            </div>
-          </div>
-          <SmartSearch />
-        </div>
-
-        {/* Property Events and Building To-Do Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[600px]">
-          {/* Property Events Widget */}
-          <div className="h-full">
-            <div className="bg-white rounded-2xl shadow-lg border-0 overflow-hidden h-full flex flex-col">
-              <div className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] p-6 text-white">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                      <Calendar className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold">Property Events</h2>
-                      <p className="text-sm text-white/80">Manage your property events</p>
-                    </div>
-                  </div>
-                  
-                  {/* Outlook Integration Status */}
-                  <div className="flex items-center gap-2">
-                    {outlookConnected ? (
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1 text-xs bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
-                          <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                          <span>Outlook Connected</span>
-                        </div>
-                        <button
-                          onClick={handleSyncOutlook}
-                          disabled={syncingOutlook}
-                          className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-3 py-1 rounded-full text-xs transition-all duration-200"
-                        >
-                          {syncingOutlook ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <RefreshCw className="h-3 w-3" />
-                          )}
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={handleConnectOutlook}
-                        className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-3 py-1 rounded-full text-xs transition-all duration-200"
-                      >
-                        <ExternalLink className="h-3 w-3 mr-1" />
-                        Connect Outlook
-                      </button>
-                    )}
-                  </div>
-                </div>
+        {/* 🧠 Central Ask BlocIQ Brain Component */}
+        <div className="bg-white rounded-2xl shadow-xl border-0 overflow-hidden">
+          <div className="relative">
+            {/* Brain Outline Container */}
+            <div className="relative bg-gradient-to-r from-[#4f46e5] to-[#a855f7] p-8">
+              {/* Brain Shape SVG */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <svg 
+                  viewBox="0 0 200 120" 
+                  className="w-full h-full opacity-10"
+                  style={{ filter: 'drop-shadow(0 0 20px rgba(255,255,255,0.3))' }}
+                >
+                  <path 
+                    d="M40 60 Q60 20 100 20 Q140 20 160 60 Q140 100 100 100 Q60 100 40 60 Z M60 40 Q80 30 100 30 Q120 30 140 40 Q120 50 100 50 Q80 50 60 40 Z M70 70 Q85 60 100 60 Q115 60 130 70 Q115 80 100 80 Q85 80 70 70 Z"
+                    fill="none" 
+                    stroke="white" 
+                    strokeWidth="2"
+                    className="animate-pulse"
+                  />
+                </svg>
               </div>
               
-              <div className="p-6 flex-1 overflow-y-auto">
-                {/* Add Event Button */}
-                {!showAddEventForm && (
-                  <div className="text-center mb-6">
-                    <button
-                      onClick={() => setShowAddEventForm(true)}
-                      className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-6 py-3 rounded-xl font-medium shadow-lg transition-all duration-200"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add New Event
+              {/* Content */}
+              <div className="relative z-10 text-center text-white">
+                <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                  <HelpCircle className="h-8 w-8 text-white" />
+                </div>
+                <h2 className="text-3xl font-bold mb-4">Ask BlocIQ</h2>
+                <p className="text-lg text-white/90 max-w-2xl mx-auto mb-8">
+                  Your leasehold management assistant — ask anything, upload a document, or get a summary.
+                </p>
+                
+                {/* Input Field */}
+                <div className="max-w-2xl mx-auto">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Ask me anything about your properties..."
+                      className="w-full px-6 py-4 bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition-all duration-200"
+                    />
+                    <button className="absolute right-3 top-1/2 transform -translate-y-1/2 p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-all duration-200">
+                      <ArrowRight className="h-5 w-5 text-white" />
                     </button>
                   </div>
-                )}
-
-                {/* Manual Event Input Form */}
-                {showAddEventForm && (
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-gray-900">Add New Event</h3>
-                      <button
-                        type="button"
-                        onClick={() => setShowAddEventForm(false)}
-                        className="text-gray-500 hover:text-gray-700 transition-colors"
-                      >
-                        <X className="h-5 w-5" />
-                      </button>
-                    </div>
-                    <form onSubmit={handleAddEvent} className="space-y-3">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Event Title</label>
-                          <input
-                            type="text"
-                            name="title"
-                            required
-                            className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
-                            placeholder="Enter event title"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Date & Time</label>
-                          <input
-                            type="datetime-local"
-                            name="date"
-                            required
-                            min={new Date().toISOString().slice(0, 16)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="submit"
-                          disabled={isAddingEvent}
-                          className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-4 py-2 rounded-lg font-medium shadow-lg transition-all duration-200 disabled:opacity-50"
-                        >
-                          {isAddingEvent ? (
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          ) : (
-                            <Plus className="h-4 w-4 mr-2" />
-                          )}
-                          Add Event
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setShowAddEventForm(false)}
-                          className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </form>
+                  
+                  {/* Example Prompts */}
+                  <div className="flex flex-wrap justify-center gap-3 mt-6">
+                    <button className="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl text-sm transition-all duration-200">
+                      Summarise today's inbox
+                    </button>
+                    <button className="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl text-sm transition-all duration-200">
+                      Update the directors
+                    </button>
+                    <button className="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl text-sm transition-all duration-200">
+                      Show overdue compliance
+                    </button>
                   </div>
-                )}
-
-                {/* Events List */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Upcoming Events</h3>
-                    <span className="text-sm text-gray-500">{upcomingEvents.length} event{upcomingEvents.length !== 1 ? 's' : ''}</span>
-                  </div>
-
-                  {upcomingEvents.length > 0 ? (
-                    <div className="space-y-3">
-                      {upcomingEvents.map((event, index) => {
-                        const eventDate = new Date(event.date)
-                        const now = new Date()
-                        const tomorrow = new Date(now)
-                        tomorrow.setDate(tomorrow.getDate() + 1)
-                        
-                        const isToday = eventDate.toDateString() === now.toDateString()
-                        const isTomorrow = eventDate.toDateString() === tomorrow.toDateString()
-                        
-                        const date = formatEventDate(event.date)
-                        const time = eventDate.toLocaleTimeString('en-GB', { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })
-
-                        return (
-                          <div key={index} className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200 hover:shadow-md transition-all duration-200">
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-start gap-3 flex-1">
-                                <div className="w-10 h-10 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-lg flex items-center justify-center text-white flex-shrink-0">
-                                  <Calendar className="h-5 w-5" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <h4 className="font-semibold text-gray-900 truncate">{event.title}</h4>
-                                    {(isToday || isTomorrow) && (
-                                      <span className={`px-2 py-1 rounded-full text-xs flex-shrink-0 ${
-                                        isToday 
-                                          ? 'bg-red-100 text-red-700' 
-                                          : 'bg-yellow-100 text-yellow-700'
-                                      }`}>
-                                        {isToday ? 'Today' : 'Tomorrow'}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="space-y-1 text-sm text-gray-600">
-                                    <div className="flex items-center gap-1">
-                                      <span>🕒</span>
-                                      <span>{date} at {time}</span>
-                                    </div>
-                                    {event.category && (
-                                      <div className="flex items-center gap-1">
-                                        <span>📋</span>
-                                        <span>{event.category}</span>
-                                      </div>
-                                    )}
-                                    <div className="flex items-center gap-1">
-                                      <span>📍</span>
-                                      <span>{event.building || 'General'}</span>
-                                    </div>
-                                    {event.location && (
-                                      <div className="flex items-center gap-1">
-                                        <span>🏢</span>
-                                        <span>{event.location}</span>
-                                      </div>
-                                    )}
-                                    {event.organiser_name && (
-                                      <div className="flex items-center gap-1">
-                                        <span>👤</span>
-                                        <span>{event.organiser_name}</span>
-                                      </div>
-                                    )}
-                                    {event.online_meeting && (
-                                      <div className="flex items-center gap-1 text-blue-600">
-                                        <span>🎥</span>
-                                        <span>Online meeting available</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                                {event.category && (
-                                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                                    {event.category}
-                                  </span>
-                                )}
-                                {event.source === 'outlook' && (
-                                  <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
-                                    Outlook
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <div className="w-16 h-16 bg-gradient-to-r from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                        <Calendar className="h-8 w-8 text-gray-400" />
-                      </div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">No events yet</h3>
-                      <p className="text-gray-500 mb-4 max-w-sm mx-auto">
-                        {outlookConnected 
-                          ? 'Add property events or sync your Outlook calendar to get started.'
-                          : 'Add property events or connect your Outlook calendar to get started.'
-                        }
-                      </p>
-                      {!outlookConnected && (
-                        <button
-                          onClick={handleConnectOutlook}
-                          className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-4 py-2 rounded-xl font-medium shadow-lg transition-all duration-200"
-                        >
-                          <ExternalLink className="h-3 w-3 mr-2" />
-                          Connect Outlook Calendar
-                        </button>
-                      )}
-                    </div>
-                  )}
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Building To-Do Widget */}
-          <div className="h-full">
-            <BuildingTodoList maxItems={5} showBuildingName={true} className="h-full" />
-          </div>
-        </div>
-
-        {/* AI Assistant Section */}
-        <div className="bg-white rounded-2xl shadow-lg border-0 overflow-hidden">
-          <div className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] p-6 text-white">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                  <Bot className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold">Ask BlocIQ</h2>
-                  <p className="text-sm text-white/80">AI-powered assistant</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-1 text-xs bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
-                <Sparkles className="h-3 w-3" />
-                <span>AI Assistant</span>
               </div>
             </div>
           </div>
           
+          {/* Full Ask BlocIQ Interface */}
           <div className="p-6">
             <AskBlocIQHomepage />
           </div>
         </div>
 
-        {/* Daily Summary Section */}
-        <DailySummary />
+        {/* Today's Tasks Section */}
+        <div className="space-y-6">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Today's Tasks</h2>
+            <p className="text-gray-600">Manage your property events and building tasks</p>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[600px]">
+            {/* Property Events Widget */}
+            <div className="h-full">
+              <div className="bg-white rounded-2xl shadow-lg border-0 overflow-hidden h-full flex flex-col">
+                <div className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] p-6 text-white">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                        <Calendar className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold">Property Events</h2>
+                        <p className="text-sm text-white/80">Manage your property events</p>
+                      </div>
+                    </div>
+                    
+                    {/* Outlook Integration Status */}
+                    <div className="flex items-center gap-2">
+                      {outlookConnected ? (
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1 text-xs bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
+                            <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                            <span>Outlook Connected</span>
+                          </div>
+                          <button
+                            onClick={handleSyncOutlook}
+                            disabled={syncingOutlook}
+                            className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-3 py-1 rounded-full text-xs transition-all duration-200"
+                          >
+                            {syncingOutlook ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-3 w-3" />
+                            )}
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={handleConnectOutlook}
+                          className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-3 py-1 rounded-full text-xs transition-all duration-200"
+                        >
+                          <ExternalLink className="h-3 w-3 mr-1" />
+                          Connect Outlook
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="p-6 flex-1 overflow-y-auto">
+                  {/* Add Event Button */}
+                  {!showAddEventForm && (
+                    <div className="text-center mb-6">
+                      <button
+                        onClick={() => setShowAddEventForm(true)}
+                        className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-6 py-3 rounded-xl font-medium shadow-lg transition-all duration-200"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add New Event
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Manual Event Input Form */}
+                  {showAddEventForm && (
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-gray-900">Add New Event</h3>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddEventForm(false)}
+                          className="text-gray-500 hover:text-gray-700 transition-colors"
+                        >
+                          <X className="h-5 w-5" />
+                        </button>
+                      </div>
+                      <form onSubmit={handleAddEvent} className="space-y-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Event Title</label>
+                            <input
+                              type="text"
+                              name="title"
+                              required
+                              className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
+                              placeholder="Enter event title"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Date & Time</label>
+                            <input
+                              type="datetime-local"
+                              name="date"
+                              required
+                              min={new Date().toISOString().slice(0, 16)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="submit"
+                            disabled={isAddingEvent}
+                            className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-4 py-2 rounded-lg font-medium shadow-lg transition-all duration-200 disabled:opacity-50"
+                          >
+                            {isAddingEvent ? (
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            ) : (
+                              <Plus className="h-4 w-4 mr-2" />
+                            )}
+                            Add Event
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowAddEventForm(false)}
+                            className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+
+                  {/* Events List */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900">Upcoming Events</h3>
+                      <span className="text-sm text-gray-500">{upcomingEvents.length} event{upcomingEvents.length !== 1 ? 's' : ''}</span>
+                    </div>
+
+                    {upcomingEvents.length > 0 ? (
+                      <div className="space-y-3">
+                        {upcomingEvents.map((event, index) => {
+                          const eventDate = new Date(event.date)
+                          const now = new Date()
+                          const tomorrow = new Date(now)
+                          tomorrow.setDate(tomorrow.getDate() + 1)
+                          
+                          const isToday = eventDate.toDateString() === now.toDateString()
+                          const isTomorrow = eventDate.toDateString() === tomorrow.toDateString()
+                          
+                          const date = formatEventDate(event.date)
+                          const time = eventDate.toLocaleTimeString('en-GB', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })
+
+                          return (
+                            <div key={index} className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200 hover:shadow-md transition-all duration-200">
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-3 flex-1">
+                                  <div className="w-10 h-10 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-lg flex items-center justify-center text-white flex-shrink-0">
+                                    <Calendar className="h-5 w-5" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <h4 className="font-semibold text-gray-900 truncate">{event.title}</h4>
+                                      {(isToday || isTomorrow) && (
+                                        <span className={`px-2 py-1 rounded-full text-xs flex-shrink-0 ${
+                                          isToday 
+                                            ? 'bg-red-100 text-red-700' 
+                                            : 'bg-yellow-100 text-yellow-700'
+                                        }`}>
+                                          {isToday ? 'Today' : 'Tomorrow'}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="space-y-1 text-sm text-gray-600">
+                                      <div className="flex items-center gap-1">
+                                        <span>🕒</span>
+                                        <span>{date} at {time}</span>
+                                      </div>
+                                      {event.category && (
+                                        <div className="flex items-center gap-1">
+                                          <span>📋</span>
+                                          <span>{event.category}</span>
+                                        </div>
+                                      )}
+                                      <div className="flex items-center gap-1">
+                                        <span>📍</span>
+                                        <span>{event.building || 'General'}</span>
+                                      </div>
+                                      {event.location && (
+                                        <div className="flex items-center gap-1">
+                                          <span>🏢</span>
+                                          <span>{event.location}</span>
+                                        </div>
+                                      )}
+                                      {event.organiser_name && (
+                                        <div className="flex items-center gap-1">
+                                          <span>👤</span>
+                                          <span>{event.organiser_name}</span>
+                                        </div>
+                                      )}
+                                      {event.online_meeting && (
+                                        <div className="flex items-center gap-1 text-blue-600">
+                                          <span>🎥</span>
+                                          <span>Online meeting available</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                                  {event.category && (
+                                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                      {event.category}
+                                    </span>
+                                  )}
+                                  {event.source === 'outlook' && (
+                                    <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
+                                      Outlook
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <div className="w-16 h-16 bg-gradient-to-r from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                          <Calendar className="h-8 w-8 text-gray-400" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No events yet</h3>
+                        <p className="text-gray-500 mb-4 max-w-sm mx-auto">
+                          {outlookConnected 
+                            ? 'Add property events or sync your Outlook calendar to get started.'
+                            : 'Add property events or connect your Outlook calendar to get started.'
+                          }
+                        </p>
+                        {!outlookConnected && (
+                          <button
+                            onClick={handleConnectOutlook}
+                            className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-4 py-2 rounded-xl font-medium shadow-lg transition-all duration-200"
+                          >
+                            <ExternalLink className="h-3 w-3 mr-2" />
+                            Connect Outlook Calendar
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Building To-Do Widget */}
+            <div className="h-full">
+              <BuildingTodoList maxItems={5} showBuildingName={true} className="h-full" />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
