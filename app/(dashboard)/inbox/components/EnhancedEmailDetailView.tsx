@@ -36,6 +36,7 @@ interface EnhancedEmailDetailViewProps {
   onMarkAsHandled?: (emailId: string) => Promise<void>;
   onFlagEmail?: (emailId: string, flagged: boolean) => Promise<void>;
   onReply?: (action: 'reply' | 'reply-all' | 'forward') => void;
+  onDelete?: (emailId: string) => Promise<void>;
 }
 
 export default function EnhancedEmailDetailView({ 
@@ -43,7 +44,8 @@ export default function EnhancedEmailDetailView({
   onMarkAsRead, 
   onMarkAsHandled, 
   onFlagEmail,
-  onReply
+  onReply,
+  onDelete
 }: EnhancedEmailDetailViewProps) {
   const [isHandling, setIsHandling] = useState(false);
 
@@ -90,6 +92,20 @@ export default function EnhancedEmailDetailView({
 
   const handleForward = () => {
     onReply?.('forward');
+  };
+
+  const handleDelete = async () => {
+    if (!onDelete) return;
+    
+    if (confirm('Are you sure you want to delete this email? This action cannot be undone.')) {
+      try {
+        await onDelete(email.id);
+        toast.success('Email deleted successfully');
+      } catch (error) {
+        console.error('Error deleting email:', error);
+        toast.error('Failed to delete email');
+      }
+    }
   };
 
   return (
@@ -274,6 +290,16 @@ export default function EnhancedEmailDetailView({
                 {isHandling ? 'Marking...' : 'Mark Handled'}
               </Button>
             )}
+
+            <Button
+              onClick={handleDelete}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </Button>
           </div>
         </div>
       </div>

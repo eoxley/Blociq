@@ -28,7 +28,8 @@ export async function POST(req: NextRequest) {
       .from('incoming_emails')
       .update({ 
         unread: false,
-        is_read: true 
+        is_read: true,
+        status: 'read'
       })
       .eq('id', emailId);
 
