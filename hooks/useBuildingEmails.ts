@@ -47,7 +47,6 @@ export function useBuildingEmails(): UseBuildingEmailsReturn {
       let query = supabase
         .from('incoming_emails')
         .select('*')
-        .eq('unread', false)
         .eq('is_deleted', false) // Filter out deleted emails
         .order('received_at', { ascending: false })
         .limit(10)

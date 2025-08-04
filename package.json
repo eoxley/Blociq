@@ -15,6 +15,7 @@
     "fix:emails": "node scripts/fix_sample_emails.js",
     "fix:emails:simple": "node scripts/fix_sample_emails_simple.js",
     "fix:emails:quick": "node scripts/fix_emails_quick.js",
+    "fix:email-user-ids": "node scripts/fix_email_user_ids.js",
     "test:dummy-buildings": "node scripts/test-dummy-buildings.js"
   },
   "dependencies": {
