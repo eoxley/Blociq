@@ -283,6 +283,56 @@ export default function InboxClient() {
             <TriageIcon className="w-5 h-5" />
             <span>AI Triage</span>
           </button>
+          
+          {/* Test Emails Button */}
+          <button
+            onClick={async () => {
+              try {
+                const response = await fetch('/api/add-test-emails', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                });
+                
+                if (response.ok) {
+                  const result = await response.json();
+                  toast.success(`Added ${result.data.added} test emails`);
+                  // Refresh emails
+                  await refreshEmails();
+                } else {
+                  const error = await response.json();
+                  toast.error(error.message || 'Failed to add test emails');
+                }
+              } catch (error) {
+                console.error('Error adding test emails:', error);
+                toast.error('Failed to add test emails');
+              }
+            }}
+            className="flex items-center gap-2 bg-white border border-green-300 rounded-lg px-3 py-2 text-sm hover:bg-green-50 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Test Emails</span>
+          </button>
+          
+          {/* Debug Button */}
+          <button
+            onClick={async () => {
+              try {
+                const response = await fetch('/api/test-db');
+                const result = await response.json();
+                console.log('Debug info:', result);
+                toast.success(`DB: ${result.total_emails} total, ${result.emails_with_user_id} with user_id`);
+              } catch (error) {
+                console.error('Error checking debug info:', error);
+                toast.error('Failed to get debug info');
+              }
+            }}
+            className="flex items-center gap-2 bg-white border border-blue-300 rounded-lg px-3 py-2 text-sm hover:bg-blue-50 transition-colors"
+          >
+            <span>🔍</span>
+            <span>Debug</span>
+          </button>
           {/* Compose New Email Button */}
           <button
             onClick={() => setShowComposeModal(true)}

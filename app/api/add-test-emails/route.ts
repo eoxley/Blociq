@@ -1,205 +1,151 @@
-import { createClient } from '@supabase/supabase-js'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/utils/supabase/server';
 
-export async function POST(request: Request) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-
+export async function POST(req: NextRequest) {
   try {
-    console.log('📧 Adding test emails to database...')
-
-    // Get the first user
-    const { data: users, error: usersError } = await supabase
-      .from('auth.users')
-      .select('id')
-      .limit(1)
-
-    if (usersError) {
-      console.error('❌ Error getting users:', usersError)
-      return NextResponse.json({ error: 'Failed to get users' }, { status: 500 })
+    const supabase = createClient();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      return NextResponse.json({ 
+        error: 'Not authenticated',
+        message: 'Please log in to add test emails'
+      }, { status: 401 });
     }
 
-    let userId: string
+    const userId = user.id;
+    console.log('✅ Adding test emails for user:', userId);
 
-    if (!users || users.length === 0) {
-      console.log('⚠️ No users found. Creating a test user...')
-      // Create a test user
-      const { data: newUser, error: createUserError } = await supabase.auth.admin.createUser({
-        email: 'test@blociq.com',
-        password: 'testpassword123',
-        email_confirm: true
-      })
-
-      if (createUserError) {
-        console.error('❌ Error creating test user:', createUserError)
-        return NextResponse.json({ error: 'Failed to create test user' }, { status: 500 })
-      }
-
-      console.log('✅ Created test user:', newUser.user.id)
-      userId = newUser.user.id
-    } else {
-      userId = users[0].id
-      console.log('✅ Using existing user:', userId)
-    }
-
-    // Test emails data
+    // Sample test emails
     const testEmails = [
       {
-        subject: 'Heating Issue in Flat 1',
-        from_email: 'john.smith@email.com',
+        user_id: userId,
+        from_email: 'john.smith@example.com',
         from_name: 'John Smith',
+        subject: 'Heating Issue in Flat 1',
         body_preview: 'The heating system is not working properly in my flat. Can someone please check it?',
+        body_full: 'Dear Property Manager,\n\nThe heating system in my flat (Flat 1) is not working properly. The radiators are cold and the thermostat is not responding. This is quite urgent as the weather is getting colder.\n\nCould you please arrange for someone to check this as soon as possible?\n\nThank you,\nJohn Smith',
         received_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+        unread: true,
         is_read: false,
+        handled: false,
         is_handled: false,
-        user_id: userId,
-        building_id: '2beeec1d-a94e-4058-b881-213d74cc6830'
+        flag_status: null,
+        categories: ['maintenance'],
+        importance: 'normal',
+        has_attachments: false,
+        building_id: 1,
+        unit: 'Flat 1'
       },
       {
-        subject: 'Noise Complaint',
-        from_email: 'sarah.johnson@email.com',
+        user_id: userId,
+        from_email: 'sarah.johnson@example.com',
         from_name: 'Sarah Johnson',
+        subject: 'Noise Complaint - Flat 2',
         body_preview: 'There is excessive noise coming from the flat above. Can this be addressed?',
+        body_full: 'Hello,\n\nI am writing to report excessive noise coming from the flat above mine (Flat 2). There has been loud music and banging sounds for the past few days, especially in the evenings.\n\nThis is affecting my ability to work from home and get proper rest. Could you please investigate this matter?\n\nRegards,\nSarah Johnson',
         received_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
+        unread: true,
         is_read: false,
+        handled: false,
         is_handled: false,
-        user_id: userId,
-        building_id: '2beeec1d-a94e-4058-b881-213d74cc6830'
+        flag_status: 'flagged',
+        categories: ['complaint'],
+        importance: 'high',
+        has_attachments: false,
+        building_id: 1,
+        unit: 'Flat 2'
       },
       {
-        subject: 'Maintenance Request',
-        from_email: 'michael.brown@email.com',
+        user_id: userId,
+        from_email: 'michael.brown@example.com',
         from_name: 'Michael Brown',
+        subject: 'Maintenance Request - Kitchen Tap',
         body_preview: 'The kitchen tap is leaking. Please send a plumber.',
+        body_full: 'Hi,\n\nThe kitchen tap in my flat (Flat 3) has been leaking for the past week. The water is dripping constantly and has started to cause some damage to the cabinet below.\n\nCould you please arrange for a plumber to fix this issue?\n\nThanks,\nMichael Brown',
         received_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), // 4 days ago
+        unread: false,
         is_read: true,
+        handled: true,
         is_handled: true,
-        user_id: userId,
-        building_id: '2beeec1d-a94e-4058-b881-213d74cc6830'
+        flag_status: null,
+        categories: ['maintenance'],
+        importance: 'normal',
+        has_attachments: false,
+        building_id: 1,
+        unit: 'Flat 3'
       },
       {
-        subject: 'Parking Space Request',
-        from_email: 'emma.davis@email.com',
+        user_id: userId,
+        from_email: 'emma.davis@example.com',
         from_name: 'Emma Davis',
+        subject: 'Parking Space Request',
         body_preview: 'I would like to request a parking space for my vehicle.',
+        body_full: 'Dear Property Manager,\n\nI am a resident in Flat 4 and would like to request a parking space for my vehicle. I currently have to park on the street which is inconvenient and sometimes unsafe.\n\nIs there any availability for a dedicated parking space?\n\nBest regards,\nEmma Davis',
         received_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
-        is_read: false,
+        unread: false,
+        is_read: true,
+        handled: false,
         is_handled: false,
-        user_id: userId,
-        building_id: '2beeec1d-a94e-4058-b881-213d74cc6830'
+        flag_status: null,
+        categories: ['request'],
+        importance: 'normal',
+        has_attachments: false,
+        building_id: 1,
+        unit: 'Flat 4'
       },
       {
-        subject: 'Internet Connection Issue',
-        from_email: 'david.wilson@email.com',
+        user_id: userId,
+        from_email: 'david.wilson@example.com',
         from_name: 'David Wilson',
+        subject: 'Internet Connection Issue',
         body_preview: 'The internet connection in my flat is very slow. Can this be investigated?',
+        body_full: 'Hello,\n\nThe internet connection in my flat (Flat 5) has been extremely slow for the past few days. I work from home and this is affecting my productivity significantly.\n\nCould you please investigate this issue? I have tried restarting the router but the problem persists.\n\nThank you,\nDavid Wilson',
         received_at: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(), // 6 days ago
-        is_read: true,
-        is_handled: false,
-        user_id: userId,
-        building_id: '2beeec1d-a94e-4058-b881-213d74cc6830'
-      },
-      {
-        subject: 'Window Repair Needed',
-        from_email: 'lisa.anderson@email.com',
-        from_name: 'Lisa Anderson',
-        body_preview: 'The window in my bedroom is not closing properly. Please arrange for repair.',
-        received_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
+        unread: true,
         is_read: false,
+        handled: false,
         is_handled: false,
-        user_id: userId,
-        building_id: '2beeec1d-a94e-4058-b881-213d74cc6830'
-      },
-      {
-        subject: 'Electricity Problem',
-        from_email: 'robert.taylor@email.com',
-        from_name: 'Robert Taylor',
-        body_preview: 'There is an electrical issue in my flat. The lights keep flickering.',
-        received_at: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), // 8 days ago
-        is_read: true,
-        is_handled: true,
-        user_id: userId,
-        building_id: '2beeec1d-a94e-4058-b881-213d74cc6830'
-      },
-      {
-        subject: 'Cleaning Service Request',
-        from_email: 'jennifer.martinez@email.com',
-        from_name: 'Jennifer Martinez',
-        body_preview: 'I would like to request a cleaning service for my flat.',
-        received_at: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(), // 9 days ago
-        is_read: false,
-        is_handled: false,
-        user_id: userId,
-        building_id: '2beeec1d-a94e-4058-b881-213d74cc6830'
-      },
-      {
-        subject: 'Package Delivery Issue',
-        from_email: 'christopher.lee@email.com',
-        from_name: 'Christopher Lee',
-        body_preview: 'I have a package that was delivered but I was not home. Can you help?',
-        received_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), // 10 days ago
-        is_read: true,
-        is_handled: false,
-        user_id: userId,
-        building_id: '2beeec1d-a94e-4058-b881-213d74cc6830'
-      },
-      {
-        subject: 'Security Concern',
-        from_email: 'amanda.garcia@email.com',
-        from_name: 'Amanda Garcia',
-        body_preview: 'I noticed a security issue with the main entrance. Can this be addressed?',
-        received_at: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000).toISOString(), // 11 days ago
-        is_read: false,
-        is_handled: false,
-        user_id: userId,
-        building_id: '2beeec1d-a94e-4058-b881-213d74cc6830'
+        flag_status: null,
+        categories: ['technical'],
+        importance: 'high',
+        has_attachments: false,
+        building_id: 1,
+        unit: 'Flat 5'
       }
-    ]
-
-    console.log(`📧 Inserting ${testEmails.length} test emails...`)
+    ];
 
     // Insert test emails
     const { data: insertedEmails, error: insertError } = await supabase
       .from('incoming_emails')
       .insert(testEmails)
-      .select()
+      .select();
 
     if (insertError) {
-      console.error('❌ Error inserting emails:', insertError)
-      return NextResponse.json({ error: 'Failed to insert emails' }, { status: 500 })
+      console.error('❌ Error inserting test emails:', insertError);
+      return NextResponse.json({ 
+        error: 'Failed to add test emails',
+        details: insertError.message
+      }, { status: 500 });
     }
 
-    console.log('✅ Successfully inserted test emails')
-    console.log(`📊 Inserted ${insertedEmails.length} emails`)
-
-    // Verify the emails are accessible
-    const { data: verifyEmails, error: verifyError } = await supabase
-      .from('incoming_emails')
-      .select('*')
-      .eq('user_id', userId)
-
-    if (verifyError) {
-      console.error('❌ Error verifying emails:', verifyError)
-      return NextResponse.json({ error: 'Failed to verify emails' }, { status: 500 })
-    }
-
-    console.log(`✅ Verification: ${verifyEmails.length} emails found for user`)
+    console.log('✅ Successfully added test emails:', insertedEmails?.length || 0);
 
     return NextResponse.json({
       success: true,
       message: 'Test emails added successfully',
-      insertedCount: insertedEmails.length,
-      totalEmailsForUser: verifyEmails.length,
-      userId: userId
-    })
+      data: {
+        added: insertedEmails?.length || 0,
+        emails: insertedEmails
+      }
+    });
 
   } catch (error) {
-    console.error('❌ Error in addTestEmails:', error)
+    console.error('❌ Error in add-test-emails:', error);
     return NextResponse.json({ 
-      error: 'Internal server error',
+      error: 'Unexpected error',
+      message: 'Failed to add test emails',
       details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    }, { status: 500 });
   }
 } 
