@@ -7,12 +7,15 @@
   "crons": [
     {
       "path": "/api/cron/sync-inbox",
-      "schedule": "*/15 * * * *"
+      "schedule": "*/5 * * * *"
     }
   ],
   "functions": {
     "app/api/sync-inbox/route.ts": {
       "maxDuration": 60
+    },
+    "app/api/cron/sync-inbox/route.ts": {
+      "maxDuration": 120
     },
     "app/api/debug/cleanup-emails/route.ts": {
       "maxDuration": 30

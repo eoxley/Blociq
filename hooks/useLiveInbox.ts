@@ -60,6 +60,7 @@ export function useLiveInbox(): UseLiveInboxReturn {
   
   const subscriptionRef = useRef<any>(null);
   const lastSyncTime = useRef<Date | null>(null);
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch emails from Supabase
   const fetchEmails = useCallback(async () => {
@@ -94,7 +95,7 @@ export function useLiveInbox(): UseLiveInboxReturn {
         .eq('user_id', user.id)
         .eq('is_deleted', false) // Filter out deleted emails
         .order('received_at', { ascending: false })
-        .limit(100); // Limit to prevent performance issues
+        .limit(200); // Increased limit to get more emails
 
       if (error) {
         console.error('❌ Error fetching emails:', error);
@@ -361,10 +362,19 @@ export function useLiveInbox(): UseLiveInboxReturn {
     fetchEmails();
     setupRealTimeSubscription();
 
+    // Set up periodic refresh every 30 seconds
+    refreshIntervalRef.current = setInterval(() => {
+      console.log('🔄 Periodic email refresh...');
+      fetchEmails();
+    }, 30000); // 30 seconds
+
     return () => {
-      // Cleanup subscription on unmount
+      // Cleanup subscription and interval on unmount
       if (subscriptionRef.current) {
         supabase.removeChannel(subscriptionRef.current);
+      }
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
       }
     };
   }, [sessionLoading, fetchEmails, setupRealTimeSubscription]);
