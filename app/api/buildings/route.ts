@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { dummyBuildings } from '@/lib/dummyBuildings'
 
 export async function GET() {
   const supabase = createClient(
@@ -17,6 +18,31 @@ export async function GET() {
     if (buildingsError) {
       console.error('Error fetching buildings:', buildingsError)
       return NextResponse.json({ error: buildingsError.message }, { status: 500 })
+    }
+
+    // If no buildings found in database, use dummy data
+    if (!buildings || buildings.length === 0) {
+      console.log('No buildings found in database, using dummy data')
+      
+      const dummyBuildingsWithIds = dummyBuildings.map((building, index) => ({
+        id: `dummy-${index + 1}`,
+        name: building.name,
+        address: building.address,
+        unit_count: building.units,
+        liveUnitCount: building.units,
+        postcode: building.postcode,
+        image: building.image,
+        isDummy: true, // Flag to identify dummy data
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }))
+
+      return NextResponse.json({ 
+        buildings: dummyBuildingsWithIds,
+        totalBuildings: dummyBuildingsWithIds.length,
+        totalUnits: dummyBuildings.reduce((total, building) => total + building.units, 0),
+        isDummyData: true
+      })
     }
 
     // Fetch all units to get unit counts
@@ -46,14 +72,16 @@ export async function GET() {
       
       return {
         ...building,
-        liveUnitCount: liveUnitCount
+        liveUnitCount: liveUnitCount,
+        isDummy: false // Flag to identify real data
       }
     }) || []
 
     return NextResponse.json({ 
       buildings: buildingsWithUnitCounts,
       totalBuildings: buildingsWithUnitCounts.length,
-      totalUnits: allUnits?.length || 0
+      totalUnits: allUnits?.length || 0,
+      isDummyData: false
     })
 
   } catch (error) {

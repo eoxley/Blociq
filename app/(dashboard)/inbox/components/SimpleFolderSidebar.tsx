@@ -33,9 +33,11 @@ export default function SimpleFolderSidebar({
   useEffect(() => {
     const fetchCustomFolders = async () => {
       try {
+        console.log('📁 Fetching custom folders...');
         const response = await fetch('/api/folders');
         if (response.ok) {
           const data = await response.json();
+          console.log('📁 Folders response:', data);
           const customFoldersData = data.folders.map((folder: any) => ({
             id: folder.id,
             label: folder.name,
@@ -44,9 +46,13 @@ export default function SimpleFolderSidebar({
             isCustom: true
           }));
           setCustomFolders(customFoldersData);
+          console.log('✅ Custom folders loaded:', customFoldersData.length);
+        } else {
+          console.error('❌ Failed to fetch folders:', response.status);
         }
       } catch (error) {
-        console.error('Failed to fetch custom folders:', error);
+        console.error('❌ Failed to fetch custom folders:', error);
+        // Don't show error to user, just log it
       }
     };
 
