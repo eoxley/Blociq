@@ -512,13 +512,6 @@ export default function BuildingTodoList({
               <p className="text-gray-500 mb-4">
                 No overdue or due tasks found.
               </p>
-              <button
-                onClick={() => setShowAddTaskForm(true)}
-                className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-4 py-2 rounded-xl font-medium shadow-lg transition-all duration-200"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Your First Task
-              </button>
             </div>
           ) : (
             <div className="space-y-3">
