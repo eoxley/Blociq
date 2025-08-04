@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -16,7 +16,9 @@
     "fix:emails:simple": "node scripts/fix_sample_emails_simple.js",
     "fix:emails:quick": "node scripts/fix_emails_quick.js",
     "fix:email-user-ids": "node scripts/fix_email_user_ids.js",
-    "test:dummy-buildings": "node scripts/test-dummy-buildings.js"
+    "test:dummy-buildings": "node scripts/test-dummy-buildings.js",
+    "deploy:check": "node test-deployment.js",
+    "deploy:vercel": "vercel --prod"
   },
   "dependencies": {
     "@azure/msal-node": "^3.6.2",
