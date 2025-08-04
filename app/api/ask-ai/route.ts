@@ -26,16 +26,22 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const { 
-      question, 
+      prompt, // AskBlocIQ sends 'prompt' instead of 'question'
+      question, // Keep for backward compatibility
       contextType = 'general',
       buildingId, 
+      building_id, // AskBlocIQ sends 'building_id'
       documentIds = [], 
       emailThreadId, 
       manualContext, 
-      leaseholderId 
+      leaseholderId,
+      projectId // New field for Major Works
     } = body;
 
-    if (!question) {
+    const actualQuestion = prompt || question;
+    const actualBuildingId = buildingId || building_id;
+
+    if (!actualQuestion) {
       return NextResponse.json({ error: 'Question is required' }, { status: 400 });
     }
 
@@ -43,13 +49,14 @@ export async function POST(req: NextRequest) {
 
     // Build unified prompt with all context
     const prompt = await buildPrompt({
-      question,
+      question: actualQuestion,
       contextType,
-      buildingId,
+      buildingId: actualBuildingId,
       documentIds,
       emailThreadId,
       manualContext,
       leaseholderId,
+      projectId,
     });
 
     console.log('📝 Prompt built, calling OpenAI...');
@@ -69,10 +76,10 @@ export async function POST(req: NextRequest) {
     // Log the AI interaction
     const logId = await insertAiLog({
       user_id: user.id,
-      question,
+      question: actualQuestion,
       response: aiResponse,
       context_type: contextType,
-      building_id: buildingId,
+      building_id: actualBuildingId,
       document_ids: documentIds,
       leaseholder_id: leaseholderId,
       email_thread_id: emailThreadId,
@@ -83,10 +90,14 @@ export async function POST(req: NextRequest) {
       result: aiResponse,
       ai_log_id: logId,
       context_type: contextType,
-      building_id: buildingId,
+      building_id: actualBuildingId,
       document_count: documentIds.length,
       has_email_thread: !!emailThreadId,
-      has_leaseholder: !!leaseholderId
+      has_leaseholder: !!leaseholderId,
+      context: {
+        complianceUsed: contextType === 'compliance',
+        majorWorksUsed: contextType === 'major_works'
+      }
     });
 
   } catch (error) {

@@ -4,6 +4,7 @@ import { getDocumentSummaries } from '@/lib/supabase/documents';
 import { getEmailThreadContext } from '@/lib/supabase/emails';
 import { getFounderGuidance } from '@/lib/ai/founder';
 import { getComplianceContext } from '@/lib/supabase/compliance';
+import { getMajorWorksContext, getMajorWorksProjectContext } from '@/lib/supabase/majorWorks';
 
 export async function buildPrompt({
   contextType,
@@ -13,6 +14,7 @@ export async function buildPrompt({
   emailThreadId,
   manualContext,
   leaseholderId,
+  projectId,
 }: {
   contextType: string;
   question: string;
@@ -21,6 +23,7 @@ export async function buildPrompt({
   emailThreadId?: string;
   manualContext?: string;
   leaseholderId?: string;
+  projectId?: string;
 }) {
   let contextSections: string[] = [];
 
@@ -56,6 +59,19 @@ export async function buildPrompt({
   if (contextType === 'compliance' && buildingId) {
     const compliance = await getComplianceContext(buildingId);
     if (compliance) contextSections.push(`Compliance Info:\n${compliance}`);
+  }
+
+  // 🏗️ Major Works Context
+  if (contextType === 'major_works') {
+    if (projectId) {
+      // Get specific project context
+      const projectContext = await getMajorWorksProjectContext(projectId);
+      if (projectContext) contextSections.push(`Major Works Project Info:\n${projectContext}`);
+    } else if (buildingId) {
+      // Get all major works for building
+      const majorWorks = await getMajorWorksContext(buildingId);
+      if (majorWorks) contextSections.push(`Major Works Info:\n${majorWorks}`);
+    }
   }
 
   // ✍️ Manual override
