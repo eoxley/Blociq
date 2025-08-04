@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useInbox } from '@/hooks/useInbox';
-import SimpleEmailDetailView from './components/SimpleEmailDetailView';
+import { useLiveInbox } from '@/hooks/useLiveInbox';
+import EnhancedEmailDetailView from './components/EnhancedEmailDetailView';
 import SimpleFolderSidebar from './components/SimpleFolderSidebar';
 import { useUser } from '@supabase/auth-helpers-react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Mail, Wifi, WifiOff } from 'lucide-react';
 
 export default function InboxClient() {
   const {
@@ -14,14 +14,46 @@ export default function InboxClient() {
     selectEmail,
     manualSync,
     isRealTimeEnabled,
-    folders,
     loading,
-    error
-  } = useInbox();
+    syncing,
+    error,
+    newEmailCount,
+    markAsRead,
+    markAsHandled,
+    flagEmail
+  } = useLiveInbox();
 
   const [search, setSearch] = useState('');
   const [selectedFolder, setSelectedFolder] = useState('inbox');
   const user = useUser();
+
+  // Generate folders based on email data
+  const folders = [
+    {
+      id: 'inbox',
+      label: 'Inbox',
+      count: emails.length,
+      icon: '📥'
+    },
+    {
+      id: 'unread',
+      label: 'Unread',
+      count: emails.filter(e => e.unread || !e.is_read).length,
+      icon: '📬'
+    },
+    {
+      id: 'flagged',
+      label: 'Flagged',
+      count: emails.filter(e => e.flag_status === 'flagged').length,
+      icon: '🚩'
+    },
+    {
+      id: 'handled',
+      label: 'Handled',
+      count: emails.filter(e => e.handled || e.is_handled).length,
+      icon: '✅'
+    }
+  ];
 
   // Filter emails based on search and folder
   const filteredEmails = emails.filter(email => {
@@ -61,7 +93,7 @@ export default function InboxClient() {
     setSelectedFolder(folderId);
     // Clear selected email when changing folders
     if (selectedEmail) {
-      selectEmail(null as any);
+      selectEmail(null);
     }
   };
 
@@ -70,24 +102,39 @@ export default function InboxClient() {
 
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">📨 Inbox</h1>
-        <div className="flex items-center gap-4 text-sm">
-          {isRealTimeEnabled ? (
-            <span className="text-green-600 font-medium">🟢 Live</span>
-          ) : (
-            <span className="text-yellow-500">⚠️ Real-time not active</span>
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-semibold">📨 Inbox</h1>
+          {newEmailCount > 0 && (
+            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm font-medium">
+              {newEmailCount} new
+            </span>
           )}
+        </div>
+        <div className="flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-2">
+            {isRealTimeEnabled ? (
+              <div className="flex items-center gap-1 text-green-600">
+                <Wifi className="h-4 w-4" />
+                <span className="font-medium">Live</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 text-yellow-500">
+                <WifiOff className="h-4 w-4" />
+                <span>Offline</span>
+              </div>
+            )}
+          </div>
           <button
             onClick={manualSync}
-            disabled={loading}
+            disabled={syncing || loading}
             className="flex items-center gap-2 text-indigo-600 hover:underline transition disabled:opacity-50"
           >
-            {loading ? (
+            {syncing ? (
               <RefreshCw className="h-4 w-4 animate-spin" />
             ) : (
               <RefreshCw className="h-4 w-4" />
             )}
-            Manual Sync
+            {syncing ? 'Syncing...' : 'Manual Sync'}
           </button>
         </div>
       </div>
@@ -189,7 +236,12 @@ export default function InboxClient() {
             {/* Email Detail Panel */}
             <div className="bg-white rounded-xl shadow p-6 min-h-[300px]">
               {selectedEmail ? (
-                <SimpleEmailDetailView email={selectedEmail} />
+                <EnhancedEmailDetailView 
+                  email={selectedEmail}
+                  onMarkAsRead={markAsRead}
+                  onMarkAsHandled={markAsHandled}
+                  onFlagEmail={flagEmail}
+                />
               ) : (
                 <div className="flex flex-col items-center justify-center text-center text-gray-500 h-full">
                   <div className="text-4xl mb-2">📥</div>
