@@ -157,8 +157,7 @@ export function useLiveInbox(): UseLiveInboxReturn {
           unread: false, 
           is_read: true 
         })
-        .eq('id', emailId)
-        .eq('user_id', user?.id);
+        .eq('id', emailId);
 
       if (error) {
         console.error('❌ Error marking email as read:', error);
@@ -175,12 +174,12 @@ export function useLiveInbox(): UseLiveInboxReturn {
         )
       );
 
-      toast.success('Email marked as read');
+      console.log('✅ Email marked as read successfully');
     } catch (error) {
       console.error('❌ Error in markAsRead:', error);
       toast.error('Failed to mark email as read');
     }
-  }, [user?.id]);
+  }, []);
 
   // Mark email as handled
   const markAsHandled = useCallback(async (emailId: string) => {
@@ -191,8 +190,7 @@ export function useLiveInbox(): UseLiveInboxReturn {
           handled: true, 
           is_handled: true 
         })
-        .eq('id', emailId)
-        .eq('user_id', user?.id);
+        .eq('id', emailId);
 
       if (error) {
         console.error('❌ Error marking email as handled:', error);
@@ -209,12 +207,12 @@ export function useLiveInbox(): UseLiveInboxReturn {
         )
       );
 
-      toast.success('Email marked as handled');
+      console.log('✅ Email marked as handled successfully');
     } catch (error) {
       console.error('❌ Error in markAsHandled:', error);
       toast.error('Failed to mark email as handled');
     }
-  }, [user?.id]);
+  }, []);
 
   // Flag/unflag email
   const flagEmail = useCallback(async (emailId: string, flagged: boolean) => {
@@ -224,8 +222,7 @@ export function useLiveInbox(): UseLiveInboxReturn {
         .update({ 
           flag_status: flagged ? 'flagged' : null 
         })
-        .eq('id', emailId)
-        .eq('user_id', user?.id);
+        .eq('id', emailId);
 
       if (error) {
         console.error('❌ Error flagging email:', error);
@@ -242,12 +239,12 @@ export function useLiveInbox(): UseLiveInboxReturn {
         )
       );
 
-      toast.success(flagged ? 'Email flagged' : 'Email unflagged');
+      console.log('✅ Email flag updated successfully');
     } catch (error) {
       console.error('❌ Error in flagEmail:', error);
       toast.error('Failed to update email flag');
     }
-  }, [user?.id]);
+  }, []);
 
   // Refresh emails
   const refreshEmails = useCallback(async () => {
@@ -344,6 +341,14 @@ export function useLiveInbox(): UseLiveInboxReturn {
       markAsRead(email.id);
     }
   }, [markAsRead]);
+
+  // Auto-select first email when emails are loaded
+  useEffect(() => {
+    if (emails.length > 0 && !selectedEmail && !loading) {
+      console.log('📧 Auto-selecting first email');
+      selectEmail(emails[0]);
+    }
+  }, [emails, selectedEmail, loading, selectEmail]);
 
   return {
     emails,
