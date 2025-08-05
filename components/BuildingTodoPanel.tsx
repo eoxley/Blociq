@@ -16,7 +16,8 @@ import {
   X,
   Save,
   Filter,
-  Pin
+  Pin,
+  User
 } from 'lucide-react'
 import AIButton from './AIButton'
 
@@ -33,6 +34,37 @@ type Todo = {
   created_by?: string
   created_at: string
   updated_at: string
+  source?: 'building_todos' | 'building_tasks' // Track which table it came from
+}
+
+type Task = {
+  id: string
+  building_id: string
+  task: string
+  due_date: string | null
+  assigned_to: string | null
+  status: 'Not Started' | 'In Progress' | 'Complete'
+  priority: 'Low' | 'Medium' | 'High' | 'Urgent'
+  notes: string | null
+  created_at: string
+  created_by: string | null
+}
+
+// Unified interface for display
+type UnifiedTodo = {
+  id: string
+  building_id: number
+  title: string
+  description?: string
+  status: 'pending' | 'in_progress' | 'completed'
+  is_complete: boolean
+  due_date?: string
+  priority?: 'Low' | 'Medium' | 'High'
+  assigned_to?: string
+  created_by?: string
+  created_at: string
+  updated_at: string
+  source: 'building_todos' | 'building_tasks'
 }
 
 type Summary = {
@@ -56,20 +88,21 @@ interface BuildingTodoPanelProps {
 
 export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps) {
   const [todos, setTodos] = useState<Todo[]>([])
+  const [tasks, setTasks] = useState<Task[]>([])
   const [summary, setSummary] = useState<Summary | null>(null)
   const [loading, setLoading] = useState(true)
   const [summaryLoading, setSummaryLoading] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
-  const [editingTodo, setEditingTodo] = useState<Todo | null>(null)
+  const [editingTodo, setEditingTodo] = useState<UnifiedTodo | null>(null)
   const [filter, setFilter] = useState<FilterType>('All')
-  const [deleteConfirmTodo, setDeleteConfirmTodo] = useState<Todo | null>(null)
+  const [deleteConfirmTodo, setDeleteConfirmTodo] = useState<UnifiedTodo | null>(null)
   const [newTodo, setNewTodo] = useState({
     title: '',
     due_date: '',
     priority: 'Medium' as 'Low' | 'Medium' | 'High'
   })
 
-  // Fetch todos
+  // Fetch todos from building_todos table
   const fetchTodos = async () => {
     try {
       const { data, error } = await supabase
@@ -83,9 +116,46 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
         return
       }
 
-      setTodos(data || [])
+      // Add source identifier to todos
+      const todosWithSource = (data || []).map(todo => ({
+        ...todo,
+        source: 'building_todos' as const
+      }))
+      setTodos(todosWithSource)
     } catch (error) {
       console.error('Error fetching todos:', error)
+    }
+  }
+
+  // Convert Task to UnifiedTodo
+  const convertTaskToUnifiedTodo = (task: Task): UnifiedTodo => ({
+    id: task.id,
+    building_id: parseInt(task.building_id),
+    title: task.task,
+    description: task.notes || undefined,
+    status: task.status === 'Complete' ? 'completed' : 
+            task.status === 'In Progress' ? 'in_progress' : 'pending',
+    is_complete: task.status === 'Complete',
+    due_date: task.due_date || undefined,
+    priority: task.priority === 'Urgent' ? 'High' : task.priority,
+    assigned_to: task.assigned_to || undefined,
+    created_by: task.created_by || undefined,
+    created_at: task.created_at,
+    updated_at: task.created_at, // building_tasks doesn't have updated_at
+    source: 'building_tasks'
+  })
+
+  // Fetch tasks from building_tasks table
+  const fetchTasks = async () => {
+    try {
+      const response = await fetch(`/api/building-tasks?buildingId=${buildingId}`)
+      const data = await response.json()
+
+      if (data.success) {
+        setTasks(data.tasks || [])
+      }
+    } catch (error) {
+      console.error('Error fetching tasks:', error)
     } finally {
       setLoading(false)
     }
@@ -109,30 +179,39 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
 
   useEffect(() => {
     fetchTodos()
+    fetchTasks()
     fetchSummary()
   }, [buildingId])
 
+  // Combine and sort all items
+  const getAllItems = (): UnifiedTodo[] => {
+    const todosWithSource = todos.map(todo => ({ ...todo, source: 'building_todos' as const }))
+    const tasksAsUnified = tasks.map(convertTaskToUnifiedTodo)
+    return [...todosWithSource, ...tasksAsUnified]
+  }
+
   // Sort and filter todos
   const getSortedAndFilteredTodos = () => {
-    let filteredTodos = todos
+    const allItems = getAllItems()
+    let filteredItems = allItems
 
     // Apply filter
     switch (filter) {
       case 'Pending':
-        filteredTodos = todos.filter(todo => todo.status === 'pending')
+        filteredItems = allItems.filter(item => item.status === 'pending')
         break
       case 'In Progress':
-        filteredTodos = todos.filter(todo => todo.status === 'in_progress')
+        filteredItems = allItems.filter(item => item.status === 'in_progress')
         break
       case 'Completed':
-        filteredTodos = todos.filter(todo => todo.status === 'completed')
+        filteredItems = allItems.filter(item => item.status === 'completed')
         break
       default:
-        filteredTodos = todos
+        filteredItems = allItems
     }
 
     // Sort: pending first, then in progress, then completed, then by due date, then by priority
-    return filteredTodos.sort((a, b) => {
+    return filteredItems.sort((a, b) => {
       // First: status priority (pending > in_progress > completed)
       const statusOrder = { 'pending': 3, 'in_progress': 2, 'completed': 1 }
       const aStatus = statusOrder[a.status] || 1
@@ -163,25 +242,47 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
   }
 
   // Toggle todo completion
-  const toggleTodo = async (todo: Todo) => {
+  const toggleTodo = async (todo: UnifiedTodo) => {
     try {
       const newStatus = todo.status === 'completed' ? 'pending' : 'completed'
-      const { error } = await supabase
-        .from('building_todos')
-        .update({ 
-          status: newStatus,
-          is_complete: newStatus === 'completed'
+      
+      if (todo.source === 'building_todos') {
+        // Update in building_todos table
+        const { error } = await supabase
+          .from('building_todos')
+          .update({ 
+            status: newStatus,
+            is_complete: newStatus === 'completed'
+          })
+          .eq('id', todo.id)
+
+        if (error) {
+          console.error('Error updating todo:', error)
+          return
+        }
+
+        setTodos(prev => prev.map(t => 
+          t.id === todo.id ? { ...t, status: newStatus, is_complete: newStatus === 'completed' } : t
+        ))
+      } else if (todo.source === 'building_tasks') {
+        // Update in building_tasks table
+        const response = await fetch(`/api/building-tasks/${todo.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: newStatus === 'completed' ? 'Complete' : 'In Progress'
+          })
         })
-        .eq('id', todo.id)
 
-      if (error) {
-        console.error('Error updating todo:', error)
-        return
+        if (!response.ok) {
+          console.error('Error updating task')
+          return
+        }
+
+        setTasks(prev => prev.map(t => 
+          t.id === todo.id ? { ...t, status: newStatus === 'completed' ? 'Complete' : 'In Progress' } : t
+        ))
       }
-
-      setTodos(prev => prev.map(t => 
-        t.id === todo.id ? { ...t, status: newStatus, is_complete: newStatus === 'completed' } : t
-      ))
 
       // Refresh summary after update
       fetchSummary()
@@ -215,7 +316,8 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
       }
 
       const { todo } = await response.json()
-      setTodos(prev => [todo, ...prev])
+      const todoWithSource = { ...todo, source: 'building_todos' as const }
+      setTodos(prev => [todoWithSource, ...prev])
       setNewTodo({ title: '', due_date: '', priority: 'Medium' })
       setShowAddModal(false)
       fetchSummary()
@@ -229,23 +331,54 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
     if (!editingTodo || !editingTodo.title.trim()) return
 
     try {
-      const { error } = await supabase
-        .from('building_todos')
-        .update({
-          title: editingTodo.title.trim(),
-          due_date: editingTodo.due_date || null,
-          priority: editingTodo.priority
-        })
-        .eq('id', editingTodo.id)
+      if (editingTodo.source === 'building_todos') {
+        // Update in building_todos table
+        const { error } = await supabase
+          .from('building_todos')
+          .update({
+            title: editingTodo.title.trim(),
+            due_date: editingTodo.due_date || null,
+            priority: editingTodo.priority
+          })
+          .eq('id', editingTodo.id)
 
-      if (error) {
-        console.error('Error updating todo:', error)
-        return
+        if (error) {
+          console.error('Error updating todo:', error)
+          return
+        }
+
+        setTodos(prev => prev.map(t => 
+          t.id === editingTodo.id ? editingTodo : t
+        ))
+      } else if (editingTodo.source === 'building_tasks') {
+        // Update in building_tasks table
+        const response = await fetch(`/api/building-tasks/${editingTodo.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            task: editingTodo.title.trim(),
+            due_date: editingTodo.due_date || null,
+            priority: editingTodo.priority === 'High' ? 'High' : 
+                     editingTodo.priority === 'Medium' ? 'Medium' : 'Low'
+          })
+        })
+
+        if (!response.ok) {
+          console.error('Error updating task')
+          return
+        }
+
+        setTasks(prev => prev.map(t => 
+          t.id === editingTodo.id ? {
+            ...t,
+            task: editingTodo.title.trim(),
+            due_date: editingTodo.due_date || null,
+            priority: editingTodo.priority === 'High' ? 'High' : 
+                     editingTodo.priority === 'Medium' ? 'Medium' : 'Low'
+          } : t
+        ))
       }
 
-      setTodos(prev => prev.map(t => 
-        t.id === editingTodo.id ? editingTodo : t
-      ))
       setEditingTodo(null)
       fetchSummary()
     } catch (error) {
@@ -254,19 +387,35 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
   }
 
   // Delete todo
-  const deleteTodo = async (id: string) => {
+  const deleteTodo = async (id: string, source: 'building_todos' | 'building_tasks') => {
     try {
-      const { error } = await supabase
-        .from('building_todos')
-        .delete()
-        .eq('id', id)
+      if (source === 'building_todos') {
+        // Delete from building_todos table
+        const { error } = await supabase
+          .from('building_todos')
+          .delete()
+          .eq('id', id)
 
-      if (error) {
-        console.error('Error deleting todo:', error)
-        return
+        if (error) {
+          console.error('Error deleting todo:', error)
+          return
+        }
+
+        setTodos(prev => prev.filter(t => t.id !== id))
+      } else if (source === 'building_tasks') {
+        // Delete from building_tasks table
+        const response = await fetch(`/api/building-tasks/${id}`, {
+          method: 'DELETE'
+        })
+
+        if (!response.ok) {
+          console.error('Error deleting task')
+          return
+        }
+
+        setTasks(prev => prev.filter(t => t.id !== id))
       }
 
-      setTodos(prev => prev.filter(t => t.id !== id))
       setDeleteConfirmTodo(null)
       fetchSummary()
     } catch (error) {
@@ -285,12 +434,13 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
   }
 
   // Check if task is overdue
-  const isOverdue = (todo: Todo) => {
+  const isOverdue = (todo: UnifiedTodo) => {
     if (!todo.due_date || todo.status === 'completed') return false
     return new Date(todo.due_date) < new Date()
   }
 
   const sortedAndFilteredTodos = getSortedAndFilteredTodos()
+  const allItems = getAllItems()
 
   return (
     <div className="space-y-6">
@@ -339,7 +489,7 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
             ))}
           </div>
           <span className="text-sm text-gray-500">
-            {sortedAndFilteredTodos.length} of {todos.length} tasks
+            {sortedAndFilteredTodos.length} of {allItems.length} tasks
           </span>
         </div>
 
@@ -352,7 +502,7 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
           <div className="space-y-3">
             {sortedAndFilteredTodos.map((todo) => (
               <div
-                key={todo.id}
+                key={`${todo.source}-${todo.id}`}
                 className={`flex items-center gap-3 p-4 border rounded-lg transition-all duration-200 ${
                   todo.status === 'completed'
                     ? 'bg-gray-50 border-gray-200' 
@@ -424,6 +574,12 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
                            todo.status === 'in_progress' ? '🔄 In Progress' :
                            '⏳ Pending'}
                         </span>
+                        {todo.assigned_to && (
+                          <div className="flex items-center gap-1 text-sm text-gray-500">
+                            <User className="h-3 w-3" />
+                            {todo.assigned_to}
+                          </div>
+                        )}
                         {todo.due_date && (
                           <div className="flex items-center gap-1 text-sm text-gray-500">
                             <Calendar className="h-3 w-3" />
@@ -432,6 +588,11 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
                               <AlertTriangle className="h-3 w-3 text-red-500" />
                             )}
                           </div>
+                        )}
+                        {todo.source === 'building_tasks' && (
+                          <span className="px-2 py-1 text-xs rounded-full border text-purple-600 bg-purple-100 border-purple-200">
+                            📋 Task
+                          </span>
                         )}
                       </div>
                     </div>
@@ -667,7 +828,7 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
                 Cancel
               </button>
               <button
-                onClick={() => deleteTodo(deleteConfirmTodo.id)}
+                onClick={() => deleteTodo(deleteConfirmTodo.id, deleteConfirmTodo.source!)}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
                 Delete
