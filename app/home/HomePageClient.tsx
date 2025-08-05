@@ -808,7 +808,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
         {/* 🧠 Enhanced Circular Ask BlocIQ Widget */}
         <div className="flex justify-center">
-          <div className={`relative transition-all duration-500 ${showChat ? 'w-[600px] h-[600px] md:w-[700px] md:h-[700px]' : 'w-[400px] h-[400px] md:w-[500px] md:h-[500px]'} rounded-full md:rounded-full rounded-3xl bg-gradient-to-br from-purple-600 via-[#4f46e5] to-indigo-500 shadow-2xl hover:shadow-3xl flex items-center justify-center p-12 group`}>
+          <div 
+            className={`relative transition-all duration-500 ${showChat ? 'w-[600px] h-[600px] md:w-[700px] md:h-[700px]' : 'w-[400px] h-[400px] md:w-[500px] md:h-[500px]'} rounded-full md:rounded-full rounded-3xl bg-gradient-to-br from-purple-600 via-[#4f46e5] to-indigo-500 shadow-2xl hover:shadow-3xl flex items-center justify-center p-12 group`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
             {/* Enhanced Radial Glow Effect */}
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-400/20 to-indigo-400/20 blur-xl group-hover:blur-2xl transition-all duration-500"></div>
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-300/10 to-pink-300/10 blur-2xl group-hover:blur-3xl transition-all duration-700"></div>
@@ -830,6 +835,19 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 Your leasehold management assistant
               </p>
               
+              {/* Single White Upload Icon - Only show when chat is closed */}
+              {!showChat && (
+                <div className="flex justify-center mb-6">
+                  <div 
+                    className="cursor-pointer hover:opacity-80 transition-opacity" 
+                    title="Upload document to Ask BlocIQ"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="text-white w-6 h-6" />
+                  </div>
+                </div>
+              )}
+              
                              {/* Enhanced Input Field with Clear Button - White Background - Only show when chat is closed */}
                {!showChat && (
                <div className="mb-6">
@@ -844,16 +862,15 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                        onKeyPress={handleKeyPress}
                      />
                      
-                     {/* File Upload Button */}
-                     <button
-                       type="button"
-                       onClick={() => fileInputRef.current?.click()}
-                       disabled={isSubmitting || uploadedFiles.length >= maxFiles}
-                       className="absolute left-3 top-1/2 transform -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
-                       title="Attach a document"
-                     >
-                       <Upload className="h-4 w-4" />
-                     </button>
+                     {/* Hidden file input for upload functionality */}
+                     <input
+                       ref={fileInputRef}
+                       type="file"
+                       multiple
+                       accept=".pdf,.docx,.txt"
+                       onChange={(e) => handleFileSelect(e.target.files)}
+                       className="hidden"
+                     />
                      
                      {/* Clear Button */}
                      {askInput && (
@@ -879,41 +896,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                    </button>
                  </div>
 
-                 {/* File Upload Zone - Only show when chat is closed */}
-                 <div
-                   className={`border-2 border-dashed rounded-xl p-4 mt-3 text-center transition-all duration-200 ${
-                     isDragOver 
-                       ? 'border-blue-500 bg-blue-50' 
-                       : 'border-gray-300 hover:border-blue-500 hover:bg-blue-50'
-                   }`}
-                   onDragOver={handleDragOver}
-                   onDragLeave={handleDragLeave}
-                   onDrop={handleDrop}
-                 >
-                   <div className="flex flex-col items-center gap-2">
-                     <Upload className="h-5 w-5 text-gray-400" />
-                     <p className="text-sm text-gray-600">
-                       Drag & drop files here or{' '}
-                       <span 
-                         className="text-blue-500 underline cursor-pointer hover:text-blue-600"
-                         onClick={() => fileInputRef.current?.click()}
-                       >
-                         click to upload
-                       </span>
-                     </p>
-                     <p className="text-xs text-white">
-                       Supports PDF, DOCX, TXT (max 10MB, up to {maxFiles} files)
-                     </p>
-                   </div>
-                   <input
-                     ref={fileInputRef}
-                     type="file"
-                     multiple
-                     accept=".pdf,.docx,.txt"
-                     onChange={(e) => handleFileSelect(e.target.files)}
-                     className="hidden"
-                   />
-                 </div>
+
 
                  {/* Uploaded Files Display */}
                  {uploadedFiles.length > 0 && (
