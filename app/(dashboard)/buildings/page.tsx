@@ -311,8 +311,8 @@ function BuildingsList() {
                   {/* Unit Count */}
                   <div className="flex items-center gap-3 mb-8 justify-center">
                     <Users className="h-5 w-5 text-[#4f46e5]" />
-                    <p className="text-gray-600 font-medium">
-                      {building.units || building.unit_count || 0} {building.units === 1 || building.unit_count === 1 ? 'unit' : 'units'}
+                    <p className="text-sm text-gray-600">
+                      {building.units || building.unit_count > 0 ? `${building.units || building.unit_count} units` : "—"}
                     </p>
                   </div>
 
@@ -340,10 +340,10 @@ function BuildingsList() {
                         <BlocIQButton 
                           asChild
                           size="sm"
-                          className={`w-full bg-gradient-to-r from-[#4f46e5] to-[#a855f7] border-0 shadow-lg hover:shadow-xl hover:brightness-110 transition-all duration-200 rounded-xl font-semibold text-base ${
+                          className={`w-full shadow-lg hover:shadow-xl transition-all duration-200 rounded-xl font-semibold text-base ${
                             building.name === "Ashwood House" 
-                              ? "text-white" 
-                              : "text-white"
+                              ? "border border-purple-500 text-purple-600 bg-white hover:bg-gray-50" 
+                              : "bg-gradient-to-r from-[#4f46e5] to-[#a855f7] border-0 hover:brightness-110 text-white"
                           }`}
                         >
                           <Link href={`/buildings/${building.id}`}>
