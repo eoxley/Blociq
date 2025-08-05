@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { 
   Building2, 
@@ -18,106 +18,159 @@ import { BlocIQButton } from '@/components/ui/blociq-button'
 // Hardcoded dummy buildings for demo purposes
 const dummyBuildings = [
   { 
-    id: '1', 
+    id: 'dummy-1', 
     name: "Kingsmere House", 
     address: "Wimbledon, London SW19", 
-    units: 42 
+    units: 42,
+    isDummy: true
   },
   { 
-    id: '2', 
+    id: 'dummy-2', 
     name: "Harbour View", 
     address: "Brighton Seafront, BN1", 
-    units: 28 
+    units: 28,
+    isDummy: true
   },
   { 
-    id: '3', 
+    id: 'dummy-3', 
     name: "Maple Row", 
     address: "Guildford, Surrey GU1", 
-    units: 16 
+    units: 16,
+    isDummy: true
   },
   { 
-    id: '4', 
+    id: 'dummy-4', 
     name: "Riverside Court", 
     address: "Kingston upon Thames, KT1", 
-    units: 35 
+    units: 35,
+    isDummy: true
   },
   { 
-    id: '5', 
+    id: 'dummy-5', 
     name: "Oakwood Gardens", 
     address: "Epsom, Surrey KT18", 
-    units: 24 
+    units: 24,
+    isDummy: true
   },
   { 
-    id: '6', 
+    id: 'dummy-6', 
     name: "Victoria Heights", 
     address: "Croydon, London CR0", 
-    units: 31 
+    units: 31,
+    isDummy: true
   },
   { 
-    id: '7', 
+    id: 'dummy-7', 
     name: "Parkview Apartments", 
     address: "Sutton, Surrey SM1", 
-    units: 19 
+    units: 19,
+    isDummy: true
   },
   { 
-    id: '8', 
+    id: 'dummy-8', 
     name: "The Regency", 
     address: "Worthing, West Sussex BN11", 
-    units: 22 
+    units: 22,
+    isDummy: true
   },
   { 
-    id: '9', 
+    id: 'dummy-9', 
     name: "Marina Point", 
     address: "Portsmouth, Hampshire PO1", 
-    units: 38 
+    units: 38,
+    isDummy: true
   },
   { 
-    id: '10', 
+    id: 'dummy-10', 
     name: "St. James Court", 
     address: "Southampton, Hampshire SO14", 
-    units: 27 
+    units: 27,
+    isDummy: true
   },
   { 
-    id: '11', 
+    id: 'dummy-11', 
     name: "The Grand", 
     address: "Bournemouth, Dorset BH1", 
-    units: 33 
+    units: 33,
+    isDummy: true
   },
   { 
-    id: '12', 
+    id: 'dummy-12', 
     name: "Cliffside Manor", 
     address: "Eastbourne, East Sussex BN21", 
-    units: 15 
+    units: 15,
+    isDummy: true
   },
   { 
-    id: '13', 
+    id: 'dummy-13', 
     name: "Seaside Plaza", 
     address: "Hastings, East Sussex TN34", 
-    units: 29 
+    units: 29,
+    isDummy: true
   },
   { 
-    id: '14', 
+    id: 'dummy-14', 
     name: "Royal Gardens", 
     address: "Chichester, West Sussex PO19", 
-    units: 21 
+    units: 21,
+    isDummy: true
   }
 ]
 
 // Client component for the buildings list with search functionality
 function BuildingsList() {
   const [searchTerm, setSearchTerm] = useState('')
+  const [realBuildings, setRealBuildings] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Fetch real buildings from Supabase
+  useEffect(() => {
+    const fetchRealBuildings = async () => {
+      try {
+        setIsLoading(true)
+        const response = await fetch('/api/list-buildings')
+        
+        if (response.ok) {
+          const data = await response.json()
+          // Transform real buildings to match the expected format
+          const transformedBuildings = (data.buildings || []).map((building: any) => ({
+            id: building.id.toString(),
+            name: building.name,
+            address: building.address,
+            units: building.unit_count || 0, // Use unit_count from database
+            isDummy: false,
+            created_at: building.created_at
+          }))
+          setRealBuildings(transformedBuildings)
+        } else {
+          console.error('Failed to fetch real buildings:', response.statusText)
+        }
+      } catch (error) {
+        console.error('Error fetching real buildings:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchRealBuildings()
+  }, [])
+
+  // Combine real and dummy buildings
+  const combinedBuildings = useMemo(() => {
+    return [...realBuildings, ...dummyBuildings]
+  }, [realBuildings])
 
   // Filter buildings based on search term (case-insensitive)
   const filteredBuildings = useMemo(() => {
-    if (!searchTerm.trim()) return dummyBuildings
+    if (!searchTerm.trim()) return combinedBuildings
     
-    return dummyBuildings.filter(building => {
+    return combinedBuildings.filter(building => {
       const searchLower = searchTerm.toLowerCase()
       const nameMatch = building.name.toLowerCase().includes(searchLower)
       const addressMatch = building.address.toLowerCase().includes(searchLower)
       return nameMatch || addressMatch
     })
-  }, [searchTerm])
+  }, [combinedBuildings, searchTerm])
 
   return (
     <div>
@@ -137,7 +190,9 @@ function BuildingsList() {
             <div className="mt-6 bg-white/20 backdrop-blur-sm rounded-xl p-4 max-w-2xl mx-auto">
               <div className="flex items-center justify-center gap-2 text-white/90">
                 <Sparkles className="h-5 w-5" />
-                <span className="text-sm font-medium">Showing 14 sample buildings for demonstration</span>
+                <span className="text-sm font-medium">
+                  {isLoading ? 'Loading buildings...' : `Showing ${realBuildings.length} real + ${dummyBuildings.length} demo buildings`}
+                </span>
               </div>
             </div>
           </div>
@@ -193,7 +248,7 @@ function BuildingsList() {
         {/* Search Results Count */}
         {searchTerm && (
           <div className="mb-8 text-sm text-gray-600 bg-gray-50 rounded-lg px-4 py-2 inline-block">
-            Showing {filteredBuildings.length} of {dummyBuildings.length} buildings
+            Showing {filteredBuildings.length} of {combinedBuildings.length} buildings
           </div>
         )}
       </div>
@@ -219,9 +274,15 @@ function BuildingsList() {
                       <h3 className="text-2xl font-bold text-gray-900">
                         {building.name}
                       </h3>
-                      <span className="bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 text-xs px-3 py-1 rounded-full font-semibold border border-purple-200 shadow-sm animate-pulse">
-                        ✨ Demo
-                      </span>
+                      {building.isDummy ? (
+                        <span className="bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 text-xs px-3 py-1 rounded-full font-semibold border border-purple-200 shadow-sm animate-pulse">
+                          ✨ Demo
+                        </span>
+                      ) : (
+                        <span className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 text-xs px-3 py-1 rounded-full font-semibold border border-green-200 shadow-sm">
+                          🏢 Real
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -243,27 +304,50 @@ function BuildingsList() {
 
                   {/* Action Buttons - Enhanced with BlocIQ Gradient */}
                   <div className="space-y-3">
-                    <BlocIQButton 
-                      asChild
-                      size="sm"
-                      className="w-full bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white border-0 shadow-lg hover:shadow-xl hover:brightness-110 transition-all duration-200 rounded-xl font-semibold text-base"
-                    >
-                      <Link href={`/buildings/${building.id}`}>
-                        <Eye className="h-5 w-5 mr-2" />
-                        👁 View Details
-                      </Link>
-                    </BlocIQButton>
-                    <BlocIQButton 
-                      asChild
-                      variant="outline"
-                      size="sm"
-                      className="w-full border-[#4f46e5] text-[#4f46e5] hover:bg-[#4f46e5] hover:text-white transition-all duration-200 rounded-xl font-semibold text-base"
-                    >
-                      <Link href={`/buildings/${building.id}/compliance`}>
-                        <Shield className="h-5 w-5 mr-2" />
-                        🛡️ View Compliance
-                      </Link>
-                    </BlocIQButton>
+                    {building.isDummy ? (
+                      // Dummy buildings - non-clickable
+                      <div className="space-y-3">
+                        <button 
+                          className="w-full bg-gray-100 text-gray-500 px-4 py-3 rounded-xl font-semibold text-base cursor-not-allowed opacity-75"
+                          disabled
+                        >
+                          <Eye className="h-5 w-5 mr-2 inline" />
+                          👁 Demo Only
+                        </button>
+                        <button 
+                          className="w-full bg-gray-100 text-gray-500 px-4 py-3 rounded-xl font-semibold text-base cursor-not-allowed opacity-75"
+                          disabled
+                        >
+                          <Shield className="h-5 w-5 mr-2 inline" />
+                          🛡️ Demo Only
+                        </button>
+                      </div>
+                    ) : (
+                      // Real buildings - clickable
+                      <>
+                        <BlocIQButton 
+                          asChild
+                          size="sm"
+                          className="w-full bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white border-0 shadow-lg hover:shadow-xl hover:brightness-110 transition-all duration-200 rounded-xl font-semibold text-base"
+                        >
+                          <Link href={`/buildings/${building.id}`}>
+                            <Eye className="h-5 w-5 mr-2" />
+                            👁 View Details
+                          </Link>
+                        </BlocIQButton>
+                        <BlocIQButton 
+                          asChild
+                          variant="outline"
+                          size="sm"
+                          className="w-full border-[#4f46e5] text-[#4f46e5] hover:bg-[#4f46e5] hover:text-white transition-all duration-200 rounded-xl font-semibold text-base"
+                        >
+                          <Link href={`/buildings/${building.id}/compliance`}>
+                            <Shield className="h-5 w-5 mr-2" />
+                            🛡️ View Compliance
+                          </Link>
+                        </BlocIQButton>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
