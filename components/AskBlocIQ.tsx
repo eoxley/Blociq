@@ -736,16 +736,7 @@ export default function AskBlocIQ({
               disabled={loading}
             />
             
-            {/* File Upload Button */}
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={loading || uploadedFiles.length >= maxFiles}
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
-              title="Attach a document"
-            >
-              <Upload className="h-4 w-4" />
-            </button>
+            {/* File Upload Button - REMOVED */}
             
             {/* Send Button */}
             <button
@@ -775,7 +766,7 @@ export default function AskBlocIQ({
           >
             <div className="flex flex-col items-center gap-2">
               <Upload className="h-5 w-5 text-gray-400" />
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-white">
                 Drag & drop files here or{' '}
                 <span 
                   className="text-blue-500 underline cursor-pointer hover:text-blue-600"
