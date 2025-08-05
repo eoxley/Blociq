@@ -485,22 +485,13 @@ export default function AskBlocIQHomepage() {
               onChange={(e) => setPrompt(e.target.value)}
               onKeyDown={handleKeyPress}
               placeholder="Ask BlocIQ anything, upload documents, or search for files (e.g., 'show me the last FRA')..."
-              className="w-full px-4 py-3 pr-20 bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent transition-all duration-200 resize-none text-gray-900 placeholder-gray-500"
+              className="w-full pl-4 pr-20 py-3 bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent transition-all duration-200 resize-none text-gray-900 placeholder-gray-500"
               rows={1}
               disabled={isLoading}
               style={{ minHeight: '48px', maxHeight: '120px' }}
             />
             
-            {/* File Upload Button */}
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isLoading || uploadedFiles.length >= maxFiles}
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
-              title="Attach a document"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
+
             
             {/* Send Button */}
             <button

@@ -20,10 +20,10 @@ export async function GET() {
 
     console.log('🔍 Listing all buildings...')
 
-    // Fetch all buildings
+    // Fetch all buildings with unit count
     const { data: buildings, error: buildingsError } = await supabase
       .from('buildings')
-      .select('id, name, address, created_at')
+      .select('id, name, address, unit_count, created_at')
       .order('name')
 
     if (buildingsError) {

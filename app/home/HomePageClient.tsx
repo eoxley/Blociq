@@ -227,13 +227,15 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
       if (propertyEventsResponse.error) {
         console.error('Error fetching property events:', propertyEventsResponse.error)
+        // Continue with empty array instead of crashing
       }
 
       if (manualEventsResponse.error) {
         console.error('Error fetching manual events:', manualEventsResponse.error)
+        // Continue with empty array instead of crashing
       }
 
-      // Transform property events
+      // Transform property events (handle missing data gracefully)
       const propertyEvents: PropertyEvent[] = (propertyEventsResponse.data || []).map(event => ({
         building: event.building_name || 'General',
         date: event.date,
@@ -245,7 +247,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         organiser_name: event.organiser_name
       }))
 
-      // Transform manual events
+      // Transform manual events (handle missing data gracefully)
       const manualEvents: PropertyEvent[] = (manualEventsResponse.data || []).map(event => ({
         building: event.building_id ? `Building ${event.building_id}` : 'General',
         date: event.start_time,
@@ -265,6 +267,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       setUpcomingEvents(allEvents.slice(0, 5)) // Limit to 5 total events
     } catch (error) {
       console.error('Error in fetchEvents:', error)
+      // Set empty events array instead of crashing
+      setUpcomingEvents([])
     }
   }
 

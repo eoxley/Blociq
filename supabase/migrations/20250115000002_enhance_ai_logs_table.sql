@@ -21,9 +21,11 @@ CREATE INDEX IF NOT EXISTS idx_ai_logs_context_type ON ai_logs(context_type);
 CREATE INDEX IF NOT EXISTS idx_ai_logs_context_id ON ai_logs(context_id);
 CREATE INDEX IF NOT EXISTS idx_ai_logs_building_id ON ai_logs(building_id);
 CREATE INDEX IF NOT EXISTS idx_ai_logs_leaseholder_id ON ai_logs(leaseholder_id);
+CREATE INDEX IF NOT EXISTS idx_ai_logs_unit_count ON ai_logs(unit_count);
 CREATE INDEX IF NOT EXISTS idx_ai_logs_created_at ON ai_logs(created_at);
 
 -- Add comments for documentation
 COMMENT ON COLUMN ai_logs.context_type IS 'Type of context (building, major-works, compliance, general, etc.)';
 COMMENT ON COLUMN ai_logs.context_id IS 'ID of the specific context (building ID, major works ID, etc.)';
+COMMENT ON COLUMN ai_logs.unit_count IS 'Number of units in the building being discussed';
 COMMENT ON COLUMN ai_logs.metadata IS 'Additional metadata as JSON (documents, brain_button_usage, etc.)'; 
