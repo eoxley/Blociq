@@ -3,7 +3,7 @@
 // Home page client component - Major works dashboard removed for cleaner interface
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2, ExternalLink, RefreshCw, MessageCircle, Sparkles, Upload, FileText, Send, Bot, ArrowRight, HelpCircle } from 'lucide-react'
+import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2, ExternalLink, RefreshCw, MessageCircle, Sparkles, Upload, FileText, Send, Bot, ArrowRight, HelpCircle, Brain, X as XIcon } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 
 
@@ -370,13 +370,21 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       </section>
 
       <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
-        {/* 🧠 Circular Ask BlocIQ Widget */}
+        {/* 🧠 Enhanced Circular Ask BlocIQ Widget */}
         <div className="flex justify-center">
-          <div className="relative w-[350px] h-[350px] md:w-[400px] md:h-[400px] rounded-full bg-gradient-to-br from-[#4f46e5] to-[#a855f7] shadow-2xl flex items-center justify-center p-8">
+          <div className="relative w-[350px] h-[350px] md:w-[400px] md:h-[400px] rounded-full md:rounded-full rounded-3xl bg-gradient-to-br from-purple-600 via-[#4f46e5] to-indigo-500 shadow-2xl hover:shadow-3xl transition-all duration-500 flex items-center justify-center p-8 group">
+            {/* Radial Glow Effect */}
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-400/20 to-indigo-400/20 blur-xl group-hover:blur-2xl transition-all duration-500"></div>
+            
+            {/* AI Badge */}
+            <div className="absolute -top-2 -right-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full p-2 shadow-lg animate-pulse">
+              <Brain className="h-4 w-4 text-white" />
+            </div>
+            
             {/* Content */}
-            <div className="text-center text-white max-w-xs">
-              {/* Question Mark Icon */}
-              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg border border-white/30">
+            <div className="text-center text-white max-w-xs relative z-10">
+              {/* Question Mark Icon with Enhanced Hover */}
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg border border-white/30 group-hover:scale-110 transition-transform duration-300">
                 <HelpCircle className="h-8 w-8 text-white" />
               </div>
               
@@ -390,29 +398,62 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 Your leasehold management assistant
               </p>
               
-              {/* Input Field */}
+              {/* Enhanced Input Field */}
               <div className="mb-6">
-                <div className="relative">
+                <div className="relative group">
                   <input
                     type="text"
                     placeholder="Ask me anything..."
-                    className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition-all duration-200 text-sm"
+                    className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition-all duration-200 text-sm pr-12"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        // Handle submit
+                        console.log('Submit:', e.currentTarget.value);
+                      }
+                    }}
                   />
-                  <button className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-all duration-200">
+                  <button className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95">
                     <ArrowRight className="h-4 w-4 text-white" />
                   </button>
                 </div>
               </div>
               
-              {/* Example Prompts */}
-              <div className="space-y-2">
-                <button className="w-full px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-xs font-medium transition-all duration-200 border border-white/30 hover:border-white/50">
+              {/* Enhanced Example Prompts - Hidden on mobile */}
+              <div className="space-y-2 hidden md:block">
+                <button 
+                  className="w-full px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-xs font-medium transition-all duration-200 border border-white/30 hover:border-white/50 hover:scale-105 active:scale-95"
+                  onClick={() => {
+                    const input = document.querySelector('input[placeholder="Ask me anything..."]') as HTMLInputElement;
+                    if (input) {
+                      input.value = 'Summarise inbox';
+                      input.focus();
+                    }
+                  }}
+                >
                   Summarise inbox
                 </button>
-                <button className="w-full px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-xs font-medium transition-all duration-200 border border-white/30 hover:border-white/50">
+                <button 
+                  className="w-full px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-xs font-medium transition-all duration-200 border border-white/30 hover:border-white/50 hover:scale-105 active:scale-95"
+                  onClick={() => {
+                    const input = document.querySelector('input[placeholder="Ask me anything..."]') as HTMLInputElement;
+                    if (input) {
+                      input.value = 'Update directors';
+                      input.focus();
+                    }
+                  }}
+                >
                   Update directors
                 </button>
-                <button className="w-full px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-xs font-medium transition-all duration-200 border border-white/30 hover:border-white/50">
+                <button 
+                  className="w-full px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-xs font-medium transition-all duration-200 border border-white/30 hover:border-white/50 hover:scale-105 active:scale-95"
+                  onClick={() => {
+                    const input = document.querySelector('input[placeholder="Ask me anything..."]') as HTMLInputElement;
+                    if (input) {
+                      input.value = 'Show compliance';
+                      input.focus();
+                    }
+                  }}
+                >
                   Show compliance
                 </button>
               </div>
