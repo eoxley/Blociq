@@ -136,16 +136,21 @@ function BuildingsList() {
         
         if (response.ok) {
           const data = await response.json()
+          console.log('🏢 Raw buildings data:', data.buildings)
           // Transform real buildings to match the expected format
-          const transformedBuildings = (data.buildings || []).map((building: any) => ({
-            id: building.id.toString(),
-            name: building.name,
-            address: building.address,
-            units: building.unit_count || 0, // Use unit_count from database
-            unit_count: building.unit_count || 0, // Also store as unit_count for consistency
-            isDummy: false,
-            created_at: building.created_at
-          }))
+          const transformedBuildings = (data.buildings || []).map((building: any) => {
+            const transformed = {
+              id: building.id.toString(),
+              name: building.name,
+              address: building.address,
+              units: building.unit_count || 0, // Use unit_count from database
+              unit_count: building.unit_count || 0, // Also store as unit_count for consistency
+              isDummy: false,
+              created_at: building.created_at
+            }
+            console.log(`🏠 Transformed ${building.name}:`, transformed)
+            return transformed
+          })
           setRealBuildings(transformedBuildings)
         } else {
           console.error('Failed to fetch real buildings:', response.statusText)
@@ -312,7 +317,11 @@ function BuildingsList() {
                   <div className="flex items-center gap-3 mb-8 justify-center">
                     <Users className="h-5 w-5 text-[#4f46e5]" />
                     <p className="text-sm text-gray-600">
-                      {building.units || building.unit_count > 0 ? `${building.units || building.unit_count} units` : "—"}
+                      {(() => {
+                        const unitCount = building.units || building.unit_count || 0
+                        console.log(`🏠 ${building.name} unit count:`, { units: building.units, unit_count: building.unit_count, final: unitCount })
+                        return unitCount > 0 ? `${unitCount} units` : "0 units"
+                      })()}
                     </p>
                   </div>
 
