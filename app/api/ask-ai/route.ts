@@ -12,6 +12,10 @@ import OpenAI from 'openai';
 import { buildPrompt } from '@/lib/buildPrompt';
 import { insertAiLog } from '@/lib/supabase/ai_logs';
 
+// Debug: Check if API key is loaded
+const apiKey = process.env.OPENAI_API_KEY;
+console.log('🔑 OpenAI API Key loaded:', apiKey ? `${apiKey.substring(0, 10)}...` : 'NOT FOUND');
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req: NextRequest) {
@@ -60,6 +64,7 @@ export async function POST(req: NextRequest) {
     });
 
     console.log('📝 Prompt built, calling OpenAI...');
+    console.log('🔑 Using API key:', apiKey ? `${apiKey.substring(0, 10)}...` : 'NOT FOUND');
 
     // Call OpenAI
     const completion = await openai.chat.completions.create({
@@ -102,6 +107,7 @@ export async function POST(req: NextRequest) {
 
   } catch (error) {
     console.error('❌ Error in ask-ai route:', error);
+    console.error('🔑 API Key in error context:', apiKey ? `${apiKey.substring(0, 10)}...` : 'NOT FOUND');
     return NextResponse.json({ 
       error: 'Failed to process AI request',
       details: error instanceof Error ? error.message : 'Unknown error'
