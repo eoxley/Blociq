@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { supabase } from '@/lib/supabaseClient'
 import Link from 'next/link'
 import { 
   Building2, 
@@ -12,34 +11,113 @@ import {
   ArrowRight,
   Search,
   Shield,
-  Loader2,
-  AlertCircle,
-  Clipboard,
   Sparkles
 } from 'lucide-react'
 import { BlocIQButton } from '@/components/ui/blociq-button'
-import { BlocIQCard, BlocIQCardContent } from '@/components/ui/blociq-card'
+
+// Hardcoded dummy buildings for demo purposes
+const dummyBuildings = [
+  { 
+    id: '1', 
+    name: "Kingsmere House", 
+    address: "Wimbledon, London SW19", 
+    units: 42 
+  },
+  { 
+    id: '2', 
+    name: "Harbour View", 
+    address: "Brighton Seafront, BN1", 
+    units: 28 
+  },
+  { 
+    id: '3', 
+    name: "Maple Row", 
+    address: "Guildford, Surrey GU1", 
+    units: 16 
+  },
+  { 
+    id: '4', 
+    name: "Riverside Court", 
+    address: "Kingston upon Thames, KT1", 
+    units: 35 
+  },
+  { 
+    id: '5', 
+    name: "Oakwood Gardens", 
+    address: "Epsom, Surrey KT18", 
+    units: 24 
+  },
+  { 
+    id: '6', 
+    name: "Victoria Heights", 
+    address: "Croydon, London CR0", 
+    units: 31 
+  },
+  { 
+    id: '7', 
+    name: "Parkview Apartments", 
+    address: "Sutton, Surrey SM1", 
+    units: 19 
+  },
+  { 
+    id: '8', 
+    name: "The Regency", 
+    address: "Worthing, West Sussex BN11", 
+    units: 22 
+  },
+  { 
+    id: '9', 
+    name: "Marina Point", 
+    address: "Portsmouth, Hampshire PO1", 
+    units: 38 
+  },
+  { 
+    id: '10', 
+    name: "St. James Court", 
+    address: "Southampton, Hampshire SO14", 
+    units: 27 
+  },
+  { 
+    id: '11', 
+    name: "The Grand", 
+    address: "Bournemouth, Dorset BH1", 
+    units: 33 
+  },
+  { 
+    id: '12', 
+    name: "Cliffside Manor", 
+    address: "Eastbourne, East Sussex BN21", 
+    units: 15 
+  },
+  { 
+    id: '13', 
+    name: "Seaside Plaza", 
+    address: "Hastings, East Sussex TN34", 
+    units: 29 
+  },
+  { 
+    id: '14', 
+    name: "Royal Gardens", 
+    address: "Chichester, West Sussex PO19", 
+    units: 21 
+  }
+]
 
 // Client component for the buildings list with search functionality
-function BuildingsList({ initialBuildings, isDummyData = false }: { initialBuildings: any[], isDummyData?: boolean }) {
+function BuildingsList() {
   const [searchTerm, setSearchTerm] = useState('')
-
-  // Ensure initialBuildings is an array and filter out any invalid entries
-  const validBuildings = initialBuildings.filter(building => 
-    building && typeof building === 'object' && building.id && building.name
-  )
 
   // Filter buildings based on search term (case-insensitive)
   const filteredBuildings = useMemo(() => {
-    if (!searchTerm.trim()) return validBuildings
+    if (!searchTerm.trim()) return dummyBuildings
     
-    return validBuildings.filter(building => {
+    return dummyBuildings.filter(building => {
       const searchLower = searchTerm.toLowerCase()
-      const nameMatch = building.name && typeof building.name === 'string' && building.name.toLowerCase().includes(searchLower)
-      const addressMatch = building.address && typeof building.address === 'string' && building.address.toLowerCase().includes(searchLower)
+      const nameMatch = building.name.toLowerCase().includes(searchLower)
+      const addressMatch = building.address.toLowerCase().includes(searchLower)
       return nameMatch || addressMatch
     })
-  }, [validBuildings, searchTerm])
+  }, [searchTerm])
 
   return (
     <div>
@@ -56,14 +134,12 @@ function BuildingsList({ initialBuildings, isDummyData = false }: { initialBuild
             <p className="text-xl text-white/90 max-w-3xl mx-auto leading-relaxed">
               Track compliance, view documents, and manage your portfolio effortlessly.
             </p>
-            {isDummyData && (
-              <div className="mt-6 bg-white/20 backdrop-blur-sm rounded-xl p-4 max-w-2xl mx-auto">
-                <div className="flex items-center justify-center gap-2 text-white/90">
-                  <Sparkles className="h-5 w-5" />
-                  <span className="text-sm font-medium">Showing 13 sample buildings for demonstration</span>
-                </div>
+            <div className="mt-6 bg-white/20 backdrop-blur-sm rounded-xl p-4 max-w-2xl mx-auto">
+              <div className="flex items-center justify-center gap-2 text-white/90">
+                <Sparkles className="h-5 w-5" />
+                <span className="text-sm font-medium">Showing 14 sample buildings for demonstration</span>
               </div>
-            )}
+            </div>
           </div>
         </div>
         
@@ -75,8 +151,8 @@ function BuildingsList({ initialBuildings, isDummyData = false }: { initialBuild
         </div>
       </section>
 
-             {/* Search and Create Section - Enhanced */}
-       <div className="max-w-8xl mx-auto px-4 lg:px-6 xl:px-8 py-12">
+      {/* Search and Create Section - Enhanced */}
+      <div className="max-w-8xl mx-auto px-4 lg:px-6 xl:px-8 py-12">
         <div className="flex flex-col lg:flex-row gap-8 items-start lg:items-center justify-between mb-12">
           {/* Search Bar */}
           <div className="flex-1 max-w-lg">
@@ -117,23 +193,19 @@ function BuildingsList({ initialBuildings, isDummyData = false }: { initialBuild
         {/* Search Results Count */}
         {searchTerm && (
           <div className="mb-8 text-sm text-gray-600 bg-gray-50 rounded-lg px-4 py-2 inline-block">
-            Showing {filteredBuildings.length} of {validBuildings.length} buildings
+            Showing {filteredBuildings.length} of {dummyBuildings.length} buildings
           </div>
         )}
       </div>
 
-             {/* Buildings Grid - Enhanced Landing Page Style */}
-       {filteredBuildings.length > 0 ? (
-         <div className="max-w-8xl mx-auto px-4 lg:px-6 xl:px-8 pb-16">
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
+      {/* Buildings Grid - Enhanced Landing Page Style */}
+      {filteredBuildings.length > 0 ? (
+        <div className="max-w-8xl mx-auto px-4 lg:px-6 xl:px-8 pb-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
             {filteredBuildings.map((building) => (
               <div 
                 key={building.id}
-                className={`bg-white rounded-2xl shadow-lg border transition-all duration-300 transform hover:scale-105 text-center group overflow-hidden ${
-                  building.isDummy 
-                    ? 'border-purple-200 hover:shadow-purple-200/50 hover:shadow-2xl' 
-                    : 'border-gray-100 hover:shadow-2xl'
-                }`}
+                className="bg-white rounded-2xl shadow-lg border border-purple-200 hover:shadow-purple-200/50 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 text-center group overflow-hidden"
               >
                 <div className="p-8">
                   {/* Building Icon */}
@@ -147,40 +219,27 @@ function BuildingsList({ initialBuildings, isDummyData = false }: { initialBuild
                       <h3 className="text-2xl font-bold text-gray-900">
                         {building.name}
                       </h3>
-                      {building.isDummy && (
-                        <span className="bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 text-xs px-3 py-1 rounded-full font-semibold border border-purple-200 shadow-sm animate-pulse">
-                          ✨ Demo
-                        </span>
-                      )}
+                      <span className="bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 text-xs px-3 py-1 rounded-full font-semibold border border-purple-200 shadow-sm animate-pulse">
+                        ✨ Demo
+                      </span>
                     </div>
                   </div>
 
                   {/* Address */}
-                  {building.address && (
-                    <div className="flex items-start gap-3 mb-6 justify-center">
-                      <MapPin className="h-5 w-5 text-[#4f46e5] mt-0.5 flex-shrink-0" />
-                      <p className="text-gray-600 leading-relaxed text-sm">
-                        {building.address}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Live Unit Count */}
-                  <div className="flex items-center gap-3 mb-8 justify-center">
-                    <Users className="h-5 w-5 text-[#4f46e5]" />
-                    <p className="text-gray-600 font-medium">
-                      {building.liveUnitCount || 0} {(building.liveUnitCount || 0) === 1 ? 'unit' : 'units'}
+                  <div className="flex items-start gap-3 mb-6 justify-center">
+                    <MapPin className="h-5 w-5 text-[#4f46e5] mt-0.5 flex-shrink-0" />
+                    <p className="text-gray-600 leading-relaxed text-sm">
+                      {building.address}
                     </p>
                   </div>
 
-                  {/* No Units Message */}
-                  {(building.liveUnitCount || 0) === 0 && (
-                    <div className="mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <p className="text-sm text-yellow-800">
-                        No units assigned yet
-                      </p>
-                    </div>
-                  )}
+                  {/* Unit Count */}
+                  <div className="flex items-center gap-3 mb-8 justify-center">
+                    <Users className="h-5 w-5 text-[#4f46e5]" />
+                    <p className="text-gray-600 font-medium">
+                      {building.units} {building.units === 1 ? 'unit' : 'units'}
+                    </p>
+                  </div>
 
                   {/* Action Buttons - Enhanced with BlocIQ Gradient */}
                   <div className="space-y-3">
@@ -233,19 +292,30 @@ function BuildingsList({ initialBuildings, isDummyData = false }: { initialBuild
             </BlocIQButton>
           </div>
         </div>
-      ) : validBuildings.length === 0 ? (
-        /* Empty State - No Buildings - Enhanced */
-        <div className="max-w-4xl mx-auto px-6 py-20">
-          <div className="text-center">
-            <div className="w-24 h-24 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
-              <Building2 className="h-12 w-12 text-white" />
+      ) : null}
+    </div>
+  )
+}
+
+// Main component that renders the buildings list
+export default function BuildingsPage() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Buildings List */}
+      <BuildingsList />
+
+      {/* Enhanced CTA Section - Matching Landing Page Style */}
+      <section className="py-20 bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="bg-white rounded-2xl p-12 shadow-xl border border-gray-100 text-center">
+            <div className="w-20 h-20 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
+              <Plus className="h-10 w-10 text-white" />
             </div>
-            <h2 className="text-4xl font-bold text-gray-900 mb-6">
-              No Buildings Yet
+            <h2 className="text-3xl font-bold text-gray-900 mb-6">
+              Add Another Building
             </h2>
-            <p className="text-xl text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed">
-              Get started by adding your first building to your portfolio. 
-              You'll be able to manage units, compliance, and communications all in one place with BlocIQ's intelligent platform.
+            <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto leading-relaxed">
+              Expand your portfolio by adding more properties to manage with BlocIQ's intelligent platform.
             </p>
             <div className="relative inline-block">
               <button
@@ -256,7 +326,7 @@ function BuildingsList({ initialBuildings, isDummyData = false }: { initialBuild
                 className="inline-flex items-center gap-3 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white px-8 py-4 rounded-xl cursor-not-allowed opacity-75 hover:opacity-75 transition-all duration-200 font-semibold text-lg shadow-lg transform"
               >
                 <Plus className="h-6 w-6" />
-                Create Your First Building
+                Add New Building
                 <ArrowRight className="h-5 w-5" />
               </button>
               {/* Coming Soon Badge */}
@@ -266,152 +336,7 @@ function BuildingsList({ initialBuildings, isDummyData = false }: { initialBuild
             </div>
           </div>
         </div>
-      ) : null}
-    </div>
-  )
-}
-
-// Client component that fetches data and renders the buildings list
-export default function BuildingsPage() {
-  const [buildings, setBuildings] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [isDummyData, setIsDummyData] = useState(false)
-
-  // Fetch buildings with live unit counts from the units table
-  React.useEffect(() => {
-    const fetchBuildings = async () => {
-      try {
-        // Use the new API endpoint that handles the UUID/integer mismatch
-        const response = await fetch('/api/buildings')
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-        
-        const data = await response.json()
-        
-        if (data.error) {
-          throw new Error(data.error)
-        }
-        
-        console.log('Buildings data:', data)
-        console.log('Buildings data type:', typeof data.buildings)
-        console.log('Buildings data is array:', Array.isArray(data.buildings))
-        
-        // Ensure buildings is an array and handle potential undefined values
-        const buildingsData = Array.isArray(data.buildings) ? data.buildings : []
-        
-        console.log('Processed buildings data:', buildingsData)
-        
-        // Clean the data to ensure all required fields exist
-        const cleanedBuildings = buildingsData.map((building: any) => ({
-          id: building?.id || '',
-          name: building?.name || 'Unnamed Building',
-          address: building?.address || null,
-          liveUnitCount: building?.liveUnitCount || 0,
-          // Add any other fields that might be needed
-          ...building
-        }))
-        
-        console.log('Cleaned buildings data:', cleanedBuildings)
-        setBuildings(cleanedBuildings)
-        
-        // Check if this is dummy data
-        if (data.isDummyData) {
-          setIsDummyData(true)
-        }
-      } catch (err) {
-        console.error('Error fetching data:', err)
-        setError('Unable to load your buildings at this time. Please try again later.')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchBuildings()
-  }, [])
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="max-w-4xl mx-auto px-6 py-20">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl animate-pulse">
-              <Loader2 className="h-8 w-8 text-white animate-spin" />
-            </div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              Loading Buildings...
-            </h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Please wait while we load your properties
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="max-w-4xl mx-auto px-6 py-20">
-          <div className="text-center">
-            <div className="w-20 h-20 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
-              <AlertCircle className="h-10 w-10 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">
-              Error Loading Buildings
-            </h1>
-            <p className="text-lg text-gray-600">
-              {error}
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Buildings List */}
-      <BuildingsList initialBuildings={buildings} isDummyData={isDummyData} />
-
-      {/* Enhanced CTA Section - Matching Landing Page Style */}
-      {buildings && buildings.length > 0 && (
-        <section className="py-20 bg-gradient-to-br from-gray-50 to-gray-100">
-          <div className="max-w-4xl mx-auto px-6">
-            <div className="bg-white rounded-2xl p-12 shadow-xl border border-gray-100 text-center">
-              <div className="w-20 h-20 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
-                <Plus className="h-10 w-10 text-white" />
-              </div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">
-                Add Another Building
-              </h2>
-              <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto leading-relaxed">
-                Expand your portfolio by adding more properties to manage with BlocIQ's intelligent platform.
-              </p>
-              <div className="relative inline-block">
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    alert('Building creation feature coming soon!');
-                  }}
-                  className="inline-flex items-center gap-3 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white px-8 py-4 rounded-xl cursor-not-allowed opacity-75 hover:opacity-75 transition-all duration-200 font-semibold text-lg shadow-lg transform"
-                >
-                  <Plus className="h-6 w-6" />
-                  Add New Building
-                  <ArrowRight className="h-5 w-5" />
-                </button>
-                {/* Coming Soon Badge */}
-                <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
-                  COMING SOON
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
+      </section>
     </div>
   )
 } 
