@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Send, Save, Maximize2, Minimize2, Mail, Users, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import DOMPurify from 'dompurify';
+import * as DOMPurify from 'dompurify';
 
 interface Email {
   id: string;
@@ -51,6 +51,10 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
   const [body, setBody] = useState<string>('');
   const [signature, setSignature] = useState<string>('');
   const [isAIGenerated, setIsAIGenerated] = useState<boolean>(false);
+  
+  // Add refs for better control
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   // Load user signature on mount with error handling
   const loadSignature = useCallback(async () => {
@@ -144,6 +148,7 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
     }
 
     setIsSending(true);
+    
     try {
       // Sanitize the email body for safe sending
       const sanitizedBody = DOMPurify.sanitize(body.trim());
@@ -187,6 +192,7 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
     }
 
     setIsSaving(true);
+    
     try {
       const response = await fetch('/api/send-email', {
         method: 'POST',
