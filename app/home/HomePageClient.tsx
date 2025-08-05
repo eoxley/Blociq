@@ -1,7 +1,7 @@
 'use client'
 
 // Home page client component - Major works dashboard removed for cleaner interface
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2, ExternalLink, RefreshCw, MessageCircle, Sparkles, Upload, FileText, Send, Bot, ArrowRight, HelpCircle, Brain, X as XIcon } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
@@ -81,6 +81,11 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const [showAddEventForm, setShowAddEventForm] = useState(false)
   const [recentEmails, setRecentEmails] = useState<Email[]>([])
   const [loadingEmails, setLoadingEmails] = useState(true)
+  
+  // Ask BlocIQ state
+  const [askInput, setAskInput] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const askInputRef = useRef<HTMLInputElement>(null)
 
   // Dynamic welcome messages - rotating pool of positive, motivational, humorous, and informative messages
   const welcomeMessages = [
@@ -343,6 +348,43 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     await loadOutlookEvents()
   }
 
+  // Handle Ask BlocIQ submission
+  const handleAskSubmit = async (prompt: string) => {
+    if (!prompt.trim()) return
+    
+    setIsSubmitting(true)
+    try {
+      // Here you would typically call your AI API
+      console.log('Submitting to AI:', prompt)
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // Clear input after submission
+      setAskInput('')
+      toast.success('Your question has been sent to BlocIQ!')
+    } catch (error) {
+      console.error('Error submitting to AI:', error)
+      toast.error('Failed to send question')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Handle Enter key press
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleAskSubmit(askInput)
+    }
+  }
+
+  // Handle example prompt click
+  const handleExampleClick = (prompt: string) => {
+    setAskInput(prompt)
+    askInputRef.current?.focus()
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Enhanced Hero Banner - BlocIQ Landing Page Style */}
@@ -373,18 +415,19 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         {/* 🧠 Enhanced Circular Ask BlocIQ Widget */}
         <div className="flex justify-center">
           <div className="relative w-[350px] h-[350px] md:w-[400px] md:h-[400px] rounded-full md:rounded-full rounded-3xl bg-gradient-to-br from-purple-600 via-[#4f46e5] to-indigo-500 shadow-2xl hover:shadow-3xl transition-all duration-500 flex items-center justify-center p-8 group">
-            {/* Radial Glow Effect */}
+            {/* Enhanced Radial Glow Effect */}
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-400/20 to-indigo-400/20 blur-xl group-hover:blur-2xl transition-all duration-500"></div>
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-300/10 to-pink-300/10 blur-2xl group-hover:blur-3xl transition-all duration-700"></div>
             
-            {/* AI Badge */}
-            <div className="absolute -top-2 -right-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full p-2 shadow-lg animate-pulse">
+            {/* AI Badge with Enhanced Animation */}
+            <div className="absolute -top-2 -right-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full p-2 shadow-lg animate-pulse hover:animate-bounce transition-all duration-300 hover:scale-110">
               <Brain className="h-4 w-4 text-white" />
             </div>
             
             {/* Content */}
             <div className="text-center text-white max-w-xs relative z-10">
               {/* Question Mark Icon with Enhanced Hover */}
-              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg border border-white/30 group-hover:scale-110 transition-transform duration-300">
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg border border-white/30 group-hover:scale-110 transition-transform duration-300 hover:shadow-2xl">
                 <HelpCircle className="h-8 w-8 text-white" />
               </div>
               
@@ -398,22 +441,40 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 Your leasehold management assistant
               </p>
               
-              {/* Enhanced Input Field */}
+              {/* Enhanced Input Field with Clear Button */}
               <div className="mb-6">
                 <div className="relative group">
                   <input
+                    ref={askInputRef}
                     type="text"
+                    value={askInput}
+                    onChange={(e) => setAskInput(e.target.value)}
                     placeholder="Ask me anything..."
                     className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition-all duration-200 text-sm pr-12"
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        // Handle submit
-                        console.log('Submit:', e.currentTarget.value);
-                      }
-                    }}
+                    onKeyPress={handleKeyPress}
                   />
-                  <button className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95">
-                    <ArrowRight className="h-4 w-4 text-white" />
+                  
+                  {/* Clear Button */}
+                  {askInput && (
+                    <button 
+                      onClick={() => setAskInput('')}
+                      className="absolute right-10 top-1/2 transform -translate-y-1/2 p-1 bg-white/20 hover:bg-white/30 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95"
+                    >
+                      <XIcon className="h-3 w-3 text-white" />
+                    </button>
+                  )}
+                  
+                  {/* Submit Button */}
+                  <button 
+                    onClick={() => handleAskSubmit(askInput)}
+                    disabled={!askInput.trim() || isSubmitting}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? (
+                      <Loader2 className="h-4 w-4 text-white animate-spin" />
+                    ) : (
+                      <ArrowRight className="h-4 w-4 text-white" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -421,38 +482,20 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               {/* Enhanced Example Prompts - Hidden on mobile */}
               <div className="space-y-2 hidden md:block">
                 <button 
-                  className="w-full px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-xs font-medium transition-all duration-200 border border-white/30 hover:border-white/50 hover:scale-105 active:scale-95"
-                  onClick={() => {
-                    const input = document.querySelector('input[placeholder="Ask me anything..."]') as HTMLInputElement;
-                    if (input) {
-                      input.value = 'Summarise inbox';
-                      input.focus();
-                    }
-                  }}
+                  className="w-full px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-xs font-medium transition-all duration-200 border border-white/30 hover:border-white/50 hover:scale-105 active:scale-95 hover:shadow-lg"
+                  onClick={() => handleExampleClick('Summarise inbox')}
                 >
                   Summarise inbox
                 </button>
                 <button 
-                  className="w-full px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-xs font-medium transition-all duration-200 border border-white/30 hover:border-white/50 hover:scale-105 active:scale-95"
-                  onClick={() => {
-                    const input = document.querySelector('input[placeholder="Ask me anything..."]') as HTMLInputElement;
-                    if (input) {
-                      input.value = 'Update directors';
-                      input.focus();
-                    }
-                  }}
+                  className="w-full px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-xs font-medium transition-all duration-200 border border-white/30 hover:border-white/50 hover:scale-105 active:scale-95 hover:shadow-lg"
+                  onClick={() => handleExampleClick('Update directors')}
                 >
                   Update directors
                 </button>
                 <button 
-                  className="w-full px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-xs font-medium transition-all duration-200 border border-white/30 hover:border-white/50 hover:scale-105 active:scale-95"
-                  onClick={() => {
-                    const input = document.querySelector('input[placeholder="Ask me anything..."]') as HTMLInputElement;
-                    if (input) {
-                      input.value = 'Show compliance';
-                      input.focus();
-                    }
-                  }}
+                  className="w-full px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-xs font-medium transition-all duration-200 border border-white/30 hover:border-white/50 hover:scale-105 active:scale-95 hover:shadow-lg"
+                  onClick={() => handleExampleClick('Show compliance')}
                 >
                   Show compliance
                 </button>
