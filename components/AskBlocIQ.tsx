@@ -132,6 +132,8 @@ export default function AskBlocIQ({
     aiContent: string;
     templateType: 'letter' | 'email' | 'notice';
     buildingName: string;
+    leaseholderName?: string | null;
+    unitNumber?: string | null;
   } | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -253,52 +255,76 @@ export default function AskBlocIQ({
 
   // Communication action handlers
   const handleCreateLetter = (aiContent: string) => {
-    // Extract building context if available
-    const buildingContext = messages.find(m => 
+    // Extract building and leaseholder context if available
+    const contextMessage = messages.find(m => 
       m.role === 'assistant' && m.content.includes('📌 Building:')
     )?.content || ''
     
-    const buildingMatch = buildingContext.match(/📌 Building: (.+)/)
+    const buildingMatch = contextMessage.match(/📌 Building: (.+)/)
     const buildingName = buildingMatch ? buildingMatch[1] : buildingName || 'General'
+    
+    const leaseholderMatch = contextMessage.match(/👤 Leaseholder: (.+)/)
+    const leaseholderName = leaseholderMatch ? leaseholderMatch[1] : null
+    
+    const unitMatch = contextMessage.match(/🏠 Unit: (.+)/)
+    const unitNumber = unitMatch ? unitMatch[1] : null
     
     setCommunicationModalData({
       aiContent,
       templateType: 'letter',
-      buildingName
+      buildingName,
+      leaseholderName,
+      unitNumber
     })
     setShowCommunicationModal(true)
   }
 
   const handleSendEmail = (aiContent: string) => {
-    // Extract building context
-    const buildingContext = messages.find(m => 
+    // Extract building and leaseholder context
+    const contextMessage = messages.find(m => 
       m.role === 'assistant' && m.content.includes('📌 Building:')
     )?.content || ''
     
-    const buildingMatch = buildingContext.match(/📌 Building: (.+)/)
+    const buildingMatch = contextMessage.match(/📌 Building: (.+)/)
     const buildingName = buildingMatch ? buildingMatch[1] : buildingName || 'General'
+    
+    const leaseholderMatch = contextMessage.match(/👤 Leaseholder: (.+)/)
+    const leaseholderName = leaseholderMatch ? leaseholderMatch[1] : null
+    
+    const unitMatch = contextMessage.match(/🏠 Unit: (.+)/)
+    const unitNumber = unitMatch ? unitMatch[1] : null
     
     setCommunicationModalData({
       aiContent,
       templateType: 'email',
-      buildingName
+      buildingName,
+      leaseholderName,
+      unitNumber
     })
     setShowCommunicationModal(true)
   }
 
   const handleSaveAsNotice = (aiContent: string) => {
-    // Extract building context
-    const buildingContext = messages.find(m => 
+    // Extract building and leaseholder context
+    const contextMessage = messages.find(m => 
       m.role === 'assistant' && m.content.includes('📌 Building:')
     )?.content || ''
     
-    const buildingMatch = buildingContext.match(/📌 Building: (.+)/)
+    const buildingMatch = contextMessage.match(/📌 Building: (.+)/)
     const buildingName = buildingMatch ? buildingMatch[1] : buildingName || 'General'
+    
+    const leaseholderMatch = contextMessage.match(/👤 Leaseholder: (.+)/)
+    const leaseholderName = leaseholderMatch ? leaseholderMatch[1] : null
+    
+    const unitMatch = contextMessage.match(/🏠 Unit: (.+)/)
+    const unitNumber = unitMatch ? unitMatch[1] : null
     
     setCommunicationModalData({
       aiContent,
       templateType: 'notice',
-      buildingName
+      buildingName,
+      leaseholderName,
+      unitNumber
     })
     setShowCommunicationModal(true)
   }
@@ -886,6 +912,8 @@ export default function AskBlocIQ({
           aiContent={communicationModalData.aiContent}
           templateType={communicationModalData.templateType}
           buildingName={communicationModalData.buildingName}
+          leaseholderName={communicationModalData.leaseholderName}
+          unitNumber={communicationModalData.unitNumber}
           onSave={handleSaveTemplate}
         />
       )}

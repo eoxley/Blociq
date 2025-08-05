@@ -168,6 +168,74 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // 🏠 Unit and Leaseholder Lookup
+    let unit = null;
+    let leaseholder = null;
+    
+    if (building_id || contextMetadata.building_id) {
+      console.log('🔍 Looking for unit and leaseholder references in prompt...');
+      
+      // Extract potential unit references from the prompt
+      const unitPatterns = [
+        /(?:flat|apartment|unit|flat)\s+(\d+)/gi,
+        /(\d+)\s+(?:flat|apartment|unit)/gi,
+        /flat\s+(\d+)/gi,
+        /apartment\s+(\d+)/gi,
+        /unit\s+(\d+)/gi
+      ];
+      
+      let unitNumber = null;
+      for (const pattern of unitPatterns) {
+        const match = prompt.match(pattern);
+        if (match) {
+          unitNumber = match[1];
+          console.log('🔍 Found unit reference:', unitNumber);
+          break;
+        }
+      }
+      
+      if (unitNumber) {
+        const buildingId = building_id || contextMetadata.building_id;
+        
+        // Look up the unit
+        const { data: unitData } = await supabase
+          .from("units")
+          .select("id, unit_number, leaseholder_id, building_id")
+          .eq("building_id", buildingId)
+          .ilike("unit_number", `%${unitNumber}%`)
+          .maybeSingle();
+
+        if (unitData) {
+          unit = unitData;
+          console.log('✅ Found unit:', unitData.unit_number);
+          
+          // Look up the leaseholder
+          if (unitData.leaseholder_id) {
+            const { data: leaseholderData } = await supabase
+              .from("leaseholders")
+              .select("id, name, email, phone")
+              .eq("id", unitData.leaseholder_id)
+              .maybeSingle();
+
+            if (leaseholderData) {
+              leaseholder = leaseholderData;
+              console.log('✅ Found leaseholder:', leaseholderData.name);
+              
+              // Add leaseholder context to building context
+              buildingContext += `Unit: ${unitData.unit_number}\nLeaseholder: ${leaseholderData.name}\nEmail: ${leaseholderData.email || 'Not provided'}\nPhone: ${leaseholderData.phone || 'Not provided'}\n\n`;
+              
+              // Update context metadata
+              contextMetadata.unit_number = unitData.unit_number;
+              contextMetadata.leaseholder_name = leaseholderData.name;
+              contextMetadata.leaseholder_id = leaseholderData.id;
+              contextMetadata.leaseholder_email = leaseholderData.email;
+              contextMetadata.leaseholder_phone = leaseholderData.phone;
+            }
+          }
+        }
+      }
+    }
+
     // 📁 Process uploaded files if any
     if (uploadedFiles.length > 0) {
       console.log('📁 Processing uploaded files...');
@@ -211,6 +279,11 @@ export async function POST(req: NextRequest) {
 
     // 📝 Final System Prompt Assembly
     systemPrompt += buildingContext;
+    
+    // Add leaseholder-specific context if available
+    if (leaseholder) {
+      systemPrompt += `\nYou are helping with ${unit?.unit_number || 'a unit'} in ${contextMetadata.buildingName || 'this building'}. The leaseholder is ${leaseholder.name}. Only share information that complies with UK GDPR and data protection regulations.`;
+    }
 
     console.log('📝 Calling OpenAI with context...');
     console.log('🏢 Building context length:', buildingContext.length);
@@ -240,7 +313,8 @@ export async function POST(req: NextRequest) {
         building_name: contextMetadata.buildingName || null,
         document_count: document_ids.length,
         context_type: contextType,
-        leaseholder_id: leaseholder_id || null,
+        leaseholder_id: leaseholder?.id || leaseholder_id || null,
+        unit_number: unit?.unit_number || null,
       })
       .select('id')
       .single();
@@ -258,11 +332,16 @@ export async function POST(req: NextRequest) {
       building_name: contextMetadata.buildingName || null,
       document_count: document_ids.length,
       files_uploaded: uploadedFiles.length,
+      leaseholder_id: leaseholder?.id || null,
+      leaseholder_name: leaseholder?.name || null,
+      unit_number: unit?.unit_number || null,
       context: {
         ...contextMetadata,
         has_building_context: !!buildingContext.trim(),
         context_length: buildingContext.length,
-        files_processed: uploadedFiles.length
+        files_processed: uploadedFiles.length,
+        has_leaseholder_context: !!leaseholder,
+        has_unit_context: !!unit
       }
     });
 
