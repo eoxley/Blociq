@@ -8,446 +8,431 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import OpenAI from 'openai';
+import { getSystemPrompt } from '@/lib/ai/systemPrompt';
+import { enhanceAIResponse, getResponseByTopic } from '@/lib/ai/responseEnhancer';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+interface ContextSection {
+  title: string;
+  content: string;
+  hasData: boolean;
+}
+
+interface BuildingContext {
+  building: any;
+  units: any[];
+  leaseholders: any[];
+  compliance: any[];
+  majorWorks: any[];
+  siteStaff: any[];
+  documents: any[];
+  events: any[];
+  relatedEmail?: any;
+  emails: any[];
+  tasks: any[];
+}
 
 export async function POST(req: NextRequest) {
   try {
+    const { question, buildingId, relatedEmailId, tone = 'default' } = await req.json();
+
+    if (!buildingId) {
+      return NextResponse.json({ 
+        error: 'Building ID is required' 
+      }, { status: 400 });
+    }
+
     const supabase = createRouteHandlerClient({ cookies });
     
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Get user session for authentication
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ 
+        error: 'Authentication required' 
+      }, { status: 401 });
     }
 
-    // Check if request is FormData (file upload) or JSON
-    const contentType = req.headers.get('content-type') || '';
-    let prompt = '';
-    let building_id = '';
-    let document_ids: string[] = [];
-    let leaseholder_id = '';
-    let contextType = 'general';
-    let contextId = '';
-    let uploadedFiles: File[] = [];
-
-    if (contentType.includes('multipart/form-data')) {
-      // Handle file upload
-      const formData = await req.formData();
-      prompt = formData.get('message') as string || formData.get('prompt') as string || '';
-      building_id = formData.get('building_id') as string || '';
-      contextType = formData.get('context_type') as string || formData.get('contextType') as string || 'general';
-      contextId = formData.get('context_id') as string || '';
-      
-      // Extract uploaded files
-      const files = formData.getAll('file') as File[];
-      uploadedFiles = files.filter(file => file instanceof File);
-      
-      console.log('📁 Received file upload:', uploadedFiles.length, 'files');
-    } else {
-      // Handle JSON request
-      const body = await req.json();
-      prompt = body.prompt || '';
-      building_id = body.building_id || '';
-      document_ids = body.document_ids || [];
-      leaseholder_id = body.leaseholder_id || '';
-      contextType = body.context_type || body.contextType || 'general';
-      contextId = body.context_id || '';
-    }
-
-    if (!prompt && uploadedFiles.length === 0) {
-      return NextResponse.json({ error: 'Missing prompt or files' }, { status: 400 });
-    }
-
-    let buildingContext = "";
-    let contextMetadata: any = {};
-    let systemPrompt = `You are BlocIQ, an AI assistant for UK leasehold property managers. Use British English. Be legally accurate and cite documents or founder guidance where relevant. If unsure, advise the user to refer to legal documents or professional advice.\n\n`;
-
-    // 🏢 Smart Building Detection from Prompt
-    if (!building_id) {
-      console.log('🔍 Auto-detecting building from prompt...');
-      
-      // Extract potential building names from the question
-      const buildingKeywords = ['house', 'court', 'building', 'apartment', 'residence', 'manor', 'gardens', 'heights', 'view', 'plaza'];
-      const words = prompt.toLowerCase().split(/\s+/);
-      
-      for (let i = 0; i < words.length - 1; i++) {
-        const potentialName = words.slice(i, i + 2).join(' '); // Check 2-word combinations
-        if (buildingKeywords.some(keyword => potentialName.includes(keyword))) {
-          console.log('🔍 Searching for building:', potentialName);
-          
-          const { data: building } = await supabase
-            .from('buildings')
-            .select('id, name, unit_count, address')
-            .ilike('name', `%${potentialName}%`)
-            .maybeSingle();
-          
-          if (building) {
-            contextMetadata.buildingDetected = true;
-            contextMetadata.buildingName = building.name;
-            contextMetadata.building_id = building.id;
-            contextMetadata.unit_count = building.unit_count;
-            buildingContext += `Building: ${building.name}\nUnits: ${building.unit_count || 'Unknown'}\nAddress: ${building.address || 'Not specified'}\n\n`;
-            
-            // Add unit count to system prompt for better context
-            systemPrompt += `\nThe building "${building.name}" contains ${building.unit_count || 'an unknown number of'} units.\n`;
-            
-            console.log('✅ Found building context:', building.name);
-            break;
-          }
-        }
-      }
-    }
-
-    // 🏢 Additional Context from Building ID
-    if (building_id) {
-      console.log('🏢 Fetching context for building ID:', building_id);
-      
-      const { data: building } = await supabase
-        .from('buildings')
-        .select('id, name, unit_count, address')
-        .eq('id', building_id)
-        .maybeSingle();
-
-      if (building) {
-        contextMetadata.buildingName = building.name;
-        contextMetadata.unit_count = building.unit_count;
-        buildingContext += `Building: ${building.name}\nUnits: ${building.unit_count || 'Unknown'}\nAddress: ${building.address || 'Not specified'}\n\n`;
-        
-        // Add unit count to system prompt for better context
-        systemPrompt += `\nThe building "${building.name}" contains ${building.unit_count || 'an unknown number of'} units.\n`;
-      }
-
-      // 📋 Building Todos
-      try {
-        const { data: todos } = await supabase
-          .from('building_todos')
-          .select('title, description, status, priority, due_date')
-          .eq('building_id', building_id)
-          .order('due_date', { ascending: true })
-          .limit(10);
-
-        if (todos && todos.length > 0) {
-          const todoContext = todos.map(todo =>
-            `- ${todo.title} (${todo.status}, ${todo.priority} priority, due: ${todo.due_date})`
-          ).join('\n');
-          buildingContext += `Open Tasks:\n${todoContext}\n\n`;
-          contextMetadata.todoCount = todos.length;
-        }
-      } catch (error) {
-        console.warn('Could not fetch building todos:', error);
-      }
-
-      // ⚠️ Compliance Issues
-      try {
-        const { data: compliance } = await supabase
-          .from('compliance_items')
-          .select('item_name, status, due_date, priority')
-          .eq('building_id', building_id)
-          .in('status', ['overdue', 'pending'])
-          .order('due_date', { ascending: true })
-          .limit(10);
-
-        if (compliance && compliance.length > 0) {
-          const complianceContext = compliance.map(item =>
-            `- ${item.item_name} (${item.status}, ${item.priority} priority, due: ${item.due_date})`
-          ).join('\n');
-          buildingContext += `Compliance Issues:\n${complianceContext}\n\n`;
-          contextMetadata.complianceCount = compliance.length;
-        }
-      } catch (error) {
-        console.warn('Could not fetch compliance items:', error);
-      }
-
-      // 📄 Key Documents
-      try {
-        const { data: documents } = await supabase
-          .from('building_documents')
-          .select('doc_type, doc_name, upload_date')
-          .eq('building_id', building_id)
-          .order('upload_date', { ascending: false })
-          .limit(5);
-
-        if (documents && documents.length > 0) {
-          const docContext = documents.map(doc =>
-            `- ${doc.doc_name} (${doc.doc_type}, uploaded: ${doc.upload_date})`
-          ).join('\n');
-          buildingContext += `Key Documents:\n${docContext}\n\n`;
-          contextMetadata.documentCount = documents.length;
-        }
-      } catch (error) {
-        console.warn('Could not fetch building documents:', error);
-      }
-    }
-
-    // 🏠 Smart Unit and Leaseholder Lookup
-    let unit = null;
-    let leaseholder = null;
+    // 🏗️ Build comprehensive context
+    const context = await buildCompleteContext(supabase, buildingId, relatedEmailId);
     
-    console.log('🔍 Looking for unit and leaseholder references in prompt...');
+    // 🧠 Generate AI response with enhanced context
+    const aiResponse = await generateAIResponse(question, context, tone);
     
-    // Enhanced unit detection patterns
-    const unitPatterns = [
-      /(?:flat|apartment|unit|flat)\s+(\d+[a-z]?)/gi,
-      /(\d+[a-z]?)\s+(?:flat|apartment|unit)/gi,
-      /flat\s+(\d+[a-z]?)/gi,
-      /apartment\s+(\d+[a-z]?)/gi,
-      /unit\s+(\d+[a-z]?)/gi,
-      /(\d+[a-z]?)\s+ashwood/gi,
-      /ashwood\s+(\d+[a-z]?)/gi
-    ];
-    
-    let unitNumber = null;
-    let detectedBuildingName = null;
-    
-    // First, try to extract building name from the prompt
-    const buildingKeywords = ['ashwood', 'house', 'court', 'building', 'apartment', 'residence', 'manor', 'gardens', 'heights', 'view', 'plaza'];
-    const words = prompt.toLowerCase().split(/\s+/);
-    
-    for (let i = 0; i < words.length - 1; i++) {
-      const potentialName = words.slice(i, i + 2).join(' '); // Check 2-word combinations
-      if (buildingKeywords.some(keyword => potentialName.includes(keyword))) {
-        console.log('🔍 Detected potential building name:', potentialName);
-        detectedBuildingName = potentialName;
-        break;
-      }
-    }
-    
-    // Extract unit number from prompt
-    for (const pattern of unitPatterns) {
-      const match = prompt.match(pattern);
-      if (match) {
-        unitNumber = match[1];
-        console.log('🔍 Found unit reference:', unitNumber);
-        break;
-      }
-    }
-    
-    if (unitNumber) {
-      console.log('🔍 Looking up unit:', unitNumber);
-      
-      // Determine which building to search in
-      let targetBuildingId = building_id || contextMetadata.building_id;
-      
-      // If we have a detected building name but no building_id, try to find the building
-      if (!targetBuildingId && detectedBuildingName) {
-        console.log('🔍 Searching for building by name:', detectedBuildingName);
-        const { data: buildingMatch } = await supabase
-          .from('buildings')
-          .select('id, name')
-          .ilike('name', `%${detectedBuildingName}%`)
-          .maybeSingle();
-        
-        if (buildingMatch) {
-          targetBuildingId = buildingMatch.id;
-          console.log('✅ Found building:', buildingMatch.name);
-        }
-      }
-      
-      if (targetBuildingId) {
-        // Look up the unit with enhanced query
-        const { data: unitData } = await supabase
-          .from("units")
-          .select(`
-            id, 
-            unit_number, 
-            leaseholder_id, 
-            building_id,
-            buildings(name)
-          `)
-          .eq("building_id", targetBuildingId)
-          .ilike("unit_number", `%${unitNumber}%`)
-          .maybeSingle();
-
-        if (unitData) {
-          unit = unitData;
-          const buildingName = unitData.buildings?.[0]?.name;
-          console.log('✅ Found unit:', unitData.unit_number, 'in', buildingName);
-          
-          // Look up the leaseholder
-          if (unitData.leaseholder_id) {
-            const { data: leaseholderData } = await supabase
-              .from("leaseholders")
-              .select("id, name, email, phone")
-              .eq("id", unitData.leaseholder_id)
-              .maybeSingle();
-
-            if (leaseholderData) {
-              leaseholder = leaseholderData;
-              console.log('✅ Found leaseholder:', leaseholderData.name);
-              
-              // Add leaseholder context to building context
-              buildingContext += `Unit: ${unitData.unit_number}\nLeaseholder: ${leaseholderData.name}\nEmail: ${leaseholderData.email || 'Not provided'}\nPhone: ${leaseholderData.phone || 'Not provided'}\n\n`;
-              
-              // Update context metadata
-              contextMetadata.unit_number = unitData.unit_number;
-              contextMetadata.leaseholder_name = leaseholderData.name;
-              contextMetadata.leaseholder_id = leaseholderData.id;
-              contextMetadata.leaseholder_email = leaseholderData.email;
-              contextMetadata.leaseholder_phone = leaseholderData.phone;
-              contextMetadata.building_name = buildingName;
-              
-              // Enhanced system prompt for leaseholder context
-              systemPrompt += `\nThe user is asking about unit ${unitData.unit_number} in ${buildingName || 'this building'}. The leaseholder is ${leaseholderData.name} (${leaseholderData.email || 'no email'}). Only share information that complies with UK GDPR and data protection regulations.`;
-            }
-          } else {
-            console.log('⚠️ Unit found but no leaseholder assigned');
-            buildingContext += `Unit: ${unitData.unit_number}\nLeaseholder: Not assigned\n\n`;
-            contextMetadata.unit_number = unitData.unit_number;
-            contextMetadata.building_name = buildingName;
-          }
-        } else {
-          console.log('❌ Unit not found:', unitNumber);
-          // Log failed match for debugging
-          contextMetadata.failed_unit_match = unitNumber;
-          contextMetadata.failed_building_search = detectedBuildingName;
-        }
-      } else {
-        console.log('❌ No building context available for unit lookup');
-        contextMetadata.failed_unit_match = unitNumber;
-        contextMetadata.missing_building_context = true;
-      }
-    }
-
-    // 📁 Process uploaded files if any
-    if (uploadedFiles.length > 0) {
-      console.log('📁 Processing uploaded files...');
-      
-      for (const file of uploadedFiles) {
-        try {
-          // Upload file to Supabase Storage
-          const fileName = `${Date.now()}-${file.name}`;
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('ai-documents')
-            .upload(fileName, file);
-
-          if (uploadError) {
-            console.error('❌ File upload error:', uploadError);
-            continue;
-          }
-
-          // Get public URL
-          const { data: { publicUrl } } = supabase.storage
-            .from('ai-documents')
-            .getPublicUrl(fileName);
-
-          // Extract text from file (simplified - in production you'd use a proper parser)
-          let fileContent = '';
-          if (file.type === 'text/plain') {
-            fileContent = await file.text();
-          } else {
-            // For PDF/DOCX, we'll add a placeholder (in production, use proper parsers)
-            fileContent = `[Document: ${file.name}] - Content extraction would be implemented here.`;
-          }
-
-          // Add file content to context
-          buildingContext += `\n📄 Document: ${file.name}\nContent: ${fileContent.substring(0, 1000)}${fileContent.length > 1000 ? '...' : ''}\n\n`;
-          
-          console.log('✅ File processed:', file.name);
-        } catch (error) {
-          console.error('❌ Error processing file:', file.name, error);
-        }
-      }
-    }
-
-    // 📎 Process document summaries if document_ids are provided
-    if (document_ids?.length > 0) {
-      console.log('📎 Fetching document summaries for:', document_ids.length, 'documents');
-      
-      const { data: summaries } = await supabase
-        .from("document_summaries")
-        .select("document_id, summary, file_name")
-        .in("document_id", document_ids);
-
-      if (summaries?.length) {
-        const docSummaryText = summaries.map(doc =>
-          `📎 ${doc.file_name}:\n${doc.summary}`
-        ).join("\n\n");
-
-        systemPrompt += `\n\nAttached Document Summaries:\n${docSummaryText}\n`;
-        
-        console.log('✅ Added', summaries.length, 'document summaries to prompt');
-        contextMetadata.document_count = document_ids.length;
-        contextMetadata.documents = summaries.map(s => s.file_name);
-      } else {
-        console.log('⚠️ No document summaries found for provided IDs');
-      }
-    }
-
-    // 📝 Final System Prompt Assembly
-    systemPrompt += buildingContext;
-
-    console.log('📝 Calling OpenAI with context...');
-    console.log('🏢 Building context length:', buildingContext.length);
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: prompt || 'Please analyze the uploaded documents.' }
-      ],
-      temperature: 0.3,
-      max_tokens: 1500,
-    });
-
-    const result = response.choices[0]?.message?.content || 'No response generated';
-
-    console.log('✅ OpenAI response received');
-
-    // 📊 Log to Supabase
-    const { data: logData, error: logError } = await supabase
-      .from('ai_logs')
-      .insert({
-        user_id: user.id,
-        question: prompt,
-        response: result,
-        building_id: building_id || contextMetadata.building_id || null,
-        building_name: contextMetadata.buildingName || null,
-        unit_count: contextMetadata.unit_count || null,
-        document_count: document_ids.length,
-        context_type: contextType,
-        context_id: contextId || null,
-        leaseholder_id: leaseholder?.id || leaseholder_id || null,
-        unit_number: unit?.unit_number || null,
-        metadata: contextMetadata.documents ? { documents: contextMetadata.documents } : null,
-      })
-      .select('id')
-      .single();
-
-    if (logError) {
-      console.warn('Could not log AI interaction:', logError);
-    }
+    // 🎯 Enhance response using our improved system
+    const enhancedResponse = enhanceAIResponse(aiResponse, detectTopic(question), tone);
 
     return NextResponse.json({
-      success: true,
-      result,
-      ai_log_id: logData?.id,
-      context_type: contextType,
-      context_id: contextId || null,
-      building_id: building_id || contextMetadata.building_id || null,
-      building_name: contextMetadata.buildingName || null,
-      unit_count: contextMetadata.unit_count || null,
-      document_count: document_ids.length,
-      files_uploaded: uploadedFiles.length,
-      leaseholder_id: leaseholder?.id || null,
-      leaseholder_name: leaseholder?.name || null,
-      unit_number: unit?.unit_number || null,
-      documents: contextMetadata.documents || [],
+      response: enhancedResponse.response,
+      nextSteps: enhancedResponse.nextSteps,
+      legalContext: enhancedResponse.legalContext,
+      keyPoints: enhancedResponse.keyPoints,
       context: {
-        ...contextMetadata,
-        has_building_context: !!buildingContext.trim(),
-        context_length: buildingContext.length,
-        files_processed: uploadedFiles.length,
-        has_leaseholder_context: !!leaseholder,
-        has_unit_context: !!unit
+        building: context.building?.name,
+        unitsCount: context.units?.length || 0,
+        complianceItems: context.compliance?.length || 0,
+        majorWorksCount: context.majorWorks?.length || 0,
+        documentsCount: context.documents?.length || 0,
+        eventsCount: context.events?.length || 0
       }
     });
 
-  } catch (error) {
-    console.error('❌ Error in ask-ai route:', error);
+  } catch (error: any) {
+    console.error('Ask AI Error:', error);
     return NextResponse.json({ 
-      error: 'Failed to process AI request',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to process request' 
     }, { status: 500 });
   }
+}
+
+async function buildCompleteContext(supabase: any, buildingId: string, relatedEmailId?: string): Promise<BuildingContext> {
+  const context: BuildingContext = {
+    building: null,
+    units: [],
+    leaseholders: [],
+    compliance: [],
+    majorWorks: [],
+    siteStaff: [],
+    documents: [],
+    events: [],
+    emails: [],
+    tasks: []
+  };
+
+  // 🏢 1. Building Information
+  try {
+    const { data: building, error } = await supabase
+      .from('buildings')
+      .select('*')
+      .eq('id', buildingId)
+      .single();
+
+    if (!error && building) {
+      context.building = building;
+    }
+  } catch (error) {
+    console.warn('Could not fetch building data:', error);
+  }
+
+  // 📦 2. Units and Leaseholders
+  try {
+    const { data: units, error } = await supabase
+      .from('units')
+      .select(`
+        *,
+        leaseholders (
+          id,
+          name,
+          email,
+          phone,
+          emergency_contact
+        )
+      `)
+      .eq('building_id', buildingId)
+      .order('unit_number');
+
+    if (!error && units) {
+      context.units = units;
+      context.leaseholders = units
+        .map(u => u.leaseholders)
+        .filter(Boolean);
+    }
+  } catch (error) {
+    console.warn('Could not fetch units/leaseholders:', error);
+  }
+
+  // ✅ 3. Compliance and Safety
+  try {
+    const { data: compliance, error } = await supabase
+      .from('building_compliance_assets')
+      .select(`
+        *,
+        compliance_assets (
+          name,
+          description,
+          recommended_frequency,
+          legal_requirement
+        )
+      `)
+      .eq('building_id', buildingId)
+      .order('next_due_date', { ascending: true });
+
+    if (!error && compliance) {
+      context.compliance = compliance;
+    }
+  } catch (error) {
+    console.warn('Could not fetch compliance data:', error);
+  }
+
+  // 🛠️ 4. Major Works Projects
+  try {
+    const { data: majorWorks, error } = await supabase
+      .from('major_works_projects')
+      .select('*')
+      .eq('building_id', buildingId)
+      .order('start_date', { ascending: false });
+
+    if (!error && majorWorks) {
+      context.majorWorks = majorWorks;
+    }
+  } catch (error) {
+    console.warn('Could not fetch major works:', error);
+  }
+
+  // 👷 5. Site Staff
+  try {
+    const { data: staff, error } = await supabase
+      .from('site_staff')
+      .select('*')
+      .eq('building_id', buildingId);
+
+    if (!error && staff) {
+      context.siteStaff = staff;
+    }
+  } catch (error) {
+    console.warn('Could not fetch site staff:', error);
+  }
+
+  // 📁 6. Building Documents
+  try {
+    const { data: documents, error } = await supabase
+      .from('building_documents')
+      .select('*')
+      .eq('building_id', buildingId)
+      .order('uploaded_at', { ascending: false });
+
+    if (!error && documents) {
+      context.documents = documents;
+    }
+  } catch (error) {
+    console.warn('Could not fetch documents:', error);
+  }
+
+  // 🗓️ 7. Calendar Events
+  try {
+    const { data: events, error } = await supabase
+      .from('property_events')
+      .select('*')
+      .eq('building_id', buildingId)
+      .gte('date', new Date().toISOString())
+      .order('date', { ascending: true });
+
+    if (!error && events) {
+      context.events = events;
+    }
+  } catch (error) {
+    console.warn('Could not fetch events:', error);
+  }
+
+  // 📬 8. Recent Emails
+  try {
+    const { data: emails, error } = await supabase
+      .from('incoming_emails')
+      .select('*')
+      .eq('building_id', buildingId)
+      .order('received_at', { ascending: false })
+      .limit(10);
+
+    if (!error && emails) {
+      context.emails = emails;
+    }
+  } catch (error) {
+    console.warn('Could not fetch emails:', error);
+  }
+
+  // 📋 9. Building Tasks
+  try {
+    const { data: tasks, error } = await supabase
+      .from('building_todos')
+      .select('*')
+      .eq('building_id', buildingId)
+      .in('status', ['pending', 'in_progress'])
+      .order('due_date', { ascending: true });
+
+    if (!error && tasks) {
+      context.tasks = tasks;
+    }
+  } catch (error) {
+    console.warn('Could not fetch tasks:', error);
+  }
+
+  // 📧 10. Related Email (if specified)
+  if (relatedEmailId) {
+    try {
+      const { data: email, error } = await supabase
+        .from('incoming_emails')
+        .select('*')
+        .eq('id', relatedEmailId)
+        .single();
+
+      if (!error && email) {
+        context.relatedEmail = email;
+      }
+    } catch (error) {
+      console.warn('Could not fetch related email:', error);
+    }
+  }
+
+  return context;
+}
+
+function formatContextSections(context: BuildingContext): string[] {
+  const sections: string[] = [];
+
+  // 🏢 Building Information
+  if (context.building) {
+    sections.push(`**Building Information:**
+- Name: ${context.building.name}
+- Structure Type: ${context.building.structure_type || 'Not specified'}
+- Address: ${context.building.address || 'Not specified'}
+- High Risk Building: ${context.building.is_hrb ? 'Yes' : 'No'}
+- Total Units: ${context.units?.length || 0}`);
+  } else {
+    sections.push('**Building Information:** Data not available');
+  }
+
+  // 📦 Units and Leaseholders
+  if (context.units?.length) {
+    const unitInfo = context.units.map(unit => {
+      const leaseholder = unit.leaseholders;
+      return `- Flat ${unit.unit_number}: ${leaseholder?.name || 'Leaseholder unknown'}${leaseholder?.email ? ` (${leaseholder.email})` : ''}`;
+    }).join('\n');
+    
+    sections.push(`**Units and Leaseholders:**
+${unitInfo}`);
+  } else {
+    sections.push('**Units and Leaseholders:** No data available');
+  }
+
+  // ✅ Compliance Status
+  if (context.compliance?.length) {
+    const overdue = context.compliance.filter(item => item.status === 'overdue');
+    const upcoming = context.compliance.filter(item => 
+      item.status === 'pending' && new Date(item.next_due_date) <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+    );
+    
+    sections.push(`**Compliance Status:**
+- Total Items: ${context.compliance.length}
+- Overdue: ${overdue.length}
+- Due within 30 days: ${upcoming.length}
+${overdue.length > 0 ? `- Overdue items: ${overdue.map(item => item.compliance_assets?.name).join(', ')}` : ''}`);
+  } else {
+    sections.push('**Compliance Status:** No compliance data available');
+  }
+
+  // 🛠️ Major Works
+  if (context.majorWorks?.length) {
+    const activeWorks = context.majorWorks.filter(work => work.status === 'in_progress');
+    sections.push(`**Major Works Projects:**
+- Total Projects: ${context.majorWorks.length}
+- Active Projects: ${activeWorks.length}
+${activeWorks.length > 0 ? `- Current: ${activeWorks.map(w => w.title).join(', ')}` : ''}`);
+  } else {
+    sections.push('**Major Works Projects:** No major works recorded');
+  }
+
+  // 👷 Site Staff
+  if (context.siteStaff?.length) {
+    const staffList = context.siteStaff.map(staff => `- ${staff.name} (${staff.role})`).join('\n');
+    sections.push(`**On-site Staff:**
+${staffList}`);
+  } else {
+    sections.push('**On-site Staff:** No site staff recorded');
+  }
+
+  // 📁 Documents
+  if (context.documents?.length) {
+    const recentDocs = context.documents.slice(0, 5);
+    sections.push(`**Building Documents:**
+- Total Documents: ${context.documents.length}
+- Recent: ${recentDocs.map(doc => doc.name).join(', ')}`);
+  } else {
+    sections.push('**Building Documents:** No documents uploaded');
+  }
+
+  // 🗓️ Events
+  if (context.events?.length) {
+    const upcomingEvents = context.events.slice(0, 3);
+    sections.push(`**Upcoming Events:**
+- Total Events: ${context.events.length}
+- Next: ${upcomingEvents.map(event => `${event.title} (${new Date(event.date).toLocaleDateString('en-GB')})`).join(', ')}`);
+  } else {
+    sections.push('**Upcoming Events:** No events scheduled');
+  }
+
+  // 📋 Tasks
+  if (context.tasks?.length) {
+    const urgentTasks = context.tasks.filter(task => 
+      new Date(task.due_date) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    );
+    sections.push(`**Building Tasks:**
+- Active Tasks: ${context.tasks.length}
+- Urgent (due within 7 days): ${urgentTasks.length}
+${urgentTasks.length > 0 ? `- Urgent: ${urgentTasks.map(task => task.title).join(', ')}` : ''}`);
+  } else {
+    sections.push('**Building Tasks:** No active tasks');
+  }
+
+  // 📧 Related Email
+  if (context.relatedEmail) {
+    sections.push(`**Related Email:**
+- Subject: ${context.relatedEmail.subject}
+- From: ${context.relatedEmail.from_email}
+- Received: ${new Date(context.relatedEmail.received_at).toLocaleDateString('en-GB')}`);
+  }
+
+  return sections;
+}
+
+async function generateAIResponse(question: string, context: BuildingContext, tone: string): Promise<string> {
+  const contextSections = formatContextSections(context);
+  const buildingContext = contextSections.join('\n\n');
+  
+  const systemPrompt = getSystemPrompt(buildingContext);
+  
+  const userPrompt = `**Question:** ${question}
+
+**Available Context:**
+${buildingContext}
+
+Please provide a comprehensive, professional response based on the available data. If any information is missing or unclear, explain this to the user. Use British English and reference relevant UK property management legislation where appropriate.`;
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    temperature: 0.3,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt }
+    ],
+  });
+
+  return response.choices[0].message.content || 'Unable to generate response';
+}
+
+function detectTopic(question: string): string {
+  const questionLower = question.toLowerCase();
+  
+  // Check for specific topics
+  if (questionLower.includes('c2') || questionLower.includes('eicr') || questionLower.includes('electrical')) {
+    return 'C2 Remedial Works (EICR)';
+  }
+  if (questionLower.includes('section 20') || questionLower.includes('consultation') || questionLower.includes('major works')) {
+    return 'Section 20 Threshold';
+  }
+  if (questionLower.includes('fire door') || questionLower.includes('tripartite')) {
+    return 'Fire Door Maintenance – Tripartite';
+  }
+  if (questionLower.includes('service charge') || questionLower.includes('fire alarm')) {
+    return 'Service Charge Dispute – Fire Alarm';
+  }
+  if (questionLower.includes('contractor') || questionLower.includes('risk assessment') || questionLower.includes('health and safety')) {
+    return 'Contractor Risk Assessments';
+  }
+  if (questionLower.includes('major works') || questionLower.includes('project preparation')) {
+    return 'Major Works Project Preparation';
+  }
+  
+  return '';
 } 
