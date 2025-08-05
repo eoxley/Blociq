@@ -1176,8 +1176,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             )}
           </div>
         </div>
+      </div>
 
-        {/* Today's Tasks Section */}
+      {/* Today's Tasks Section */}
         <div className="space-y-6">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Today's Tasks</h2>
