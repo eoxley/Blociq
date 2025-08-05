@@ -16,8 +16,8 @@ const navItems = [
   { label: "Buildings", icon: "🏢", href: "/buildings", comingSoon: false, description: "Property portfolio" },
   { label: "Compliance", icon: "🛡️", href: "/compliance", comingSoon: false, description: "Regulatory tracking" },
   { label: "Communications", icon: "📣", href: "/communications", comingSoon: false, description: "Letter & email templates" },
-
   { label: "Major Works", icon: "🔧", href: "/major-works", comingSoon: false, description: "Project management" },
+  { label: "AI History", icon: "🧠", href: "/ai-history", comingSoon: false, description: "Search past AI interactions" },
 ];
 
 export default function MobileNavigation() {

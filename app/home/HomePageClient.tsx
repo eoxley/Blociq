@@ -18,6 +18,7 @@ import BlocIQLogo from '@/components/BlocIQLogo'
 import { toast } from 'sonner'
 import { checkOutlookConnection, fetchOutlookEvents, getOutlookAuthUrl } from '@/lib/outlookUtils'
 import { getTimeBasedGreeting } from '@/utils/greeting'
+import CommunicationModal from '@/components/CommunicationModal'
 
 type PropertyEvent = {
   building: string
@@ -106,6 +107,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const [showChat, setShowChat] = useState(false)
   const [uploadedFiles, setUploadedFiles] = useState<Array<{file: File, id: string, name: string, size: number, type: string}>>([])
   const [isDragOver, setIsDragOver] = useState(false)
+  const [showCommunicationModal, setShowCommunicationModal] = useState(false)
+  const [communicationModalData, setCommunicationModalData] = useState<{
+    aiContent: string
+    templateType: 'letter' | 'email' | 'notice'
+    buildingName: string
+  } | null>(null)
   const askInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -609,6 +616,88 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     return '📎'
   }
 
+  // Communication action handlers
+  const handleCreateLetter = (aiContent: string) => {
+    // Extract building context if available
+    const buildingContext = messages.find(m => 
+      m.sender === 'ai' && m.text.includes('📌 Building:')
+    )?.text || ''
+    
+    const buildingMatch = buildingContext.match(/📌 Building: (.+)/)
+    const buildingName = buildingMatch ? buildingMatch[1] : 'General'
+    
+    setCommunicationModalData({
+      aiContent,
+      templateType: 'letter',
+      buildingName
+    })
+    setShowCommunicationModal(true)
+  }
+
+  const handleSendEmail = (aiContent: string) => {
+    // Extract building context
+    const buildingContext = messages.find(m => 
+      m.sender === 'ai' && m.text.includes('📌 Building:')
+    )?.text || ''
+    
+    const buildingMatch = buildingContext.match(/📌 Building: (.+)/)
+    const buildingName = buildingMatch ? buildingMatch[1] : 'General'
+    
+    setCommunicationModalData({
+      aiContent,
+      templateType: 'email',
+      buildingName
+    })
+    setShowCommunicationModal(true)
+  }
+
+  const handleSaveAsNotice = (aiContent: string) => {
+    // Extract building context
+    const buildingContext = messages.find(m => 
+      m.sender === 'ai' && m.text.includes('📌 Building:')
+    )?.text || ''
+    
+    const buildingMatch = buildingContext.match(/📌 Building: (.+)/)
+    const buildingName = buildingMatch ? buildingMatch[1] : 'General'
+    
+    setCommunicationModalData({
+      aiContent,
+      templateType: 'notice',
+      buildingName
+    })
+    setShowCommunicationModal(true)
+  }
+
+  const handleSaveTemplate = async (template: any) => {
+    try {
+      // Save to communication templates
+      const { data, error } = await supabase
+        .from('communication_templates')
+        .insert(template)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      toast.success(`${template.template_type.charAt(0).toUpperCase() + template.template_type.slice(1)} template saved!`)
+      
+      // Log the action
+      await supabase
+        .from('communications_log')
+        .insert({
+          action_type: `create_${template.template_type}`,
+          template_id: data.id,
+          building_name: template.building_name,
+          created_from_ai: true,
+          ai_content: template.content.substring(0, 500)
+        })
+
+    } catch (error) {
+      console.error('Error saving template:', error)
+      toast.error('Failed to save template')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Enhanced Hero Banner - BlocIQ Landing Page Style */}
@@ -830,17 +919,41 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                           ? 'bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white' 
                           : 'bg-white text-gray-900 border border-gray-200'
                       }`}>
-                        {/* Message Content */}
-                        <div className="text-sm whitespace-pre-line leading-relaxed mb-2">
-                          {message.text}
-                        </div>
-                        
-                        {/* Timestamp */}
-                        <div className={`text-xs ${
-                          message.sender === 'user' ? 'text-white/70' : 'text-gray-400'
-                        }`}>
-                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </div>
+                                               {/* Message Content */}
+                       <div className="text-sm whitespace-pre-line leading-relaxed mb-2">
+                         {message.text}
+                       </div>
+                       
+                       {/* Action Buttons for AI Responses */}
+                       {message.sender === 'ai' && (
+                         <div className="flex gap-2 mt-3 pt-3 border-t border-gray-200">
+                           <button
+                             onClick={() => handleCreateLetter(message.text)}
+                             className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                           >
+                             📝 Create Letter
+                           </button>
+                           <button
+                             onClick={() => handleSendEmail(message.text)}
+                             className="flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
+                           >
+                             📨 Send Email
+                           </button>
+                           <button
+                             onClick={() => handleSaveAsNotice(message.text)}
+                             className="flex items-center gap-1 px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors"
+                           >
+                             📄 Save as Notice
+                           </button>
+                         </div>
+                       )}
+                       
+                       {/* Timestamp */}
+                       <div className={`text-xs ${
+                         message.sender === 'user' ? 'text-white/70' : 'text-gray-400'
+                       }`}>
+                         {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                       </div>
                       </div>
                     </div>
                   ))}
@@ -1258,6 +1371,21 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           </div>
         </div>
       </div>
+
+      {/* Communication Modal */}
+      {showCommunicationModal && communicationModalData && (
+        <CommunicationModal
+          isOpen={showCommunicationModal}
+          onClose={() => {
+            setShowCommunicationModal(false)
+            setCommunicationModalData(null)
+          }}
+          aiContent={communicationModalData.aiContent}
+          templateType={communicationModalData.templateType}
+          buildingName={communicationModalData.buildingName}
+          onSave={handleSaveTemplate}
+        />
+      )}
     </div>
   )
 } 

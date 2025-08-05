@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Plus, Calendar, Loader2, Send, Upload, FileText, X, Check, Sparkles, File, FileText as FileTextIcon, Building2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
+import CommunicationModal from './CommunicationModal';
 
 type Message = {
   id: string;
@@ -126,6 +127,12 @@ export default function AskBlocIQ({
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const [usedMajorWorksData, setUsedMajorWorksData] = useState(false);
+  const [showCommunicationModal, setShowCommunicationModal] = useState(false);
+  const [communicationModalData, setCommunicationModalData] = useState<{
+    aiContent: string;
+    templateType: 'letter' | 'email' | 'notice';
+    buildingName: string;
+  } | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -243,6 +250,88 @@ export default function AskBlocIQ({
   const handleSuggestedPrompt = (prompt: string) => {
     setQuestion(prompt);
   };
+
+  // Communication action handlers
+  const handleCreateLetter = (aiContent: string) => {
+    // Extract building context if available
+    const buildingContext = messages.find(m => 
+      m.role === 'assistant' && m.content.includes('📌 Building:')
+    )?.content || ''
+    
+    const buildingMatch = buildingContext.match(/📌 Building: (.+)/)
+    const buildingName = buildingMatch ? buildingMatch[1] : buildingName || 'General'
+    
+    setCommunicationModalData({
+      aiContent,
+      templateType: 'letter',
+      buildingName
+    })
+    setShowCommunicationModal(true)
+  }
+
+  const handleSendEmail = (aiContent: string) => {
+    // Extract building context
+    const buildingContext = messages.find(m => 
+      m.role === 'assistant' && m.content.includes('📌 Building:')
+    )?.content || ''
+    
+    const buildingMatch = buildingContext.match(/📌 Building: (.+)/)
+    const buildingName = buildingMatch ? buildingMatch[1] : buildingName || 'General'
+    
+    setCommunicationModalData({
+      aiContent,
+      templateType: 'email',
+      buildingName
+    })
+    setShowCommunicationModal(true)
+  }
+
+  const handleSaveAsNotice = (aiContent: string) => {
+    // Extract building context
+    const buildingContext = messages.find(m => 
+      m.role === 'assistant' && m.content.includes('📌 Building:')
+    )?.content || ''
+    
+    const buildingMatch = buildingContext.match(/📌 Building: (.+)/)
+    const buildingName = buildingMatch ? buildingMatch[1] : buildingName || 'General'
+    
+    setCommunicationModalData({
+      aiContent,
+      templateType: 'notice',
+      buildingName
+    })
+    setShowCommunicationModal(true)
+  }
+
+  const handleSaveTemplate = async (template: any) => {
+    try {
+      // Save to communication templates
+      const { data, error } = await supabase
+        .from('communication_templates')
+        .insert(template)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      toast.success(`${template.template_type.charAt(0).toUpperCase() + template.template_type.slice(1)} template saved!`)
+      
+      // Log the action
+      await supabase
+        .from('communications_log')
+        .insert({
+          action_type: `create_${template.template_type}`,
+          template_id: data.id,
+          building_name: template.building_name,
+          created_from_ai: true,
+          ai_content: template.content.substring(0, 500)
+        })
+
+    } catch (error) {
+      console.error('Error saving template:', error)
+      toast.error('Failed to save template')
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -494,6 +583,30 @@ export default function AskBlocIQ({
                           <span className="text-xs opacity-70">({formatFileSize(file.size)})</span>
                         </div>
                       ))}
+                    </div>
+                  )}
+
+                  {/* Action Buttons for AI Responses */}
+                  {message.role === 'assistant' && (
+                    <div className="flex gap-2 mt-3 pt-3 border-t border-gray-200">
+                      <button
+                        onClick={() => handleCreateLetter(message.content)}
+                        className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                      >
+                        📝 Create Letter
+                      </button>
+                      <button
+                        onClick={() => handleSendEmail(message.content)}
+                        className="flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
+                      >
+                        📨 Send Email
+                      </button>
+                      <button
+                        onClick={() => handleSaveAsNotice(message.content)}
+                        className="flex items-center gap-1 px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors"
+                      >
+                        📄 Save as Notice
+                      </button>
                     </div>
                   )}
                 </div>
@@ -760,6 +873,21 @@ export default function AskBlocIQ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Communication Modal */}
+      {showCommunicationModal && communicationModalData && (
+        <CommunicationModal
+          isOpen={showCommunicationModal}
+          onClose={() => {
+            setShowCommunicationModal(false)
+            setCommunicationModalData(null)
+          }}
+          aiContent={communicationModalData.aiContent}
+          templateType={communicationModalData.templateType}
+          buildingName={communicationModalData.buildingName}
+          onSave={handleSaveTemplate}
+        />
       )}
     </div>
   );
