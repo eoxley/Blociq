@@ -39,27 +39,76 @@ export async function POST(req: NextRequest) {
     // Fetch email details if emailId is provided
     let emailData = { subject, body, categories, flag_status, from_email, building_id: null };
     if (emailId) {
-      const { data: email, error } = await supabase
-        .from('incoming_emails')
-        .select('subject, body_preview, body_full, categories, flag_status, from_email, building_id')
-        .eq('id', emailId)
-        .eq('user_id', user.id)
-        .single();
+      // First try to get the email from Microsoft Graph
+      try {
+        const graphResponse = await fetch(`https://graph.microsoft.com/v1.0/me/messages/${emailId}`, {
+          headers: {
+            'Authorization': `Bearer ${process.env.MICROSOFT_GRAPH_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
+        });
 
-      if (error) {
-        console.error('Error fetching email:', error);
-        return NextResponse.json({ error: 'Email not found' }, { status: 404 });
-      }
-      
-      if (email) {
-        emailData = {
-          subject: email.subject || undefined,
-          body: email.body_full || email.body_preview || undefined,
-          categories: email.categories || undefined,
-          flag_status: email.flag_status || undefined,
-          from_email: email.from_email || undefined,
-          building_id: email.building_id || null
-        };
+        if (graphResponse.ok) {
+          const graphEmail = await graphResponse.json();
+          emailData = {
+            subject: graphEmail.subject || undefined,
+            body: graphEmail.body?.content || undefined,
+            categories: graphEmail.categories || undefined,
+            flag_status: graphEmail.flag?.flagStatus || undefined,
+            from_email: graphEmail.from?.emailAddress?.address || undefined,
+            building_id: null // Will be determined from local database
+          };
+        } else {
+          // Fallback to Supabase if Graph fails
+          const { data: email, error } = await supabase
+            .from('incoming_emails')
+            .select('subject, body_preview, body_full, categories, flag_status, from_email, building_id')
+            .eq('id', emailId)
+            .eq('user_id', user.id)
+            .single();
+
+          if (error) {
+            console.error('Error fetching email:', error);
+            return NextResponse.json({ error: 'Email not found' }, { status: 404 });
+          }
+          
+          if (email) {
+            emailData = {
+              subject: email.subject || undefined,
+              body: email.body_full || email.body_preview || undefined,
+              categories: email.categories || undefined,
+              flag_status: email.flag_status || undefined,
+              from_email: email.from_email || undefined,
+              building_id: email.building_id || null
+            };
+          }
+        }
+      } catch (graphError) {
+        console.error('Error fetching from Graph, falling back to Supabase:', graphError);
+        
+        // Fallback to Supabase
+        const { data: email, error } = await supabase
+          .from('incoming_emails')
+          .select('subject, body_preview, body_full, categories, flag_status, from_email, building_id')
+          .eq('id', emailId)
+          .eq('user_id', user.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching email:', error);
+          return NextResponse.json({ error: 'Email not found' }, { status: 404 });
+        }
+        
+        if (email) {
+          emailData = {
+            subject: email.subject || undefined,
+            body: email.body_full || email.body_preview || undefined,
+            categories: email.categories || undefined,
+            flag_status: email.flag_status || undefined,
+            from_email: email.from_email || undefined,
+            building_id: email.building_id || null
+          };
+        }
       }
     }
 
