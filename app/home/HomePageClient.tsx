@@ -414,35 +414,30 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
         {/* 🧠 Enhanced Circular Ask BlocIQ Widget */}
         <div className="flex justify-center">
-          <div className="relative w-[350px] h-[350px] md:w-[400px] md:h-[400px] rounded-full md:rounded-full rounded-3xl bg-gradient-to-br from-purple-600 via-[#4f46e5] to-indigo-500 shadow-2xl hover:shadow-3xl transition-all duration-500 flex items-center justify-center p-8 group">
+          <div className="relative w-[400px] h-[400px] md:w-[500px] md:h-[500px] rounded-full md:rounded-full rounded-3xl bg-gradient-to-br from-purple-600 via-[#4f46e5] to-indigo-500 shadow-2xl hover:shadow-3xl transition-all duration-500 flex items-center justify-center p-12 group">
             {/* Enhanced Radial Glow Effect */}
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-400/20 to-indigo-400/20 blur-xl group-hover:blur-2xl transition-all duration-500"></div>
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-300/10 to-pink-300/10 blur-2xl group-hover:blur-3xl transition-all duration-700"></div>
             
-            {/* AI Badge with Enhanced Animation */}
-            <div className="absolute -top-2 -right-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full p-2 shadow-lg animate-pulse hover:animate-bounce transition-all duration-300 hover:scale-110">
-              <Brain className="h-4 w-4 text-white" />
-            </div>
-            
             {/* Content */}
-            <div className="text-center text-white max-w-xs relative z-10">
-              {/* Question Mark Icon with Enhanced Hover */}
-              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg border border-white/30 group-hover:scale-110 transition-transform duration-300 hover:shadow-2xl">
-                <HelpCircle className="h-8 w-8 text-white" />
+            <div className="text-center text-white max-w-sm relative z-10">
+              {/* Brain Icon with Pulse Animation */}
+              <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-lg border border-white/30 group-hover:scale-110 transition-transform duration-300 hover:shadow-2xl animate-pulse">
+                <Brain className="h-10 w-10 text-white" />
               </div>
               
               {/* Title */}
-              <h2 className="text-2xl font-bold mb-3 text-white drop-shadow-lg">
+              <h2 className="text-3xl font-bold mb-4 text-white drop-shadow-lg">
                 Ask BlocIQ
               </h2>
               
               {/* Subtitle */}
-              <p className="text-sm text-white/90 mb-6 leading-relaxed">
+              <p className="text-base text-white/90 mb-8 leading-relaxed">
                 Your leasehold management assistant
               </p>
               
               {/* Enhanced Input Field with Clear Button */}
-              <div className="mb-6">
+              <div className="mb-8">
                 <div className="relative group">
                   <input
                     ref={askInputRef}
@@ -450,7 +445,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                     value={askInput}
                     onChange={(e) => setAskInput(e.target.value)}
                     placeholder="Ask me anything..."
-                    className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition-all duration-200 text-sm pr-12"
+                    className="w-full px-5 py-4 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition-all duration-200 text-base pr-16"
                     onKeyPress={handleKeyPress}
                   />
                   
@@ -458,9 +453,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                   {askInput && (
                     <button 
                       onClick={() => setAskInput('')}
-                      className="absolute right-10 top-1/2 transform -translate-y-1/2 p-1 bg-white/20 hover:bg-white/30 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95"
+                      className="absolute right-12 top-1/2 transform -translate-y-1/2 p-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95"
                     >
-                      <XIcon className="h-3 w-3 text-white" />
+                      <XIcon className="h-4 w-4 text-white" />
                     </button>
                   )}
                   
@@ -468,33 +463,33 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                   <button 
                     onClick={() => handleAskSubmit(askInput)}
                     disabled={!askInput.trim() || isSubmitting}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2.5 bg-white/20 hover:bg-white/30 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? (
-                      <Loader2 className="h-4 w-4 text-white animate-spin" />
+                      <Loader2 className="h-5 w-5 text-white animate-spin" />
                     ) : (
-                      <ArrowRight className="h-4 w-4 text-white" />
+                      <ArrowRight className="h-5 w-5 text-white" />
                     )}
                   </button>
                 </div>
               </div>
               
               {/* Enhanced Example Prompts - Hidden on mobile */}
-              <div className="space-y-2 hidden md:block">
+              <div className="space-y-3 hidden md:block">
                 <button 
-                  className="w-full px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-xs font-medium transition-all duration-200 border border-white/30 hover:border-white/50 hover:scale-105 active:scale-95 hover:shadow-lg"
+                  className="w-full px-4 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-sm font-medium transition-all duration-200 border border-white/30 hover:border-white/50 hover:scale-105 active:scale-95 hover:shadow-lg"
                   onClick={() => handleExampleClick('Summarise inbox')}
                 >
                   Summarise inbox
                 </button>
                 <button 
-                  className="w-full px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-xs font-medium transition-all duration-200 border border-white/30 hover:border-white/50 hover:scale-105 active:scale-95 hover:shadow-lg"
+                  className="w-full px-4 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-sm font-medium transition-all duration-200 border border-white/30 hover:border-white/50 hover:scale-105 active:scale-95 hover:shadow-lg"
                   onClick={() => handleExampleClick('Update directors')}
                 >
                   Update directors
                 </button>
                 <button 
-                  className="w-full px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-xs font-medium transition-all duration-200 border border-white/30 hover:border-white/50 hover:scale-105 active:scale-95 hover:shadow-lg"
+                  className="w-full px-4 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-sm font-medium transition-all duration-200 border border-white/30 hover:border-white/50 hover:scale-105 active:scale-95 hover:shadow-lg"
                   onClick={() => handleExampleClick('Show compliance')}
                 >
                   Show compliance
