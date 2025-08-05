@@ -51,14 +51,43 @@ export async function POST(req: NextRequest) {
 
     console.log('🤖 Building unified prompt for:', contextType);
 
+    // 🏢 Building Context Detection
+    let detectedBuilding = null;
+    if (!actualBuildingId) {
+      // Extract potential building names from the question
+      const buildingKeywords = ['house', 'court', 'building', 'apartment', 'residence', 'manor', 'gardens', 'heights', 'view', 'plaza'];
+      const words = actualQuestion.toLowerCase().split(/\s+/);
+      
+      for (let i = 0; i < words.length - 1; i++) {
+        const potentialName = words.slice(i, i + 2).join(' '); // Check 2-word combinations
+        if (buildingKeywords.some(keyword => potentialName.includes(keyword))) {
+          console.log('🔍 Searching for building:', potentialName);
+          
+          const { data: buildings } = await supabase
+            .from('buildings')
+            .select('id, name, unit_count, address')
+            .ilike('name', `%${potentialName}%`)
+            .maybeSingle();
+          
+          if (buildings) {
+            detectedBuilding = buildings;
+            console.log('✅ Found building context:', buildings.name);
+            break;
+          }
+        }
+      }
+    }
+
     // Build unified prompt with all context
     const unifiedPrompt = await buildPrompt({
       question: actualQuestion,
       contextType,
-      buildingId: actualBuildingId,
+      buildingId: actualBuildingId || detectedBuilding?.id?.toString(),
       documentIds,
       emailThreadId,
-      manualContext,
+      manualContext: detectedBuilding ? 
+        `Building Context: ${detectedBuilding.name} has ${detectedBuilding.unit_count || 'unknown'} units. Address: ${detectedBuilding.address || 'Not specified'}.` : 
+        manualContext,
       leaseholderId,
       projectId,
     });
@@ -84,7 +113,7 @@ export async function POST(req: NextRequest) {
       question: actualQuestion,
       response: aiResponse,
       context_type: contextType,
-      building_id: actualBuildingId,
+      building_id: actualBuildingId || detectedBuilding?.id,
       document_ids: documentIds,
       leaseholder_id: leaseholderId,
       email_thread_id: emailThreadId,
@@ -95,13 +124,15 @@ export async function POST(req: NextRequest) {
       result: aiResponse,
       ai_log_id: logId,
       context_type: contextType,
-      building_id: actualBuildingId,
+      building_id: actualBuildingId || detectedBuilding?.id,
       document_count: documentIds.length,
       has_email_thread: !!emailThreadId,
       has_leaseholder: !!leaseholderId,
       context: {
         complianceUsed: contextType === 'compliance',
-        majorWorksUsed: contextType === 'major_works'
+        majorWorksUsed: contextType === 'major_works',
+        buildingDetected: !!detectedBuilding,
+        buildingName: detectedBuilding?.name
       }
     });
 

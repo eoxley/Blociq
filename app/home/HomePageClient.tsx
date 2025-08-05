@@ -475,7 +475,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             <div className="text-center text-white max-w-sm relative z-10">
               {/* Brain Icon with Pulse Animation - No Border */}
               <div className="w-20 h-20 flex items-center justify-center mx-auto mb-8 animate-pulse">
-                <Brain className="h-12 w-12 text-white drop-shadow-lg" />
+                <Brain className={`h-12 w-12 text-white drop-shadow-lg ${isSubmitting ? 'animate-bounce' : ''}`} />
               </div>
               
               {/* Title */}
@@ -530,7 +530,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               {messages.length > 0 && (
                 <button
                   onClick={() => setShowChat(!showChat)}
-                  className="flex items-center gap-2 mx-auto px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-sm font-medium transition-all duration-200 border border-white/30 hover:border-white/50"
+                  className="flex items-center gap-2 mx-auto px-4 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl text-sm font-medium transition-all duration-200 border border-white/30 hover:border-white/50 shadow-lg hover:shadow-xl"
                 >
                   {showChat ? (
                     <>
@@ -540,7 +540,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                   ) : (
                     <>
                       <ChevronDown className="h-4 w-4" />
-                      Show Chat ({messages.length} messages)
+                      View Chat ({messages.length} message{messages.length !== 1 ? 's' : ''})
                     </>
                   )}
                 </button>
@@ -550,29 +550,59 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             {/* Chat Interface */}
             {showChat && messages.length > 0 && (
               <div className="absolute inset-0 bg-white/95 backdrop-blur-sm rounded-full flex flex-col p-8">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Chat History</h3>
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full flex items-center justify-center">
+                      <Brain className="h-4 w-4 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">BlocIQ Assistant</h3>
+                      <p className="text-sm text-gray-500">{messages.length} message{messages.length !== 1 ? 's' : ''}</p>
+                    </div>
+                  </div>
                   <button
                     onClick={() => setShowChat(false)}
-                    className="text-gray-500 hover:text-gray-700"
+                    className="text-gray-500 hover:text-gray-700 transition-colors p-2 hover:bg-gray-100 rounded-lg"
                   >
                     <X className="h-5 w-5" />
                   </button>
                 </div>
                 
-                <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+                <div className="flex-1 overflow-y-auto space-y-4 mb-6 pr-2">
                   {messages.map((message, index) => (
                     <div key={index} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                      <div className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm ${
                         message.sender === 'user' 
                           ? 'bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white' 
-                          : 'bg-gray-100 text-gray-900 border border-gray-200'
+                          : 'bg-gray-50 text-gray-900 border border-gray-200'
                       }`}>
-                        <div className="text-sm whitespace-pre-line">{message.text}</div>
-                        <div className={`text-xs mt-1 ${
-                          message.sender === 'user' ? 'text-white/70' : 'text-gray-500'
+                        {/* Message Header */}
+                        <div className={`flex items-center gap-2 mb-2 ${
+                          message.sender === 'user' ? 'text-white/80' : 'text-gray-500'
                         }`}>
-                          {message.timestamp.toLocaleTimeString()}
+                          {message.sender === 'user' ? (
+                            <>
+                              <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
+                                <span className="text-xs font-medium">U</span>
+                              </div>
+                              <span className="text-xs font-medium">You</span>
+                            </>
+                          ) : (
+                            <>
+                              <div className="w-5 h-5 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full flex items-center justify-center">
+                                <Brain className="h-3 w-3 text-white" />
+                              </div>
+                              <span className="text-xs font-medium">BlocIQ</span>
+                            </>
+                          )}
+                          <span className="text-xs opacity-60">
+                            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        
+                        {/* Message Content */}
+                        <div className="text-sm whitespace-pre-line leading-relaxed">
+                          {message.text}
                         </div>
                       </div>
                     </div>
@@ -581,16 +611,37 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                   {/* Loading indicator */}
                   {isSubmitting && (
                     <div className="flex justify-start">
-                      <div className="bg-gray-100 border border-gray-200 rounded-2xl px-4 py-3">
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <Loader2 className="animate-spin h-4 w-4" />
-                          <span className="text-sm">Thinking...</span>
+                      <div className="bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 shadow-sm">
+                        <div className="flex items-center gap-3">
+                          <div className="w-5 h-5 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full flex items-center justify-center">
+                            <Brain className="h-3 w-3 text-white" />
+                          </div>
+                          <div className="flex items-center gap-2 text-gray-600">
+                            <Loader2 className="animate-spin h-4 w-4" />
+                            <span className="text-sm font-medium">Thinking...</span>
+                          </div>
                         </div>
                       </div>
                     </div>
                   )}
                   
                   <div ref={messagesEndRef} />
+                </div>
+                
+                {/* Quick Actions */}
+                <div className="border-t border-gray-200 pt-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                      <span>AI Assistant Active</span>
+                    </div>
+                    <button
+                      onClick={() => setMessages([])}
+                      className="text-xs text-gray-500 hover:text-gray-700 transition-colors px-3 py-1 hover:bg-gray-100 rounded-lg"
+                    >
+                      Clear Chat
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
