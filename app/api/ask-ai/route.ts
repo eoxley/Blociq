@@ -1,20 +1,13 @@
-// ✅ AUDIT COMPLETE [2025-01-15]
-// - Has try/catch wrapper
-// - Validates required fields (question, building_id)
-// - Uses proper Supabase queries with .eq() filters
-// - Returns meaningful error responses
-// - Includes authentication check
+// ✅ SMART BLOCIQ BUILDING CONTEXT API [2025-01-15]
+// - Enhanced building detection from prompts
+// - Comprehensive compliance and todo context
+// - Smart context assembly with metadata
+// - Proper error handling and logging
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import OpenAI from 'openai';
-import { buildPrompt } from '@/lib/buildPrompt';
-import { insertAiLog } from '@/lib/supabase/ai_logs';
-
-// Debug: Check if API key is loaded
-const apiKey = process.env.OPENAI_API_KEY;
-console.log('🔑 OpenAI API Key loaded:', apiKey ? `${apiKey.substring(0, 10)}...` : 'NOT FOUND');
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -28,126 +21,253 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await req.json();
-    const { 
-      prompt: userPrompt, // AskBlocIQ sends 'prompt' instead of 'question'
-      question, // Keep for backward compatibility
-      contextType = 'general',
-      buildingId, 
-      building_id, // AskBlocIQ sends 'building_id'
-      documentIds = [], 
-      emailThreadId, 
-      manualContext, 
-      leaseholderId,
-      projectId // New field for Major Works
-    } = body;
+    // Check if request is FormData (file upload) or JSON
+    const contentType = req.headers.get('content-type') || '';
+    let prompt = '';
+    let building_id = '';
+    let document_ids: string[] = [];
+    let leaseholder_id = '';
+    let contextType = 'general';
+    let uploadedFiles: File[] = [];
 
-    const actualQuestion = userPrompt || question;
-    const actualBuildingId = buildingId || building_id;
-
-    if (!actualQuestion) {
-      return NextResponse.json({ error: 'Question is required' }, { status: 400 });
+    if (contentType.includes('multipart/form-data')) {
+      // Handle file upload
+      const formData = await req.formData();
+      prompt = formData.get('prompt') as string || '';
+      building_id = formData.get('building_id') as string || '';
+      contextType = formData.get('contextType') as string || 'general';
+      
+      // Extract uploaded files
+      const files = formData.getAll('file') as File[];
+      uploadedFiles = files.filter(file => file instanceof File);
+      
+      console.log('📁 Received file upload:', uploadedFiles.length, 'files');
+    } else {
+      // Handle JSON request
+      const body = await req.json();
+      prompt = body.prompt || '';
+      building_id = body.building_id || '';
+      document_ids = body.document_ids || [];
+      leaseholder_id = body.leaseholder_id || '';
+      contextType = body.contextType || 'general';
     }
 
-    console.log('🤖 Building unified prompt for:', contextType);
+    if (!prompt && uploadedFiles.length === 0) {
+      return NextResponse.json({ error: 'Missing prompt or files' }, { status: 400 });
+    }
 
-    // 🏢 Building Context Detection
-    let detectedBuilding = null;
-    if (!actualBuildingId) {
+    let buildingContext = "";
+    let contextMetadata: any = {};
+    let systemPrompt = `You are BlocIQ, an AI assistant for UK leasehold property managers. Use British English. Be legally accurate and cite documents or founder guidance where relevant. If unsure, advise the user to refer to legal documents or professional advice.\n\n`;
+
+    // 🏢 Smart Building Detection from Prompt
+    if (!building_id) {
+      console.log('🔍 Auto-detecting building from prompt...');
+      
       // Extract potential building names from the question
       const buildingKeywords = ['house', 'court', 'building', 'apartment', 'residence', 'manor', 'gardens', 'heights', 'view', 'plaza'];
-      const words = actualQuestion.toLowerCase().split(/\s+/);
+      const words = prompt.toLowerCase().split(/\s+/);
       
       for (let i = 0; i < words.length - 1; i++) {
         const potentialName = words.slice(i, i + 2).join(' '); // Check 2-word combinations
         if (buildingKeywords.some(keyword => potentialName.includes(keyword))) {
           console.log('🔍 Searching for building:', potentialName);
           
-          const { data: buildings } = await supabase
+          const { data: building } = await supabase
             .from('buildings')
             .select('id, name, unit_count, address')
             .ilike('name', `%${potentialName}%`)
             .maybeSingle();
           
-          if (buildings) {
-            detectedBuilding = buildings;
-            console.log('✅ Found building context:', buildings.name);
+          if (building) {
+            contextMetadata.buildingDetected = true;
+            contextMetadata.buildingName = building.name;
+            contextMetadata.building_id = building.id;
+            buildingContext += `Building: ${building.name}\nUnits: ${building.unit_count || 'Unknown'}\nAddress: ${building.address || 'Not specified'}\n\n`;
+            console.log('✅ Found building context:', building.name);
             break;
           }
         }
       }
     }
 
-    // Build unified prompt with all context
-    const unifiedPrompt = await buildPrompt({
-      question: actualQuestion,
-      contextType,
-      buildingId: actualBuildingId || detectedBuilding?.id?.toString(),
-      documentIds,
-      emailThreadId,
-      manualContext: detectedBuilding ? 
-        `Building Context: ${detectedBuilding.name} has ${detectedBuilding.unit_count || 'unknown'} units. Address: ${detectedBuilding.address || 'Not specified'}.` : 
-        manualContext,
-      leaseholderId,
-      projectId,
-    });
+    // 🏢 Additional Context from Building ID
+    if (building_id) {
+      console.log('🏢 Fetching context for building ID:', building_id);
+      
+      const { data: building } = await supabase
+        .from('buildings')
+        .select('id, name, unit_count, address')
+        .eq('id', building_id)
+        .maybeSingle();
 
-    console.log('📝 Prompt built, calling OpenAI...');
-    console.log('🔑 Using API key:', apiKey ? `${apiKey.substring(0, 10)}...` : 'NOT FOUND');
+      if (building) {
+        contextMetadata.buildingName = building.name;
+        buildingContext += `Building: ${building.name}\nUnits: ${building.unit_count || 'Unknown'}\nAddress: ${building.address || 'Not specified'}\n\n`;
+      }
 
-    // Call OpenAI with proper system + user message format
-    const completion = await openai.chat.completions.create({
+      // 📋 Building Todos
+      try {
+        const { data: todos } = await supabase
+          .from('building_todos')
+          .select('title, description, status, priority, due_date')
+          .eq('building_id', building_id)
+          .order('due_date', { ascending: true })
+          .limit(10);
+
+        if (todos && todos.length > 0) {
+          const todoContext = todos.map(todo =>
+            `- ${todo.title} (${todo.status}, ${todo.priority} priority, due: ${todo.due_date})`
+          ).join('\n');
+          buildingContext += `Open Tasks:\n${todoContext}\n\n`;
+          contextMetadata.todoCount = todos.length;
+        }
+      } catch (error) {
+        console.warn('Could not fetch building todos:', error);
+      }
+
+      // ⚠️ Compliance Issues
+      try {
+        const { data: compliance } = await supabase
+          .from('compliance_items')
+          .select('item_name, status, due_date, priority')
+          .eq('building_id', building_id)
+          .in('status', ['overdue', 'pending'])
+          .order('due_date', { ascending: true })
+          .limit(10);
+
+        if (compliance && compliance.length > 0) {
+          const complianceContext = compliance.map(item =>
+            `- ${item.item_name} (${item.status}, ${item.priority} priority, due: ${item.due_date})`
+          ).join('\n');
+          buildingContext += `Compliance Issues:\n${complianceContext}\n\n`;
+          contextMetadata.complianceCount = compliance.length;
+        }
+      } catch (error) {
+        console.warn('Could not fetch compliance items:', error);
+      }
+
+      // 📄 Key Documents
+      try {
+        const { data: documents } = await supabase
+          .from('building_documents')
+          .select('doc_type, doc_name, upload_date')
+          .eq('building_id', building_id)
+          .order('upload_date', { ascending: false })
+          .limit(5);
+
+        if (documents && documents.length > 0) {
+          const docContext = documents.map(doc =>
+            `- ${doc.doc_name} (${doc.doc_type}, uploaded: ${doc.upload_date})`
+          ).join('\n');
+          buildingContext += `Key Documents:\n${docContext}\n\n`;
+          contextMetadata.documentCount = documents.length;
+        }
+      } catch (error) {
+        console.warn('Could not fetch building documents:', error);
+      }
+    }
+
+    // 📁 Process uploaded files if any
+    if (uploadedFiles.length > 0) {
+      console.log('📁 Processing uploaded files...');
+      
+      for (const file of uploadedFiles) {
+        try {
+          // Upload file to Supabase Storage
+          const fileName = `${Date.now()}-${file.name}`;
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('ai-documents')
+            .upload(fileName, file);
+
+          if (uploadError) {
+            console.error('❌ File upload error:', uploadError);
+            continue;
+          }
+
+          // Get public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('ai-documents')
+            .getPublicUrl(fileName);
+
+          // Extract text from file (simplified - in production you'd use a proper parser)
+          let fileContent = '';
+          if (file.type === 'text/plain') {
+            fileContent = await file.text();
+          } else {
+            // For PDF/DOCX, we'll add a placeholder (in production, use proper parsers)
+            fileContent = `[Document: ${file.name}] - Content extraction would be implemented here.`;
+          }
+
+          // Add file content to context
+          buildingContext += `\n📄 Document: ${file.name}\nContent: ${fileContent.substring(0, 1000)}${fileContent.length > 1000 ? '...' : ''}\n\n`;
+          
+          console.log('✅ File processed:', file.name);
+        } catch (error) {
+          console.error('❌ Error processing file:', file.name, error);
+        }
+      }
+    }
+
+    // 📝 Final System Prompt Assembly
+    systemPrompt += buildingContext;
+
+    console.log('📝 Calling OpenAI with context...');
+    console.log('🏢 Building context length:', buildingContext.length);
+
+    const response = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
-        { 
-          role: 'system', 
-          content: `You are BlocIQ, an AI assistant for UK leasehold property managers. Use British English. Be legally accurate and cite documents or founder guidance where relevant. If unsure, advise the user to refer to legal documents or professional advice.`
-        },
-        { 
-          role: 'user', 
-          content: unifiedPrompt 
-        }
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: prompt || 'Please analyze the uploaded documents.' }
       ],
       temperature: 0.3,
       max_tokens: 1500,
     });
 
-    const aiResponse = completion.choices[0]?.message?.content || 'No response generated';
+    const result = response.choices[0]?.message?.content || 'No response generated';
 
     console.log('✅ OpenAI response received');
 
-    // Log the AI interaction
-    const logId = await insertAiLog({
-      user_id: user.id,
-      question: actualQuestion,
-      response: aiResponse,
-      context_type: contextType,
-      building_id: actualBuildingId || detectedBuilding?.id,
-      document_ids: documentIds,
-      leaseholder_id: leaseholderId,
-      email_thread_id: emailThreadId,
-    });
+    // 📊 Log to Supabase
+    const { data: logData, error: logError } = await supabase
+      .from('ai_logs')
+      .insert({
+        user_id: user.id,
+        question: prompt,
+        response: result,
+        building_id: building_id || contextMetadata.building_id || null,
+        building_name: contextMetadata.buildingName || null,
+        document_count: document_ids.length,
+        context_type: contextType,
+        leaseholder_id: leaseholder_id || null,
+      })
+      .select('id')
+      .single();
 
-    return NextResponse.json({ 
+    if (logError) {
+      console.warn('Could not log AI interaction:', logError);
+    }
+
+    return NextResponse.json({
       success: true,
-      result: aiResponse,
-      ai_log_id: logId,
+      result,
+      ai_log_id: logData?.id,
       context_type: contextType,
-      building_id: actualBuildingId || detectedBuilding?.id,
-      document_count: documentIds.length,
-      has_email_thread: !!emailThreadId,
-      has_leaseholder: !!leaseholderId,
+      building_id: building_id || contextMetadata.building_id || null,
+      building_name: contextMetadata.buildingName || null,
+      document_count: document_ids.length,
+      files_uploaded: uploadedFiles.length,
       context: {
-        complianceUsed: contextType === 'compliance',
-        majorWorksUsed: contextType === 'major_works',
-        buildingDetected: !!detectedBuilding,
-        buildingName: detectedBuilding?.name
+        ...contextMetadata,
+        has_building_context: !!buildingContext.trim(),
+        context_length: buildingContext.length,
+        files_processed: uploadedFiles.length
       }
     });
 
   } catch (error) {
     console.error('❌ Error in ask-ai route:', error);
-    console.error('🔑 API Key in error context:', apiKey ? `${apiKey.substring(0, 10)}...` : 'NOT FOUND');
     return NextResponse.json({ 
       error: 'Failed to process AI request',
       details: error instanceof Error ? error.message : 'Unknown error'
