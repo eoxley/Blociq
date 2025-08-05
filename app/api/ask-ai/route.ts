@@ -28,14 +28,16 @@ export async function POST(req: NextRequest) {
     let document_ids: string[] = [];
     let leaseholder_id = '';
     let contextType = 'general';
+    let contextId = '';
     let uploadedFiles: File[] = [];
 
     if (contentType.includes('multipart/form-data')) {
       // Handle file upload
       const formData = await req.formData();
-      prompt = formData.get('prompt') as string || '';
+      prompt = formData.get('message') as string || formData.get('prompt') as string || '';
       building_id = formData.get('building_id') as string || '';
-      contextType = formData.get('contextType') as string || 'general';
+      contextType = formData.get('context_type') as string || formData.get('contextType') as string || 'general';
+      contextId = formData.get('context_id') as string || '';
       
       // Extract uploaded files
       const files = formData.getAll('file') as File[];
@@ -49,7 +51,8 @@ export async function POST(req: NextRequest) {
       building_id = body.building_id || '';
       document_ids = body.document_ids || [];
       leaseholder_id = body.leaseholder_id || '';
-      contextType = body.contextType || 'general';
+      contextType = body.context_type || body.contextType || 'general';
+      contextId = body.context_id || '';
     }
 
     if (!prompt && uploadedFiles.length === 0) {
@@ -393,6 +396,7 @@ export async function POST(req: NextRequest) {
         building_name: contextMetadata.buildingName || null,
         document_count: document_ids.length,
         context_type: contextType,
+        context_id: contextId || null,
         leaseholder_id: leaseholder?.id || leaseholder_id || null,
         unit_number: unit?.unit_number || null,
         metadata: contextMetadata.documents ? { documents: contextMetadata.documents } : null,
@@ -409,6 +413,7 @@ export async function POST(req: NextRequest) {
       result,
       ai_log_id: logData?.id,
       context_type: contextType,
+      context_id: contextId || null,
       building_id: building_id || contextMetadata.building_id || null,
       building_name: contextMetadata.buildingName || null,
       document_count: document_ids.length,
