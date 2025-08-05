@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useLiveInbox } from '@/hooks/useLiveInbox';
+import { useOutlookInbox } from '@/hooks/useOutlookInbox';
 import EnhancedEmailDetailView from './components/EnhancedEmailDetailView';
 import SimpleFolderSidebar from './components/SimpleFolderSidebar';
 import TriageModal from './components/TriageModal';
@@ -24,11 +24,12 @@ export default function InboxClient() {
     syncing,
     error,
     newEmailCount,
+    inboxInfo,
     markAsRead,
     markAsHandled,
     flagEmail,
     refreshEmails
-  } = useLiveInbox();
+  } = useOutlookInbox();
 
   const [search, setSearch] = useState('');
   const [selectedFolder, setSelectedFolder] = useState('inbox');
@@ -44,18 +45,18 @@ export default function InboxClient() {
   
 
 
-  // Generate folders based on email data
+  // Generate folders based on email data and Outlook inbox info
   const folders = [
     {
       id: 'inbox',
       label: 'Inbox',
-      count: emails.length,
+      count: inboxInfo?.totalCount || emails.length,
       icon: '📥'
     },
     {
       id: 'unread',
       label: 'Unread',
-      count: emails.filter(e => e.unread || !e.is_read).length,
+      count: inboxInfo?.unreadCount || emails.filter(e => e.unread || !e.is_read).length,
       icon: '📬'
     },
     {
@@ -258,9 +259,19 @@ export default function InboxClient() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-semibold">📨 Inbox</h1>
+          <h1 className="text-2xl font-semibold">📨 Outlook Inbox</h1>
+          {inboxInfo && (
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm font-medium">
+                {inboxInfo.totalCount} total
+              </span>
+              <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-sm font-medium">
+                {inboxInfo.unreadCount} unread
+              </span>
+            </div>
+          )}
           {newEmailCount > 0 && (
-            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm font-medium">
+            <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-medium">
               {newEmailCount} new
             </span>
           )}
@@ -281,210 +292,7 @@ export default function InboxClient() {
             <span>AI Triage</span>
           </button>
           
-          {/* Test Emails Button */}
-          <button
-            onClick={async () => {
-              try {
-                const response = await fetch('/api/add-test-emails', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                });
-                
-                if (response.ok) {
-                  const result = await response.json();
-                  toast.success(`Added ${result.data.added} test emails`);
-                  // Refresh emails
-                  await refreshEmails();
-                } else {
-                  const error = await response.json();
-                  toast.error(error.message || 'Failed to add test emails');
-                }
-              } catch (error) {
-                console.error('Error adding test emails:', error);
-                toast.error('Failed to add test emails');
-              }
-            }}
-            className="flex items-center gap-2 bg-white border border-green-300 rounded-lg px-3 py-2 text-sm hover:bg-green-50 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Test Emails</span>
-          </button>
-          
-          {/* Debug Button */}
-          <button
-            onClick={async () => {
-              try {
-                const response = await fetch('/api/test-db');
-                const result = await response.json();
-                console.log('Debug info:', result);
-                toast.success(`DB: ${result.total_emails} total, ${result.emails_with_user_id} with user_id`);
-              } catch (error) {
-                console.error('Error checking debug info:', error);
-                toast.error('Failed to get debug info');
-              }
-            }}
-            className="flex items-center gap-2 bg-white border border-blue-300 rounded-lg px-3 py-2 text-sm hover:bg-blue-50 transition-colors"
-          >
-            <span>🔍</span>
-            <span>Debug</span>
-          </button>
-          
-          {/* Email Debug Button */}
-          <button
-            onClick={async () => {
-              try {
-                const response = await fetch('/api/debug-emails');
-                const result = await response.json();
-                console.log('Email Debug:', result);
-                
-                if (result.success) {
-                  const { emailStats, analysis } = result;
-                  let message = `Emails: ${emailStats.total} total`;
-                  message += ` | Real: ${emailStats.real}`;
-                  message += ` | Test: ${emailStats.test}`;
-                  message += ` | Dummy: ${emailStats.dummy}`;
-                  message += ` | Source: ${analysis.primarySource}`;
-                  
-                  toast.success(message);
-                } else {
-                  toast.error(result.message || 'Failed to check emails');
-                }
-              } catch (error) {
-                console.error('Email debug error:', error);
-                toast.error('Failed to check email status');
-              }
-            }}
-            className="flex items-center gap-2 bg-white border border-green-300 rounded-lg px-3 py-2 text-sm hover:bg-green-50 transition-colors"
-          >
-            <span>📧</span>
-            <span>Email Debug</span>
-          </button>
-          
-          {/* Test Email Sync Button */}
-          <button
-            onClick={async () => {
-              try {
-                const response = await fetch('/api/test-email-sync');
-                const result = await response.json();
-                console.log('Email Sync Test:', result);
-                
-                if (result.success) {
-                  const { user, outlook, emails, sync } = result.data;
-                  let message = `User: ${user.email}`;
-                  message += ` | Outlook: ${outlook.connected ? '✅ Connected' : '❌ Not Connected'}`;
-                  message += ` | Emails: ${emails.total} total, ${emails.recent} recent`;
-                  if (emails.latest) {
-                    message += ` | Latest: ${emails.latest.subject}`;
-                  }
-                  
-                  toast.success(message);
-                } else {
-                  toast.error(result.message || 'Failed to test email sync');
-                }
-              } catch (error) {
-                console.error('Email sync test error:', error);
-                toast.error('Failed to test email sync');
-              }
-            }}
-            className="flex items-center gap-2 bg-white border border-blue-300 rounded-lg px-3 py-2 text-sm hover:bg-blue-50 transition-colors"
-          >
-            <span>🔄</span>
-            <span>Test Sync</span>
-          </button>
-          
-          {/* Outlook Status Button */}
-          <button
-            onClick={async () => {
-              try {
-                const response = await fetch('/api/debug-outlook-status');
-                const result = await response.json();
-                console.log('Outlook Status:', result);
-                
-                if (result.success) {
-                  const { tokenStatus, emailStatus, envStatus } = result;
-                  
-                  let message = `Status: ${tokenStatus.exists ? '✅ Connected' : '❌ Not Connected'}`;
-                  if (tokenStatus.exists) {
-                    message += ` (${tokenStatus.email})`;
-                    message += ` | Emails: ${emailStatus.count}`;
-                    if (tokenStatus.isExpired) {
-                      message += ' | ⚠️ Token Expired';
-                    }
-                  }
-                  
-                  toast.success(message);
-                } else {
-                  toast.error(result.message || 'Failed to check status');
-                }
-              } catch (error) {
-                console.error('Outlook status error:', error);
-                toast.error('Failed to check Outlook status');
-              }
-            }}
-            className="flex items-center gap-2 bg-white border border-purple-300 rounded-lg px-3 py-2 text-sm hover:bg-purple-50 transition-colors"
-          >
-            <span>📧</span>
-            <span>Outlook Status</span>
-          </button>
-          
-          {/* Connect Outlook Button */}
-          <button
-            onClick={async () => {
-              try {
-                const { data: { user }, error } = await supabase.auth.getUser();
-                if (user) {
-                  console.log('👤 Your User ID:', user.id);
-                  toast.success(`User ID: ${user.id}`);
-                } else {
-                  console.log('❌ No user found');
-                  toast.error('No user found');
-                }
-              } catch (error) {
-                console.error('Error getting user ID:', error);
-                toast.error('Failed to get user ID');
-              }
-            }}
-            className="flex items-center gap-2 bg-white border border-orange-300 rounded-lg px-3 py-2 text-sm hover:bg-orange-50 transition-colors"
-          >
-            <span>👤</span>
-            <span>Get User ID</span>
-          </button>
-          
-          <button
-            onClick={async () => {
-              try {
-                const response = await fetch('/api/connect-outlook', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                  if (result.connected) {
-                    toast.success(`Already connected to ${result.email}`);
-                  } else if (result.authUrl) {
-                    // Open Microsoft OAuth in new window
-                    window.open(result.authUrl, '_blank', 'width=600,height=700');
-                    toast.success('Opening Microsoft login...');
-                  }
-                } else {
-                  toast.error(result.message || 'Failed to connect Outlook');
-                }
-              } catch (error) {
-                console.error('Error connecting Outlook:', error);
-                toast.error('Failed to connect Outlook');
-              }
-            }}
-            className="flex items-center gap-2 bg-white border border-green-300 rounded-lg px-3 py-2 text-sm hover:bg-green-50 transition-colors"
-          >
-            <span>🔗</span>
-            <span>Connect Outlook</span>
-          </button>
+
           {/* Compose New Email Button */}
           <button
             onClick={() => setShowComposeModal(true)}
@@ -496,17 +304,10 @@ export default function InboxClient() {
         </div>
         <div className="flex items-center gap-4 text-sm">
           <div className="flex items-center gap-2">
-            {isRealTimeEnabled ? (
-              <div className="flex items-center gap-1 text-green-600">
-                <Wifi className="h-4 w-4" />
-                <span className="font-medium">Live</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1 text-yellow-500">
-                <WifiOff className="h-4 w-4" />
-                <span>Offline</span>
-              </div>
-            )}
+            <div className="flex items-center gap-1 text-green-600">
+              <Wifi className="h-4 w-4" />
+              <span className="font-medium">Live Outlook</span>
+            </div>
           </div>
           <button
             onClick={manualSync}
@@ -518,7 +319,7 @@ export default function InboxClient() {
             ) : (
               <RefreshCw className="h-4 w-4" />
             )}
-            {syncing ? 'Syncing...' : 'Manual Sync'}
+            {syncing ? 'Syncing...' : 'Refresh Outlook'}
           </button>
         </div>
       </div>
@@ -529,8 +330,47 @@ export default function InboxClient() {
           <div className="flex items-center gap-3">
             <AlertTriangle className="h-5 w-5 text-red-600" />
             <div>
-              <h3 className="font-medium text-red-800">Error loading emails</h3>
-              <p className="text-sm text-red-600">{error}</p>
+              <h3 className="font-medium text-red-800">
+                {error === 'Outlook not connected' ? 'Outlook Connection Required' : 'Error loading emails'}
+              </h3>
+              <p className="text-sm text-red-600">
+                {error === 'Outlook not connected' 
+                  ? 'Please connect your Outlook account to view emails. Click "Connect Outlook" below to get started.'
+                  : error}
+                </p>
+              {error === 'Outlook not connected' && (
+                <button
+                  onClick={async () => {
+                    try {
+                      const response = await fetch('/api/connect-outlook', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                      });
+                      
+                      const result = await response.json();
+                      
+                      if (result.success) {
+                        if (result.connected) {
+                          toast.success(`Already connected to ${result.email}`);
+                        } else if (result.authUrl) {
+                          window.open(result.authUrl, '_blank', 'width=600,height=700');
+                          toast.success('Opening Microsoft login...');
+                        }
+                      } else {
+                        toast.error(result.message || 'Failed to connect Outlook');
+                      }
+                    } catch (error) {
+                      console.error('Error connecting Outlook:', error);
+                      toast.error('Failed to connect Outlook');
+                    }
+                  }}
+                  className="mt-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors"
+                >
+                  Connect Outlook
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -575,7 +415,7 @@ export default function InboxClient() {
               <div className="flex items-center justify-center py-8">
                 <div className="flex items-center gap-3 text-gray-500">
                   <RefreshCw className="h-5 w-5 animate-spin" />
-                  <span>Loading emails...</span>
+                  <span>Loading emails from Outlook...</span>
                 </div>
               </div>
             ) : filteredEmails.length > 0 ? (
@@ -626,7 +466,7 @@ export default function InboxClient() {
               </ul>
             ) : (
               <div className="text-center py-8 text-gray-500">
-                {search ? 'No emails match your search.' : `No emails in ${selectedFolder}.`}
+                {search ? 'No emails match your search.' : `No emails in ${selectedFolder} from Outlook.`}
               </div>
             )}
           </div>
@@ -648,7 +488,7 @@ export default function InboxClient() {
               <div className="text-4xl mb-2">📥</div>
               <h2 className="text-lg font-semibold">Select an email</h2>
               <p className="text-sm text-gray-400">
-                Choose an email from the list to view its details and generate AI-powered replies.
+                Choose an email from your Outlook inbox to view its details and generate AI-powered replies.
               </p>
             </div>
           )}
