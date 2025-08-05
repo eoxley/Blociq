@@ -3,7 +3,7 @@
 // Home page client component - Major works dashboard removed for cleaner interface
 import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2, ExternalLink, RefreshCw, MessageCircle, Sparkles, Upload, FileText, Send, Bot, ArrowRight, HelpCircle, Brain, X as XIcon } from 'lucide-react'
+import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2, ExternalLink, RefreshCw, MessageCircle, Sparkles, Upload, FileText, Send, Bot, ArrowRight, HelpCircle, Brain, X as XIcon, ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 
 
@@ -85,7 +85,10 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   // Ask BlocIQ state
   const [askInput, setAskInput] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [messages, setMessages] = useState<Array<{sender: 'user' | 'ai', text: string, timestamp: Date}>>([])
+  const [showChat, setShowChat] = useState(false)
   const askInputRef = useRef<HTMLInputElement>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Dynamic welcome messages - rotating pool of positive, motivational, humorous, and informative messages
   const welcomeMessages = [
@@ -348,24 +351,61 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     await loadOutlookEvents()
   }
 
+  // Scroll to bottom of messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
   // Handle Ask BlocIQ submission
   const handleAskSubmit = async (prompt: string) => {
     if (!prompt.trim()) return
     
     setIsSubmitting(true)
+    
+    // Add user message to chat
+    const userMessage = { sender: 'user' as const, text: prompt, timestamp: new Date() }
+    setMessages(prev => [...prev, userMessage])
+    
     try {
-      // Here you would typically call your AI API
-      console.log('Submitting to AI:', prompt)
+      // Call the actual AI API
+      const response = await fetch('/api/ask-ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          prompt: prompt,
+          contextType: 'general'
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      if (data.error) {
+        throw new Error(data.error)
+      }
+
+      // Add AI response to chat
+      const aiMessage = { sender: 'ai' as const, text: data.response, timestamp: new Date() }
+      setMessages(prev => [...prev, aiMessage])
+      
+      // Show chat interface
+      setShowChat(true)
       
       // Clear input after submission
       setAskInput('')
-      toast.success('Your question has been sent to BlocIQ!')
+      toast.success('Response received!')
     } catch (error) {
       console.error('Error submitting to AI:', error)
-      toast.error('Failed to send question')
+      toast.error('Failed to get response from BlocIQ')
+      
+      // Add error message to chat
+      const errorMessage = { sender: 'ai' as const, text: 'Sorry, I encountered an error. Please try again.', timestamp: new Date() }
+      setMessages(prev => [...prev, errorMessage])
     } finally {
       setIsSubmitting(false)
     }
@@ -414,7 +454,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
         {/* 🧠 Enhanced Circular Ask BlocIQ Widget */}
         <div className="flex justify-center">
-          <div className="relative w-[400px] h-[400px] md:w-[500px] md:h-[500px] rounded-full md:rounded-full rounded-3xl bg-gradient-to-br from-purple-600 via-[#4f46e5] to-indigo-500 shadow-2xl hover:shadow-3xl transition-all duration-500 flex items-center justify-center p-12 group">
+          <div className={`relative transition-all duration-500 ${showChat ? 'w-[600px] h-[600px] md:w-[700px] md:h-[700px]' : 'w-[400px] h-[400px] md:w-[500px] md:h-[500px]'} rounded-full md:rounded-full rounded-3xl bg-gradient-to-br from-purple-600 via-[#4f46e5] to-indigo-500 shadow-2xl hover:shadow-3xl flex items-center justify-center p-12 group`}>
             {/* Enhanced Radial Glow Effect */}
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-400/20 to-indigo-400/20 blur-xl group-hover:blur-2xl transition-all duration-500"></div>
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-300/10 to-pink-300/10 blur-2xl group-hover:blur-3xl transition-all duration-700"></div>
@@ -473,11 +513,77 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                   </button>
                 </div>
               </div>
+
+              {/* Chat Toggle Button */}
+              {messages.length > 0 && (
+                <button
+                  onClick={() => setShowChat(!showChat)}
+                  className="flex items-center gap-2 mx-auto px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-sm font-medium transition-all duration-200 border border-white/30 hover:border-white/50"
+                >
+                  {showChat ? (
+                    <>
+                      <ChevronUp className="h-4 w-4" />
+                      Hide Chat
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-4 w-4" />
+                      Show Chat ({messages.length} messages)
+                    </>
+                  )}
+                </button>
+              )}
             </div>
+
+            {/* Chat Interface */}
+            {showChat && messages.length > 0 && (
+              <div className="absolute inset-0 bg-white/95 backdrop-blur-sm rounded-full flex flex-col p-8">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Chat History</h3>
+                  <button
+                    onClick={() => setShowChat(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+                  {messages.map((message, index) => (
+                    <div key={index} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                        message.sender === 'user' 
+                          ? 'bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white' 
+                          : 'bg-gray-100 text-gray-900 border border-gray-200'
+                      }`}>
+                        <div className="text-sm whitespace-pre-line">{message.text}</div>
+                        <div className={`text-xs mt-1 ${
+                          message.sender === 'user' ? 'text-white/70' : 'text-gray-500'
+                        }`}>
+                          {message.timestamp.toLocaleTimeString()}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Loading indicator */}
+                  {isSubmitting && (
+                    <div className="flex justify-start">
+                      <div className="bg-gray-100 border border-gray-200 rounded-2xl px-4 py-3">
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <Loader2 className="animate-spin h-4 w-4" />
+                          <span className="text-sm">Thinking...</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div ref={messagesEndRef} />
+                </div>
+              </div>
+            )}
           </div>
         </div>
-
-
 
         {/* Today's Tasks Section */}
         <div className="space-y-6">
