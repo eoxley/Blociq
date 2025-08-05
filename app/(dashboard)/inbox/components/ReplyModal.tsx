@@ -302,20 +302,125 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium text-gray-700">Message</label>
-              {isAIGenerated && (
-                <div className="flex items-center gap-2 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+              <div className="flex items-center gap-2">
+                {isAIGenerated && (
+                  <div className="flex items-center gap-2 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                    <Bot className="h-3 w-3" />
+                    AI Generated
+                  </div>
+                )}
+                <Button
+                  onClick={async () => {
+                    try {
+                      const response = await fetch('/api/generate-reply', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ emailId: email.id, action: action })
+                      });
+                      
+                      if (response.ok) {
+                        const data = await response.json();
+                        if (data.success && data.response) {
+                          setBody(data.response);
+                          setIsAIGenerated(true);
+                          toast.success('AI reply generated!');
+                        }
+                      }
+                    } catch (error) {
+                      toast.error('Failed to generate AI reply');
+                    }
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
                   <Bot className="h-3 w-3" />
-                  AI Generated
-                </div>
-              )}
+                  Generate AI Reply
+                </Button>
+              </div>
             </div>
-            <textarea
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent resize-none"
-              rows={12}
-              placeholder="Enter your message..."
-            />
+            
+            {/* Rich Text Editor */}
+            <div className="border border-gray-300 rounded-lg overflow-hidden">
+              <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const textarea = document.getElementById('email-body') as HTMLTextAreaElement;
+                    if (textarea) {
+                      const start = textarea.selectionStart;
+                      const end = textarea.selectionEnd;
+                      const text = textarea.value;
+                      const before = text.substring(0, start);
+                      const selection = text.substring(start, end);
+                      const after = text.substring(end);
+                      textarea.value = before + '<strong>' + selection + '</strong>' + after;
+                      textarea.focus();
+                      textarea.setSelectionRange(start + 8, end + 8);
+                    }
+                  }}
+                  className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50"
+                >
+                  B
+                </button>
+                <button
+                  onClick={() => {
+                    const textarea = document.getElementById('email-body') as HTMLTextAreaElement;
+                    if (textarea) {
+                      const start = textarea.selectionStart;
+                      const end = textarea.selectionEnd;
+                      const text = textarea.value;
+                      const before = text.substring(0, start);
+                      const selection = text.substring(start, end);
+                      const after = text.substring(end);
+                      textarea.value = before + '<em>' + selection + '</em>' + after;
+                      textarea.focus();
+                      textarea.setSelectionRange(start + 4, end + 4);
+                    }
+                  }}
+                  className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50"
+                >
+                  I
+                </button>
+                <button
+                  onClick={() => {
+                    const textarea = document.getElementById('email-body') as HTMLTextAreaElement;
+                    if (textarea) {
+                      const start = textarea.selectionStart;
+                      const end = textarea.selectionEnd;
+                      const text = textarea.value;
+                      const before = text.substring(0, start);
+                      const selection = text.substring(start, end);
+                      const after = text.substring(end);
+                      textarea.value = before + '<u>' + selection + '</u>' + after;
+                      textarea.focus();
+                      textarea.setSelectionRange(start + 3, end + 3);
+                    }
+                  }}
+                  className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50"
+                >
+                  U
+                </button>
+              </div>
+              <textarea
+                id="email-body"
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                className="w-full px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent resize-none"
+                rows={12}
+                placeholder="Enter your message..."
+              />
+            </div>
+            
+            {/* Preview */}
+            {body && (
+              <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                <div className="text-xs text-gray-500 mb-2">Preview:</div>
+                <div 
+                  className="prose prose-sm max-w-none"
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(body) }}
+                />
+              </div>
+            )}
           </div>
 
           {/* Signature */}
