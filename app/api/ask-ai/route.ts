@@ -168,46 +168,89 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 🏠 Unit and Leaseholder Lookup
+    // 🏠 Smart Unit and Leaseholder Lookup
     let unit = null;
     let leaseholder = null;
     
-    if (building_id || contextMetadata.building_id) {
-      console.log('🔍 Looking for unit and leaseholder references in prompt...');
+    console.log('🔍 Looking for unit and leaseholder references in prompt...');
+    
+    // Enhanced unit detection patterns
+    const unitPatterns = [
+      /(?:flat|apartment|unit|flat)\s+(\d+[a-z]?)/gi,
+      /(\d+[a-z]?)\s+(?:flat|apartment|unit)/gi,
+      /flat\s+(\d+[a-z]?)/gi,
+      /apartment\s+(\d+[a-z]?)/gi,
+      /unit\s+(\d+[a-z]?)/gi,
+      /(\d+[a-z]?)\s+ashwood/gi,
+      /ashwood\s+(\d+[a-z]?)/gi
+    ];
+    
+    let unitNumber = null;
+    let detectedBuildingName = null;
+    
+    // First, try to extract building name from the prompt
+    const buildingKeywords = ['ashwood', 'house', 'court', 'building', 'apartment', 'residence', 'manor', 'gardens', 'heights', 'view', 'plaza'];
+    const words = prompt.toLowerCase().split(/\s+/);
+    
+    for (let i = 0; i < words.length - 1; i++) {
+      const potentialName = words.slice(i, i + 2).join(' '); // Check 2-word combinations
+      if (buildingKeywords.some(keyword => potentialName.includes(keyword))) {
+        console.log('🔍 Detected potential building name:', potentialName);
+        detectedBuildingName = potentialName;
+        break;
+      }
+    }
+    
+    // Extract unit number from prompt
+    for (const pattern of unitPatterns) {
+      const match = prompt.match(pattern);
+      if (match) {
+        unitNumber = match[1];
+        console.log('🔍 Found unit reference:', unitNumber);
+        break;
+      }
+    }
+    
+    if (unitNumber) {
+      console.log('🔍 Looking up unit:', unitNumber);
       
-      // Extract potential unit references from the prompt
-      const unitPatterns = [
-        /(?:flat|apartment|unit|flat)\s+(\d+)/gi,
-        /(\d+)\s+(?:flat|apartment|unit)/gi,
-        /flat\s+(\d+)/gi,
-        /apartment\s+(\d+)/gi,
-        /unit\s+(\d+)/gi
-      ];
+      // Determine which building to search in
+      let targetBuildingId = building_id || contextMetadata.building_id;
       
-      let unitNumber = null;
-      for (const pattern of unitPatterns) {
-        const match = prompt.match(pattern);
-        if (match) {
-          unitNumber = match[1];
-          console.log('🔍 Found unit reference:', unitNumber);
-          break;
+      // If we have a detected building name but no building_id, try to find the building
+      if (!targetBuildingId && detectedBuildingName) {
+        console.log('🔍 Searching for building by name:', detectedBuildingName);
+        const { data: buildingMatch } = await supabase
+          .from('buildings')
+          .select('id, name')
+          .ilike('name', `%${detectedBuildingName}%`)
+          .maybeSingle();
+        
+        if (buildingMatch) {
+          targetBuildingId = buildingMatch.id;
+          console.log('✅ Found building:', buildingMatch.name);
         }
       }
       
-      if (unitNumber) {
-        const buildingId = building_id || contextMetadata.building_id;
-        
-        // Look up the unit
+      if (targetBuildingId) {
+        // Look up the unit with enhanced query
         const { data: unitData } = await supabase
           .from("units")
-          .select("id, unit_number, leaseholder_id, building_id")
-          .eq("building_id", buildingId)
+          .select(`
+            id, 
+            unit_number, 
+            leaseholder_id, 
+            building_id,
+            buildings(name)
+          `)
+          .eq("building_id", targetBuildingId)
           .ilike("unit_number", `%${unitNumber}%`)
           .maybeSingle();
 
         if (unitData) {
           unit = unitData;
-          console.log('✅ Found unit:', unitData.unit_number);
+          const buildingName = unitData.buildings?.[0]?.name;
+          console.log('✅ Found unit:', unitData.unit_number, 'in', buildingName);
           
           // Look up the leaseholder
           if (unitData.leaseholder_id) {
@@ -230,9 +273,27 @@ export async function POST(req: NextRequest) {
               contextMetadata.leaseholder_id = leaseholderData.id;
               contextMetadata.leaseholder_email = leaseholderData.email;
               contextMetadata.leaseholder_phone = leaseholderData.phone;
+              contextMetadata.building_name = buildingName;
+              
+              // Enhanced system prompt for leaseholder context
+              systemPrompt += `\nThe user is asking about unit ${unitData.unit_number} in ${buildingName || 'this building'}. The leaseholder is ${leaseholderData.name} (${leaseholderData.email || 'no email'}). Only share information that complies with UK GDPR and data protection regulations.`;
             }
+          } else {
+            console.log('⚠️ Unit found but no leaseholder assigned');
+            buildingContext += `Unit: ${unitData.unit_number}\nLeaseholder: Not assigned\n\n`;
+            contextMetadata.unit_number = unitData.unit_number;
+            contextMetadata.building_name = buildingName;
           }
+        } else {
+          console.log('❌ Unit not found:', unitNumber);
+          // Log failed match for debugging
+          contextMetadata.failed_unit_match = unitNumber;
+          contextMetadata.failed_building_search = detectedBuildingName;
         }
+      } else {
+        console.log('❌ No building context available for unit lookup');
+        contextMetadata.failed_unit_match = unitNumber;
+        contextMetadata.missing_building_context = true;
       }
     }
 
@@ -277,13 +338,32 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // 📎 Process document summaries if document_ids are provided
+    if (document_ids?.length > 0) {
+      console.log('📎 Fetching document summaries for:', document_ids.length, 'documents');
+      
+      const { data: summaries } = await supabase
+        .from("document_summaries")
+        .select("document_id, summary, file_name")
+        .in("document_id", document_ids);
+
+      if (summaries?.length) {
+        const docSummaryText = summaries.map(doc =>
+          `📎 ${doc.file_name}:\n${doc.summary}`
+        ).join("\n\n");
+
+        systemPrompt += `\n\nAttached Document Summaries:\n${docSummaryText}\n`;
+        
+        console.log('✅ Added', summaries.length, 'document summaries to prompt');
+        contextMetadata.document_count = document_ids.length;
+        contextMetadata.documents = summaries.map(s => s.file_name);
+      } else {
+        console.log('⚠️ No document summaries found for provided IDs');
+      }
+    }
+
     // 📝 Final System Prompt Assembly
     systemPrompt += buildingContext;
-    
-    // Add leaseholder-specific context if available
-    if (leaseholder) {
-      systemPrompt += `\nYou are helping with ${unit?.unit_number || 'a unit'} in ${contextMetadata.buildingName || 'this building'}. The leaseholder is ${leaseholder.name}. Only share information that complies with UK GDPR and data protection regulations.`;
-    }
 
     console.log('📝 Calling OpenAI with context...');
     console.log('🏢 Building context length:', buildingContext.length);
@@ -315,6 +395,7 @@ export async function POST(req: NextRequest) {
         context_type: contextType,
         leaseholder_id: leaseholder?.id || leaseholder_id || null,
         unit_number: unit?.unit_number || null,
+        metadata: contextMetadata.documents ? { documents: contextMetadata.documents } : null,
       })
       .select('id')
       .single();
@@ -335,6 +416,7 @@ export async function POST(req: NextRequest) {
       leaseholder_id: leaseholder?.id || null,
       leaseholder_name: leaseholder?.name || null,
       unit_number: unit?.unit_number || null,
+      documents: contextMetadata.documents || [],
       context: {
         ...contextMetadata,
         has_building_context: !!buildingContext.trim(),
