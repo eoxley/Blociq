@@ -848,7 +848,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                          click to upload
                        </span>
                      </p>
-                     <p className="text-xs text-gray-500">
+                     <p className="text-xs text-white">
                        Supports PDF, DOCX, TXT (max 10MB, up to {maxFiles} files)
                      </p>
                    </div>
@@ -1103,7 +1103,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                           click to upload
                         </span>
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-white">
                         Supports PDF, DOCX, TXT (max 10MB, up to {maxFiles} files)
                       </p>
                     </div>
