@@ -76,8 +76,6 @@ export default function AskBlocIQHomepage() {
     adjustTextareaHeight()
   }, [prompt])
 
-  // Auto-scroll removed - let users control their own scrolling
-
   // File handling functions
   const acceptedFileTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
   const maxFileSize = 10 * 1024 * 1024 // 10MB
@@ -456,7 +454,6 @@ export default function AskBlocIQHomepage() {
       <div className="border-t border-gray-200 p-6 bg-gray-50 rounded-b-2xl">
         <form onSubmit={handleSubmit} className="space-y-3">
 
-
           {/* Main Input */}
           <div className="relative">
             <textarea
@@ -470,8 +467,6 @@ export default function AskBlocIQHomepage() {
               disabled={isLoading}
               style={{ minHeight: '48px', maxHeight: '120px' }}
             />
-            
-
             
             {/* Send Button */}
             <button
@@ -488,13 +483,15 @@ export default function AskBlocIQHomepage() {
             </button>
           </div>
 
-          {/* Simple Upload Icon */}
-          <div className="mt-4 flex justify-center">
-            <Upload 
-              className="text-white w-6 h-6 cursor-pointer hover:opacity-80 transition-opacity" 
+          {/* Minimal Upload Icon */}
+          <div className="flex justify-center">
+            <div 
+              className="cursor-pointer hover:opacity-80 transition-opacity p-2" 
               title="Upload document to Ask BlocIQ"
               onClick={() => fileInputRef.current?.click()}
-            />
+            >
+              <Upload className="text-gray-400 w-6 h-6" />
+            </div>
             <input
               ref={fileInputRef}
               type="file"
