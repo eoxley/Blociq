@@ -15,8 +15,6 @@ const nextConfig: NextConfig = {
   // Add optimizations to prevent chunk loading errors
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
-    // Add better module resolution
-    esmExternals: 'loose',
   },
   // Configure webpack to handle chunk loading better
   webpack: (config, { dev, isServer }) => {
@@ -54,14 +52,6 @@ const nextConfig: NextConfig = {
     // Suppress deprecation warnings
     config.infrastructureLogging = {
       level: 'error',
-    };
-    
-    // Add better module resolution
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      // Ensure consistent module resolution
-      'react': require.resolve('react'),
-      'react-dom': require.resolve('react-dom'),
     };
     
     return config;
