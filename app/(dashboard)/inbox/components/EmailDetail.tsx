@@ -9,7 +9,8 @@ import { Separator } from '@/components/ui/separator'
 import ReplyEditor from './ReplyEditor'
 import ReplyModal from './ReplyModal'
 import { toast } from 'sonner'
-import { sanitizeHtml } from '@/utils/email'
+import { sanitizeHtml, processEmailHtml } from '@/utils/email'
+import { useEmailAttachments } from '@/hooks/useEmailAttachments'
 
 interface Email {
   id: string
@@ -43,6 +44,9 @@ export default function EmailDetail({ email, onEmailDeleted }: EmailDetailProps)
     action: 'reply' | 'replyAll' | 'forward'
   }>({ isOpen: false, action: 'reply' })
   const [isDeleting, setIsDeleting] = useState(false)
+
+  // Fetch email attachments for inline image support
+  const { attachments, loading: attachmentsLoading } = useEmailAttachments(email.id)
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Unknown date'
@@ -348,7 +352,7 @@ export default function EmailDetail({ email, onEmailDeleted }: EmailDetailProps)
               <div 
                 className="text-gray-700 leading-relaxed"
                 dangerouslySetInnerHTML={{ 
-                  __html: sanitizeHtml(email.body_full) 
+                  __html: processEmailHtml(email.body_full, attachments) 
                 }}
               />
             ) : (

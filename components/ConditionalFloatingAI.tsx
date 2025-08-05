@@ -1,15 +1,15 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import FloatingBlocIQ from './FloatingBlocIQ'
+import BrainButton from './BrainButton'
 
 export default function ConditionalFloatingAI() {
   const pathname = usePathname()
   
-  // Don't show the floating AI on the home page or landing page
+  // Don't show the brain button on the home page or landing page
   if (pathname === '/home' || pathname === '/') {
     return null
   }
   
-  return <FloatingBlocIQ />
+  return <BrainButton />
 } 

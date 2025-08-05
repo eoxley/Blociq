@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { Mail, Flag, CheckCircle, Reply, Forward, Archive, Trash2, Clock, Building, User, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { sanitizeHtml } from '@/utils/email';
+import { sanitizeHtml, processEmailHtml } from '@/utils/email';
+import { useEmailAttachments } from '@/hooks/useEmailAttachments';
 
 interface Email {
   id: string;
@@ -49,6 +50,8 @@ export default function EnhancedEmailDetailView({
   onReply,
   onDelete
 }: EnhancedEmailDetailViewProps) {
+  // Fetch email attachments for inline image support
+  const { attachments, loading: attachmentsLoading } = useEmailAttachments(email.id);
   const [isHandling, setIsHandling] = useState(false);
 
   const formatDate = (dateString: string | null) => {
@@ -187,7 +190,7 @@ export default function EnhancedEmailDetailView({
               email.body_content_type === 'html' ? (
                 <div 
                   className="prose max-w-none text-gray-700"
-                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(email.body_full) }}
+                  dangerouslySetInnerHTML={{ __html: processEmailHtml(email.body_full, attachments) }}
                 />
               ) : (
                 <div className="whitespace-pre-wrap text-gray-700">
