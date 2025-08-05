@@ -358,6 +358,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
   // Handle Ask BlocIQ submission
   const handleAskSubmit = async (prompt: string) => {
+    console.log('🚀 NEW handleAskSubmit called with prompt:', prompt)
+    
     if (!prompt.trim()) return
     
     setIsSubmitting(true)
@@ -367,6 +369,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     setMessages(prev => [...prev, userMessage])
     
     try {
+      console.log('🤖 Sending request to /api/ask-ai:', { prompt, contextType: 'general' })
+      
       // Call the actual AI API
       const response = await fetch('/api/ask-ai', {
         method: 'POST',
@@ -379,18 +383,26 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         }),
       })
 
+      console.log('📡 Response status:', response.status)
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        const errorText = await response.text()
+        console.error('❌ API Error:', errorText)
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`)
       }
 
       const data = await response.json()
+      console.log('📄 API Response data:', data)
       
       if (data.error) {
         throw new Error(data.error)
       }
 
+      // The API returns 'result' not 'response'
+      const aiResponse = data.result || data.response || 'No response received'
+      
       // Add AI response to chat
-      const aiMessage = { sender: 'ai' as const, text: data.response, timestamp: new Date() }
+      const aiMessage = { sender: 'ai' as const, text: aiResponse, timestamp: new Date() }
       setMessages(prev => [...prev, aiMessage])
       
       // Show chat interface
@@ -400,11 +412,11 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       setAskInput('')
       toast.success('Response received!')
     } catch (error) {
-      console.error('Error submitting to AI:', error)
+      console.error('❌ Error submitting to AI:', error)
       toast.error('Failed to get response from BlocIQ')
       
       // Add error message to chat
-      const errorMessage = { sender: 'ai' as const, text: 'Sorry, I encountered an error. Please try again.', timestamp: new Date() }
+      const errorMessage = { sender: 'ai' as const, text: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`, timestamp: new Date() }
       setMessages(prev => [...prev, errorMessage])
     } finally {
       setIsSubmitting(false)
