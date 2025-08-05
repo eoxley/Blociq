@@ -61,22 +61,34 @@ export async function POST(req: NextRequest) {
           .single();
 
         if (tokens?.access_token) {
-          const graphResponse = await fetch(
-            `https://graph.microsoft.com/v1.0/me/messages/${email.message_id}`,
-            {
-              method: 'DELETE',
-              headers: {
-                'Authorization': `Bearer ${tokens.access_token}`,
-                'Content-Type': 'application/json',
-              },
-            }
-          );
+          try {
+            const graphResponse = await fetch(
+              `https://graph.microsoft.com/v1.0/me/messages/${email.message_id}`,
+              {
+                method: 'DELETE',
+                headers: {
+                  'Authorization': `Bearer ${tokens.access_token}`,
+                  'Content-Type': 'application/json',
+                },
+              }
+            );
 
-          if (graphResponse.ok) {
-            console.log('✅ Email deleted from Outlook successfully');
-          } else {
-            console.warn('⚠️ Failed to delete from Outlook, but deleted from Supabase');
+            if (graphResponse.ok) {
+              console.log('✅ Email deleted from Outlook successfully');
+            } else {
+              const errorText = await graphResponse.text();
+              console.warn('⚠️ Failed to delete from Outlook:', graphResponse.status, errorText);
+              
+              // Check if it's a permissions issue
+              if (graphResponse.status === 403) {
+                console.error('❌ Insufficient permissions for Mail.ReadWrite or Mail.ReadWrite.Shared');
+              }
+            }
+          } catch (graphError) {
+            console.error('❌ Graph API error:', graphError);
           }
+        } else {
+          console.warn('⚠️ No valid Outlook access token found');
         }
       } catch (outlookError) {
         console.warn('⚠️ Outlook deletion failed:', outlookError);

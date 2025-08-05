@@ -77,6 +77,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Validate OpenAI API key
+    if (!process.env.OPENAI_API_KEY) {
+      console.error('❌ OpenAI API key not configured');
+      return NextResponse.json({ error: 'AI service not configured' }, { status: 500 });
+    }
+
     // Initialize OpenAI client
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
@@ -120,20 +126,40 @@ Content: ${emailData.body || 'No content available'}
 
 Please provide a helpful and professional response that addresses the sender's concerns. If this is related to a specific building, reference the building context appropriately.`;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      max_tokens: 800,
-      temperature: 0.7,
-    });
+    let generatedReply = '';
+    
+    try {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        max_tokens: 800,
+        temperature: 0.7,
+      });
 
-    const generatedReply = completion.choices[0]?.message?.content || '';
+      generatedReply = completion.choices[0]?.message?.content || '';
 
-    if (!generatedReply) {
-      return NextResponse.json({ error: 'Failed to generate reply' }, { status: 500 });
+      if (!generatedReply) {
+        console.error('❌ OpenAI returned empty response');
+        return NextResponse.json({ error: 'Failed to generate reply - empty response' }, { status: 500 });
+      }
+
+      console.log('✅ AI reply generated successfully');
+    } catch (openaiError: any) {
+      console.error('❌ OpenAI API error:', openaiError);
+      
+      if (openaiError.status === 401) {
+        return NextResponse.json({ error: 'AI service authentication failed' }, { status: 500 });
+      } else if (openaiError.status === 429) {
+        return NextResponse.json({ error: 'AI service rate limit exceeded' }, { status: 429 });
+      } else {
+        return NextResponse.json({ 
+          error: 'AI service error', 
+          details: openaiError.message || 'Unknown OpenAI error'
+        }, { status: 500 });
+      }
     }
 
     return NextResponse.json({

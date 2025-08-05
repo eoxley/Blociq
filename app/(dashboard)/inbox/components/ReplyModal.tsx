@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X, Send, Save, Maximize2, Minimize2, Mail, Users } from 'lucide-react';
+import { X, Send, Save, Maximize2, Minimize2, Mail, Users, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
@@ -108,6 +108,7 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
       // Clear the stored reply after using it
       localStorage.removeItem('generatedReply');
       localStorage.removeItem('replyContext');
+      console.log('🤖 Using AI-generated reply');
     } else {
       setIsAIGenerated(false);
       // Set initial body with signature
@@ -289,7 +290,15 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
 
           {/* Body Field */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Message</label>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-gray-700">Message</label>
+              {isAIGenerated && (
+                <div className="flex items-center gap-2 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                  <Bot className="h-3 w-3" />
+                  AI Generated
+                </div>
+              )}
+            </div>
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
