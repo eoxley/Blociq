@@ -79,13 +79,11 @@ export function useOutlookInbox(): UseOutlookInboxReturn {
   // Fetch emails from Microsoft Graph API
   const fetchEmails = useCallback(async () => {
     if (!user?.id) {
-      console.log('👤 No user ID, skipping email fetch');
       setLoading(false);
       return;
     }
 
     try {
-      console.log('📧 Fetching emails from Outlook for user:', user.id);
       setError(null);
 
       const response = await fetch('/api/fetch-outlook-emails', {
@@ -116,8 +114,7 @@ export function useOutlookInbox(): UseOutlookInboxReturn {
       if (result.success) {
         const { emails: fetchedEmails, inboxInfo: fetchedInboxInfo } = result.data;
         
-        console.log('✅ Emails loaded from Outlook:', fetchedEmails?.length || 0, 'items');
-        console.log('📊 Inbox info:', fetchedInboxInfo);
+        // Emails loaded from Outlook successfully
         
         // Calculate new emails since last sync
         if (lastSyncTime.current && fetchedEmails) {
@@ -202,7 +199,7 @@ export function useOutlookInbox(): UseOutlookInboxReturn {
   // Mark email as read via Microsoft Graph API
   const markAsRead = useCallback(async (emailId: string) => {
     try {
-      console.log('📧 Marking email as read:', emailId);
+      // Marking email as read
       
       const response = await fetch('/api/mark-email-read', {
         method: 'POST',
@@ -229,7 +226,7 @@ export function useOutlookInbox(): UseOutlookInboxReturn {
         )
       );
 
-      console.log('✅ Email marked as read successfully');
+              // Email marked as read successfully
       toast.success('Email marked as read');
     } catch (error) {
       console.error('❌ Error in markAsRead:', error);
@@ -250,7 +247,7 @@ export function useOutlookInbox(): UseOutlookInboxReturn {
         )
       );
 
-      console.log('✅ Email marked as handled (local state only)');
+              // Email marked as handled (local state only)
       toast.success('Email marked as handled');
     } catch (error) {
       console.error('❌ Error in markAsHandled:', error);
@@ -271,7 +268,7 @@ export function useOutlookInbox(): UseOutlookInboxReturn {
         )
       );
 
-      console.log('✅ Email flag updated (local state only)');
+              // Email flag updated (local state only)
       toast.success(flagged ? 'Email flagged' : 'Email unflagged');
     } catch (error) {
       console.error('❌ Error in flagEmail:', error);
@@ -292,7 +289,7 @@ export function useOutlookInbox(): UseOutlookInboxReturn {
 
     // Set up periodic refresh every 30 seconds
     refreshIntervalRef.current = setInterval(() => {
-      console.log('🔄 Periodic email refresh from Outlook...');
+              // Periodic email refresh from Outlook
       fetchEmails();
     }, 30000); // 30 seconds
 
@@ -317,7 +314,7 @@ export function useOutlookInbox(): UseOutlookInboxReturn {
   // Auto-select first email when emails are loaded
   useEffect(() => {
     if (emails.length > 0 && !selectedEmail && !loading) {
-      console.log('📧 Auto-selecting first email');
+              // Auto-selecting first email
       selectEmail(emails[0]);
     }
   }, [emails, selectedEmail, loading, selectEmail]);

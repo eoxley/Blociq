@@ -103,7 +103,7 @@ export default function EnhancedEmailDetailView({
   const generateDraftReply = async () => {
     setIsGeneratingReply(true);
     try {
-      console.log('🤖 Generating AI reply for email:', email.id);
+      // Generating AI reply for email
       
       const response = await fetch('/api/generate-reply', {
         method: 'POST',
@@ -130,7 +130,6 @@ export default function EnhancedEmailDetailView({
         // Open reply modal with generated content
         onReply?.('reply');
         toast.success('AI reply generated successfully!');
-        console.log('✅ AI reply generated successfully');
       } else {
         throw new Error(data.error || 'No reply generated');
       }

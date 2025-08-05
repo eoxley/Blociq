@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { X, Send, Save, Maximize2, Minimize2, Mail, Users, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import DOMPurify from 'dompurify';
 
 interface Email {
   id: string;
@@ -111,9 +112,14 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
       console.log('🤖 Using AI-generated reply');
     } else {
       setIsAIGenerated(false);
-      // Set initial body with signature
+      // Set initial body with proper HTML formatting
       const originalMessage = email.body_full || email.body_preview || '';
-      const quotedMessage = `\n\n--- Original Message ---\nFrom: ${email.from_name || email.from_email}\nDate: ${new Date(email.received_at || '').toLocaleString()}\nSubject: ${email.subject}\n\n${originalMessage}`;
+      const originalSender = email.from_name || email.from_email || 'Unknown sender';
+      const originalDate = email.received_at ? new Date(email.received_at).toLocaleString() : 'Unknown date';
+      const originalSubject = email.subject || 'No subject';
+      
+      // Format the quoted message properly
+      const quotedMessage = `\n\n--- Original Message ---\nFrom: ${originalSender}\nDate: ${originalDate}\nSubject: ${originalSubject}\n\n${originalMessage}`;
       
       setBody(action === 'forward' ? quotedMessage : quotedMessage);
     }
@@ -127,18 +133,22 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
 
     setIsSending(true);
     try {
-      const response = await fetch('/api/send-email', {
+      // Sanitize the email body for safe sending
+      const sanitizedBody = DOMPurify.sanitize(body.trim());
+      
+      const response = await fetch('/api/send-reply', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          to,
-          cc,
+          reply_to_message_id: email.outlook_id || email.id,
+          reply_text: sanitizedBody,
+          to: to,
+          cc: cc,
           subject: subject.trim(),
-          body: body.trim(),
-          relatedEmailId: action !== 'forward' ? email.id : null,
-          status: 'sent'
+          building_id: email.building_id,
+          user_id: email.user_id
         }),
       });
 

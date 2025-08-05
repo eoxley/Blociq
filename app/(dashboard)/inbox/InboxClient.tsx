@@ -43,12 +43,37 @@ export default function InboxClient() {
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
   const user = useUser();
 
-  // Keyboard delete support
+  // Keyboard shortcuts support
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Delete' && selectedEmail) {
-        e.preventDefault();
-        handleDeleteEmail(selectedEmail.id);
+      // Only handle shortcuts when not typing in input fields
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      if (selectedEmail) {
+        switch (e.key.toLowerCase()) {
+          case 'r':
+            e.preventDefault();
+            handleReply('reply');
+            break;
+          case 'a':
+            e.preventDefault();
+            handleReply('reply-all');
+            break;
+          case 'f':
+            e.preventDefault();
+            handleReply('forward');
+            break;
+          case 'delete':
+            e.preventDefault();
+            handleDeleteEmail(selectedEmail.id);
+            break;
+          case 'escape':
+            e.preventDefault();
+            selectEmail(null);
+            break;
+        }
       }
     };
 
@@ -340,6 +365,15 @@ export default function InboxClient() {
               <span className="font-medium">Live Outlook</span>
             </div>
           </div>
+          {selectedEmail && (
+            <div className="flex items-center gap-2 text-gray-500 text-xs">
+              <span>R: Reply</span>
+              <span>A: Reply All</span>
+              <span>F: Forward</span>
+              <span>Del: Delete</span>
+              <span>Esc: Deselect</span>
+            </div>
+          )}
           <button
             onClick={manualSync}
             disabled={syncing || loading}
