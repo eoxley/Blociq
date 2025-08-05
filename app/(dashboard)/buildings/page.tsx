@@ -141,7 +141,7 @@ function BuildingsList() {
             id: building.id.toString(),
             name: building.name,
             address: building.address,
-            units: building.unit_count || 0, // Use unit_count from database
+            units: building.unit_count || 0, // Use dynamically calculated unit_count
             unit_count: building.unit_count || 0, // Also store as unit_count for consistency
             isDummy: false,
             created_at: building.created_at
@@ -313,8 +313,9 @@ function BuildingsList() {
                     <Users className="h-5 w-5 text-[#4f46e5]" />
                     <p className="text-sm text-gray-600">
                       {(() => {
+                        // Use dynamically calculated unit count from units table
                         const unitCount = building.units || building.unit_count || 0
-                        return unitCount > 0 ? `${unitCount} units` : "0 units"
+                        return `${unitCount} units`
                       })()}
                     </p>
                   </div>
