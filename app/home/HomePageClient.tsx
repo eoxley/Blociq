@@ -209,19 +209,32 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
   const fetchEvents = async () => {
     try {
-      const { data, error } = await supabase
-        .from('property_events')
-        .select('*')
-        .gte('date', new Date().toISOString().split('T')[0])
-        .order('date', { ascending: true })
-        .limit(5)
+      // Fetch from both property_events and manual_events tables
+      const [propertyEventsResponse, manualEventsResponse] = await Promise.all([
+        supabase
+          .from('property_events')
+          .select('*')
+          .gte('date', new Date().toISOString().split('T')[0])
+          .order('date', { ascending: true })
+          .limit(5),
+        supabase
+          .from('manual_events')
+          .select('*')
+          .gte('start_time', new Date().toISOString())
+          .order('start_time', { ascending: true })
+          .limit(5)
+      ])
 
-      if (error) {
-        console.error('Error fetching events:', error)
-        return
+      if (propertyEventsResponse.error) {
+        console.error('Error fetching property events:', propertyEventsResponse.error)
       }
 
-      const transformedEvents: PropertyEvent[] = (data || []).map(event => ({
+      if (manualEventsResponse.error) {
+        console.error('Error fetching manual events:', manualEventsResponse.error)
+      }
+
+      // Transform property events
+      const propertyEvents: PropertyEvent[] = (propertyEventsResponse.data || []).map(event => ({
         building: event.building_name || 'General',
         date: event.date,
         title: event.title,
@@ -232,7 +245,24 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         organiser_name: event.organiser_name
       }))
 
-      setUpcomingEvents(transformedEvents)
+      // Transform manual events
+      const manualEvents: PropertyEvent[] = (manualEventsResponse.data || []).map(event => ({
+        building: event.building_id ? `Building ${event.building_id}` : 'General',
+        date: event.start_time,
+        title: event.title,
+        category: event.category || 'Manual Entry',
+        source: 'property',
+        event_type: 'manual',
+        location: event.location,
+        organiser_name: event.organiser_name
+      }))
+
+      // Combine and sort all events
+      const allEvents = [...propertyEvents, ...manualEvents].sort((a, b) => 
+        new Date(a.date).getTime() - new Date(b.date).getTime()
+      )
+
+      setUpcomingEvents(allEvents.slice(0, 5)) // Limit to 5 total events
     } catch (error) {
       console.error('Error in fetchEvents:', error)
     }
@@ -325,17 +355,29 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       const title = formData.get('title') as string
       const date = formData.get('date') as string
 
-      const { error } = await supabase
-        .from('property_events')
-        .insert({
+      // Use the proper API endpoint that inserts into manual_events table
+      const response = await fetch('/api/events/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           title,
-          date,
+          start_time: date,
+          end_time: date,
           category: 'General',
-          building_name: 'General'
-        })
+          building_id: null,
+          description: '',
+          location: '',
+          is_all_day: true,
+          priority: 'medium',
+          notes: ''
+        }),
+      })
 
-      if (error) {
-        console.error('Error adding event:', error)
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('Error adding event:', errorData)
         toast.error('Failed to add event')
         return
       }
