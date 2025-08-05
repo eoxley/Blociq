@@ -16,6 +16,8 @@ interface CommunicationModalProps {
   aiContent: string
   templateType: 'letter' | 'email' | 'notice'
   buildingName?: string
+  leaseholderName?: string | null
+  unitNumber?: string | null
   onSave?: (template: any) => void
 }
 
@@ -31,6 +33,8 @@ export default function CommunicationModal({
   aiContent,
   templateType,
   buildingName = 'General',
+  leaseholderName,
+  unitNumber,
   onSave
 }: CommunicationModalProps) {
   const [title, setTitle] = useState('')
@@ -57,8 +61,8 @@ export default function CommunicationModal({
       
       // Initialize placeholders
       const defaultPlaceholders: Placeholder[] = [
-        { key: '[LEASEHOLDER_NAME]', value: '', description: 'Leaseholder name' },
-        { key: '[UNIT_NUMBER]', value: '', description: 'Unit number' },
+        { key: '[LEASEHOLDER_NAME]', value: leaseholderName || '', description: 'Leaseholder name' },
+        { key: '[UNIT_NUMBER]', value: unitNumber || '', description: 'Unit number' },
         { key: '[DATE]', value: new Date().toLocaleDateString('en-GB'), description: 'Current date' },
         { key: '[BUILDING_NAME]', value: buildingName, description: 'Building name' },
         { key: '[MANAGER_NAME]', value: '', description: 'Property manager name' },
@@ -73,7 +77,7 @@ export default function CommunicationModal({
       })
       setSelectedPlaceholders(defaultValues)
     }
-  }, [isOpen, aiContent, templateType, buildingName])
+      }, [isOpen, aiContent, templateType, buildingName, leaseholderName, unitNumber])
 
   const replacePlaceholders = (text: string) => {
     let result = text
@@ -94,7 +98,9 @@ export default function CommunicationModal({
         template_type: templateType,
         created_from_ai: true,
         placeholders: selectedPlaceholders,
-        notice_type: templateType === 'notice' ? 'general' : undefined
+        notice_type: templateType === 'notice' ? 'general' : undefined,
+        leaseholder_name: leaseholderName || null,
+        unit_number: unitNumber || null
       }
 
       if (onSave) {

@@ -112,6 +112,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     aiContent: string
     templateType: 'letter' | 'email' | 'notice'
     buildingName: string
+    leaseholderName?: string | null
+    unitNumber?: string | null
   } | null>(null)
   const askInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -459,6 +461,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       if (data.context) {
         const contextSummary = []
         if (data.context.buildingName) contextSummary.push(`📌 Building: ${data.context.buildingName}`)
+        if (data.unit_number) contextSummary.push(`🏠 Unit: ${data.unit_number}`)
+        if (data.leaseholder_name) contextSummary.push(`👤 Leaseholder: ${data.leaseholder_name}`)
         if (data.context.todoCount) contextSummary.push(`📋 Open Tasks: ${data.context.todoCount} items`)
         if (data.context.complianceCount) contextSummary.push(`⚠️ Compliance: ${data.context.complianceCount} issues`)
         if (data.context.documentCount) contextSummary.push(`📄 Documents: ${data.context.documentCount} files`)
@@ -618,52 +622,76 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
   // Communication action handlers
   const handleCreateLetter = (aiContent: string) => {
-    // Extract building context if available
-    const buildingContext = messages.find(m => 
+    // Extract building and leaseholder context if available
+    const contextMessage = messages.find(m => 
       m.sender === 'ai' && m.text.includes('📌 Building:')
     )?.text || ''
     
-    const buildingMatch = buildingContext.match(/📌 Building: (.+)/)
+    const buildingMatch = contextMessage.match(/📌 Building: (.+)/)
     const buildingName = buildingMatch ? buildingMatch[1] : 'General'
+    
+    const leaseholderMatch = contextMessage.match(/👤 Leaseholder: (.+)/)
+    const leaseholderName = leaseholderMatch ? leaseholderMatch[1] : null
+    
+    const unitMatch = contextMessage.match(/🏠 Unit: (.+)/)
+    const unitNumber = unitMatch ? unitMatch[1] : null
     
     setCommunicationModalData({
       aiContent,
       templateType: 'letter',
-      buildingName
+      buildingName,
+      leaseholderName,
+      unitNumber
     })
     setShowCommunicationModal(true)
   }
 
   const handleSendEmail = (aiContent: string) => {
-    // Extract building context
-    const buildingContext = messages.find(m => 
+    // Extract building and leaseholder context
+    const contextMessage = messages.find(m => 
       m.sender === 'ai' && m.text.includes('📌 Building:')
     )?.text || ''
     
-    const buildingMatch = buildingContext.match(/📌 Building: (.+)/)
+    const buildingMatch = contextMessage.match(/📌 Building: (.+)/)
     const buildingName = buildingMatch ? buildingMatch[1] : 'General'
+    
+    const leaseholderMatch = contextMessage.match(/👤 Leaseholder: (.+)/)
+    const leaseholderName = leaseholderMatch ? leaseholderMatch[1] : null
+    
+    const unitMatch = contextMessage.match(/🏠 Unit: (.+)/)
+    const unitNumber = unitMatch ? unitMatch[1] : null
     
     setCommunicationModalData({
       aiContent,
       templateType: 'email',
-      buildingName
+      buildingName,
+      leaseholderName,
+      unitNumber
     })
     setShowCommunicationModal(true)
   }
 
   const handleSaveAsNotice = (aiContent: string) => {
-    // Extract building context
-    const buildingContext = messages.find(m => 
+    // Extract building and leaseholder context
+    const contextMessage = messages.find(m => 
       m.sender === 'ai' && m.text.includes('📌 Building:')
     )?.text || ''
     
-    const buildingMatch = buildingContext.match(/📌 Building: (.+)/)
+    const buildingMatch = contextMessage.match(/📌 Building: (.+)/)
     const buildingName = buildingMatch ? buildingMatch[1] : 'General'
+    
+    const leaseholderMatch = contextMessage.match(/👤 Leaseholder: (.+)/)
+    const leaseholderName = leaseholderMatch ? leaseholderMatch[1] : null
+    
+    const unitMatch = contextMessage.match(/🏠 Unit: (.+)/)
+    const unitNumber = unitMatch ? unitMatch[1] : null
     
     setCommunicationModalData({
       aiContent,
       templateType: 'notice',
-      buildingName
+      buildingName,
+      leaseholderName,
+      unitNumber
     })
     setShowCommunicationModal(true)
   }
@@ -1383,6 +1411,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           aiContent={communicationModalData.aiContent}
           templateType={communicationModalData.templateType}
           buildingName={communicationModalData.buildingName}
+          leaseholderName={communicationModalData.leaseholderName}
+          unitNumber={communicationModalData.unitNumber}
           onSave={handleSaveTemplate}
         />
       )}
