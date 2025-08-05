@@ -421,9 +421,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             
             {/* Content */}
             <div className="text-center text-white max-w-sm relative z-10">
-              {/* Brain Icon with Pulse Animation */}
-              <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-lg border border-white/30 group-hover:scale-110 transition-transform duration-300 hover:shadow-2xl animate-pulse">
-                <Brain className="h-10 w-10 text-white" />
+              {/* Brain Icon with Pulse Animation - No Border */}
+              <div className="w-20 h-20 flex items-center justify-center mx-auto mb-8 animate-pulse">
+                <Brain className="h-12 w-12 text-white drop-shadow-lg" />
               </div>
               
               {/* Title */}
@@ -432,12 +432,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               </h2>
               
               {/* Subtitle */}
-              <p className="text-base text-white/90 mb-8 leading-relaxed">
+              <p className="text-base text-white/90 mb-10 leading-relaxed">
                 Your leasehold management assistant
               </p>
               
-              {/* Enhanced Input Field with Clear Button */}
-              <div className="mb-8">
+              {/* Enhanced Input Field with Clear Button - White Background */}
+              <div className="mb-6">
                 <div className="relative group">
                   <input
                     ref={askInputRef}
@@ -445,7 +445,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                     value={askInput}
                     onChange={(e) => setAskInput(e.target.value)}
                     placeholder="Ask me anything..."
-                    className="w-full px-5 py-4 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition-all duration-200 text-base pr-16"
+                    className="w-full px-5 py-4 bg-white text-gray-900 border border-gray-200 rounded-xl placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] transition-all duration-200 text-base pr-16 shadow-lg"
                     onKeyPress={handleKeyPress}
                   />
                   
@@ -453,9 +453,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                   {askInput && (
                     <button 
                       onClick={() => setAskInput('')}
-                      className="absolute right-12 top-1/2 transform -translate-y-1/2 p-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95"
+                      className="absolute right-12 top-1/2 transform -translate-y-1/2 p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95"
                     >
-                      <XIcon className="h-4 w-4 text-white" />
+                      <XIcon className="h-4 w-4" />
                     </button>
                   )}
                   
@@ -463,37 +463,15 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                   <button 
                     onClick={() => handleAskSubmit(askInput)}
                     disabled={!askInput.trim() || isSubmitting}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2.5 bg-white/20 hover:bg-white/30 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2.5 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                   >
                     {isSubmitting ? (
-                      <Loader2 className="h-5 w-5 text-white animate-spin" />
+                      <Loader2 className="h-5 w-5 animate-spin" />
                     ) : (
-                      <ArrowRight className="h-5 w-5 text-white" />
+                      <ArrowRight className="h-5 w-5" />
                     )}
                   </button>
                 </div>
-              </div>
-              
-              {/* Enhanced Example Prompts - Hidden on mobile */}
-              <div className="space-y-3 hidden md:block">
-                <button 
-                  className="w-full px-4 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-sm font-medium transition-all duration-200 border border-white/30 hover:border-white/50 hover:scale-105 active:scale-95 hover:shadow-lg"
-                  onClick={() => handleExampleClick('Summarise inbox')}
-                >
-                  Summarise inbox
-                </button>
-                <button 
-                  className="w-full px-4 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-sm font-medium transition-all duration-200 border border-white/30 hover:border-white/50 hover:scale-105 active:scale-95 hover:shadow-lg"
-                  onClick={() => handleExampleClick('Update directors')}
-                >
-                  Update directors
-                </button>
-                <button 
-                  className="w-full px-4 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-sm font-medium transition-all duration-200 border border-white/30 hover:border-white/50 hover:scale-105 active:scale-95 hover:shadow-lg"
-                  onClick={() => handleExampleClick('Show compliance')}
-                >
-                  Show compliance
-                </button>
               </div>
             </div>
           </div>
