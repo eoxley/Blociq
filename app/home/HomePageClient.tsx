@@ -77,6 +77,23 @@ interface HomePageClientProps {
 }
 
 export default function HomePageClient({ userData }: HomePageClientProps) {
+  // Add CSS animation for message fade-in
+  useEffect(() => {
+    const style = document.createElement('style')
+    style.textContent = `
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    `
+    document.head.appendChild(style)
+    return () => {
+      if (document.head.contains(style)) {
+        document.head.removeChild(style)
+      }
+    }
+  }, [])
+
   const [isAddingEvent, setIsAddingEvent] = useState(false)
   const [showAddEventForm, setShowAddEventForm] = useState(false)
   const [recentEmails, setRecentEmails] = useState<Email[]>([])
@@ -87,8 +104,11 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [messages, setMessages] = useState<Array<{sender: 'user' | 'ai', text: string, timestamp: Date}>>([])
   const [showChat, setShowChat] = useState(false)
+  const [uploadedFiles, setUploadedFiles] = useState<Array<{file: File, id: string, name: string, size: number, type: string}>>([])
+  const [isDragOver, setIsDragOver] = useState(false)
   const askInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Dynamic welcome messages - rotating pool of positive, motivational, humorous, and informative messages
   const welcomeMessages = [
@@ -360,7 +380,10 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const handleAskSubmit = async (prompt: string) => {
     console.log('🚀 NEW handleAskSubmit called with prompt:', prompt)
     
-    if (!prompt.trim()) return
+    if (!prompt.trim() && uploadedFiles.length === 0) {
+      toast.error('Please enter a question or upload a file.')
+      return
+    }
     
     setIsSubmitting(true)
     
@@ -371,16 +394,36 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     try {
       console.log('🤖 Sending request to /api/ask-ai:', { prompt, contextType: 'general' })
       
+      // Create FormData if files are uploaded
+      let requestBody: FormData | string
+      let headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+
+      if (uploadedFiles.length > 0) {
+        const formData = new FormData()
+        formData.append('prompt', prompt.trim())
+        formData.append('contextType', 'general')
+        
+        uploadedFiles.forEach((uploadedFile) => {
+          formData.append(`file`, uploadedFile.file)
+          formData.append(`fileName`, uploadedFile.name)
+        })
+        
+        requestBody = formData
+        delete headers['Content-Type']
+      } else {
+        requestBody = JSON.stringify({ 
+          prompt: prompt,
+          contextType: 'general'
+        })
+      }
+
       // Call the actual AI API
       const response = await fetch('/api/ask-ai', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          prompt: prompt,
-          contextType: 'general'
-        }),
+        headers,
+        body: requestBody,
       })
 
       console.log('📡 Response status:', response.status)
@@ -404,12 +447,55 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       // Add AI response to chat
       const aiMessage = { sender: 'ai' as const, text: aiResponse, timestamp: new Date() }
       setMessages(prev => [...prev, aiMessage])
+
+      // Add context summary if available
+      if (data.context) {
+        const contextSummary = []
+        if (data.context.buildingName) contextSummary.push(`📌 Building: ${data.context.buildingName}`)
+        if (data.context.todoCount) contextSummary.push(`📋 Open Tasks: ${data.context.todoCount} items`)
+        if (data.context.complianceCount) contextSummary.push(`⚠️ Compliance: ${data.context.complianceCount} issues`)
+        if (data.context.documentCount) contextSummary.push(`📄 Documents: ${data.context.documentCount} files`)
+        if (data.files_uploaded > 0) contextSummary.push(`📎 Attached: ${data.files_uploaded} file(s)`)
+        
+        if (contextSummary.length > 0) {
+          const contextMessage = { 
+            sender: 'ai' as const, 
+            text: `**Used Context:**\n${contextSummary.join('\n')}\n\n⚖️ *This assistant provides guidance, not legal advice.*`, 
+            timestamp: new Date() 
+          }
+          setMessages(prev => [...prev, contextMessage])
+        }
+      }
+
+      // Add follow-up action buttons
+      const followUpActions = []
+      if (data.context?.buildingName) {
+        followUpActions.push('✍️ Draft update')
+        followUpActions.push('🗓️ Add event')
+        followUpActions.push('📩 Email directors')
+      }
+      if (data.context?.complianceCount > 0) {
+        followUpActions.push('📋 Log compliance issue')
+      }
+      if (data.context?.todoCount > 0) {
+        followUpActions.push('✅ Mark task complete')
+      }
+      
+      if (followUpActions.length > 0) {
+        const actionsMessage = { 
+          sender: 'ai' as const, 
+          text: `**Quick Actions:**\n${followUpActions.join('       ')}`, 
+          timestamp: new Date() 
+        }
+        setMessages(prev => [...prev, actionsMessage])
+      }
       
       // Show chat interface
       setShowChat(true)
       
-      // Clear input after submission
+      // Clear input and files after submission
       setAskInput('')
+      setUploadedFiles([])
       toast.success('Response received!')
     } catch (error) {
       console.error('❌ Error submitting to AI:', error)
@@ -443,6 +529,85 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
     }
   }, [messages])
+
+  // File handling constants
+  const acceptedFileTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
+  const maxFileSize = 10 * 1024 * 1024 // 10MB
+  const maxFiles = 5
+
+  const validateFile = (file: File): boolean => {
+    if (!acceptedFileTypes.includes(file.type)) {
+      toast.error(`File type not supported. Please upload PDF, DOCX, or TXT files.`)
+      return false
+    }
+    
+    if (file.size > maxFileSize) {
+      toast.error(`File too large. Please upload files smaller than 10MB.`)
+      return false
+    }
+    
+    if (uploadedFiles.length >= maxFiles) {
+      toast.error(`Maximum ${maxFiles} files allowed.`)
+      return false
+    }
+    
+    return true
+  }
+
+  const handleFileSelect = (files: FileList | null) => {
+    if (!files) return
+    
+    Array.from(files).forEach(file => {
+      if (validateFile(file)) {
+        const fileId = Math.random().toString(36).substr(2, 9)
+        const uploadedFile = {
+          file,
+          id: fileId,
+          name: file.name,
+          size: file.size,
+          type: file.type
+        }
+        
+        setUploadedFiles(prev => [...prev, uploadedFile])
+        toast.success(`✅ ${file.name} uploaded. You can now ask questions about it.`)
+      }
+    })
+  }
+
+  const removeFile = (fileId: string) => {
+    setUploadedFiles(prev => prev.filter(f => f.id !== fileId))
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+    handleFileSelect(e.dataTransfer.files)
+  }
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes'
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  }
+
+  const getFileIcon = (fileType: string) => {
+    if (fileType.includes('pdf')) return '📄'
+    if (fileType.includes('word') || fileType.includes('document')) return '📝'
+    if (fileType.includes('text')) return '📄'
+    return '📎'
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -495,61 +660,130 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 Your leasehold management assistant
               </p>
               
-              {/* Enhanced Input Field with Clear Button - White Background */}
-              <div className="mb-6">
-                <div className="relative group">
-                  <input
-                    ref={askInputRef}
-                    type="text"
-                    value={askInput}
-                    onChange={(e) => setAskInput(e.target.value)}
-                    placeholder="Ask me anything..."
-                    className="w-full px-5 py-4 bg-white text-gray-900 border border-gray-200 rounded-xl placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] transition-all duration-200 text-base pr-16 shadow-lg"
-                    onKeyPress={handleKeyPress}
-                  />
-                  
-                  {/* Clear Button */}
-                  {askInput && (
-                    <button 
-                      onClick={() => setAskInput('')}
-                      className="absolute right-12 top-1/2 transform -translate-y-1/2 p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95"
-                    >
-                      <XIcon className="h-4 w-4" />
-                    </button>
-                  )}
-                  
-                  {/* Submit Button */}
-                  <button 
-                    onClick={() => handleAskSubmit(askInput)}
-                    disabled={!askInput.trim() || isSubmitting}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2.5 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-                  >
-                    {isSubmitting ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      <ArrowRight className="h-5 w-5" />
-                    )}
-                  </button>
-                </div>
-              </div>
+                             {/* Enhanced Input Field with Clear Button - White Background - Only show when chat is closed */}
+               {!showChat && (
+               <div className="mb-6">
+                 <div className="relative group">
+                   <input
+                       ref={askInputRef}
+                     type="text"
+                       value={askInput}
+                       onChange={(e) => setAskInput(e.target.value)}
+                     placeholder="Ask me anything..."
+                       className="w-full px-5 py-4 bg-white text-gray-900 border border-gray-200 rounded-xl placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] transition-all duration-200 text-base pr-16 shadow-lg"
+                       onKeyPress={handleKeyPress}
+                     />
+                     
+                     {/* File Upload Button */}
+                     <button
+                       type="button"
+                       onClick={() => fileInputRef.current?.click()}
+                       disabled={isSubmitting || uploadedFiles.length >= maxFiles}
+                       className="absolute left-3 top-1/2 transform -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
+                       title="Attach a document"
+                     >
+                       <Upload className="h-4 w-4" />
+                     </button>
+                     
+                     {/* Clear Button */}
+                     {askInput && (
+                       <button 
+                         onClick={() => setAskInput('')}
+                         className="absolute right-12 top-1/2 transform -translate-y-1/2 p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95"
+                       >
+                         <XIcon className="h-4 w-4" />
+                       </button>
+                     )}
+                     
+                     {/* Submit Button */}
+                     <button 
+                       onClick={() => handleAskSubmit(askInput)}
+                       disabled={(!askInput.trim() && uploadedFiles.length === 0) || isSubmitting}
+                       className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2.5 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                     >
+                       {isSubmitting ? (
+                         <Loader2 className="h-5 w-5 animate-spin" />
+                       ) : (
+                         <ArrowRight className="h-5 w-5" />
+                       )}
+                   </button>
+                 </div>
 
-              {/* Chat Toggle Button */}
-              {messages.length > 0 && (
+                 {/* File Upload Zone - Only show when chat is closed */}
+                 <div
+                   className={`border-2 border-dashed rounded-xl p-4 mt-3 text-center transition-all duration-200 ${
+                     isDragOver 
+                       ? 'border-blue-500 bg-blue-50' 
+                       : 'border-gray-300 hover:border-blue-500 hover:bg-blue-50'
+                   }`}
+                   onDragOver={handleDragOver}
+                   onDragLeave={handleDragLeave}
+                   onDrop={handleDrop}
+                 >
+                   <div className="flex flex-col items-center gap-2">
+                     <Upload className="h-5 w-5 text-gray-400" />
+                     <p className="text-sm text-gray-600">
+                       Drag & drop files here or{' '}
+                       <span 
+                         className="text-blue-500 underline cursor-pointer hover:text-blue-600"
+                         onClick={() => fileInputRef.current?.click()}
+                       >
+                         click to upload
+                       </span>
+                     </p>
+                     <p className="text-xs text-gray-500">
+                       Supports PDF, DOCX, TXT (max 10MB, up to {maxFiles} files)
+                     </p>
+                   </div>
+                   <input
+                     ref={fileInputRef}
+                     type="file"
+                     multiple
+                     accept=".pdf,.docx,.txt"
+                     onChange={(e) => handleFileSelect(e.target.files)}
+                     className="hidden"
+                   />
+                 </div>
+
+                 {/* Uploaded Files Display */}
+                 {uploadedFiles.length > 0 && (
+                   <div className="mt-3">
+                     <div className="flex items-center gap-2 mb-2">
+                       <span className="text-xs font-medium text-gray-600">📄 Included in AI context:</span>
+                     </div>
+                     <div className="flex flex-wrap gap-2">
+                       {uploadedFiles.map((file) => (
+                         <div
+                           key={file.id}
+                           className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer group"
+                           title={`${file.name} (${formatFileSize(file.size)})`}
+                         >
+                           <span>{getFileIcon(file.type)}</span>
+                           <span className="font-medium truncate max-w-[120px]">{file.name}</span>
+                           <span className="text-xs text-blue-500 opacity-70">({formatFileSize(file.size)})</span>
+                           <button
+                             type="button"
+                             onClick={() => removeFile(file.id)}
+                             className="ml-1 text-blue-400 hover:text-blue-600 transition-colors opacity-0 group-hover:opacity-100"
+                           >
+                             <XIcon className="h-3 w-3" />
+                           </button>
+                         </div>
+                       ))}
+                     </div>
+                   </div>
+                 )}
+               </div>
+               )}
+
+              {/* Chat Toggle Button - Only show when chat is closed */}
+              {messages.length > 0 && !showChat && (
                 <button
-                  onClick={() => setShowChat(!showChat)}
+                  onClick={() => setShowChat(true)}
                   className="flex items-center gap-2 mx-auto px-4 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl text-sm font-medium transition-all duration-200 border border-white/30 hover:border-white/50 shadow-lg hover:shadow-xl"
                 >
-                  {showChat ? (
-                    <>
-                      <ChevronUp className="h-4 w-4" />
-                      Hide Chat
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown className="h-4 w-4" />
-                      View Chat ({messages.length} message{messages.length !== 1 ? 's' : ''})
-                    </>
-                  )}
+                  <ChevronDown className="h-4 w-4" />
+                  View Chat ({messages.length} message{messages.length !== 1 ? 's' : ''})
                 </button>
               )}
             </div>
@@ -570,7 +804,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                   </div>
                   <button
                     onClick={() => setShowChat(false)}
-                    className="text-gray-500 hover:text-gray-700 transition-colors p-2 hover:bg-gray-100 rounded-lg"
+                    className="absolute top-4 right-4 text-gray-400 hover:text-black transition-colors p-2 hover:bg-gray-100 rounded-lg"
+                    aria-label="Hide Chat"
                   >
                     <X className="h-5 w-5" />
                   </button>
@@ -579,10 +814,17 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 {/* Scrollable Messages Area */}
                 <div 
                   ref={messagesEndRef}
-                  className="flex-1 overflow-y-auto max-h-[60vh] px-4 pb-4 space-y-4"
+                  className="overflow-y-auto flex-1 p-4 space-y-3 max-h-[60vh]"
                 >
                   {messages.map((message, index) => (
-                    <div key={index} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div 
+                      key={index} 
+                      className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} transition-opacity duration-300 ease-in-out`}
+                      style={{ 
+                        opacity: 0,
+                        animation: `fadeIn 0.3s ease-in-out ${index * 0.1}s forwards`
+                      }}
+                    >
                       <div className={`max-w-[80%] rounded-xl p-3 shadow-sm ${
                         message.sender === 'user' 
                           ? 'bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white' 
@@ -622,7 +864,36 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 </div>
                 
                 {/* Sticky Input Bar */}
-                <div className="sticky bottom-0 bg-white p-4 shadow-inner border-t border-gray-200">
+                <div className="sticky bottom-0 bg-white p-4 border-t shadow-inner">
+                  {/* File Upload Zone */}
+                  {uploadedFiles.length > 0 && (
+                    <div className="mb-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs font-medium text-gray-600">📄 Included in AI context:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {uploadedFiles.map((file) => (
+                          <div
+                            key={file.id}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer group"
+                            title={`${file.name} (${formatFileSize(file.size)})`}
+                          >
+                            <span>{getFileIcon(file.type)}</span>
+                            <span className="font-medium truncate max-w-[120px]">{file.name}</span>
+                            <span className="text-xs text-blue-500 opacity-70">({formatFileSize(file.size)})</span>
+                            <button
+                              type="button"
+                              onClick={() => removeFile(file.id)}
+                              className="ml-1 text-blue-400 hover:text-blue-600 transition-colors opacity-0 group-hover:opacity-100"
+                            >
+                              <XIcon className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-3">
                     <input
                       ref={askInputRef}
@@ -630,9 +901,20 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                       value={askInput}
                       onChange={(e) => setAskInput(e.target.value)}
                       placeholder="Ask me anything..."
-                      className="flex-1 w-full rounded-full border px-4 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] transition-all duration-200 text-sm"
+                      className="w-full rounded-full px-4 py-2 border focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] transition-all duration-200 text-sm"
                       onKeyPress={handleKeyPress}
                     />
+                    
+                    {/* File Upload Button */}
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isSubmitting || uploadedFiles.length >= maxFiles}
+                      className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
+                      title="Attach a document"
+                    >
+                      <Upload className="h-4 w-4" />
+                    </button>
                     
                     {/* Clear Button */}
                     {askInput && (
@@ -647,7 +929,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                     {/* Submit Button */}
                     <button 
                       onClick={() => handleAskSubmit(askInput)}
-                      disabled={!askInput.trim() || isSubmitting}
+                      disabled={(!askInput.trim() && uploadedFiles.length === 0) || isSubmitting}
                       className="p-2.5 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white rounded-full transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                     >
                       {isSubmitting ? (
@@ -656,6 +938,42 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                         <ArrowRight className="h-4 w-4" />
                       )}
                     </button>
+                  </div>
+
+                  {/* Drag & Drop Zone */}
+                  <div
+                    className={`border-2 border-dashed rounded-xl p-4 mt-3 text-center transition-all duration-200 ${
+                      isDragOver 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-gray-300 hover:border-blue-500 hover:bg-blue-50'
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <Upload className="h-5 w-5 text-gray-400" />
+                      <p className="text-sm text-gray-600">
+                        Drag & drop files here or{' '}
+                        <span 
+                          className="text-blue-500 underline cursor-pointer hover:text-blue-600"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          click to upload
+                        </span>
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Supports PDF, DOCX, TXT (max 10MB, up to {maxFiles} files)
+                      </p>
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept=".pdf,.docx,.txt"
+                      onChange={(e) => handleFileSelect(e.target.files)}
+                      className="hidden"
+                    />
                   </div>
                   
                   {/* Quick Actions */}
