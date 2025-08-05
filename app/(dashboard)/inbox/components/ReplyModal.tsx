@@ -48,6 +48,7 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [signature, setSignature] = useState('');
+  const [isAIGenerated, setIsAIGenerated] = useState(false);
 
   // Load user signature on mount
   useEffect(() => {
@@ -96,11 +97,25 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
     setCc(newCc);
     setSubject(newSubject || '');
 
-    // Set initial body with signature
-    const originalMessage = email.body_full || email.body_preview || '';
-    const quotedMessage = `\n\n--- Original Message ---\nFrom: ${email.from_name || email.from_email}\nDate: ${new Date(email.received_at || '').toLocaleString()}\nSubject: ${email.subject}\n\n${originalMessage}`;
+    // Check for generated reply from AI
+    const generatedReply = localStorage.getItem('generatedReply');
+    const replyContext = localStorage.getItem('replyContext');
     
-    setBody(action === 'forward' ? quotedMessage : quotedMessage);
+    if (action === 'reply' && generatedReply) {
+      // Use the AI-generated reply
+      setBody(generatedReply);
+      setIsAIGenerated(true);
+      // Clear the stored reply after using it
+      localStorage.removeItem('generatedReply');
+      localStorage.removeItem('replyContext');
+    } else {
+      setIsAIGenerated(false);
+      // Set initial body with signature
+      const originalMessage = email.body_full || email.body_preview || '';
+      const quotedMessage = `\n\n--- Original Message ---\nFrom: ${email.from_name || email.from_email}\nDate: ${new Date(email.received_at || '').toLocaleString()}\nSubject: ${email.subject}\n\n${originalMessage}`;
+      
+      setBody(action === 'forward' ? quotedMessage : quotedMessage);
+    }
   }, [email, action, isOpen]);
 
   const handleSend = async () => {

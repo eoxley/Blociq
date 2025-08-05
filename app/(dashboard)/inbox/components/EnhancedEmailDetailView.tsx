@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Mail, Flag, CheckCircle, Reply, Forward, Archive, Trash2, Clock, Building, User, Users } from 'lucide-react';
+import { Mail, Flag, CheckCircle, Reply, Forward, Archive, Trash2, Clock, Building, User, Users, Bot, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { sanitizeHtml, processEmailHtml } from '@/utils/email';
@@ -53,6 +53,7 @@ export default function EnhancedEmailDetailView({
   // Fetch email attachments for inline image support
   const { attachments, loading: attachmentsLoading } = useEmailAttachments(email.id);
   const [isHandling, setIsHandling] = useState(false);
+  const [isGeneratingReply, setIsGeneratingReply] = useState(false);
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Unknown date';
@@ -97,6 +98,44 @@ export default function EnhancedEmailDetailView({
 
   const handleForward = () => {
     onReply?.('forward');
+  };
+
+  const generateDraftReply = async () => {
+    setIsGeneratingReply(true);
+    try {
+      const response = await fetch('/api/generate-reply', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          emailId: email.id
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate reply');
+      }
+
+      const data = await response.json();
+      
+      if (data.success && data.response) {
+        // Store the generated reply in localStorage for the reply modal to access
+        localStorage.setItem('generatedReply', data.response);
+        localStorage.setItem('replyContext', JSON.stringify(data.context));
+        
+        // Open reply modal with generated content
+        onReply?.('reply');
+        toast.success('AI reply generated successfully!');
+      } else {
+        throw new Error('No reply generated');
+      }
+    } catch (error) {
+      console.error('Error generating reply:', error);
+      toast.error('Failed to generate AI reply');
+    } finally {
+      setIsGeneratingReply(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -249,35 +288,49 @@ export default function EnhancedEmailDetailView({
       {/* Action Buttons */}
       <div className="border-t border-gray-200 pt-4">
         <div className="flex items-center justify-between">
-                     <div className="flex items-center gap-2">
-             <Button
-               onClick={handleReply}
-               variant="outline"
-               size="sm"
-               className="flex items-center gap-2"
-             >
-               <Reply className="h-4 w-4" />
-               Reply
-             </Button>
-             <Button
-               onClick={handleReplyAll}
-               variant="outline"
-               size="sm"
-               className="flex items-center gap-2"
-             >
-               <Users className="h-4 w-4" />
-               Reply All
-             </Button>
-             <Button
-               onClick={handleForward}
-               variant="outline"
-               size="sm"
-               className="flex items-center gap-2"
-             >
-               <Forward className="h-4 w-4" />
-               Forward
-             </Button>
-           </div>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleReply}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Reply className="h-4 w-4" />
+              Reply
+            </Button>
+            <Button
+              onClick={handleReplyAll}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Users className="h-4 w-4" />
+              Reply All
+            </Button>
+            <Button
+              onClick={handleForward}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Forward className="h-4 w-4" />
+              Forward
+            </Button>
+            <Button
+              onClick={generateDraftReply}
+              disabled={isGeneratingReply}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-indigo-500 hover:from-indigo-600 hover:to-purple-700"
+            >
+              {isGeneratingReply ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Bot className="h-4 w-4" />
+              )}
+              {isGeneratingReply ? 'Generating...' : '✍️ Generate Reply'}
+            </Button>
+          </div>
           
           <div className="flex items-center gap-2">
             <Button

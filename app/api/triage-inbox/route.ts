@@ -15,12 +15,12 @@ export async function POST() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Step 1: Get all untriaged inbox emails
+    // Step 1: Get all inbox emails (not just unread)
     const { data: emails, error: emailsError } = await supabase
       .from('incoming_emails')
       .select('*')
       .eq('user_id', user.id)
-      .is('triaged', null) // triaged = boolean
+      .eq('folder', 'inbox') // Only process inbox emails
       .limit(25)
 
     if (emailsError) {
@@ -29,8 +29,10 @@ export async function POST() {
     }
 
     if (!emails || emails.length === 0) {
-      return NextResponse.json({ summary: 'No new emails to triage.' })
+      return NextResponse.json({ summary: 'No emails to triage.' })
     }
+
+    console.log(`📧 Processing ${emails.length} emails for triage`)
 
     const triageResults = []
     const draftsToSave = []

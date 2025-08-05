@@ -1,10 +1,8 @@
-// ✅ AUDIT COMPLETE [2025-08-03]
-// - Field validation for subject, body, or prompt
-// - Authentication check with user validation
-// - Supabase query with proper .eq() filter
-// - Try/catch with detailed error handling
-// - Used in email reply components
-// - Includes OpenAI integration with error handling
+// ✅ ENHANCED GENERATE REPLY API
+// - Supports both emailId and direct content input
+// - Includes building context for better responses
+// - Enhanced error handling and validation
+// - Professional UK leasehold property management responses
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
@@ -26,8 +24,8 @@ export async function POST(req: NextRequest) {
   try {
     const { emailId, subject, body, categories, flag_status, from_email, prompt }: GenerateReplyRequest = await req.json();
     
-    if (!subject && !body && !prompt) {
-      return NextResponse.json({ error: 'Subject, body, or prompt is required' }, { status: 400 });
+    if (!emailId && !subject && !body && !prompt) {
+      return NextResponse.json({ error: 'Email ID or content is required' }, { status: 400 });
     }
 
     const supabase = createRouteHandlerClient<Database>({ cookies });
@@ -38,27 +36,44 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // If emailId is provided, fetch the email details from database
-    let emailData = { subject, body, categories, flag_status, from_email };
+    // Fetch email details if emailId is provided
+    let emailData = { subject, body, categories, flag_status, from_email, building_id: null };
     if (emailId) {
       const { data: email, error } = await supabase
         .from('incoming_emails')
-        .select('subject, body_preview, categories, flag_status, from_email')
+        .select('subject, body_preview, body_full, categories, flag_status, from_email, building_id')
         .eq('id', emailId)
+        .eq('user_id', user.id)
         .single();
 
       if (error) {
         console.error('Error fetching email:', error);
-      } else if (email) {
-        // Type assertion since the database types might not be updated yet
-        const emailRecord = email as any;
+        return NextResponse.json({ error: 'Email not found' }, { status: 404 });
+      }
+      
+      if (email) {
         emailData = {
-          subject: emailRecord.subject || undefined,
-          body: emailRecord.body_preview || undefined,
-          categories: emailRecord.categories || undefined,
-          flag_status: emailRecord.flag_status || undefined,
-          from_email: emailRecord.from_email || undefined
+          subject: email.subject || undefined,
+          body: email.body_full || email.body_preview || undefined,
+          categories: email.categories || undefined,
+          flag_status: email.flag_status || undefined,
+          from_email: email.from_email || undefined,
+          building_id: email.building_id || null
         };
+      }
+    }
+
+    // Optional: fetch building details for context
+    let buildingContext = "";
+    if (emailData.building_id) {
+      const { data: building } = await supabase
+        .from("buildings")
+        .select("name, unit_count, address")
+        .eq("id", emailData.building_id)
+        .maybeSingle();
+
+      if (building) {
+        buildingContext = `This email is related to the building "${building.name}", which contains ${building.unit_count || 'an unknown number of'} units. Address: ${building.address || 'Not specified'}.\n`;
       }
     }
 
@@ -71,8 +86,9 @@ export async function POST(req: NextRequest) {
     const tagContext = buildTagContext(emailData.categories || [], emailData.flag_status || null);
     const urgencyContext = emailData.flag_status === 'flagged' ? 'URGENT - This email has been flagged as requiring immediate attention.' : '';
     
-    const systemPrompt = `You are a professional property management assistant responding to leaseholder emails using British English. 
-    
+    const systemPrompt = `You are an expert UK leasehold property manager. Write a professional and empathetic email reply to the message below. Use appropriate tone and reference building context if relevant.
+
+${buildingContext}
 ${tagContext}
 
 Guidelines:
@@ -83,6 +99,7 @@ Guidelines:
 - Include next steps or follow-up actions when appropriate
 - Keep responses concise but comprehensive
 - Use appropriate formality based on the email context
+- Reference building details when relevant to provide context
 - End with a professional closing using "Kind regards" or similar British formalities
 ${urgencyContext ? `- ${urgencyContext}` : ''}
 
@@ -101,7 +118,7 @@ Subject: ${emailData.subject || 'No subject'}
 From: ${emailData.from_email || 'Unknown sender'}
 Content: ${emailData.body || 'No content available'}
 
-Please provide a helpful and professional response that addresses the sender's concerns.`;
+Please provide a helpful and professional response that addresses the sender's concerns. If this is related to a specific building, reference the building context appropriately.`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
@@ -125,7 +142,9 @@ Please provide a helpful and professional response that addresses the sender's c
       context: {
         tags: emailData.categories,
         flag_status: emailData.flag_status,
-        urgency: emailData.flag_status === 'flagged'
+        urgency: emailData.flag_status === 'flagged',
+        building_id: emailData.building_id,
+        building_context: buildingContext
       }
     });
 
