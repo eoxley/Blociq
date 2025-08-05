@@ -665,64 +665,10 @@ export default function AskBlocIQ({
 
       {/* Input Area */}
       <div className="border-t border-gray-200 p-4 bg-gray-50">
-        {/* Smart Summary Chips */}
-        {uploadedFiles.length > 0 && (
-          <div className="mb-3">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-medium text-gray-600">📄 Included in AI context:</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {uploadedFiles.map((file) => (
-                <div
-                  key={file.id}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer group"
-                  title={`${file.name} (${formatFileSize(file.size)})`}
-                >
-                  {getFileIconComponent(file.type)}
-                  <span className="font-medium">{cleanFileName(file.name)}</span>
-                  <span className="text-xs text-blue-500 opacity-70">({formatFileSize(file.size)})</span>
-                  <button
-                    type="button"
-                    onClick={() => removeFile(file.id)}
-                    className="ml-1 text-blue-400 hover:text-blue-600 transition-colors opacity-0 group-hover:opacity-100"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+
 
         <form onSubmit={handleSubmit} className="space-y-3">
-          {/* File Upload Zone */}
-          {uploadedFiles.length > 0 && (
-            <div className="space-y-2">
-              <div className="text-xs font-medium text-gray-600 mb-2">📎 Attached files:</div>
-              <div className="flex flex-wrap gap-2">
-                {uploadedFiles.map((file) => (
-                  <div
-                    key={file.id}
-                    className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-gray-200 text-sm shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    {getFileIconComponent(file.type)}
-                    <div className="flex flex-col">
-                      <span className="font-medium text-gray-900 truncate max-w-[150px]">{file.name}</span>
-                      <span className="text-xs text-gray-500">{formatFileSize(file.size)}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeFile(file.id)}
-                      className="text-gray-400 hover:text-red-500 transition-colors ml-2"
-                      title="Remove file"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+
 
           {/* Main Input */}
           <div className="relative">
@@ -757,7 +703,7 @@ export default function AskBlocIQ({
           <div className="mt-4 flex justify-center">
             <Upload 
               className="text-white w-6 h-6 cursor-pointer hover:opacity-80 transition-opacity" 
-              title="Upload a document"
+              title="Upload document to Ask BlocIQ"
               onClick={() => fileInputRef.current?.click()}
             />
             <input

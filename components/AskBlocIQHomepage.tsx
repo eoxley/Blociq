@@ -455,27 +455,7 @@ export default function AskBlocIQHomepage() {
       {/* Input Area */}
       <div className="border-t border-gray-200 p-6 bg-gray-50 rounded-b-2xl">
         <form onSubmit={handleSubmit} className="space-y-3">
-          {/* File Upload Zone */}
-          {uploadedFiles.length > 0 && (
-            <div className="flex flex-wrap gap-2 transition-all duration-300 ease-in-out">
-              {uploadedFiles.map((file) => (
-                <div
-                  key={file.id}
-                  className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-gray-200 text-sm"
-                >
-                  <span>{getFileIcon(file.type)}</span>
-                  <span className="truncate max-w-[150px]">{file.name}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeFile(file.id)}
-                    className="text-gray-400 hover:text-red-500 transition-colors"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+
 
           {/* Main Input */}
           <div className="relative">
@@ -512,7 +492,7 @@ export default function AskBlocIQHomepage() {
           <div className="mt-4 flex justify-center">
             <Upload 
               className="text-white w-6 h-6 cursor-pointer hover:opacity-80 transition-opacity" 
-              title="Upload a document"
+              title="Upload document to Ask BlocIQ"
               onClick={() => fileInputRef.current?.click()}
             />
             <input
