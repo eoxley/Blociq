@@ -95,10 +95,19 @@ export async function POST(req: NextRequest) {
     console.log('📝 Prompt built, calling OpenAI...');
     console.log('🔑 Using API key:', apiKey ? `${apiKey.substring(0, 10)}...` : 'NOT FOUND');
 
-    // Call OpenAI
+    // Call OpenAI with proper system + user message format
     const completion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
-      messages: [{ role: 'system', content: unifiedPrompt }],
+      messages: [
+        { 
+          role: 'system', 
+          content: `You are BlocIQ, an AI assistant for UK leasehold property managers. Use British English. Be legally accurate and cite documents or founder guidance where relevant. If unsure, advise the user to refer to legal documents or professional advice.`
+        },
+        { 
+          role: 'user', 
+          content: unifiedPrompt 
+        }
+      ],
       temperature: 0.3,
       max_tokens: 1500,
     });
