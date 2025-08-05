@@ -20,26 +20,6 @@ import { BlocIQCard, BlocIQCardContent } from '@/components/ui/blociq-card'
 import { BlocIQBadge } from '@/components/ui/blociq-badge'
 import { toast } from 'sonner'
 
-/**
- * Enhanced BuildingTodoList Component
- * 
- * A responsive widget that displays building tasks with hero banner styling
- * and manual add task modal with full CRUD API support.
- * 
- * Features:
- * - Hero banner styling matching Property Events
- * - Manual add task modal with building selection
- * - Full CRUD API integration
- * - Interactive completion toggling
- * - Priority badges (High, Medium, Low)
- * - Overdue task highlighting
- * - Building name display
- * - Responsive design
- * 
- * @param className - Additional CSS classes
- * @param maxItems - Maximum number of tasks to display (default: 5)
- * @param showBuildingName - Whether to show building names (default: true)
- */
 type Todo = {
   id: string
   building_id: number
@@ -101,49 +81,32 @@ export default function BuildingTodoList({
         .from('buildings')
         .select('id, name')
         .order('name')
-
-      if (error) {
-        console.error('Error fetching buildings:', error)
-        return
-      }
-
+      
+      if (error) throw error
       setBuildings(data || [])
     } catch (error) {
-      console.error('Error in fetchBuildings:', error)
+      console.error('Error fetching buildings:', error)
     }
   }
 
-  // Fetch overdue and due today todos
+  // Fetch todos
   const fetchTodos = async () => {
     try {
       setLoading(true)
-      setError(null)
-
-      const now = new Date()
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      const tomorrow = new Date(today)
-      tomorrow.setDate(tomorrow.getDate() + 1)
-
       const { data, error } = await supabase
         .from('building_todos')
         .select(`
           *,
           building:buildings(name)
         `)
-        .or(`due_date.lte.${now.toISOString()},and(due_date.gte.${today.toISOString()},due_date.lt.${tomorrow.toISOString()})`)
-        .eq('is_complete', false)
-        .order('due_date', { ascending: true })
+        .order('created_at', { ascending: false })
         .limit(maxItems)
-
-      if (error) {
-        console.error('Error fetching todos:', error)
-        setError('Failed to load tasks')
-        return
-      }
-
+      
+      if (error) throw error
+      
       setTodos(data || [])
       
-      // Notify parent component about empty state
+      // Notify parent about empty state
       if (onEmptyState) {
         onEmptyState((data || []).length === 0)
       }
@@ -159,38 +122,27 @@ export default function BuildingTodoList({
   const toggleTodo = async (todo: Todo) => {
     try {
       const newStatus = todo.status === 'completed' ? 'pending' : 'completed'
+      const { error } = await supabase
+        .from('building_todos')
+        .update({ 
+          status: newStatus,
+          is_complete: newStatus === 'completed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', todo.id)
       
-      const response = await fetch('/api/add-building-todo', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          id: todo.id,
-          title: todo.title,
-          description: todo.description,
-          building_id: todo.building_id,
-          due_date: todo.due_date,
-          priority: todo.priority,
-          assigned_to: todo.assigned_to,
-          status: newStatus
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to update task')
-      }
-
+      if (error) throw error
+      
       // Update local state
       setTodos(prev => prev.map(t => 
         t.id === todo.id 
           ? { ...t, status: newStatus, is_complete: newStatus === 'completed' }
           : t
       ))
-
+      
       toast.success(newStatus === 'completed' ? 'Task completed!' : 'Task marked as pending')
     } catch (error) {
-      console.error('Error updating todo:', error)
+      console.error('Error toggling todo:', error)
       toast.error('Failed to update task')
     }
   }
@@ -198,33 +150,34 @@ export default function BuildingTodoList({
   // Add new task
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsAddingTask(true)
-
+    
+    if (!newTask.title.trim()) {
+      toast.error('Task title is required')
+      return
+    }
+    
     try {
-      const response = await fetch('/api/add-building-todo', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: newTask.title,
-          description: newTask.description,
-          building_id: newTask.building_id || null,
+      setIsAddingTask(true)
+      
+      const { data, error } = await supabase
+        .from('building_todos')
+        .insert({
+          title: newTask.title.trim(),
+          description: newTask.description.trim() || null,
+          building_id: newTask.building_id ? parseInt(newTask.building_id) : null,
           due_date: newTask.due_date || null,
           priority: newTask.priority,
-          assigned_to: newTask.assigned_to || null
-        }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to create task')
-      }
-
-      const data = await response.json()
-      toast.success(data.message || 'Task created successfully!')
+          assigned_to: newTask.assigned_to.trim() || null,
+          status: 'pending',
+          is_complete: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
       
-      // Reset form and close modal
+      if (error) throw error
+      
+      // Reset form
       setNewTask({
         title: '',
         description: '',
@@ -233,13 +186,15 @@ export default function BuildingTodoList({
         priority: 'Medium',
         assigned_to: ''
       })
+      
       setShowAddTaskForm(false)
+      toast.success('Task added successfully!')
       
       // Refresh todos
       fetchTodos()
     } catch (error) {
       console.error('Error adding task:', error)
-      toast.error(error instanceof Error ? error.message : 'Failed to create task')
+      toast.error('Failed to add task')
     } finally {
       setIsAddingTask(false)
     }
@@ -247,20 +202,17 @@ export default function BuildingTodoList({
 
   // Delete task
   const handleDeleteTask = async (todoId: string) => {
-    if (!confirm('Are you sure you want to delete this task?')) {
-      return
-    }
-
+    if (!confirm('Are you sure you want to delete this task?')) return
+    
     try {
-      const response = await fetch(`/api/add-building-todo?id=${todoId}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to delete task')
-      }
-
-      // Remove from local state
+      const { error } = await supabase
+        .from('building_todos')
+        .delete()
+        .eq('id', todoId)
+      
+      if (error) throw error
+      
+      // Update local state
       setTodos(prev => prev.filter(t => t.id !== todoId))
       toast.success('Task deleted successfully!')
     } catch (error) {
@@ -269,32 +221,24 @@ export default function BuildingTodoList({
     }
   }
 
-  useEffect(() => {
-    fetchBuildings()
-    fetchTodos()
-  }, [maxItems])
-
-  // Get priority color
+  // Helper functions
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'High': return 'text-red-600 bg-red-100 border-red-200'
-      case 'Medium': return 'text-yellow-600 bg-yellow-100 border-yellow-200'
-      case 'Low': return 'text-green-600 bg-green-100 border-green-200'
-      default: return 'text-gray-600 bg-gray-100 border-gray-200'
+      case 'High': return 'bg-red-100 text-red-800'
+      case 'Medium': return 'bg-yellow-100 text-yellow-800'
+      case 'Low': return 'bg-green-100 text-green-800'
+      default: return 'bg-gray-100 text-gray-800'
     }
   }
 
-  // Check if task is overdue
   const isOverdue = (todo: Todo) => {
-    if (!todo.due_date || todo.status === 'completed') return false
-    return new Date(todo.due_date) < new Date()
+    if (!todo.due_date) return false
+    return new Date(todo.due_date) < new Date() && todo.status !== 'completed'
   }
 
-  // Format due date
   const formatDueDate = (dueDate: string) => {
     const date = new Date(dueDate)
-    const now = new Date()
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const today = new Date()
     const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
 
@@ -309,6 +253,12 @@ export default function BuildingTodoList({
       })
     }
   }
+
+  // Load data on mount
+  useEffect(() => {
+    fetchBuildings()
+    fetchTodos()
+  }, [maxItems])
 
   if (loading) {
     return (
@@ -517,119 +467,120 @@ export default function BuildingTodoList({
                 <span className="text-sm text-gray-500">{todos.length} task{todos.length !== 1 ? 's' : ''}</span>
               </div>
               <div className="space-y-3">
-              {todos.map((todo) => (
-                <div 
-                  key={todo.id} 
-                  className={`bg-gradient-to-r rounded-xl p-4 border transition-all duration-200 hover:shadow-md ${
-                    todo.status === 'completed' 
-                      ? 'from-gray-50 to-gray-100 border-gray-200' 
-                      : isOverdue(todo)
-                      ? 'from-red-50 to-pink-50 border-red-200'
-                      : 'from-green-50 to-emerald-50 border-green-200'
-                  }`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3 flex-1">
-                      <button
-                        onClick={() => toggleTodo(todo)}
-                        className={`mt-1 flex-shrink-0 ${
-                          todo.status === 'completed' 
-                            ? 'text-green-600' 
-                            : 'text-gray-400 hover:text-gray-600'
-                        }`}
-                      >
-                        {todo.status === 'completed' ? (
-                          <CheckCircle className="h-5 w-5" />
-                        ) : (
-                          <Circle className="h-5 w-5" />
-                        )}
-                      </button>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h4 className={`font-semibold text-sm ${
+                {todos.map((todo) => (
+                  <div 
+                    key={todo.id} 
+                    className={`bg-gradient-to-r rounded-xl p-4 border transition-all duration-200 hover:shadow-md ${
+                      todo.status === 'completed' 
+                        ? 'from-gray-50 to-gray-100 border-gray-200' 
+                        : isOverdue(todo)
+                        ? 'from-red-50 to-pink-50 border-red-200'
+                        : 'from-green-50 to-emerald-50 border-green-200'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-3 flex-1">
+                        <button
+                          onClick={() => toggleTodo(todo)}
+                          className={`mt-1 flex-shrink-0 ${
                             todo.status === 'completed' 
-                              ? 'text-gray-500 line-through' 
-                              : 'text-gray-900'
-                          }`}>
-                            {todo.title}
-                          </h4>
-                          {isOverdue(todo) && (
-                            <span className="px-2 py-1 rounded-full text-xs bg-red-100 text-red-700 flex-shrink-0">
-                              Overdue
-                            </span>
+                              ? 'text-green-600' 
+                              : 'text-gray-400 hover:text-gray-600'
+                          }`}
+                        >
+                          {todo.status === 'completed' ? (
+                            <CheckCircle className="h-5 w-5" />
+                          ) : (
+                            <Circle className="h-5 w-5" />
                           )}
-                        </div>
-                        
-                        {todo.description && (
-                          <p className={`text-xs mb-2 ${
-                            todo.status === 'completed' 
-                              ? 'text-gray-400' 
-                              : 'text-gray-600'
-                          }`}>
-                            {todo.description}
-                          </p>
-                        )}
+                        </button>
 
-                        <div className="space-y-1 text-sm text-gray-600">
-                          {showBuildingName && todo.building?.name && (
-                            <div className="flex items-center gap-1">
-                              <Building className="h-3 w-3" />
-                              <span>{todo.building.name}</span>
-                            </div>
-                          )}
-                          
-                          {todo.due_date && (
-                            <div className={`flex items-center gap-1 ${
-                              isOverdue(todo) 
-                                ? 'text-red-600' 
-                                : 'text-gray-500'
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className={`font-semibold text-sm ${
+                              todo.status === 'completed' 
+                                ? 'text-gray-500 line-through' 
+                                : 'text-gray-900'
                             }`}>
-                              <Calendar className="h-3 w-3" />
-                              <span>{formatDueDate(todo.due_date)}</span>
-                              {isOverdue(todo) && (
-                                <AlertTriangle className="h-3 w-3" />
-                              )}
-                            </div>
+                              {todo.title}
+                            </h4>
+                            {isOverdue(todo) && (
+                              <span className="px-2 py-1 rounded-full text-xs bg-red-100 text-red-700 flex-shrink-0">
+                                Overdue
+                              </span>
+                            )}
+                          </div>
+                          
+                          {todo.description && (
+                            <p className={`text-xs mb-2 ${
+                              todo.status === 'completed' 
+                                ? 'text-gray-400' 
+                                : 'text-gray-600'
+                            }`}>
+                              {todo.description}
+                            </p>
                           )}
+
+                          <div className="space-y-1 text-sm text-gray-600">
+                            {showBuildingName && todo.building?.name && (
+                              <div className="flex items-center gap-1">
+                                <Building className="h-3 w-3" />
+                                <span>{todo.building.name}</span>
+                              </div>
+                            )}
+                            
+                            {todo.due_date && (
+                              <div className={`flex items-center gap-1 ${
+                                isOverdue(todo) 
+                                  ? 'text-red-600' 
+                                  : 'text-gray-500'
+                              }`}>
+                                <Calendar className="h-3 w-3" />
+                                <span>{formatDueDate(todo.due_date)}</span>
+                                {isOverdue(todo) && (
+                                  <AlertTriangle className="h-3 w-3" />
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                      {todo.priority && (
-                        <BlocIQBadge 
-                          className={`text-xs ${getPriorityColor(todo.priority)}`}
+                      <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                        {todo.priority && (
+                          <BlocIQBadge 
+                            className={`text-xs ${getPriorityColor(todo.priority)}`}
+                          >
+                            {todo.priority}
+                          </BlocIQBadge>
+                        )}
+                        
+                        <button
+                          onClick={() => handleDeleteTask(todo.id)}
+                          className="text-red-400 hover:text-red-600 transition-colors p-1"
+                          title="Delete task"
                         >
-                          {todo.priority}
-                        </BlocIQBadge>
-                      )}
-                      
-                      <button
-                        onClick={() => handleDeleteTask(todo.id)}
-                        className="text-red-400 hover:text-red-600 transition-colors p-1"
-                        title="Delete task"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {todos.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="flex items-center justify-between text-sm text-gray-500">
-                <span>{todos.length} task{todos.length !== 1 ? 's' : ''} shown</span>
-                <a 
-                  href="/buildings" 
-                  className="text-[#4f46e5] hover:text-[#a855f7] transition-colors"
-                >
-                  View all →
-                </a>
+                ))}
               </div>
+              
+              {todos.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex items-center justify-between text-sm text-gray-500">
+                    <span>{todos.length} task{todos.length !== 1 ? 's' : ''} shown</span>
+                    <a 
+                      href="/buildings" 
+                      className="text-[#4f46e5] hover:text-[#a855f7] transition-colors"
+                    >
+                      View all →
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
