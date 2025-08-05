@@ -27,7 +27,7 @@ export default function TriageModal({ isOpen, onClose, unreadEmails, onTriageCom
 
   const handleRunTriage = async () => {
     if (unreadEmails.length === 0) {
-      toast.error('No unread emails to triage');
+      toast.error('No emails to triage');
       return;
     }
 
@@ -90,8 +90,8 @@ export default function TriageModal({ isOpen, onClose, unreadEmails, onTriageCom
         <div className="p-6 space-y-4">
           {!triageData ? (
             <>
-              <div className="text-gray-600">
-                <p>AI will analyze {unreadEmails.length} unread emails and:</p>
+                        <div className="text-gray-600">
+            <p>AI will analyze {unreadEmails.length} emails and:</p>
                 <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
                   <li>📊 Summarise inbox and categorize emails</li>
                   <li>🔥 Mark urgent emails automatically</li>

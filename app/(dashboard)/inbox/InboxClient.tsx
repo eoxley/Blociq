@@ -42,6 +42,19 @@ export default function InboxClient() {
   const [showMobileFolders, setShowMobileFolders] = useState(false);
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
   const user = useUser();
+
+  // Keyboard delete support
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Delete' && selectedEmail) {
+        e.preventDefault();
+        handleDeleteEmail(selectedEmail.id);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedEmail]);
   
 
 
@@ -82,8 +95,8 @@ export default function InboxClient() {
     { id: 'drafts', label: 'Drafts', count: draftsCount, icon: '📝' }
   ];
 
-  // Get unread emails for triage
-  const unreadEmails = emails.filter(e => e.unread || !e.is_read);
+  // Get all emails for triage (not just unread)
+  const allEmails = emails;
 
   // Fetch drafts count
   useEffect(() => {
@@ -221,10 +234,17 @@ export default function InboxClient() {
         throw new Error('Failed to delete email');
       }
 
-      // Remove email from local state
+      // Remove email from local state immediately
       const updatedEmails = emails.filter(email => email.id !== emailId);
-      // You'll need to update your email state management here
+      // Update the emails state through the hook
+      refreshEmails();
       
+      // Clear selected email if it was the deleted one
+      if (selectedEmail?.id === emailId) {
+        selectEmail(null);
+      }
+      
+      toast.success('Email deleted successfully');
     } catch (error) {
       console.error('Error deleting email:', error);
       toast.error('Failed to delete email');
@@ -289,7 +309,7 @@ export default function InboxClient() {
             className="flex items-center gap-2 bg-white border border-red-300 rounded-lg px-3 py-2 text-sm hover:bg-red-50 transition-colors"
           >
             <TriageIcon className="w-5 h-5" />
-            <span>AI Triage</span>
+            <span>AI Triage ({allEmails.length})</span>
           </button>
           
 
@@ -519,12 +539,12 @@ export default function InboxClient() {
       </div>
 
       {/* AI Triage Modal */}
-      <TriageModal
-        isOpen={showTriageModal}
-        onClose={() => setShowTriageModal(false)}
-        unreadEmails={unreadEmails}
-        onTriageComplete={handleTriageComplete}
-      />
+              <TriageModal
+          isOpen={showTriageModal}
+          onClose={() => setShowTriageModal(false)}
+          unreadEmails={allEmails}
+          onTriageComplete={handleTriageComplete}
+        />
 
       {/* Compose Email Modal */}
       <ComposeEmailModal
