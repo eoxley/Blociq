@@ -67,12 +67,14 @@ interface BuildingTodoListProps {
   className?: string
   maxItems?: number
   showBuildingName?: boolean
+  onEmptyState?: (isEmpty: boolean) => void
 }
 
 export default function BuildingTodoList({ 
   className = "", 
   maxItems = 5,
-  showBuildingName = true 
+  showBuildingName = true,
+  onEmptyState
 }: BuildingTodoListProps) {
   const [todos, setTodos] = useState<Todo[]>([])
   const [buildings, setBuildings] = useState<Building[]>([])
@@ -140,6 +142,11 @@ export default function BuildingTodoList({
       }
 
       setTodos(data || [])
+      
+      // Notify parent component about empty state
+      if (onEmptyState) {
+        onEmptyState((data || []).length === 0)
+      }
     } catch (error) {
       console.error('Error fetching todos:', error)
       setError('Failed to load tasks')
@@ -503,14 +510,7 @@ export default function BuildingTodoList({
           )}
 
           {/* Tasks List */}
-          {todos.length === 0 ? (
-            <div className="text-center py-8 flex-1 flex items-center justify-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <CheckCircle className="h-8 w-8 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">All caught up!</h3>
-            </div>
-          ) : (
+          {todos.length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Active Tasks</h3>
@@ -616,7 +616,6 @@ export default function BuildingTodoList({
                   </div>
                 </div>
               ))}
-            </div>
             </div>
           )}
 

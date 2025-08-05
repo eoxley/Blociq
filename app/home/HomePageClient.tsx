@@ -163,6 +163,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const [buildings, setBuildings] = useState<Building[]>([])
   const [outlookConnected, setOutlookConnected] = useState(false)
   const [syncingOutlook, setSyncingOutlook] = useState(false)
+  const [todosEmpty, setTodosEmpty] = useState(false)
   const [newEvent, setNewEvent] = useState({
     title: '',
     date: '',
@@ -220,7 +221,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         supabase
           .from('manual_events')
           .select('*')
-          .gte('start_time', new Date().toISOString())
+          .gte('start_time', new Date().toISOString().split('T')[0])
           .order('start_time', { ascending: true })
           .limit(5)
       ])
@@ -258,6 +259,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         location: event.location,
         organiser_name: event.organiser_name
       }))
+
+      console.log('📅 Fetched events:', {
+        propertyEvents: propertyEventsResponse.data?.length || 0,
+        manualEvents: manualEventsResponse.data?.length || 0,
+        manualEventsData: manualEventsResponse.data
+      })
 
       // Combine and sort all events
       const allEvents = [...propertyEvents, ...manualEvents].sort((a, b) => 
@@ -1444,7 +1451,21 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
             {/* Building To-Do Widget */}
             <div className="h-full">
-              <BuildingTodoList maxItems={5} showBuildingName={true} className="h-full" />
+              {todosEmpty ? (
+                <div className="text-center py-8 flex-1 flex items-center justify-center">
+                  <div className="w-16 h-16 bg-gradient-to-r from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">All caught up!</h3>
+                </div>
+              ) : (
+                <BuildingTodoList 
+                  maxItems={5} 
+                  showBuildingName={true} 
+                  className="h-full" 
+                  onEmptyState={setTodosEmpty}
+                />
+              )}
             </div>
           </div>
         </div>
