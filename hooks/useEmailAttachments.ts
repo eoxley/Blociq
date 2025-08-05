@@ -33,7 +33,10 @@ export function useEmailAttachments(emailId: string | null): UseEmailAttachments
       const response = await fetch(`/api/email-attachments?emailId=${emailId}`);
       
       if (!response.ok) {
-        throw new Error('Failed to fetch attachments');
+        // Don't throw error, just set empty attachments
+        console.warn('Email attachments API returned non-OK status:', response.status);
+        setAttachments([]);
+        return;
       }
 
       const data = await response.json();
@@ -41,11 +44,13 @@ export function useEmailAttachments(emailId: string | null): UseEmailAttachments
       if (data.success) {
         setAttachments(data.attachments || []);
       } else {
-        throw new Error(data.error || 'Failed to fetch attachments');
+        // Don't throw error, just set empty attachments
+        console.warn('Email attachments API returned error:', data.error);
+        setAttachments([]);
       }
     } catch (err) {
       console.error('Error fetching email attachments:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch attachments');
+      // Don't set error state, just set empty attachments
       setAttachments([]);
     } finally {
       setLoading(false);

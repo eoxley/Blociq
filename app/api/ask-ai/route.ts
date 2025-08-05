@@ -403,6 +403,7 @@ export async function POST(req: NextRequest) {
         response: result,
         building_id: building_id || contextMetadata.building_id || null,
         building_name: contextMetadata.buildingName || null,
+        unit_count: contextMetadata.unit_count || null,
         document_count: document_ids.length,
         context_type: contextType,
         context_id: contextId || null,

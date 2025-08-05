@@ -22,14 +22,16 @@ const dummyBuildings = [
     name: "Kingsmere House", 
     address: "Wimbledon, London SW19", 
     units: 42,
-    isDummy: true
+    isDummy: true,
+    is_hrb: true
   },
   { 
     id: 'dummy-2', 
     name: "Harbour View", 
     address: "Brighton Seafront, BN1", 
     units: 28,
-    isDummy: true
+    isDummy: true,
+    is_hrb: true
   },
   { 
     id: 'dummy-3', 
@@ -50,7 +52,8 @@ const dummyBuildings = [
     name: "Oakwood Gardens", 
     address: "Epsom, Surrey KT18", 
     units: 24,
-    isDummy: true
+    isDummy: true,
+    is_hrb: true
   },
   { 
     id: 'dummy-6', 
@@ -99,7 +102,8 @@ const dummyBuildings = [
     name: "Cliffside Manor", 
     address: "Eastbourne, East Sussex BN21", 
     units: 15,
-    isDummy: true
+    isDummy: true,
+    is_hrb: true
   },
   { 
     id: 'dummy-13', 
@@ -138,6 +142,7 @@ function BuildingsList() {
             name: building.name,
             address: building.address,
             units: building.unit_count || 0, // Use unit_count from database
+            unit_count: building.unit_count || 0, // Also store as unit_count for consistency
             isDummy: false,
             created_at: building.created_at
           }))
@@ -260,8 +265,17 @@ function BuildingsList() {
             {filteredBuildings.map((building) => (
               <div 
                 key={building.id}
-                className="bg-white rounded-2xl shadow-lg border border-purple-200 hover:shadow-purple-200/50 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 text-center group overflow-hidden"
+                className="relative bg-white rounded-2xl shadow-lg border border-purple-200 hover:shadow-purple-200/50 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 text-center group overflow-hidden"
               >
+                {/* HRB Badge */}
+                {building.is_hrb && (
+                  <div 
+                    className="absolute top-3 right-3 bg-gradient-to-br from-orange-400 to-yellow-300 text-xs font-bold text-white px-2 py-1 rounded-full shadow-lg hover:scale-105 transition-transform duration-200 z-10"
+                    title="High-Risk Building (HRB)"
+                  >
+                    🛡 HRB
+                  </div>
+                )}
                 <div className="p-8">
                   {/* Building Icon */}
                   <div className="w-20 h-20 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-2xl flex items-center justify-center mb-8 shadow-lg mx-auto group-hover:scale-110 transition-transform duration-300">
@@ -298,7 +312,7 @@ function BuildingsList() {
                   <div className="flex items-center gap-3 mb-8 justify-center">
                     <Users className="h-5 w-5 text-[#4f46e5]" />
                     <p className="text-gray-600 font-medium">
-                      {building.units} {building.units === 1 ? 'unit' : 'units'}
+                      {building.units || building.unit_count || 0} {building.units === 1 || building.unit_count === 1 ? 'unit' : 'units'}
                     </p>
                   </div>
 
@@ -311,15 +325,13 @@ function BuildingsList() {
                           className="w-full bg-gray-100 text-gray-500 px-4 py-3 rounded-xl font-semibold text-base cursor-not-allowed opacity-75"
                           disabled
                         >
-                          <Eye className="h-5 w-5 mr-2 inline" />
-                          👁 Demo Only
+                          Demo Only
                         </button>
                         <button 
                           className="w-full bg-gray-100 text-gray-500 px-4 py-3 rounded-xl font-semibold text-base cursor-not-allowed opacity-75"
                           disabled
                         >
-                          <Shield className="h-5 w-5 mr-2 inline" />
-                          🛡️ Demo Only
+                          Demo Only
                         </button>
                       </div>
                     ) : (
@@ -328,11 +340,14 @@ function BuildingsList() {
                         <BlocIQButton 
                           asChild
                           size="sm"
-                          className="w-full bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white border-0 shadow-lg hover:shadow-xl hover:brightness-110 transition-all duration-200 rounded-xl font-semibold text-base"
+                          className={`w-full bg-gradient-to-r from-[#4f46e5] to-[#a855f7] border-0 shadow-lg hover:shadow-xl hover:brightness-110 transition-all duration-200 rounded-xl font-semibold text-base ${
+                            building.name === "Ashwood House" 
+                              ? "text-white" 
+                              : "text-white"
+                          }`}
                         >
                           <Link href={`/buildings/${building.id}`}>
-                            <Eye className="h-5 w-5 mr-2" />
-                            👁 View Details
+                            View Details
                           </Link>
                         </BlocIQButton>
                         <BlocIQButton 
@@ -342,8 +357,7 @@ function BuildingsList() {
                           className="w-full border-[#4f46e5] text-[#4f46e5] hover:bg-[#4f46e5] hover:text-white transition-all duration-200 rounded-xl font-semibold text-base"
                         >
                           <Link href={`/buildings/${building.id}/compliance`}>
-                            <Shield className="h-5 w-5 mr-2" />
-                            🛡️ View Compliance
+                            View Compliance
                           </Link>
                         </BlocIQButton>
                       </>

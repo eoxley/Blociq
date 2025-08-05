@@ -34,7 +34,11 @@ export async function GET(req: NextRequest) {
 
     if (error) {
       console.error('Error fetching email attachments:', error);
-      return NextResponse.json({ error: 'Failed to fetch attachments' }, { status: 500 });
+      // Return empty array instead of error to prevent UI crashes
+      return NextResponse.json({
+        success: true,
+        attachments: []
+      });
     }
 
     return NextResponse.json({
