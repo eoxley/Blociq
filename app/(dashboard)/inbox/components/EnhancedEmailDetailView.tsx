@@ -103,6 +103,8 @@ export default function EnhancedEmailDetailView({
   const generateDraftReply = async () => {
     setIsGeneratingReply(true);
     try {
+      console.log('🤖 Generating AI reply for email:', email.id);
+      
       const response = await fetch('/api/generate-reply', {
         method: 'POST',
         headers: {
@@ -114,7 +116,8 @@ export default function EnhancedEmailDetailView({
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate reply');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: Failed to generate reply`);
       }
 
       const data = await response.json();
@@ -127,12 +130,13 @@ export default function EnhancedEmailDetailView({
         // Open reply modal with generated content
         onReply?.('reply');
         toast.success('AI reply generated successfully!');
+        console.log('✅ AI reply generated successfully');
       } else {
-        throw new Error('No reply generated');
+        throw new Error(data.error || 'No reply generated');
       }
     } catch (error) {
-      console.error('Error generating reply:', error);
-      toast.error('Failed to generate AI reply');
+      console.error('❌ Error generating reply:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to generate AI reply');
     } finally {
       setIsGeneratingReply(false);
     }

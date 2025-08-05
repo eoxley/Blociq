@@ -222,6 +222,8 @@ export default function InboxClient() {
 
   const handleDeleteEmail = async (emailId: string) => {
     try {
+      console.log('🗑️ Deleting email:', emailId);
+      
       const response = await fetch('/api/delete-email', {
         method: 'POST',
         headers: {
@@ -231,23 +233,32 @@ export default function InboxClient() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete email');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: Failed to delete email`);
       }
 
-      // Remove email from local state immediately
-      const updatedEmails = emails.filter(email => email.id !== emailId);
-      // Update the emails state through the hook
-      refreshEmails();
+      const result = await response.json();
       
-      // Clear selected email if it was the deleted one
-      if (selectedEmail?.id === emailId) {
-        selectEmail(null);
+      if (result.success) {
+        // Remove email from local state immediately
+        const updatedEmails = emails.filter(email => email.id !== emailId);
+        
+        // Update the emails state through the hook
+        refreshEmails();
+        
+        // Clear selected email if it was the deleted one
+        if (selectedEmail?.id === emailId) {
+          selectEmail(null);
+        }
+        
+        toast.success('Email deleted successfully');
+        console.log('✅ Email deleted successfully');
+      } else {
+        throw new Error(result.error || 'Unknown error occurred');
       }
-      
-      toast.success('Email deleted successfully');
     } catch (error) {
-      console.error('Error deleting email:', error);
-      toast.error('Failed to delete email');
+      console.error('❌ Error deleting email:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to delete email');
     }
   };
 
