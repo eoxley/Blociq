@@ -18,6 +18,7 @@ import {
   Filter,
   Pin
 } from 'lucide-react'
+import AIButton from './AIButton'
 
 type Todo = {
   id: string
@@ -456,6 +457,13 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
                     </>
                   ) : (
                     <>
+                      <AIButton
+                        contextType="todo"
+                        itemId={todo.id}
+                        itemTitle={todo.title}
+                        buildingId={buildingId.toString()}
+                        className="p-2"
+                      />
                       <button
                         onClick={() => setEditingTodo(todo)}
                         className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"

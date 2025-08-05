@@ -5,6 +5,12 @@ import { getEmailThreadContext } from '@/lib/supabase/emails';
 import { getFounderGuidance } from '@/lib/ai/founder';
 import { getComplianceContext } from '@/lib/supabase/compliance';
 import { getMajorWorksContext, getMajorWorksProjectContext } from '@/lib/supabase/majorWorks';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function buildPrompt({
   contextType,
@@ -74,17 +80,34 @@ export async function buildPrompt({
     }
   }
 
+  // 📋 Building Todos
+  if (buildingId) {
+    try {
+      const { data: todos } = await supabase
+        .from('building_todos')
+        .select('title, description, status, priority, due_date')
+        .eq('building_id', buildingId)
+        .order('due_date', { ascending: true })
+        .limit(10);
+
+      if (todos && todos.length > 0) {
+        const todoContext = todos.map(todo => 
+          `- ${todo.title} (${todo.status}, ${todo.priority} priority, due: ${todo.due_date})`
+        ).join('\n');
+        contextSections.push(`Building Todos:\n${todoContext}`);
+      }
+    } catch (error) {
+      console.warn('Could not fetch building todos:', error);
+    }
+  }
+
   // ✍️ Manual override
   if (manualContext) contextSections.push(`Manual Context:\n${manualContext}`);
 
-  // 🧠 System Prompt
-  const systemPrompt = `You are BlocIQ, an AI assistant for UK leasehold property managers. Use British English. Be legally accurate and cite documents or founder guidance where relevant. If unsure, advise the user to refer to legal documents or professional advice.`;
+  // Return context sections without system prompt (handled separately)
+  const contextPrompt = contextSections.length > 0 
+    ? `Context Information:\n\n${contextSections.join('\n\n---\n\n')}\n\nUser question: ${question}`
+    : `User question: ${question}`;
 
-  const finalPrompt = [
-    systemPrompt,
-    `\n\n---\n\n` + contextSections.join('\n\n---\n\n'),
-    `\n\nUser question: ${question}`
-  ].join('\n');
-
-  return finalPrompt;
+  return contextPrompt;
 } 

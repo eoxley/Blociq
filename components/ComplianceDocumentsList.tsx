@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { FileText, Download, Calendar, Building, User, Sparkles } from "lucide-react";
 import SmartUploader from "./SmartUploader";
+import AIButton from "./AIButton";
 
 type ComplianceDocument = {
   id: string;
@@ -200,13 +201,22 @@ export default function ComplianceDocumentsList({
                     )}
                   </div>
                   
-                  {doc.doc_url && (
-                    <Button asChild size="sm" variant="outline">
-                      <a href={doc.doc_url} target="_blank" rel="noopener noreferrer">
-                        <Download className="h-4 w-4" />
-                      </a>
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <AIButton
+                      contextType="document"
+                      itemId={doc.id}
+                      itemTitle={doc.doc_type || 'Compliance Document'}
+                      buildingId={buildingId?.toString()}
+                      className="p-1"
+                    />
+                    {doc.doc_url && (
+                      <Button asChild size="sm" variant="outline">
+                        <a href={doc.doc_url} target="_blank" rel="noopener noreferrer">
+                          <Download className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Dates */}
