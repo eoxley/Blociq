@@ -20,6 +20,25 @@ interface OutlookToken {
 }
 
 /**
+ * Safely sanitizes HTML content for rendering
+ * This is a basic implementation - for production, consider using a library like DOMPurify
+ * @param html - The HTML content to sanitize
+ * @returns Sanitized HTML content
+ */
+export function sanitizeHtml(html: string): string {
+  // Basic sanitization - remove script tags and potentially dangerous attributes
+  let sanitized = html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+    .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+    .replace(/javascript:/gi, '')
+    .replace(/vbscript:/gi, '')
+    .replace(/data:/gi, '');
+  
+  return sanitized;
+}
+
+/**
  * Sends an email via Microsoft Graph API (Outlook)
  * @param emailData - The email data to send
  * @param tokens - Outlook access tokens

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
+import { sanitizeHtml } from "@/utils/email";
 
 interface Email {
   message_id: string;
@@ -13,6 +14,7 @@ interface Email {
   from_email: string;
   from_name?: string;
   body: string;
+  body_content_type?: string;
   received_at: string;
   building_id?: string;
   building_name?: string;
@@ -289,7 +291,14 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
               <div>
                 <h4 className="font-medium text-sm text-gray-700 mb-2">Message</h4>
                 <Card className="p-4 bg-gray-50">
-                  <p className="text-sm whitespace-pre-wrap">{email.body}</p>
+                  {email.body_content_type === 'html' ? (
+                    <div 
+                      className="prose prose-sm max-w-none text-sm"
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(email.body) }}
+                    />
+                  ) : (
+                    <p className="text-sm whitespace-pre-wrap">{email.body}</p>
+                  )}
                 </Card>
               </div>
 
