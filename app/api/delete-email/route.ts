@@ -1,7 +1,7 @@
 // ✅ AUDIT COMPLETE [2025-01-15]
 // - Field validation for emailId
 // - Supabase query with proper .eq() filter
-// - Microsoft Graph API integration for Outlook deletion
+// - Microsoft Graph API integration for Outlook deletion to deleted items
 // - Try/catch with detailed error handling
 // - Used in inbox components
 
@@ -12,8 +12,14 @@ import { Database } from '@/lib/database.types';
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies: () => cookies() });
+    const supabase = createRouteHandlerClient<Database>({ cookies });
     
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     // Validate request body
     const body = await req.json();
     const { emailId } = body;
@@ -37,18 +43,50 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email not found' }, { status: 404 });
     }
 
-    // Delete from Supabase
-    const { error: deleteError } = await supabase
-      .from('incoming_emails')
-      .delete()
-      .eq('id', emailId);
+    // Find or create "deleted items" folder for the user
+    let deletedItemsFolder;
+    const { data: existingFolder } = await supabase
+      .from('email_folders')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('name', 'Deleted Items')
+      .single();
 
-    if (deleteError) {
-      console.error('❌ Failed to delete from Supabase:', deleteError.message);
-      return NextResponse.json({ error: deleteError.message }, { status: 500 });
+    if (existingFolder) {
+      deletedItemsFolder = existingFolder;
+    } else {
+              // Create deleted items folder if it doesn't exist
+        const { data: newFolder, error: createError } = await supabase
+          .from('email_folders')
+          .insert({
+            user_id: user.id,
+            name: 'Deleted Items'
+          })
+          .select()
+          .single();
+
+      if (createError) {
+        console.error('❌ Failed to create deleted items folder:', createError.message);
+        return NextResponse.json({ error: 'Failed to create deleted items folder' }, { status: 500 });
+      }
+      deletedItemsFolder = newFolder;
     }
 
-    // Try to delete from Outlook if we have the message ID
+    // Move email to deleted items folder instead of deleting
+    const { error: moveError } = await supabase
+      .from('incoming_emails')
+      .update({ 
+        folder_id: deletedItemsFolder.id,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', emailId);
+
+    if (moveError) {
+      console.error('❌ Failed to move email to deleted items:', moveError.message);
+      return NextResponse.json({ error: moveError.message }, { status: 500 });
+    }
+
+    // Try to move to Outlook deleted items folder
     if (email.message_id) {
       try {
         // Get the latest Outlook token
@@ -62,26 +100,46 @@ export async function POST(req: NextRequest) {
 
         if (tokens?.access_token) {
           try {
-            const graphResponse = await fetch(
-              `https://graph.microsoft.com/v1.0/me/messages/${email.message_id}`,
+            // First, try to move to deleted items folder
+            const moveResponse = await fetch(
+              `https://graph.microsoft.com/v1.0/me/messages/${email.message_id}/move`,
               {
-                method: 'DELETE',
+                method: 'POST',
                 headers: {
                   'Authorization': `Bearer ${tokens.access_token}`,
                   'Content-Type': 'application/json',
                 },
+                body: JSON.stringify({
+                  destinationId: 'deleteditems' // Standard Outlook deleted items folder
+                }),
               }
             );
 
-            if (graphResponse.ok) {
-              console.log('✅ Email deleted from Outlook successfully');
+            if (moveResponse.ok) {
+              console.log('✅ Email moved to Outlook deleted items successfully');
             } else {
-              const errorText = await graphResponse.text();
-              console.warn('⚠️ Failed to delete from Outlook:', graphResponse.status, errorText);
-              
-              // Check if it's a permissions issue
-              if (graphResponse.status === 403) {
-                console.error('❌ Insufficient permissions for Mail.ReadWrite or Mail.ReadWrite.Shared');
+              // If move fails, try direct deletion
+              const deleteResponse = await fetch(
+                `https://graph.microsoft.com/v1.0/me/messages/${email.message_id}`,
+                {
+                  method: 'DELETE',
+                  headers: {
+                    'Authorization': `Bearer ${tokens.access_token}`,
+                    'Content-Type': 'application/json',
+                  },
+                }
+              );
+
+              if (deleteResponse.ok) {
+                console.log('✅ Email deleted from Outlook successfully');
+              } else {
+                const errorText = await deleteResponse.text();
+                console.warn('⚠️ Failed to delete from Outlook:', deleteResponse.status, errorText);
+                
+                // Check if it's a permissions issue
+                if (deleteResponse.status === 403) {
+                  console.error('❌ Insufficient permissions for Mail.ReadWrite or Mail.ReadWrite.Shared');
+                }
               }
             }
           } catch (graphError) {
@@ -96,8 +154,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    console.log('✅ Email deleted successfully');
-    return NextResponse.json({ success: true });
+    console.log('✅ Email moved to deleted items successfully');
+    return NextResponse.json({ 
+      success: true,
+      message: 'Email moved to deleted items'
+    });
 
   } catch (error) {
     console.error('❌ Error in delete-email route:', error);

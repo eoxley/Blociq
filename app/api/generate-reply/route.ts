@@ -18,11 +18,12 @@ interface GenerateReplyRequest {
   flag_status?: string;
   from_email?: string;
   prompt?: string;
+  action?: 'reply' | 'reply-all' | 'forward';
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { emailId, subject, body, categories, flag_status, from_email, prompt }: GenerateReplyRequest = await req.json();
+    const { emailId, subject, body, categories, flag_status, from_email, prompt, action }: GenerateReplyRequest = await req.json();
     
     if (!emailId && !subject && !body && !prompt) {
       return NextResponse.json({ error: 'Email ID or content is required' }, { status: 400 });
@@ -37,32 +38,76 @@ export async function POST(req: NextRequest) {
     }
 
     // Fetch email details if emailId is provided
-    let emailData = { subject, body, categories, flag_status, from_email, building_id: null };
+    let emailData = { subject, body, categories, flag_status, from_email, building_id: null, message_id: null };
     if (emailId) {
-      // First try to get the email from Microsoft Graph
+      // First try to get the email from Microsoft Graph for full context
       try {
-        const graphResponse = await fetch(`https://graph.microsoft.com/v1.0/me/messages/${emailId}`, {
-          headers: {
-            'Authorization': `Bearer ${process.env.MICROSOFT_GRAPH_TOKEN}`,
-            'Content-Type': 'application/json',
-          },
-        });
+        // Get user's Outlook token
+        const { data: tokens } = await supabase
+          .from('outlook_tokens')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
 
-        if (graphResponse.ok) {
-          const graphEmail = await graphResponse.json();
-          emailData = {
-            subject: graphEmail.subject || undefined,
-            body: graphEmail.body?.content || undefined,
-            categories: graphEmail.categories || undefined,
-            flag_status: graphEmail.flag?.flagStatus || undefined,
-            from_email: graphEmail.from?.emailAddress?.address || undefined,
-            building_id: null // Will be determined from local database
-          };
+        if (tokens?.access_token) {
+          // Get the email from Supabase first to get the message_id
+          const { data: localEmail } = await supabase
+            .from('incoming_emails')
+            .select('*')
+            .eq('id', emailId)
+            .eq('user_id', user.id)
+            .single();
+
+          if (localEmail?.message_id) {
+            const graphResponse = await fetch(`https://graph.microsoft.com/v1.0/me/messages/${localEmail.message_id}`, {
+              headers: {
+                'Authorization': `Bearer ${tokens.access_token}`,
+                'Content-Type': 'application/json',
+              },
+            });
+
+            if (graphResponse.ok) {
+              const graphEmail = await graphResponse.json();
+              emailData = {
+                subject: graphEmail.subject || localEmail.subject || undefined,
+                body: graphEmail.body?.content || localEmail.body_full || localEmail.body_preview || undefined,
+                categories: graphEmail.categories || localEmail.categories || undefined,
+                flag_status: graphEmail.flag?.flagStatus || localEmail.flag_status || undefined,
+                from_email: graphEmail.from?.emailAddress?.address || localEmail.from_email || undefined,
+                building_id: localEmail.building_id || null,
+                message_id: localEmail.message_id
+              };
+            } else {
+              // Use local data if Graph fails
+              emailData = {
+                subject: localEmail.subject || undefined,
+                body: localEmail.body_full || localEmail.body_preview || undefined,
+                categories: localEmail.categories || undefined,
+                flag_status: localEmail.flag_status || undefined,
+                from_email: localEmail.from_email || undefined,
+                building_id: localEmail.building_id || null,
+                message_id: localEmail.message_id
+              };
+            }
+          } else {
+            // Use local data if no message_id
+            emailData = {
+              subject: localEmail.subject || undefined,
+              body: localEmail.body_full || localEmail.body_preview || undefined,
+              categories: localEmail.categories || undefined,
+              flag_status: localEmail.flag_status || undefined,
+              from_email: localEmail.from_email || undefined,
+              building_id: localEmail.building_id || null,
+              message_id: localEmail.message_id
+            };
+          }
         } else {
-          // Fallback to Supabase if Graph fails
+          // Fallback to Supabase if no token
           const { data: email, error } = await supabase
             .from('incoming_emails')
-            .select('subject, body_preview, body_full, categories, flag_status, from_email, building_id')
+            .select('*')
             .eq('id', emailId)
             .eq('user_id', user.id)
             .single();
@@ -79,36 +124,14 @@ export async function POST(req: NextRequest) {
               categories: email.categories || undefined,
               flag_status: email.flag_status || undefined,
               from_email: email.from_email || undefined,
-              building_id: email.building_id || null
+              building_id: email.building_id || null,
+              message_id: email.message_id
             };
           }
         }
-      } catch (graphError) {
-        console.error('Error fetching from Graph, falling back to Supabase:', graphError);
-        
-        // Fallback to Supabase
-        const { data: email, error } = await supabase
-          .from('incoming_emails')
-          .select('subject, body_preview, body_full, categories, flag_status, from_email, building_id')
-          .eq('id', emailId)
-          .eq('user_id', user.id)
-          .single();
-
-        if (error) {
-          console.error('Error fetching email:', error);
-          return NextResponse.json({ error: 'Email not found' }, { status: 404 });
-        }
-        
-        if (email) {
-          emailData = {
-            subject: email.subject || undefined,
-            body: email.body_full || email.body_preview || undefined,
-            categories: email.categories || undefined,
-            flag_status: email.flag_status || undefined,
-            from_email: email.from_email || undefined,
-            building_id: email.building_id || null
-          };
-        }
+      } catch (error) {
+        console.error('Error fetching email data:', error);
+        return NextResponse.json({ error: 'Failed to fetch email data' }, { status: 500 });
       }
     }
 
@@ -140,11 +163,15 @@ export async function POST(req: NextRequest) {
     // Build context-aware prompt based on email tags and status
     const tagContext = buildTagContext(emailData.categories || [], emailData.flag_status || null);
     const urgencyContext = emailData.flag_status === 'flagged' ? 'URGENT - This email has been flagged as requiring immediate attention.' : '';
+    const actionContext = action === 'reply-all' ? 'This is a reply-all response. Consider all recipients and ensure the response is appropriate for the entire group.' : 
+                         action === 'forward' ? 'This is a forwarded message. Provide context for the recipient about why this is being forwarded.' : 
+                         'This is a direct reply to the sender.';
     
-    const systemPrompt = `You are an expert UK leasehold property manager. Write a professional and empathetic email reply to the message below. Use appropriate tone and reference building context if relevant.
+    const systemPrompt = `You are an expert UK leasehold property manager. Write a professional and empathetic email ${action || 'reply'} to the message below. Use appropriate tone and reference building context if relevant.
 
 ${buildingContext}
 ${tagContext}
+${actionContext}
 
 Guidelines:
 - Use a professional, courteous, and helpful tone using British English
@@ -157,9 +184,12 @@ Guidelines:
 - Reference building details when relevant to provide context
 - End with a professional closing using "Kind regards" or similar British formalities
 ${urgencyContext ? `- ${urgencyContext}` : ''}
+- Consider the full email chain context when crafting your response
+- If this is a reply to a complex issue, acknowledge previous correspondence
+- Provide specific, actionable next steps with timelines when possible
 
 Response Structure:
-1. Acknowledge the concern/request
+1. Acknowledge the concern/request (and previous correspondence if applicable)
 2. Provide relevant information or solution
 3. Outline next steps or timeline
 4. Offer additional support if needed
@@ -167,13 +197,13 @@ Response Structure:
 
 Use British English spelling throughout (e.g., analyse, summarise, organise, recognise, apologise, customise, centre, defence) and format dates as DD/MM/YYYY.`;
 
-    const userPrompt = prompt || `Generate a professional reply to this email:
+    const userPrompt = prompt || `Generate a professional ${action || 'reply'} to this email:
 
 Subject: ${emailData.subject || 'No subject'}
 From: ${emailData.from_email || 'Unknown sender'}
 Content: ${emailData.body || 'No content available'}
 
-Please provide a helpful and professional response that addresses the sender's concerns. If this is related to a specific building, reference the building context appropriately.`;
+Please provide a helpful and professional response that addresses the sender's concerns. If this is related to a specific building, reference the building context appropriately. Consider the full email chain and provide context-aware responses.`;
 
     let generatedReply = '';
     
@@ -219,7 +249,9 @@ Please provide a helpful and professional response that addresses the sender's c
         flag_status: emailData.flag_status,
         urgency: emailData.flag_status === 'flagged',
         building_id: emailData.building_id,
-        building_context: buildingContext
+        building_context: buildingContext,
+        action: action || 'reply',
+        message_id: emailData.message_id
       }
     });
 

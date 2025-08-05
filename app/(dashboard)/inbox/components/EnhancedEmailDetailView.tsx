@@ -144,10 +144,10 @@ export default function EnhancedEmailDetailView({
   const handleDelete = async () => {
     if (!onDelete) return;
     
-    if (confirm('Are you sure you want to delete this email? This action cannot be undone.')) {
+    if (confirm('Are you sure you want to move this email to deleted items? The email will be moved to the "Deleted Items" folder in both BlocIQ and Outlook.')) {
       try {
         await onDelete(email.id);
-        toast.success('Email deleted successfully');
+        toast.success('Email moved to deleted items');
       } catch (error) {
         console.error('Error deleting email:', error);
         toast.error('Failed to delete email');
@@ -194,6 +194,88 @@ export default function EnhancedEmailDetailView({
               </span>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Action Buttons - Moved to top */}
+      <div className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={handleReply}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <Reply className="h-4 w-4" />
+            Reply
+          </Button>
+          <Button
+            onClick={handleReplyAll}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <Users className="h-4 w-4" />
+            Reply All
+          </Button>
+          <Button
+            onClick={handleForward}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <Forward className="h-4 w-4" />
+            Forward
+          </Button>
+          <Button
+            onClick={generateDraftReply}
+            disabled={isGeneratingReply}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-indigo-500 hover:from-indigo-600 hover:to-purple-700"
+          >
+            {isGeneratingReply ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Bot className="h-4 w-4" />
+            )}
+            {isGeneratingReply ? 'Generating...' : '✍️ Generate Reply'}
+          </Button>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={handleFlagToggle}
+            variant={email.flag_status === 'flagged' ? 'default' : 'outline'}
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <Flag className="h-4 w-4" />
+            {email.flag_status === 'flagged' ? 'Unflag' : 'Flag'}
+          </Button>
+          
+          {!email.handled && !email.is_handled && (
+            <Button
+              onClick={handleMarkAsHandled}
+              disabled={isHandling}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <CheckCircle className="h-4 w-4" />
+              {isHandling ? 'Marking...' : 'Mark Handled'}
+            </Button>
+          )}
+
+          <Button
+            onClick={handleDelete}
+            variant="destructive"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete
+          </Button>
         </div>
       </div>
 
@@ -288,89 +370,7 @@ export default function EnhancedEmailDetailView({
          )}
       </div>
 
-      {/* Action Buttons */}
-      <div className="border-t border-gray-200 pt-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={handleReply}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <Reply className="h-4 w-4" />
-              Reply
-            </Button>
-            <Button
-              onClick={handleReplyAll}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <Users className="h-4 w-4" />
-              Reply All
-            </Button>
-            <Button
-              onClick={handleForward}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <Forward className="h-4 w-4" />
-              Forward
-            </Button>
-            <Button
-              onClick={generateDraftReply}
-              disabled={isGeneratingReply}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-indigo-500 hover:from-indigo-600 hover:to-purple-700"
-            >
-              {isGeneratingReply ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Bot className="h-4 w-4" />
-              )}
-              {isGeneratingReply ? 'Generating...' : '✍️ Generate Reply'}
-            </Button>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={handleFlagToggle}
-              variant={email.flag_status === 'flagged' ? 'default' : 'outline'}
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <Flag className="h-4 w-4" />
-              {email.flag_status === 'flagged' ? 'Unflag' : 'Flag'}
-            </Button>
-            
-            {!email.handled && !email.is_handled && (
-              <Button
-                onClick={handleMarkAsHandled}
-                disabled={isHandling}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
-              >
-                <CheckCircle className="h-4 w-4" />
-                {isHandling ? 'Marking...' : 'Mark Handled'}
-              </Button>
-            )}
-
-            <Button
-              onClick={handleDelete}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-            >
-              <Trash2 className="h-4 w-4" />
-              Delete
-            </Button>
-          </div>
-        </div>
-      </div>
+      
     </div>
   );
 } 
