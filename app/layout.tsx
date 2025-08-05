@@ -6,6 +6,7 @@ import { BlocIQProvider } from '@/components/BlocIQContext';
 import Footer from '@/components/Footer';
 import { Toaster } from 'sonner';
 import ConditionalFloatingAI from '@/components/ConditionalFloatingAI';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -22,29 +23,31 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} bg-[#FAFAFA] antialiased`}>
-        <BlocIQProvider>
-          <SupabaseProvider>
-            <div className="min-h-screen flex flex-col">
-              <main className="flex-1">
-                {children}
-              </main>
-              <Footer />
-            </div>
-            <ConditionalFloatingAI />
-          </SupabaseProvider>
-          <Toaster 
-            position="top-right" 
-            toastOptions={{
-              style: {
-                background: '#FFFFFF',
-                color: '#333333',
-                border: '1px solid #E2E8F0',
-                borderRadius: '12px',
-                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
-              },
-            }}
-          />
-        </BlocIQProvider>
+        <ErrorBoundary>
+          <BlocIQProvider>
+            <SupabaseProvider>
+              <div className="min-h-screen flex flex-col">
+                <main className="flex-1">
+                  {children}
+                </main>
+                <Footer />
+              </div>
+              <ConditionalFloatingAI />
+            </SupabaseProvider>
+            <Toaster 
+              position="top-right" 
+              toastOptions={{
+                style: {
+                  background: '#FFFFFF',
+                  color: '#333333',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
+                },
+              }}
+            />
+          </BlocIQProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

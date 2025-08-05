@@ -15,11 +15,13 @@ const nextConfig: NextConfig = {
   // Add optimizations to prevent chunk loading errors
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
+    // Add better module resolution
+    esmExternals: 'loose',
   },
   // Configure webpack to handle chunk loading better
   webpack: (config, { dev, isServer }) => {
     if (!dev && !isServer) {
-      // Optimize chunk splitting for production
+      // Optimize chunk splitting for production with better error handling
       config.optimization.splitChunks = {
         chunks: 'all',
         cacheGroups: {
@@ -27,14 +29,39 @@ const nextConfig: NextConfig = {
             test: /[\\/]node_modules[\\/]/,
             name: 'vendors',
             chunks: 'all',
+            priority: 10,
+            enforce: true,
+          },
+          common: {
+            name: 'common',
+            minChunks: 2,
+            chunks: 'all',
+            priority: 5,
+            enforce: true,
           },
         },
+      };
+      
+      // Add better error handling for module loading
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
       };
     }
     
     // Suppress deprecation warnings
     config.infrastructureLogging = {
       level: 'error',
+    };
+    
+    // Add better module resolution
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      // Ensure consistent module resolution
+      'react': require.resolve('react'),
+      'react-dom': require.resolve('react-dom'),
     };
     
     return config;
@@ -64,6 +91,13 @@ const nextConfig: NextConfig = {
   },
   // Add output configuration for better deployment
   output: 'standalone',
+  // Add better error handling for production builds
+  onDemandEntries: {
+    // period (in ms) where the server will keep pages in the buffer
+    maxInactiveAge: 25 * 1000,
+    // number of pages that should be kept simultaneously without being disposed
+    pagesBufferLength: 2,
+  },
 };
 
 export default nextConfig;

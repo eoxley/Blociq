@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { X, Send, Save, Maximize2, Minimize2, Mail, Users, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -41,36 +41,38 @@ interface ReplyModalProps {
 type ReplyAction = 'reply' | 'reply-all' | 'forward';
 
 export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModalProps) {
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  // Initialize all state variables with proper defaults to prevent initialization errors
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [isSending, setIsSending] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
   const [to, setTo] = useState<string[]>([]);
   const [cc, setCc] = useState<string[]>([]);
-  const [subject, setSubject] = useState('');
-  const [body, setBody] = useState('');
-  const [signature, setSignature] = useState('');
-  const [isAIGenerated, setIsAIGenerated] = useState(false);
+  const [subject, setSubject] = useState<string>('');
+  const [body, setBody] = useState<string>('');
+  const [signature, setSignature] = useState<string>('');
+  const [isAIGenerated, setIsAIGenerated] = useState<boolean>(false);
 
-  // Load user signature on mount
-  useEffect(() => {
-    const loadSignature = async () => {
-      try {
-        const response = await fetch('/api/get-signature');
-        if (response.ok) {
-          const data = await response.json();
-          setSignature(data.signature);
-        }
-      } catch (error) {
-        console.error('Error loading signature:', error);
+  // Load user signature on mount with error handling
+  const loadSignature = useCallback(async () => {
+    try {
+      const response = await fetch('/api/get-signature');
+      if (response.ok) {
+        const data = await response.json();
+        setSignature(data.signature || '');
       }
-    };
+    } catch (error) {
+      console.error('Error loading signature:', error);
+      setSignature('');
+    }
+  }, []);
 
+  useEffect(() => {
     if (isOpen) {
       loadSignature();
     }
-  }, [isOpen]);
+  }, [isOpen, loadSignature]);
 
-  // Initialize form when email changes
+  // Initialize form when email changes with proper error handling
   useEffect(() => {
     if (!email || !isOpen) return;
 
@@ -78,54 +80,64 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
     let newCc: string[] = [];
     let newSubject = '';
 
-    switch (action) {
-      case 'reply':
-        newTo = [email.from_email || ''];
-        newSubject = email.subject?.startsWith('RE:') ? email.subject : `RE: ${email.subject}`;
-        break;
-      case 'reply-all':
-        // For reply-all, we'd need to parse the original email headers
-        // For now, just reply to sender
-        newTo = [email.from_email || ''];
-        newSubject = email.subject?.startsWith('RE:') ? email.subject : `RE: ${email.subject}`;
-        break;
-      case 'forward':
-        newSubject = email.subject?.startsWith('FWD:') ? email.subject : `FWD: ${email.subject}`;
-        break;
-    }
+    try {
+      switch (action) {
+        case 'reply':
+          newTo = [email.from_email || ''];
+          newSubject = email.subject?.startsWith('RE:') ? email.subject : `RE: ${email.subject}`;
+          break;
+        case 'reply-all':
+          // For reply-all, we'd need to parse the original email headers
+          // For now, just reply to sender
+          newTo = [email.from_email || ''];
+          newSubject = email.subject?.startsWith('RE:') ? email.subject : `RE: ${email.subject}`;
+          break;
+        case 'forward':
+          newSubject = email.subject?.startsWith('FWD:') ? email.subject : `FWD: ${email.subject}`;
+          break;
+      }
 
-    setTo(newTo);
-    setCc(newCc);
-    setSubject(newSubject || '');
+      setTo(newTo);
+      setCc(newCc);
+      setSubject(newSubject || '');
 
-    // Check for generated reply from AI
-    const generatedReply = localStorage.getItem('generatedReply');
-    const replyContext = localStorage.getItem('replyContext');
-    
-    if (action === 'reply' && generatedReply) {
-      // Use the AI-generated reply
-      setBody(generatedReply);
-      setIsAIGenerated(true);
-      // Clear the stored reply after using it
-      localStorage.removeItem('generatedReply');
-      localStorage.removeItem('replyContext');
-      console.log('🤖 Using AI-generated reply');
-    } else {
+      // Check for generated reply from AI
+      const generatedReply = localStorage.getItem('generatedReply');
+      const replyContext = localStorage.getItem('replyContext');
+      
+      if (action === 'reply' && generatedReply) {
+        // Use the AI-generated reply
+        setBody(generatedReply);
+        setIsAIGenerated(true);
+        // Clear the stored reply after using it
+        localStorage.removeItem('generatedReply');
+        localStorage.removeItem('replyContext');
+        console.log('🤖 Using AI-generated reply');
+      } else {
+        setIsAIGenerated(false);
+        // Set initial body with proper HTML formatting
+        const originalMessage = email.body_full || email.body_preview || '';
+        const originalSender = email.from_name || email.from_email || 'Unknown sender';
+        const originalDate = email.received_at ? new Date(email.received_at).toLocaleString() : 'Unknown date';
+        const originalSubject = email.subject || 'No subject';
+        
+        // Format the quoted message properly
+        const quotedMessage = `\n\n--- Original Message ---\nFrom: ${originalSender}\nDate: ${originalDate}\nSubject: ${originalSubject}\n\n${originalMessage}`;
+        
+        setBody(action === 'forward' ? quotedMessage : quotedMessage);
+      }
+    } catch (error) {
+      console.error('Error initializing reply form:', error);
+      // Set safe defaults
+      setTo([]);
+      setCc([]);
+      setSubject('');
+      setBody('');
       setIsAIGenerated(false);
-      // Set initial body with proper HTML formatting
-      const originalMessage = email.body_full || email.body_preview || '';
-      const originalSender = email.from_name || email.from_email || 'Unknown sender';
-      const originalDate = email.received_at ? new Date(email.received_at).toLocaleString() : 'Unknown date';
-      const originalSubject = email.subject || 'No subject';
-      
-      // Format the quoted message properly
-      const quotedMessage = `\n\n--- Original Message ---\nFrom: ${originalSender}\nDate: ${originalDate}\nSubject: ${originalSubject}\n\n${originalMessage}`;
-      
-      setBody(action === 'forward' ? quotedMessage : quotedMessage);
     }
   }, [email, action, isOpen]);
 
-  const handleSend = async () => {
+  const handleSend = useCallback(async () => {
     if (!email || to.length === 0 || !subject.trim() || !body.trim()) {
       toast.error('Please fill in all required fields');
       return;
@@ -166,9 +178,9 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
     } finally {
       setIsSending(false);
     }
-  };
+  }, [email, to, cc, subject, body, onClose]);
 
-  const handleSaveDraft = async () => {
+  const handleSaveDraft = useCallback(async () => {
     if (!email || to.length === 0 || !subject.trim() || !body.trim()) {
       toast.error('Please fill in all required fields');
       return;
@@ -205,36 +217,36 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [email, to, cc, subject, body, action, onClose]);
 
-  const handlePopOut = () => {
+  const handlePopOut = useCallback(() => {
     // TODO: Implement pop-out functionality
     // This could open a new window or route to a dedicated compose page
     toast.info('Pop-out functionality coming soon');
-  };
+  }, []);
 
-  const getActionLabel = () => {
+  const getActionLabel = useCallback(() => {
     switch (action) {
       case 'reply': return 'Reply';
       case 'reply-all': return 'Reply All';
       case 'forward': return 'Forward';
       default: return 'Compose';
     }
-  };
+  }, [action]);
 
-  const getActionIcon = () => {
+  const getActionIcon = useCallback(() => {
     switch (action) {
       case 'reply': return <Mail className="h-4 w-4" />;
       case 'reply-all': return <Users className="h-4 w-4" />;
       case 'forward': return <Mail className="h-4 w-4" />;
       default: return <Mail className="h-4 w-4" />;
     }
-  };
+  }, [action]);
 
   if (!isOpen || !email) return null;
 
   return (
-          <div className="fixed inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center z-50 transition-all duration-300 ease-in-out">
+    <div className="fixed inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center z-50 transition-all duration-300 ease-in-out">
       <div className={`bg-white rounded-xl shadow-xl ${isFullscreen ? 'w-full h-full m-0' : 'max-w-4xl w-full mx-4 max-h-[90vh]'} overflow-hidden`}>
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
