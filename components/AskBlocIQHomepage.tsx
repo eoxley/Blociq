@@ -508,32 +508,13 @@ export default function AskBlocIQHomepage() {
             </button>
           </div>
 
-          {/* Drag & Drop Zone */}
-          <div
-            className={`border-2 border-dashed rounded-xl p-4 text-center transition-all duration-200 ${
-              isDragOver 
-                ? 'border-[#008C8F] bg-[#008C8F]/5' 
-                : 'border-gray-300 hover:border-[#008C8F] hover:bg-[#008C8F]/5'
-            }`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            <div className="flex flex-col items-center gap-2">
-              <Upload className="h-5 w-5 text-gray-400" />
-              <p className="text-sm text-white">
-                Drag & drop files here or{' '}
-                <span 
-                  className="text-[#008C8F] underline cursor-pointer hover:text-[#007B8A]"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  click to upload
-                </span>
-              </p>
-              <p className="text-xs text-white">
-                Supports PDF, DOCX, TXT (max 10MB, up to {maxFiles} files)
-              </p>
-            </div>
+          {/* Simple Upload Icon */}
+          <div className="mt-4 flex justify-center">
+            <Upload 
+              className="text-white w-6 h-6 cursor-pointer hover:opacity-80 transition-opacity" 
+              title="Upload a document"
+              onClick={() => fileInputRef.current?.click()}
+            />
             <input
               ref={fileInputRef}
               type="file"
