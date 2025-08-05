@@ -677,16 +677,16 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const handleCreateLetter = (aiContent: string) => {
     // Extract building and leaseholder context if available
     const contextMessage = messages.find(m => 
-      m.sender === 'ai' && m.text.includes('📌 Building:')
+      m.sender === 'ai' && m.text.includes('Building:')
     )?.text || ''
     
-    const buildingMatch = contextMessage.match(/📌 Building: (.+)/)
+    const buildingMatch = contextMessage.match(/Building: (.+)/)
     const buildingName = buildingMatch ? buildingMatch[1] : 'General'
     
-    const leaseholderMatch = contextMessage.match(/👤 Leaseholder: (.+)/)
+    const leaseholderMatch = contextMessage.match(/Leaseholder: (.+)/)
     const leaseholderName = leaseholderMatch ? leaseholderMatch[1] : null
     
-    const unitMatch = contextMessage.match(/🏠 Unit: (.+)/)
+    const unitMatch = contextMessage.match(/Unit: (.+)/)
     const unitNumber = unitMatch ? unitMatch[1] : null
     
     setCommunicationModalData({
@@ -702,16 +702,16 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const handleSendEmail = (aiContent: string) => {
     // Extract building and leaseholder context
     const contextMessage = messages.find(m => 
-      m.sender === 'ai' && m.text.includes('📌 Building:')
+      m.sender === 'ai' && m.text.includes('Building:')
     )?.text || ''
     
-    const buildingMatch = contextMessage.match(/📌 Building: (.+)/)
+    const buildingMatch = contextMessage.match(/Building: (.+)/)
     const buildingName = buildingMatch ? buildingMatch[1] : 'General'
     
-    const leaseholderMatch = contextMessage.match(/👤 Leaseholder: (.+)/)
+    const leaseholderMatch = contextMessage.match(/Leaseholder: (.+)/)
     const leaseholderName = leaseholderMatch ? leaseholderMatch[1] : null
     
-    const unitMatch = contextMessage.match(/🏠 Unit: (.+)/)
+    const unitMatch = contextMessage.match(/Unit: (.+)/)
     const unitNumber = unitMatch ? unitMatch[1] : null
     
     setCommunicationModalData({
@@ -727,16 +727,16 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const handleSaveAsNotice = (aiContent: string) => {
     // Extract building and leaseholder context
     const contextMessage = messages.find(m => 
-      m.sender === 'ai' && m.text.includes('📌 Building:')
+      m.sender === 'ai' && m.text.includes('Building:')
     )?.text || ''
     
-    const buildingMatch = contextMessage.match(/📌 Building: (.+)/)
+    const buildingMatch = contextMessage.match(/Building: (.+)/)
     const buildingName = buildingMatch ? buildingMatch[1] : 'General'
     
-    const leaseholderMatch = contextMessage.match(/👤 Leaseholder: (.+)/)
+    const leaseholderMatch = contextMessage.match(/Leaseholder: (.+)/)
     const leaseholderName = leaseholderMatch ? leaseholderMatch[1] : null
     
-    const unitMatch = contextMessage.match(/🏠 Unit: (.+)/)
+    const unitMatch = contextMessage.match(/Unit: (.+)/)
     const unitNumber = unitMatch ? unitMatch[1] : null
     
     setCommunicationModalData({
