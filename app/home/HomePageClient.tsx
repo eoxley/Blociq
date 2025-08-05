@@ -1166,7 +1166,11 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                       <span>AI Assistant Active</span>
                     </div>
                     <button
-                      onClick={() => setMessages([])}
+                      onClick={() => {
+                        setMessages([])
+                        setAskInput('')
+                        setUploadedFiles([])
+                      }}
                       className="text-xs text-gray-500 hover:text-gray-700 transition-colors px-3 py-1 hover:bg-gray-100 rounded-lg"
                     >
                       Clear Chat
