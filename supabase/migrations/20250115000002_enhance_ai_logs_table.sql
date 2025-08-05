@@ -13,6 +13,7 @@ ALTER TABLE ai_logs ADD COLUMN IF NOT EXISTS context_id VARCHAR(255);
 ALTER TABLE ai_logs ADD COLUMN IF NOT EXISTS leaseholder_id UUID;
 ALTER TABLE ai_logs ADD COLUMN IF NOT EXISTS leaseholder_name VARCHAR(255);
 ALTER TABLE ai_logs ADD COLUMN IF NOT EXISTS unit_number VARCHAR(50);
+ALTER TABLE ai_logs ADD COLUMN IF NOT EXISTS unit_count INTEGER;
 ALTER TABLE ai_logs ADD COLUMN IF NOT EXISTS metadata JSONB;
 
 -- Add indexes for performance

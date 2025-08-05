@@ -86,7 +86,12 @@ export async function POST(req: NextRequest) {
             contextMetadata.buildingDetected = true;
             contextMetadata.buildingName = building.name;
             contextMetadata.building_id = building.id;
+            contextMetadata.unit_count = building.unit_count;
             buildingContext += `Building: ${building.name}\nUnits: ${building.unit_count || 'Unknown'}\nAddress: ${building.address || 'Not specified'}\n\n`;
+            
+            // Add unit count to system prompt for better context
+            systemPrompt += `\nThe building "${building.name}" contains ${building.unit_count || 'an unknown number of'} units.\n`;
+            
             console.log('✅ Found building context:', building.name);
             break;
           }
@@ -106,7 +111,11 @@ export async function POST(req: NextRequest) {
 
       if (building) {
         contextMetadata.buildingName = building.name;
+        contextMetadata.unit_count = building.unit_count;
         buildingContext += `Building: ${building.name}\nUnits: ${building.unit_count || 'Unknown'}\nAddress: ${building.address || 'Not specified'}\n\n`;
+        
+        // Add unit count to system prompt for better context
+        systemPrompt += `\nThe building "${building.name}" contains ${building.unit_count || 'an unknown number of'} units.\n`;
       }
 
       // 📋 Building Todos
@@ -416,6 +425,7 @@ export async function POST(req: NextRequest) {
       context_id: contextId || null,
       building_id: building_id || contextMetadata.building_id || null,
       building_name: contextMetadata.buildingName || null,
+      unit_count: contextMetadata.unit_count || null,
       document_count: document_ids.length,
       files_uploaded: uploadedFiles.length,
       leaseholder_id: leaseholder?.id || null,
