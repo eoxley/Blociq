@@ -151,16 +151,16 @@ export default function FloatingBlocIQ() {
           {/* Chat Messages */}
           {!isMinimized && (
             <>
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white">
                 {messages.map((message) => (
                   <div key={message.id} className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                    <div className={`max-w-[80%] rounded-xl px-4 py-3 shadow-sm ${
                       message.isUser 
                         ? 'bg-teal-600 text-white' 
                         : 'bg-gray-50 text-gray-900 border border-gray-200'
                     }`}>
-                      <div className="text-sm whitespace-pre-line">{message.content}</div>
-                      <div className={`text-xs mt-1 ${
+                      <div className="text-sm whitespace-pre-line leading-relaxed">{message.content}</div>
+                      <div className={`text-xs mt-2 ${
                         message.isUser ? 'text-white/70' : 'text-gray-500'
                       }`}>
                         {formatMessageTime(message.timestamp)}
@@ -172,7 +172,7 @@ export default function FloatingBlocIQ() {
                 {/* Loading indicator */}
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3">
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 shadow-sm">
                       <div className="flex items-center gap-2 text-gray-600">
                         <Loader2 className="animate-spin h-4 w-4" />
                         <span className="text-sm">Thinking...</span>
@@ -183,10 +183,10 @@ export default function FloatingBlocIQ() {
               </div>
 
               {/* Input Form */}
-              <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200">
+              <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200 bg-white">
                 {/* Attachments Display */}
                 {attachments.length > 0 && (
-                  <div className="mb-3 p-2 bg-gray-50 rounded-lg">
+                  <div className="mb-3 p-3 bg-gray-50 rounded-lg">
                     <div className="text-xs text-gray-600 mb-2">📎 Attachments:</div>
                     <div className="space-y-1">
                       {attachments.map((file, index) => (

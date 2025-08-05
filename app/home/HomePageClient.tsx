@@ -907,31 +907,31 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
             {/* Chat Interface */}
             {showChat && messages.length > 0 && (
-              <div className="absolute inset-0 bg-white/95 backdrop-blur-sm rounded-full flex flex-col">
+              <div className="fixed inset-0 bg-white z-50 flex flex-col">
                 {/* Chat Header */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white/80 backdrop-blur-sm rounded-t-full">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full flex items-center justify-center">
-                      <Brain className="h-4 w-4 text-white" />
+                <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white shadow-sm">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full flex items-center justify-center">
+                      <Brain className="h-5 w-5 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">BlocIQ Assistant</h3>
+                      <h3 className="text-xl font-semibold text-gray-900">BlocIQ Assistant</h3>
                       <p className="text-sm text-gray-500">{messages.length} message{messages.length !== 1 ? 's' : ''}</p>
                     </div>
                   </div>
                   <button
                     onClick={() => setShowChat(false)}
-                    className="absolute top-4 right-4 text-gray-400 hover:text-black transition-colors p-2 hover:bg-gray-100 rounded-lg"
+                    className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-lg"
                     aria-label="Hide Chat"
                   >
-                    <X className="h-5 w-5" />
+                    <X className="h-6 w-6" />
                   </button>
                 </div>
                 
                 {/* Scrollable Messages Area */}
                 <div 
                   ref={messagesEndRef}
-                  className="overflow-y-auto flex-1 p-4 space-y-3 max-h-[60vh]"
+                  className="flex-1 overflow-y-auto p-6 space-y-4 bg-white"
                 >
                   {messages.map((message, index) => (
                     <div 
@@ -942,46 +942,46 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                         animation: `fadeIn 0.3s ease-in-out ${index * 0.1}s forwards`
                       }}
                     >
-                      <div className={`max-w-[80%] rounded-xl p-3 shadow-sm ${
+                      <div className={`max-w-[70%] rounded-xl p-4 shadow-sm ${
                         message.sender === 'user' 
                           ? 'bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white' 
-                          : 'bg-white text-gray-900 border border-gray-200'
+                          : 'bg-gray-50 text-gray-900 border border-gray-200'
                       }`}>
-                                               {/* Message Content */}
-                       <div className="text-sm whitespace-pre-line leading-relaxed mb-2">
-                         {message.text}
-                       </div>
-                       
-                       {/* Action Buttons for AI Responses */}
-                       {message.sender === 'ai' && (
-                         <div className="flex gap-2 mt-3 pt-3 border-t border-gray-200">
-                           <button
-                             onClick={() => handleCreateLetter(message.text)}
-                             className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
-                           >
-                             📝 Create Letter
-                           </button>
-                           <button
-                             onClick={() => handleSendEmail(message.text)}
-                             className="flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
-                           >
-                             📨 Send Email
-                           </button>
-                           <button
-                             onClick={() => handleSaveAsNotice(message.text)}
-                             className="flex items-center gap-1 px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors"
-                           >
-                             📄 Save as Notice
-                           </button>
-                         </div>
-                       )}
-                       
-                       {/* Timestamp */}
-                       <div className={`text-xs ${
-                         message.sender === 'user' ? 'text-white/70' : 'text-gray-400'
-                       }`}>
-                         {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                       </div>
+                        {/* Message Content */}
+                        <div className="text-sm whitespace-pre-line leading-relaxed mb-3">
+                          {message.text}
+                        </div>
+                        
+                        {/* Action Buttons for AI Responses */}
+                        {message.sender === 'ai' && (
+                          <div className="flex gap-2 mt-4 pt-3 border-t border-gray-200">
+                            <button
+                              onClick={() => handleCreateLetter(message.text)}
+                              className="flex items-center gap-1 px-3 py-1.5 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                            >
+                              📝 Create Letter
+                            </button>
+                            <button
+                              onClick={() => handleSendEmail(message.text)}
+                              className="flex items-center gap-1 px-3 py-1.5 text-xs bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+                            >
+                              📨 Send Email
+                            </button>
+                            <button
+                              onClick={() => handleSaveAsNotice(message.text)}
+                              className="flex items-center gap-1 px-3 py-1.5 text-xs bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+                            >
+                              📄 Save as Notice
+                            </button>
+                          </div>
+                        )}
+                        
+                        {/* Timestamp */}
+                        <div className={`text-xs mt-2 ${
+                          message.sender === 'user' ? 'text-white/70' : 'text-gray-400'
+                        }`}>
+                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -989,10 +989,10 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                   {/* Loading indicator */}
                   {isSubmitting && (
                     <div className="flex justify-start">
-                      <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm max-w-[80%]">
+                      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 shadow-sm max-w-[70%]">
                         <div className="flex items-center gap-3">
-                          <div className="w-5 h-5 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full flex items-center justify-center">
-                            <Brain className="h-3 w-3 text-white" />
+                          <div className="w-6 h-6 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full flex items-center justify-center">
+                            <Brain className="h-4 w-4 text-white" />
                           </div>
                           <div className="flex items-center gap-2 text-gray-600">
                             <Loader2 className="animate-spin h-4 w-4" />
@@ -1005,12 +1005,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 </div>
                 
                 {/* Sticky Input Bar */}
-                <div className="sticky bottom-0 bg-white p-4 border-t shadow-inner">
+                <div className="sticky bottom-0 bg-white p-6 border-t border-gray-200 shadow-lg">
                   {/* File Upload Zone */}
                   {uploadedFiles.length > 0 && (
-                    <div className="mb-3">
+                    <div className="mb-4">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xs font-medium text-gray-600">📄 Included in AI context:</span>
+                        <span className="text-sm font-medium text-gray-600">📄 Included in AI context:</span>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {uploadedFiles.map((file) => (
@@ -1035,14 +1035,14 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                     </div>
                   )}
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-4">
                     <input
                       ref={askInputRef}
                       type="text"
                       value={askInput}
                       onChange={(e) => setAskInput(e.target.value)}
                       placeholder="Ask me anything..."
-                      className="w-full rounded-full px-4 py-2 border focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] transition-all duration-200 text-sm"
+                      className="flex-1 rounded-xl px-4 py-3 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] transition-all duration-200 text-sm"
                       onKeyPress={handleKeyPress}
                     />
                     
@@ -1051,17 +1051,17 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={isSubmitting || uploadedFiles.length >= maxFiles}
-                      className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
+                      className="p-2 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
                       title="Attach a document"
                     >
-                      <Upload className="h-4 w-4" />
+                      <Upload className="h-5 w-5" />
                     </button>
                     
                     {/* Clear Button */}
                     {askInput && (
                       <button 
                         onClick={() => setAskInput('')}
-                        className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 rounded-full transition-all duration-200 hover:scale-110 active:scale-95"
+                        className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95"
                       >
                         <XIcon className="h-4 w-4" />
                       </button>
@@ -1071,19 +1071,19 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                     <button 
                       onClick={() => handleAskSubmit(askInput)}
                       disabled={(!askInput.trim() && uploadedFiles.length === 0) || isSubmitting}
-                      className="p-2.5 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white rounded-full transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                      className="p-3 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white rounded-xl transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                     >
                       {isSubmitting ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-5 w-5 animate-spin" />
                       ) : (
-                        <ArrowRight className="h-4 w-4" />
+                        <ArrowRight className="h-5 w-5" />
                       )}
                     </button>
                   </div>
 
                   {/* Drag & Drop Zone */}
                   <div
-                    className={`border-2 border-dashed rounded-xl p-4 mt-3 text-center transition-all duration-200 ${
+                    className={`border-2 border-dashed rounded-xl p-4 mt-4 text-center transition-all duration-200 ${
                       isDragOver 
                         ? 'border-blue-500 bg-blue-50' 
                         : 'border-gray-300 hover:border-blue-500 hover:bg-blue-50'
@@ -1118,7 +1118,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                   </div>
                   
                   {/* Quick Actions */}
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
                     <div className="flex items-center gap-2 text-xs text-gray-500">
                       <div className="w-2 h-2 bg-green-400 rounded-full"></div>
                       <span>AI Assistant Active</span>
