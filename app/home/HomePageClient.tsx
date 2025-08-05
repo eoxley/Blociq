@@ -806,10 +806,10 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       </section>
 
       <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
-        {/* 🧠 Enhanced Circular Ask BlocIQ Widget */}
+        {/* 🧠 Compact Ask BlocIQ Widget */}
         <div className="flex justify-center">
           <div 
-            className={`relative transition-all duration-500 ${showChat ? 'w-[600px] h-[600px] md:w-[700px] md:h-[700px]' : 'w-[400px] h-[400px] md:w-[500px] md:h-[500px]'} rounded-full md:rounded-full rounded-3xl bg-gradient-to-br from-purple-600 via-[#4f46e5] to-indigo-500 shadow-2xl hover:shadow-3xl flex items-center justify-center p-12 group`}
+            className={`relative transition-all duration-500 ${showChat ? 'w-[500px] h-[500px] md:w-[600px] md:h-[600px]' : 'w-[300px] h-[300px] md:w-[350px] md:h-[350px]'} rounded-full md:rounded-full rounded-3xl bg-gradient-to-br from-purple-600 via-[#4f46e5] to-indigo-500 shadow-2xl hover:shadow-3xl flex items-center justify-center p-8 group`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
@@ -819,19 +819,19 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-300/10 to-pink-300/10 blur-2xl group-hover:blur-3xl transition-all duration-700"></div>
             
             {/* Content */}
-            <div className="text-center text-white max-w-sm relative z-10">
-              {/* Brain Icon with Pulse Animation - No Border */}
-              <div className="w-20 h-20 flex items-center justify-center mx-auto mb-8 animate-pulse">
-                <Brain className={`h-12 w-12 text-white drop-shadow-lg ${isSubmitting ? 'animate-bounce' : ''}`} />
+            <div className="text-center text-white max-w-xs relative z-10">
+              {/* Brain Icon with Pulse Animation - Smaller */}
+              <div className="w-16 h-16 flex items-center justify-center mx-auto mb-6 animate-pulse">
+                <Brain className={`h-10 w-10 text-white drop-shadow-lg ${isSubmitting ? 'animate-bounce' : ''}`} />
               </div>
               
               {/* Title */}
-              <h2 className="text-3xl font-bold mb-4 text-white drop-shadow-lg">
+              <h2 className="text-2xl font-bold mb-3 text-white drop-shadow-lg">
                 Ask BlocIQ
               </h2>
               
               {/* Subtitle */}
-              <p className="text-base text-white/90 mb-10 leading-relaxed">
+              <p className="text-sm text-white/90 mb-8 leading-relaxed">
                 Your leasehold management assistant
               </p>
               
@@ -848,9 +848,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 </div>
               )}
               
-                             {/* Enhanced Input Field with Clear Button - White Background - Only show when chat is closed */}
+                             {/* Compact Input Field - Only show when chat is closed */}
                {!showChat && (
-               <div className="mb-6">
+               <div className="mb-4">
                  <div className="relative group">
                    <input
                        ref={askInputRef}
@@ -858,7 +858,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                        value={askInput}
                        onChange={(e) => setAskInput(e.target.value)}
                      placeholder="Ask me anything..."
-                       className="w-full px-5 py-4 bg-white text-gray-900 border border-gray-200 rounded-xl placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] transition-all duration-200 text-base pr-16 shadow-lg"
+                       className="w-full px-4 py-3 bg-white text-gray-900 border border-gray-200 rounded-xl placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] transition-all duration-200 text-sm pr-14 shadow-lg"
                        onKeyPress={handleKeyPress}
                      />
                      
@@ -876,9 +876,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                      {askInput && (
                        <button 
                          onClick={() => setAskInput('')}
-                         className="absolute right-12 top-1/2 transform -translate-y-1/2 p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95"
+                         className="absolute right-10 top-1/2 transform -translate-y-1/2 p-1 bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95"
                        >
-                         <XIcon className="h-4 w-4" />
+                         <XIcon className="h-3 w-3" />
                        </button>
                      )}
                      
@@ -886,12 +886,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                      <button 
                        onClick={() => handleAskSubmit(askInput)}
                        disabled={(!askInput.trim() && uploadedFiles.length === 0) || isSubmitting}
-                       className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2.5 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                       className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                      >
                        {isSubmitting ? (
-                         <Loader2 className="h-5 w-5 animate-spin" />
+                         <Loader2 className="h-4 w-4 animate-spin" />
                        ) : (
-                         <ArrowRight className="h-5 w-5" />
+                         <ArrowRight className="h-4 w-4" />
                        )}
                    </button>
                  </div>
@@ -943,7 +943,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
             {/* Chat Interface */}
             {showChat && messages.length > 0 && (
-              <div className="fixed inset-0 bg-white z-50 flex flex-col">
+              <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden">
                 {/* Chat Header */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white shadow-sm">
                   <div className="flex items-center gap-4">

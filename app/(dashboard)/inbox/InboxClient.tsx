@@ -289,6 +289,8 @@ export default function InboxClient() {
 
   const handleEmailDrop = async (emailId: string, folderId: string) => {
     try {
+      console.log('📁 Moving email:', emailId, 'to folder:', folderId);
+      
       const response = await fetch('/api/move-email', {
         method: 'POST',
         headers: {
@@ -298,14 +300,30 @@ export default function InboxClient() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to move email');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: Failed to move email`);
       }
 
-      toast.success('Email moved successfully');
+      const result = await response.json();
+      
+      if (result.success) {
+        // Refresh emails to show updated folder assignments
+        refreshEmails();
+        
+        // Clear selected email if it was the moved one
+        if (selectedEmail?.id === emailId) {
+          selectEmail(null);
+        }
+        
+        toast.success('Email moved successfully');
+        console.log('✅ Email moved successfully');
+      } else {
+        throw new Error(result.error || 'Unknown error occurred');
+      }
       
     } catch (error) {
-      console.error('Error moving email:', error);
-      toast.error('Failed to move email');
+      console.error('❌ Error moving email:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to move email');
     }
   };
 
@@ -490,12 +508,14 @@ export default function InboxClient() {
                     key={email.id}
                     draggable
                     onDragStart={(e) => {
+                      console.log('📁 Drag start for email:', email.id);
                       e.dataTransfer.setData('emailId', email.id);
                     }}
                     onClick={() => handleEmailSelect(email)}
-                    className={`p-3 rounded-xl cursor-pointer transition hover:bg-indigo-50 ${
+                    className={`p-3 rounded-xl cursor-pointer transition hover:bg-indigo-50 hover:shadow-sm ${
                       selectedEmail?.id === email.id ? 'bg-indigo-100 border border-indigo-200' : ''
                     }`}
+                    title="Drag to move to folder"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">

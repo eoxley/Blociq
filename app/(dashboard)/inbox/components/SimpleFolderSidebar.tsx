@@ -84,8 +84,13 @@ export default function SimpleFolderSidebar({
     setDragOverFolder(null);
     
     const emailId = e.dataTransfer.getData('emailId');
+    console.log('📁 Drop event:', { emailId, folderId });
+    
     if (emailId && onEmailDrop) {
+      console.log('📁 Calling onEmailDrop with:', emailId, folderId);
       onEmailDrop(emailId, folderId);
+    } else {
+      console.warn('⚠️ Missing emailId or onEmailDrop callback');
     }
   };
 
@@ -113,12 +118,12 @@ export default function SimpleFolderSidebar({
               onDragOver={(e) => handleDragOver(e, folder.id)}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, folder.id)}
-              className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+              className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all duration-200 ${
                 selectedFolder === folder.id 
-                  ? 'bg-indigo-100 border border-indigo-200' 
+                  ? 'bg-indigo-100 border-2 border-indigo-200 shadow-sm' 
                   : dragOverFolder === folder.id
-                  ? 'bg-blue-50 border border-blue-200'
-                  : 'hover:bg-gray-50'
+                  ? 'bg-blue-50 border-2 border-blue-400 shadow-md scale-105'
+                  : 'hover:bg-gray-50 border border-transparent'
               }`}
             >
               <div className="flex items-center gap-3">

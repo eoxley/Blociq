@@ -12,7 +12,7 @@ import { Database } from '@/lib/database.types';
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies: () => cookies() });
+    const supabase = createRouteHandlerClient<Database>({ cookies });
     
     // Get current user
     const { data: { user } } = await supabase.auth.getUser();
@@ -93,28 +93,97 @@ export async function POST(req: NextRequest) {
             .single();
 
           if (folder) {
-            // Try to find corresponding Outlook folder
-            // This is a simplified approach - you might want to store Outlook folder IDs
-            const graphResponse = await fetch(
-              `https://graph.microsoft.com/v1.0/me/messages/${email.message_id}/move`,
+            // First, get all mail folders from Outlook
+            const foldersResponse = await fetch(
+              'https://graph.microsoft.com/v1.0/me/mailFolders',
               {
-                method: 'POST',
                 headers: {
                   'Authorization': `Bearer ${tokens.access_token}`,
                   'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                  destinationId: folder.name.toLowerCase() // Simplified mapping
-                }),
               }
             );
 
-            if (graphResponse.ok) {
-              console.log('✅ Email moved in Outlook successfully');
+            if (foldersResponse.ok) {
+              const foldersData = await foldersResponse.json();
+              const outlookFolder = foldersData.value?.find((f: any) => 
+                f.displayName?.toLowerCase() === folder.name.toLowerCase()
+              );
+
+              if (outlookFolder) {
+                // Move email to existing Outlook folder
+                const moveResponse = await fetch(
+                  `https://graph.microsoft.com/v1.0/me/messages/${email.message_id}/move`,
+                  {
+                    method: 'POST',
+                    headers: {
+                      'Authorization': `Bearer ${tokens.access_token}`,
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      destinationId: outlookFolder.id
+                    }),
+                  }
+                );
+
+                if (moveResponse.ok) {
+                  console.log('✅ Email moved in Outlook successfully');
+                } else {
+                  const errorData = await moveResponse.text();
+                  console.warn('⚠️ Failed to move in Outlook:', moveResponse.status, errorData);
+                }
+              } else {
+                // Create the folder in Outlook if it doesn't exist
+                const createFolderResponse = await fetch(
+                  'https://graph.microsoft.com/v1.0/me/mailFolders',
+                  {
+                    method: 'POST',
+                    headers: {
+                      'Authorization': `Bearer ${tokens.access_token}`,
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      displayName: folder.name,
+                      parentFolderId: 'msgfolderroot'
+                    }),
+                  }
+                );
+
+                if (createFolderResponse.ok) {
+                  const newFolder = await createFolderResponse.json();
+                  
+                  // Now move the email to the newly created folder
+                  const moveResponse = await fetch(
+                    `https://graph.microsoft.com/v1.0/me/messages/${email.message_id}/move`,
+                    {
+                      method: 'POST',
+                      headers: {
+                        'Authorization': `Bearer ${tokens.access_token}`,
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        destinationId: newFolder.id
+                      }),
+                    }
+                  );
+
+                  if (moveResponse.ok) {
+                    console.log('✅ Email moved to newly created Outlook folder');
+                  } else {
+                    const errorData = await moveResponse.text();
+                    console.warn('⚠️ Failed to move to new Outlook folder:', moveResponse.status, errorData);
+                  }
+                } else {
+                  const errorData = await createFolderResponse.text();
+                  console.warn('⚠️ Failed to create Outlook folder:', createFolderResponse.status, errorData);
+                }
+              }
             } else {
-              console.warn('⚠️ Failed to move in Outlook, but moved in Supabase');
+              console.warn('⚠️ Failed to fetch Outlook folders');
             }
           }
+        } else {
+          console.warn('⚠️ No valid Outlook access token found');
         }
       } catch (outlookError) {
         console.warn('⚠️ Outlook move failed:', outlookError);
