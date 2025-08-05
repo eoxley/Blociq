@@ -810,6 +810,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         <div className="flex justify-center">
           <div 
             className={`relative transition-all duration-500 ${showChat ? 'w-[500px] h-[500px] md:w-[600px] md:h-[600px]' : 'w-[300px] h-[300px] md:w-[350px] md:h-[350px]'} rounded-full md:rounded-full rounded-3xl bg-gradient-to-br from-purple-600 via-[#4f46e5] to-indigo-500 shadow-2xl hover:shadow-3xl flex items-center justify-center p-8 group`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
           >
             {/* Enhanced Radial Glow Effect */}
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-400/20 to-indigo-400/20 blur-xl group-hover:blur-2xl transition-all duration-500"></div>
@@ -832,66 +835,99 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 Your leasehold management assistant
               </p>
               
-              {/* Minimal Upload Icon - Only show when chat is closed */}
+              {/* Single White Upload Icon - Only show when chat is closed */}
               {!showChat && (
                 <div className="flex justify-center mb-6">
                   <div 
-                    className="cursor-pointer hover:opacity-80 transition-opacity p-2" 
+                    className="cursor-pointer hover:opacity-80 transition-opacity" 
                     title="Upload document to Ask BlocIQ"
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    <Upload className="text-white w-8 h-8" />
+                    <Upload className="text-white w-6 h-6" />
                   </div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept=".pdf,.docx,.txt"
-                    onChange={(e) => handleFileSelect(e.target.files)}
-                    className="hidden"
-                  />
                 </div>
               )}
               
-              {/* Compact Input Field - Only show when chat is closed */}
-              {!showChat && (
-                <div className="mb-4">
-                  <div className="relative group">
-                    <input
-                      ref={askInputRef}
-                      type="text"
-                      value={askInput}
-                      onChange={(e) => setAskInput(e.target.value)}
-                      placeholder="Ask me anything..."
-                      className="w-full px-4 py-3 bg-white text-gray-900 border border-gray-200 rounded-xl placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] transition-all duration-200 text-sm pr-14 shadow-lg"
-                      onKeyPress={handleKeyPress}
-                    />
-                    
-                    {/* Clear Button */}
-                    {askInput && (
-                      <button 
-                        onClick={() => setAskInput('')}
-                        className="absolute right-10 top-1/2 transform -translate-y-1/2 p-1 bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95"
-                      >
-                        <XIcon className="h-3 w-3" />
-                      </button>
-                    )}
-                    
-                    {/* Submit Button */}
-                    <button 
-                      onClick={() => handleAskSubmit(askInput)}
-                      disabled={(!askInput.trim() && uploadedFiles.length === 0) || isSubmitting}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-                    >
-                      {isSubmitting ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <ArrowRight className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
+                             {/* Compact Input Field - Only show when chat is closed */}
+               {!showChat && (
+               <div className="mb-4">
+                 <div className="relative group">
+                   <input
+                       ref={askInputRef}
+                     type="text"
+                       value={askInput}
+                       onChange={(e) => setAskInput(e.target.value)}
+                     placeholder="Ask me anything..."
+                       className="w-full px-4 py-3 bg-white text-gray-900 border border-gray-200 rounded-xl placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] transition-all duration-200 text-sm pr-14 shadow-lg"
+                       onKeyPress={handleKeyPress}
+                     />
+                     
+                     {/* Hidden file input for upload functionality */}
+                     <input
+                       ref={fileInputRef}
+                       type="file"
+                       multiple
+                       accept=".pdf,.docx,.txt"
+                       onChange={(e) => handleFileSelect(e.target.files)}
+                       className="hidden"
+                     />
+                     
+                     {/* Clear Button */}
+                     {askInput && (
+                       <button 
+                         onClick={() => setAskInput('')}
+                         className="absolute right-10 top-1/2 transform -translate-y-1/2 p-1 bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95"
+                       >
+                         <XIcon className="h-3 w-3" />
+                       </button>
+                     )}
+                     
+                     {/* Submit Button */}
+                     <button 
+                       onClick={() => handleAskSubmit(askInput)}
+                       disabled={(!askInput.trim() && uploadedFiles.length === 0) || isSubmitting}
+                       className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                     >
+                       {isSubmitting ? (
+                         <Loader2 className="h-4 w-4 animate-spin" />
+                       ) : (
+                         <ArrowRight className="h-4 w-4" />
+                       )}
+                   </button>
+                 </div>
+
+
+
+                 {/* Uploaded Files Display */}
+                 {uploadedFiles.length > 0 && (
+                   <div className="mt-3">
+                     <div className="flex items-center gap-2 mb-2">
+                       <span className="text-xs font-medium text-gray-600">📄 Included in AI context:</span>
+                     </div>
+                     <div className="flex flex-wrap gap-2">
+                       {uploadedFiles.map((file) => (
+                         <div
+                           key={file.id}
+                           className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer group"
+                           title={`${file.name} (${formatFileSize(file.size)})`}
+                         >
+                           <span>{getFileIcon(file.type)}</span>
+                           <span className="font-medium truncate max-w-[120px]">{file.name}</span>
+                           <span className="text-xs text-blue-500 opacity-70">({formatFileSize(file.size)})</span>
+                           <button
+                             type="button"
+                             onClick={() => removeFile(file.id)}
+                             className="ml-1 text-blue-400 hover:text-blue-600 transition-colors opacity-0 group-hover:opacity-100"
+                           >
+                             <XIcon className="h-3 w-3" />
+                           </button>
+                         </div>
+                       ))}
+                     </div>
+                   </div>
+                 )}
+               </div>
+               )}
 
               {/* Chat Toggle Button - Only show when chat is closed */}
               {messages.length > 0 && !showChat && (
