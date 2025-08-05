@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Mail, Flag, CheckCircle, Reply, Forward, Archive, Trash2, Clock, Building, User, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { sanitizeHtml } from '@/utils/email';
 
 interface Email {
   id: string;
@@ -12,6 +13,7 @@ interface Email {
   subject: string | null;
   body_preview: string | null;
   body_full: string | null;
+  body_content_type?: string | null;
   received_at: string | null;
   unread: boolean | null;
   is_read: boolean | null;
@@ -182,9 +184,16 @@ export default function EnhancedEmailDetailView({
           <h3 className="font-medium text-gray-900">Message</h3>
           <div className="bg-gray-50 rounded-lg p-4">
             {email.body_full ? (
-              <div className="whitespace-pre-wrap text-gray-700">
-                {email.body_full}
-              </div>
+              email.body_content_type === 'html' ? (
+                <div 
+                  className="prose max-w-none text-gray-700"
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(email.body_full) }}
+                />
+              ) : (
+                <div className="whitespace-pre-wrap text-gray-700">
+                  {email.body_full}
+                </div>
+              )
             ) : email.body_preview ? (
               <div className="text-gray-700">
                 {email.body_preview}

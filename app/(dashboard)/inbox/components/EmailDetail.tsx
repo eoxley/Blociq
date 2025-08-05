@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator'
 import ReplyEditor from './ReplyEditor'
 import ReplyModal from './ReplyModal'
 import { toast } from 'sonner'
+import { sanitizeHtml } from '@/utils/email'
 
 interface Email {
   id: string
@@ -18,6 +19,7 @@ interface Email {
   received_at: string | null
   body_preview: string | null
   body_full: string | null
+  body_content_type?: string | null
   building_id: string | null
   is_read: boolean | null
   is_handled: boolean | null
@@ -342,12 +344,21 @@ export default function EmailDetail({ email, onEmailDeleted }: EmailDetailProps)
       <div className="flex-1 overflow-y-auto p-6">
         <div className="prose prose-sm max-w-none">
           {email.body_full ? (
-            <div 
-              className="text-gray-700 leading-relaxed"
-              dangerouslySetInnerHTML={{ 
-                __html: email.body_full.replace(/\n/g, '<br>') 
-              }}
-            />
+            email.body_content_type === 'html' ? (
+              <div 
+                className="text-gray-700 leading-relaxed"
+                dangerouslySetInnerHTML={{ 
+                  __html: sanitizeHtml(email.body_full) 
+                }}
+              />
+            ) : (
+              <div 
+                className="text-gray-700 leading-relaxed"
+                dangerouslySetInnerHTML={{ 
+                  __html: email.body_full.replace(/\n/g, '<br>') 
+                }}
+              />
+            )
           ) : (
             <div className="text-gray-700 leading-relaxed whitespace-pre-line">
               {email.body_preview || 'No content available'}

@@ -195,6 +195,7 @@ export async function POST(req: NextRequest) {
       subject: email.subject || null,
       body_preview: email.bodyPreview || null,
       body_full: email.body?.content || null,
+      body_content_type: email.body?.contentType || 'text',
       received_at: email.receivedDateTime || null,
       unread: !email.isRead,
       is_read: email.isRead,
