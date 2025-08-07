@@ -420,10 +420,15 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
                 <Button
                   onClick={async () => {
                     try {
-                      const response = await fetch('/api/generate-reply', {
+                      const response = await fetch('/api/ask-ai', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ emailId: email.id, action: action })
+                        body: JSON.stringify({ 
+                          prompt: `Generate a professional email reply to this email: ${email.subject || 'No subject'}. Content: ${email.body_full || email.body_preview || ''}`,
+                          building_id: email.building_id,
+                          context_type: 'email_reply',
+                          tone: 'Professional'
+                        })
                       });
                       
                       if (response.ok) {
