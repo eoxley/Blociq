@@ -294,15 +294,234 @@ export function extractEmails(text: string): string[] {
 }
 
 /**
- * Sanitizes email content for safe sending
- * @param content - The content to sanitize
- * @returns Sanitized content
+ * Sanitizes and formats email content for safe display
+ * @param email - Email object with body fields
+ * @param attachments - Optional attachments for inline image support
+ * @returns Sanitized HTML string for safe rendering
  */
-export function sanitizeEmailContent(content: string): string {
-  return DOMPurify.sanitize(content, {
+export function sanitizeEmailContent(email: {
+  body_html?: string | null;
+  body_full?: string | null;
+  body_preview?: string | null;
+  body_content_type?: string | null;
+}, attachments?: any[]): string {
+  // Priority: body_html > body_full > body_preview
+  let content = '';
+  let isHtml = false;
+
+  if (email.body_html && email.body_content_type === 'html') {
+    content = email.body_html;
+    isHtml = true;
+  } else if (email.body_full) {
+    if (email.body_content_type === 'html') {
+      content = email.body_full;
+      isHtml = true;
+    } else {
+      content = email.body_full;
+      isHtml = false;
+    }
+  } else if (email.body_preview) {
+    content = email.body_preview;
+    isHtml = false;
+  } else {
+    return '<p class="text-gray-500 italic">No message content available</p>';
+  }
+
+  if (isHtml) {
+    // Process HTML content with attachments if available
+    let processedHtml = content;
+    if (attachments && attachments.length > 0) {
+      processedHtml = processEmailHtml(content, attachments);
+    }
+
+    // Sanitize HTML content
+    const sanitizedHtml = DOMPurify.sanitize(processedHtml, {
+      ALLOWED_TAGS: [
+        'p', 'br', 'div', 'span', 'strong', 'em', 'u', 'b', 'i', 'a', 
+        'ul', 'ol', 'li', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 
+        'hr', 'pre', 'code', 'img', 'table', 'thead', 'tbody', 'tr', 'td', 'th'
+      ],
+      ALLOWED_ATTR: ['href', 'target', 'src', 'alt', 'title', 'class', 'style'],
+      FORBID_TAGS: [
+        'html', 'head', 'meta', 'style', 'script', 'title', 'link', 'base', 
+        'iframe', 'object', 'embed', 'form', 'input', 'textarea', 'select', 
+        'button', 'noscript', 'applet', 'bgsound', 'link', 'meta', 'title'
+      ],
+      KEEP_CONTENT: true
+    });
+
+    // Additional cleanup for better formatting
+    let cleanedHtml = sanitizedHtml
+      .replace(/<html[^>]*>.*?<body[^>]*>(.*?)<\/body>.*?<\/html>/gis, '$1')
+      .replace(/<head[^>]*>.*?<\/head>/gis, '')
+      .replace(/<meta[^>]*>/gi, '')
+      .replace(/<style[^>]*>.*?<\/style>/gis, '')
+      .replace(/<script[^>]*>.*?<\/script>/gis, '')
+      .replace(/<title[^>]*>.*?<\/title>/gis, '')
+      .replace(/<link[^>]*>/gi, '')
+      .replace(/<base[^>]*>/gi, '')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&amp;/gi, '&')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+      .trim();
+
+    // Wrap in a container with proper styling
+    return `<div class="prose prose-sm max-w-none text-gray-700">${cleanedHtml}</div>`;
+  } else {
+    // Handle plain text content
+    const escapedContent = content
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    // Convert URLs to clickable links
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const linkedContent = escapedContent.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline">$1</a>');
+
+    // Convert line breaks to HTML
+    const formattedContent = linkedContent.replace(/\n/g, '<br>');
+
+    return `<div class="whitespace-pre-wrap text-gray-700">${formattedContent}</div>`;
+  }
+}
+
+/**
+ * Formats quoted email content for replies
+ * @param email - Email object with sender and content information
+ * @returns Formatted quoted content string
+ */
+export function formatQuotedEmail(email: {
+  from_name?: string | null;
+  from_email?: string | null;
+  subject?: string | null;
+  received_at?: string | null;
+  body_html?: string | null;
+  body_full?: string | null;
+  body_preview?: string | null;
+  body_content_type?: string | null;
+}): string {
+  const originalSender = email.from_name || email.from_email || 'Unknown sender';
+  const originalDate = email.received_at ? new Date(email.received_at).toLocaleString() : 'Unknown date';
+  const originalSubject = email.subject || 'No subject';
+
+  // Get the original email content
+  const originalContent = email.body_html || email.body_full || email.body_preview || '';
+
+  // Sanitize the HTML content
+  const sanitizedHtml = DOMPurify.sanitize(originalContent, {
     ALLOWED_TAGS: ['p', 'br', 'div', 'span', 'strong', 'em', 'u', 'b', 'i', 'a', 'ul', 'ol', 'li', 'blockquote'],
     ALLOWED_ATTR: ['href', 'target'],
-    FORBID_TAGS: ['html', 'head', 'meta', 'style', 'script', 'title', 'link', 'base', 'iframe', 'object', 'embed', 'form', 'input', 'textarea', 'select', 'button'],
+    FORBID_TAGS: [
+      'html', 'head', 'meta', 'style', 'script', 'title', 'link', 'base', 'iframe', 'object', 'embed', 
+      'form', 'input', 'textarea', 'select', 'button', 'label', 'fieldset', 'legend', 'optgroup', 
+      'option', 'datalist', 'output', 'progress', 'meter', 'canvas', 'svg', 'math', 'video', 'audio', 
+      'source', 'track', 'map', 'area', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption', 
+      'colgroup', 'col', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'pre', 'code', 'kbd', 'samp', 'var', 
+      'cite', 'q', 'abbr', 'acronym', 'dfn', 'del', 'ins', 'mark', 'small', 'sub', 'sup', 'time', 'wbr', 
+      'ruby', 'rt', 'rp', 'bdi', 'bdo'
+    ],
     KEEP_CONTENT: true
   });
+
+  // Additional cleanup for better formatting
+  let cleanedContent = sanitizedHtml
+    .replace(/<html[^>]*>.*?<body[^>]*>(.*?)<\/body>.*?<\/html>/gis, '$1')
+    .replace(/<head[^>]*>.*?<\/head>/gis, '')
+    .replace(/<meta[^>]*>/gi, '')
+    .replace(/<style[^>]*>.*?<\/style>/gis, '')
+    .replace(/<script[^>]*>.*?<\/script>/gis, '')
+    .replace(/<title[^>]*>.*?<\/title>/gis, '')
+    .replace(/<link[^>]*>/gi, '')
+    .replace(/<base[^>]*>/gi, '')
+    .replace(/<iframe[^>]*>.*?<\/iframe>/gis, '')
+    .replace(/<object[^>]*>.*?<\/object>/gis, '')
+    .replace(/<embed[^>]*>/gi, '')
+    .replace(/<form[^>]*>.*?<\/form>/gis, '')
+    .replace(/<input[^>]*>/gi, '')
+    .replace(/<button[^>]*>.*?<\/button>/gis, '')
+    .replace(/<select[^>]*>.*?<\/select>/gis, '')
+    .replace(/<textarea[^>]*>.*?<\/textarea>/gis, '')
+    .replace(/<label[^>]*>.*?<\/label>/gis, '')
+    .replace(/<fieldset[^>]*>.*?<\/fieldset>/gis, '')
+    .replace(/<legend[^>]*>.*?<\/legend>/gis, '')
+    .replace(/<optgroup[^>]*>.*?<\/optgroup>/gis, '')
+    .replace(/<option[^>]*>.*?<\/option>/gis, '')
+    .replace(/<datalist[^>]*>.*?<\/datalist>/gis, '')
+    .replace(/<output[^>]*>.*?<\/output>/gis, '')
+    .replace(/<progress[^>]*>.*?<\/progress>/gis, '')
+    .replace(/<meter[^>]*>.*?<\/meter>/gis, '')
+    .replace(/<canvas[^>]*>.*?<\/canvas>/gis, '')
+    .replace(/<svg[^>]*>.*?<\/svg>/gis, '')
+    .replace(/<math[^>]*>.*?<\/math>/gis, '')
+    .replace(/<video[^>]*>.*?<\/video>/gis, '')
+    .replace(/<audio[^>]*>.*?<\/audio>/gis, '')
+    .replace(/<source[^>]*>/gi, '')
+    .replace(/<track[^>]*>/gi, '')
+    .replace(/<map[^>]*>.*?<\/map>/gis, '')
+    .replace(/<area[^>]*>/gi, '')
+    .replace(/<table[^>]*>.*?<\/table>/gis, '')
+    .replace(/<thead[^>]*>.*?<\/thead>/gis, '')
+    .replace(/<tbody[^>]*>.*?<\/tbody>/gis, '')
+    .replace(/<tfoot[^>]*>.*?<\/tfoot>/gis, '')
+    .replace(/<tr[^>]*>.*?<\/tr>/gis, '')
+    .replace(/<th[^>]*>.*?<\/th>/gis, '')
+    .replace(/<td[^>]*>.*?<\/td>/gis, '')
+    .replace(/<caption[^>]*>.*?<\/caption>/gis, '')
+    .replace(/<colgroup[^>]*>.*?<\/colgroup>/gis, '')
+    .replace(/<col[^>]*>/gi, '')
+    .replace(/<h[1-6][^>]*>.*?<\/h[1-6]>/gis, '')
+    .replace(/<hr[^>]*>/gi, '')
+    .replace(/<pre[^>]*>.*?<\/pre>/gis, '')
+    .replace(/<code[^>]*>.*?<\/code>/gis, '')
+    .replace(/<kbd[^>]*>.*?<\/kbd>/gis, '')
+    .replace(/<samp[^>]*>.*?<\/samp>/gis, '')
+    .replace(/<var[^>]*>.*?<\/var>/gis, '')
+    .replace(/<cite[^>]*>.*?<\/cite>/gis, '')
+    .replace(/<q[^>]*>.*?<\/q>/gis, '')
+    .replace(/<abbr[^>]*>.*?<\/abbr>/gis, '')
+    .replace(/<acronym[^>]*>.*?<\/acronym>/gis, '')
+    .replace(/<dfn[^>]*>.*?<\/dfn>/gis, '')
+    .replace(/<del[^>]*>.*?<\/del>/gis, '')
+    .replace(/<ins[^>]*>.*?<\/ins>/gis, '')
+    .replace(/<mark[^>]*>.*?<\/mark>/gis, '')
+    .replace(/<small[^>]*>.*?<\/small>/gis, '')
+    .replace(/<sub[^>]*>.*?<\/sub>/gis, '')
+    .replace(/<sup[^>]*>.*?<\/sup>/gis, '')
+    .replace(/<time[^>]*>.*?<\/time>/gis, '')
+    .replace(/<wbr[^>]*>/gi, '')
+    .replace(/<ruby[^>]*>.*?<\/ruby>/gis, '')
+    .replace(/<rt[^>]*>.*?<\/rt>/gis, '')
+    .replace(/<rp[^>]*>.*?<\/rp>/gis, '')
+    .replace(/<bdi[^>]*>.*?<\/bdi>/gis, '')
+    .replace(/<bdo[^>]*>.*?<\/bdo>/gis, '')
+    .replace(/<span[^>]*>/gi, '')
+    .replace(/<\/span>/gi, '')
+    .replace(/<div[^>]*>/gi, '')
+    .replace(/<\/div>/gi, '')
+    .replace(/<p[^>]*>/gi, '')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<br[^>]*>/gi, '\n')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\n\s*\n\s*\n/g, '\n\n')
+    .trim();
+
+  // Format the quoted message with proper structure
+  const quotedMessage = `\n\n--- Original Message ---
+From: ${originalSender}
+Date: ${originalDate}
+Subject: ${originalSubject}
+
+${cleanedContent}`;
+
+  return quotedMessage;
 } 

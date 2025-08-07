@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { Brain, MessageSquare, Loader2, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
+import { sanitizeEmailContent } from '@/utils/email';
 
 type Email = {
   id: string
@@ -170,9 +171,12 @@ export default function SimpleEmailDetailView({ email }: SimpleEmailDetailViewPr
         <div className="prose max-w-none">
           <div className="bg-gray-50 rounded-lg p-4">
             <h3 className="text-lg font-semibold mb-3">Email Content</h3>
-            <div className="text-gray-700 whitespace-pre-wrap">
-              {email.body_full || email.body_preview || 'No content available'}
-            </div>
+            <div 
+              className="text-gray-700"
+              dangerouslySetInnerHTML={{ 
+                __html: sanitizeEmailContent(email as any) 
+              }}
+            />
           </div>
         </div>
 

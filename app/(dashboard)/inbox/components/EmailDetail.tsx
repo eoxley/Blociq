@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator'
 import ReplyEditor from './ReplyEditor'
 import ReplyModal from './ReplyModal'
 import { toast } from 'sonner'
-import { sanitizeHtml, processEmailHtml } from '@/utils/email'
+import { sanitizeEmailContent } from '@/utils/email';
 import { useEmailAttachments } from '@/hooks/useEmailAttachments'
 
 interface Email {
@@ -20,12 +20,23 @@ interface Email {
   received_at: string | null
   body_preview: string | null
   body_full: string | null
+  body_html?: string | null
   body_content_type?: string | null
   building_id: string | null
   is_read: boolean | null
   is_handled: boolean | null
+  unread?: boolean | null
+  handled?: boolean | null
+  pinned?: boolean | null
+  flag_status?: string | null
+  categories?: string[] | null
   tags: string[] | null
+  unit_id?: number | null
+  leaseholder_id?: string | null
   outlook_id: string | null
+  user_id?: string | null
+  ai_tag?: string | null
+  triage_category?: string | null
   buildings?: { name: string } | null
 }
 
@@ -41,7 +52,7 @@ export default function EmailDetail({ email, onEmailDeleted }: EmailDetailProps)
   const [isSendingReply, setIsSendingReply] = useState(false)
   const [replyModalState, setReplyModalState] = useState<{
     isOpen: boolean
-    action: 'reply' | 'replyAll' | 'forward'
+    action: 'reply' | 'reply-all' | 'forward'
   }>({ isOpen: false, action: 'reply' })
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -149,7 +160,7 @@ export default function EmailDetail({ email, onEmailDeleted }: EmailDetailProps)
   }
 
   const handleReplyAll = () => {
-    setReplyModalState({ isOpen: true, action: 'replyAll' })
+    setReplyModalState({ isOpen: true, action: 'reply-all' })
   }
 
   const handleForward = () => {
@@ -347,27 +358,12 @@ export default function EmailDetail({ email, onEmailDeleted }: EmailDetailProps)
       {/* Email Body */}
       <div className="flex-1 overflow-y-auto p-6">
         <div className="prose prose-sm max-w-none">
-          {email.body_full ? (
-            email.body_content_type === 'html' ? (
-              <div 
-                className="text-gray-700 leading-relaxed"
-                dangerouslySetInnerHTML={{ 
-                  __html: processEmailHtml(email.body_full, attachments) 
-                }}
-              />
-            ) : (
-              <div 
-                className="text-gray-700 leading-relaxed"
-                dangerouslySetInnerHTML={{ 
-                  __html: email.body_full.replace(/\n/g, '<br>') 
-                }}
-              />
-            )
-          ) : (
-            <div className="text-gray-700 leading-relaxed whitespace-pre-line">
-              {email.body_preview || 'No content available'}
-            </div>
-          )}
+          <div 
+            className="text-gray-700 leading-relaxed"
+            dangerouslySetInnerHTML={{ 
+              __html: sanitizeEmailContent(email as any, attachments) 
+            }}
+          />
         </div>
 
         {/* Email Metadata */}
@@ -393,10 +389,10 @@ export default function EmailDetail({ email, onEmailDeleted }: EmailDetailProps)
       {/* Reply Modal */}
       {replyModalState.isOpen && (
         <ReplyModal
-          mode={replyModalState.action}
+          isOpen={replyModalState.isOpen}
           onClose={() => setReplyModalState({ isOpen: false, action: 'reply' })}
-          email={email}
-          onEmailSent={handleEmailSent}
+          email={email as any}
+          action={replyModalState.action}
         />
       )}
     </div>

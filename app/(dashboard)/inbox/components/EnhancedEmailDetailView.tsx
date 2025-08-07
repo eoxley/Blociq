@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { sanitizeHtml, processEmailHtml } from '@/utils/email';
 import { useEmailAttachments } from '@/hooks/useEmailAttachments';
 import DOMPurify from 'dompurify';
+import { sanitizeEmailContent } from '@/utils/email';
 
 interface Email {
   id: string;
@@ -255,34 +256,11 @@ export default function EnhancedEmailDetailView({
         <div className="space-y-4">
           <h3 className="font-medium text-gray-900">Message</h3>
           <div className="bg-gray-50 rounded-lg p-4">
-            {email.body_full ? (
-              email.body_content_type === 'html' ? (
-                <div 
-                  className="prose prose-sm max-w-none text-gray-700"
-                  dangerouslySetInnerHTML={{ 
-                    __html: DOMPurify.sanitize(processEmailHtml(email.body_full, attachments), {
-                      ALLOWED_TAGS: ['p', 'br', 'div', 'span', 'strong', 'em', 'u', 'b', 'i', 'a', 'ul', 'ol', 'li', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'pre', 'code', 'img'],
-                      ALLOWED_ATTR: ['href', 'target', 'src', 'alt', 'title', 'class'],
-                      FORBID_TAGS: ['html', 'head', 'meta', 'style', 'script', 'title', 'link', 'base', 'iframe', 'object', 'embed', 'form', 'input', 'textarea', 'select', 'button'],
-                      KEEP_CONTENT: true
-                    })
-                  }}
-                />
-              ) : (
-                <div className="whitespace-pre-wrap text-gray-700">
-                  {email.body_full}
-                </div>
-              )
-            ) : email.body_preview ? (
-              <div className="text-gray-700">
-                {email.body_preview}
-                <p className="text-gray-500 text-sm mt-2">
-                  (Full message not available)
-                </p>
-              </div>
-            ) : (
-              <p className="text-gray-500 italic">No message content available</p>
-            )}
+            <div 
+              dangerouslySetInnerHTML={{ 
+                __html: sanitizeEmailContent(email, attachments)
+              }}
+            />
           </div>
         </div>
 
