@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
-import { sanitizeHtml, processEmailHtml } from "@/utils/email";
+import { sanitizeEmailContent } from '@/utils/email';
 import { useEmailAttachments } from '@/hooks/useEmailAttachments';
 import DOMPurify from 'dompurify';
 
@@ -301,12 +301,7 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
                     <div 
                       className="prose prose-sm max-w-none text-sm"
                       dangerouslySetInnerHTML={{ 
-                        __html: DOMPurify.sanitize(processEmailHtml(email.body, attachments), {
-                          ALLOWED_TAGS: ['p', 'br', 'div', 'span', 'strong', 'em', 'u', 'b', 'i', 'a', 'ul', 'ol', 'li', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'pre', 'code', 'img'],
-                          ALLOWED_ATTR: ['href', 'target', 'src', 'alt', 'title', 'class'],
-                          FORBID_TAGS: ['html', 'head', 'meta', 'style', 'script', 'title', 'link', 'base', 'iframe', 'object', 'embed', 'form', 'input', 'textarea', 'select', 'button'],
-                          KEEP_CONTENT: true
-                        })
+                        __html: sanitizeEmailContent(email, attachments)
                       }}
                     />
                   ) : (
@@ -332,7 +327,7 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
               {/* Tone Selector */}
               <div className="flex items-center gap-3">
                 <span className="text-sm font-medium">Tone:</span>
-                <Select value={tone} onChange={(e) => setTone(e.target.value)}>
+                <Select value={tone} onValueChange={(value) => setTone(value)}>
                   <option value="Professional">Professional</option>
                   <option value="Friendly">Friendly</option>
                   <option value="Formal">Formal</option>
