@@ -191,11 +191,12 @@ export default function AskBlocIQHomepage() {
       } else {
         requestBody = JSON.stringify({
           prompt: userMessage.content,
-          building_id: null
+          building_id: null,
+          is_public: true
         })
       }
 
-      const response = await fetch('/api/ask-ai-public', {
+      const response = await fetch('/api/ask-ai', {
         method: 'POST',
         headers,
         body: requestBody,
