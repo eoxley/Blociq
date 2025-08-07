@@ -302,6 +302,8 @@ export default function InboxClient() {
         throw new Error('Failed to move email');
       }
 
+      // Refresh emails to update the UI
+      refreshEmails();
       toast.success('Email moved successfully');
       
     } catch (error) {

@@ -181,6 +181,10 @@ export function PropertyInbox() {
           {filteredEmails.map((email) => (
             <Card
               key={email.id}
+              draggable={true}
+              onDragStart={(e) => {
+                e.dataTransfer.setData('emailId', email.id);
+              }}
               className={`p-4 hover:shadow-md transition-shadow cursor-pointer ${!email.isRead ? "bg-blue-50 border-blue-200" : ""}`}
             >
               <div className="flex items-start space-x-4">

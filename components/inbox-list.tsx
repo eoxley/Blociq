@@ -55,6 +55,10 @@ export default function InboxList({ emails }: { emails: Email[] }) {
         {localEmails.map((email) => (
           <div
             key={email.id}
+            draggable={true}
+            onDragStart={(e) => {
+              e.dataTransfer.setData('emailId', email.id);
+            }}
             onClick={() => handleEmailClick(email)}
             className={`p-4 border-b cursor-pointer hover:bg-blue-50 transition ${
               selectedEmail?.id === email.id ? 'bg-blue-100' : ''
