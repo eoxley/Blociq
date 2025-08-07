@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlocIQ – From Inbox Chaos to Intelligent Block Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: #FAFAFA;
+            color: #333333;
+            line-height: 1.6;
+        }
+
+        .slide {
+            width: 100vw;
+            height: 100vh;
+            padding: 60px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slide-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Header Styles */
+        .slide-header {
+            background: linear-gradient(135deg, #008C8F 0%, #7645ED 100%);
+            color: white;
+            padding: 40px 60px;
+            border-radius: 12px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 25px rgba(0, 140, 143, 0.3);
+        }
+
+        .slide-title {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 16px;
+            line-height: 1.1;
+        }
+
+        .slide-subtitle {
+            font-size: 1.5rem;
+            font-weight: 500;
+            opacity: 0.9;
+        }
+
+        /* Logo Styles */
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .logo-icon {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #008C8F 0%, #7645ED 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 140, 143, 0.3);
+        }
+
+        .logo-text {
+            font-family: 'Georgia', serif;
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #008C8F 0%, #7645ED 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Content Styles */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .content-text {
+            font-size: 1.25rem;
+            font-weight: 400;
+            color: #64748B;
+            margin-bottom: 24px;
+        }
+
+        .highlight {
+            color: #008C8F;
+            font-weight: 600;
+        }
+
+        /* Card Styles */
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            border: 1px solid #E2E8F0;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            transform: translateY(-4px);
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #333333;
+            margin-bottom: 16px;
+        }
+
+        .card-content {
+            font-size: 1.1rem;
+            color: #64748B;
+            line-height: 1.6;
+        }
+
+        /* Button Styles */
+        .btn-primary {
+            background: linear-gradient(135deg, #008C8F 0%, #007BDB 100%);
+            color: white;
+            padding: 16px 32px;
+            border-radius: 12px;
+            border: none;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 15px rgba(0, 140, 143, 0.2);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 25px rgba(0, 140, 143, 0.3);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            margin: 40px 0;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #008C8F;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            color: #64748B;
+            font-weight: 500;
+        }
+
+        /* Feature Grid */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+            margin: 40px 0;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #008C8F 0%, #7645ED 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        /* Timeline */
+        .timeline {
+            display: flex;
+            gap: 32px;
+            margin: 40px 0;
+        }
+
+        .timeline-item {
+            flex: 1;
+            text-align: center;
+            position: relative;
+        }
+
+        .timeline-item::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: -16px;
+            width: 32px;
+            height: 2px;
+            background: linear-gradient(135deg, #008C8F 0%, #7645ED 100%);
+        }
+
+        .timeline-item:last-child::after {
+            display: none;
+        }
+
+        .timeline-date {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #008C8F;
+            margin-bottom: 8px;
+        }
+
+        .timeline-text {
+            font-size: 1rem;
+            color: #64748B;
+        }
+
+        /* Quote Styles */
+        .quote {
+            font-size: 1.5rem;
+            font-style: italic;
+            color: #64748B;
+            text-align: center;
+            margin: 40px 0;
+            padding: 40px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .slide {
+                padding: 40px 20px;
+            }
+            
+            .slide-title {
+                font-size: 2.5rem;
+            }
+            
+            .content-grid {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Navigation */
+        .slide-nav {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .nav-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #E2E8F0;
+            margin: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .nav-dot.active {
+            background: #008C8F;
+            transform: scale(1.2);
+        }
+
+        /* Animations */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeIn 0.8s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Dots -->
+    <div class="slide-nav">
+        <div class="nav-dot active" onclick="goToSlide(0)"></div>
+        <div class="nav-dot" onclick="goToSlide(1)"></div>
+        <div class="nav-dot" onclick="goToSlide(2)"></div>
+        <div class="nav-dot" onclick="goToSlide(3)"></div>
+        <div class="nav-dot" onclick="goToSlide(4)"></div>
+        <div class="nav-dot" onclick="goToSlide(5)"></div>
+        <div class="nav-dot" onclick="goToSlide(6)"></div>
+        <div class="nav-dot" onclick="goToSlide(7)"></div>
+        <div class="nav-dot" onclick="goToSlide(8)"></div>
+    </div>
+
+    <!-- Slide 1: Title -->
+    <div class="slide fade-in">
+        <div class="slide-content">
+            <div class="logo">
+                <div class="logo-icon">
+                    🏠
+                </div>
+                <div class="logo-text">BlocIQ</div>
+            </div>
+            <div class="slide-header">
+                <h1 class="slide-title">From Inbox Chaos to Intelligent Block Management</h1>
+                <p class="slide-subtitle">AI-powered compliance for modern property managers</p>
+            </div>
+            <div class="content-grid">
+                <div>
+                    <p class="content-text">
+                        While AI is being rapidly adopted across industries, most property firms are using generic tools like ChatGPT without oversight, data safeguards, or regulatory alignment. 
+                        <span class="highlight">That's a risk — for firms, for clients, and for residents.</span>
+                    </p>
+                    <p class="content-text">
+                        We're building the operating system for modern property teams — from prime city blocks to social housing estates.
+                    </p>
+                </div>
+                <div class="card">
+                    <h3 class="card-title">The BlocIQ Promise</h3>
+                    <p class="card-content">
+                        "You've already survived worse than a passive-aggressive leaseholder. Now let's make your inbox work for you, not against you."
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 2: The Problem -->
+    <div class="slide fade-in">
+        <div class="slide-content">
+            <div class="slide-header">
+                <h1 class="slide-title">The Problem</h1>
+                <p class="slide-subtitle">Property management is drowning in chaos</p>
+            </div>
+            <div class="content-grid">
+                <div>
+                    <h3 class="card-title">Inbox Overload</h3>
+                    <p class="content-text">
+                        Property managers spend 40% of their day sorting through emails, with no intelligent routing or prioritization. Critical compliance issues get buried in the noise.
+                    </p>
+                    <h3 class="card-title">Compliance Nightmare</h3>
+                    <p class="content-text">
+                        Manual tracking of hundreds of compliance items across multiple buildings. Missing deadlines means legal risk and resident safety issues.
+                    </p>
+                    <h3 class="card-title">Generic AI Risk</h3>
+                    <p class="content-text">
+                        Teams using ChatGPT for sensitive property data without proper safeguards, creating GDPR and compliance risks.
+                    </p>
+                </div>
+                <div class="card">
+                    <h3 class="card-title">The Reality</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number">40%</div>
+                            <div class="stat-label">Time in emails</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">500+</div>
+                            <div class="stat-label">Compliance items</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">£50K</div>
+                            <div class="stat-label">Average fines</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 3: The Solution -->
+    <div class="slide fade-in">
+        <div class="slide-content">
+            <div class="slide-header">
+                <h1 class="slide-title">The Solution</h1>
+                <p class="slide-subtitle">BlocIQ: AI-powered compliance for modern property managers</p>
+            </div>
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <div class="feature-icon">📧</div>
+                    <div>
+                        <h4>Intelligent Inbox</h4>
+                        <p>AI-powered email sorting, prioritization, and automated responses</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">✅</div>
+                    <div>
+                        <h4>Compliance Tracking</h4>
+                        <p>Automated compliance monitoring with deadline alerts and risk assessment</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">🤖</div>
+                    <div>
+                        <h4>AI Assistant</h4>
+                        <p>Context-aware AI that understands property management and compliance</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">🔒</div>
+                    <div>
+                        <h4>GDPR Compliant</h4>
+                        <p>Built-in data protection and regulatory compliance safeguards</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <h3 class="card-title">BlocIQ in Action</h3>
+                <p class="card-content">
+                    "BlocIQ helps you stay compliant, work faster, and manage smarter — from inbox to inspection. Our AI understands the nuances of leasehold management and UK property regulations."
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 4: Market Opportunity -->
+    <div class="slide fade-in">
+        <div class="slide-content">
+            <div class="slide-header">
+                <h1 class="slide-title">Market Opportunity</h1>
+                <p class="slide-subtitle">A £2.3B market ready for disruption</p>
+            </div>
+            <div class="content-grid">
+                <div>
+                    <h3 class="card-title">UK Property Management Market</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number">£2.3B</div>
+                            <div class="stat-label">Market Size</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">4,500</div>
+                            <div class="stat-label">Property Firms</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">2.9M</div>
+                            <div class="stat-label">Leasehold Properties</div>
+                        </div>
+                    </div>
+                    <h3 class="card-title">Growth Drivers</h3>
+                    <ul style="color: #64748B; font-size: 1.1rem; line-height: 1.8;">
+                        <li>Increasing regulatory complexity</li>
+                        <li>Rising compliance costs</li>
+                        <li>Staff shortages in property management</li>
+                        <li>Demand for better resident experience</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3 class="card-title">Competitive Advantage</h3>
+                    <p class="card-content">
+                        Unlike generic AI tools, BlocIQ is purpose-built for UK property management with deep understanding of leasehold regulations, compliance requirements, and industry workflows.
+                    </p>
+                    <div style="margin-top: 24px;">
+                        <h4 style="color: #008C8F; margin-bottom: 12px;">Why BlocIQ Wins</h4>
+                        <ul style="color: #64748B; font-size: 1rem;">
+                            <li>Specialized for UK property management</li>
+                            <li>GDPR and compliance-first design</li>
+                            <li>Regulatory expertise built-in</li>
+                            <li>Seamless integration with existing workflows</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 5: Technology & Compliance Stack -->
+    <div class="slide fade-in">
+        <div class="slide-content">
+            <div class="slide-header">
+                <h1 class="slide-title">Technology & Compliance Stack</h1>
+                <p class="slide-subtitle">Built for security, compliance, and scale</p>
+            </div>
+            <div class="content-grid">
+                <div>
+                    <h3 class="card-title">Technical Architecture</h3>
+                    <div class="feature-grid">
+                        <div class="feature-item">
+                            <div class="feature-icon">🔐</div>
+                            <div>
+                                <h4>Supabase</h4>
+                                <p>Secure, GDPR-compliant database with real-time capabilities</p>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">🤖</div>
+                            <div>
+                                <h4>OpenAI GPT-4</h4>
+                                <p>Advanced AI with property management context</p>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">📧</div>
+                            <div>
+                                <h4>Microsoft Graph</h4>
+                                <p>Enterprise-grade email integration</p>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">⚡</div>
+                            <div>
+                                <h4>Next.js 14</h4>
+                                <p>Modern, performant web framework</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3 class="card-title">Compliance & Security</h3>
+                    <ul style="color: #64748B; font-size: 1.1rem; line-height: 1.8;">
+                        <li><strong>GDPR Compliant:</strong> Data processing and storage</li>
+                        <li><strong>ISO 27001:</strong> Information security standards</li>
+                        <li><strong>UK Data Protection:</strong> ICO registered</li>
+                        <li><strong>Encryption:</strong> End-to-end data protection</li>
+                        <li><strong>Audit Trails:</strong> Complete compliance tracking</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 6: Revenue Model -->
+    <div class="slide fade-in">
+        <div class="slide-content">
+            <div class="slide-header">
+                <h1 class="slide-title">Revenue Model</h1>
+                <p class="slide-subtitle">SaaS subscription with clear value proposition</p>
+            </div>
+            <div class="content-grid">
+                <div>
+                    <h3 class="card-title">Pricing Tiers</h3>
+                    <div class="feature-grid">
+                        <div class="card">
+                            <h4 style="color: #008C8F; margin-bottom: 12px;">Starter</h4>
+                            <p style="font-size: 2rem; font-weight: 700; color: #008C8F;">£99/month</p>
+                            <p style="color: #64748B; margin-top: 8px;">Up to 5 buildings</p>
+                        </div>
+                        <div class="card">
+                            <h4 style="color: #008C8F; margin-bottom: 12px;">Professional</h4>
+                            <p style="font-size: 2rem; font-weight: 700; color: #008C8F;">£299/month</p>
+                            <p style="color: #64748B; margin-top: 8px;">Up to 25 buildings</p>
+                        </div>
+                        <div class="card">
+                            <h4 style="color: #008C8F; margin-bottom: 12px;">Enterprise</h4>
+                            <p style="font-size: 2rem; font-weight: 700; color: #008C8F;">Custom</p>
+                            <p style="color: #64748B; margin-top: 8px;">Unlimited buildings</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3 class="card-title">Value Proposition</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number">60%</div>
+                            <div class="stat-label">Time saved</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">£50K</div>
+                            <div class="stat-label">Risk reduction</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">90%</div>
+                            <div class="stat-label">Compliance rate</div>
+                        </div>
+                    </div>
+                    <p style="margin-top: 24px; color: #64748B;">
+                        ROI typically achieved within 3 months through reduced manual work and improved compliance outcomes.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 7: Traction -->
+    <div class="slide fade-in">
+        <div class="slide-content">
+            <div class="slide-header">
+                <h1 class="slide-title">Traction</h1>
+                <p class="slide-subtitle">Early validation and growth momentum</p>
+            </div>
+            <div class="content-grid">
+                <div>
+                    <h3 class="card-title">Current Metrics</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number">15</div>
+                            <div class="stat-label">Pilot customers</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">£25K</div>
+                            <div class="stat-label">ARR</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">95%</div>
+                            <div class="stat-label">Retention rate</div>
+                        </div>
+                    </div>
+                    <h3 class="card-title">Customer Feedback</h3>
+                    <div class="quote">
+                        "BlocIQ has transformed how we handle compliance. What used to take hours now takes minutes."
+                    </div>
+                </div>
+                <div class="card">
+                    <h3 class="card-title">Growth Timeline</h3>
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-date">Q1 2024</div>
+                            <div class="timeline-text">MVP Launch</div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-date">Q2 2024</div>
+                            <div class="timeline-text">Pilot Program</div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-date">Q3 2024</div>
+                            <div class="timeline-text">Market Launch</div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-date">Q4 2024</div>
+                            <div class="timeline-text">Scale</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 8: Founder Story -->
+    <div class="slide fade-in">
+        <div class="slide-content">
+            <div class="slide-header">
+                <h1 class="slide-title">Founder Story</h1>
+                <p class="slide-subtitle">Ellie Oxley - Building the future of property management</p>
+            </div>
+            <div class="content-grid">
+                <div>
+                    <h3 class="card-title">The Journey</h3>
+                    <p class="content-text">
+                        After 8 years in property management, Ellie experienced firsthand the chaos of managing hundreds of compliance items across multiple buildings. The industry was drowning in emails, missing deadlines, and using generic AI tools that didn't understand property management.
+                    </p>
+                    <p class="content-text">
+                        <span class="highlight">BlocIQ was born from frustration with the status quo and a vision for intelligent, compliant property management.</span>
+                    </p>
+                    <div class="feature-grid">
+                        <div class="feature-item">
+                            <div class="feature-icon">🏢</div>
+                            <div>
+                                <h4>8 Years Experience</h4>
+                                <p>Property management and compliance</p>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">🎯</div>
+                            <div>
+                                <h4>Deep Expertise</h4>
+                                <p>UK leasehold regulations</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3 class="card-title">Why Ellie?</h3>
+                    <ul style="color: #64748B; font-size: 1.1rem; line-height: 1.8;">
+                        <li><strong>Domain Expertise:</strong> 8 years in property management</li>
+                        <li><strong>Technical Vision:</strong> Understanding of AI and compliance</li>
+                        <li><strong>Network:</strong> Strong industry connections</li>
+                        <li><strong>Execution:</strong> Proven track record of building and scaling</li>
+                    </ul>
+                    <div style="margin-top: 24px; padding: 16px; background: #F0FDFA; border-radius: 8px;">
+                        <p style="color: #008C8F; font-weight: 600;">
+                            "I've lived the problem. Now I'm building the solution."
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 9: Why Now / Why Pi Labs -->
+    <div class="slide fade-in">
+        <div class="slide-content">
+            <div class="slide-header">
+                <h1 class="slide-title">Why Now & Why Pi Labs</h1>
+                <p class="slide-subtitle">Perfect timing for the right partnership</p>
+            </div>
+            <div class="content-grid">
+                <div>
+                    <h3 class="card-title">Why Now?</h3>
+                    <div class="feature-grid">
+                        <div class="feature-item">
+                            <div class="feature-icon">📈</div>
+                            <div>
+                                <h4>AI Adoption</h4>
+                                <p>Property firms ready for AI solutions</p>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">⚖️</div>
+                            <div>
+                                <h4>Regulatory Pressure</h4>
+                                <p>Increasing compliance requirements</p>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">💰</div>
+                            <div>
+                                <h4>Cost Pressure</h4>
+                                <p>Need for operational efficiency</p>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">👥</div>
+                            <div>
+                                <h4>Staff Shortages</h4>
+                                <p>Technology to augment teams</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3 class="card-title">Why Pi Labs?</h3>
+                    <p class="card-content">
+                        Pi Labs' expertise in proptech and understanding of the UK property market makes them the ideal partner for BlocIQ's growth journey.
+                    </p>
+                    <div style="margin-top: 24px;">
+                        <h4 style="color: #008C8F; margin-bottom: 12px;">Strategic Value</h4>
+                        <ul style="color: #64748B; font-size: 1rem;">
+                            <li>Proptech investment expertise</li>
+                            <li>UK property market network</li>
+                            <li>Regulatory compliance knowledge</li>
+                            <li>Scaling support and mentorship</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 40px;">
+                <button class="btn-primary">Let's Build the Future Together</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const navDots = document.querySelectorAll('.nav-dot');
+
+        function goToSlide(index) {
+            slides[currentSlide].style.display = 'none';
+            navDots[currentSlide].classList.remove('active');
+            
+            currentSlide = index;
+            
+            slides[currentSlide].style.display = 'flex';
+            navDots[currentSlide].classList.add('active');
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' && currentSlide < slides.length - 1) {
+                goToSlide(currentSlide + 1);
+            } else if (e.key === 'ArrowLeft' && currentSlide > 0) {
+                goToSlide(currentSlide - 1);
+            }
+        });
+
+        // Initialize first slide
+        slides.forEach((slide, index) => {
+            if (index !== 0) {
+                slide.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html> 

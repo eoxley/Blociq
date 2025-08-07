@@ -37,7 +37,12 @@ export default function Footer() {
               </div>
               <span className="ml-1.5 font-medium text-gray-900 text-xs">BlocIQ</span>
             </div>
-            <span className="text-xs">&copy; BlocIQ Ltd. All rights reserved.</span>
+            <div className="flex flex-col">
+              <span className="text-xs">&copy; BlocIQ Ltd. All rights reserved.</span>
+              <span className="text-xs text-gray-400">
+                BlocIQ Ltd | Company No. 16533839 | Registered in England and Wales | Registered office: 3 Cliveden Court, The Broadway, TN3 8DA
+              </span>
+            </div>
           </div>
           
           <div className="flex items-center space-x-4 text-xs">
