@@ -43,6 +43,57 @@ export default function InboxClient() {
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
   const user = useUser();
 
+  // Define functions before they are used in useEffect
+  const handleReply = useCallback((action: 'reply' | 'reply-all' | 'forward') => {
+    if (selectedEmail) {
+      setReplyEmail(selectedEmail);
+      setReplyAction(action);
+      setShowReplyModal(true);
+    }
+  }, [selectedEmail]);
+
+  const handleDeleteEmail = useCallback(async (emailId: string) => {
+    try {
+      console.log('🗑️ Moving email to deleted items:', emailId);
+      
+      const response = await fetch('/api/delete-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ emailId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: Failed to delete email`);
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        // Remove email from current view since it's now in deleted items
+        const updatedEmails = emails.filter(email => email.id !== emailId);
+        
+        // Update the emails state through the hook
+        refreshEmails();
+        
+        // Clear selected email if it was the deleted one
+        if (selectedEmail?.id === emailId) {
+          selectEmail(null);
+        }
+        
+        toast.success('Email moved to deleted items');
+        console.log('✅ Email moved to deleted items successfully');
+      } else {
+        throw new Error(result.error || 'Unknown error occurred');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting email:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to delete email');
+    }
+  }, [emails, refreshEmails, selectedEmail, selectEmail]);
+
   // Keyboard shortcuts support
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -212,14 +263,6 @@ export default function InboxClient() {
     selectEmail(email);
   };
 
-  const handleReply = useCallback((action: 'reply' | 'reply-all' | 'forward') => {
-    if (selectedEmail) {
-      setReplyEmail(selectedEmail);
-      setReplyAction(action);
-      setShowReplyModal(true);
-    }
-  }, [selectedEmail]);
-
   const handleTriageComplete = (results: any) => {
     // Refresh emails to show new AI tags and categories
     refreshEmails();
@@ -244,48 +287,6 @@ export default function InboxClient() {
       fetchDraftsCount();
     }
   };
-
-  const handleDeleteEmail = useCallback(async (emailId: string) => {
-    try {
-      console.log('🗑️ Moving email to deleted items:', emailId);
-      
-      const response = await fetch('/api/delete-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ emailId }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}: Failed to delete email`);
-      }
-
-      const result = await response.json();
-      
-      if (result.success) {
-        // Remove email from current view since it's now in deleted items
-        const updatedEmails = emails.filter(email => email.id !== emailId);
-        
-        // Update the emails state through the hook
-        refreshEmails();
-        
-        // Clear selected email if it was the deleted one
-        if (selectedEmail?.id === emailId) {
-          selectEmail(null);
-        }
-        
-        toast.success('Email moved to deleted items');
-        console.log('✅ Email moved to deleted items successfully');
-      } else {
-        throw new Error(result.error || 'Unknown error occurred');
-      }
-    } catch (error) {
-      console.error('❌ Error deleting email:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to delete email');
-    }
-  }, [emails, refreshEmails, selectedEmail, selectEmail]);
 
   const handleEmailDrop = async (emailId: string, folderId: string) => {
     try {
