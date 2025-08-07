@@ -204,6 +204,10 @@ export default function InboxEmailCard({
     <div 
       ref={cardRef}
       tabIndex={onSelect ? 0 : -1}
+      draggable={true}
+      onDragStart={(e) => {
+        e.dataTransfer.setData('emailId', email.id);
+      }}
       className={`
         p-4 border rounded-lg shadow-sm bg-white mb-3 transition-all duration-200
         ${email.unread ? 'border-l-4 border-l-blue-500' : 'border-gray-200'}
