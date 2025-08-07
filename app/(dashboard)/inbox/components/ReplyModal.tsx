@@ -40,6 +40,120 @@ interface ReplyModalProps {
 
 type ReplyAction = 'reply' | 'reply-all' | 'forward';
 
+// Function to sanitize and format original email content
+const formatQuotedEmail = (email: Email): string => {
+  const originalSender = email.from_name || email.from_email || 'Unknown sender';
+  const originalDate = email.received_at ? new Date(email.received_at).toLocaleString() : 'Unknown date';
+  const originalSubject = email.subject || 'No subject';
+  
+  // Get the original email content
+  const originalContent = email.body_full || email.body_preview || '';
+  
+  // Sanitize the HTML content
+  const sanitizedHtml = DOMPurify.sanitize(originalContent, {
+    ALLOWED_TAGS: ['p', 'br', 'div', 'span', 'strong', 'em', 'u', 'b', 'i', 'a', 'ul', 'ol', 'li', 'blockquote'],
+    ALLOWED_ATTR: ['href', 'target'],
+    KEEP_CONTENT: true
+  });
+  
+  // Remove unwanted tags and clean up the content
+  let cleanedContent = sanitizedHtml
+    .replace(/<html[^>]*>.*?<body[^>]*>(.*?)<\/body>.*?<\/html>/gis, '$1') // Remove html/body tags
+    .replace(/<head[^>]*>.*?<\/head>/gis, '') // Remove head tags
+    .replace(/<meta[^>]*>/gi, '') // Remove meta tags
+    .replace(/<style[^>]*>.*?<\/style>/gis, '') // Remove style tags
+    .replace(/<script[^>]*>.*?<\/script>/gis, '') // Remove script tags
+    .replace(/<title[^>]*>.*?<\/title>/gis, '') // Remove title tags
+    .replace(/<link[^>]*>/gi, '') // Remove link tags
+    .replace(/<base[^>]*>/gi, '') // Remove base tags
+    .replace(/<iframe[^>]*>.*?<\/iframe>/gis, '') // Remove iframe tags
+    .replace(/<object[^>]*>.*?<\/object>/gis, '') // Remove object tags
+    .replace(/<embed[^>]*>/gi, '') // Remove embed tags
+    .replace(/<form[^>]*>.*?<\/form>/gis, '') // Remove form tags
+    .replace(/<input[^>]*>/gi, '') // Remove input tags
+    .replace(/<button[^>]*>.*?<\/button>/gis, '') // Remove button tags
+    .replace(/<select[^>]*>.*?<\/select>/gis, '') // Remove select tags
+    .replace(/<textarea[^>]*>.*?<\/textarea>/gis, '') // Remove textarea tags
+    .replace(/<label[^>]*>.*?<\/label>/gis, '') // Remove label tags
+    .replace(/<fieldset[^>]*>.*?<\/fieldset>/gis, '') // Remove fieldset tags
+    .replace(/<legend[^>]*>.*?<\/legend>/gis, '') // Remove legend tags
+    .replace(/<optgroup[^>]*>.*?<\/optgroup>/gis, '') // Remove optgroup tags
+    .replace(/<option[^>]*>.*?<\/option>/gis, '') // Remove option tags
+    .replace(/<datalist[^>]*>.*?<\/datalist>/gis, '') // Remove datalist tags
+    .replace(/<output[^>]*>.*?<\/output>/gis, '') // Remove output tags
+    .replace(/<progress[^>]*>.*?<\/progress>/gis, '') // Remove progress tags
+    .replace(/<meter[^>]*>.*?<\/meter>/gis, '') // Remove meter tags
+    .replace(/<canvas[^>]*>.*?<\/canvas>/gis, '') // Remove canvas tags
+    .replace(/<svg[^>]*>.*?<\/svg>/gis, '') // Remove svg tags
+    .replace(/<math[^>]*>.*?<\/math>/gis, '') // Remove math tags
+    .replace(/<video[^>]*>.*?<\/video>/gis, '') // Remove video tags
+    .replace(/<audio[^>]*>.*?<\/audio>/gis, '') // Remove audio tags
+    .replace(/<source[^>]*>/gi, '') // Remove source tags
+    .replace(/<track[^>]*>/gi, '') // Remove track tags
+    .replace(/<map[^>]*>.*?<\/map>/gis, '') // Remove map tags
+    .replace(/<area[^>]*>/gi, '') // Remove area tags
+    .replace(/<table[^>]*>.*?<\/table>/gis, '') // Remove table tags
+    .replace(/<thead[^>]*>.*?<\/thead>/gis, '') // Remove thead tags
+    .replace(/<tbody[^>]*>.*?<\/tbody>/gis, '') // Remove tbody tags
+    .replace(/<tfoot[^>]*>.*?<\/tfoot>/gis, '') // Remove tfoot tags
+    .replace(/<tr[^>]*>.*?<\/tr>/gis, '') // Remove tr tags
+    .replace(/<th[^>]*>.*?<\/th>/gis, '') // Remove th tags
+    .replace(/<td[^>]*>.*?<\/td>/gis, '') // Remove td tags
+    .replace(/<caption[^>]*>.*?<\/caption>/gis, '') // Remove caption tags
+    .replace(/<colgroup[^>]*>.*?<\/colgroup>/gis, '') // Remove colgroup tags
+    .replace(/<col[^>]*>/gi, '') // Remove col tags
+    .replace(/<h[1-6][^>]*>.*?<\/h[1-6]>/gis, '') // Remove heading tags
+    .replace(/<hr[^>]*>/gi, '') // Remove hr tags
+    .replace(/<pre[^>]*>.*?<\/pre>/gis, '') // Remove pre tags
+    .replace(/<code[^>]*>.*?<\/code>/gis, '') // Remove code tags
+    .replace(/<kbd[^>]*>.*?<\/kbd>/gis, '') // Remove kbd tags
+    .replace(/<samp[^>]*>.*?<\/samp>/gis, '') // Remove samp tags
+    .replace(/<var[^>]*>.*?<\/var>/gis, '') // Remove var tags
+    .replace(/<cite[^>]*>.*?<\/cite>/gis, '') // Remove cite tags
+    .replace(/<q[^>]*>.*?<\/q>/gis, '') // Remove q tags
+    .replace(/<abbr[^>]*>.*?<\/abbr>/gis, '') // Remove abbr tags
+    .replace(/<acronym[^>]*>.*?<\/acronym>/gis, '') // Remove acronym tags
+    .replace(/<dfn[^>]*>.*?<\/dfn>/gis, '') // Remove dfn tags
+    .replace(/<del[^>]*>.*?<\/del>/gis, '') // Remove del tags
+    .replace(/<ins[^>]*>.*?<\/ins>/gis, '') // Remove ins tags
+    .replace(/<mark[^>]*>.*?<\/mark>/gis, '') // Remove mark tags
+    .replace(/<small[^>]*>.*?<\/small>/gis, '') // Remove small tags
+    .replace(/<sub[^>]*>.*?<\/sub>/gis, '') // Remove sub tags
+    .replace(/<sup[^>]*>.*?<\/sup>/gis, '') // Remove sup tags
+    .replace(/<time[^>]*>.*?<\/time>/gis, '') // Remove time tags
+    .replace(/<wbr[^>]*>/gi, '') // Remove wbr tags
+    .replace(/<ruby[^>]*>.*?<\/ruby>/gis, '') // Remove ruby tags
+    .replace(/<rt[^>]*>.*?<\/rt>/gis, '') // Remove rt tags
+    .replace(/<rp[^>]*>.*?<\/rp>/gis, '') // Remove rp tags
+    .replace(/<bdi[^>]*>.*?<\/bdi>/gis, '') // Remove bdi tags
+    .replace(/<bdo[^>]*>.*?<\/bdo>/gis, '') // Remove bdo tags
+    .replace(/<span[^>]*>/gi, '') // Remove span opening tags
+    .replace(/<\/span>/gi, '') // Remove span closing tags
+    .replace(/<div[^>]*>/gi, '') // Remove div opening tags
+    .replace(/<\/div>/gi, '') // Remove div closing tags
+    .replace(/<p[^>]*>/gi, '') // Remove p opening tags
+    .replace(/<\/p>/gi, '\n') // Replace p closing tags with newlines
+    .replace(/<br[^>]*>/gi, '\n') // Replace br tags with newlines
+    .replace(/&nbsp;/gi, ' ') // Replace &nbsp; with spaces
+    .replace(/&amp;/gi, '&') // Replace &amp; with &
+    .replace(/&lt;/gi, '<') // Replace &lt; with <
+    .replace(/&gt;/gi, '>') // Replace &gt; with >
+    .replace(/&quot;/gi, '"') // Replace &quot; with "
+    .replace(/&#39;/gi, "'") // Replace &#39; with '
+    .replace(/\n\s*\n\s*\n/g, '\n\n') // Remove excessive newlines
+    .trim();
+  
+  // Format the quoted message with proper structure
+  const quotedMessage = `\n\n--- Original Message ---
+From: ${originalSender}
+Date: ${originalDate}
+Subject: ${originalSubject}
+
+${cleanedContent}`;
+  
+  return quotedMessage;
+};
+
 export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModalProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -112,15 +226,8 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
       console.log('🤖 Using AI-generated reply');
     } else {
       setIsAIGenerated(false);
-      // Set initial body with proper HTML formatting
-      const originalMessage = email.body_full || email.body_preview || '';
-      const originalSender = email.from_name || email.from_email || 'Unknown sender';
-      const originalDate = email.received_at ? new Date(email.received_at).toLocaleString() : 'Unknown date';
-      const originalSubject = email.subject || 'No subject';
-      
-      // Format the quoted message properly
-      const quotedMessage = `\n\n--- Original Message ---\nFrom: ${originalSender}\nDate: ${originalDate}\nSubject: ${originalSubject}\n\n${originalMessage}`;
-      
+      // Use the formatted quoted message function
+      const quotedMessage = formatQuotedEmail(email);
       setBody(action === 'forward' ? quotedMessage : quotedMessage);
     }
   }, [email, action, isOpen]);
@@ -415,10 +522,51 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
             {body && (
               <div className="mt-2 p-3 bg-gray-50 rounded-lg">
                 <div className="text-xs text-gray-500 mb-2">Preview:</div>
-                <div 
-                  className="prose prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(body) }}
-                />
+                <div className="prose prose-sm max-w-none">
+                  {body.split('--- Original Message ---').map((part, index) => {
+                    if (index === 0) {
+                      // This is the new reply content
+                      return (
+                        <div key="new-content" className="mb-4">
+                          <div 
+                            className="whitespace-pre-wrap text-gray-900"
+                            dangerouslySetInnerHTML={{ 
+                              __html: DOMPurify.sanitize(part.trim(), {
+                                ALLOWED_TAGS: ['p', 'br', 'div', 'span', 'strong', 'em', 'u', 'b', 'i', 'a', 'ul', 'ol', 'li', 'blockquote'],
+                                ALLOWED_ATTR: ['href', 'target']
+                              })
+                            }}
+                          />
+                        </div>
+                      );
+                    } else {
+                      // This is the quoted content
+                      const lines = part.trim().split('\n');
+                      const headerLines = lines.slice(0, 3); // From, Date, Subject
+                      const contentLines = lines.slice(3); // The actual quoted content
+                      
+                      return (
+                        <details key="quoted-content" className="mt-4" open>
+                          <summary className="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-800 mb-2">
+                            📧 Original Message (click to expand/collapse)
+                          </summary>
+                          <div className="pl-4 border-l-2 border-gray-300 bg-white p-3 rounded">
+                            {/* Header info */}
+                            <div className="text-xs text-gray-500 mb-2 space-y-1">
+                              {headerLines.map((line, lineIndex) => (
+                                <div key={lineIndex}>{line}</div>
+                              ))}
+                            </div>
+                            {/* Quoted content */}
+                            <div className="text-sm text-gray-700 whitespace-pre-wrap">
+                              {contentLines.join('\n')}
+                            </div>
+                          </div>
+                        </details>
+                      );
+                    }
+                  })}
+                </div>
               </div>
             )}
           </div>
