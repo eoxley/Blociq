@@ -14,16 +14,13 @@ import { Label } from '@/components/ui/label';
 import { AlertSuccess, AlertError, AlertWarning, AlertInfo } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import LayoutWithSidebar from '@/components/LayoutWithSidebar';
+import PageHero from '@/components/PageHero';
 
 export default function DesignSystemPage() {
   return (
     <LayoutWithSidebar>
+      <PageHero title="BlocIQ Design System" subtitle="Enhanced color palette and component library" />
       <div className="space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">BlocIQ Design System</h1>
-          <p className="text-muted-foreground">Enhanced color palette and component library</p>
-        </div>
-
         {/* Color Palette */}
         <Card>
           <CardHeader>

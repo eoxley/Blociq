@@ -39,4 +39,35 @@ export async function getAccessTokenFromCode(code: string): Promise<{
     refresh_token: tokenData.refresh_token,
     expires_in: tokenData.expires_in
   };
+}
+
+/**
+ * Exchange authorization code for tokens
+ */
+export async function exchangeCodeForTokens(code: string) {
+  const params = new URLSearchParams();
+  params.append('client_id', process.env.OUTLOOK_CLIENT_ID!);
+  params.append('client_secret', process.env.OUTLOOK_CLIENT_SECRET!);
+  params.append('grant_type', 'authorization_code');
+  params.append('code', code);
+  params.append('redirect_uri', process.env.NEXT_PUBLIC_MICROSOFT_REDIRECT_URI!);
+
+  console.log("🚀 Sending token exchange with:", params.toString());
+
+  const res = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: params.toString(),
+  });
+
+  const data = await res.json();
+  console.log("📥 Microsoft token response:", data);
+
+  if (!res.ok || !data.access_token) {
+    throw new Error(`Microsoft OAuth error (${res.status}): ${data.error} - ${data.error_description}`);
+  }
+
+  return data;
 } 

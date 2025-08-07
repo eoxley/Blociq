@@ -104,10 +104,10 @@ export default function RecipientSelector({
 
   const filteredRecipients = recipients.filter(recipient => {
     const matchesSearch = 
-      recipient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      recipient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      recipient.unit.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      recipient.building_name.toLowerCase().includes(searchTerm.toLowerCase());
+      (recipient.name && recipient.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (recipient.email && recipient.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (recipient.unit && recipient.unit.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (recipient.building_name && recipient.building_name.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesType = typeFilter === 'all' || recipient.type === typeFilter;
     

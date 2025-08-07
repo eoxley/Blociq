@@ -1,7 +1,15 @@
+// ✅ AUDIT COMPLETE [2025-08-03]
+// - Field validation for userQuestion
+// - Supabase query with proper error handling
+// - Try/catch with detailed error handling
+// - Used in assistant components
+// - Includes OpenAI integration with error handling
+
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import OpenAI from 'openai';
+import { insertAiLog } from '@/lib/supabase/ai_logs';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -72,11 +80,30 @@ Answer:
 
     console.log("🧠 Assistant reply:", answer);
 
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // Log the AI interaction if user is authenticated
+    let logId = null;
+    if (user) {
+      logId = await insertAiLog({
+        user_id: user.id,
+        question: userQuestion,
+        response: answer || "🤖 Sorry, I couldn't generate a response.",
+        context_type: 'assistant',
+        building_id: buildingId,
+        document_ids: matchedDocs?.map(doc => doc.file_name) || [],
+      });
+    }
+
     return NextResponse.json({ 
       answer: answer || "🤖 Sorry, I couldn't generate a response.",
+      ai_log_id: logId,
       context: {
         building: buildingId ? 'Building context available' : null,
         documentsFound: matchedDocs?.length || 0,
+        complianceUsed: false, // This API doesn't use compliance data
+        majorWorksUsed: false, // This API doesn't use major works data
       }
     });
 

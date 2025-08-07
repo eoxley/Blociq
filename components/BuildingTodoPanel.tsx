@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { 
   CheckCircle, 
   Circle, 
@@ -16,18 +16,55 @@ import {
   X,
   Save,
   Filter,
-  Pin
+  Pin,
+  User
 } from 'lucide-react'
+import AIButton from './AIButton'
 
 type Todo = {
   id: string
   building_id: number
   title: string
+  description?: string
+  status: 'pending' | 'in_progress' | 'completed'
+  is_complete: boolean // For backward compatibility
+  due_date?: string
+  priority?: 'Low' | 'Medium' | 'High'
+  assigned_to?: string
+  created_by?: string
+  created_at: string
+  updated_at: string
+  source?: 'building_todos' | 'building_tasks' // Track which table it came from
+}
+
+type Task = {
+  id: string
+  building_id: string
+  task: string
+  due_date: string | null
+  assigned_to: string | null
+  status: 'Not Started' | 'In Progress' | 'Complete'
+  priority: 'Low' | 'Medium' | 'High' | 'Urgent'
+  notes: string | null
+  created_at: string
+  created_by: string | null
+}
+
+// Unified interface for display
+type UnifiedTodo = {
+  id: string
+  building_id: number
+  title: string
+  description?: string
+  status: 'pending' | 'in_progress' | 'completed'
   is_complete: boolean
   due_date?: string
   priority?: 'Low' | 'Medium' | 'High'
+  assigned_to?: string
+  created_by?: string
   created_at: string
   updated_at: string
+  source: 'building_todos' | 'building_tasks'
 }
 
 type Summary = {
@@ -43,7 +80,7 @@ type Summary = {
   lastUpdated: string
 }
 
-type FilterType = 'All' | 'Incomplete' | 'Completed'
+type FilterType = 'All' | 'Pending' | 'In Progress' | 'Completed'
 
 interface BuildingTodoPanelProps {
   buildingId: number
@@ -51,21 +88,21 @@ interface BuildingTodoPanelProps {
 
 export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps) {
   const [todos, setTodos] = useState<Todo[]>([])
+  const [tasks, setTasks] = useState<Task[]>([])
   const [summary, setSummary] = useState<Summary | null>(null)
   const [loading, setLoading] = useState(true)
   const [summaryLoading, setSummaryLoading] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
-  const [editingTodo, setEditingTodo] = useState<Todo | null>(null)
+  const [editingTodo, setEditingTodo] = useState<UnifiedTodo | null>(null)
   const [filter, setFilter] = useState<FilterType>('All')
-  const [deleteConfirmTodo, setDeleteConfirmTodo] = useState<Todo | null>(null)
+  const [deleteConfirmTodo, setDeleteConfirmTodo] = useState<UnifiedTodo | null>(null)
   const [newTodo, setNewTodo] = useState({
     title: '',
     due_date: '',
     priority: 'Medium' as 'Low' | 'Medium' | 'High'
   })
-  const supabase = createClientComponentClient()
 
-  // Fetch todos
+  // Fetch todos from building_todos table
   const fetchTodos = async () => {
     try {
       const { data, error } = await supabase
@@ -79,9 +116,46 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
         return
       }
 
-      setTodos(data || [])
+      // Add source identifier to todos
+      const todosWithSource = (data || []).map(todo => ({
+        ...todo,
+        source: 'building_todos' as const
+      }))
+      setTodos(todosWithSource)
     } catch (error) {
       console.error('Error fetching todos:', error)
+    }
+  }
+
+  // Convert Task to UnifiedTodo
+  const convertTaskToUnifiedTodo = (task: Task): UnifiedTodo => ({
+    id: task.id,
+    building_id: parseInt(task.building_id),
+    title: task.task,
+    description: task.notes || undefined,
+    status: task.status === 'Complete' ? 'completed' : 
+            task.status === 'In Progress' ? 'in_progress' : 'pending',
+    is_complete: task.status === 'Complete',
+    due_date: task.due_date || undefined,
+    priority: task.priority === 'Urgent' ? 'High' : task.priority,
+    assigned_to: task.assigned_to || undefined,
+    created_by: task.created_by || undefined,
+    created_at: task.created_at,
+    updated_at: task.created_at, // building_tasks doesn't have updated_at
+    source: 'building_tasks'
+  })
+
+  // Fetch tasks from building_tasks table
+  const fetchTasks = async () => {
+    try {
+      const response = await fetch(`/api/building-tasks?buildingId=${buildingId}`)
+      const data = await response.json()
+
+      if (data.success) {
+        setTasks(data.tasks || [])
+      }
+    } catch (error) {
+      console.error('Error fetching tasks:', error)
     } finally {
       setLoading(false)
     }
@@ -91,7 +165,7 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
   const fetchSummary = async () => {
     setSummaryLoading(true)
     try {
-      const response = await fetch(`/api/generate-summary?buildingId=${buildingId}`)
+      const response = await fetch(`/api/summarise-building-todos?building_id=${buildingId}`)
       if (response.ok) {
         const data = await response.json()
         setSummary(data)
@@ -105,30 +179,45 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
 
   useEffect(() => {
     fetchTodos()
+    fetchTasks()
     fetchSummary()
   }, [buildingId])
 
+  // Combine and sort all items
+  const getAllItems = (): UnifiedTodo[] => {
+    const todosWithSource = todos.map(todo => ({ ...todo, source: 'building_todos' as const }))
+    const tasksAsUnified = tasks.map(convertTaskToUnifiedTodo)
+    return [...todosWithSource, ...tasksAsUnified]
+  }
+
   // Sort and filter todos
   const getSortedAndFilteredTodos = () => {
-    let filteredTodos = todos
+    const allItems = getAllItems()
+    let filteredItems = allItems
 
     // Apply filter
     switch (filter) {
-      case 'Incomplete':
-        filteredTodos = todos.filter(todo => !todo.is_complete)
+      case 'Pending':
+        filteredItems = allItems.filter(item => item.status === 'pending')
+        break
+      case 'In Progress':
+        filteredItems = allItems.filter(item => item.status === 'in_progress')
         break
       case 'Completed':
-        filteredTodos = todos.filter(todo => todo.is_complete)
+        filteredItems = allItems.filter(item => item.status === 'completed')
         break
       default:
-        filteredTodos = todos
+        filteredItems = allItems
     }
 
-    // Sort: incomplete first, then by due date, then by priority
-    return filteredTodos.sort((a, b) => {
-      // First: incomplete tasks first
-      if (a.is_complete !== b.is_complete) {
-        return a.is_complete ? 1 : -1
+    // Sort: pending first, then in progress, then completed, then by due date, then by priority
+    return filteredItems.sort((a, b) => {
+      // First: status priority (pending > in_progress > completed)
+      const statusOrder = { 'pending': 3, 'in_progress': 2, 'completed': 1 }
+      const aStatus = statusOrder[a.status] || 1
+      const bStatus = statusOrder[b.status] || 1
+      if (aStatus !== bStatus) {
+        return bStatus - aStatus
       }
 
       // Second: by due date (earliest first, null dates last)
@@ -153,21 +242,47 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
   }
 
   // Toggle todo completion
-  const toggleTodo = async (todo: Todo) => {
+  const toggleTodo = async (todo: UnifiedTodo) => {
     try {
-      const { error } = await supabase
-        .from('building_todos')
-        .update({ is_complete: !todo.is_complete })
-        .eq('id', todo.id)
+      const newStatus = todo.status === 'completed' ? 'pending' : 'completed'
+      
+      if (todo.source === 'building_todos') {
+        // Update in building_todos table
+        const { error } = await supabase
+          .from('building_todos')
+          .update({ 
+            status: newStatus,
+            is_complete: newStatus === 'completed'
+          })
+          .eq('id', todo.id)
 
-      if (error) {
-        console.error('Error updating todo:', error)
-        return
+        if (error) {
+          console.error('Error updating todo:', error)
+          return
+        }
+
+        setTodos(prev => prev.map(t => 
+          t.id === todo.id ? { ...t, status: newStatus, is_complete: newStatus === 'completed' } : t
+        ))
+      } else if (todo.source === 'building_tasks') {
+        // Update in building_tasks table
+        const response = await fetch(`/api/building-tasks/${todo.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: newStatus === 'completed' ? 'Complete' : 'In Progress'
+          })
+        })
+
+        if (!response.ok) {
+          console.error('Error updating task')
+          return
+        }
+
+        setTasks(prev => prev.map(t => 
+          t.id === todo.id ? { ...t, status: newStatus === 'completed' ? 'Complete' : 'In Progress' } : t
+        ))
       }
-
-      setTodos(prev => prev.map(t => 
-        t.id === todo.id ? { ...t, is_complete: !t.is_complete } : t
-      ))
 
       // Refresh summary after update
       fetchSummary()
@@ -181,23 +296,28 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
     if (!newTodo.title.trim()) return
 
     try {
-      const { data, error } = await supabase
-        .from('building_todos')
-        .insert({
+      const response = await fetch('/api/create-building-todo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           building_id: buildingId,
           title: newTodo.title.trim(),
           due_date: newTodo.due_date || null,
           priority: newTodo.priority
         })
-        .select()
-        .single()
+      })
 
-      if (error) {
-        console.error('Error adding todo:', error)
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('Error adding todo:', errorData)
         return
       }
 
-      setTodos(prev => [data, ...prev])
+      const { todo } = await response.json()
+      const todoWithSource = { ...todo, source: 'building_todos' as const }
+      setTodos(prev => [todoWithSource, ...prev])
       setNewTodo({ title: '', due_date: '', priority: 'Medium' })
       setShowAddModal(false)
       fetchSummary()
@@ -211,23 +331,54 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
     if (!editingTodo || !editingTodo.title.trim()) return
 
     try {
-      const { error } = await supabase
-        .from('building_todos')
-        .update({
-          title: editingTodo.title.trim(),
-          due_date: editingTodo.due_date || null,
-          priority: editingTodo.priority
-        })
-        .eq('id', editingTodo.id)
+      if (editingTodo.source === 'building_todos') {
+        // Update in building_todos table
+        const { error } = await supabase
+          .from('building_todos')
+          .update({
+            title: editingTodo.title.trim(),
+            due_date: editingTodo.due_date || null,
+            priority: editingTodo.priority
+          })
+          .eq('id', editingTodo.id)
 
-      if (error) {
-        console.error('Error updating todo:', error)
-        return
+        if (error) {
+          console.error('Error updating todo:', error)
+          return
+        }
+
+        setTodos(prev => prev.map(t => 
+          t.id === editingTodo.id ? editingTodo : t
+        ))
+      } else if (editingTodo.source === 'building_tasks') {
+        // Update in building_tasks table
+        const response = await fetch(`/api/building-tasks/${editingTodo.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            task: editingTodo.title.trim(),
+            due_date: editingTodo.due_date || null,
+            priority: editingTodo.priority === 'High' ? 'High' : 
+                     editingTodo.priority === 'Medium' ? 'Medium' : 'Low'
+          })
+        })
+
+        if (!response.ok) {
+          console.error('Error updating task')
+          return
+        }
+
+        setTasks(prev => prev.map(t => 
+          t.id === editingTodo.id ? {
+            ...t,
+            task: editingTodo.title.trim(),
+            due_date: editingTodo.due_date || null,
+            priority: editingTodo.priority === 'High' ? 'High' : 
+                     editingTodo.priority === 'Medium' ? 'Medium' : 'Low'
+          } : t
+        ))
       }
 
-      setTodos(prev => prev.map(t => 
-        t.id === editingTodo.id ? editingTodo : t
-      ))
       setEditingTodo(null)
       fetchSummary()
     } catch (error) {
@@ -236,19 +387,35 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
   }
 
   // Delete todo
-  const deleteTodo = async (id: string) => {
+  const deleteTodo = async (id: string, source: 'building_todos' | 'building_tasks') => {
     try {
-      const { error } = await supabase
-        .from('building_todos')
-        .delete()
-        .eq('id', id)
+      if (source === 'building_todos') {
+        // Delete from building_todos table
+        const { error } = await supabase
+          .from('building_todos')
+          .delete()
+          .eq('id', id)
 
-      if (error) {
-        console.error('Error deleting todo:', error)
-        return
+        if (error) {
+          console.error('Error deleting todo:', error)
+          return
+        }
+
+        setTodos(prev => prev.filter(t => t.id !== id))
+      } else if (source === 'building_tasks') {
+        // Delete from building_tasks table
+        const response = await fetch(`/api/building-tasks/${id}`, {
+          method: 'DELETE'
+        })
+
+        if (!response.ok) {
+          console.error('Error deleting task')
+          return
+        }
+
+        setTasks(prev => prev.filter(t => t.id !== id))
       }
 
-      setTodos(prev => prev.filter(t => t.id !== id))
       setDeleteConfirmTodo(null)
       fetchSummary()
     } catch (error) {
@@ -267,12 +434,13 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
   }
 
   // Check if task is overdue
-  const isOverdue = (todo: Todo) => {
-    if (!todo.due_date || todo.is_complete) return false
+  const isOverdue = (todo: UnifiedTodo) => {
+    if (!todo.due_date || todo.status === 'completed') return false
     return new Date(todo.due_date) < new Date()
   }
 
   const sortedAndFilteredTodos = getSortedAndFilteredTodos()
+  const allItems = getAllItems()
 
   return (
     <div className="space-y-6">
@@ -280,13 +448,23 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
       <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-gray-900">📝 Building To-Do List</h2>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            Add Task
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={fetchSummary}
+              disabled={summaryLoading}
+              className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              <Brain className={`h-4 w-4 ${summaryLoading ? 'animate-spin' : ''}`} />
+              Summarise Tasks
+            </button>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Add Task
+            </button>
+          </div>
         </div>
 
         {/* Filter Controls */}
@@ -296,7 +474,7 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
             <span className="text-sm font-medium text-gray-700">Filter:</span>
           </div>
           <div className="flex gap-2">
-            {(['All', 'Incomplete', 'Completed'] as FilterType[]).map((filterType) => (
+            {(['All', 'Pending', 'In Progress', 'Completed'] as FilterType[]).map((filterType) => (
               <button
                 key={filterType}
                 onClick={() => setFilter(filterType)}
@@ -311,7 +489,7 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
             ))}
           </div>
           <span className="text-sm text-gray-500">
-            {sortedAndFilteredTodos.length} of {todos.length} tasks
+            {sortedAndFilteredTodos.length} of {allItems.length} tasks
           </span>
         </div>
 
@@ -324,12 +502,14 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
           <div className="space-y-3">
             {sortedAndFilteredTodos.map((todo) => (
               <div
-                key={todo.id}
+                key={`${todo.source}-${todo.id}`}
                 className={`flex items-center gap-3 p-4 border rounded-lg transition-all duration-200 ${
-                  todo.is_complete 
+                  todo.status === 'completed'
                     ? 'bg-gray-50 border-gray-200' 
                     : isOverdue(todo)
                     ? 'bg-red-50 border-red-200'
+                    : todo.status === 'in_progress'
+                    ? 'bg-blue-50 border-blue-200'
                     : 'bg-white border-gray-200 hover:border-teal-300'
                 }`}
               >
@@ -338,7 +518,7 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
                   onClick={() => toggleTodo(todo)}
                   className="flex-shrink-0 transition-all duration-200 hover:scale-110"
                 >
-                  {todo.is_complete ? (
+                  {todo.status === 'completed' ? (
                     <CheckCircle className="h-5 w-5 text-green-600" />
                   ) : (
                     <Circle className="h-5 w-5 text-gray-400 hover:text-teal-600" />
@@ -376,7 +556,7 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
                     </div>
                   ) : (
                     <div>
-                      <h3 className={`font-medium ${todo.is_complete ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+                      <h3 className={`font-medium ${todo.status === 'completed' ? 'line-through text-gray-500' : 'text-gray-900'}`}>
                         {todo.title}
                       </h3>
                       <div className="flex items-center gap-3 mt-1">
@@ -384,6 +564,21 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
                           <span className={`px-2 py-1 text-xs rounded-full border ${getPriorityColor(todo.priority)}`}>
                             📌 {todo.priority}
                           </span>
+                        )}
+                        <span className={`px-2 py-1 text-xs rounded-full border ${
+                          todo.status === 'completed' ? 'text-green-600 bg-green-100 border-green-200' :
+                          todo.status === 'in_progress' ? 'text-blue-600 bg-blue-100 border-blue-200' :
+                          'text-gray-600 bg-gray-100 border-gray-200'
+                        }`}>
+                          {todo.status === 'completed' ? '✅ Completed' :
+                           todo.status === 'in_progress' ? '🔄 In Progress' :
+                           '⏳ Pending'}
+                        </span>
+                        {todo.assigned_to && (
+                          <div className="flex items-center gap-1 text-sm text-gray-500">
+                            <User className="h-3 w-3" />
+                            {todo.assigned_to}
+                          </div>
                         )}
                         {todo.due_date && (
                           <div className="flex items-center gap-1 text-sm text-gray-500">
@@ -393,6 +588,11 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
                               <AlertTriangle className="h-3 w-3 text-red-500" />
                             )}
                           </div>
+                        )}
+                        {todo.source === 'building_tasks' && (
+                          <span className="px-2 py-1 text-xs rounded-full border text-purple-600 bg-purple-100 border-purple-200">
+                            📋 Task
+                          </span>
                         )}
                       </div>
                     </div>
@@ -418,6 +618,13 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
                     </>
                   ) : (
                     <>
+                      <AIButton
+                        contextType="todo"
+                        itemId={todo.id}
+                        itemTitle={todo.title}
+                        buildingId={buildingId.toString()}
+                        className="p-2"
+                      />
                       <button
                         onClick={() => setEditingTodo(todo)}
                         className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
@@ -523,7 +730,7 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
 
       {/* Add Task Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center z-50 transition-all duration-300 ease-in-out">
           <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Add New Task</h3>
@@ -599,7 +806,7 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmTodo && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center z-50 transition-all duration-300 ease-in-out">
           <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Confirm Deletion</h3>
@@ -621,7 +828,7 @@ export default function BuildingTodoPanel({ buildingId }: BuildingTodoPanelProps
                 Cancel
               </button>
               <button
-                onClick={() => deleteTodo(deleteConfirmTodo.id)}
+                onClick={() => deleteTodo(deleteConfirmTodo.id, deleteConfirmTodo.source!)}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
                 Delete

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { X, Building2, Calendar, FileText, Wrench, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -33,7 +33,6 @@ export default function CreateMajorWorksModal({
   onClose, 
   onProjectCreated 
 }: CreateMajorWorksModalProps) {
-  const supabase = createClientComponentClient()
   const [isLoading, setIsLoading] = useState(false)
   const [buildings, setBuildings] = useState<Building[]>([])
   const [selectedBuilding, setSelectedBuilding] = useState<number | ''>('')
@@ -135,7 +134,7 @@ export default function CreateMajorWorksModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="fixed inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all duration-300 ease-in-out">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">

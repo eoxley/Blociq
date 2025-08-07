@@ -50,7 +50,7 @@
 :root {
   --radius: 0.75rem; /* Increased for rounded-xl */
   
-  /* BlocIQ Brand Colors - Updated to match landing page */
+  /* BlocIQ Brand Colors - Updated to match landing page gradient */
   --background: #FAFAFA;
   --foreground: #333333;
   --card: #FFFFFF;
@@ -58,37 +58,37 @@
   --popover: #FFFFFF;
   --popover-foreground: #333333;
   
-  /* Primary Colors - Updated to match landing page */
-  --primary: #008C8F; /* Aqua Teal */
+  /* Primary Colors - Updated to match landing page gradient */
+  --primary: #0d9488; /* Teal-600 */
   --primary-foreground: #FFFFFF;
-  --secondary: #0F5D5D; /* Deep Teal */
+  --secondary: #2563eb; /* Blue-600 */
   --secondary-foreground: #FFFFFF;
   
-  /* Gradient Colors */
-  --gradient-primary: linear-gradient(135deg, #008C8F 0%, #7645ED 100%);
-  --gradient-action: linear-gradient(135deg, #008C8F 0%, #007BDB 100%);
-  --gradient-sidebar-active: linear-gradient(135deg, #2078F4 0%, #7645ED 100%);
+  /* Gradient Colors - Updated to match landing page */
+  --gradient-primary: linear-gradient(135deg, #0d9488 0%, #2563eb 50%, #9333ea 100%);
+  --gradient-action: linear-gradient(135deg, #0d9488 0%, #2563eb 100%);
+  --gradient-sidebar-active: linear-gradient(135deg, #0d9488 0%, #2563eb 50%, #9333ea 100%);
   
-  /* Brand Colors */
-  --blociq-green: #2BBEB4;
-  --deep-teal: #0F5D5D;
+  /* Brand Colors - Updated to match landing page */
+  --blociq-green: #0d9488; /* Teal-600 */
+  --deep-teal: #0d9488; /* Teal-600 */
   --soft-white: #FAFAFA;
   --charcoal: #333333;
-  --accent-blue: #2078F4;
-  --purple: #7645ED;
+  --accent-blue: #2563eb; /* Blue-600 */
+  --purple: #9333ea; /* Purple-600 */
   
   /* Support Colors */
   --muted: #F3F4F6;
   --muted-foreground: #64748B;
   --accent: #F0FDFA;
-  --accent-foreground: #0F5D5D;
+  --accent-foreground: #0d9488;
   --destructive: #EF4444;
   --destructive-foreground: #FFFFFF;
   
   /* UI Colors */
   --border: #E2E8F0;
   --input: #E2E8F0;
-  --ring: #008C8F;
+  --ring: #0d9488; /* Teal-600 */
   
   /* Status Colors */
   --success: #10B981;
@@ -97,21 +97,21 @@
   --error: #EF4444;
   
   /* Chart Colors */
-  --chart-1: #008C8F;
-  --chart-2: #0F5D5D;
-  --chart-3: #10B981;
+  --chart-1: #0d9488; /* Teal-600 */
+  --chart-2: #2563eb; /* Blue-600 */
+  --chart-3: #9333ea; /* Purple-600 */
   --chart-4: #FBBF24;
   --chart-5: #6366F1;
   
   /* Sidebar Colors */
   --sidebar: #FFFFFF;
   --sidebar-foreground: #333333;
-  --sidebar-primary: #008C8F;
+  --sidebar-primary: #0d9488; /* Teal-600 */
   --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: #F0FDFA;
-  --sidebar-accent-foreground: #0F5D5D;
+  --sidebar-accent-foreground: #0d9488;
   --sidebar-border: #E2E8F0;
-  --sidebar-ring: #008C8F;
+  --sidebar-ring: #0d9488; /* Teal-600 */
 }
 
 .dark {
@@ -154,6 +154,15 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Fix text-size-adjust compatibility */
+    -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    /* Fix user-select compatibility */
+    -webkit-user-select: auto;
+    -moz-user-select: auto;
+    -ms-user-select: auto;
+    user-select: auto;
   }
 }
 

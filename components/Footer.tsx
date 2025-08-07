@@ -3,14 +3,14 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useRouter } from 'next/navigation'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { LogOut, Settings } from 'lucide-react'
 import BlocIQLogo from '@/components/BlocIQLogo'
 
 export default function Footer() {
   const pathname = usePathname()
   const router = useRouter()
-  const supabase = createClientComponentClient()
+
 
   // Check if we should show the account/logout links
   const shouldShowAccountLinks = pathname && 
@@ -32,8 +32,8 @@ export default function Footer() {
         <div className="flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0">
           <div className="flex items-center space-x-4 text-xs text-gray-600">
             <div className="flex items-center">
-              <div className="w-6 h-6 bg-gradient-to-br from-teal-500 to-teal-600 rounded-md flex items-center justify-center shadow-sm">
-                <BlocIQLogo className="text-white" size={14} />
+              <div className="w-6 h-6 bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-md flex items-center justify-center shadow-sm">
+                <BlocIQLogo className="h-4 w-4 text-white" />
               </div>
               <span className="ml-1.5 font-medium text-gray-900 text-xs">BlocIQ</span>
             </div>

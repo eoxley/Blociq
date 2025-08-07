@@ -1,119 +1,148 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/utils/supabase/server'
+import { cookies } from 'next/headers'
 
-export async function GET(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    console.log("📋 Fetching communications log...");
+    const supabase = createClient(cookies())
     
-    const supabase = createRouteHandlerClient({ cookies });
-    
-    // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      console.error("❌ User authentication failed:", userError);
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Check authentication
+    const { data: { session }, error: authError } = await supabase.auth.getSession()
+    if (authError || !session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    console.log("✅ User authenticated:", user.id);
+    const body = await request.json()
+    const {
+      type,
+      leaseholder_id,
+      leaseholder_name,
+      building_name,
+      unit_number,
+      subject,
+      content,
+      status = 'sent'
+    } = body
 
-    // Fetch communications sent by this user with error handling
-    const { data: communications, error: communicationsError } = await supabase
-      .from("communications_sent")
-      .select(`
-        *,
-        communication_templates (
-          id,
-          name,
-          type,
-          category
-        ),
-        buildings (
-          id,
-          name,
-          address
-        )
-      `)
-      .eq("sent_by", user.id)
-      .order("sent_at", { ascending: false });
-
-    if (communicationsError) {
-      console.error("❌ Error fetching communications:", communicationsError);
-      
-      // If table doesn't exist, return empty array instead of error
-      if (communicationsError.code === '42P01') { // Table doesn't exist
-        console.log("⚠️ Communications sent table doesn't exist, returning empty array");
-        return NextResponse.json({
-          communications: [],
-          summary: {
-            total_communications: 0,
-            email_count: 0,
-            pdf_count: 0,
-            both_count: 0,
-            successful_sends: 0,
-            failed_sends: 0,
-            buildings_contacted: 0,
-            templates_used: 0,
-            last_communication_date: null
-          },
-          count: 0
-        });
-      }
-      
-      return NextResponse.json({ 
-        error: "Failed to fetch communications",
-        details: communicationsError
-      }, { status: 500 });
+    // Validate required fields
+    if (!type || !leaseholder_id || !leaseholder_name || !subject) {
+      return NextResponse.json(
+        { error: 'Missing required fields: type, leaseholder_id, leaseholder_name, subject' },
+        { status: 400 }
+      )
     }
 
-    // Group communications by building
-    const buildingGroups: any[] = [];
-    const buildingMap = new Map();
+    // Validate type
+    if (!['call', 'email', 'letter'].includes(type)) {
+      return NextResponse.json(
+        { error: 'Invalid communication type. Must be call, email, or letter' },
+        { status: 400 }
+      )
+    }
 
-    communications?.forEach((comm) => {
-      const buildingId = comm.building_id;
-      
-      if (!buildingMap.has(buildingId)) {
-        const buildingGroup = {
-          building_id: buildingId,
-          building_name: comm.buildings?.name || 'Unknown Building',
-          building_address: comm.buildings?.address || '',
-          communications: []
-        };
-        buildingGroups.push(buildingGroup);
-        buildingMap.set(buildingId, buildingGroup);
-      }
-      
-      buildingMap.get(buildingId).communications.push(comm);
-    });
+    // Insert communication log
+    const { data, error } = await supabase
+      .from('communications_log')
+      .insert({
+        type,
+        leaseholder_id,
+        leaseholder_name,
+        building_name: building_name || 'Unknown',
+        unit_number: unit_number || 'Unknown',
+        subject,
+        content: content || '',
+        status,
+        user_id: session.user.id,
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single()
 
-    // Calculate summary statistics
-    const summary = {
-      total_communications: communications?.length || 0,
-      email_count: communications?.filter(c => c.method === 'email').length || 0,
-      pdf_count: communications?.filter(c => c.method === 'pdf').length || 0,
-      both_count: communications?.filter(c => c.method === 'both').length || 0,
-      successful_sends: communications?.filter(c => c.status === 'sent').length || 0,
-      failed_sends: communications?.filter(c => c.status === 'failed').length || 0,
-      buildings_contacted: buildingGroups.length,
-      templates_used: new Set(communications?.map(c => c.template_id)).size,
-      last_communication_date: communications?.[0]?.sent_at || null
-    };
-
-    console.log(`✅ Found ${communications?.length || 0} communications across ${buildingGroups.length} buildings`);
+    if (error) {
+      console.error('Error logging communication:', error)
+      return NextResponse.json(
+        { error: 'Failed to log communication' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({
-      communications: buildingGroups,
-      summary,
-      count: communications?.length || 0
-    });
+      success: true,
+      message: 'Communication logged successfully',
+      data
+    })
 
   } catch (error) {
-    console.error("❌ Communications log fetch error:", error);
-    return NextResponse.json({ 
-      error: "Internal server error during communications log fetch",
-      details: error instanceof Error ? error.message : "Unknown error"
-    }, { status: 500 });
+    console.error('Error in communications log API:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = createClient(cookies())
+    
+    // Check authentication
+    const { data: { session }, error: authError } = await supabase.auth.getSession()
+    if (authError || !session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const limit = parseInt(searchParams.get('limit') || '50')
+    const offset = parseInt(searchParams.get('offset') || '0')
+    const type = searchParams.get('type')
+    const leaseholder_id = searchParams.get('leaseholder_id')
+    const building_name = searchParams.get('building_name')
+
+    // Build query
+    let query = supabase
+      .from('communications_log')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    // Apply filters
+    if (type) {
+      query = query.eq('type', type)
+    }
+    if (leaseholder_id) {
+      query = query.eq('leaseholder_id', leaseholder_id)
+    }
+    if (building_name) {
+      query = query.ilike('building_name', `%${building_name}%`)
+    }
+
+    // Apply pagination
+    query = query.range(offset, offset + limit - 1)
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error('Error fetching communications log:', error)
+      return NextResponse.json(
+        { error: 'Failed to fetch communications log' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      data,
+      pagination: {
+        limit,
+        offset,
+        hasMore: data.length === limit
+      }
+    })
+
+  } catch (error) {
+    console.error('Error in communications log GET API:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
   }
 } 

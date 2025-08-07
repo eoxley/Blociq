@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { MessageSquare, User, Calendar, Plus, Trash2, Search, Bell } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -37,7 +37,6 @@ const PHASES = [
 ]
 
 export default function ProjectObservations({ projectId }: ProjectObservationsProps) {
-  const supabase = createClientComponentClient()
   const [observations, setObservations] = useState<ProjectObservation[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)

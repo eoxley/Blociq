@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { Database } from '@/lib/database.types'
 import { Mail, Flag, Eye, Tag } from 'lucide-react'
 
@@ -15,7 +15,6 @@ interface InboxSummaryStats {
 }
 
 export default function InboxSummary() {
-  const supabase = createClientComponentClient<Database>()
   const [summary, setSummary] = useState<InboxSummaryStats>({
     total: 0,
     unread: 0,

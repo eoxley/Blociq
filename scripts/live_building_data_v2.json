@@ -1,0 +1,365 @@
+{
+  "buildingId": "2beeec1d-a94e-4058-b881-213d74cc6830",
+  "url": "https://www.blociq.co.uk/buildings/2beeec1d-a94e-4058-b881-213d74cc6830",
+  "timestamp": "2025-07-28T11:06:20.046Z",
+  "apiResults": {
+    "/api/buildings/2beeec1d-a94e-4058-b881-213d74cc6830": {
+      "status": "http_error",
+      "statusCode": 405,
+      "data": ""
+    },
+    "/api/buildings/2beeec1d-a94e-4058-b881-213d74cc6830/units": {
+      "status": "http_error",
+      "statusCode": 404,
+      "data": "<!DOCTYPE html><!--U0RfjCvN_imMXbB3IOGBs--><html lang=\"en\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"preload\" href=\"/_next/static/media/e4af272ccee01ff0-s.p.woff2\" as=\"font\" crossorigin=\"\" type=\"font/woff2\"/><link rel=\"stylesheet\" href=\"/_next/static/css/205d133bc4d087de.css\" data-precedence=\"next\"/><link rel=\"stylesheet\" href=\"/_next/static/css/931b179cff3131dc.css\" data-precedence=\"next\"/><link rel=\"preload\" as=\"script\" fetchPr"
+    },
+    "/api/buildings/2beeec1d-a94e-4058-b881-213d74cc6830/major-works": {
+      "status": "http_error",
+      "statusCode": 404,
+      "data": "<!DOCTYPE html><!--U0RfjCvN_imMXbB3IOGBs--><html lang=\"en\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"preload\" href=\"/_next/static/media/e4af272ccee01ff0-s.p.woff2\" as=\"font\" crossorigin=\"\" type=\"font/woff2\"/><link rel=\"stylesheet\" href=\"/_next/static/css/205d133bc4d087de.css\" data-precedence=\"next\"/><link rel=\"stylesheet\" href=\"/_next/static/css/931b179cff3131dc.css\" data-precedence=\"next\"/><link rel=\"preload\" as=\"script\" fetchPr"
+    },
+    "/api/buildings/2beeec1d-a94e-4058-b881-213d74cc6830/compliance": {
+      "status": "http_error",
+      "statusCode": 404,
+      "data": "<!DOCTYPE html><!--U0RfjCvN_imMXbB3IOGBs--><html lang=\"en\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"preload\" href=\"/_next/static/media/e4af272ccee01ff0-s.p.woff2\" as=\"font\" crossorigin=\"\" type=\"font/woff2\"/><link rel=\"stylesheet\" href=\"/_next/static/css/205d133bc4d087de.css\" data-precedence=\"next\"/><link rel=\"stylesheet\" href=\"/_next/static/css/931b179cff3131dc.css\" data-precedence=\"next\"/><link rel=\"preload\" as=\"script\" fetchPr"
+    },
+    "/api/major-works/building/2beeec1d-a94e-4058-b881-213d74cc6830": {
+      "status": "http_error",
+      "statusCode": 401,
+      "data": "{\"error\":\"Unauthorized\"}"
+    },
+    "/api/compliance/building/2beeec1d-a94e-4058-b881-213d74cc6830": {
+      "status": "http_error",
+      "statusCode": 401,
+      "data": "{\"error\":\"Unauthorized\"}"
+    },
+    "/api/test-building?buildingId=2beeec1d-a94e-4058-b881-213d74cc6830": {
+      "status": "http_error",
+      "statusCode": 401,
+      "data": "{\"error\":\"Not authenticated\"}"
+    },
+    "/api/test-building-page?buildingId=2beeec1d-a94e-4058-b881-213d74cc6830": {
+      "status": "http_error",
+      "statusCode": 401,
+      "data": "{\"error\":\"Not authenticated\"}"
+    },
+    "/api/test-units?buildingId=2beeec1d-a94e-4058-b881-213d74cc6830": {
+      "status": "success",
+      "data": {
+        "success": true,
+        "buildingId": "2beeec1d-a94e-4058-b881-213d74cc6830",
+        "buildingIdType": "string",
+        "buildings": [
+          {
+            "id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "name": "Ashwood House"
+          }
+        ],
+        "allUnits": [
+          {
+            "id": "b09d35b1-e298-4275-84ab-f45e67dc4583",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 1"
+          },
+          {
+            "id": "a2c6e57f-adc9-457d-a580-542889c0cee9",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 2"
+          },
+          {
+            "id": "ab2cacb9-57cd-49c8-bae0-5a55666997fb",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 3"
+          },
+          {
+            "id": "7d7554a5-2ca7-493d-b7d4-e1e74b1d337e",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 4"
+          },
+          {
+            "id": "f9985139-f81a-49f3-9817-f10daac2d0b3",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 5"
+          },
+          {
+            "id": "301ecb26-5824-486e-b27a-0a651ca36a13",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 6"
+          },
+          {
+            "id": "02f9364f-ceb8-49c2-8e5c-f1aeadd53fa1",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 7"
+          },
+          {
+            "id": "e39c193c-c123-4c8d-8ad5-084e7b0bf4a5",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 8"
+          },
+          {
+            "id": "c00aa8cb-ae76-4f7f-adb7-a943e8a6ebb9",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 9"
+          },
+          {
+            "id": "69b79bfb-02aa-492f-8851-0d9c8d2c09d2",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 10"
+          }
+        ],
+        "buildingUnits": [
+          {
+            "id": "b09d35b1-e298-4275-84ab-f45e67dc4583",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 1",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "69b79bfb-02aa-492f-8851-0d9c8d2c09d2",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 10",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "5952145d-0fea-411b-a646-b55af3eb4090",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 11",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "7021669d-914e-43d9-bdf2-a1f5780716e3",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 12",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "37d8d1bc-e8fa-40ca-a4f7-7e3d903fcb71",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 13",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "6f6a7820-369a-481e-b2dd-ed45d940a8e1",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 14",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "81f290f4-866a-4bd5-97b4-54c275e1dac4",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 15",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "956c84a5-ae8b-4ff8-846d-c3a275e62020",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 16",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "450d2c91-fb04-4d21-a4d4-7d9c32f05226",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 17",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "0f5cf74a-2aad-49a3-abb0-c98c20a38743",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 18",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "7c45ccec-b482-4603-95a5-24343e9049f1",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 19",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "a2c6e57f-adc9-457d-a580-542889c0cee9",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 2",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "5f9c02a7-7c55-4a1d-8133-54909f4d8f8d",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 20",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "815a0afa-e40f-451d-9ee2-fefbe7415875",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 21",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "fe8afb42-a59e-4283-94f0-ed3136774be0",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 22",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "92203f12-1710-40f7-a2d5-fcbca48388c0",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 23",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "6ee730e5-150d-47f9-8c5f-eb4a3d009b01",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 24",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "91480fea-883d-42a7-bd54-3f278f9a41d2",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 25",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "4df50210-899a-46f7-b088-4ebebc1acd61",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 26",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "24252fe3-2a9a-4a6c-b211-87bd0392e65c",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 27",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "8bb51f8b-afeb-4bad-b8e6-36a8b845bfc1",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 28",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "3b3be5cc-7b2e-4a84-afb7-5ea0783aaa65",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 29",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "ab2cacb9-57cd-49c8-bae0-5a55666997fb",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 3",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "5151a371-59f4-463d-be65-bc65c019543d",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 30",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "5f8d3f96-f2e3-4377-b767-366f34ecbd8e",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 31",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "7d7554a5-2ca7-493d-b7d4-e1e74b1d337e",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 4",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "f9985139-f81a-49f3-9817-f10daac2d0b3",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 5",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "301ecb26-5824-486e-b27a-0a651ca36a13",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 6",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "02f9364f-ceb8-49c2-8e5c-f1aeadd53fa1",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 7",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "e39c193c-c123-4c8d-8ad5-084e7b0bf4a5",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 8",
+            "floor": null,
+            "type": null
+          },
+          {
+            "id": "c00aa8cb-ae76-4f7f-adb7-a943e8a6ebb9",
+            "building_id": "2beeec1d-a94e-4058-b881-213d74cc6830",
+            "unit_number": "Flat 9",
+            "floor": null,
+            "type": null
+          }
+        ],
+        "errors": {
+          "buildings": null,
+          "allUnits": null,
+          "buildingUnits": null
+        }
+      }
+    },
+    "/api/test-compliance-access?buildingId=2beeec1d-a94e-4058-b881-213d74cc6830": {
+      "status": "http_error",
+      "statusCode": 401,
+      "data": "{\"error\":\"No session found\"}"
+    },
+    "/api/test-major-works": {
+      "status": "http_error",
+      "statusCode": 401,
+      "data": "{\"error\":\"Unauthorized\"}"
+    },
+    "/api/list-buildings": {
+      "status": "http_error",
+      "statusCode": 401,
+      "data": "{\"error\":\"Not authenticated\"}"
+    }
+  },
+  "pageData": {
+    "building": {
+      "name": "BlocIQ"
+    },
+    "units": [],
+    "majorWorks": [],
+    "compliance": []
+  },
+  "summary": {
+    "successfulApis": 1,
+    "totalApis": 12,
+    "hasPageData": true
+  }
+}

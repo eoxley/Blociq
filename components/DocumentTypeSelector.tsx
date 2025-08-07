@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { supabase } from '@/lib/supabaseClient';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -45,7 +45,6 @@ export default function DocumentTypeSelector({
   const [complianceItems, setComplianceItems] = useState<ComplianceItem[]>([]);
   const [filter, setFilter] = useState<string>("");
   const [category, setCategory] = useState<string>("all");
-  const supabase = createClientComponentClient();
 
   useEffect(() => {
     if (isOpen) {
@@ -134,8 +133,8 @@ export default function DocumentTypeSelector({
 
   // Filter compliance items
   const filteredItems = complianceItems.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(filter.toLowerCase()) ||
-                         item.description.toLowerCase().includes(filter.toLowerCase());
+    const matchesSearch = (item.name?.toLowerCase() || '').includes(filter.toLowerCase()) ||
+                         (item.description?.toLowerCase() || '').includes(filter.toLowerCase());
     const matchesCategory = category === "all" || item.category === category;
     return matchesSearch && matchesCategory;
   });
@@ -146,7 +145,7 @@ export default function DocumentTypeSelector({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/60 backdrop-blur-sm transition-all duration-300 ease-in-out">
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">

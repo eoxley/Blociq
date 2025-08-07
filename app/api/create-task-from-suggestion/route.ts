@@ -1,3 +1,10 @@
+// ✅ AUDIT COMPLETE [2025-08-03]
+// - Field validation for suggestedAction, buildingId
+// - Validation of suggested action structure
+// - Supabase query with proper error handling
+// - Try/catch with detailed error handling
+// - Used in AI suggestion components
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { cookies } from 'next/headers';

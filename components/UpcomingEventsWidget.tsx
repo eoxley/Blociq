@@ -100,7 +100,7 @@ export default function UpcomingEventsWidget() {
         }
       }
     } catch (error) {
-      console.error("Error loading events widget data:", error);
+      console.error("Error loading events widget data:", error?.message || JSON.stringify(error));
     } finally {
       setLoading(false);
     }
@@ -134,7 +134,7 @@ export default function UpcomingEventsWidget() {
         }
       }
     } catch (error) {
-      console.error("Error syncing calendar:", error);
+      console.error("Error syncing calendar:", error?.message || JSON.stringify(error));
     } finally {
       setSyncing(false);
     }
@@ -147,13 +147,14 @@ export default function UpcomingEventsWidget() {
     
     // Try exact matches first
     const exactMatch = buildings.find((building) => 
-      searchText.includes(building.name.toLowerCase())
+      building.name && searchText.includes(building.name.toLowerCase())
     );
     if (exactMatch) return exactMatch;
     
     // Try partial matches (building name contains words from event)
     const eventWords = searchText.split(/\s+/).filter(word => word.length > 2);
     const partialMatch = buildings.find((building) => {
+      if (!building.name) return false;
       const buildingWords = building.name.toLowerCase().split(/\s+/);
       return eventWords.some(word => 
         buildingWords.some(buildingWord => buildingWord.includes(word) || word.includes(buildingWord))
@@ -203,13 +204,21 @@ export default function UpcomingEventsWidget() {
   const formatEventTime = (startTime: string, endTime: string, isAllDay: boolean) => {
     if (isAllDay) return "All day";
     
+    if (!startTime) return "Time TBD";
+    
     const start = new Date(startTime);
-    const end = new Date(endTime);
+    if (isNaN(start.getTime())) return "Invalid Time";
     
     const startFormatted = start.toLocaleTimeString('en-GB', { 
       hour: '2-digit', 
       minute: '2-digit' 
     });
+    
+    if (!endTime) return startFormatted;
+    
+    const end = new Date(endTime);
+    if (isNaN(end.getTime())) return startFormatted;
+    
     const endFormatted = end.toLocaleTimeString('en-GB', { 
       hour: '2-digit', 
       minute: '2-digit' 
@@ -219,7 +228,11 @@ export default function UpcomingEventsWidget() {
   };
 
   const formatEventDate = (dateString: string) => {
+    if (!dateString) return "Unknown Date";
+    
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "Invalid Date";
+    
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -244,7 +257,11 @@ export default function UpcomingEventsWidget() {
     }
     
     // For outlook events, calculate based on time
+    if (!event.start_time) return "low";
+    
     const startTime = new Date(event.start_time);
+    if (isNaN(startTime.getTime())) return "low";
+    
     const now = new Date();
     const hoursUntilEvent = (startTime.getTime() - now.getTime()) / (1000 * 60 * 60);
     
@@ -346,7 +363,7 @@ export default function UpcomingEventsWidget() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="font-semibold text-gray-900 text-sm">
-                        {event.subject || event.title}
+                        {event.subject || event.title || 'Untitled Event'}
                       </h3>
                       {event.event_type === 'manual' && (
                         <BlocIQBadge variant="secondary" size="sm">
@@ -386,9 +403,9 @@ export default function UpcomingEventsWidget() {
                      {!matchedBuilding && aiMatches[event.id] && (
                        <div className="flex items-center gap-1 text-xs text-purple-600 font-medium">
                          <Building className="h-3 w-3" />
-                         <span>🤖 AI: {aiMatches[event.id].buildingName}</span>
+                         <span>🤖 AI: {aiMatches[event.id]?.buildingName || 'Unknown Building'}</span>
                          <span className="text-purple-400">
-                           ({Math.round(aiMatches[event.id].confidence * 100)}% confidence)
+                           ({Math.round((aiMatches[event.id]?.confidence || 0) * 100)}% confidence)
                          </span>
                        </div>
                      )}

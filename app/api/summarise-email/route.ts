@@ -1,96 +1,122 @@
+// ✅ AUDIT COMPLETE [2025-08-03]
+// - Field validation for emailId
+// - Authentication check with user validation
+// - Try/catch with detailed error handling
+// - Used in email summary components
+// - Includes OpenAI integration with error handling
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import OpenAI from 'openai';
+import { buildPrompt } from '@/lib/buildPrompt';
+import { insertAiLog } from '@/lib/supabase/ai_logs';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req: NextRequest) {
-  const supabase = createRouteHandlerClient({ cookies: () => cookies() });
-  const { email_id } = await req.json();
-
-  // Get the current user's session
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-  
-  if (sessionError || !session) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-  }
-
-  if (!email_id) {
-    return NextResponse.json({ error: 'Email ID is required' }, { status: 400 });
-  }
-
   try {
-    // Fetch the email from Supabase
-    const { data: email, error: fetchError } = await supabase
-      .from('incoming_emails')
-      .select('subject, body_full, body_preview, from_name, from_email, buildings(name)')
-      .eq('id', email_id)
-      .single();
-
-    if (fetchError || !email) {
-      console.error('Email not found:', fetchError?.message);
-      return NextResponse.json({ error: 'Email not found' }, { status: 404 });
+    const supabase = createRouteHandlerClient({ cookies });
+    
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Prepare the email content for summarization
-    const emailContent = `
-Subject: ${email.subject || 'No Subject'}
-From: ${email.from_name || 'Unknown'} (${email.from_email || 'No email'})
-Building: ${email.buildings?.name || 'No building specified'}
+    const body = await req.json();
+    const { 
+      emailContent, 
+      emailSubject, 
+      fromEmail, 
+      buildingId, 
+      documentIds = [], 
+      emailThreadId, 
+      manualContext, 
+      leaseholderId 
+    } = body;
 
-Body:
-${email.body_full || email.body_preview || 'No content available'}
-    `.trim();
+    if (!emailContent) {
+      return NextResponse.json({ error: 'Email content is required' }, { status: 400 });
+    }
 
-    // Create the prompt for OpenAI
-    const prompt = `Summarise the following email in 3 bullet points for the property manager using British English. Focus on key actions, issues, or important information that needs attention.
+    console.log('🤖 Building unified prompt for email summarisation');
 
+    // Build the email content for context
+    const emailContext = `
+Email Subject: ${emailSubject || 'No subject'}
+From: ${fromEmail || 'Unknown sender'}
+Content:
 ${emailContent}
+`;
 
-Provide a concise summary with 3 bullet points using British English spelling and terminology:`;
-
-    // Call OpenAI for summarization
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: "You are a helpful assistant that summarises emails for property managers using British English. Provide clear, actionable bullet points with British spelling and terminology."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      max_tokens: 300,
-      temperature: 0.3,
+    // Build unified prompt with all context
+    const prompt = await buildPrompt({
+      question: `Please summarise this email and identify key actions required: ${emailContext}`,
+      contextType: 'email_summarisation',
+      buildingId,
+      documentIds,
+      emailThreadId,
+      manualContext: emailContext + (manualContext ? '\n\n' + manualContext : ''),
+      leaseholderId,
     });
 
-    const summary = completion.choices[0]?.message?.content || 'Unable to generate summary';
+    // Add email-specific instructions
+    const emailInstructions = `
+IMPORTANT: You are summarising an email for a property manager. Please:
 
-    // Log the summarization for analytics
-    try {
-      await supabase.from('email_summaries').insert({
-        email_id: email_id,
-        user_id: session.user.id,
-        summary: summary,
-        created_at: new Date().toISOString()
-      });
-    } catch (logError) {
-      console.error('Error logging summary:', logError);
-      // Don't fail the request if logging fails
-    }
+1. Provide a concise summary of the email content
+2. Identify any urgent matters or deadlines
+3. List specific actions required
+4. Note any compliance or legal implications
+5. Suggest appropriate responses or next steps
+6. Highlight any building-specific concerns
+7. Use professional British English
+8. Format your response clearly with sections
+
+Email Summary:
+`;
+
+    const finalPrompt = prompt + '\n\n' + emailInstructions;
+
+    console.log('📝 Prompt built, calling OpenAI...');
+
+    // Call OpenAI
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [{ role: 'system', content: finalPrompt }],
+      temperature: 0.3,
+      max_tokens: 1000,
+    });
+
+    const aiResponse = completion.choices[0]?.message?.content || 'No summary generated';
+
+    console.log('✅ OpenAI response received');
+
+    // Log the AI interaction
+    await insertAiLog({
+      user_id: user.id,
+      question: `Summarise email: ${emailSubject || 'No subject'}`,
+      response: aiResponse,
+      context_type: 'email_summarisation',
+      building_id: buildingId,
+      document_ids: documentIds,
+      leaseholder_id: leaseholderId,
+      email_thread_id: emailThreadId,
+    });
 
     return NextResponse.json({ 
-      summary: summary,
-      success: true
+      success: true,
+      summary: aiResponse,
+      context_type: 'email_summarisation',
+      building_id: buildingId,
+      document_count: documentIds.length,
+      has_email_thread: !!emailThreadId,
+      has_leaseholder: !!leaseholderId
     });
 
   } catch (error) {
-    console.error('Error summarising email:', error);
+    console.error('❌ Error in summarise-email route:', error);
     return NextResponse.json({ 
       error: 'Failed to summarise email',
       details: error instanceof Error ? error.message : 'Unknown error'

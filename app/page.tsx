@@ -23,14 +23,14 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center shadow-lg">
+              <div className="w-16 h-16 bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
                 <BlocIQLogo className="text-white" size={40} />
               </div>
-              <span className="ml-4 text-4xl font-extrabold bg-gradient-to-r from-[#0d9488] to-[#14b8a6] bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>BlocIQ</span>
+              <span className="ml-4 text-4xl font-extrabold bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 bg-clip-text text-transparent" style={{ WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>BlocIQ</span>
             </div>
             <Link 
               href="/login"
-              className="bg-gradient-to-r from-teal-600 to-teal-700 text-white px-6 py-3 rounded-xl hover:from-teal-700 hover:to-teal-800 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              className="bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl hover:from-teal-700 hover:via-blue-700 hover:to-purple-700 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
             >
               Log in
             </Link>
@@ -41,7 +41,8 @@ export default function LandingPage() {
       {/* Enhanced Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 py-24">
         <div className="absolute inset-0 bg-black/10"></div>
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center text-white">
             <div className="mb-6">
               <div className="w-16 h-16 flex items-center justify-center mx-auto mb-6">
@@ -63,13 +64,12 @@ export default function LandingPage() {
                 Log in to your account
                 <ArrowRight className="h-5 w-5" />
               </Link>
-              <Link 
-                href="#features"
+              <button 
                 className="inline-flex items-center gap-3 bg-white/10 hover:bg-white/20 text-white px-8 py-4 rounded-xl transition-all duration-200 font-semibold text-lg backdrop-blur-sm border border-white/20"
               >
                 Explore Features
                 <ArrowRight className="h-5 w-5" />
-              </Link>
+              </button>
             </div>
           </div>
         </div>

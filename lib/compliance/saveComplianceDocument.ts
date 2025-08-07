@@ -1,224 +1,236 @@
-import { supabase } from '../supabase';
-import { TablesInsert, TablesUpdate } from '../database.types';
+import { supabase } from '@/lib/supabaseClient'
+
+interface SaveComplianceDocumentInput {
+  buildingId: string
+  complianceAssetId: string
+  fileUrl: string
+  title: string
+  summary: string
+  lastRenewedDate: string
+  nextDueDate: string | null
+}
+
+interface SaveComplianceDocumentResult {
+  success: boolean
+  documentId?: string
+  error?: string
+}
 
 /**
- * Save a new compliance document to Supabase and update the related building compliance asset
- * with renewal metadata.
- * 
- * @param params - Object containing all required parameters
- * @param params.buildingId - The building ID (number)
- * @param params.complianceAssetId - The compliance asset ID (string)
- * @param params.fileUrl - The Supabase public URL of the uploaded file
- * @param params.title - The document title extracted by AI
- * @param params.summary - The document summary extracted by AI
- * @param params.lastRenewedDate - The last renewal date in ISO format (YYYY-MM-DD)
- * @param params.nextDueDate - The next due date in ISO format (YYYY-MM-DD) or null
- * 
- * @throws Error if database operations fail
+ * Saves a compliance document to the database and updates building compliance assets
+ * with extracted metadata including renewal dates and document reference.
  */
-export async function saveComplianceDocument({
-  buildingId,
-  complianceAssetId,
-  fileUrl,
-  title,
-  summary,
-  lastRenewedDate,
-  nextDueDate
-}: {
-  buildingId: number;
-  complianceAssetId: string;
-  fileUrl: string;
-  title: string;
-  summary: string;
-  lastRenewedDate: string;
-  nextDueDate: string | null;
-}): Promise<void> {
+export async function saveComplianceDocument(
+  input: SaveComplianceDocumentInput
+): Promise<SaveComplianceDocumentResult> {
+
   try {
-    // Validate inputs
-    if (!buildingId || !complianceAssetId || !fileUrl || !title || !summary || !lastRenewedDate) {
-      throw new Error('Missing required parameters for saving compliance document');
+    console.log('💾 Saving compliance document for asset:', input.complianceAssetId)
+
+    // Step 1: Save document to compliance_documents table
+    const { data: documentData, error: documentError } = await supabase
+      .from('compliance_docs')
+      .insert({
+        building_id: input.buildingId,
+        doc_type: input.title,
+        doc_url: input.fileUrl,
+        title: input.title,
+        summary: input.summary,
+        uploaded_at: new Date().toISOString(),
+        expiry_date: input.nextDueDate,
+        extracted_text: null, // Could be populated later if needed
+        classification: 'compliance',
+        created_at: new Date().toISOString()
+      })
+      .select('id, title, doc_url')
+      .single()
+
+    if (documentError) {
+      console.error('❌ Failed to save compliance document:', documentError)
+      return {
+        success: false,
+        error: `Failed to save document: ${documentError.message}`
+      }
     }
 
-    // Validate date format (YYYY-MM-DD)
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(lastRenewedDate)) {
-      throw new Error('lastRenewedDate must be in ISO format (YYYY-MM-DD)');
-    }
-    
-    if (nextDueDate && !dateRegex.test(nextDueDate)) {
-      throw new Error('nextDueDate must be in ISO format (YYYY-MM-DD) or null');
-    }
+    console.log('✅ Document saved with ID:', documentData.id)
 
-    // Step 1: Insert into compliance_documents table
-    const documentInsert: TablesInsert<'compliance_documents'> = {
-      building_id: buildingId,
-      compliance_asset_id: complianceAssetId,
-      document_url: fileUrl,
-      title: title,
-      summary: summary,
-      extracted_date: lastRenewedDate,
-      doc_type: 'compliance', // Default type for compliance documents
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-
-    const { data: insertedDocument, error: insertError } = await supabase
-      .from('compliance_documents')
-      .insert(documentInsert)
-      .select('id')
-      .single();
-
-    if (insertError) {
-      console.error('❌ Error inserting compliance document:', insertError);
-      throw new Error(`Failed to insert compliance document: ${insertError.message}`);
-    }
-
-    if (!insertedDocument?.id) {
-      throw new Error('Failed to get inserted document ID');
-    }
-
-    const documentId = insertedDocument.id;
-
-    // Step 2: Update building_compliance_assets table
-    const assetUpdate: TablesUpdate<'building_compliance_assets'> = {
-      last_renewed_date: lastRenewedDate,
-      next_due_date: nextDueDate,
-      latest_document_id: documentId,
-      last_updated: new Date().toISOString()
-    };
-
-    const { error: updateError } = await supabase
+    // Step 2: Update building_compliance_assets with extracted metadata
+    const { error: assetError } = await supabase
       .from('building_compliance_assets')
-      .update(assetUpdate)
-      .eq('building_id', buildingId)
-      .eq('asset_id', complianceAssetId);
+      .update({
+        last_renewed_date: input.lastRenewedDate || null,
+        next_due_date: input.nextDueDate,
+        latest_document_id: documentData.id,
+        last_updated: new Date().toISOString(),
+        notes: `Document uploaded: ${input.title}`
+      })
+      .eq('building_id', input.buildingId)
+      .eq('asset_id', input.complianceAssetId)
 
-    if (updateError) {
-      console.error('❌ Error updating building compliance asset:', updateError);
+    if (assetError) {
+      console.error('❌ Failed to update building compliance asset:', assetError)
       
-      // If update fails, we should clean up the inserted document
-      await supabase
-        .from('compliance_documents')
-        .delete()
-        .eq('id', documentId);
-      
-      throw new Error(`Failed to update building compliance asset: ${updateError.message}`);
+      // Try to rollback document creation if asset update fails
+      try {
+        await supabase
+          .from('compliance_docs')
+          .delete()
+          .eq('id', documentData.id)
+        
+        console.log('🔄 Rolled back document creation due to asset update failure')
+      } catch (rollbackError) {
+        console.error('❌ Failed to rollback document creation:', rollbackError)
+      }
+
+      return {
+        success: false,
+        error: `Failed to update compliance asset: ${assetError.message}`
+      }
     }
 
-    console.log('✅ Successfully saved compliance document and updated building asset:', {
-      documentId,
-      buildingId,
-      complianceAssetId,
-      title,
-      lastRenewedDate,
-      nextDueDate
-    });
+    console.log('✅ Building compliance asset updated successfully')
+
+    // Step 3: Log the successful operation
+    console.log('📋 Compliance document saved successfully:', {
+      documentId: documentData.id,
+      title: documentData.title,
+      lastRenewed: input.lastRenewedDate,
+      nextDue: input.nextDueDate,
+      assetId: input.complianceAssetId
+    })
+
+    return {
+      success: true,
+      documentId: documentData.id
+    }
 
   } catch (error) {
-    console.error('❌ Error in saveComplianceDocument:', error);
-    throw error;
+    console.error('❌ Unexpected error saving compliance document:', error)
+    
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    }
   }
 }
 
 /**
- * Alternative function using upsert for compliance documents
- * Use this if you expect to handle re-uploads of the same document
+ * Helper function to validate compliance document input
  */
-export async function saveComplianceDocumentUpsert({
-  buildingId,
-  complianceAssetId,
-  fileUrl,
-  title,
-  summary,
-  lastRenewedDate,
-  nextDueDate
-}: {
-  buildingId: number;
-  complianceAssetId: string;
-  fileUrl: string;
-  title: string;
-  summary: string;
-  lastRenewedDate: string;
-  nextDueDate: string | null;
-}): Promise<void> {
-  try {
-    // Validate inputs
-    if (!buildingId || !complianceAssetId || !fileUrl || !title || !summary || !lastRenewedDate) {
-      throw new Error('Missing required parameters for saving compliance document');
-    }
+export function validateComplianceDocumentInput(
+  input: SaveComplianceDocumentInput
+): { isValid: boolean; errors: string[] } {
+  const errors: string[] = []
 
-    // Validate date format (YYYY-MM-DD)
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(lastRenewedDate)) {
-      throw new Error('lastRenewedDate must be in ISO format (YYYY-MM-DD)');
-    }
-    
-    if (nextDueDate && !dateRegex.test(nextDueDate)) {
-      throw new Error('nextDueDate must be in ISO format (YYYY-MM-DD) or null');
-    }
-
-    // Use upsert to handle potential duplicates
-    const documentUpsert: TablesInsert<'compliance_documents'> = {
-      building_id: buildingId,
-      compliance_asset_id: complianceAssetId,
-      document_url: fileUrl,
-      title: title,
-      summary: summary,
-      extracted_date: lastRenewedDate,
-      doc_type: 'compliance',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-
-    const { data: upsertedDocument, error: upsertError } = await supabase
-      .from('compliance_documents')
-      .upsert(documentUpsert, {
-        onConflict: 'building_id,compliance_asset_id,document_url'
-      })
-      .select('id')
-      .single();
-
-    if (upsertError) {
-      console.error('❌ Error upserting compliance document:', upsertError);
-      throw new Error(`Failed to upsert compliance document: ${upsertError.message}`);
-    }
-
-    if (!upsertedDocument?.id) {
-      throw new Error('Failed to get upserted document ID');
-    }
-
-    const documentId = upsertedDocument.id;
-
-    // Update building_compliance_assets table
-    const assetUpdate: TablesUpdate<'building_compliance_assets'> = {
-      last_renewed_date: lastRenewedDate,
-      next_due_date: nextDueDate,
-      latest_document_id: documentId,
-      last_updated: new Date().toISOString()
-    };
-
-    const { error: updateError } = await supabase
-      .from('building_compliance_assets')
-      .update(assetUpdate)
-      .eq('building_id', buildingId)
-      .eq('asset_id', complianceAssetId);
-
-    if (updateError) {
-      console.error('❌ Error updating building compliance asset:', updateError);
-      throw new Error(`Failed to update building compliance asset: ${updateError.message}`);
-    }
-
-    console.log('✅ Successfully upserted compliance document and updated building asset:', {
-      documentId,
-      buildingId,
-      complianceAssetId,
-      title,
-      lastRenewedDate,
-      nextDueDate
-    });
-
-  } catch (error) {
-    console.error('❌ Error in saveComplianceDocumentUpsert:', error);
-    throw error;
+  if (!input.buildingId) {
+    errors.push('Building ID is required')
   }
+
+  if (!input.complianceAssetId) {
+    errors.push('Compliance asset ID is required')
+  }
+
+  if (!input.fileUrl) {
+    errors.push('File URL is required')
+  }
+
+  if (!input.title) {
+    errors.push('Document title is required')
+  }
+
+  if (!input.summary) {
+    errors.push('Document summary is required')
+  }
+
+  // Validate date formats
+  if (input.lastRenewedDate) {
+    const lastRenewed = new Date(input.lastRenewedDate)
+    if (isNaN(lastRenewed.getTime())) {
+      errors.push('Invalid last renewed date format')
+    }
+  }
+
+  if (input.nextDueDate) {
+    const nextDue = new Date(input.nextDueDate)
+    if (isNaN(nextDue.getTime())) {
+      errors.push('Invalid next due date format')
+    }
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  }
+}
+
+/**
+ * Helper function to get compliance document by ID
+ */
+export async function getComplianceDocument(documentId: string) {
+
+  const { data, error } = await supabase
+    .from('compliance_docs')
+    .select(`
+      id,
+      building_id,
+      doc_type,
+      doc_url,
+      title,
+      summary,
+      uploaded_at,
+      expiry_date,
+      classification
+    `)
+    .eq('id', documentId)
+    .single()
+
+  if (error) {
+    throw new Error(`Failed to fetch compliance document: ${error.message}`)
+  }
+
+  return data
+}
+
+/**
+ * Helper function to get building compliance assets with latest documents
+ */
+export async function getBuildingComplianceAssetsWithDocuments(buildingId: string) {
+
+  const { data, error } = await supabase
+    .from('building_compliance_assets')
+    .select(`
+      id,
+      building_id,
+      asset_id,
+      status,
+      last_renewed_date,
+      next_due_date,
+      latest_document_id,
+      last_updated,
+      notes,
+      compliance_assets (
+        id,
+        name,
+        description,
+        category,
+        recommended_frequency
+      ),
+      compliance_docs (
+        id,
+        title,
+        doc_url,
+        uploaded_at,
+        expiry_date
+      )
+    `)
+    .eq('building_id', buildingId)
+    .eq('status', 'active')
+    .order('last_updated', { ascending: false })
+
+  if (error) {
+    throw new Error(`Failed to fetch building compliance assets: ${error.message}`)
+  }
+
+  return data
 } 

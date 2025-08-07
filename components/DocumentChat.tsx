@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { supabase } from '@/lib/supabaseClient';
 import { Send, FileText, Building2, Calendar, User } from "lucide-react";
 import { toast } from "sonner";
 
@@ -47,7 +47,6 @@ export default function DocumentChat({ buildingId, onDocumentSelect }: DocumentC
   const [selectedDocumentType, setSelectedDocumentType] = useState<string>("");
   const [userId, setUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const supabase = createClientComponentClient();
 
   useEffect(() => {
     // Get current user
@@ -59,7 +58,7 @@ export default function DocumentChat({ buildingId, onDocumentSelect }: DocumentC
 
     // Load available documents
     loadDocuments();
-  }, [buildingId, supabase]);
+  }, [buildingId]);
 
   useEffect(() => {
     scrollToBottom();

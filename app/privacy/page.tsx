@@ -1,13 +1,14 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import LayoutWithSidebar from '@/components/LayoutWithSidebar'
 
 export default function PrivacyPolicyPage() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center gap-4">
+    <LayoutWithSidebar>
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-4 mb-6">
             <Link 
               href="/"
               className="flex items-center gap-2 text-[#0F5D5D] hover:text-teal-700 transition-colors"
@@ -17,10 +18,8 @@ export default function PrivacyPolicyPage() {
             </Link>
           </div>
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Content */}
         <div className="bg-white rounded-xl shadow-lg p-8 md:p-12">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-4">
@@ -351,6 +350,6 @@ export default function PrivacyPolicyPage() {
           </div>
         </div>
       </div>
-    </div>
+    </LayoutWithSidebar>
   )
 } 

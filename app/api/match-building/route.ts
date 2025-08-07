@@ -37,32 +37,34 @@ export async function POST(req: NextRequest) {
     
     // AI-like matching logic
     const matches = buildings.map(building => {
-      const buildingName = building.name.toLowerCase();
-      const buildingAddress = building.address?.toLowerCase() || '';
+      const buildingName = building.name ? building.name.toLowerCase() : '';
+      const buildingAddress = building.address ? building.address.toLowerCase() : '';
       
       let score = 0;
       let reasoning = '';
 
       // Exact name match (highest score)
-      if (eventText.includes(buildingName)) {
+      if (buildingName && eventText.includes(buildingName)) {
         score += 0.9;
         reasoning += `Exact building name match: "${building.name}". `;
       }
 
       // Partial name match
-      const buildingWords = buildingName.split(/\s+/);
-      const eventWords = eventText.split(/\s+/);
-      
-      const matchingWords = buildingWords.filter((word: string) => 
-        eventWords.some((eventWord: string) => 
-          eventWord.includes(word) || word.includes(eventWord)
-        )
-      );
+      if (buildingName) {
+        const buildingWords = buildingName.split(/\s+/);
+        const eventWords = eventText.split(/\s+/);
+        
+        const matchingWords = buildingWords.filter((word: string) => 
+          eventWords.some((eventWord: string) => 
+            eventWord.includes(word) || word.includes(eventWord)
+          )
+        );
 
-      if (matchingWords.length > 0) {
-        const partialScore = (matchingWords.length / buildingWords.length) * 0.7;
-        score += partialScore;
-        reasoning += `Partial name match: "${matchingWords.join(', ')}". `;
+        if (matchingWords.length > 0) {
+          const partialScore = (matchingWords.length / buildingWords.length) * 0.7;
+          score += partialScore;
+          reasoning += `Partial name match: "${matchingWords.join(', ')}". `;
+        }
       }
 
       // Address match

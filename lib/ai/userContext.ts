@@ -21,7 +21,7 @@ export interface UserContext {
   recentEvents: Array<{
     id: string;
     title: string;
-    date: string;
+    start_time: string;
     category: string;
   }>;
 }
@@ -78,6 +78,7 @@ export async function fetchUserContext(userId: string, supabase: any): Promise<U
         .from('incoming_emails')
         .select('id, subject, sender, created_at')
         .eq('building_id', userProfile.building_id)
+        .eq('is_deleted', false) // Filter out deleted emails
         .order('created_at', { ascending: false })
         .limit(3);
       
@@ -112,10 +113,10 @@ export async function fetchUserContext(userId: string, supabase: any): Promise<U
       
       const { data: events, error: eventsError } = await supabase
         .from('property_events')
-        .select('id, title, date, category')
+        .select('id, title, start_time, category')
         .eq('building_id', userProfile.building_id)
-        .gte('date', thirtyDaysAgo)
-        .order('date', { ascending: false })
+        .gte('start_time', thirtyDaysAgo)
+        .order('start_time', { ascending: false })
         .limit(5);
       
       if (!eventsError && events) {
@@ -163,7 +164,7 @@ export function formatContextMessages(context: UserContext): Array<{ role: 'syst
   // Add recent events context
   if (context.recentEvents.length > 0) {
     const eventContext = context.recentEvents
-      .map(event => `${event.title} (${event.category}) on ${new Date(event.date).toLocaleDateString()}`)
+      .map(event => `${event.title} (${event.category}) on ${new Date(event.start_time).toLocaleDateString()}`)
       .join('\n');
     messages.push({ role: 'system', content: `Recent events:\n${eventContext}` });
   }

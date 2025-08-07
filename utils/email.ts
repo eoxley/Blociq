@@ -19,6 +19,67 @@ interface OutlookToken {
   refresh_token: string;
 }
 
+interface EmailAttachment {
+  contentId?: string;
+  contentBytes?: string;
+  contentType?: string;
+  name?: string;
+}
+
+/**
+ * Sanitizes HTML content for safe rendering
+ * @param html - The HTML content to sanitize
+ * @returns Sanitized HTML content
+ */
+export function sanitizeHtml(html: string): string {
+  // Basic sanitization - remove script tags and potentially dangerous attributes
+  let sanitized = html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+    .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+    .replace(/javascript:/gi, '')
+    .replace(/vbscript:/gi, '')
+    .replace(/data:/gi, '');
+  
+  return sanitized;
+}
+
+/**
+ * Handles inline attachments by replacing cid: references with data URIs
+ * @param html - The HTML content to process
+ * @param attachments - Array of email attachments with contentId and contentBytes
+ * @returns HTML with inline attachments replaced
+ */
+export function inlineAttachments(html: string, attachments?: EmailAttachment[]): string {
+  if (!attachments?.length) {
+    // If no attachments, replace cid: references with fallback images
+    return html.replace(/src="cid:[^"]*"/gi, 'src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTkgMTJMMTUgMTJNMTIgOUwxMiAxNU0yMSAxMkMyMSAxNi45NzA2IDE2Ljk3MDYgMjEgMTIgMjFDNy4wMjk0NCAyMSAzIDE2Ljk3MDYgMyAxMkMzIDcuMDI5NDQgNy4wMjk0NCAzIDEyIDNDMTYuOTcwNiAzIDIxIDcuMDI5NDQgMjEgMTJaIiBzdHJva2U9IiM5Q0EzQUYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=" alt="Image not available" style="width: 24px; height: 24px; opacity: 0.5;"');
+  }
+
+  return attachments.reduce((updatedHtml, attachment) => {
+    if (attachment.contentId && attachment.contentBytes && attachment.contentType) {
+      const dataUrl = `data:${attachment.contentType};base64,${attachment.contentBytes}`;
+      const cid = `cid:${attachment.contentId}`;
+      return updatedHtml.replaceAll(cid, dataUrl);
+    }
+    return updatedHtml;
+  }, html);
+}
+
+/**
+ * Enhanced HTML sanitization with inline attachment support
+ * @param html - The HTML content to sanitize and process
+ * @param attachments - Optional array of email attachments
+ * @returns Processed HTML content
+ */
+export function processEmailHtml(html: string, attachments?: EmailAttachment[]): string {
+  // First, handle inline attachments
+  const htmlWithAttachments = inlineAttachments(html, attachments);
+  
+  // Then sanitize the HTML
+  return sanitizeHtml(htmlWithAttachments);
+}
+
 /**
  * Sends an email via Microsoft Graph API (Outlook)
  * @param emailData - The email data to send

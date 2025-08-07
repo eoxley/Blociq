@@ -3,11 +3,23 @@
 import DashboardSidebar from './DashboardSidebar'
 import { ReactNode } from 'react'
 
-export default function LayoutWithSidebar({ children }: { children: ReactNode }) {
+interface LayoutWithSidebarProps {
+  children: ReactNode
+  title?: string
+  subtitle?: string
+  showSearch?: boolean
+}
+
+export default function LayoutWithSidebar({ 
+  children, 
+  title, 
+  subtitle, 
+  showSearch 
+}: LayoutWithSidebarProps) {
   return (
     <div className="flex h-screen overflow-hidden">
       <DashboardSidebar />
-      <main className="flex-1 overflow-y-auto bg-[#FAFAFA] p-6">
+      <main className="flex-1 overflow-y-auto bg-[#FAFAFA]">
         {children}
       </main>
     </div>

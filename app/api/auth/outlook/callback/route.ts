@@ -1,163 +1,123 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { createClient } from '@/utils/supabase/server';
-
-/**
- * Helper function to exchange authorization code for tokens
- */
-async function getTokenFromCode(code: string): Promise<{
-  access_token: string;
-  refresh_token: string;
-  expires_in: number;
-}> {
-  const tenantId = process.env.OUTLOOK_TENANT_ID || 'common';
-  const tokenResponse = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      client_id: process.env.OUTLOOK_CLIENT_ID!,
-      client_secret: process.env.OUTLOOK_CLIENT_SECRET!,
-      code: code,
-      redirect_uri: process.env.OUTLOOK_REDIRECT_URI!,
-      grant_type: 'authorization_code'
-    }),
-  });
-
-  if (!tokenResponse.ok) {
-    const errorData = await tokenResponse.text();
-    console.error('[Outlook Callback] Token exchange failed:', errorData);
-    throw new Error(`Token exchange failed: ${tokenResponse.status} ${tokenResponse.statusText}`);
-  }
-
-  const tokenData = await tokenResponse.json();
-  
-  if (!tokenData.access_token || !tokenData.refresh_token || !tokenData.expires_in) {
-    console.error('[Outlook Callback] Missing required tokens from Microsoft response');
-    throw new Error('Missing required tokens from Microsoft response');
-  }
-
-  return {
-    access_token: tokenData.access_token,
-    refresh_token: tokenData.refresh_token,
-    expires_in: tokenData.expires_in
-  };
-}
-
-/**
- * Helper function to get Microsoft user info
- */
-async function getMicrosoftUser(accessToken: string): Promise<{ email: string }> {
-  const userResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!userResponse.ok) {
-    console.error('[Outlook Callback] Failed to get user info from Microsoft Graph');
-    throw new Error(`Failed to get user info: ${userResponse.status} ${userResponse.statusText}`);
-  }
-
-  const userData = await userResponse.json();
-  const userEmail = userData.mail || userData.userPrincipalName;
-
-  if (!userEmail) {
-    console.error('[Outlook Callback] No email found in user data');
-    throw new Error('No email found in user data');
-  }
-
-  return { email: userEmail };
-}
 
 export async function GET(req: NextRequest) {
-  try {
-    console.log('[Outlook Callback] Starting OAuth callback process');
-    
-    const { searchParams } = new URL(req.url);
-    const code = searchParams.get('code');
-    const state = searchParams.get('state');
-    const error = searchParams.get('error');
-    const errorDescription = searchParams.get('error_description');
+  const url = new URL(req.url);
+  const searchParams = url.searchParams;
+  const code = searchParams.get('code');
 
-    // Handle OAuth errors
-    if (error) {
-      console.error('[Outlook Callback] OAuth error:', error, errorDescription);
-      return NextResponse.redirect(new URL('/inbox?error=outlook_auth_failed', req.url));
-    }
+  console.log('[Outlook Callback] Callback URL:', req.url);
+  console.log('[Outlook Callback] Query string:', searchParams.toString());
+  console.log('[Outlook Callback] Code parameter:', code);
 
-    if (!code || !state) {
-      console.error('[Outlook Callback] Missing required parameters:', { code: !!code, state: !!state });
-      return NextResponse.redirect(new URL('/inbox?error=outlook_missing_params', req.url));
-    }
-
-    // Verify state parameter from cookie
-    const cookieStore = await cookies();
-    const storedState = cookieStore.get('outlook_oauth_state')?.value;
-    console.log('[Outlook Callback] Cookie store:', JSON.stringify(cookieStore.getAll()));
-    console.log('[Outlook Callback] Received state:', state, 'Stored state:', storedState);
-
-    if (!storedState || storedState !== state) {
-      console.error('[Outlook Callback] Invalid state parameter');
-      return NextResponse.redirect(new URL('/inbox?error=outlook_invalid_state', req.url));
-    }
-
-    // Get authenticated user session (try getUser instead of getSession)
-    const supabase = createClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    console.log('[Outlook Callback] getUser result:', user, userError);
-    
-    if (userError || !user) {
-      console.error('[Outlook Callback] User not authenticated:', userError);
-      return NextResponse.redirect(new URL('/inbox?error=user_not_authenticated', req.url));
-    }
-
-    console.log('[Outlook Callback] User authenticated:', user.id);
-
-    // ✅ 1. Exchange the `code` from Outlook OAuth for an access and refresh token
-    console.log('[Outlook Callback] Exchanging authorization code for tokens...');
-    const tokenData = await getTokenFromCode(code);
-    console.log('[Outlook Callback] Token exchange successful');
-
-    // ✅ 2. Fetch the Microsoft user's email via Microsoft Graph `/me` endpoint
-    console.log('[Outlook Callback] Fetching user info from Microsoft Graph...');
-    const userInfo = await getMicrosoftUser(tokenData.access_token);
-    console.log('[Outlook Callback] User info retrieved:', userInfo.email);
-
-    // Calculate token expiry
-    const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
-
-    // ✅ 3. Store the token details in the `outlook_tokens` Supabase table
-    console.log('[Outlook Callback] Storing tokens in database...');
-    const { error: insertError } = await supabase
-      .from('outlook_tokens')
-      .upsert({
-        user_id: user.id,
-        email: userInfo.email,
-        access_token: tokenData.access_token,
-        refresh_token: tokenData.refresh_token,
-        expires_at: expiresAt
-      }, {
-        onConflict: 'user_id,email'
-      });
-
-    if (insertError) {
-      console.error('[Outlook Callback] Failed to store tokens in database:', insertError);
-      return NextResponse.redirect(new URL('/inbox?error=outlook_token_storage_failed', req.url));
-    }
-
-    // Clean up the OAuth state cookie
-    cookieStore.delete('outlook_oauth_state');
-
-    console.log('[Outlook Callback] Token stored successfully for user:', user.id, 'email:', userInfo.email);
-    
-    // ✅ 6. Redirect to `/inbox` on success (updated from /dashboard/inbox)
-    return NextResponse.redirect(new URL(`/inbox?success=outlook_connected&email=${encodeURIComponent(userInfo.email)}`, req.url));
-
-  } catch (error) {
-    console.error('[Outlook Callback] Error in Outlook OAuth callback:', error);
-    return NextResponse.redirect(new URL('/inbox?error=outlook_callback_failed', req.url));
+  if (!code) {
+    console.error('[Outlook Callback] Missing code parameter');
+    return new NextResponse('Missing code', { status: 400 });
   }
+
+  // Return a temporary HTML page that handles the token exchange
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Connecting Outlook...</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="spinner"></div>
+        <h2>Connecting Outlook Account...</h2>
+        <p>Please wait while we complete the authentication process.</p>
+    </div>
+    
+    <script>
+        (async function() {
+            try {
+                console.log('[Outlook Callback] Starting token exchange...');
+                
+                // Get the authorization code from URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const code = urlParams.get('code');
+                console.log('[Outlook Callback] Authorization code:', code ? 'found' : 'not found');
+                
+                if (!code) {
+                    throw new Error('Authorization code not found in URL');
+                }
+                
+                // POST to exchange endpoint
+                console.log('[Outlook Callback] Sending POST to /api/auth/outlook/exchange');
+                const response = await fetch('/api/auth/outlook/exchange', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        code: code
+                    })
+                });
+                
+                console.log('[Outlook Callback] Exchange response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('[Outlook Callback] Exchange failed:', errorText);
+                    throw new Error('Token exchange failed: ' + errorText);
+                }
+                
+                // Redirect to home page
+                console.log('[Outlook Callback] Redirecting to /');
+                window.location.href = '/';
+                
+            } catch (error) {
+                console.error('[Outlook Callback] Error during token exchange:', error);
+                document.body.innerHTML = \`
+                    <div class="container">
+                        <h2 style="color: #e74c3c;">Connection Failed</h2>
+                        <p>Error: \${error.message}</p>
+                        <button onclick="window.location.href='/outlook/connect'" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            Try Again
+                        </button>
+                    </div>
+                \`;
+            }
+        })();
+    </script>
+</body>
+</html>`;
+
+  return new NextResponse(html, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/html',
+    },
+  });
 } 

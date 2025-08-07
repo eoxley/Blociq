@@ -11,10 +11,13 @@
     }
   ],
   "functions": {
-    "app/api/cron/sync-inbox/route.ts": {
+    "app/api/sync-inbox/route.ts": {
       "maxDuration": 60
     },
-    "app/api/**/*.ts": {
+    "app/api/cron/sync-inbox/route.ts": {
+      "maxDuration": 120
+    },
+    "app/api/debug/cleanup-emails/route.ts": {
       "maxDuration": 30
     }
   },

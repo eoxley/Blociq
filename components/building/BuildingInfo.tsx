@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Card, CardContent } from "@/components/ui/card"
 import { Edit, Save, X, Key, Users, Car, Building, Plus, Phone, Mail, Calendar, Wrench, Shield, FileText } from "lucide-react"
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabaseClient'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -49,7 +49,6 @@ export default function BuildingInfo({ buildingId }: BuildingInfoProps) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showAdditionalFields, setShowAdditionalFields] = useState(false)
-  const supabase = createClientComponentClient()
 
   useEffect(() => {
     fetchBuildingInfo()

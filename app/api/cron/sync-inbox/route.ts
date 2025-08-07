@@ -1,217 +1,169 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getValidAccessToken } from "@/lib/outlookAuth";
-import { Client } from "@microsoft/microsoft-graph-client";
-import { createClient } from "@supabase/supabase-js";
-import "isomorphic-fetch";
+import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export async function GET(req: NextRequest) {
-  // Verify this is a legitimate cron request
-  const authHeader = req.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+// ✅ STEP 3: Reduce Cron Job Frequency - Now serves as fallback
+// ✅ FIXED: Make user-specific instead of hardcoded
+export async function GET() {
+  console.log('📬 Starting automatic inbox sync for all connected users');
+
+  // Get all active Outlook tokens for different users
+  const { data: tokenRows, error: tokenError } = await supabase
+    .from('outlook_tokens')
+    .select('*')
+    .not('access_token', 'is', null)
+    .not('access_token', 'eq', '')
+    .order('created_at', { ascending: false });
+
+  if (tokenError || !tokenRows || tokenRows.length === 0) {
+    console.error('❌ Failed to fetch access tokens:', tokenError);
+    return NextResponse.json({ success: false, error: 'No tokens available' }, { status: 401 });
   }
 
-  try {
-    console.log("🕐 Cron job: Starting automatic inbox sync...");
-    
-    // Get last sync time from database
-    const { data: syncState } = await supabase
-      .from("email_sync_state")
-      .select("last_sync_time")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
+  console.log(`📧 Found ${tokenRows.length} active Outlook tokens to sync`);
 
-    const lastSyncTime = syncState?.last_sync_time || new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const filterDate = lastSyncTime.toISOString();
+  let totalSynced = 0;
+  let totalUsers = 0;
 
-    console.log(`📅 Auto-syncing emails since: ${filterDate}`);
+  // Sync emails for each connected user
+  for (const tokenRow of tokenRows) {
+    try {
+      console.log(`🔄 Syncing emails for user: ${tokenRow.user_email}`);
+      
+      // Check if token is expired and refresh if needed
+      const now = new Date();
+      const expiresAt = new Date(tokenRow.expires_at);
+      
+      let accessToken = tokenRow.access_token;
+      
+      if (expiresAt <= now) {
+        console.log(`🔄 Token expired for ${tokenRow.user_email}, refreshing...`);
+        
+        try {
+          const tenantId = process.env.OUTLOOK_TENANT_ID || 'common';
+          const refreshResponse = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              client_id: process.env.OUTLOOK_CLIENT_ID!,
+              client_secret: process.env.OUTLOOK_CLIENT_SECRET!,
+              grant_type: 'refresh_token',
+              refresh_token: tokenRow.refresh_token,
+              redirect_uri: process.env.OUTLOOK_REDIRECT_URI!,
+            }),
+          });
 
-    // Get access token for Microsoft Graph
-    const accessToken = await getValidAccessToken();
-    const client = Client.init({
-      authProvider: (done) => done(null, accessToken)
-    });
+          if (refreshResponse.ok) {
+            const refreshData = await refreshResponse.json();
+            const newExpiresAt = new Date(Date.now() + refreshData.expires_in * 1000).toISOString();
 
-    // Get the most recent valid token for any user (for cron job)
-    const { data: tokens, error: tokenError } = await supabase
-      .from("outlook_tokens")
-      .select("*")
-      .order("expires_at", { ascending: false })
-      .limit(1)
-      .single();
+            // Update the stored token
+            const { error: updateError } = await supabase
+              .from('outlook_tokens')
+              .update({
+                access_token: refreshData.access_token,
+                refresh_token: refreshData.refresh_token,
+                expires_at: newExpiresAt
+              })
+              .eq('user_id', tokenRow.user_id);
 
-    if (tokenError || !tokens) {
-      console.error("❌ No valid Outlook token found for cron job:", tokenError);
-      return NextResponse.json({ error: "No valid token available" }, { status: 401 });
-    }
-
-    console.log("✅ Using token for user:", tokens.email);
-
-    // Fetch new emails from Outlook using the token's associated email
-    const messages = await client
-      .api(`/users/${tokens.email}/messages`)
-      .filter(`receivedDateTime gt '${filterDate}'`)
-      .select("id,subject,from,toRecipients,ccRecipients,body,bodyPreview,internetMessageId,conversationId,receivedDateTime,isRead")
-      .orderby("receivedDateTime DESC")
-      .top(25) // Conservative limit for cron jobs
-      .get();
-
-    console.log(`📧 Found ${messages.value.length} new emails`);
-
-    let emailsProcessed = 0;
-    let emailsNew = 0;
-    let emailsUpdated = 0;
-
-    for (const msg of messages.value) {
-      try {
-        // Parse email data
-        const emailData: Record<string, unknown> = {
-          outlook_message_id: msg.id,
-          message_id: msg.internetMessageId,
-          thread_id: msg.conversationId,
-          subject: msg.subject || "(No subject)",
-          from_email: msg.from?.emailAddress?.address,
-          from_name: msg.from?.emailAddress?.name,
-          to_email: msg.toRecipients?.map((r: Record<string, unknown>) => (r as { emailAddress: { address: string } }).emailAddress.address) || [],
-          cc_email: msg.ccRecipients?.map((r: Record<string, unknown>) => (r as { emailAddress: { address: string } }).emailAddress.address) || [],
-          body: msg.body?.content || msg.bodyPreview || "",
-          body_preview: msg.bodyPreview || "",
-          received_at: msg.receivedDateTime,
-          is_read: msg.isRead || false,
-          is_handled: false,
-          folder: "inbox",
-          sync_status: "synced",
-          last_sync_at: new Date().toISOString()
-        };
-
-        // Check if email already exists
-        const { data: existingEmail } = await supabase
-          .from("incoming_emails")
-          .select("id, is_read, is_handled")
-          .eq("outlook_message_id", msg.id)
-          .single();
-
-        if (existingEmail) {
-          // Update existing email (e.g., read status)
-          const { error } = await supabase
-            .from("incoming_emails")
-            .update({
-              is_read: emailData.is_read,
-              last_sync_at: emailData.last_sync_at,
-              sync_status: emailData.sync_status
-            })
-            .eq("outlook_message_id", msg.id);
-
-          if (!error) {
-            emailsUpdated++;
-          }
-        } else {
-          // Match leaseholder email to unit/building
-          if (emailData.from_email) {
-            const { data: unitMatch } = await supabase
-              .from("units")
-              .select(`
-                unit_number,
-                building_id,
-                buildings (name),
-                leaseholders!inner (
-                  email
-                )
-              `)
-              .eq("leaseholders.email", emailData.from_email)
-              .single();
-
-            if (unitMatch) {
-              emailData.unit = unitMatch.unit_number;
-              emailData.building_id = unitMatch.building_id;
-              emailData.building_name = unitMatch.buildings.name;
-            } else {
-              // Fallback: match "Flat 7" in subject
-              const match = (emailData.subject as string)?.match(/flat\s?(\d+[A-Za-z]?)/i);
-              if (match) {
-                const flat = `Flat ${match[1]}`;
-                const { data: fallbackUnit } = await supabase
-                  .from("units")
-                  .select("unit_number, building_id, buildings(name)")
-                  .eq("unit_number", flat)
-                  .single();
-
-                if (fallbackUnit) {
-                  emailData.unit = fallbackUnit.unit_number;
-                  emailData.building_id = fallbackUnit.building_id;
-                  emailData.building_name = (fallbackUnit.buildings as { name: string }[])?.[0]?.name;
-                }
-              }
+            if (!updateError) {
+              accessToken = refreshData.access_token;
+              console.log(`✅ Token refreshed for ${tokenRow.user_email}`);
             }
           }
+        } catch (error) {
+          console.error(`❌ Failed to refresh token for ${tokenRow.user_email}:`, error);
+          continue; // Skip this user and continue with next
+        }
+      }
 
-          // Insert new email
+      // Fetch recent emails (last 30 days)
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      let url = `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=50&$orderby=receivedDateTime desc&$filter=receivedDateTime ge '${thirtyDaysAgo}'&$select=id,subject,bodyPreview,body,from,receivedDateTime,isRead,flag,importance,categories,hasAttachments,internetMessageId`;
+      let userSynced = 0;
+
+      while (url) {
+        const res = await fetch(url, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        const result = await res.json();
+
+        if (!res.ok) {
+          console.error(`❌ Microsoft API error for ${tokenRow.user_email}:`, result);
+          break; // Skip this user and continue with next
+        }
+
+        console.log(`📥 Page fetched for ${tokenRow.user_email}: ${result.value?.length ?? 0} messages`);
+
+        for (const msg of result.value || []) {
+          console.log('📨 Processing message:', msg.subject);
+
+          const insert = {
+            user_id: tokenRow.user_id,
+            subject: msg.subject ?? null,
+            from_email: msg.from?.emailAddress?.address ?? null,
+            from_name: msg.from?.emailAddress?.name ?? null,
+            body_preview: msg.bodyPreview ?? null,
+            body_full: msg.body?.content ?? null,
+            received_at: msg.receivedDateTime ?? null,
+            unread: !msg.isRead,
+            is_read: msg.isRead,
+            flag_status: msg.flag?.flagStatus ?? null,
+            categories: msg.categories ?? null,
+            importance: msg.importance ?? null,
+            has_attachments: msg.hasAttachments ?? false,
+            outlook_id: msg.id ?? null,
+            outlook_message_id: msg.internetMessageId ?? null,
+            folder: 'inbox',
+            sync_status: 'cron_synced',
+            last_sync_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+
           const { error } = await supabase
-            .from("incoming_emails")
-            .insert(emailData);
+            .from('incoming_emails')
+            .upsert(insert, { 
+              onConflict: 'outlook_message_id',
+              ignoreDuplicates: false
+            });
 
-          if (!error) {
-            emailsNew++;
+          if (error) {
+            console.error('❌ Failed to insert message:', msg.id, error);
+          } else {
+            console.log('✅ Saved message:', msg.subject);
+            userSynced++;
           }
         }
 
-        emailsProcessed++;
-      } catch (error) {
-        console.error(`❌ Error processing email ${msg.id}:`, error);
+        url = result['@odata.nextLink'] ?? null;
       }
+
+      console.log(`✅ Synced ${userSynced} emails for ${tokenRow.user_email}`);
+      totalSynced += userSynced;
+      totalUsers++;
+
+    } catch (error) {
+      console.error(`❌ Error syncing for ${tokenRow.user_email}:`, error);
+      // Continue with next user instead of failing completely
     }
-
-    // Update sync state
-    const { error: syncError } = await supabase
-      .from("email_sync_state")
-      .insert({
-        last_sync_time: new Date().toISOString(),
-        sync_status: "completed",
-        emails_processed: emailsProcessed,
-        emails_new: emailsNew,
-        emails_updated: emailsUpdated
-      });
-
-    if (syncError) {
-      console.error("❌ Failed to update sync state:", syncError);
-    }
-
-    console.log(`✅ Auto-sync completed: ${emailsProcessed} processed, ${emailsNew} new, ${emailsUpdated} updated`);
-
-    return NextResponse.json({
-      success: true,
-      summary: {
-        processed: emailsProcessed,
-        new: emailsNew,
-        updated: emailsUpdated
-      },
-      timestamp: new Date().toISOString()
-    });
-
-  } catch (error) {
-    console.error("❌ Auto-sync failed:", error);
-    
-    // Log error in sync state
-    try {
-      await supabase
-        .from("email_sync_state")
-        .insert({
-          sync_status: "error",
-          error_message: error instanceof Error ? error.message : "Unknown error"
-        });
-    } catch (logError) {
-      console.error("Failed to log sync error:", logError);
-    }
-
-    return NextResponse.json(
-      { error: "Auto-sync failed", details: error instanceof Error ? error.message : "Unknown error" },
-      { status: 500 }
-    );
   }
+
+  console.log(`🎉 Cron sync completed: ${totalSynced} emails synced for ${totalUsers} users`);
+
+  return NextResponse.json({ 
+    success: true, 
+    synced: totalSynced,
+    users_processed: totalUsers,
+    message: `Cron job completed. Synced ${totalSynced} emails across ${totalUsers} users.`
+  });
 } 

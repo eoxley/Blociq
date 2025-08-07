@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
+import { sanitizeHtml, processEmailHtml } from "@/utils/email";
+import { useEmailAttachments } from '@/hooks/useEmailAttachments';
 
 interface Email {
   message_id: string;
@@ -13,6 +15,7 @@ interface Email {
   from_email: string;
   from_name?: string;
   body: string;
+  body_content_type?: string;
   received_at: string;
   building_id?: string;
   building_name?: string;
@@ -41,6 +44,9 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+
+  // Fetch email attachments for inline image support
+  const { attachments } = useEmailAttachments(email.message_id);
 
   // Generate AI draft when modal opens
   useEffect(() => {
@@ -232,7 +238,7 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
       };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-40">
+          <div className="fixed inset-0 bg-white/60 backdrop-blur-sm z-40 transition-all duration-300 ease-in-out">
       <div 
         ref={modalRef}
         className={modalClasses}
@@ -289,7 +295,14 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
               <div>
                 <h4 className="font-medium text-sm text-gray-700 mb-2">Message</h4>
                 <Card className="p-4 bg-gray-50">
-                  <p className="text-sm whitespace-pre-wrap">{email.body}</p>
+                  {email.body_content_type === 'html' ? (
+                    <div 
+                      className="prose prose-sm max-w-none text-sm"
+                      dangerouslySetInnerHTML={{ __html: processEmailHtml(email.body, attachments) }}
+                    />
+                  ) : (
+                    <p className="text-sm whitespace-pre-wrap">{email.body}</p>
+                  )}
                 </Card>
               </div>
 

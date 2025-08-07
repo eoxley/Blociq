@@ -1,15 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { cookies } from 'next/headers';
+import { getTimeBasedGreeting } from '@/utils/greeting';
 
 export async function GET(req: NextRequest) {
   try {
     const supabase = createClient(cookies());
     
-    // Get the current user's session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    // Dynamic greeting based on time of day
+    const getGreeting = () => {
+      return getTimeBasedGreeting()
+    }
     
-    if (sessionError || !session) {
+    // Get the current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
@@ -34,7 +40,7 @@ export async function GET(req: NextRequest) {
 
 
     if (eventsError) {
-      console.error('Error fetching events:', eventsError);
+      console.error('Error fetching events:', eventsError?.message || JSON.stringify(eventsError));
     }
 
     // 2. Query unread emails (using correct field name)
@@ -44,7 +50,7 @@ export async function GET(req: NextRequest) {
         *,
         buildings(name)
       `)
-      .eq('unread', true) // Changed from is_read to unread
+      .eq('is_read', false) // Use is_read = false for unread emails
       .order('received_at', { ascending: false });
 
     if (emailsError) {
@@ -53,7 +59,7 @@ export async function GET(req: NextRequest) {
 
     // 3. Query compliance documents expiring soon (next 7 days)
     const { data: complianceAlerts, error: complianceError } = await supabase
-      .from('compliance_docs')
+      .from('compliance_assets')
       .select(`
         *,
         buildings(name)
@@ -73,8 +79,7 @@ export async function GET(req: NextRequest) {
         id,
         name,
         address,
-        unit_count,
-        demo_ready
+        unit_count
       `)
       .order('name');
 
@@ -128,7 +133,7 @@ export async function GET(req: NextRequest) {
 
     if (!hasData) {
       return NextResponse.json({
-        summary: "Good morning! You're all caught up today. No upcoming events, unread emails, or compliance alerts to address. Enjoy your day! 🌟"
+        summary: `${getGreeting()} You're all caught up today. No upcoming events, unread emails, or compliance alerts to address. Enjoy your day! 🌟`
       });
     }
 
@@ -196,7 +201,7 @@ export async function GET(req: NextRequest) {
     if (!openaiApiKey) {
       console.error('OpenAI API key not found');
       return NextResponse.json({
-        summary: "Good morning! I'm having trouble accessing the AI service right now, but you can check your events and emails manually. Have a great day! 🌅"
+        summary: `${getGreeting()} I'm having trouble accessing the AI service right now, but you can check your events and emails manually. Have a great day! 🌅`
       });
     }
 
@@ -226,7 +231,7 @@ export async function GET(req: NextRequest) {
     if (!openaiResponse.ok) {
       console.error('OpenAI API error:', await openaiResponse.text());
       return NextResponse.json({
-        summary: "Good morning! I'm having trouble generating your summary right now, but you can check your events and emails manually. Have a productive day! 🌅"
+        summary: `${getGreeting()} I'm having trouble generating your summary right now, but you can check your events and emails manually. Have a productive day! 🌅`
       });
     }
 
@@ -237,8 +242,12 @@ export async function GET(req: NextRequest) {
 
   } catch (error) {
     console.error('Error generating daily summary:', error);
+    
+    // Dynamic greeting for error case
+    const greeting = getTimeBasedGreeting()
+    
     return NextResponse.json({
-      summary: "Good morning! I'm having trouble generating your summary right now, but you can check your events and emails manually. Have a productive day! 🌅"
+      summary: `${greeting} I'm having trouble generating your summary right now, but you can check your events and emails manually. Have a productive day! 🌅`
     });
   }
 } 

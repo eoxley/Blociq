@@ -72,8 +72,14 @@ This report identifies UI components, pages, buttons, and features that exist vi
   - TODO: add actual upload logic here
 
 ### Static Counters/Data
-- **AI Documents Page** (`app/ai-documents/page.tsx`)
-  - Hardcoded stats: 24 Documents, 18 Analyzed, 156 Chat Messages, 12 AI Insights
+- **AI Documents Page** - ✅ MIGRATED TO AI ASSISTANT
+  - Functionality moved to `/ai-assistant` with integrated document upload and search
+  - Document upload now integrated into DocumentAwareAI component
+  - Added document search functionality with `/api/search-documents`
+- **AI Assistant Page** - ✅ MIGRATED TO HOMEPAGE
+  - AI Assistant page redirected to homepage
+  - All AI functionality now integrated into Ask BlocIQ on homepage
+  - Document upload, search, and AI chat all available in one unified interface
 - **Buildings Client** (`app/buildings/BuildingsClient.tsx`)
   - Demo data fallback when no real buildings found
 

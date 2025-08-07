@@ -1,519 +1,453 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
-import { NextResponse } from 'next/server'
-import OpenAI from 'openai'
+// ✅ SMART BLOCIQ BUILDING CONTEXT API [2025-01-15]
+// - Enhanced building detection from prompts
+// - Comprehensive compliance and todo context
+// - Smart context assembly with metadata
+// - Proper error handling and logging
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+import { NextRequest, NextResponse } from 'next/server';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
+import OpenAI from 'openai';
 
-export async function POST(request: Request) {
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+export async function POST(req: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = createRouteHandlerClient({ cookies });
     
-    // Check authentication
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json()
-    const { building_id, prompt } = body
+    // Check if request is FormData (file upload) or JSON
+    const contentType = req.headers.get('content-type') || '';
+    let prompt = '';
+    let building_id = '';
+    let document_ids: string[] = [];
+    let leaseholder_id = '';
+    let contextType = 'general';
+    let contextId = '';
+    let uploadedFiles: File[] = [];
 
-    if (!prompt) {
-      return NextResponse.json({ error: 'Prompt is required' }, { status: 400 })
+    if (contentType.includes('multipart/form-data')) {
+      // Handle file upload
+      const formData = await req.formData();
+      prompt = formData.get('message') as string || formData.get('prompt') as string || '';
+      building_id = formData.get('building_id') as string || '';
+      contextType = formData.get('context_type') as string || formData.get('contextType') as string || 'general';
+      contextId = formData.get('context_id') as string || '';
+      
+      // Extract uploaded files
+      const files = formData.getAll('file') as File[];
+      uploadedFiles = files.filter(file => file instanceof File);
+      
+      console.log('📁 Received file upload:', uploadedFiles.length, 'files');
+    } else {
+      // Handle JSON request
+      const body = await req.json();
+      prompt = body.prompt || '';
+      building_id = body.building_id || '';
+      document_ids = body.document_ids || [];
+      leaseholder_id = body.leaseholder_id || '';
+      contextType = body.context_type || body.contextType || 'general';
+      contextId = body.context_id || '';
     }
 
-    console.log('🔍 AI Query:', prompt)
-    console.log('🏢 Building ID:', building_id)
-
-    // Comprehensive data gathering from all relevant tables
-    const buildingData = await gatherBuildingData(supabase, building_id)
-    const unitsData = await gatherUnitsData(supabase, building_id)
-    const leaseholdersData = await gatherLeaseholdersData(supabase, building_id)
-    const complianceData = await gatherComplianceData(supabase, building_id)
-    const emailsData = await gatherEmailsData(supabase, building_id)
-    const tasksData = await gatherTasksData(supabase, building_id)
-    const documentsData = await gatherDocumentsData(supabase, building_id)
-    const eventsData = await gatherEventsData(supabase, building_id)
-    const majorWorksData = await gatherMajorWorksData(supabase, building_id)
-
-    // Combine all data into a comprehensive context
-    const comprehensiveContext = {
-      building: buildingData,
-      units: unitsData,
-      leaseholders: leaseholdersData,
-      compliance: complianceData,
-      emails: emailsData,
-      tasks: tasksData,
-      documents: documentsData,
-      events: eventsData,
-      majorWorks: majorWorksData
+    if (!prompt && uploadedFiles.length === 0) {
+      return NextResponse.json({ error: 'Missing prompt or files' }, { status: 400 });
     }
 
-    // Create a detailed prompt for the AI
-    const aiPrompt = createAIPrompt(prompt, comprehensiveContext)
+    let buildingContext = "";
+    let contextMetadata: any = {};
+    let systemPrompt = `You are BlocIQ, an AI assistant for UK leasehold property managers. Use British English. Be legally accurate and cite documents or founder guidance where relevant. If unsure, advise the user to refer to legal documents or professional advice.\n\n`;
 
-    console.log('🤖 Sending to OpenAI...')
-
-    // Call OpenAI with comprehensive context
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'system',
-          content: `You are BlocIQ, a comprehensive property management AI assistant for UK leasehold blocks. You have access to detailed building data including units, leaseholders, compliance, emails, tasks, documents, events, and major works projects.
-
-IMPORTANT: When document content is provided in the context, analyze it thoroughly and provide specific insights based on the actual content. Do not give vague responses like "I cannot access the content" when document excerpts are available.
-
-For documents:
-- If document content is provided, analyze it and give specific answers based on what you find
-- If the document contains compliance information, highlight key findings and suggest actions
-- If the document is a survey or report, summarize the main findings and any required follow-up actions
-- If the document appears to have limited readable text, suggest re-uploading with OCR or a text-based version
-
-Always be helpful, professional, and accurate. If information is not available in the data, clearly state that.`
-        },
-        {
-          role: 'user',
-          content: aiPrompt
+    // 🏢 Smart Building Detection from Prompt
+    if (!building_id) {
+      console.log('🔍 Auto-detecting building from prompt...');
+      
+      // Extract potential building names from the question
+      const buildingKeywords = ['house', 'court', 'building', 'apartment', 'residence', 'manor', 'gardens', 'heights', 'view', 'plaza'];
+      const words = prompt.toLowerCase().split(/\s+/);
+      
+      for (let i = 0; i < words.length - 1; i++) {
+        const potentialName = words.slice(i, i + 2).join(' '); // Check 2-word combinations
+        if (buildingKeywords.some(keyword => potentialName.includes(keyword))) {
+          console.log('🔍 Searching for building:', potentialName);
+          
+          const { data: building } = await supabase
+            .from('buildings')
+            .select('id, name, unit_count, address')
+            .ilike('name', `%${potentialName}%`)
+            .maybeSingle();
+          
+          if (building) {
+            contextMetadata.buildingDetected = true;
+            contextMetadata.buildingName = building.name;
+            contextMetadata.building_id = building.id;
+            contextMetadata.unit_count = building.unit_count;
+            buildingContext += `Building: ${building.name}\nUnits: ${building.unit_count || 'Unknown'}\nAddress: ${building.address || 'Not specified'}\n\n`;
+            
+            // Add unit count to system prompt for better context
+            systemPrompt += `\nThe building "${building.name}" contains ${building.unit_count || 'an unknown number of'} units.\n`;
+            
+            console.log('✅ Found building context:', building.name);
+            break;
+          }
         }
+      }
+    }
+
+    // 🏢 Additional Context from Building ID
+    if (building_id) {
+      console.log('🏢 Fetching context for building ID:', building_id);
+      
+      const { data: building } = await supabase
+        .from('buildings')
+        .select('id, name, unit_count, address')
+        .eq('id', building_id)
+        .maybeSingle();
+
+      if (building) {
+        contextMetadata.buildingName = building.name;
+        contextMetadata.unit_count = building.unit_count;
+        buildingContext += `Building: ${building.name}\nUnits: ${building.unit_count || 'Unknown'}\nAddress: ${building.address || 'Not specified'}\n\n`;
+        
+        // Add unit count to system prompt for better context
+        systemPrompt += `\nThe building "${building.name}" contains ${building.unit_count || 'an unknown number of'} units.\n`;
+      }
+
+      // 📋 Building Todos
+      try {
+        const { data: todos } = await supabase
+          .from('building_todos')
+          .select('title, description, status, priority, due_date')
+          .eq('building_id', building_id)
+          .order('due_date', { ascending: true })
+          .limit(10);
+
+        if (todos && todos.length > 0) {
+          const todoContext = todos.map(todo =>
+            `- ${todo.title} (${todo.status}, ${todo.priority} priority, due: ${todo.due_date})`
+          ).join('\n');
+          buildingContext += `Open Tasks:\n${todoContext}\n\n`;
+          contextMetadata.todoCount = todos.length;
+        }
+      } catch (error) {
+        console.warn('Could not fetch building todos:', error);
+      }
+
+      // ⚠️ Compliance Issues
+      try {
+        const { data: compliance } = await supabase
+          .from('compliance_items')
+          .select('item_name, status, due_date, priority')
+          .eq('building_id', building_id)
+          .in('status', ['overdue', 'pending'])
+          .order('due_date', { ascending: true })
+          .limit(10);
+
+        if (compliance && compliance.length > 0) {
+          const complianceContext = compliance.map(item =>
+            `- ${item.item_name} (${item.status}, ${item.priority} priority, due: ${item.due_date})`
+          ).join('\n');
+          buildingContext += `Compliance Issues:\n${complianceContext}\n\n`;
+          contextMetadata.complianceCount = compliance.length;
+        }
+      } catch (error) {
+        console.warn('Could not fetch compliance items:', error);
+      }
+
+      // 📄 Key Documents
+      try {
+        const { data: documents } = await supabase
+          .from('building_documents')
+          .select('doc_type, doc_name, upload_date')
+          .eq('building_id', building_id)
+          .order('upload_date', { ascending: false })
+          .limit(5);
+
+        if (documents && documents.length > 0) {
+          const docContext = documents.map(doc =>
+            `- ${doc.doc_name} (${doc.doc_type}, uploaded: ${doc.upload_date})`
+          ).join('\n');
+          buildingContext += `Key Documents:\n${docContext}\n\n`;
+          contextMetadata.documentCount = documents.length;
+        }
+      } catch (error) {
+        console.warn('Could not fetch building documents:', error);
+      }
+    }
+
+    // 🏠 Smart Unit and Leaseholder Lookup
+    let unit = null;
+    let leaseholder = null;
+    
+    console.log('🔍 Looking for unit and leaseholder references in prompt...');
+    
+    // Enhanced unit detection patterns
+    const unitPatterns = [
+      /(?:flat|apartment|unit|flat)\s+(\d+[a-z]?)/gi,
+      /(\d+[a-z]?)\s+(?:flat|apartment|unit)/gi,
+      /flat\s+(\d+[a-z]?)/gi,
+      /apartment\s+(\d+[a-z]?)/gi,
+      /unit\s+(\d+[a-z]?)/gi,
+      /(\d+[a-z]?)\s+ashwood/gi,
+      /ashwood\s+(\d+[a-z]?)/gi
+    ];
+    
+    let unitNumber = null;
+    let detectedBuildingName = null;
+    
+    // First, try to extract building name from the prompt
+    const buildingKeywords = ['ashwood', 'house', 'court', 'building', 'apartment', 'residence', 'manor', 'gardens', 'heights', 'view', 'plaza'];
+    const words = prompt.toLowerCase().split(/\s+/);
+    
+    for (let i = 0; i < words.length - 1; i++) {
+      const potentialName = words.slice(i, i + 2).join(' '); // Check 2-word combinations
+      if (buildingKeywords.some(keyword => potentialName.includes(keyword))) {
+        console.log('🔍 Detected potential building name:', potentialName);
+        detectedBuildingName = potentialName;
+        break;
+      }
+    }
+    
+    // Extract unit number from prompt
+    for (const pattern of unitPatterns) {
+      const match = prompt.match(pattern);
+      if (match) {
+        unitNumber = match[1];
+        console.log('🔍 Found unit reference:', unitNumber);
+        break;
+      }
+    }
+    
+    if (unitNumber) {
+      console.log('🔍 Looking up unit:', unitNumber);
+      
+      // Determine which building to search in
+      let targetBuildingId = building_id || contextMetadata.building_id;
+      
+      // If we have a detected building name but no building_id, try to find the building
+      if (!targetBuildingId && detectedBuildingName) {
+        console.log('🔍 Searching for building by name:', detectedBuildingName);
+        const { data: buildingMatch } = await supabase
+          .from('buildings')
+          .select('id, name')
+          .ilike('name', `%${detectedBuildingName}%`)
+          .maybeSingle();
+        
+        if (buildingMatch) {
+          targetBuildingId = buildingMatch.id;
+          console.log('✅ Found building:', buildingMatch.name);
+        }
+      }
+      
+      if (targetBuildingId) {
+        // Look up the unit with enhanced query
+        const { data: unitData } = await supabase
+          .from("units")
+          .select(`
+            id, 
+            unit_number, 
+            leaseholder_id, 
+            building_id,
+            buildings(name)
+          `)
+          .eq("building_id", targetBuildingId)
+          .ilike("unit_number", `%${unitNumber}%`)
+          .maybeSingle();
+
+        if (unitData) {
+          unit = unitData;
+          const buildingName = unitData.buildings?.[0]?.name;
+          console.log('✅ Found unit:', unitData.unit_number, 'in', buildingName);
+          
+          // Look up the leaseholder
+          if (unitData.leaseholder_id) {
+            const { data: leaseholderData } = await supabase
+              .from("leaseholders")
+              .select("id, name, email, phone")
+              .eq("id", unitData.leaseholder_id)
+              .maybeSingle();
+
+            if (leaseholderData) {
+              leaseholder = leaseholderData;
+              console.log('✅ Found leaseholder:', leaseholderData.name);
+              
+              // Add leaseholder context to building context
+              buildingContext += `Unit: ${unitData.unit_number}\nLeaseholder: ${leaseholderData.name}\nEmail: ${leaseholderData.email || 'Not provided'}\nPhone: ${leaseholderData.phone || 'Not provided'}\n\n`;
+              
+              // Update context metadata
+              contextMetadata.unit_number = unitData.unit_number;
+              contextMetadata.leaseholder_name = leaseholderData.name;
+              contextMetadata.leaseholder_id = leaseholderData.id;
+              contextMetadata.leaseholder_email = leaseholderData.email;
+              contextMetadata.leaseholder_phone = leaseholderData.phone;
+              contextMetadata.building_name = buildingName;
+              
+              // Enhanced system prompt for leaseholder context
+              systemPrompt += `\nThe user is asking about unit ${unitData.unit_number} in ${buildingName || 'this building'}. The leaseholder is ${leaseholderData.name} (${leaseholderData.email || 'no email'}). Only share information that complies with UK GDPR and data protection regulations.`;
+            }
+          } else {
+            console.log('⚠️ Unit found but no leaseholder assigned');
+            buildingContext += `Unit: ${unitData.unit_number}\nLeaseholder: Not assigned\n\n`;
+            contextMetadata.unit_number = unitData.unit_number;
+            contextMetadata.building_name = buildingName;
+          }
+        } else {
+          console.log('❌ Unit not found:', unitNumber);
+          // Log failed match for debugging
+          contextMetadata.failed_unit_match = unitNumber;
+          contextMetadata.failed_building_search = detectedBuildingName;
+        }
+      } else {
+        console.log('❌ No building context available for unit lookup');
+        contextMetadata.failed_unit_match = unitNumber;
+        contextMetadata.missing_building_context = true;
+      }
+    }
+
+    // 📁 Process uploaded files if any
+    if (uploadedFiles.length > 0) {
+      console.log('📁 Processing uploaded files...');
+      
+      for (const file of uploadedFiles) {
+        try {
+          // Upload file to Supabase Storage
+          const fileName = `${Date.now()}-${file.name}`;
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('ai-documents')
+            .upload(fileName, file);
+
+          if (uploadError) {
+            console.error('❌ File upload error:', uploadError);
+            continue;
+          }
+
+          // Get public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('ai-documents')
+            .getPublicUrl(fileName);
+
+          // Extract text from file (simplified - in production you'd use a proper parser)
+          let fileContent = '';
+          if (file.type === 'text/plain') {
+            fileContent = await file.text();
+          } else {
+            // For PDF/DOCX, we'll add a placeholder (in production, use proper parsers)
+            fileContent = `[Document: ${file.name}] - Content extraction would be implemented here.`;
+          }
+
+          // Add file content to context
+          buildingContext += `\n📄 Document: ${file.name}\nContent: ${fileContent.substring(0, 1000)}${fileContent.length > 1000 ? '...' : ''}\n\n`;
+          
+          console.log('✅ File processed:', file.name);
+        } catch (error) {
+          console.error('❌ Error processing file:', file.name, error);
+        }
+      }
+    }
+
+    // 📎 Process document summaries if document_ids are provided
+    if (document_ids?.length > 0) {
+      console.log('📎 Fetching document summaries for:', document_ids.length, 'documents');
+      
+      const { data: summaries } = await supabase
+        .from("document_summaries")
+        .select("document_id, summary, file_name")
+        .in("document_id", document_ids);
+
+      if (summaries?.length) {
+        const docSummaryText = summaries.map(doc =>
+          `📎 ${doc.file_name}:\n${doc.summary}`
+        ).join("\n\n");
+
+        systemPrompt += `\n\nAttached Document Summaries:\n${docSummaryText}\n`;
+        
+        console.log('✅ Added', summaries.length, 'document summaries to prompt');
+        contextMetadata.document_count = document_ids.length;
+        contextMetadata.documents = summaries.map(s => s.file_name);
+      } else {
+        console.log('⚠️ No document summaries found for provided IDs');
+      }
+    }
+
+    // 📝 Final System Prompt Assembly
+    systemPrompt += buildingContext;
+
+    console.log('📝 Calling OpenAI with context...');
+    console.log('🏢 Building context length:', buildingContext.length);
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: prompt || 'Please analyze the uploaded documents.' }
       ],
       temperature: 0.3,
-      max_tokens: 2000
-    })
+      max_tokens: 1500,
+    });
 
-    const answer = completion.choices[0].message.content
+    const result = response.choices[0]?.message?.content || 'No response generated';
 
-    console.log('✅ AI Response generated')
+    console.log('✅ OpenAI response received');
 
-    // Log the interaction
-    await supabase
+    // 📊 Log to Supabase
+    const { data: logData, error: logError } = await supabase
       .from('ai_logs')
       .insert({
-        user_id: session.user.id,
+        user_id: user.id,
         question: prompt,
-        response: answer,
-        timestamp: new Date().toISOString(),
+        response: result,
+        building_id: building_id || contextMetadata.building_id || null,
+        building_name: contextMetadata.buildingName || null,
+        unit_count: contextMetadata.unit_count || null,
+        document_count: document_ids.length,
+        context_type: contextType,
+        context_id: contextId || null,
+        leaseholder_id: leaseholder?.id || leaseholder_id || null,
+        unit_number: unit?.unit_number || null,
+        metadata: contextMetadata.documents ? { documents: contextMetadata.documents } : null,
       })
+      .select('id')
+      .single();
 
-    return NextResponse.json({ 
-      success: true, 
-      response: answer,
+    if (logError) {
+      console.warn('Could not log AI interaction:', logError);
+    }
+
+    return NextResponse.json({
+      success: true,
+      result,
+      ai_log_id: logData?.id,
+      context_type: contextType,
+      context_id: contextId || null,
+      building_id: building_id || contextMetadata.building_id || null,
+      building_name: contextMetadata.buildingName || null,
+      unit_count: contextMetadata.unit_count || null,
+      document_count: document_ids.length,
+      files_uploaded: uploadedFiles.length,
+      leaseholder_id: leaseholder?.id || null,
+      leaseholder_name: leaseholder?.name || null,
+      unit_number: unit?.unit_number || null,
+      documents: contextMetadata.documents || [],
       context: {
-        building: buildingData ? 'Building data available' : null,
-        units: unitsData ? `${unitsData.length} units found` : null,
-        leaseholders: leaseholdersData ? `${leaseholdersData.length} leaseholders found` : null,
-        compliance: complianceData ? 'Compliance data available' : null,
-        emails: emailsData ? `${emailsData.length} emails found` : null,
-        tasks: tasksData ? `${tasksData.length} tasks found` : null,
-        documents: documentsData ? `${documentsData.length} documents found` : null,
-        events: eventsData ? `${eventsData.length} events found` : null,
-        majorWorks: majorWorksData ? `${majorWorksData.length} major works projects found` : null
+        ...contextMetadata,
+        has_building_context: !!buildingContext.trim(),
+        context_length: buildingContext.length,
+        files_processed: uploadedFiles.length,
+        has_leaseholder_context: !!leaseholder,
+        has_unit_context: !!unit
       }
-    })
+    });
 
   } catch (error) {
-    console.error('❌ Error in comprehensive ask-ai API:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('❌ Error in ask-ai route:', error);
+    return NextResponse.json({ 
+      error: 'Failed to process AI request',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
-}
-
-async function gatherBuildingData(supabase: any, buildingId?: string) {
-  try {
-    let query = supabase.from('buildings').select('*')
-    
-    if (buildingId) {
-      query = query.eq('id', buildingId)
-    }
-    
-    const { data: buildings } = await query
-    
-    if (buildingId) {
-      return buildings?.[0] || null
-    }
-    
-    return buildings || []
-  } catch (error) {
-    console.error('Error gathering building data:', error)
-    return null
-  }
-}
-
-async function gatherUnitsData(supabase: any, buildingId?: string) {
-  try {
-    let query = supabase
-      .from('units')
-      .select(`
-        *,
-        leaseholders (
-          id,
-          name,
-          email,
-          phone
-        ),
-        occupiers (
-          id,
-          full_name,
-          email,
-          phone,
-          start_date,
-          end_date,
-          rent_amount,
-          rent_frequency,
-          status
-        )
-      `)
-    
-    if (buildingId) {
-      query = query.eq('building_id', buildingId)
-    }
-    
-    const { data: units } = await query
-    return units || []
-  } catch (error) {
-    console.error('Error gathering units data:', error)
-    return []
-  }
-}
-
-async function gatherLeaseholdersData(supabase: any, buildingId?: string) {
-  try {
-    let query = supabase
-      .from('leaseholders')
-      .select(`
-        *,
-        units!inner (
-          id,
-          unit_number,
-          building_id
-        )
-      `)
-    
-    if (buildingId) {
-      query = query.eq('units.building_id', buildingId)
-    }
-    
-    const { data: leaseholders } = await query
-    return leaseholders || []
-  } catch (error) {
-    console.error('Error gathering leaseholders data:', error)
-    return []
-  }
-}
-
-async function gatherComplianceData(supabase: any, buildingId?: string) {
-  try {
-    let query = supabase
-      .from('building_compliance_assets')
-      .select(`
-        *,
-        compliance_assets (
-          name,
-          category,
-          description
-        )
-      `)
-    
-    if (buildingId) {
-      query = query.eq('building_id', buildingId)
-    }
-    
-    const { data: compliance } = await query
-    return compliance || []
-  } catch (error) {
-    console.error('Error gathering compliance data:', error)
-    return []
-  }
-}
-
-async function gatherEmailsData(supabase: any, buildingId?: string) {
-  try {
-    let query = supabase
-      .from('incoming_emails')
-      .select('*')
-      .order('received_at', { ascending: false })
-      .limit(20)
-    
-    if (buildingId) {
-      query = query.eq('building_id', buildingId)
-    }
-    
-    const { data: emails } = await query
-    return emails || []
-  } catch (error) {
-    console.error('Error gathering emails data:', error)
-    return []
-  }
-}
-
-async function gatherTasksData(supabase: any, buildingId?: string) {
-  try {
-    let query = supabase
-      .from('building_todos')
-      .select('*')
-      .order('due_date', { ascending: true })
-      .limit(20)
-    
-    if (buildingId) {
-      query = query.eq('building_id', buildingId)
-    }
-    
-    const { data: tasks } = await query
-    return tasks || []
-  } catch (error) {
-    console.error('Error gathering tasks data:', error)
-    return []
-  }
-}
-
-async function gatherDocumentsData(supabase: any, buildingId?: string) {
-  try {
-    let query = supabase
-      .from('building_documents')
-      .select('*, full_text, extracted_text, summary, suggested_action')
-      .order('created_at', { ascending: false })
-      .limit(20)
-    
-    if (buildingId) {
-      query = query.eq('building_id', buildingId)
-    }
-    
-    const { data: documents } = await query
-    return documents || []
-  } catch (error) {
-    console.error('Error gathering documents data:', error)
-    return []
-  }
-}
-
-async function gatherEventsData(supabase: any, buildingId?: string) {
-  try {
-    let query = supabase
-      .from('property_events')
-      .select('*')
-      .gte('start_time', new Date().toISOString())
-      .order('start_time', { ascending: true })
-      .limit(20)
-    
-    if (buildingId) {
-      query = query.eq('building_id', buildingId)
-    }
-    
-    const { data: events } = await query
-    return events || []
-  } catch (error) {
-    console.error('Error gathering events data:', error)
-    return []
-  }
-}
-
-async function gatherMajorWorksData(supabase: any, buildingId?: string) {
-  try {
-    let query = supabase
-      .from('major_works_projects')
-      .select(`
-        *,
-        major_works_documents (*),
-        major_works_logs (*),
-        major_works_observations (*)
-      `)
-      .order('created_at', { ascending: false })
-      .limit(20)
-    
-    if (buildingId) {
-      query = query.eq('building_id', buildingId)
-    }
-    
-    const { data: majorWorks } = await query
-    return majorWorks || []
-  } catch (error) {
-    console.error('Error gathering major works data:', error)
-    return []
-  }
-}
-
-function createAIPrompt(userQuestion: string, context: any) {
-  const { building, units, leaseholders, compliance, emails, tasks, documents, events, majorWorks } = context
-
-  let prompt = `You are BlocIQ, a comprehensive property management AI assistant. Answer the following question based on the detailed building data provided:
-
-USER QUESTION: ${userQuestion}
-
-AVAILABLE DATA:
-
-`
-
-  // Building Information
-  if (building) {
-    if (Array.isArray(building)) {
-      prompt += `BUILDINGS (${building.length} total):\n`
-      building.forEach((b, i) => {
-        prompt += `${i + 1}. ${b.name} (ID: ${b.id})
-- Address: ${b.address || 'Not specified'}
-- Unit Count: ${b.unit_count || 'Not specified'}
-- Building Age: ${b.building_age || 'Not specified'}
-- Total Floors: ${b.total_floors || 'Not specified'}
-- Construction Type: ${b.construction_type || 'Not specified'}
-- Building Manager: ${b.building_manager_name || 'Not specified'}
-- Emergency Contact: ${b.emergency_contact_name || 'Not specified'}
-- Service Charge Frequency: ${b.service_charge_frequency || 'Not specified'}
-- Ground Rent: ${b.ground_rent_amount || 'Not specified'} (${b.ground_rent_frequency || 'Not specified'})
-- Fire Safety Status: ${b.fire_safety_status || 'Not specified'}
-- Energy Rating: ${b.energy_rating || 'Not specified'}\n\n`
-      })
-    } else {
-      prompt += `BUILDING DETAILS:
-- Name: ${building.name}
-- Address: ${building.address || 'Not specified'}
-- Unit Count: ${building.unit_count || 'Not specified'}
-- Building Age: ${building.building_age || 'Not specified'}
-- Total Floors: ${building.total_floors || 'Not specified'}
-- Construction Type: ${building.construction_type || 'Not specified'}
-- Building Manager: ${building.building_manager_name || 'Not specified'}
-- Emergency Contact: ${building.emergency_contact_name || 'Not specified'}
-- Service Charge Frequency: ${building.service_charge_frequency || 'Not specified'}
-- Ground Rent: ${building.ground_rent_amount || 'Not specified'} (${building.ground_rent_frequency || 'Not specified'})
-- Fire Safety Status: ${building.fire_safety_status || 'Not specified'}
-- Energy Rating: ${building.energy_rating || 'Not specified'}\n\n`
-    }
-  }
-
-  // Units Information
-  if (units && units.length > 0) {
-    prompt += `UNITS (${units.length} total):\n`
-    units.forEach((unit: any, i: number) => {
-      prompt += `${i + 1}. Unit ${unit.unit_number}
-- Floor: ${unit.floor || 'Not specified'}
-- Type: ${unit.type || 'Not specified'}
-- Leaseholder: ${unit.leaseholders?.[0]?.name || 'No leaseholder'}
-- Occupiers: ${unit.occupiers?.length || 0} occupier(s)\n`
-    })
-    prompt += '\n'
-  }
-
-  // Leaseholders Information
-  if (leaseholders && leaseholders.length > 0) {
-    prompt += `LEASEHOLDERS (${leaseholders.length} total):\n`
-    leaseholders.forEach((leaseholder: any, i: number) => {
-      prompt += `${i + 1}. ${leaseholder.name || 'Unnamed'}
-- Email: ${leaseholder.email || 'Not specified'}
-- Phone: ${leaseholder.phone || 'Not specified'}
-- Unit: ${leaseholder.units?.[0]?.unit_number || 'Not specified'}\n`
-    })
-    prompt += '\n'
-  }
-
-  // Compliance Information
-  if (compliance && compliance.length > 0) {
-    prompt += `COMPLIANCE ITEMS (${compliance.length} total):\n`
-    compliance.forEach((item: any, i: number) => {
-      prompt += `${i + 1}. ${item.compliance_assets?.name || 'Unnamed'}
-- Category: ${item.compliance_assets?.category || 'Not specified'}
-- Status: ${item.status || 'Not specified'}
-- Next Due: ${item.next_due_date || 'Not specified'}
-- Notes: ${item.notes || 'None'}\n`
-    })
-    prompt += '\n'
-  }
-
-  // Emails Information
-  if (emails && emails.length > 0) {
-    prompt += `RECENT EMAILS (${emails.length} total):\n`
-    emails.slice(0, 5).forEach((email: any, i: number) => {
-      prompt += `${i + 1}. ${email.subject || 'No subject'}
-- From: ${email.from_email || 'Unknown'}
-- Received: ${email.received_at || 'Unknown'}
-- Status: ${email.handled ? 'Handled' : 'Unhandled'}\n`
-    })
-    prompt += '\n'
-  }
-
-  // Tasks Information
-  if (tasks && tasks.length > 0) {
-    prompt += `TASKS (${tasks.length} total):\n`
-    tasks.slice(0, 5).forEach((task: any, i: number) => {
-      prompt += `${i + 1}. ${task.title || 'Untitled'}
-- Priority: ${task.priority || 'Not specified'}
-- Due Date: ${task.due_date || 'Not specified'}
-- Status: ${task.is_complete ? 'Complete' : 'Incomplete'}\n`
-    })
-    prompt += '\n'
-  }
-
-  // Documents Information
-  if (documents && documents.length > 0) {
-    prompt += `DOCUMENTS (${documents.length} total):\n`
-    documents.slice(0, 5).forEach((doc: any, i: number) => {
-      prompt += `${i + 1}. ${doc.file_name || 'Unnamed'}
-- Type: ${doc.type || 'Not specified'}
-- Created: ${doc.created_at || 'Unknown'}
-- Summary: ${doc.summary || 'No summary available'}
-- Suggested Action: ${doc.suggested_action || 'No action suggested'}\n`
-    })
-    prompt += '\n'
-    
-    // Include document content excerpts for AI analysis
-    const documentsWithContent = documents.filter((doc: any) => 
-      doc.full_text || doc.extracted_text
-    )
-    
-    if (documentsWithContent.length > 0) {
-      prompt += `DOCUMENT CONTENT EXCERPTS:\n`
-      documentsWithContent.forEach((doc: any, i: number) => {
-        const content = doc.full_text || doc.extracted_text || ''
-        const excerpt = content.slice(0, 1000) // Limit to 1000 characters per document
-        if (excerpt.length > 50) { // Only include if there's substantial content
-          prompt += `Document: ${doc.file_name || 'Unnamed'}\n---\n${excerpt}\n\n`
-        }
-      })
-      prompt += '\n'
-    }
-  }
-
-  // Events Information
-  if (events && events.length > 0) {
-    prompt += `UPCOMING EVENTS (${events.length} total):\n`
-    events.slice(0, 5).forEach((event: any, i: number) => {
-      prompt += `${i + 1}. ${event.title || 'Untitled'}
-- Date: ${event.start_time || 'Unknown'}
-- Type: ${event.event_type || 'Not specified'}
-- Location: ${event.location || 'Not specified'}\n`
-    })
-    prompt += '\n'
-  }
-
-  // Major Works Information
-  if (majorWorks && majorWorks.length > 0) {
-    prompt += `MAJOR WORKS PROJECTS (${majorWorks.length} total):\n`
-    majorWorks.slice(0, 5).forEach((project: any, i: number) => {
-      prompt += `${i + 1}. ${project.title || 'Untitled'}
-- Status: ${project.status || 'Not specified'}
-- Budget: ${project.budget || 'Not specified'}
-- Start Date: ${project.start_date || 'Not specified'}
-- End Date: ${project.end_date || 'Not specified'}
-- Documents: ${project.major_works_documents?.length || 0} document(s)
-- Logs: ${project.major_works_logs?.length || 0} log entry(ies)\n`
-    })
-    prompt += '\n'
-  }
-
-  prompt += `INSTRUCTIONS:
-- Provide a comprehensive answer based on the data above
-- If the question asks about specific numbers (like unit count), provide exact figures from the data
-- If information is not available in the data, clearly state that
-- Be helpful, professional, and accurate
-- If the question is about a specific building, focus on that building's data
-- If no specific building is mentioned, provide information about all buildings if available
-
-DOCUMENT ANALYSIS GUIDELINES:
-- When document content is provided, analyze it thoroughly and provide specific insights
-- For compliance documents, highlight key findings, deadlines, and required actions
-- For surveys and reports, summarize main findings and suggest follow-up actions
-- For contracts and legal documents, identify key terms and obligations
-- For financial documents, highlight costs, payments, and financial implications
-- Always suggest practical next steps for property managers
-- If document content appears unclear or limited, suggest re-uploading with better text extraction
-
-Please provide your answer:`
-
-  return prompt
 } 
