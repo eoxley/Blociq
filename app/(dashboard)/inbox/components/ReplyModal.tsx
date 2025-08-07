@@ -304,38 +304,85 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
                     AI Generated
                   </div>
                 )}
+                {isAIGenerated && (
+                  <Button
+                    onClick={() => {
+                      setBody('');
+                      setIsAIGenerated(false);
+                      toast.info('AI content cleared');
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2 text-red-600 hover:text-red-700"
+                  >
+                    Clear
+                  </Button>
+                )}
                 <Button
                   onClick={async () => {
+                    // Check if user has manually typed content
+                    if (body.trim() && !isAIGenerated) {
+                      const shouldOverwrite = confirm('You have manually typed content. Do you want to replace it with an AI-generated reply?');
+                      if (!shouldOverwrite) {
+                        return;
+                      }
+                    }
+                    
+                    // Store original body for potential restoration
+                    const originalBody = body;
+                    
                     try {
+                      // Show loading state
+                      setBody('Thinking...');
+                      
                       const response = await fetch('/api/ask-ai', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ 
-                          prompt: `Generate a professional email reply to this email: ${email.subject || 'No subject'}. Content: ${email.body_full || email.body_preview || ''}`,
+                          prompt: `Generate a professional email ${action} to this email: ${email.subject || 'No subject'}. Content: ${email.body_full || email.body_preview || ''}`,
                           building_id: email.building_id,
                           context_type: 'email_reply',
-                          tone: 'Professional'
+                          tone: 'Professional',
+                          action_type: action
                         })
                       });
                       
                       if (response.ok) {
                         const data = await response.json();
                         if (data.success && data.response) {
-                          setBody(data.response);
+                          // For forward action, clean up the response
+                          let aiResponse = data.response;
+                          if (action === 'forward') {
+                            // Remove any quoted content that might have been included
+                            aiResponse = aiResponse.split('--- Original Message ---')[0]?.trim() || aiResponse;
+                          }
+                          
+                          setBody(aiResponse);
                           setIsAIGenerated(true);
                           toast.success('AI reply generated!');
+                        } else {
+                          // Restore original body if AI generation failed
+                          setBody(originalBody);
+                          toast.error('Failed to generate AI reply');
                         }
+                      } else {
+                        // Restore original body if request failed
+                        setBody(originalBody);
+                        toast.error('Failed to generate AI reply');
                       }
                     } catch (error) {
+                      // Restore original body on error
+                      setBody(originalBody);
                       toast.error('Failed to generate AI reply');
                     }
                   }}
                   variant="outline"
                   size="sm"
                   className="flex items-center gap-2"
+                  disabled={isAIGenerated}
                 >
                   <Bot className="h-3 w-3" />
-                  Generate AI Reply
+                  {isAIGenerated ? 'AI Generated' : 'Generate AI Reply'}
                 </Button>
               </div>
             </div>
@@ -404,7 +451,13 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
               <textarea
                 id="email-body"
                 value={body}
-                onChange={(e) => setBody(e.target.value)}
+                onChange={(e) => {
+                  setBody(e.target.value);
+                  // Reset AI generated state if user manually edits
+                  if (isAIGenerated && e.target.value !== body) {
+                    setIsAIGenerated(false);
+                  }
+                }}
                 className="w-full px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent resize-none"
                 rows={12}
                 placeholder="Enter your message..."
