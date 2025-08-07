@@ -59,16 +59,17 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
   const generateAIDraft = async () => {
     setIsGenerating(true);
     try {
-      const response = await fetch("/api/generate-reply", {
+      const response = await fetch("/api/ask-ai", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
-          emailId: email.message_id,
-          buildingId: email.building_id,
-          senderName: email.from_name || email.from_email,
-          emailBody: email.body,
-          tone
-        })
+          prompt: `Generate a professional email reply to this email: ${email.subject || 'No subject'}. Content: ${email.body || ''}`,
+          building_id: email.building_id,
+          context_type: 'email_reply',
+          tone: tone
+        }),
       });
 
       const data = await response.json();
