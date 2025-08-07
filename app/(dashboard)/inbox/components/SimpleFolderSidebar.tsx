@@ -117,7 +117,7 @@ export default function SimpleFolderSidebar({
                 selectedFolder === folder.id 
                   ? 'bg-indigo-100 border border-indigo-200' 
                   : dragOverFolder === folder.id
-                  ? 'bg-blue-50 border border-blue-200'
+                  ? 'bg-blue-100 border-2 border-blue-300 shadow-md'
                   : 'hover:bg-gray-50'
               }`}
             >
