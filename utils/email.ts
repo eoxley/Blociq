@@ -1,5 +1,7 @@
 // Utility functions for email sending via Outlook integration
 
+import DOMPurify from 'dompurify';
+
 interface EmailData {
   to: string;
   subject: string;
@@ -27,21 +29,17 @@ interface EmailAttachment {
 }
 
 /**
- * Sanitizes HTML content for safe rendering
+ * Sanitizes HTML content for safe rendering using DOMPurify
  * @param html - The HTML content to sanitize
  * @returns Sanitized HTML content
  */
 export function sanitizeHtml(html: string): string {
-  // Basic sanitization - remove script tags and potentially dangerous attributes
-  let sanitized = html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
-    .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
-    .replace(/javascript:/gi, '')
-    .replace(/vbscript:/gi, '')
-    .replace(/data:/gi, '');
-  
-  return sanitized;
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ['p', 'br', 'div', 'span', 'strong', 'em', 'u', 'b', 'i', 'a', 'ul', 'ol', 'li', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'pre', 'code', 'img'],
+    ALLOWED_ATTR: ['href', 'target', 'src', 'alt', 'title', 'class'],
+    FORBID_TAGS: ['html', 'head', 'meta', 'style', 'script', 'title', 'link', 'base', 'iframe', 'object', 'embed', 'form', 'input', 'textarea', 'select', 'button'],
+    KEEP_CONTENT: true
+  });
 }
 
 /**
@@ -301,7 +299,10 @@ export function extractEmails(text: string): string[] {
  * @returns Sanitized content
  */
 export function sanitizeEmailContent(content: string): string {
-  // Remove potentially dangerous HTML tags
-  const dangerousTags = /<(script|iframe|object|embed|form|input|textarea|select|button)[^>]*>.*?<\/\1>/gis;
-  return content.replace(dangerousTags, '');
+  return DOMPurify.sanitize(content, {
+    ALLOWED_TAGS: ['p', 'br', 'div', 'span', 'strong', 'em', 'u', 'b', 'i', 'a', 'ul', 'ol', 'li', 'blockquote'],
+    ALLOWED_ATTR: ['href', 'target'],
+    FORBID_TAGS: ['html', 'head', 'meta', 'style', 'script', 'title', 'link', 'base', 'iframe', 'object', 'embed', 'form', 'input', 'textarea', 'select', 'button'],
+    KEEP_CONTENT: true
+  });
 } 

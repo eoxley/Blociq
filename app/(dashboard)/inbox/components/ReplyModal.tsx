@@ -49,14 +49,15 @@ const formatQuotedEmail = (email: Email): string => {
   // Get the original email content
   const originalContent = email.body_full || email.body_preview || '';
   
-  // Sanitize the HTML content
+  // Use DOMPurify for consistent sanitization
   const sanitizedHtml = DOMPurify.sanitize(originalContent, {
     ALLOWED_TAGS: ['p', 'br', 'div', 'span', 'strong', 'em', 'u', 'b', 'i', 'a', 'ul', 'ol', 'li', 'blockquote'],
     ALLOWED_ATTR: ['href', 'target'],
+    FORBID_TAGS: ['html', 'head', 'meta', 'style', 'script', 'title', 'link', 'base', 'iframe', 'object', 'embed', 'form', 'input', 'textarea', 'select', 'button'],
     KEEP_CONTENT: true
   });
   
-  // Remove unwanted tags and clean up the content
+  // Additional cleanup for better formatting
   let cleanedContent = sanitizedHtml
     .replace(/<html[^>]*>.*?<body[^>]*>(.*?)<\/body>.*?<\/html>/gis, '$1') // Remove html/body tags
     .replace(/<head[^>]*>.*?<\/head>/gis, '') // Remove head tags
