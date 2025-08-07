@@ -79,7 +79,7 @@ export default function FloatingBlocIQ() {
         formData.append(`attachment_${index}`, file)
       })
 
-      const res = await fetch('/api/ask-assistant', {
+      const res = await fetch('/api/ask-ai', {
         method: 'POST',
         body: formData,
       })
