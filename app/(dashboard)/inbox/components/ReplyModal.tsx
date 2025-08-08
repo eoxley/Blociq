@@ -115,24 +115,11 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
       console.log('🤖 Using AI-generated reply');
     } else {
       setIsAIGenerated(false);
-      // Initialize with empty body - quoted content will be added separately
-      setBody('');
+      // Initialize with quoted content
+      const quoted = toPlainQuoted(email);
+      setBody(quoted);
     }
   }, [email, action, isOpen]);
-
-  // Add quoted content when email changes
-  useEffect(() => {
-    if (!email || !isOpen) return;
-
-    const quoted = toPlainQuoted(email);
-    // If the quoted block isn't already present, append it
-    setBody(prev => {
-      if (!prev || !prev.includes('--- Original Message ---')) {
-        return (prev ? `${prev.trim()}\n\n` : '') + quoted;
-      }
-      return prev;
-    });
-  }, [email, isOpen]);
 
   const handleSend = async () => {
     if (!email || to.length === 0 || !subject.trim() || !body.trim()) {

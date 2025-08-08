@@ -14,6 +14,7 @@ export function toPlainQuoted(email: {
   received_at?: string | Date | null;
   body_html?: string | null;
   body_full?: string | null; // may contain plain text
+  body_preview?: string | null; // fallback for preview text
 }) {
   const header =
 `--- Original Message ---
@@ -24,17 +25,25 @@ Subject: ${email.subject ?? ""}
 `;
 
   // Prefer existing plain text if present; otherwise convert HTML → text.
-  const bodyPlain = email.body_full?.trim()
-    ? email.body_full!
-    : convert(email.body_html ?? "", {
-        wordwrap: false,
-        selectors: [
-          { selector: "a", options: { hideLinkHrefIfSameAsText: true } },
-          { selector: "img", format: "skip" },
-          { selector: "script", format: "skip" },
-          { selector: "style", format: "skip" },
-        ],
-      });
+  let bodyPlain = "";
+  
+  if (email.body_full?.trim()) {
+    bodyPlain = email.body_full;
+  } else if (email.body_html) {
+    bodyPlain = convert(email.body_html, {
+      wordwrap: false,
+      selectors: [
+        { selector: "a", options: { hideLinkHrefIfSameAsText: true } },
+        { selector: "img", format: "skip" },
+        { selector: "script", format: "skip" },
+        { selector: "style", format: "skip" },
+      ],
+    });
+  } else if (email.body_preview?.trim()) {
+    bodyPlain = email.body_preview;
+  } else {
+    bodyPlain = "No content available";
+  }
 
   // Quote lines (email style)
   const quoted = bodyPlain
