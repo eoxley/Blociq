@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
-import { sanitizeEmailContent } from '@/utils/email';
+import { toPlainQuoted, toSanitisedHtml } from '@/utils/emailFormatting';
 import { useEmailAttachments } from '@/hooks/useEmailAttachments';
 import DOMPurify from 'dompurify';
 
@@ -65,16 +65,17 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          prompt: `Generate a professional email reply to this email: ${email.subject || 'No subject'}. Content: ${email.body || ''}`,
-          building_id: email.building_id,
           context_type: 'email_reply',
+          action_type: 'reply',
+          emailId: email.message_id,
+          building_id: email.building_id,
           tone: tone
         }),
       });
 
       const data = await response.json();
-      if (data.success) {
-        setReplyText(data.draft);
+      if (data.success && data.reply) {
+        setReplyText(data.reply);
         setBuildingContext(data.buildingContext);
       } else {
         console.error("Failed to generate draft:", data.error);
@@ -297,16 +298,19 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
               <div>
                 <h4 className="font-medium text-sm text-gray-700 mb-2">Message</h4>
                 <Card className="p-4 bg-gray-50">
-                  {email.body_content_type === 'html' ? (
-                    <div 
-                      className="prose prose-sm max-w-none text-sm"
-                      dangerouslySetInnerHTML={{ 
-                        __html: sanitizeEmailContent(email, attachments)
-                      }}
-                    />
-                  ) : (
-                    <p className="text-sm whitespace-pre-wrap">{email.body}</p>
-                  )}
+                  <div className="text-sm whitespace-pre-wrap">
+                    {email.body_content_type === 'html' 
+                      ? toPlainQuoted({
+                          from_name: email.from_name,
+                          from_email: email.from_email,
+                          subject: email.subject,
+                          received_at: email.received_at,
+                          body_html: email.body,
+                          body_full: email.body
+                        }).split('--- Original Message ---')[1]?.trim() || email.body
+                      : email.body
+                    }
+                  </div>
                 </Card>
               </div>
 
