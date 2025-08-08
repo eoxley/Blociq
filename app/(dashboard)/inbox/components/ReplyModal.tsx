@@ -15,6 +15,8 @@ interface Email {
   subject: string | null;
   body_preview: string | null;
   body_full: string | null;
+  body_html?: string | null;
+  body_content_type?: string | null;
   received_at: string | null;
   unread: boolean | null;
   is_read: boolean | null;
@@ -115,10 +117,23 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
       console.log('🤖 Using AI-generated reply');
     } else {
       setIsAIGenerated(false);
-      // Initialize with quoted content
-      const quoted = toPlainQuoted(email);
-      setBody(quoted);
+      // Initialize with empty body - quoted content will be added separately
+      setBody('');
     }
+  }, [email, action, isOpen]);
+
+  // Add quoted content when email changes
+  useEffect(() => {
+    if (!email || !isOpen) return;
+
+    const quoted = toPlainQuoted(email);
+    // If the quoted block isn't already present, append it
+    setBody(prev => {
+      if (!prev || !prev.includes('--- Original Message ---')) {
+        return (prev ? `${prev.trim()}\n\n` : '') + quoted;
+      }
+      return prev;
+    });
   }, [email, action, isOpen]);
 
   const handleSend = async () => {
