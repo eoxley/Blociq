@@ -13,7 +13,7 @@ export function toPlainQuoted(email: {
   subject?: string | null;
   received_at?: string | Date | null;
   body_html?: string | null;
-  body_full?: string | null; // may contain plain text
+  body_full?: string | null; // may contain plain text or HTML
   body_preview?: string | null; // fallback for preview text
 }) {
   const header =
@@ -28,7 +28,24 @@ Subject: ${email.subject ?? ""}
   let bodyPlain = "";
   
   if (email.body_full?.trim()) {
-    bodyPlain = email.body_full;
+    // Check if body_full contains HTML tags
+    const hasHtmlTags = /<[^>]*>/.test(email.body_full);
+    
+    if (hasHtmlTags) {
+      // Convert HTML to plain text
+      bodyPlain = convert(email.body_full, {
+        wordwrap: false,
+        selectors: [
+          { selector: "a", options: { hideLinkHrefIfSameAsText: true } },
+          { selector: "img", format: "skip" },
+          { selector: "script", format: "skip" },
+          { selector: "style", format: "skip" },
+        ],
+      });
+    } else {
+      // Already plain text
+      bodyPlain = email.body_full;
+    }
   } else if (email.body_html) {
     bodyPlain = convert(email.body_html, {
       wordwrap: false,
@@ -51,5 +68,6 @@ Subject: ${email.subject ?? ""}
     .map(line => `> ${line}`)
     .join("\n");
 
-  return `${header}${quoted}\n`;
+  const result = `${header}${quoted}\n`;
+  return result;
 }

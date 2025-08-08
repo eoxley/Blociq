@@ -299,17 +299,27 @@ export default function ReplyModal({ email, isOpen, onClose, onReplySent }: Repl
                 <h4 className="font-medium text-sm text-gray-700 mb-2">Message</h4>
                 <Card className="p-4 bg-gray-50">
                   <div className="text-sm whitespace-pre-wrap">
-                    {email.body_content_type === 'html' 
-                      ? toPlainQuoted({
+                    {(() => {
+                      console.log('🔍 components/ReplyModal: email.body preview:', email.body?.substring(0, 100));
+                      console.log('🔍 components/ReplyModal: email.body_content_type:', email.body_content_type);
+                      
+                      if (email.body_content_type === 'html') {
+                        const quoted = toPlainQuoted({
                           from_name: email.from_name,
                           from_email: email.from_email,
                           subject: email.subject,
                           received_at: email.received_at,
                           body_html: email.body,
                           body_full: email.body
-                        }).split('--- Original Message ---')[1]?.trim() || email.body
-                      : email.body
-                    }
+                        });
+                        console.log('🔍 components/ReplyModal: quoted result preview:', quoted.substring(0, 200));
+                        const extracted = quoted.split('--- Original Message ---')[1]?.trim() || email.body;
+                        console.log('🔍 components/ReplyModal: extracted preview:', extracted.substring(0, 100));
+                        return extracted;
+                      } else {
+                        return email.body;
+                      }
+                    })()}
                   </div>
                 </Card>
               </div>
