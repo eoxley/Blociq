@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator'
 import ReplyEditor from './ReplyEditor'
 import ReplyModal from './ReplyModal'
 import { toast } from 'sonner'
-import { sanitizeEmailContent } from '@/utils/email';
+import { toPlainQuoted } from '@/utils/emailFormatting';
 import { useEmailAttachments } from '@/hooks/useEmailAttachments'
 
 interface Email {
@@ -358,12 +358,19 @@ export default function EmailDetail({ email, onEmailDeleted }: EmailDetailProps)
       {/* Email Body */}
       <div className="flex-1 overflow-y-auto p-6">
         <div className="prose prose-sm max-w-none">
-          <div 
-            className="text-gray-700 leading-relaxed"
-            dangerouslySetInnerHTML={{ 
-              __html: sanitizeEmailContent(email as any, attachments) 
-            }}
-          />
+          <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+            {email.body_content_type === 'html' 
+              ? toPlainQuoted({
+                  from_name: email.from_name,
+                  from_email: email.from_email,
+                  subject: email.subject,
+                  received_at: email.received_at,
+                  body_html: email.body_html,
+                  body_full: email.body_full
+                }).split('--- Original Message ---')[1]?.trim() || email.body_full || email.body_preview || 'No content available'
+              : email.body_full || email.body_preview || 'No content available'
+            }
+          </div>
         </div>
 
         {/* Email Metadata */}
