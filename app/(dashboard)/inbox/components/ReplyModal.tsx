@@ -126,7 +126,18 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
   useEffect(() => {
     if (!email || !isOpen) return;
 
+    console.log('🔍 ReplyModal: email data:', {
+      from_name: email.from_name,
+      from_email: email.from_email,
+      subject: email.subject,
+      body_full: email.body_full?.substring(0, 100),
+      body_html: email.body_html?.substring(0, 100),
+      body_content_type: email.body_content_type
+    });
+
     const quoted = toPlainQuoted(email);
+    console.log('🔍 ReplyModal: quoted result preview:', quoted.substring(0, 200));
+    
     // If the quoted block isn't already present, append it
     setBody(prev => {
       if (!prev || !prev.includes('--- Original Message ---')) {
@@ -483,32 +494,38 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
                <div className="mt-2 p-3 bg-gray-50 rounded-lg">
                  <div className="text-xs text-gray-500 mb-2">Preview:</div>
                  <div className="prose prose-sm max-w-none">
-                   {body.split('--- Original Message ---').map((part, index) => {
-                     if (index === 0) {
-                       // This is the new reply content - render as plain text
-                       return (
-                         <div key="new-content" className="mb-4">
-                           <div className="whitespace-pre-wrap text-gray-900">
-                             {part.trim()}
-                           </div>
-                         </div>
-                       );
-                     } else {
-                       // This is the quoted content - render as plain text
-                       return (
-                         <details key="quoted-content" className="mt-4" open>
-                           <summary className="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-800 mb-2">
-                             📧 Original Message (click to expand/collapse)
-                           </summary>
-                           <div className="pl-4 border-l-2 border-gray-300 bg-white p-3 rounded">
-                             <div className="text-sm text-gray-700 whitespace-pre-wrap">
+                   {(() => {
+                     console.log('🔍 ReplyModal: preview body content:', body.substring(0, 200));
+                     const parts = body.split('--- Original Message ---');
+                     console.log('🔍 ReplyModal: preview parts count:', parts.length);
+                     return parts.map((part, index) => {
+                       if (index === 0) {
+                         // This is the new reply content - render as plain text
+                         return (
+                           <div key="new-content" className="mb-4">
+                             <div className="whitespace-pre-wrap text-gray-900">
                                {part.trim()}
                              </div>
                            </div>
-                         </details>
-                       );
-                     }
-                   })}
+                         );
+                       } else {
+                         // This is the quoted content - render as plain text
+                         console.log('🔍 ReplyModal: quoted part preview:', part.substring(0, 100));
+                         return (
+                           <details key="quoted-content" className="mt-4" open>
+                             <summary className="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-800 mb-2">
+                               📧 Original Message (click to expand/collapse)
+                             </summary>
+                             <div className="pl-4 border-l-2 border-gray-300 bg-white p-3 rounded">
+                               <div className="text-sm text-gray-700 whitespace-pre-wrap">
+                                 {part.trim()}
+                               </div>
+                             </div>
+                           </details>
+                         );
+                       }
+                     });
+                   })()}
                  </div>
                </div>
              )}
