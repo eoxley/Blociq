@@ -5,7 +5,7 @@ import { X, Send, Save, Maximize2, Minimize2, Mail, Users, Bot } from 'lucide-re
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import DOMPurify from 'dompurify';
-import { sanitizeEmailContent, formatQuotedEmail } from '@/utils/email';
+import { toPlainQuoted, toSanitisedHtml } from '@/utils/emailFormatting';
 import { Card } from '@/components/ui/card';
 
 interface Email {
@@ -52,6 +52,7 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
   const [body, setBody] = useState('');
   const [signature, setSignature] = useState('');
   const [isAIGenerated, setIsAIGenerated] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Load user signature on mount
   useEffect(() => {
@@ -114,11 +115,24 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
       console.log('🤖 Using AI-generated reply');
     } else {
       setIsAIGenerated(false);
-      // Use the formatted quoted message function
-      const quotedMessage = formatQuotedEmail(email);
-      setBody(action === 'forward' ? quotedMessage : quotedMessage);
+      // Initialize with empty body - quoted content will be added separately
+      setBody('');
     }
   }, [email, action, isOpen]);
+
+  // Add quoted content when email changes
+  useEffect(() => {
+    if (!email || !isOpen) return;
+
+    const quoted = toPlainQuoted(email);
+    // If the quoted block isn't already present, append it
+    setBody(prev => {
+      if (!prev || !prev.includes('--- Original Message ---')) {
+        return (prev ? `${prev.trim()}\n\n` : '') + quoted;
+      }
+      return prev;
+    });
+  }, [email, isOpen]);
 
   const handleSend = async () => {
     if (!email || to.length === 0 || !subject.trim() || !body.trim()) {
@@ -128,8 +142,8 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
 
     setIsSending(true);
     try {
-      // Sanitize the email body for safe sending
-      const sanitizedBody = DOMPurify.sanitize(body.trim());
+      // Use plain text body for sending
+      const plainTextBody = body.trim();
       
       const response = await fetch('/api/send-reply', {
         method: 'POST',
@@ -138,7 +152,7 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
         },
         body: JSON.stringify({
           reply_to_message_id: email.outlook_id || email.id,
-          reply_text: sanitizedBody,
+          reply_text: plainTextBody,
           to: to,
           cc: cc,
           subject: subject.trim(),
@@ -180,7 +194,7 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
           to,
           cc,
           subject: subject.trim(),
-          body: body.trim(),
+          body: body.trim(), // Already plain text
           relatedEmailId: action !== 'forward' ? email.id : null,
           status: 'draft'
         }),
@@ -331,35 +345,31 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
                     // Store original body for potential restoration
                     const originalBody = body;
                     
+                    setIsGenerating(true);
                     try {
                       // Show loading state
                       setBody('Thinking...');
                       
-                      const response = await fetch('/api/ask-ai', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                          prompt: `Generate a professional email ${action} to this email: ${email.subject || 'No subject'}. Content: ${email.body_full || email.body_preview || ''}`,
-                          building_id: email.building_id,
-                          context_type: 'email_reply',
-                          tone: 'Professional',
-                          action_type: action
-                        })
-                      });
-                      
-                      if (response.ok) {
-                        const data = await response.json();
-                        if (data.success && data.response) {
-                          // For forward action, clean up the response
-                          let aiResponse = data.response;
-                          if (action === 'forward') {
-                            // Remove any quoted content that might have been included
-                            aiResponse = aiResponse.split('--- Original Message ---')[0]?.trim() || aiResponse;
-                          }
-                          
-                          setBody(aiResponse);
-                          setIsAIGenerated(true);
-                          toast.success('AI reply generated!');
+                                             const response = await fetch('/api/ask-ai', {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({ 
+                           context_type: 'email_reply',
+                           action_type: action,
+                           emailId: email.id,
+                           building_id: email.building_id,
+                           tone: 'Professional'
+                         })
+                       });
+                       
+                       if (response.ok) {
+                         const data = await response.json();
+                         if (data.success && data.reply) {
+                           const quoted = toPlainQuoted(email);
+                           // Fill the textarea with the AI draft + quoted original, as plain text
+                           setBody(`${data.reply.trim()}\n\n${quoted}`);
+                           setIsAIGenerated(true);
+                           toast.success('AI reply generated!');
                         } else {
                           // Restore original body if AI generation failed
                           setBody(originalBody);
@@ -370,19 +380,21 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
                         setBody(originalBody);
                         toast.error('Failed to generate AI reply');
                       }
-                    } catch (error) {
-                      // Restore original body on error
-                      setBody(originalBody);
-                      toast.error('Failed to generate AI reply');
-                    }
+                                         } catch (error) {
+                       // Restore original body on error
+                       setBody(originalBody);
+                       toast.error('Failed to generate AI reply');
+                     } finally {
+                       setIsGenerating(false);
+                     }
                   }}
                   variant="outline"
                   size="sm"
                   className="flex items-center gap-2"
-                  disabled={isAIGenerated}
-                >
-                  <Bot className="h-3 w-3" />
-                  {isAIGenerated ? 'AI Generated' : 'Generate AI Reply'}
+                                     disabled={isAIGenerated || isGenerating}
+                 >
+                   <Bot className="h-3 w-3" />
+                   {isGenerating ? 'Generating...' : isAIGenerated ? 'AI Generated' : 'Generate AI Reply'}
                 </Button>
               </div>
             </div>
@@ -464,57 +476,40 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
               />
             </div>
             
-            {/* Preview */}
-            {body && (
-              <div className="mt-2 p-3 bg-gray-50 rounded-lg">
-                <div className="text-xs text-gray-500 mb-2">Preview:</div>
-                <div className="prose prose-sm max-w-none">
-                  {body.split('--- Original Message ---').map((part, index) => {
-                    if (index === 0) {
-                      // This is the new reply content
-                      return (
-                        <div key="new-content" className="mb-4">
-                          <div 
-                            className="whitespace-pre-wrap text-gray-900"
-                            dangerouslySetInnerHTML={{ 
-                              __html: DOMPurify.sanitize(part.trim(), {
-                                ALLOWED_TAGS: ['p', 'br', 'div', 'span', 'strong', 'em', 'u', 'b', 'i', 'a', 'ul', 'ol', 'li', 'blockquote'],
-                                ALLOWED_ATTR: ['href', 'target']
-                              })
-                            }}
-                          />
-                        </div>
-                      );
-                    } else {
-                      // This is the quoted content
-                      const lines = part.trim().split('\n');
-                      const headerLines = lines.slice(0, 3); // From, Date, Subject
-                      const contentLines = lines.slice(3); // The actual quoted content
-                      
-                      return (
-                        <details key="quoted-content" className="mt-4" open>
-                          <summary className="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-800 mb-2">
-                            📧 Original Message (click to expand/collapse)
-                          </summary>
-                          <div className="pl-4 border-l-2 border-gray-300 bg-white p-3 rounded">
-                            {/* Header info */}
-                            <div className="text-xs text-gray-500 mb-2 space-y-1">
-                              {headerLines.map((line, lineIndex) => (
-                                <div key={lineIndex}>{line}</div>
-                              ))}
-                            </div>
-                            {/* Quoted content */}
-                            <div className="text-sm text-gray-700 whitespace-pre-wrap">
-                              {contentLines.join('\n')}
-                            </div>
-                          </div>
-                        </details>
-                      );
-                    }
-                  })}
-                </div>
-              </div>
-            )}
+                         {/* Preview */}
+             {body && (
+               <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                 <div className="text-xs text-gray-500 mb-2">Preview:</div>
+                 <div className="prose prose-sm max-w-none">
+                   {body.split('--- Original Message ---').map((part, index) => {
+                     if (index === 0) {
+                       // This is the new reply content - render as plain text
+                       return (
+                         <div key="new-content" className="mb-4">
+                           <div className="whitespace-pre-wrap text-gray-900">
+                             {part.trim()}
+                           </div>
+                         </div>
+                       );
+                     } else {
+                       // This is the quoted content - render as plain text
+                       return (
+                         <details key="quoted-content" className="mt-4" open>
+                           <summary className="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-800 mb-2">
+                             📧 Original Message (click to expand/collapse)
+                           </summary>
+                           <div className="pl-4 border-l-2 border-gray-300 bg-white p-3 rounded">
+                             <div className="text-sm text-gray-700 whitespace-pre-wrap">
+                               {part.trim()}
+                             </div>
+                           </div>
+                         </details>
+                       );
+                     }
+                   })}
+                 </div>
+               </div>
+             )}
           </div>
 
           {/* Signature */}
