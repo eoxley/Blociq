@@ -14,13 +14,20 @@ interface OutlookFolder {
   id: string;
   displayName: string;
   wellKnownName?: string;
+  childFolderCount?: number;
 }
+
+const STANDARD_ORDER = [
+  'inbox',
+  'drafts',
+  'sentitems',
+  'deleteditems',
+  'archive',
+];
 
 export default function InboxV2() {
   const { user } = useSession();
-  const {
-    emails, selectedEmail, selectEmail, manualSync, loading, syncing, refreshEmails, markAsRead
-  } = useOutlookInbox();
+  const { emails, selectedEmail, selectEmail, manualSync, loading, syncing, refreshEmails, markAsRead } = useOutlookInbox();
 
   const [search, setSearch] = useState('');
   const [folders, setFolders] = useState<OutlookFolder[]>([]);
@@ -29,12 +36,10 @@ export default function InboxV2() {
   const [showReplyModal, setShowReplyModal] = useState(false);
   const [replyAction, setReplyAction] = useState<'reply' | 'reply-all' | 'forward'>('reply');
 
-  // Fetch folders on component mount
   useEffect(() => {
     fetchFolders();
   }, []);
 
-  // Fetch Outlook folders
   const fetchFolders = async () => {
     try {
       setLoadingFolders(true);
@@ -45,22 +50,24 @@ export default function InboxV2() {
         throw new Error(data?.error || 'Failed to load folders');
       }
       
-      // Normalize: only id + displayName + wellKnownName
-      const items = (data.items || []).map((f: any) => ({
-        id: f.id,
-        displayName: f.displayName || f.wellKnownName || 'Untitled',
-        wellKnownName: f.wellKnownName || undefined,
-      }));
-      
-      setFolders(items);
+      const items = data.items || [];
+
+      // Separate well-known from custom folders
+      const wellKnown = items.filter(f => f.wellKnownName && STANDARD_ORDER.includes(f.wellKnownName.toLowerCase()));
+      const custom = items.filter(f => !f.wellKnownName || !STANDARD_ORDER.includes(f.wellKnownName.toLowerCase()));
+
+      // Sort well-known folders by STANDARD_ORDER
+      const orderedWellKnown = STANDARD_ORDER
+        .map(name => wellKnown.find(f => f.wellKnownName?.toLowerCase() === name))
+        .filter(Boolean);
+
+      // Combine well-known (in order) + custom folders
+      setFolders([...orderedWellKnown, ...custom]);
       
       // Default select Inbox if nothing selected
       if (!selectedFolderId) {
-        const inbox = items.find((f: any) =>
-          (f.wellKnownName || '').toLowerCase() === 'inbox' ||
-          f.displayName.toLowerCase() === 'inbox'
-        );
-        setSelectedFolderId(inbox?.id || items[0]?.id || null);
+        const inboxFolder = orderedWellKnown.find(f => f.wellKnownName?.toLowerCase() === 'inbox');
+        setSelectedFolderId(inboxFolder?.id || items[0]?.id || null);
       }
     } catch (e) {
       console.error('Error fetching folders:', e);
