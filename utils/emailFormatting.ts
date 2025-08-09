@@ -16,6 +16,27 @@ export const sanitizeEmailHtml = (raw?: string): string => {
 };
 
 /**
+ * Checks if a string contains HTML tags
+ * Used to determine whether content should be rendered as HTML or plain text
+ */
+export const looksLikeHtml = (s?: string): boolean => {
+  if (!s) return false;
+  
+  // Common HTML tags to look for
+  const htmlTags = [
+    'html', 'head', 'body', 'div', 'p', 'span', 'br', 'hr',
+    'table', 'tr', 'td', 'th', 'thead', 'tbody',
+    'ul', 'ol', 'li', 'a', 'img', 'strong', 'b', 'em', 'i',
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    'form', 'input', 'button', 'textarea', 'select', 'option',
+    'meta', 'link', 'style', 'script'
+  ];
+  
+  const tagPattern = new RegExp(`<\\/?(${htmlTags.join('|')})[^>]*>`, 'i');
+  return tagPattern.test(s);
+};
+
+/**
  * Converts email content to plain text with proper quoting
  * Handles HTML → text conversion and creates email-style quoted replies
  */
