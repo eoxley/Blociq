@@ -1,72 +1,34 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Inbox, Archive, Trash2, Folder, Plus, X } from 'lucide-react';
+import { Inbox, Archive, Trash2, Folder, Plus, X, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
-interface Folder {
+interface OutlookFolder {
   id: string;
   displayName: string;
-  childFolderCount?: number;
   wellKnownName?: string;
 }
 
 interface FolderListV2Props {
-  folders: Array<{
-    id: string;
-    name: string;
-    count: number;
-    type?: 'inbox' | 'archive' | 'deleted' | 'custom';
-  }>;
-  selectedFolderId: string;
-  onSelect: (folderId: string) => void;
+  folders: OutlookFolder[];
+  selectedFolderId: string | null;
+  loading: boolean;
+  onSelect: (id: string | null) => void; // null means refresh
   onDropEmail: (emailId: string, folderId: string) => void;
 }
 
-export default function FolderListV2({ folders, selectedFolderId, onSelect, onDropEmail }: FolderListV2Props) {
-  const [outlookFolders, setOutlookFolders] = useState<Folder[]>([]);
+export default function FolderListV2({ 
+  folders, 
+  selectedFolderId, 
+  loading, 
+  onSelect, 
+  onDropEmail 
+}: FolderListV2Props) {
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [outlookConnected, setOutlookConnected] = useState(true); // Track Outlook connection status
-
-  // Fetch Outlook folders on component mount
-  useEffect(() => {
-    fetchFolders();
-  }, []);
-
-  const fetchFolders = async () => {
-    try {
-      setIsLoading(true);
-      setOutlookConnected(true); // Reset connection status
-      const response = await fetch('/api/folders');
-      const data = await response.json();
-      
-      if (response.ok) {
-        setOutlookFolders(data.items || []);
-      } else {
-        console.error('Failed to fetch folders:', data.error);
-        
-        // Handle specific error cases
-        if (response.status === 401) {
-          if (data.code === 'OUTLOOK_NOT_CONNECTED') {
-            setOutlookConnected(false);
-            toast.error('Outlook not connected. Please connect your Outlook account to manage folders.');
-          } else {
-            toast.error('Authentication failed. Please log in again.');
-          }
-        } else {
-          toast.error('Failed to load folders');
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching folders:', error);
-      toast.error('Failed to load folders');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const [outlookConnected, setOutlookConnected] = useState(true);
 
   const createFolder = async (name: string, parentFolderId?: string) => {
     try {
@@ -83,7 +45,7 @@ export default function FolderListV2({ folders, selectedFolderId, onSelect, onDr
         toast.success(`Folder "${name}" created`);
         setNewFolderName('');
         setShowCreateFolder(false);
-        await fetchFolders(); // Refresh the folder list
+        onSelect(null); // Trigger refresh
       } else {
         throw new Error(data.error || 'Failed to create folder');
       }
@@ -103,15 +65,6 @@ export default function FolderListV2({ folders, selectedFolderId, onSelect, onDr
     createFolder(newFolderName.trim());
   };
 
-  const getFolderIcon = (type?: string) => {
-    switch (type) {
-      case 'inbox': return <Inbox className="h-4 w-4" />;
-      case 'archive': return <Archive className="h-4 w-4" />;
-      case 'deleted': return <Trash2 className="h-4 w-4" />;
-      default: return <Folder className="h-4 w-4" />;
-    }
-  };
-
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
@@ -125,19 +78,39 @@ export default function FolderListV2({ folders, selectedFolderId, onSelect, onDr
     }
   };
 
+  const getFolderIcon = (folder: OutlookFolder) => {
+    const wellKnownName = folder.wellKnownName?.toLowerCase();
+    switch (wellKnownName) {
+      case 'inbox': return <Inbox className="h-4 w-4" />;
+      case 'archive': return <Archive className="h-4 w-4" />;
+      case 'deleteditems': return <Trash2 className="h-4 w-4" />;
+      default: return <Folder className="h-4 w-4" />;
+    }
+  };
+
   return (
     <div className="w-64 bg-gray-50 border-r border-gray-200 flex flex-col">
       <div className="p-4 border-b border-gray-200 flex-shrink-0">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">Folders</h2>
-          <button
-            onClick={() => setShowCreateFolder(true)}
-            disabled={!outlookConnected}
-            className="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title={outlookConnected ? "Create new folder" : "Connect Outlook to create folders"}
-          >
-            <Plus className="h-4 w-4" />
-          </button>
+          <div className="flex items-center space-x-1">
+            <button
+              onClick={() => onSelect(null)} // Trigger refresh
+              disabled={loading}
+              className="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-200 transition-colors disabled:opacity-50"
+              title="Refresh folders"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+            <button
+              onClick={() => setShowCreateFolder(true)}
+              disabled={!outlookConnected}
+              className="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title={outlookConnected ? "Create new folder" : "Connect Outlook to create folders"}
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          </div>
         </div>
         
         {/* Outlook Connection Status */}
@@ -195,7 +168,7 @@ export default function FolderListV2({ folders, selectedFolderId, onSelect, onDr
       </div>
       
       <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 pr-2">
-        {isLoading ? (
+        {loading ? (
           <div className="p-4">
             <div className="animate-pulse space-y-2">
               <div className="h-4 bg-gray-200 rounded w-3/4"></div>
@@ -203,13 +176,16 @@ export default function FolderListV2({ folders, selectedFolderId, onSelect, onDr
               <div className="h-4 bg-gray-200 rounded w-2/3"></div>
             </div>
           </div>
+        ) : folders.length === 0 ? (
+          <div className="p-4 text-center">
+            <div className="text-sm text-gray-500">No folders found</div>
+          </div>
         ) : (
           <div className="p-2">
             <div className="space-y-1">
-              {/* Built-in folders */}
               {folders.map((folder) => {
-                const Icon = getFolderIcon(folder.type);
                 const isSelected = selectedFolderId === folder.id;
+                const Icon = getFolderIcon(folder);
                 
                 return (
                   <div
@@ -230,48 +206,12 @@ export default function FolderListV2({ folders, selectedFolderId, onSelect, onDr
                     >
                       <div className="flex items-center">
                         {Icon}
-                        <span className="ml-3">{folder.name}</span>
+                        <span className="ml-3 truncate">{folder.displayName}</span>
                       </div>
-                      <span className="text-sm text-gray-500">{folder.count}</span>
                     </button>
                   </div>
                 );
               })}
-
-              {/* Outlook folders */}
-              {outlookFolders
-                .filter(folder => !folder.wellKnownName) // Exclude well-known folders as they're already shown above
-                .map((folder) => {
-                  const isSelected = selectedFolderId === folder.id;
-                  
-                  return (
-                    <div
-                      key={folder.id}
-                      onDragOver={handleDragOver}
-                      onDrop={(e) => handleDrop(e, folder.id)}
-                      className={`rounded-md transition-colors ${
-                        isSelected ? 'bg-blue-100' : 'hover:bg-gray-100'
-                      }`}
-                    >
-                      <button
-                        onClick={() => onSelect(folder.id)}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-left transition-colors ${
-                          isSelected 
-                            ? 'text-blue-700' 
-                            : 'text-gray-700'
-                        }`}
-                      >
-                        <div className="flex items-center">
-                          <Folder className="h-4 w-4" />
-                          <span className="ml-3">{folder.displayName}</span>
-                        </div>
-                        {folder.childFolderCount ? (
-                          <span className="text-sm text-gray-500">{folder.childFolderCount}</span>
-                        ) : null}
-                      </button>
-                    </div>
-                  );
-                })}
             </div>
           </div>
         )}

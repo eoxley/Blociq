@@ -1,83 +1,85 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getOutlookClient } from '@/lib/outlookClient';
-import { sanitizeEmailHtml } from '@/utils/emailFormatting';
+import { z } from 'zod';
 
-export async function POST(req: Request) {
+const Body = z.object({
+  to: z.string().min(1),
+  cc: z.string().optional(),
+  subject: z.string().min(1),
+  body: z.string().min(1),
+  attachments: z.array(z.object({
+    "@odata.type": z.string(),
+    name: z.string(),
+    contentType: z.string(),
+    contentBytes: z.string()
+  })).optional()
+});
+
+export async function POST(req: NextRequest) {
   try {
-    const { to = [], cc = [], subject = '', htmlBody = '', attachments = [] } = await req.json();
-
-    // Validate required fields
-    if (!Array.isArray(to) || to.length === 0) {
-      return NextResponse.json({ error: 'Recipient list (to) is required' }, { status: 400 });
-    }
-
-    if (!subject?.trim()) {
-      return NextResponse.json({ error: 'Subject is required' }, { status: 400 });
-    }
-
-    if (!htmlBody?.trim()) {
-      return NextResponse.json({ error: 'Email body is required' }, { status: 400 });
-    }
+    const json = await req.json();
+    const { to, cc, subject, body, attachments } = Body.parse(json);
 
     // Get authenticated Graph client
     const client = await getOutlookClient();
 
-    // Sanitize HTML body
-    const sanitizedHtml = sanitizeEmailHtml(htmlBody);
-
-    // Build message object for Microsoft Graph
-    const message: any = {
-      subject: subject.trim(),
-      toRecipients: to.map((address: string) => ({ 
-        emailAddress: { address: address.trim() } 
-      })),
-      body: { 
-        contentType: 'HTML', 
-        content: sanitizedHtml 
-      },
+    // Parse recipients
+    const parseRecipients = (recipients: string) => {
+      if (!recipients.trim()) return [];
+      return recipients.split(',').map(email => ({
+        emailAddress: {
+          address: email.trim()
+        }
+      }));
     };
 
-    // Add CC recipients if provided
-    if (Array.isArray(cc) && cc.length > 0) {
-      message.ccRecipients = cc.map((address: string) => ({ 
-        emailAddress: { address: address.trim() } 
-      }));
-    }
+    // Build message object
+    const message = {
+      subject: subject,
+      body: {
+        contentType: 'HTML',
+        content: body
+      },
+      toRecipients: parseRecipients(to),
+      ccRecipients: parseRecipients(cc || ''),
+      ...(attachments && attachments.length > 0 && { attachments })
+    };
 
-    // Add attachments if provided
-    if (Array.isArray(attachments) && attachments.length > 0) {
-      message.attachments = attachments.map((attachment: any) => ({
-        '@odata.type': '#microsoft.graph.fileAttachment',
-        name: attachment.name,
-        contentBytes: attachment.contentBytesBase64,
-        contentType: attachment.contentType || 'application/octet-stream',
-      }));
-    }
-
-    // Send the email via Microsoft Graph
-    await client.api('/me/sendMail').post({ 
-      message, 
-      saveToSentItems: true 
+    // Send email via Microsoft Graph
+    const response = await client.api('/me/sendMail').post({
+      message,
+      saveToSentItems: true
     });
 
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error('Send email failed:', error?.message || error);
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Email sent successfully',
+      response 
+    });
+
+  } catch (err: any) {
+    console.error('send-email failed:', err?.message || err);
     
-    // Handle specific error cases
-    if (error?.message?.includes('not authenticated')) {
-      return NextResponse.json({ error: 'User not authenticated' }, { status: 401 });
+    // Handle specific authentication errors
+    if (err?.status === 401) {
+      if (err.message?.includes('Outlook not connected')) {
+        return NextResponse.json({ 
+          error: 'Outlook not connected. Please connect your Outlook account first.',
+          code: 'OUTLOOK_NOT_CONNECTED'
+        }, { status: 401 });
+      } else {
+        return NextResponse.json({ 
+          error: 'Authentication failed. Please log in again.',
+          code: 'AUTH_FAILED'
+        }, { status: 401 });
+      }
     }
+
+    const code = err?.statusCode || err?.status || 500;
+    const msg = code === 403 
+      ? 'Permission denied. Ensure Mail.Send is granted.' 
+      : err?.message || 'Failed to send email';
     
-    if (error?.message?.includes('Outlook not connected')) {
-      return NextResponse.json({ error: 'Outlook not connected. Please connect your Outlook account first.' }, { status: 400 });
-    }
-    
-    if (error?.message?.includes('Graph API error: 403')) {
-      return NextResponse.json({ error: 'Permission denied. Please ensure your Outlook account has Mail.Send permission.' }, { status: 403 });
-    }
-    
-    const msg = error?.message || 'Failed to send email';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: msg }, { status: code });
   }
 }

@@ -3,177 +3,197 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useOutlookInbox } from '@/hooks/useOutlookInbox';
 import { useSession } from '@/lib/auth';
-import { Search, RefreshCw } from 'lucide-react';
+import { Search, RefreshCw, Reply, ReplyAll, Forward, Trash2 } from 'lucide-react';
 import FolderListV2 from './components/FolderListV2';
 import EmailListV2 from './components/EmailListV2';
 import EmailDetailV2 from './components/EmailDetailV2';
 import ReplyModalV2 from './components/ReplyModalV2';
 import { toast } from 'sonner';
 
+interface OutlookFolder {
+  id: string;
+  displayName: string;
+  wellKnownName?: string;
+}
+
 export default function InboxV2() {
   const { user } = useSession();
   const {
-    emails,
-    selectedEmail,
-    selectEmail,
-    manualSync,
-    loading,
-    syncing,
-    error,
-    markAsRead,
-    markAsHandled,
-    refreshEmails
+    emails, selectedEmail, selectEmail, manualSync, loading, syncing, refreshEmails, markAsRead
   } = useOutlookInbox();
 
   const [search, setSearch] = useState('');
-  const [selectedFolder, setSelectedFolder] = useState('inbox');
+  const [folders, setFolders] = useState<OutlookFolder[]>([]);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [loadingFolders, setLoadingFolders] = useState(false);
   const [showReplyModal, setShowReplyModal] = useState(false);
   const [replyAction, setReplyAction] = useState<'reply' | 'reply-all' | 'forward'>('reply');
 
-  // Filter emails based on search and folder
+  // Fetch folders on component mount
+  useEffect(() => {
+    fetchFolders();
+  }, []);
+
+  // Fetch Outlook folders
+  const fetchFolders = async () => {
+    try {
+      setLoadingFolders(true);
+      const res = await fetch('/api/folders', { method: 'GET' });
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data?.error || 'Failed to load folders');
+      }
+      
+      // Normalize: only id + displayName + wellKnownName
+      const items = (data.items || []).map((f: any) => ({
+        id: f.id,
+        displayName: f.displayName || f.wellKnownName || 'Untitled',
+        wellKnownName: f.wellKnownName || undefined,
+      }));
+      
+      setFolders(items);
+      
+      // Default select Inbox if nothing selected
+      if (!selectedFolderId) {
+        const inbox = items.find((f: any) =>
+          (f.wellKnownName || '').toLowerCase() === 'inbox' ||
+          f.displayName.toLowerCase() === 'inbox'
+        );
+        setSelectedFolderId(inbox?.id || items[0]?.id || null);
+      }
+    } catch (e) {
+      console.error('Error fetching folders:', e);
+      toast.error(e instanceof Error ? e.message : 'Failed to load folders');
+    } finally {
+      setLoadingFolders(false);
+    }
+  };
+
+  // Handle folder selection
+  const handleSelectFolder = useCallback((id: string) => {
+    setSelectedFolderId(id);
+    // TODO: Implement fetchEmailsForFolder when you have folder-specific email fetching
+    // For now, just refresh the general email list
+    refreshEmails();
+  }, [refreshEmails]);
+
+  // Handle email drop on folder
+  const handleDropEmailOnFolder = useCallback(async (emailId: string, folderId: string) => {
+    try {
+      const res = await fetch('/api/move-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emailId, folderId }),
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data?.error || 'Failed to move email');
+      }
+      
+      toast.success('Email moved successfully');
+      
+      // Refresh both folders (counts can change) and emails for selected folder
+      fetchFolders();
+      refreshEmails();
+      
+      // If the moved email was selected, deselect it
+      if (selectedEmail?.id === emailId) {
+        selectEmail(null);
+      }
+    } catch (e) {
+      console.error('Error moving email:', e);
+      toast.error(e instanceof Error ? e.message : 'Failed to move email');
+    }
+  }, [selectedEmail, selectEmail, refreshEmails]);
+
+  // Filter emails based on search
   const filteredEmails = emails.filter(email => {
-    const matchesSearch = search === '' || 
-      email.subject?.toLowerCase().includes(search.toLowerCase()) ||
-      email.from_name?.toLowerCase().includes(search.toLowerCase()) ||
-      email.from_email?.toLowerCase().includes(search.toLowerCase());
-    
-    const matchesFolder = selectedFolder === 'inbox' || 
-      (selectedFolder === 'archived' && email.is_archived) ||
-      (selectedFolder === 'deleted' && email.is_deleted);
-    
-    return matchesSearch && matchesFolder;
+    if (!search) return true;
+    const searchLower = search.toLowerCase();
+    return (
+      email.subject?.toLowerCase().includes(searchLower) ||
+      email.from_name?.toLowerCase().includes(searchLower) ||
+      email.from_email?.toLowerCase().includes(searchLower) ||
+      email.body_preview?.toLowerCase().includes(searchLower)
+    );
   });
 
-  // Build folders data
-  const folders = [
-    {
-      id: 'inbox',
-      name: 'Inbox',
-      count: emails.filter(email => !email.is_archived && !email.is_deleted).length,
-      type: 'inbox' as const
-    },
-    {
-      id: 'archived',
-      name: 'Archived',
-      count: emails.filter(email => email.is_archived).length,
-      type: 'archive' as const
-    },
-    {
-      id: 'deleted',
-      name: 'Deleted',
-      count: emails.filter(email => email.is_deleted).length,
-      type: 'deleted' as const
-    }
-  ];
-
+  // Reply handlers
   const handleReply = useCallback((action: 'reply' | 'reply-all' | 'forward') => {
-    if (selectedEmail) {
-      setReplyAction(action);
-      setShowReplyModal(true);
-    }
+    if (!selectedEmail) return;
+    setReplyAction(action);
+    setShowReplyModal(true);
   }, [selectedEmail]);
 
-  const handleToggleFlag = useCallback(async (emailId: string) => {
-    try {
-      const email = emails.find(e => e.id === emailId);
-      if (!email) return;
-
-      const newFlagStatus = email.flag_status ? null : 'flagged';
-      
-      // Optimistic update
-      const updatedEmails = emails.map(e => 
-        e.id === emailId ? { ...e, flag_status: newFlagStatus } : e
-      );
-      
-      // TODO: Call API to update flag status
-      // const response = await fetch('/api/update-email-flag', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ emailId, flagStatus: newFlagStatus }),
-      // });
-      
-      // if (!response.ok) throw new Error('Failed to update flag');
-      
-      // Refresh emails to get server state
-      await refreshEmails();
-      toast.success(newFlagStatus ? 'Email flagged' : 'Flag removed');
-    } catch (error) {
-      console.error('Error toggling flag:', error);
-      toast.error('Failed to update flag');
-      // Refresh to revert optimistic update
-      await refreshEmails();
-    }
-  }, [emails, refreshEmails]);
-
+  // Delete email handler
   const handleDeleteEmail = useCallback(async (emailId: string) => {
     try {
-      const response = await fetch('/api/delete-email', {
+      const res = await fetch('/api/delete-email', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ emailId }),
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: Failed to delete email`);
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data?.error || 'Failed to delete email');
       }
 
-      const result = await response.json();
+      toast.success('Email deleted');
+      refreshEmails();
       
-      if (result.success) {
-        refreshEmails();
-        if (selectedEmail?.id === emailId) {
-          selectEmail(null);
-        }
-        toast.success('Email moved to deleted items');
-      } else {
-        throw new Error(result.error || 'Unknown error occurred');
+      // If the deleted email was selected, deselect it
+      if (selectedEmail?.id === emailId) {
+        selectEmail(null);
       }
     } catch (error) {
       console.error('Error deleting email:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to delete email');
     }
-  }, [refreshEmails, selectedEmail, selectEmail]);
+  }, [selectedEmail, selectEmail, refreshEmails]);
 
+  // Move email handler (for DnD)
   const handleMoveEmail = useCallback(async (emailId: string, folderId: string) => {
+    await handleDropEmailOnFolder(emailId, folderId);
+  }, [handleDropEmailOnFolder]);
+
+  // Toggle flag handler
+  const handleToggleFlag = useCallback(async (emailId: string) => {
     try {
-      const response = await fetch('/api/move-email', {
+      const email = emails.find(e => e.id === emailId);
+      if (!email) return;
+
+      const res = await fetch('/api/update-email-flag', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ emailId, folderId }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          emailId, 
+          flagStatus: email.flag_status ? null : 'flagged' 
+        }),
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: Failed to move email`);
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data?.error || 'Failed to update flag');
       }
 
-      const result = await response.json();
-      
-      if (result.success) {
-        refreshEmails();
-        if (selectedEmail?.id === emailId) {
-          selectEmail(null);
-        }
-        toast.success('Email moved successfully');
-      } else {
-        throw new Error(result.error || 'Unknown error occurred');
-      }
+      toast.success(email.flag_status ? 'Flag removed' : 'Email flagged');
+      refreshEmails();
     } catch (error) {
-      console.error('Error moving email:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to move email');
+      console.error('Error toggling flag:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to update flag');
     }
-  }, [refreshEmails, selectedEmail, selectEmail]);
+  }, [emails, refreshEmails]);
 
+  // Select email handler
   const handleSelectEmail = useCallback((emailId: string) => {
     const email = emails.find(e => e.id === emailId);
     if (email) {
       selectEmail(email);
-      if (!email.is_read) {
-        markAsRead(email.id);
-      }
+      markAsRead(emailId);
     }
   }, [emails, selectEmail, markAsRead]);
 
@@ -181,7 +201,7 @@ export default function InboxV2() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't handle shortcuts when typing in input fields
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || (e.target as HTMLElement).isContentEditable) {
         return;
       }
 
@@ -193,42 +213,18 @@ export default function InboxV2() {
         }
         return;
       }
-
+    
       switch (e.key.toLowerCase()) {
-        case 'r':
-          if (!e.ctrlKey && !e.metaKey && selectedEmail) {
-            e.preventDefault();
-            handleReply('reply');
-          }
-          break;
-        case 'a':
-          if (!e.ctrlKey && !e.metaKey && selectedEmail) {
-            e.preventDefault();
-            handleReply('reply-all');
-          }
-          break;
-        case 'f':
-          if (!e.ctrlKey && !e.metaKey && selectedEmail) {
-            e.preventDefault();
-            handleReply('forward');
-          }
-          break;
-        case 'delete':
-        case 'backspace':
-          if (selectedEmail) {
-            e.preventDefault();
-            handleDeleteEmail(selectedEmail.id);
-          }
-          break;
+        case 'r': if (!e.ctrlKey && !e.metaKey && selectedEmail) { e.preventDefault(); handleReply('reply'); } break;
+        case 'a': if (!e.ctrlKey && !e.metaKey && selectedEmail) { e.preventDefault(); handleReply('reply-all'); } break;
+        case 'f': if (!e.ctrlKey && !e.metaKey && selectedEmail) { e.preventDefault(); handleReply('forward'); } break;
+        case 'delete': case 'backspace':
+          if (selectedEmail) { e.preventDefault(); handleDeleteEmail(selectedEmail.id); } break;
         case 'escape':
-          if (selectedEmail) {
-            e.preventDefault();
-            selectEmail(null);
-          }
-          break;
+          if (selectedEmail) { e.preventDefault(); selectEmail(null); } break;
       }
     };
-
+    
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedEmail, handleReply, handleDeleteEmail, selectEmail, showReplyModal]);
@@ -238,9 +234,13 @@ export default function InboxV2() {
       {/* Folders Sidebar */}
       <FolderListV2
         folders={folders}
-        selectedFolderId={selectedFolder}
-        onSelect={setSelectedFolder}
-        onDropEmail={handleMoveEmail}
+        selectedFolderId={selectedFolderId}
+        loading={loadingFolders}
+        onSelect={(id) => {
+          if (id) handleSelectFolder(id);
+          else fetchFolders(); // if refresh clicked
+        }}
+        onDropEmail={handleDropEmailOnFolder}
       />
 
       {/* Email List */}
