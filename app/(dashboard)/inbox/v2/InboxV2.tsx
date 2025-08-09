@@ -2,12 +2,14 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useOutlookInbox } from '@/hooks/useOutlookInbox';
+import { useSession } from '@/lib/auth';
 import { Mail, Search, RefreshCw, Plus, FolderOpen, Inbox, Archive, Trash2, Star, ChevronDown, Reply, ReplyAll, Forward } from 'lucide-react';
 import EmailDetailV2 from './components/EmailDetailV2';
 import ReplyModalV2 from './components/ReplyModalV2';
 import { toast } from 'sonner';
 
 export default function InboxV2() {
+  const { user } = useSession();
   const {
     emails,
     selectedEmail,
@@ -391,6 +393,7 @@ export default function InboxV2() {
           onClose={() => setShowReplyModal(false)}
           email={selectedEmail}
           action={replyAction}
+          userEmail={user?.email}
         />
       )}
     </div>
