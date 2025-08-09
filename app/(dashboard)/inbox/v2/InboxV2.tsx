@@ -245,7 +245,7 @@ export default function InboxV2() {
 
       {/* Email List */}
       <div className="w-80 border-r border-gray-200 flex flex-col">
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center justify-between mb-4">
             <div className="relative flex-1 mr-4">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -268,18 +268,20 @@ export default function InboxV2() {
           </div>
         </div>
         
-        <EmailListV2
-          emails={filteredEmails}
-          selectedEmailId={selectedEmail?.id}
-          onSelect={handleSelectEmail}
-          onToggleFlag={handleToggleFlag}
-          onDelete={handleDeleteEmail}
-          loading={loading}
-        />
+        <div className="flex-1 overflow-hidden">
+          <EmailListV2
+            emails={filteredEmails}
+            selectedEmailId={selectedEmail?.id}
+            onSelect={handleSelectEmail}
+            onToggleFlag={handleToggleFlag}
+            onDelete={handleDeleteEmail}
+            loading={loading}
+          />
+        </div>
       </div>
 
       {/* Email Detail */}
-      <div className="flex-1">
+      <div className="flex-1 flex flex-col overflow-hidden">
         <EmailDetailV2
           email={selectedEmail}
           onReply={handleReply}

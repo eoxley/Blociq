@@ -56,31 +56,29 @@ export default function EmailListV2({
 
   if (loading) {
     return (
-      <div className="w-80 border-r border-gray-200 flex flex-col">
-        <div className="p-4 border-b border-gray-200">
+      <div className="w-full h-full flex flex-col">
+        <div className="p-4 border-b border-gray-200 flex-shrink-0">
           <div className="animate-pulse">
             <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
             <div className="h-4 bg-gray-200 rounded w-1/2"></div>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto">
-          <div className="flex items-center justify-center h-32">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-          </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-80 border-r border-gray-200 flex flex-col">
-      <div className="p-4 border-b border-gray-200">
+    <div className="w-full h-full flex flex-col">
+      <div className="p-4 border-b border-gray-200 flex-shrink-0">
         <div className="text-sm font-medium text-gray-900">
           {emails.length} email{emails.length !== 1 ? 's' : ''}
         </div>
       </div>
       
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 pr-2">
         {emails.length === 0 ? (
           <div className="flex items-center justify-center h-32 text-gray-500">
             <Mail className="h-8 w-8 mr-2" />

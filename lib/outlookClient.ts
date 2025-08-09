@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
 import { cookies } from 'next/headers';
+import { Client } from '@microsoft/microsoft-graph-client';
 
 interface OutlookTokens {
   access_token: string;
@@ -19,7 +20,9 @@ export async function getOutlookClient() {
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   
   if (sessionError || !session) {
-    throw new Error('User not authenticated');
+    const e: any = new Error('User not authenticated');
+    e.status = 401;
+    throw e;
   }
 
   // Get Outlook tokens
@@ -30,7 +33,9 @@ export async function getOutlookClient() {
     .single();
 
   if (tokenError || !tokens) {
-    throw new Error('Outlook not connected. Please connect your Outlook account first.');
+    const e: any = new Error('Outlook not connected. Please connect your Outlook account first.');
+    e.status = 401;
+    throw e;
   }
 
   // Check if token is expired and refresh if needed
@@ -38,13 +43,17 @@ export async function getOutlookClient() {
   const expiresAt = new Date(tokens.expires_at);
   const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
 
+  let accessToken = tokens.access_token;
+
   if (expiresAt <= fiveMinutesFromNow) {
     // Token is expired or will expire soon, refresh it
     const refreshedTokens = await refreshOutlookToken(tokens);
-    return createGraphClient(refreshedTokens.access_token);
+    accessToken = refreshedTokens.access_token;
   }
 
-  return createGraphClient(tokens.access_token);
+  return Client.init({
+    authProvider: (done) => done(null, accessToken),
+  });
 }
 
 /**
@@ -110,45 +119,46 @@ async function refreshOutlookToken(tokens: OutlookTokens): Promise<OutlookTokens
   };
 }
 
+const WELL_KNOWN: Record<string, string> = {
+  // leave values empty; we'll resolve these once and cache in memory per lambda
+  inbox: '',
+  archive: '',
+  deleted: '',
+  sentitems: '',
+};
+
+let folderCache: Record<string, string> | null = null;
+
 /**
- * Create a Microsoft Graph client with the given access token
+ * Ensure we have a valid folder ID, mapping well-known aliases to actual folder IDs
  */
-function createGraphClient(accessToken: string) {
-  return {
-    api: (endpoint: string) => ({
-      post: async (data: any) => {
-        const response = await fetch(`https://graph.microsoft.com/v1.0${endpoint}`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(data),
-        });
+export async function ensureFolderId(client: any, folderIdOrAlias: string): Promise<string> {
+  // If it already looks like an ID (guid-ish), return as-is
+  if (/^[a-zA-Z0-9\-_]+$/.test(folderIdOrAlias) && folderIdOrAlias.length > 12) {
+    return folderIdOrAlias;
+  }
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error?.message || `Graph API error: ${response.status}`);
-        }
+  // Resolve well-known aliases → id by listing folders once and caching
+  if (!folderCache) {
+    folderCache = {};
+    try {
+      const res = await client.api('/me/mailFolders').select('id,displayName,wellKnownName').top(200).get();
+      for (const f of res?.value || []) {
+        if (f.wellKnownName) folderCache[f.wellKnownName.toLowerCase()] = f.id;
+        if (f.displayName) folderCache[f.displayName.toLowerCase()] = f.id;
+      }
+    } catch (error) {
+      console.error('Failed to fetch mail folders:', error);
+      throw new Error('Failed to fetch mail folders');
+    }
+  }
 
-        return response.json();
-      },
-      get: async () => {
-        const response = await fetch(`https://graph.microsoft.com/v1.0${endpoint}`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error?.message || `Graph API error: ${response.status}`);
-        }
-
-        return response.json();
-      },
-    }),
-  };
+  const key = folderIdOrAlias.toLowerCase();
+  const id = folderCache[key] || WELL_KNOWN[key];
+  if (!id) {
+    // As a last resort, re-fetch
+    folderCache = null;
+    return ensureFolderId(client, folderIdOrAlias);
+  }
+  return id;
 }
