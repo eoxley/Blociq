@@ -1,8 +1,10 @@
+// Feature flag: set NEXT_PUBLIC_INBOX_V2=true to render InboxV2
 import { cookies } from 'next/headers'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { AlertTriangle, Mail } from 'lucide-react'
 import InboxClient from './InboxClient'
+import InboxV2 from './v2/InboxV2'
 import PageHero from '@/components/PageHero'
 
 export default async function InboxPage() {
@@ -30,6 +32,9 @@ export default async function InboxPage() {
 
     console.log('🎯 About to render InboxClient')
     
+    // Check feature flag for Inbox V2
+    const useInboxV2 = process.env.NEXT_PUBLIC_INBOX_V2 === 'true'
+    
     // InboxClient uses useInbox hook to fetch its own data
     return (
       <div className="space-y-6">
@@ -40,7 +45,7 @@ export default async function InboxPage() {
           icon={<Mail className="h-8 w-8 text-white" />}
         />
         
-        <InboxClient />
+        {useInboxV2 ? <InboxV2 /> : <InboxClient />}
       </div>
     )
 

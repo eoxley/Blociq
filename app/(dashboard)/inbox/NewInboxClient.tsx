@@ -1,3 +1,4 @@
+// LEGACY: Kept for reference during V2, do not modify.
 'use client'
 
 import React, { useState, useEffect } from 'react'
