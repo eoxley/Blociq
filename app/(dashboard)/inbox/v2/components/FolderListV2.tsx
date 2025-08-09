@@ -29,6 +29,7 @@ export default function FolderListV2({ folders, selectedFolderId, onSelect, onDr
   const [newFolderName, setNewFolderName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [outlookConnected, setOutlookConnected] = useState(true); // Track Outlook connection status
 
   // Fetch Outlook folders on component mount
   useEffect(() => {
@@ -38,6 +39,7 @@ export default function FolderListV2({ folders, selectedFolderId, onSelect, onDr
   const fetchFolders = async () => {
     try {
       setIsLoading(true);
+      setOutlookConnected(true); // Reset connection status
       const response = await fetch('/api/folders');
       const data = await response.json();
       
@@ -45,7 +47,18 @@ export default function FolderListV2({ folders, selectedFolderId, onSelect, onDr
         setOutlookFolders(data.items || []);
       } else {
         console.error('Failed to fetch folders:', data.error);
-        toast.error('Failed to load folders');
+        
+        // Handle specific error cases
+        if (response.status === 401) {
+          if (data.code === 'OUTLOOK_NOT_CONNECTED') {
+            setOutlookConnected(false);
+            toast.error('Outlook not connected. Please connect your Outlook account to manage folders.');
+          } else {
+            toast.error('Authentication failed. Please log in again.');
+          }
+        } else {
+          toast.error('Failed to load folders');
+        }
       }
     } catch (error) {
       console.error('Error fetching folders:', error);
@@ -119,12 +132,25 @@ export default function FolderListV2({ folders, selectedFolderId, onSelect, onDr
           <h2 className="text-lg font-semibold text-gray-900">Folders</h2>
           <button
             onClick={() => setShowCreateFolder(true)}
-            className="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-200 transition-colors"
-            title="Create new folder"
+            disabled={!outlookConnected}
+            className="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title={outlookConnected ? "Create new folder" : "Connect Outlook to create folders"}
           >
             <Plus className="h-4 w-4" />
           </button>
         </div>
+        
+        {/* Outlook Connection Status */}
+        {!outlookConnected && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="text-sm text-yellow-800">
+              <div className="font-medium mb-1">Outlook not connected</div>
+              <div className="text-xs">
+                Connect your Outlook account to manage folders and move emails.
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Create Folder Form */}
         {showCreateFolder && (

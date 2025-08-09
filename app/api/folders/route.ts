@@ -8,7 +8,26 @@ export async function GET() {
     return NextResponse.json({ items: res?.value || [] });
   } catch (err: any) {
     console.error('list folders failed:', err?.message || err);
-    return NextResponse.json({ error: 'Failed to list folders' }, { status: err?.statusCode || 500 });
+    
+    // Handle specific authentication errors
+    if (err?.status === 401) {
+      if (err.message?.includes('Outlook not connected')) {
+        return NextResponse.json({ 
+          error: 'Outlook not connected. Please connect your Outlook account first.',
+          code: 'OUTLOOK_NOT_CONNECTED'
+        }, { status: 401 });
+      } else {
+        return NextResponse.json({ 
+          error: 'Authentication failed. Please log in again.',
+          code: 'AUTH_FAILED'
+        }, { status: 401 });
+      }
+    }
+    
+    return NextResponse.json({ 
+      error: 'Failed to list folders',
+      details: err?.message || 'Unknown error'
+    }, { status: err?.statusCode || 500 });
   }
 }
 
@@ -26,8 +45,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, folder: created });
   } catch (err: any) {
     const code = err?.statusCode || 500;
-    const msg = code === 403 ? 'Permission denied. Require Mail.ReadWrite.' : (err?.message || 'Failed to create folder');
     console.error('create folder failed:', err?.message || err);
+    
+    // Handle specific authentication errors
+    if (err?.status === 401) {
+      if (err.message?.includes('Outlook not connected')) {
+        return NextResponse.json({ 
+          error: 'Outlook not connected. Please connect your Outlook account first.',
+          code: 'OUTLOOK_NOT_CONNECTED'
+        }, { status: 401 });
+      } else {
+        return NextResponse.json({ 
+          error: 'Authentication failed. Please log in again.',
+          code: 'AUTH_FAILED'
+        }, { status: 401 });
+      }
+    }
+    
+    const msg = code === 403 ? 'Permission denied. Require Mail.ReadWrite.' : (err?.message || 'Failed to create folder');
     return NextResponse.json({ error: msg }, { status: code });
   }
 } 
