@@ -1,3 +1,4 @@
+// LEGACY REPLY UI – superseded by ReplyModalV2 in Inbox V2.
 'use client';
 
 import { useState } from 'react';
