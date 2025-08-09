@@ -43,42 +43,44 @@ export default function FolderListV2({ folders, selectedFolderId, onSelect, onDr
 
   return (
     <div className="w-64 bg-gray-50 border-r border-gray-200 flex flex-col">
-      <div className="p-4 border-b border-gray-200">
+      <div className="p-4 border-b border-gray-200 flex-shrink-0">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Folders</h2>
       </div>
       
-      <div className="flex-1 p-2">
-        <div className="space-y-1">
-          {folders.map((folder) => {
-            const Icon = getFolderIcon(folder.type);
-            const isSelected = selectedFolderId === folder.id;
-            
-            return (
-              <div
-                key={folder.id}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, folder.id)}
-                className={`rounded-md transition-colors ${
-                  isSelected ? 'bg-blue-100' : 'hover:bg-gray-100'
-                }`}
-              >
-                <button
-                  onClick={() => onSelect(folder.id)}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-left transition-colors ${
-                    isSelected 
-                      ? 'text-blue-700' 
-                      : 'text-gray-700'
+      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 pr-2">
+        <div className="p-2">
+          <div className="space-y-1">
+            {folders.map((folder) => {
+              const Icon = getFolderIcon(folder.type);
+              const isSelected = selectedFolderId === folder.id;
+              
+              return (
+                <div
+                  key={folder.id}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, folder.id)}
+                  className={`rounded-md transition-colors ${
+                    isSelected ? 'bg-blue-100' : 'hover:bg-gray-100'
                   }`}
                 >
-                  <div className="flex items-center">
-                    {Icon}
-                    <span className="ml-3">{folder.name}</span>
-                  </div>
-                  <span className="text-sm text-gray-500">{folder.count}</span>
-                </button>
-              </div>
-            );
-          })}
+                  <button
+                    onClick={() => onSelect(folder.id)}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-left transition-colors ${
+                      isSelected 
+                        ? 'text-blue-700' 
+                        : 'text-gray-700'
+                    }`}
+                  >
+                    <div className="flex items-center">
+                      {Icon}
+                      <span className="ml-3">{folder.name}</span>
+                    </div>
+                    <span className="text-sm text-gray-500">{folder.count}</span>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

@@ -278,8 +278,8 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl h-[90vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        {/* Header - Fixed */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center space-x-3">
             <h2 className="text-xl font-semibold text-gray-900">
               {action === 'reply' && 'Reply'}
@@ -300,10 +300,10 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
           </button>
         </div>
 
-        {/* Main Content */}
+        {/* Main Content - Scrollable */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Action Bar */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          {/* Action Bar - Fixed */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
             <div className="flex items-center space-x-2">
               <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
                 <Paperclip className="h-4 w-4" />
@@ -330,8 +330,8 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
             </div>
           </div>
 
-          {/* Email Fields */}
-          <div className="p-4 border-b border-gray-200 space-y-3">
+          {/* Email Fields - Fixed */}
+          <div className="p-4 border-b border-gray-200 space-y-3 flex-shrink-0">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">To:</label>
               <input
@@ -364,87 +364,92 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
             </div>
           </div>
 
-          {/* Rich Text Toolbar */}
+          {/* Rich Text Toolbar - Fixed */}
           {!isPlainText && (
-            <RichTextToolbar
-              onBold={handleBold}
-              onItalic={handleItalic}
-              onUnderline={handleUnderline}
-              onFontChange={handleFontChange}
-              onSizeChange={handleSizeChange}
-              onList={handleList}
-              onLink={handleLink}
-            />
-          )}
-
-          {/* Editor */}
-          {isPlainText ? (
-            <textarea
-              className="flex-1 p-6 border-0 resize-none focus:outline-none focus:ring-0 text-gray-900 leading-relaxed"
-              value={replyHtml.replace(/<[^>]*>/g, '')}
-              onChange={(e) => setReplyHtml(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Type your message here..."
-            />
-          ) : (
-            <div
-              ref={editorRef}
-              contentEditable
-              className="flex-1 p-6 border-0 resize-none focus:outline-none focus:ring-0 text-gray-900 leading-relaxed overflow-y-auto"
-              onInput={handleEditorChange}
-              onKeyDown={handleKeyDown}
-              suppressContentEditableWarning
-            />
-          )}
-
-          {/* Original message panel */}
-          <div className="mt-4 mx-6 mb-4 rounded-lg border bg-gray-50">
-            <div className="flex items-center justify-between px-4 py-2">
-              <button
-                type="button"
-                className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-gray-900"
-                onClick={() => setShowOriginal(s => !s)}
-              >
-                {showOriginal ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                <span>Original Message</span>
-              </button>
-
-              <button
-                type="button"
-                className="text-xs text-indigo-600 hover:underline"
-                onClick={ensureQuotedInEditor}
-              >
-                Insert quoted original into editor
-              </button>
+            <div className="flex-shrink-0">
+              <RichTextToolbar
+                onBold={handleBold}
+                onItalic={handleItalic}
+                onUnderline={handleUnderline}
+                onFontChange={handleFontChange}
+                onSizeChange={handleSizeChange}
+                onList={handleList}
+                onLink={handleLink}
+              />
             </div>
+          )}
 
-            {showOriginal && (
-              <div className="max-h-[40vh] overflow-y-auto bg-white border-t px-4 py-3">
-                {cleanedHtml ? (
-                  <div className="prose max-w-none">
-                    <div 
-                      dangerouslySetInnerHTML={{ __html: cleanedHtml }}
-                      className="text-gray-800 leading-relaxed text-sm"
-                    />
-                  </div>
-                ) : email?.body_full ? (
-                  <pre className="whitespace-pre-wrap text-sm text-gray-800 leading-relaxed">
-                    {email.body_full}
-                  </pre>
-                ) : email?.body_preview ? (
-                  <div className="text-gray-800 leading-relaxed text-sm">
-                    {email.body_preview}
-                  </div>
-                ) : (
-                  <div className="text-gray-500 italic text-sm">No content available</div>
-                )}
-              </div>
+          {/* Scrollable Content Area */}
+          <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 pr-2">
+            {/* Editor */}
+            {isPlainText ? (
+              <textarea
+                className="w-full p-6 border-0 resize-none focus:outline-none focus:ring-0 text-gray-900 leading-relaxed min-h-[200px]"
+                value={replyHtml.replace(/<[^>]*>/g, '')}
+                onChange={(e) => setReplyHtml(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Type your message here..."
+              />
+            ) : (
+              <div
+                ref={editorRef}
+                contentEditable
+                className="w-full p-6 border-0 resize-none focus:outline-none focus:ring-0 text-gray-900 leading-relaxed min-h-[200px]"
+                onInput={handleEditorChange}
+                onKeyDown={handleKeyDown}
+                suppressContentEditableWarning
+              />
             )}
+
+            {/* Original message panel */}
+            <div className="mt-4 mx-6 mb-4 rounded-lg border bg-gray-50">
+              <div className="flex items-center justify-between px-4 py-2">
+                <button
+                  type="button"
+                  className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                  onClick={() => setShowOriginal(s => !s)}
+                >
+                  {showOriginal ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  <span>Original Message</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="text-xs text-indigo-600 hover:underline"
+                  onClick={ensureQuotedInEditor}
+                >
+                  Insert quoted original into editor
+                </button>
+              </div>
+
+              {showOriginal && (
+                <div className="max-h-[40vh] overflow-y-auto bg-white border-t px-4 py-3">
+                  {cleanedHtml ? (
+                    <div className="prose max-w-none">
+                      <div 
+                        dangerouslySetInnerHTML={{ __html: cleanedHtml }}
+                        className="text-gray-800 leading-relaxed text-sm"
+                      />
+                    </div>
+                  ) : email?.body_full ? (
+                    <pre className="whitespace-pre-wrap text-sm text-gray-800 leading-relaxed">
+                      {email.body_full}
+                    </pre>
+                  ) : email?.body_preview ? (
+                    <div className="text-gray-800 leading-relaxed text-sm">
+                      {email.body_preview}
+                    </div>
+                  ) : (
+                    <div className="text-gray-500 italic text-sm">No content available</div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t border-gray-200">
+        {/* Footer - Fixed */}
+        <div className="flex items-center justify-between p-6 border-t border-gray-200 flex-shrink-0">
           <div className="text-sm text-gray-500">
             {replyHtml.trim() ? 'Ready to send' : 'Enter a message to send'}
           </div>
