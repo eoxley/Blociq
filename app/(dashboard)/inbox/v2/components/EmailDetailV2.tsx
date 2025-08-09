@@ -83,12 +83,12 @@ export default function EmailDetailV2({ email, onReply, onDelete }: EmailDetailV
       </div>
 
       {/* Email Content */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-6 max-h-[calc(100vh-260px)]">
         {cleanedHtml ? (
           <div className="prose max-w-none">
             <div 
               dangerouslySetInnerHTML={{ __html: cleanedHtml }}
-              className="text-gray-800 leading-relaxed"
+              className="text-gray-800 leading-relaxed text-sm"
             />
           </div>
         ) : email.body_full ? (
@@ -96,11 +96,11 @@ export default function EmailDetailV2({ email, onReply, onDelete }: EmailDetailV
             {email.body_full}
           </pre>
         ) : email.body_preview ? (
-          <div className="text-gray-800 leading-relaxed">
+          <div className="text-gray-800 leading-relaxed text-sm">
             {email.body_preview}
           </div>
         ) : (
-          <div className="text-gray-500 italic">No content available</div>
+          <div className="text-gray-500 italic text-sm">No content available</div>
         )}
 
         {/* Attachments */}
