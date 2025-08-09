@@ -1,16 +1,16 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { Mail, Calendar, User, Paperclip } from 'lucide-react';
+import { Mail, Calendar, User, Paperclip, Reply, ReplyAll, Forward, Star, Flag } from 'lucide-react';
 import { sanitizeEmailHtml, looksLikeHtml } from '@/utils/emailFormatting';
 
 interface EmailDetailV2Props {
   email: any;
   onReply: (action: 'reply' | 'reply-all' | 'forward') => void;
+  onToggleFlag: (emailId: string) => void;
   onDelete: (emailId: string) => void;
 }
 
-export default function EmailDetailV2({ email, onReply, onDelete }: EmailDetailV2Props) {
+export default function EmailDetailV2({ email, onReply, onToggleFlag, onDelete }: EmailDetailV2Props) {
   // Determine the best body content to display
   const rawHtml = email?.body_html ?? (email?.body_full && looksLikeHtml(email.body_full) ? email.body_full : null);
   const cleanedHtml = rawHtml ? sanitizeEmailHtml(rawHtml) : null;
@@ -35,6 +35,56 @@ export default function EmailDetailV2({ email, onReply, onDelete }: EmailDetailV
 
   return (
     <div className="flex flex-col h-full bg-white border-l border-gray-200">
+      {/* Action Bar */}
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => onReply('reply')}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+            title="Reply (R)"
+          >
+            <Reply className="h-4 w-4" />
+            <span>Reply</span>
+          </button>
+          <button
+            onClick={() => onReply('reply-all')}
+            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center space-x-2"
+            title="Reply All (A)"
+          >
+            <ReplyAll className="h-4 w-4" />
+            <span>Reply All</span>
+          </button>
+          <button
+            onClick={() => onReply('forward')}
+            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center space-x-2"
+            title="Forward (F)"
+          >
+            <Forward className="h-4 w-4" />
+            <span>Forward</span>
+          </button>
+        </div>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => onToggleFlag(email.id)}
+            className={`p-2 rounded-lg transition-colors ${
+              email.flag_status 
+                ? 'text-yellow-600 bg-yellow-50 hover:bg-yellow-100' 
+                : 'text-gray-400 hover:text-yellow-600 hover:bg-yellow-50'
+            }`}
+            title={email.flag_status ? 'Remove flag' : 'Add flag'}
+          >
+            <Flag className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => onDelete(email.id)}
+            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            title="Delete (Del)"
+          >
+            <Mail className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
       {/* Email Header */}
       <div className="p-6 border-b border-gray-200">
         <div className="mb-4">
@@ -122,9 +172,22 @@ export default function EmailDetailV2({ email, onReply, onDelete }: EmailDetailV
                       {attachment.size ? `${(attachment.size / 1024).toFixed(1)} KB` : 'Unknown size'}
                     </p>
                   </div>
-                  <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                    Download
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    {attachment.type?.startsWith('image/') || attachment.type === 'application/pdf' ? (
+                      <button 
+                        onClick={() => window.open(attachment.url, '_blank')}
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      >
+                        Preview
+                      </button>
+                    ) : null}
+                    <button 
+                      onClick={() => window.open(attachment.url, '_blank')}
+                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    >
+                      Download
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { X, Send, Paperclip, Sparkles, ChevronDown, ChevronRight } from 'lucide-react';
 import { toPlainQuoted, sanitizeEmailHtml, looksLikeHtml } from '@/utils/emailFormatting';
+import RichTextToolbar from './RichTextToolbar';
 
 interface Address {
   name?: string;
@@ -18,12 +19,15 @@ interface ReplyModalV2Props {
 }
 
 export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail }: ReplyModalV2Props) {
-  const [replyBody, setReplyBody] = useState('');
+  const [replyHtml, setReplyHtml] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [showOriginal, setShowOriginal] = useState(true); // default expanded
   const [toRecipients, setToRecipients] = useState('');
   const [ccRecipients, setCcRecipients] = useState('');
   const [subject, setSubject] = useState('');
+  const [isPlainText, setIsPlainText] = useState(false);
+  
+  const editorRef = useRef<HTMLDivElement>(null);
 
   // Ensure the quoted block can be inserted once
   const quoted = useMemo(() => toPlainQuoted(email), [email]);
@@ -113,22 +117,80 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
   }, [email, action, userEmail]);
 
   // Helper: append quoted block to editor if not present
-  const ensureQuotedInEditor = () =>
-    setReplyBody(prev => {
-      if (!prev.includes('--- Original Message ---')) {
-        return (prev ? `${prev.trim()}\n\n` : '') + quoted;
+  const ensureQuotedInEditor = () => {
+    if (!editorRef.current) return;
+    
+    const currentContent = editorRef.current.innerHTML;
+    if (!currentContent.includes('--- Original Message ---')) {
+      const quotedHtml = quoted.replace(/\n/g, '<br>');
+      const newContent = currentContent ? `${currentContent}<br><br>${quotedHtml}` : quotedHtml;
+      editorRef.current.innerHTML = newContent;
+      setReplyHtml(newContent);
+    }
+  };
+
+  // Rich text editor handlers
+  const handleBold = () => {
+    document.execCommand('bold', false);
+    if (editorRef.current) {
+      setReplyHtml(editorRef.current.innerHTML);
+    }
+  };
+
+  const handleItalic = () => {
+    document.execCommand('italic', false);
+    if (editorRef.current) {
+      setReplyHtml(editorRef.current.innerHTML);
+    }
+  };
+
+  const handleUnderline = () => {
+    document.execCommand('underline', false);
+    if (editorRef.current) {
+      setReplyHtml(editorRef.current.innerHTML);
+    }
+  };
+
+  const handleFontChange = (font: string) => {
+    document.execCommand('fontName', false, font);
+    if (editorRef.current) {
+      setReplyHtml(editorRef.current.innerHTML);
+    }
+  };
+
+  const handleSizeChange = (size: string) => {
+    document.execCommand('fontSize', false, size);
+    if (editorRef.current) {
+      setReplyHtml(editorRef.current.innerHTML);
+    }
+  };
+
+  const handleList = () => {
+    document.execCommand('insertUnorderedList', false);
+    if (editorRef.current) {
+      setReplyHtml(editorRef.current.innerHTML);
+    }
+  };
+
+  const handleLink = () => {
+    const url = prompt('Enter URL:');
+    if (url) {
+      document.execCommand('createLink', false, url);
+      if (editorRef.current) {
+        setReplyHtml(editorRef.current.innerHTML);
       }
-      return prev;
-    });
+    }
+  };
 
   // Reset state when modal opens/closes
   useEffect(() => {
     if (isOpen && email) {
-      setReplyBody('');
+      setReplyHtml('');
       setShowOriginal(true);
       setToRecipients(buildInitialFields.to);
       setCcRecipients(buildInitialFields.cc);
       setSubject(buildInitialFields.subject);
+      setIsPlainText(false);
     }
   }, [isOpen, email, buildInitialFields]);
 
@@ -158,7 +220,14 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
       
       if (result.success && result.text) {
         const aiText = result.text.trim();
-        setReplyBody(`${aiText}\n\n${quoted}`);
+        const aiHtml = aiText.replace(/\n/g, '<br>');
+        const quotedHtml = quoted.replace(/\n/g, '<br>');
+        const newContent = `${aiHtml}<br><br>${quotedHtml}`;
+        
+        if (editorRef.current) {
+          editorRef.current.innerHTML = newContent;
+        }
+        setReplyHtml(newContent);
       } else {
         throw new Error(result.error || 'Failed to generate AI reply');
       }
@@ -171,10 +240,13 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
   };
 
   const handleSend = () => {
-    if (!replyBody.trim()) {
+    if (!replyHtml.trim()) {
       alert('Please enter a message');
       return;
     }
+
+    // Sanitize the HTML before sending
+    const sanitizedHtml = sanitizeEmailHtml(replyHtml);
 
     console.log('Sending email:', {
       action,
@@ -182,7 +254,7 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
       to: toRecipients,
       cc: ccRecipients,
       subject,
-      body: replyBody
+      body: sanitizedHtml
     });
 
     // TODO: Wire up actual email sending
@@ -192,6 +264,12 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       handleSend();
+    }
+  };
+
+  const handleEditorChange = () => {
+    if (editorRef.current) {
+      setReplyHtml(editorRef.current.innerHTML);
     }
   };
 
@@ -232,6 +310,12 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
               </button>
             </div>
             <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setIsPlainText(!isPlainText)}
+                className="text-sm text-gray-600 hover:text-gray-900 px-2 py-1 rounded"
+              >
+                {isPlainText ? 'Rich Text' : 'Plain Text'}
+              </button>
               <button
                 onClick={handleGenerateAI}
                 disabled={isGenerating}
@@ -280,14 +364,38 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
             </div>
           </div>
 
+          {/* Rich Text Toolbar */}
+          {!isPlainText && (
+            <RichTextToolbar
+              onBold={handleBold}
+              onItalic={handleItalic}
+              onUnderline={handleUnderline}
+              onFontChange={handleFontChange}
+              onSizeChange={handleSizeChange}
+              onList={handleList}
+              onLink={handleLink}
+            />
+          )}
+
           {/* Editor */}
-          <textarea
-            className="flex-1 p-6 border-0 resize-none focus:outline-none focus:ring-0 text-gray-900 leading-relaxed"
-            value={replyBody}
-            onChange={(e) => setReplyBody(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type your message here..."
-          />
+          {isPlainText ? (
+            <textarea
+              className="flex-1 p-6 border-0 resize-none focus:outline-none focus:ring-0 text-gray-900 leading-relaxed"
+              value={replyHtml.replace(/<[^>]*>/g, '')}
+              onChange={(e) => setReplyHtml(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Type your message here..."
+            />
+          ) : (
+            <div
+              ref={editorRef}
+              contentEditable
+              className="flex-1 p-6 border-0 resize-none focus:outline-none focus:ring-0 text-gray-900 leading-relaxed overflow-y-auto"
+              onInput={handleEditorChange}
+              onKeyDown={handleKeyDown}
+              suppressContentEditableWarning
+            />
+          )}
 
           {/* Original message panel */}
           <div className="mt-4 mx-6 mb-4 rounded-lg border bg-gray-50">
@@ -338,7 +446,7 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
         {/* Footer */}
         <div className="flex items-center justify-between p-6 border-t border-gray-200">
           <div className="text-sm text-gray-500">
-            {replyBody.trim() ? 'Ready to send' : 'Enter a message to send'}
+            {replyHtml.trim() ? 'Ready to send' : 'Enter a message to send'}
           </div>
           <div className="flex items-center space-x-3">
             <button
@@ -349,7 +457,7 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
             </button>
             <button
               onClick={handleSend}
-              disabled={!replyBody.trim()}
+              disabled={!replyHtml.trim()}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
               <Send className="h-4 w-4" />

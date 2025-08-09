@@ -1,116 +1,83 @@
-// ✅ AUDIT COMPLETE [2025-08-03]
-// - Field validation for subject, body, leaseholder_id, building_id
-// - Authentication check with session validation
-// - Supabase queries with proper .eq() filters
-// - Try/catch with detailed error handling
-// - Used in email components
+import { NextResponse } from 'next/server';
+import { getOutlookClient } from '@/lib/outlookClient';
+import { sanitizeEmailHtml } from '@/utils/emailFormatting';
 
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
-import { cookies } from 'next/headers';
-
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
-    const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
-    
-    // Get user session
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const body = await req.json();
-    const { 
-      to, 
-      cc = [], 
-      subject, 
-      body: emailBody, 
-      relatedEmailId = null,
-      threadId = null,
-      status = 'sent' // 'sent' or 'draft'
-    } = body;
+    const { to = [], cc = [], subject = '', htmlBody = '', attachments = [] } = await req.json();
 
     // Validate required fields
-    if (!to || !Array.isArray(to) || to.length === 0) {
-      return NextResponse.json({ error: 'Recipients are required' }, { status: 400 });
+    if (!Array.isArray(to) || to.length === 0) {
+      return NextResponse.json({ error: 'Recipient list (to) is required' }, { status: 400 });
     }
-    if (!subject || !subject.trim()) {
+
+    if (!subject?.trim()) {
       return NextResponse.json({ error: 'Subject is required' }, { status: 400 });
     }
-    if (!emailBody || !emailBody.trim()) {
+
+    if (!htmlBody?.trim()) {
       return NextResponse.json({ error: 'Email body is required' }, { status: 400 });
     }
 
-    // Get user profile for from_email
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('full_name')
-      .eq('id', user.id)
-      .single();
+    // Get authenticated Graph client
+    const client = await getOutlookClient();
 
-    const fromEmail = user.email;
-    const fromName = profile?.full_name || user.email;
+    // Sanitize HTML body
+    const sanitizedHtml = sanitizeEmailHtml(htmlBody);
 
-    // If status is 'sent', actually send the email
-    if (status === 'sent') {
-      // TODO: Integrate with actual email service (SendGrid, AWS SES, etc.)
-      // For now, we'll just log and simulate sending
-      console.log('📧 Sending email:', {
-        from: `${fromName} <${fromEmail}>`,
-        to: to.join(', '),
-        cc: cc.join(', '),
-        subject,
-        body: emailBody
-      });
+    // Build message object for Microsoft Graph
+    const message: any = {
+      subject: subject.trim(),
+      toRecipients: to.map((address: string) => ({ 
+        emailAddress: { address: address.trim() } 
+      })),
+      body: { 
+        contentType: 'HTML', 
+        content: sanitizedHtml 
+      },
+    };
 
-      // Simulate email sending delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    // Add CC recipients if provided
+    if (Array.isArray(cc) && cc.length > 0) {
+      message.ccRecipients = cc.map((address: string) => ({ 
+        emailAddress: { address: address.trim() } 
+      }));
     }
 
-    // Save to sent_emails table
-    const { data: sentEmail, error: insertError } = await supabase
-      .from('sent_emails')
-      .insert({
-        subject: subject.trim(),
-        body: emailBody.trim(),
-        to_emails: to,
-        cc_emails: cc,
-        from_email: fromEmail,
-        thread_id: threadId,
-        related_email_id: relatedEmailId,
-        created_by_user: user.id,
-        status,
-        sent_at: status === 'sent' ? new Date().toISOString() : null
-      })
-      .select()
-      .single();
-
-    if (insertError) {
-      console.error('❌ Error saving email:', insertError);
-      return NextResponse.json({ error: 'Failed to save email' }, { status: 500 });
+    // Add attachments if provided
+    if (Array.isArray(attachments) && attachments.length > 0) {
+      message.attachments = attachments.map((attachment: any) => ({
+        '@odata.type': '#microsoft.graph.fileAttachment',
+        name: attachment.name,
+        contentBytes: attachment.contentBytesBase64,
+        contentType: attachment.contentType || 'application/octet-stream',
+      }));
     }
 
-    // If this is a reply, mark the original email as handled
-    if (relatedEmailId && status === 'sent') {
-      await supabase
-        .from('incoming_emails')
-        .update({ 
-          handled: true, 
-          is_handled: true 
-        })
-        .eq('id', relatedEmailId)
-        .eq('user_id', user.id);
-    }
-
-    return NextResponse.json({
-      success: true,
-      email: sentEmail,
-      message: status === 'sent' ? 'Email sent successfully' : 'Draft saved successfully'
+    // Send the email via Microsoft Graph
+    await client.api('/me/sendMail').post({ 
+      message, 
+      saveToSentItems: true 
     });
 
-  } catch (error) {
-    console.error('❌ Error in send-email API:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('Send email failed:', error?.message || error);
+    
+    // Handle specific error cases
+    if (error?.message?.includes('not authenticated')) {
+      return NextResponse.json({ error: 'User not authenticated' }, { status: 401 });
+    }
+    
+    if (error?.message?.includes('Outlook not connected')) {
+      return NextResponse.json({ error: 'Outlook not connected. Please connect your Outlook account first.' }, { status: 400 });
+    }
+    
+    if (error?.message?.includes('Graph API error: 403')) {
+      return NextResponse.json({ error: 'Permission denied. Please ensure your Outlook account has Mail.Send permission.' }, { status: 403 });
+    }
+    
+    const msg = error?.message || 'Failed to send email';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
