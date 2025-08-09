@@ -1,34 +1,55 @@
 import { NextResponse } from 'next/server';
-import { getOutlookClient } from '@/lib/outlookClient';
+import { getOutlookClient, refreshAndGetOutlookClient } from '@/lib/outlookClient';
+
+async function listFolders(client: any) {
+  return client
+    .api('/me/mailFolders')
+    .select('id,displayName,wellKnownName,childFolderCount')
+    .top(200)
+    .get();
+}
 
 export async function GET() {
   try {
-    const client = await getOutlookClient();
-    const res = await client
-      .api('/me/mailFolders')
-      .select('id,displayName,wellKnownName,childFolderCount')
-      .top(200)
-      .get();
-
-    // Map to consistent object
-    const folders = (res?.value || []).map((f) => ({
-      id: f.id,
-      displayName: f.displayName || f.wellKnownName || 'Untitled',
-      wellKnownName: f.wellKnownName || null,
-      childFolderCount: f.childFolderCount || 0,
-    }));
-
-    return NextResponse.json({ items: folders });
-  } catch (err: any) {
-    console.error('list folders failed:', err?.message || err);
-    if (err?.status === 401) {
-      if (err.message?.includes('Outlook not connected')) {
-        return NextResponse.json({ error: 'Outlook not connected. Please connect your Outlook account first.', code: 'OUTLOOK_NOT_CONNECTED' }, { status: 401 });
-      } else {
-        return NextResponse.json({ error: 'Authentication failed. Please log in again.', code: 'AUTH_FAILED' }, { status: 401 });
+    let client = await getOutlookClient();        // uses cached/known-good token
+    try {
+      const res = await listFolders(client);
+      const folders = (res?.value || []).map((f: any) => ({
+        id: f.id,
+        displayName: f.displayName || f.wellKnownName || 'Untitled',
+        wellKnownName: f.wellKnownName || null,
+        childFolderCount: f.childFolderCount || 0,
+      }));
+      return NextResponse.json({ items: folders });
+    } catch (err: any) {
+      const code = err?.statusCode || err?.status || 500;
+      // If unauthorized, try one automatic refresh+retry
+      if (code === 401) {
+        console.warn('folders: 401 -> attempting token refresh');
+        client = await refreshAndGetOutlookClient();
+        const res2 = await listFolders(client);
+        const folders2 = (res2?.value || []).map((f: any) => ({
+          id: f.id,
+          displayName: f.displayName || f.wellKnownName || 'Untitled',
+          wellKnownName: f.wellKnownName || null,
+          childFolderCount: f.childFolderCount || 0,
+        }));
+        return NextResponse.json({ items: folders2 });
       }
+      // Surface the real error up to the client
+      console.error('folders error:', err?.message || err);
+      return NextResponse.json(
+        { error: err?.message || 'Failed to load folders' },
+        { status: code }
+      );
     }
-    return NextResponse.json({ error: 'Failed to list folders', details: err?.message || 'Unknown error' }, { status: err?.statusCode || 500 });
+  } catch (outer: any) {
+    const code = outer?.statusCode || outer?.status || 500;
+    console.error('getOutlookClient failed:', outer?.message || outer);
+    return NextResponse.json(
+      { error: code === 401 ? 'Outlook not connected. Please reconnect.' : (outer?.message || 'Failed to list folders') },
+      { status: code }
+    );
   }
 }
 
