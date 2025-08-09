@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useOutlookInbox } from '@/hooks/useOutlookInbox';
-import { Mail, Search, RefreshCw, Plus, FolderOpen, Inbox, Archive, Trash2, Star, ChevronDown } from 'lucide-react';
+import { Mail, Search, RefreshCw, Plus, FolderOpen, Inbox, Archive, Trash2, Star, ChevronDown, Reply, ReplyAll, Forward } from 'lucide-react';
 import EmailDetailV2 from './components/EmailDetailV2';
 import ReplyModalV2 from './components/ReplyModalV2';
 import { toast } from 'sonner';
@@ -25,7 +25,6 @@ export default function InboxV2() {
   const [selectedFolder, setSelectedFolder] = useState('inbox');
   const [showReplyModal, setShowReplyModal] = useState(false);
   const [replyAction, setReplyAction] = useState<'reply' | 'reply-all' | 'forward'>('reply');
-  const [showReplyDropdown, setShowReplyDropdown] = useState(false);
 
   // Filter emails based on search and folder
   const filteredEmails = emails.filter(email => {
@@ -45,7 +44,6 @@ export default function InboxV2() {
     if (selectedEmail) {
       setReplyAction(action);
       setShowReplyModal(true);
-      setShowReplyDropdown(false);
     }
   }, [selectedEmail]);
 
@@ -138,41 +136,44 @@ export default function InboxV2() {
         return;
       }
 
-      if (!selectedEmail) return;
-
       switch (e.key.toLowerCase()) {
         case 'r':
-          if (!e.ctrlKey && !e.metaKey) {
+          if (!e.ctrlKey && !e.metaKey && selectedEmail) {
             e.preventDefault();
             handleReply('reply');
           }
           break;
         case 'a':
-          if (!e.ctrlKey && !e.metaKey) {
+          if (!e.ctrlKey && !e.metaKey && selectedEmail) {
             e.preventDefault();
             handleReply('reply-all');
           }
           break;
         case 'f':
-          if (!e.ctrlKey && !e.metaKey) {
+          if (!e.ctrlKey && !e.metaKey && selectedEmail) {
             e.preventDefault();
             handleReply('forward');
           }
           break;
         case 'delete':
         case 'backspace':
-          e.preventDefault();
-          handleDeleteEmail(selectedEmail.id);
+          if (selectedEmail) {
+            e.preventDefault();
+            handleDeleteEmail(selectedEmail.id);
+          }
           break;
         case 'escape':
-          setShowReplyDropdown(false);
+          if (selectedEmail) {
+            e.preventDefault();
+            selectEmail(null);
+          }
           break;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedEmail, handleReply, handleDeleteEmail]);
+  }, [selectedEmail, handleReply, handleDeleteEmail, selectEmail]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -331,21 +332,67 @@ export default function InboxV2() {
       </div>
 
       {/* Email Detail */}
-      <div className="flex-1">
-        <EmailDetailV2
-          email={selectedEmail}
-          onReply={handleReply}
-          onDelete={handleDeleteEmail}
-        />
+      <div className="flex-1 flex flex-col">
+        {/* Action Bar */}
+        {selectedEmail && (
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => handleReply('reply')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                title="Reply (R)"
+              >
+                <Reply className="h-4 w-4" />
+                <span>Reply</span>
+              </button>
+              <button
+                onClick={() => handleReply('reply-all')}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center space-x-2"
+                title="Reply All (A)"
+              >
+                <ReplyAll className="h-4 w-4" />
+                <span>Reply All</span>
+              </button>
+              <button
+                onClick={() => handleReply('forward')}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center space-x-2"
+                title="Forward (F)"
+              >
+                <Forward className="h-4 w-4" />
+                <span>Forward</span>
+              </button>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => handleDeleteEmail(selectedEmail.id)}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2"
+                title="Delete (Del)"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>Delete</span>
+              </button>
+            </div>
+          </div>
+        )}
+        
+        <div className="flex-1">
+          <EmailDetailV2
+            email={selectedEmail}
+            onReply={handleReply}
+            onDelete={handleDeleteEmail}
+          />
+        </div>
       </div>
 
       {/* Reply Modal */}
-      <ReplyModalV2
-        isOpen={showReplyModal}
-        onClose={() => setShowReplyModal(false)}
-        email={selectedEmail}
-        action={replyAction}
-      />
+      {showReplyModal && selectedEmail && (
+        <ReplyModalV2
+          isOpen={showReplyModal}
+          onClose={() => setShowReplyModal(false)}
+          email={selectedEmail}
+          action={replyAction}
+        />
+      )}
     </div>
   );
 }
