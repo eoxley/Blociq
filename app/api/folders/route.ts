@@ -1,48 +1,33 @@
-// ✅ AUDIT COMPLETE [2025-01-15]
-// - Supabase query with proper user_id filter
-// - Try/catch with detailed error handling
-// - Used in inbox components
+import { NextResponse } from 'next/server';
+import { getOutlookClient } from '@/lib/outlookClient';
 
-import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
-import { Database } from '@/lib/database.types';
-
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies: () => cookies() });
-    
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const client = await getOutlookClient();
+    const res = await client.api('/me/mailFolders').select('id,displayName,childFolderCount,wellKnownName').top(200).get();
+    return NextResponse.json({ items: res?.value || [] });
+  } catch (err: any) {
+    console.error('list folders failed:', err?.message || err);
+    return NextResponse.json({ error: 'Failed to list folders' }, { status: err?.statusCode || 500 });
+  }
+}
 
-    console.log('📁 Fetching folders for user:', user.id);
+export async function POST(req: Request) {
+  try {
+    const { name, parentFolderId } = await req.json();
+    if (!name?.trim()) return NextResponse.json({ error: 'Folder name is required' }, { status: 400 });
 
-    // Get user's custom folders
-    const { data: folders, error } = await supabase
-      .from('email_folders')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: true });
+    const client = await getOutlookClient();
+    // Create under parent or root (inbox or msgRoot)
+    const path = parentFolderId ? `/me/mailFolders/${parentFolderId}/childFolders` : `/me/mailFolders`;
+    const body = { displayName: name.trim() };
 
-    if (error) {
-      console.error('❌ Failed to fetch folders:', error.message);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    console.log('✅ Folders fetched successfully');
-    return NextResponse.json({ 
-      success: true,
-      folders: folders || []
-    });
-
-  } catch (error) {
-    console.error('❌ Error in folders route:', error);
-    return NextResponse.json({ 
-      error: 'Failed to fetch folders',
-      details: process.env.NODE_ENV === 'development' ? error instanceof Error ? error.message : 'Unknown error' : undefined
-    }, { status: 500 });
+    const created = await client.api(path).post(body);
+    return NextResponse.json({ success: true, folder: created });
+  } catch (err: any) {
+    const code = err?.statusCode || 500;
+    const msg = code === 403 ? 'Permission denied. Require Mail.ReadWrite.' : (err?.message || 'Failed to create folder');
+    console.error('create folder failed:', err?.message || err);
+    return NextResponse.json({ error: msg }, { status: code });
   }
 } 
