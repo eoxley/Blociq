@@ -135,6 +135,63 @@ export default function InboxV2() {
     setShowReplyModal(true);
   }, [selectedEmail]);
 
+  // AI Draft handler
+  const handleCreateAIDraft = useCallback(async (action: 'reply' | 'reply-all' | 'forward') => {
+    if (!selectedEmail) return;
+    
+    try {
+      // Call the unified brain with draft mode
+      const response = await fetch('/api/ask-blociq', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: "Generate the reply in the property manager tone.",
+          mode: "draft",
+          action: action,
+          email_id: selectedEmail.id,
+          building_id: selectedEmail.building_id,
+          include_thread: true
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate AI draft');
+      }
+
+      const data = await response.json();
+      
+      // Save to Outlook Drafts using the tools endpoint
+      const draftResponse = await fetch('/api/tools/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: data.recipients?.to || [],
+          cc: data.recipients?.cc || [],
+          subject: data.recipients?.subject || data.subject,
+          html_body: data.answer,
+          save_to_drafts: true,
+          reply_to_id: selectedEmail.id
+        }),
+      });
+
+      if (!draftResponse.ok) {
+        const draftError = await draftResponse.json();
+        throw new Error(draftError.error || 'Failed to save draft');
+      }
+
+      // Show success message with citations if available
+      if (data.citations && data.citations.length > 0) {
+        toast.success(`AI draft saved to Outlook Drafts with ${data.citations.length} citations`);
+      } else {
+        toast.success('AI draft saved to Outlook Drafts');
+      }
+    } catch (error) {
+      console.error('Error creating AI draft:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to create AI draft');
+    }
+  }, [selectedEmail]);
+
   // Delete email handler
   const handleDeleteEmail = useCallback(async (emailId: string) => {
     try {
@@ -203,6 +260,9 @@ export default function InboxV2() {
       markAsRead(emailId);
     }
   }, [emails, selectEmail, markAsRead]);
+
+  // Check if AI is enabled
+  const isAIEnabled = process.env.NEXT_PUBLIC_AI_ENABLED === 'true';
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -294,6 +354,7 @@ export default function InboxV2() {
           onReply={handleReply}
           onToggleFlag={handleToggleFlag}
           onDelete={handleDeleteEmail}
+          onCreateAIDraft={handleCreateAIDraft}
         />
       </div>
 
