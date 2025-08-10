@@ -1,197 +1,188 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@supabase/supabase-js';
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import OpenAI from 'openai';
-import { extractTextFromPDF } from '@/lib/extractTextFromPdf';
+import { extractTextFromFile } from '@/lib/ai/ocr';
+import { retrieveContext } from '@/lib/ai/retrieve';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+interface ProcessDocumentRequest {
+  file_url: string;
+  building_id?: string;
+  unit_id?: string;
+  leaseholder_id?: string;
+}
+
+interface ProcessDocumentResponse {
+  document_id: string;
+  file_name: string;
+  full_text: string;
+  content_summary: string;
+  type: string;
+  confidence: number;
+  suggested_action: string;
+  extracted: any;
+  auto_linked_building_id?: string;
+  is_unlinked: boolean;
+  ocr_used: boolean;
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
-    
-    // Check authentication
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    const body: ProcessDocumentRequest = await request.json();
+    const { file_url, building_id, unit_id, leaseholder_id } = body;
+
+    // Get user from auth
+    const cookieStore = await cookies();
+    const supabaseAuth = createServerComponentClient({ cookies: () => cookieStore });
+    const { data: { user } } = await supabaseAuth.getUser();
+
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('📄 Starting document processing...');
-
-    // Parse multipart form data
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
-    const buildingId = formData.get('buildingId') as string;
-    const documentType = formData.get('documentType') as string;
-    const fileName = formData.get('fileName') as string;
-
-    if (!file || !buildingId || !documentType || !fileName) {
-      return NextResponse.json({ 
-        error: 'Missing required fields: file, buildingId, documentType, fileName' 
-      }, { status: 400 });
+    if (!file_url) {
+      return NextResponse.json({ error: 'file_url is required' }, { status: 400 });
     }
 
-    console.log('📋 Document details:', {
-      fileName,
-      documentType,
-      buildingId,
-      fileSize: file.size,
-      fileType: file.type
-    });
+    // Extract file name from URL
+    const fileName = file_url.split('/').pop() || 'unknown_file';
+    
+    // Download file from Supabase Storage
+    const { data: fileData, error: downloadError } = await supabase.storage
+      .from('documents')
+      .download(file_url);
 
-    // Validate file type
-    if (!file.type.includes('pdf') && !file.type.includes('image')) {
-      return NextResponse.json({ 
-        error: 'Unsupported file type. Please upload PDF or image files.' 
-      }, { status: 400 });
+    if (downloadError || !fileData) {
+      console.error('Error downloading file:', downloadError);
+      return NextResponse.json({ error: 'Failed to download file' }, { status: 500 });
     }
 
     // Convert file to buffer
-    const fileBuffer = Buffer.from(await file.arrayBuffer());
+    const fileBuffer = Buffer.from(await fileData.arrayBuffer());
+    
+    // Extract text from file
+    const { text: fullText, ocr_used } = await extractTextFromFile(fileBuffer, fileData.type);
 
-    // Extract text from document
-    let extractedText: string;
-    let extractionMethod: string;
-    let extractionConfidence: number;
-
-    if (file.type.includes('pdf')) {
-      console.log('📄 Processing PDF document...');
-      const extractionResult = await extractTextFromPDF(fileBuffer);
-      extractedText = extractionResult.text;
-      extractionMethod = extractionResult.method;
-      extractionConfidence = extractionResult.confidence === 'high' ? 0.9 : extractionResult.confidence === 'medium' ? 0.7 : 0.5;
-    } else {
-      // For images, we'll use OCR directly
-      console.log('🖼️ Processing image document...');
-      const { ocrWithGoogleVision } = await import('@/lib/ocr');
-      extractedText = await ocrWithGoogleVision(fileBuffer);
-      extractionMethod = 'ocr';
-      extractionConfidence = 0.7;
-    }
-
-    if (!extractedText || extractedText.trim().length < 50) {
-      return NextResponse.json({ 
-        error: 'Unable to extract meaningful text from the document. Please ensure the document contains readable text.' 
-      }, { status: 400 });
-    }
-
-    console.log('✅ Text extraction successful:', {
-      method: extractionMethod,
-      confidence: extractionConfidence,
-      textLength: extractedText.length
+    // Call /api/ask-blociq with ingest mode
+    const ingestResponse = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL?.replace('/rest/v1', '') || 'http://localhost:3000'}/api/ask-blociq`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': request.headers.get('cookie') || ''
+      },
+      body: JSON.stringify({
+        mode: 'ingest',
+        message: 'Analyse this document for classification, key dates, and actions.',
+        file_text: fullText,
+        building_id,
+        unit_id,
+        leaseholder_id
+      })
     });
 
-    // Generate AI summary
-    console.log('🤖 Generating AI summary...');
-    const summary = await generateDocumentSummary(extractedText, documentType, fileName);
-
-    // Upload file to Supabase Storage
-    console.log('📤 Uploading file to storage...');
-    const filePath = `documents/${buildingId}/${Date.now()}_${fileName}`;
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('building-documents')
-      .upload(filePath, fileBuffer, {
-        contentType: file.type,
-        cacheControl: '3600'
-      });
-
-    if (uploadError) {
-      console.error('❌ File upload failed:', uploadError);
-      return NextResponse.json({ 
-        error: 'Failed to upload file to storage' 
-      }, { status: 500 });
+    if (!ingestResponse.ok) {
+      console.error('Error calling ingest mode:', await ingestResponse.text());
+      return NextResponse.json({ error: 'Failed to analyse document' }, { status: 500 });
     }
 
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('building-documents')
-      .getPublicUrl(filePath);
+    const ingestData = await ingestResponse.json();
 
-    // Save document metadata and extracted text to database
-    console.log('💾 Saving document to database...');
-    const { data: documentData, error: dbError } = await supabase
+    // Determine auto-linked building ID based on confidence
+    const autoLinkedBuildingId = ingestData.confidence && ingestData.confidence > 0.8 
+      ? (ingestData.guesses?.building_id || building_id)
+      : undefined;
+
+    // Prepare document data
+    const documentData = {
+      file_name: fileName,
+      file_url,
+      full_text: fullText,
+      content_summary: ingestData.answer || '',
+      type: ingestData.classification || 'unknown',
+      confidence: ingestData.confidence || 0,
+      suggested_action: ingestData.proposed_actions?.[0]?.type || '',
+      extracted: {
+        guesses: ingestData.guesses || {},
+        extracted_fields: ingestData.extracted_fields || {},
+        suggested_actions: ingestData.proposed_actions || []
+      },
+      auto_linked_building_id: autoLinkedBuildingId,
+      is_unlinked: true,
+      ocr_used
+    };
+
+    // Save/Upsert building_documents
+    const { data: savedDocument, error: saveError } = await supabase
       .from('building_documents')
-      .insert({
-        building_id: buildingId,
-        file_name: fileName,
-        file_url: publicUrl,
-        type: documentType,
-        text_content: extractedText,
-        summary: summary,
-        extraction_method: extractionMethod,
-        extraction_confidence: extractionConfidence,
-        file_size: file.size,
-        uploaded_by: session.user.id
+      .upsert({
+        ...documentData,
+        building_id: building_id || autoLinkedBuildingId,
+        unit_id,
+        leaseholder_id,
+        created_at: new Date().toISOString()
       })
       .select()
       .single();
 
-    if (dbError) {
-      console.error('❌ Database save failed:', dbError);
-      return NextResponse.json({ 
-        error: 'Failed to save document to database' 
-      }, { status: 500 });
+    if (saveError) {
+      console.error('Error saving document:', saveError);
+      return NextResponse.json({ error: 'Failed to save document' }, { status: 500 });
     }
 
-    console.log('✅ Document processing completed successfully');
+    // Chunk and embed the document
+    if (fullText && savedDocument) {
+      try {
+        // Create chunks (simple approach - split by paragraphs)
+        const paragraphs = fullText.split(/\n\s*\n/).filter(p => p.trim().length > 50);
+        const chunks = paragraphs.map((content, index) => ({
+          document_id: savedDocument.id,
+          building_id: building_id || autoLinkedBuildingId,
+          content: content.trim(),
+          chunk_index: index,
+          created_at: new Date().toISOString()
+        }));
 
-    return NextResponse.json({
-      success: true,
-      document: {
-        id: documentData.id,
-        fileName: documentData.file_name,
-        documentType: documentData.type,
-        summary: documentData.summary,
-        extractionMethod: documentData.extraction_method,
-        extractionConfidence: documentData.extraction_confidence,
-        textLength: extractedText.length,
-        fileUrl: documentData.file_url
-      },
-      message: 'Document processed and saved successfully'
-    });
+        // Insert chunks
+        if (chunks.length > 0) {
+          const { error: chunkError } = await supabase
+            .from('doc_chunks')
+            .insert(chunks);
+
+          if (chunkError) {
+            console.error('Error creating chunks:', chunkError);
+          }
+        }
+      } catch (error) {
+        console.error('Error chunking document:', error);
+      }
+    }
+
+    const response: ProcessDocumentResponse = {
+      document_id: savedDocument.id,
+      file_name: savedDocument.file_name,
+      full_text: savedDocument.full_text,
+      content_summary: savedDocument.content_summary,
+      type: savedDocument.type,
+      confidence: savedDocument.confidence,
+      suggested_action: savedDocument.suggested_action,
+      extracted: savedDocument.extracted,
+      auto_linked_building_id: savedDocument.auto_linked_building_id,
+      is_unlinked: savedDocument.is_unlinked,
+      ocr_used: savedDocument.ocr_used
+    };
+
+    return NextResponse.json(response);
 
   } catch (error) {
-    console.error('❌ Document processing error:', error);
-    return NextResponse.json({ 
-      error: 'Internal server error during document processing',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
-  }
-}
-
-async function generateDocumentSummary(
-  text: string, 
-  documentType: string, 
-  fileName: string
-): Promise<string> {
-  try {
-    const prompt = `You are a UK property management expert. Please analyze this ${documentType} document and provide a comprehensive summary.
-
-Document: ${fileName}
-Type: ${documentType}
-
-Document Content:
-${text.substring(0, 8000)} // Limit to prevent token overflow
-
-Please provide a structured summary that includes:
-1. Document purpose and key findings
-2. Compliance implications (if any)
-3. Action items or recommendations
-4. Important dates or deadlines
-5. Relevant UK legislation references
-
-Focus on UK property management context and leasehold terminology. Be specific and actionable.`;
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.3,
-      max_tokens: 1000
-    });
-
-    return response.choices[0].message?.content || 'Summary generation failed';
-  } catch (error) {
-    console.error('❌ AI summary generation failed:', error);
-    return 'Summary generation failed due to technical issues';
+    console.error('❌ Error in document process route:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 } 
