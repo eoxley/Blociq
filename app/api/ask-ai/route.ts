@@ -12,16 +12,18 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import OpenAI from 'openai';
 import { insertAiLog } from '@/lib/supabase/ai_logs';
+import { UNMASK_PII_FOR_AUTH, REQUIRE_ORG_MATCH } from '@/lib/config';
+import { getSessionWithProfile } from '@/lib/auth/session';
+import { resolveBuilding, resolveUnit } from '@/lib/ask/resolvers';
+import { getUnitCount, getLeaseholderForUnit, getLeaseholderByUnitNumber } from '@/lib/ask/data';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
-    
-    // Get current user (optional for public access)
-    const { data: { user } } = await supabase.auth.getUser();
-    const isPublicAccess = !user;
+    // Get session with profile for authentication and org matching
+    const { session, profile, supabase } = await getSessionWithProfile();
+    const isPublicAccess = !session;
 
     // Check if request is FormData (file upload) or JSON
     const contentType = req.headers.get('content-type') || '';
@@ -108,13 +110,15 @@ Keep responses concise, professional, and practical. If you don't have specific 
     }
 
     // Require authentication for private access
-    if (!user) {
+    if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     let buildingContext = "";
     let contextMetadata: any = {};
-    let systemPrompt = `You are BlocIQ, an AI assistant for UK leasehold property managers. Use British English. Be legally accurate and cite documents or founder guidance where relevant. If unsure, advise the user to refer to legal documents or professional advice.\n\n`;
+    let systemPrompt = `You are BlocIQ, an AI assistant for UK leasehold property managers. Use British English. Be legally accurate and cite documents or founder guidance where relevant. If unsure, advise the user to refer to legal documents or professional advice.
+
+IMPORTANT: When users mention "BSA", they are referring to the Building Safety Act 2022, not the Building Societies Association. Always interpret BSA as Building Safety Act 2022 in the context of property management.\n\n`;
 
     // 🏢 Smart Building Detection from Prompt
     if (!building_id) {
@@ -157,11 +161,16 @@ Keep responses concise, professional, and practical. If you don't have specific 
       try {
         const { data: building } = await supabase
           .from('buildings')
-          .select('id, name, unit_count, address')
+          .select('id, name, unit_count, address, agency_id')
           .eq('id', building_id)
           .single();
 
         if (building) {
+          // Check org matching if required
+          if (REQUIRE_ORG_MATCH && profile?.agency_id && building.agency_id && profile.agency_id !== building.agency_id) {
+            return NextResponse.json({ error: 'Access denied - building not in your organisation' }, { status: 403 });
+          }
+
           contextMetadata.buildingName = building.name;
           contextMetadata.building_id = building.id;
           contextMetadata.unit_count = building.unit_count;
@@ -235,6 +244,63 @@ Keep responses concise, professional, and practical. If you don't have specific 
       }
     }
 
+    // 🔍 PII Unmasking for Specific Queries
+    let piiData: any = null;
+    let pii_masked = true;
+
+    if (UNMASK_PII_FOR_AUTH && session) {
+      // Check for unit count queries
+      if (prompt.toLowerCase().includes('how many units') || prompt.toLowerCase().includes('unit count')) {
+        const resolvedBuilding = building_id ? { building_id, name: contextMetadata.buildingName } : await resolveBuilding(supabase, prompt);
+        if (resolvedBuilding) {
+          const unitCount = await getUnitCount(supabase, resolvedBuilding.building_id);
+          piiData = { unit_count: unitCount, building_name: resolvedBuilding.name };
+          pii_masked = false;
+        }
+      }
+
+      // Check for leaseholder queries
+      if (prompt.toLowerCase().includes('leaseholder') || prompt.toLowerCase().includes('who is') || prompt.toLowerCase().includes('phone number')) {
+        const resolvedBuilding = building_id ? { building_id, name: contextMetadata.buildingName } : await resolveBuilding(supabase, prompt);
+        if (resolvedBuilding) {
+          const resolvedUnit = await resolveUnit(supabase, resolvedBuilding.building_id, prompt);
+          if (resolvedUnit) {
+            const leaseholder = await getLeaseholderForUnit(supabase, resolvedUnit.unit_id);
+            if (leaseholder) {
+              piiData = { 
+                leaseholder: {
+                  name: leaseholder.name,
+                  email: leaseholder.email,
+                  phone: leaseholder.phone
+                },
+                unit: resolvedUnit.label,
+                building_name: resolvedBuilding.name
+              };
+              pii_masked = false;
+            }
+          } else {
+            // Try to extract unit number directly from prompt
+            const unitMatch = prompt.toLowerCase().match(/(?:unit|flat|apartment|suite)\s*(\d+)/i);
+            if (unitMatch) {
+              const leaseholder = await getLeaseholderByUnitNumber(supabase, resolvedBuilding.building_id, unitMatch[1]);
+              if (leaseholder) {
+                piiData = { 
+                  leaseholder: {
+                    name: leaseholder.name,
+                    email: leaseholder.email,
+                    phone: leaseholder.phone
+                  },
+                  unit: unitMatch[1],
+                  building_name: resolvedBuilding.name
+                };
+                pii_masked = false;
+              }
+            }
+          }
+        }
+      }
+    }
+
     // 📄 Document Context
     let documentContext = "";
     if (document_ids.length > 0) {
@@ -293,6 +359,15 @@ Keep responses concise, professional, and practical. If you don't have specific 
       finalPrompt = `Email Thread Context:\n${emailContext}\n\n${finalPrompt}`;
     }
 
+    // Add PII data to prompt if available
+    if (piiData && !pii_masked) {
+      if (piiData.unit_count !== undefined) {
+        finalPrompt = `Direct Answer: ${piiData.building_name} has ${piiData.unit_count} units.\n\n${finalPrompt}`;
+      } else if (piiData.leaseholder) {
+        finalPrompt = `Direct Answer: The leaseholder of ${piiData.unit} in ${piiData.building_name} is ${piiData.leaseholder.name}. Email: ${piiData.leaseholder.email || 'Not provided'}. Phone: ${piiData.leaseholder.phone || 'Not provided'}.\n\n${finalPrompt}`;
+      }
+    }
+
     // Add tone instruction for email replies
     if (contextType === 'email_reply') {
       systemPrompt += `\nYou are drafting an email reply. Use a ${tone.toLowerCase()} tone. Be professional and concise.`;
@@ -316,7 +391,7 @@ Keep responses concise, professional, and practical. If you don't have specific 
     // 📊 Log the interaction
     try {
       const logId = await insertAiLog({
-        user_id: user.id,
+        user_id: session.user.id,
         question: prompt,
         response: aiResponse,
         context_type: contextType,
@@ -339,6 +414,8 @@ Keep responses concise, professional, and practical. If you don't have specific 
       document_count: document_ids.length,
       has_email_thread: !!emailThreadId,
       has_leaseholder: !!leaseholder_id,
+      pii_masked: pii_masked,
+      pii_data: piiData,
       context: {
         complianceUsed: contextMetadata.complianceCount > 0,
         majorWorksUsed: contextType === 'major_works'
