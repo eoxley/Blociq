@@ -9,8 +9,9 @@ import ComposeEmailModal from './components/ComposeEmailModal';
 import ReplyModal from './components/ReplyModal';
 import { useUser } from '@supabase/auth-helpers-react';
 import { supabase } from '@/lib/supabaseClient';
-import { AlertTriangle, RefreshCw, Mail, Wifi, WifiOff, X, Plus, FolderOpen } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Mail, Wifi, WifiOff, X, Plus, FolderOpen, Building, Clock, CheckCircle, Loader2, Sparkles } from 'lucide-react';
 import TriageIcon from '@/components/icons/TriageIcon';
+import { BlocIQButton } from '@/components/ui/blociq-button';
 import { toast } from 'sonner';
 
 export default function InboxClient() {
@@ -42,6 +43,9 @@ export default function InboxClient() {
   const [showMobileFolders, setShowMobileFolders] = useState(false);
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
   const user = useUser();
+
+  // Define allEmails for compatibility
+  const allEmails = emails;
 
   // Define functions before they are used in useEffect
   const handleReply = useCallback((action: 'reply' | 'reply-all' | 'forward') => {
@@ -312,84 +316,199 @@ export default function InboxClient() {
     }
   };
 
+  // AI Draft handler
+  const handleCreateAIDraft = useCallback(async (action: 'reply' | 'reply-all' | 'forward') => {
+    if (!selectedEmail) return;
+
+    try {
+      // Call the unified brain with draft mode
+      const response = await fetch('/api/ask-blociq', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: "Generate the reply in the property manager tone.",
+          mode: "draft",
+          action: action,
+          email_id: selectedEmail.id,
+          building_id: selectedEmail.building_id,
+          include_thread: true
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate AI draft');
+      }
+
+      const data = await response.json();
+
+      // Save to Outlook Drafts using the tools endpoint
+      const draftResponse = await fetch('/api/tools/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: data.recipients?.to || [],
+          cc: data.recipients?.cc || [],
+          subject: data.recipients?.subject || data.subject,
+          html_body: data.answer,
+          save_to_drafts: true,
+          reply_to_id: selectedEmail.id
+        }),
+      });
+
+      if (!draftResponse.ok) {
+        const draftError = await draftResponse.json();
+        throw new Error(draftError.error || 'Failed to save draft');
+      }
+
+      // Show success message with citations if available
+      if (data.citations && data.citations.length > 0) {
+        toast.success(`AI draft saved to Outlook Drafts with ${data.citations.length} citations`);
+      } else {
+        toast.success('AI draft saved to Outlook Drafts');
+      }
+    } catch (error) {
+      console.error('Error creating AI draft:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to create AI draft');
+    }
+  }, [selectedEmail]);
+
+  // Triage handler
+  const handleTriage = useCallback(async () => {
+    if (!selectedEmail) return;
+
+    try {
+      const response = await fetch('/api/ask-blociq', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: "Triage this inbox thread and provide a summary, urgency assessment, and suggested actions.",
+          mode: "triage",
+          email_id: selectedEmail.id,
+          building_id: selectedEmail.building_id,
+          include_thread: true
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to triage email');
+      }
+
+      const data = await response.json();
+      
+      // Show triage results in a toast or modal
+      toast.success(`Triage complete: ${data.answer}`);
+      
+      // Handle proposed actions if any
+      if (data.proposed_actions && data.proposed_actions.length > 0) {
+        console.log('Proposed actions:', data.proposed_actions);
+        // TODO: Show action buttons for user to execute
+      }
+    } catch (error) {
+      console.error('Error triaging email:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to triage email');
+    }
+  }, [selectedEmail]);
+
+  // Check if AI is enabled
+  const isAIEnabled = process.env.NEXT_PUBLIC_AI_ENABLED === 'true';
+
   return (
     <div className="w-full max-w-[1800px] mx-auto px-4 lg:px-6 xl:px-8 py-6 lg:py-8 space-y-6 overflow-x-hidden">
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-semibold">📨 Outlook Inbox</h1>
-          {inboxInfo && (
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm font-medium">
-                {inboxInfo.totalCount} total
-              </span>
-              <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-sm font-medium">
-                {inboxInfo.unreadCount} unread
-              </span>
-            </div>
-          )}
-          {newEmailCount > 0 && (
-            <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-medium">
-              {newEmailCount} new
-            </span>
-          )}
-          {/* Mobile Folder Toggle */}
-          <button
-            onClick={() => setShowMobileFolders(!showMobileFolders)}
-            className="lg:hidden flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm hover:bg-gray-50 transition-colors"
-          >
-            <FolderOpen className="h-4 w-4" />
-            <span>Folders</span>
-          </button>
-          {/* AI Triage Button */}
-          <button
-            onClick={() => setShowTriageModal(true)}
-            className="flex items-center gap-2 bg-white border border-red-300 rounded-lg px-3 py-2 text-sm hover:bg-red-50 transition-colors"
-          >
-            <TriageIcon className="w-5 h-5" />
-            <span>AI Triage ({allEmails.length})</span>
-          </button>
-          
-
-          {/* Compose New Email Button */}
-          <button
-            onClick={() => setShowComposeModal(true)}
-            className="flex items-center gap-2 bg-indigo-600 text-white rounded-lg px-3 py-2 text-sm hover:bg-indigo-700 transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            <span>New Email</span>
-          </button>
+      {/* Enhanced Header with BlocIQ Branding */}
+      <div className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] rounded-2xl p-8 text-white shadow-xl">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold">Email Inbox</h1>
+            <p className="text-xl text-white/90">Manage and respond to property-related emails</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <BlocIQButton 
+              onClick={manualSync}
+              disabled={syncing || loading}
+              variant="secondary"
+              className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+            >
+              {syncing ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              {syncing ? 'Syncing...' : 'Sync Inbox'}
+            </BlocIQButton>
+            <BlocIQButton 
+              onClick={() => setShowComposeModal(true)}
+              variant="secondary"
+              className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Compose
+            </BlocIQButton>
+            <BlocIQButton 
+              onClick={() => setShowTriageModal(true)}
+              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold relative overflow-hidden group"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-blue-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+              <span className="relative z-10">🚑 AI Triage</span>
+            </BlocIQButton>
+          </div>
         </div>
-        <div className="flex items-center gap-4 text-sm">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 text-green-600">
-              <Wifi className="h-4 w-4" />
-              <span className="font-medium">Live Outlook</span>
+        
+        {/* Email Stats */}
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold">{emails?.length || 0}</div>
+                <div className="text-sm text-white/80">Total Emails</div>
+              </div>
+              <Building className="h-10 w-10 text-white/80" />
             </div>
           </div>
-          {selectedEmail && (
-            <div className="flex items-center gap-2 text-gray-500 text-xs">
-              <span>R: Reply</span>
-              <span>A: Reply All</span>
-              <span>F: Forward</span>
-              <span>Del: Delete</span>
-              <span>Esc: Deselect</span>
+          
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold">{emails?.filter(e => e.unread).length || 0}</div>
+                <div className="text-sm text-white/80">Unread</div>
+              </div>
+              <Mail className="h-10 w-10 text-white/80" />
             </div>
-          )}
-          <button
-            onClick={manualSync}
-            disabled={syncing || loading}
-            className="flex items-center gap-2 text-indigo-600 hover:underline transition disabled:opacity-50"
-          >
-            {syncing ? (
-              <RefreshCw className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
-            {syncing ? 'Syncing...' : 'Refresh Outlook'}
-          </button>
+          </div>
+          
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold">{emails?.filter(e => !e.handled).length || 0}</div>
+                <div className="text-sm text-white/80">Pending</div>
+              </div>
+              <Clock className="h-10 w-10 text-white/80" />
+            </div>
+          </div>
+          
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold">{emails?.filter(e => e.handled).length || 0}</div>
+                <div className="text-sm text-white/80">Handled</div>
+              </div>
+              <CheckCircle className="h-10 w-10 text-white/80" />
+            </div>
+          </div>
         </div>
+      </div>
+
+      {/* Mobile Folder Toggle */}
+      <div className="lg:hidden">
+        <button
+          onClick={() => setShowMobileFolders(!showMobileFolders)}
+          className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm hover:bg-gray-50 transition-colors"
+        >
+          <FolderOpen className="h-4 w-4" />
+          <span>Folders</span>
+        </button>
       </div>
 
       {/* Error Display */}
@@ -550,6 +669,8 @@ export default function InboxClient() {
               onFlagEmail={flagEmail}
               onReply={handleReply}
               onDelete={handleDeleteEmail}
+              onCreateAIDraft={isAIEnabled ? handleCreateAIDraft : undefined}
+              onTriage={isAIEnabled ? handleTriage : undefined}
             />
           ) : (
             <div className="flex flex-col items-center justify-center text-center text-gray-500 h-full">
@@ -581,6 +702,8 @@ export default function InboxClient() {
               onFlagEmail={flagEmail}
               onReply={handleReply}
               onDelete={handleDeleteEmail}
+              onCreateAIDraft={isAIEnabled ? handleCreateAIDraft : undefined}
+              onTriage={isAIEnabled ? handleTriage : undefined}
             />
           </div>
         )}
@@ -618,4 +741,5 @@ export default function InboxClient() {
       </button>
     </div>
   );
+} 
 } 

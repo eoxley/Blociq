@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Mail, Flag, CheckCircle, Reply, Forward, Archive, Trash2, Clock, Building, User, Users } from 'lucide-react';
+import { Mail, Flag, CheckCircle, Reply, Forward, Archive, Trash2, Clock, Building, User, Users, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { sanitizeHtml, processEmailHtml } from '@/utils/email';
@@ -42,6 +42,8 @@ interface EnhancedEmailDetailViewProps {
   onFlagEmail?: (emailId: string, flagged: boolean) => Promise<void>;
   onReply?: (action: 'reply' | 'reply-all' | 'forward') => void;
   onDelete?: (emailId: string) => Promise<void>;
+  onCreateAIDraft?: (action: 'reply' | 'reply-all' | 'forward') => void;
+  onTriage?: () => void;
 }
 
 export default function EnhancedEmailDetailView({ 
@@ -50,7 +52,9 @@ export default function EnhancedEmailDetailView({
   onMarkAsHandled, 
   onFlagEmail,
   onReply,
-  onDelete
+  onDelete,
+  onCreateAIDraft,
+  onTriage
 }: EnhancedEmailDetailViewProps) {
   // Fetch email attachments for inline image support
   const { attachments, loading: attachmentsLoading } = useEmailAttachments(email.id);
@@ -187,6 +191,40 @@ export default function EnhancedEmailDetailView({
             <Forward className="h-4 w-4" />
             Forward
           </Button>
+
+          {/* AI Action Buttons */}
+          {onCreateAIDraft && (
+            <>
+              <div className="w-px h-6 bg-gray-300 mx-2" />
+              <Button
+                onClick={() => onCreateAIDraft('reply')}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white border-0 hover:from-purple-700 hover:to-blue-700"
+              >
+                <Sparkles className="h-4 w-4" />
+                AI Reply
+              </Button>
+              <Button
+                onClick={() => onCreateAIDraft('reply-all')}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 bg-gradient-to-r from-green-600 to-teal-600 text-white border-0 hover:from-green-700 hover:to-teal-700"
+              >
+                <Sparkles className="h-4 w-4" />
+                AI Reply All
+              </Button>
+              <Button
+                onClick={() => onCreateAIDraft('forward')}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 bg-gradient-to-r from-orange-600 to-red-600 text-white border-0 hover:from-orange-700 hover:to-red-700"
+              >
+                <Sparkles className="h-4 w-4" />
+                AI Forward
+              </Button>
+            </>
+          )}
         </div>
         
         <div className="flex items-center gap-2">
@@ -222,6 +260,22 @@ export default function EnhancedEmailDetailView({
             <Trash2 className="h-4 w-4" />
             Delete
           </Button>
+
+          {/* AI Triage Button */}
+          {onTriage && (
+            <>
+              <div className="w-px h-6 bg-gray-300 mx-2" />
+              <Button
+                onClick={onTriage}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-0 hover:from-indigo-700 hover:to-purple-700"
+              >
+                <Sparkles className="h-4 w-4" />
+                AI Triage
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
