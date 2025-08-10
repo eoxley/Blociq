@@ -135,6 +135,63 @@ export default function InboxV2() {
     setShowReplyModal(true);
   }, [selectedEmail]);
 
+  // AI Draft handler
+  const handleCreateAIDraft = useCallback(async (action: 'reply' | 'reply-all' | 'forward') => {
+    if (!selectedEmail) return;
+
+    try {
+      // Call the unified brain with draft mode
+      const response = await fetch('/api/ask-blociq', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: "Generate the reply in the property manager tone.",
+          mode: "draft",
+          action: action,
+          email_id: selectedEmail.id,
+          building_id: selectedEmail.building_id,
+          include_thread: true
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate AI draft');
+      }
+
+      const data = await response.json();
+
+      // Save to Outlook Drafts using the tools endpoint
+      const draftResponse = await fetch('/api/tools/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: data.recipients?.to || [],
+          cc: data.recipients?.cc || [],
+          subject: data.recipients?.subject || data.subject,
+          html_body: data.answer,
+          save_to_drafts: true,
+          reply_to_id: selectedEmail.id
+        }),
+      });
+
+      if (!draftResponse.ok) {
+        const draftError = await draftResponse.json();
+        throw new Error(draftError.error || 'Failed to save draft');
+      }
+
+      // Show success message with citations if available
+      if (data.citations && data.citations.length > 0) {
+        toast.success(`AI draft saved to Outlook Drafts with ${data.citations.length} citations`);
+      } else {
+        toast.success('AI draft saved to Outlook Drafts');
+      }
+    } catch (error) {
+      console.error('Error creating AI draft:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to create AI draft');
+    }
+  }, [selectedEmail]);
+
   // Delete email handler
   const handleDeleteEmail = useCallback(async (emailId: string) => {
     try {
@@ -236,6 +293,47 @@ export default function InboxV2() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedEmail, handleReply, handleDeleteEmail, selectEmail, showReplyModal]);
 
+  // Triage handler
+  const handleTriage = useCallback(async () => {
+    if (!selectedEmail) return;
+
+    try {
+      const response = await fetch('/api/ask-blociq', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: "Triage this inbox thread and provide a summary, urgency assessment, and suggested actions.",
+          mode: "triage",
+          email_id: selectedEmail.id,
+          building_id: selectedEmail.building_id,
+          include_thread: true
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to triage email');
+      }
+
+      const data = await response.json();
+      
+      // Show triage results in a toast or modal
+      toast.success(`Triage complete: ${data.answer}`);
+      
+      // Handle proposed actions if any
+      if (data.proposed_actions && data.proposed_actions.length > 0) {
+        console.log('Proposed actions:', data.proposed_actions);
+        // TODO: Show action buttons for user to execute
+      }
+    } catch (error) {
+      console.error('Error triaging email:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to triage email');
+    }
+  }, [selectedEmail]);
+
+  // Check if AI is enabled
+  const isAIEnabled = process.env.NEXT_PUBLIC_AI_ENABLED === 'true';
+
   return (
     <div className="h-[calc(100vh-200px)] flex bg-white rounded-lg border border-gray-200 overflow-hidden">
       {/* Folders Sidebar */}
@@ -294,6 +392,8 @@ export default function InboxV2() {
           onReply={handleReply}
           onToggleFlag={handleToggleFlag}
           onDelete={handleDeleteEmail}
+          onCreateAIDraft={isAIEnabled ? handleCreateAIDraft : undefined}
+          onTriage={isAIEnabled ? handleTriage : undefined}
         />
       </div>
 
