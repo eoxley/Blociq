@@ -174,51 +174,33 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
     
     setIsGenerating(true);
     try {
-      // Call the unified brain with draft mode
-      const response = await fetch('/api/ask-blociq', {
+      const response = await fetch('/api/ask-ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: "Generate the reply in the property manager tone.",
-          mode: "draft",
+          context_type: 'email_reply',
           action: action,
-          email_id: email.id,
-          building_id: email.building_id,
-          include_thread: true
+          emailId: email.id,
+          source: 'inbox-v2'
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate AI reply');
+        throw new Error('Failed to generate AI reply');
       }
 
       const data = await response.json();
-      
-      // Update recipients and subject if provided
-      if (data.recipients) {
-        setToRecipients(data.recipients.to.join(', '));
-        setCcRecipients(data.recipients.cc.join(', '));
-        setSubject(data.recipients.subject);
-      }
+      const aiText = data.response || data.answer || '';
 
-      // Update the editor with the AI-generated content
       if (editorRef.current) {
         const currentContent = editorRef.current.innerHTML;
-        const newContent = currentContent ? `${currentContent}<br><br>${data.answer}` : data.answer;
+        const newContent = currentContent ? `${currentContent}<br><br>${aiText}` : aiText;
         editorRef.current.innerHTML = newContent;
         setReplyHtml(newContent);
       }
-
-      // Show success message with citations if available
-      if (data.citations && data.citations.length > 0) {
-        toast.success(`AI draft generated with ${data.citations.length} citations`);
-      } else {
-        toast.success('AI draft generated');
-      }
     } catch (error) {
       console.error('Error generating AI reply:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to generate AI reply');
+      toast.error('Failed to generate AI reply');
     } finally {
       setIsGenerating(false);
     }
@@ -268,76 +250,12 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
     }
   };
 
-  const handleCreateAIDraft = async () => {
-    if (!email) return;
-    
-    setIsGenerating(true);
-    try {
-      // Call the unified brain with draft mode
-      const response = await fetch('/api/ask-blociq', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: "Generate the reply in the property manager tone.",
-          mode: "draft",
-          action: action,
-          email_id: email.id,
-          building_id: email.building_id,
-          include_thread: true
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate AI draft');
-      }
-
-      const data = await response.json();
-      
-      // Save to Outlook Drafts using the tools endpoint
-      const draftResponse = await fetch('/api/tools/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: data.recipients?.to || [],
-          cc: data.recipients?.cc || [],
-          subject: data.recipients?.subject || data.subject,
-          html_body: data.answer,
-          save_to_drafts: true,
-          reply_to_id: email.id
-        }),
-      });
-
-      if (!draftResponse.ok) {
-        const draftError = await draftResponse.json();
-        throw new Error(draftError.error || 'Failed to save draft');
-      }
-
-      // Show success message with citations if available
-      if (data.citations && data.citations.length > 0) {
-        toast.success(`AI draft saved to Outlook Drafts with ${data.citations.length} citations`);
-      } else {
-        toast.success('AI draft saved to Outlook Drafts');
-      }
-      
-      onClose();
-    } catch (error) {
-      console.error('Error creating AI draft:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to create AI draft');
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       e.preventDefault();
       handleSend();
     }
   };
-
-  // Check if AI is enabled
-  const isAIEnabled = process.env.NEXT_PUBLIC_AI_ENABLED === 'true';
 
   const handleEditorChange = () => {
     if (editorRef.current) {
@@ -402,21 +320,11 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
               </button>
               <button
                 onClick={handleGenerateAI}
-                disabled={isGenerating || !isAIEnabled}
+                disabled={isGenerating}
                 className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                title={!isAIEnabled ? 'AI currently disabled' : undefined}
               >
                 <Sparkles className="h-4 w-4" />
                 <span>{isGenerating ? 'Generating...' : 'Generate AI Reply'}</span>
-              </button>
-              <button
-                onClick={handleCreateAIDraft}
-                disabled={isGenerating || !isAIEnabled}
-                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-lg hover:from-green-700 hover:to-teal-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                title={!isAIEnabled ? 'AI currently disabled' : 'Create AI draft and save to Outlook Drafts'}
-              >
-                <Sparkles className="h-4 w-4" />
-                <span>{isGenerating ? 'Creating...' : 'Create AI Draft'}</span>
               </button>
               <div className="text-xs text-gray-500">
                 Press Cmd+Enter (Mac) or Ctrl+Enter (Windows) to send

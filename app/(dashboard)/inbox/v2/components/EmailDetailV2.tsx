@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Flag, Trash2, Download, Eye, Reply, ReplyAll, Forward, Sparkles } from 'lucide-react';
+import { Flag, Trash2, Download, Eye, Reply, ReplyAll, Forward } from 'lucide-react';
 import { sanitizeEmailHtml, looksLikeHtml } from '@/utils/emailFormatting';
 import { BiqPrimary, BiqSecondary } from '@/components/ui/biq-button';
 
@@ -10,15 +10,9 @@ interface EmailDetailV2Props {
   onReply: (action: 'reply' | 'reply-all' | 'forward') => void;
   onToggleFlag: (emailId: string) => void;
   onDelete: (emailId: string) => void;
-  onCreateAIDraft?: (action: 'reply' | 'reply-all' | 'forward') => void;
 }
 
-function ActionBar({ onReply, onCreateAIDraft }: { 
-  onReply: (a: 'reply' | 'reply-all' | 'forward') => void;
-  onCreateAIDraft?: (a: 'reply' | 'reply-all' | 'forward') => void;
-}) {
-  const isAIEnabled = process.env.NEXT_PUBLIC_AI_ENABLED === 'true';
-  
+function ActionBar({ onReply }: { onReply: (a: 'reply' | 'reply-all' | 'forward') => void }) {
   return (
     <div className="flex items-center gap-2 flex-wrap">
       <BiqPrimary onClick={() => onReply('reply')}>
@@ -33,44 +27,11 @@ function ActionBar({ onReply, onCreateAIDraft }: {
         <Forward className="h-4 w-4 text-gray-500" />
         <span className="font-medium">Forward</span>
       </BiqSecondary>
-      
-      {isAIEnabled && onCreateAIDraft && (
-        <>
-          <div className="w-px h-6 bg-gray-300 mx-2" />
-          <button
-            onClick={() => onCreateAIDraft('reply')}
-            disabled={!isAIEnabled}
-            className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
-            title="Create AI draft and save to Outlook Drafts"
-          >
-            <Sparkles className="h-4 w-4" />
-            <span>AI Reply</span>
-          </button>
-          <button
-            onClick={() => onCreateAIDraft('reply-all')}
-            disabled={!isAIEnabled}
-            className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-lg hover:from-green-700 hover:to-teal-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
-            title="Create AI draft and save to Outlook Drafts"
-          >
-            <Sparkles className="h-4 w-4" />
-            <span>AI Reply All</span>
-          </button>
-          <button
-            onClick={() => onCreateAIDraft('forward')}
-            disabled={!isAIEnabled}
-            className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg hover:from-orange-700 hover:to-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
-            title="Create AI draft and save to Outlook Drafts"
-          >
-            <Sparkles className="h-4 w-4" />
-            <span>AI Forward</span>
-          </button>
-        </>
-      )}
     </div>
   );
 }
 
-export default function EmailDetailV2({ email, onReply, onToggleFlag, onDelete, onCreateAIDraft }: EmailDetailV2Props) {
+export default function EmailDetailV2({ email, onReply, onToggleFlag, onDelete }: EmailDetailV2Props) {
   if (!email) {
     return (
       <div className="flex flex-col h-full bg-white border-l border-gray-200">
@@ -105,7 +66,7 @@ export default function EmailDetailV2({ email, onReply, onToggleFlag, onDelete, 
     <div className="flex flex-col h-full bg-white border-l border-gray-200">
       {/* Action Bar - Fixed */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50 flex-shrink-0">
-        <ActionBar onReply={onReply} onCreateAIDraft={onCreateAIDraft} />
+        <ActionBar onReply={onReply} />
         <div className="flex items-center space-x-2">
           <button
             onClick={() => onToggleFlag(email.id)}

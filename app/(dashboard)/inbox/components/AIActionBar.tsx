@@ -74,50 +74,14 @@ export default function AIActionBar({
 
   // Generate AI draft reply
   const handleGenerateReply = async () => {
-    if (!process.env.NEXT_PUBLIC_AI_ENABLED) {
-      toast.error('AI currently disabled')
-      return
-    }
+    if (!onGenerateReply) return
     
     setError(null)
     try {
-      const response = await fetch('/api/ask-blociq', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: `Generate a professional email reply to: ${email.subject}\n\n${email.body_full || email.body_preview}`,
-          mode: 'draft',
-          building_id: email.building_id,
-          email_id: email.id
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to generate reply')
-      }
-
-      const data = await response.json()
-      setReplyDraft(data.answer)
-      setShowReplyDraft(true)
-      
-      // Send to Outlook drafts
-      const draftResponse = await fetch('/api/tools/send-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          to: [email.from_email || ''],
-          subject: data.subject || `Re: ${email.subject}`,
-          html_body: data.answer,
-          save_to_drafts: true
-        }),
-      })
-
-      if (draftResponse.ok) {
-        toast.success('AI draft saved to Outlook Drafts')
+      await onGenerateReply(email.id, email.subject, email.body_full || email.body_preview)
+      if (replyResponse) {
+        setReplyDraft(replyResponse)
+        setShowReplyDraft(true)
       }
     } catch (err) {
       console.error('Error generating reply:', err)
@@ -278,9 +242,8 @@ export default function AIActionBar({
             </div>
             <Button
               onClick={handleGenerateReply}
-              disabled={isGeneratingReply || !process.env.NEXT_PUBLIC_AI_ENABLED}
+              disabled={isGeneratingReply}
               className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-0 shadow-lg"
-              title={!process.env.NEXT_PUBLIC_AI_ENABLED ? 'AI currently disabled' : undefined}
             >
               {isGeneratingReply ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />

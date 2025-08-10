@@ -143,59 +143,31 @@ export default function TriageAssistant({
       setProgress(20)
       setCurrentStep(`Analyzing ${totalEmails} emails...`)
 
-      // Step 2: Check if AI is enabled
-      if (!process.env.NEXT_PUBLIC_AI_ENABLED) {
-        toast.error('AI currently disabled')
-        setIsTriageRunning(false)
-        return
+      // Step 2: Bulk analyze emails using the new API
+      const emailsForAnalysis = emails.map(email => ({
+        id: email.id,
+        subject: email.subject,
+        body: email.body_preview || email.body_full,
+        from: email.from_email,
+        receivedAt: email.received_at,
+        buildingId: email.building_id
+      }))
+
+      const bulkTriageResponse = await fetch('/api/bulk-triage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          emails: emailsForAnalysis,
+          performActions: true // Enable automatic actions
+        })
+      })
+
+      if (!bulkTriageResponse.ok) {
+        throw new Error('Bulk triage failed')
       }
 
-      // Step 3: Process emails individually using Ask BlocIQ
-      const triageResults: TriageResult[] = []
-      
-      for (let i = 0; i < emails.length; i++) {
-        const email = emails[i]
-        setProgress(20 + (i / emails.length) * 40)
-        setCurrentStep(`Triage ${i + 1} of ${emails.length}...`)
-
-        try {
-          const triageResponse = await fetch('/api/ask-blociq', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              message: `Triage this inbox thread: ${email.subject}\n\n${email.body_preview || email.body_full}`,
-              mode: 'triage',
-              building_id: email.building_id,
-              email_id: email.id
-            })
-          })
-
-          if (!triageResponse.ok) {
-            throw new Error('Triage failed')
-          }
-
-          const triageData = await triageResponse.json()
-          
-          // Parse triage response
-          const triageResult: TriageResult = {
-            emailId: email.id,
-            urgency: triageData.urgency || 'medium',
-            actionRequired: triageData.actionRequired || 'this_week',
-            category: triageData.category || 'General',
-            summary: triageData.summary || 'Email processed',
-            draftReply: triageData.draftReply || 'Standard reply generated',
-            suggestedActions: triageData.suggestedActions || ['Reply'],
-            tags: triageData.tags || [],
-            buildingMatch: email.buildings?.name,
-            estimatedResponseTime: triageData.estimatedResponseTime || '2-3 business days'
-          }
-          
-          triageResults.push(triageResult)
-        } catch (error) {
-          console.error('Error triaging email:', error)
-          // Continue with other emails
-        }
-      }
+      const bulkTriageData = await bulkTriageResponse.json()
+      const triageResults = bulkTriageData.results
 
       setProgress(60)
       setCurrentStep('Generating draft replies...')
@@ -211,20 +183,24 @@ export default function TriageAssistant({
         setCurrentStep(`Generating draft ${i + 1} of ${triageResults.length}...`)
 
         try {
-          // Generate draft reply using Ask BlocIQ
-          const draftResponse = await fetch('/api/ask-blociq', {
+          // Generate draft reply
+          const draftResponse = await fetch('/api/generate-email-reply', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              message: `Generate a professional email reply to: ${email?.subject}\n\n${email?.body_preview || email?.body_full}`,
-              mode: 'draft',
-              building_id: email?.building_id,
-              email_id: email?.id
+              emailContent: {
+                subject: email?.subject || '',
+                body: email?.body_preview || email?.body_full || '',
+                from: email?.from_email || '',
+                fromName: email?.from_name || ''
+              },
+              buildingId: email?.building_id || null,
+              context: result.summary
             })
           })
 
           const draftData = await draftResponse.json()
-          const draftReply = draftResponse.ok ? draftData.answer : 'Unable to generate draft'
+          const draftReply = draftResponse.ok ? (draftData.reply || draftData.draft) : 'Unable to generate draft'
 
           // Create enhanced triage result
           const enhancedResult: TriageResult = {
