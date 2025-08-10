@@ -175,9 +175,6 @@ export default function InboxClient() {
     { id: 'drafts', label: 'Drafts', count: draftsCount, icon: '📝' }
   ];
 
-  // Get all emails for triage (not just unread)
-  const allEmails = emails;
-
   // Fetch drafts count
   useEffect(() => {
     const fetchDraftsCount = async () => {
