@@ -11,14 +11,16 @@ interface EmailDetailV2Props {
   onToggleFlag: (emailId: string) => void;
   onDelete: (emailId: string) => void;
   onCreateAIDraft?: (action: 'reply' | 'reply-all' | 'forward') => void;
+  onTriage?: () => void;
 }
 
-function ActionBar({ onReply, onCreateAIDraft }: { 
+function ActionBar({ onReply, onCreateAIDraft, onTriage }: {
   onReply: (a: 'reply' | 'reply-all' | 'forward') => void;
   onCreateAIDraft?: (a: 'reply' | 'reply-all' | 'forward') => void;
+  onTriage?: () => void;
 }) {
   const isAIEnabled = process.env.NEXT_PUBLIC_AI_ENABLED === 'true';
-  
+
   return (
     <div className="flex items-center gap-2 flex-wrap">
       <BiqPrimary onClick={() => onReply('reply')}>
@@ -33,7 +35,7 @@ function ActionBar({ onReply, onCreateAIDraft }: {
         <Forward className="h-4 w-4 text-gray-500" />
         <span className="font-medium">Forward</span>
       </BiqSecondary>
-      
+
       {isAIEnabled && onCreateAIDraft && (
         <>
           <div className="w-px h-6 bg-gray-300 mx-2" />
@@ -64,13 +66,22 @@ function ActionBar({ onReply, onCreateAIDraft }: {
             <Sparkles className="h-4 w-4" />
             <span>AI Forward</span>
           </button>
+          <button
+            onClick={onTriage}
+            disabled={!isAIEnabled}
+            className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+            title="AI Triage - Analyze and suggest actions"
+          >
+            <Sparkles className="h-4 w-4" />
+            <span>AI Triage</span>
+          </button>
         </>
       )}
     </div>
   );
 }
 
-export default function EmailDetailV2({ email, onReply, onToggleFlag, onDelete, onCreateAIDraft }: EmailDetailV2Props) {
+export default function EmailDetailV2({ email, onReply, onToggleFlag, onDelete, onCreateAIDraft, onTriage }: EmailDetailV2Props) {
   if (!email) {
     return (
       <div className="flex flex-col h-full bg-white border-l border-gray-200">
@@ -105,7 +116,7 @@ export default function EmailDetailV2({ email, onReply, onToggleFlag, onDelete, 
     <div className="flex flex-col h-full bg-white border-l border-gray-200">
       {/* Action Bar - Fixed */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50 flex-shrink-0">
-        <ActionBar onReply={onReply} onCreateAIDraft={onCreateAIDraft} />
+        <ActionBar onReply={onReply} onCreateAIDraft={onCreateAIDraft} onTriage={onTriage} />
         <div className="flex items-center space-x-2">
           <button
             onClick={() => onToggleFlag(email.id)}

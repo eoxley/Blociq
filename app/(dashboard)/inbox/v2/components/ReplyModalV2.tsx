@@ -21,6 +21,7 @@ interface ReplyModalV2Props {
 }
 
 export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail }: ReplyModalV2Props) {
+  const isAIEnabled = process.env.NEXT_PUBLIC_AI_ENABLED === 'true';
   const [replyHtml, setReplyHtml] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [showOriginal, setShowOriginal] = useState(true);
@@ -169,6 +170,67 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
     }
   }, [isOpen, email, buildInitialFields]);
 
+  const handleCreateAIDraft = async () => {
+    if (!email) return;
+
+    setIsGenerating(true);
+    try {
+      // Call the unified brain with draft mode
+      const response = await fetch('/api/ask-blociq', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: "Generate the reply in the property manager tone.",
+          mode: "draft",
+          action: action,
+          email_id: email.id,
+          building_id: email.building_id,
+          include_thread: true
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate AI draft');
+      }
+
+      const data = await response.json();
+
+      // Save to Outlook Drafts using the tools endpoint
+      const draftResponse = await fetch('/api/tools/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: data.recipients?.to || [],
+          cc: data.recipients?.cc || [],
+          subject: data.recipients?.subject || data.subject,
+          html_body: data.answer,
+          save_to_drafts: true,
+          reply_to_id: email.id
+        }),
+      });
+
+      if (!draftResponse.ok) {
+        const draftError = await draftResponse.json();
+        throw new Error(draftError.error || 'Failed to save draft');
+      }
+
+      // Show success message with citations if available
+      if (data.citations && data.citations.length > 0) {
+        toast.success(`AI draft saved to Outlook Drafts with ${data.citations.length} citations`);
+      } else {
+        toast.success('AI draft saved to Outlook Drafts');
+      }
+
+      onClose();
+    } catch (error) {
+      console.error('Error creating AI draft:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to create AI draft');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleGenerateAI = async () => {
     if (!email) return;
     
@@ -194,7 +256,7 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
       }
 
       const data = await response.json();
-      
+
       // Update recipients and subject if provided
       if (data.recipients) {
         setToRecipients(data.recipients.to.join(', '));
@@ -268,76 +330,12 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
     }
   };
 
-  const handleCreateAIDraft = async () => {
-    if (!email) return;
-    
-    setIsGenerating(true);
-    try {
-      // Call the unified brain with draft mode
-      const response = await fetch('/api/ask-blociq', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: "Generate the reply in the property manager tone.",
-          mode: "draft",
-          action: action,
-          email_id: email.id,
-          building_id: email.building_id,
-          include_thread: true
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate AI draft');
-      }
-
-      const data = await response.json();
-      
-      // Save to Outlook Drafts using the tools endpoint
-      const draftResponse = await fetch('/api/tools/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: data.recipients?.to || [],
-          cc: data.recipients?.cc || [],
-          subject: data.recipients?.subject || data.subject,
-          html_body: data.answer,
-          save_to_drafts: true,
-          reply_to_id: email.id
-        }),
-      });
-
-      if (!draftResponse.ok) {
-        const draftError = await draftResponse.json();
-        throw new Error(draftError.error || 'Failed to save draft');
-      }
-
-      // Show success message with citations if available
-      if (data.citations && data.citations.length > 0) {
-        toast.success(`AI draft saved to Outlook Drafts with ${data.citations.length} citations`);
-      } else {
-        toast.success('AI draft saved to Outlook Drafts');
-      }
-      
-      onClose();
-    } catch (error) {
-      console.error('Error creating AI draft:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to create AI draft');
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       e.preventDefault();
       handleSend();
     }
   };
-
-  // Check if AI is enabled
-  const isAIEnabled = process.env.NEXT_PUBLIC_AI_ENABLED === 'true';
 
   const handleEditorChange = () => {
     if (editorRef.current) {
