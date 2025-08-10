@@ -741,5 +741,4 @@ export default function InboxClient() {
       </button>
     </div>
   );
-} 
-} 
+}
