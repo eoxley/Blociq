@@ -25,11 +25,51 @@ export default function SimpleFolderSidebar({
   onFolderSelect,
   onEmailDrop
 }: SimpleFolderSidebarProps) {
-  const { folders, isLoading, error, refresh } = useOutlookFolders();
+  // Defensive hook initialization - wrap in try-catch to prevent crashes
+  let hookData;
+  try {
+    hookData = useOutlookFolders();
+  } catch (hookError) {
+    console.error('SimpleFolderSidebar hook initialization error:', hookError);
+    // Return fallback folders if hook fails to initialize
+    const fallback = ["Inbox", "Drafts", "Sent", "Deleted", "Archive"].map((name, i) => ({
+      id: `fallback-${i}`,
+      name,
+      unread: 0,
+      total: 0,
+      isStandard: true,
+    }));
+    
+    return (
+      <div className="bg-white rounded-xl shadow p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Folders</h3>
+        </div>
+        <div className="space-y-2">
+          {fallback.map((folder) => (
+            <div key={folder.id} className="p-3 bg-gray-100 rounded-lg">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">{folder.name}</span>
+                <span className="text-xs text-gray-500">0</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const { folders, isLoading, error, refresh } = hookData;
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
 
-  // Fallback folders if API fails
+  // Defensive error handling - prevent rendering crashes
+  if (error) {
+    console.error('SimpleFolderSidebar error:', error);
+    // Don't crash the component, just log the error
+  }
+
+  // Enhanced fallback handling - ensure we always have valid data
   const fallback = ["Inbox", "Drafts", "Sent", "Deleted", "Archive"].map((name, i) => ({
     id: `fallback-${i}`,
     name,
@@ -38,7 +78,8 @@ export default function SimpleFolderSidebar({
     isStandard: true,
   }));
 
-  const list = folders.length ? folders : fallback;
+  // Defensive data handling - ensure folders is always an array
+  const list = (folders && Array.isArray(folders) && folders.length > 0) ? folders : fallback;
 
   const handleFolderCreated = (newFolder: any) => {
     // Refresh folders after creating a new one

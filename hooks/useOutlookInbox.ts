@@ -38,6 +38,7 @@ interface Email {
   last_sync_at: string | null;
   created_at: string | null;
   updated_at: string | null;
+  tags: string[] | null; // Required tags property for compatibility
 }
 
 interface InboxInfo {
@@ -97,49 +98,41 @@ export function useOutlookInbox(): UseOutlookInboxReturn {
         const errorData = await response.json();
         
         if (errorData.code === 'OUTLOOK_NOT_CONNECTED') {
+          // Defensive handling - don't throw, just set error state
           setError('Outlook not connected');
-          toast.error('Please connect your Outlook account first');
-        } else if (errorData.code === 'TOKEN_REFRESH_FAILED' || errorData.code === 'AUTH_FAILED') {
-          setError('Authentication failed');
-          toast.error('Your Outlook session has expired. Please reconnect your account.');
+          setEmails([]);
+          setInboxInfo({ totalCount: 0, unreadCount: 0 });
         } else {
-          setError(errorData.message || 'Failed to fetch emails');
-          toast.error(errorData.message || 'Failed to load emails');
+          // Defensive handling - don't throw, just set error state
+          setError(`Failed to fetch emails: ${errorData.message || 'Unknown error'}`);
+          setEmails([]);
+          setInboxInfo({ totalCount: 0, unreadCount: 0 });
         }
+        setLoading(false);
         return;
       }
 
-      const result = await response.json();
+      const data = await response.json();
       
-      if (result.success) {
-        const { emails: fetchedEmails, inboxInfo: fetchedInboxInfo } = result.data;
-        
-        // Emails loaded from Outlook successfully
-        
-        // Calculate new emails since last sync
-        if (lastSyncTime.current && fetchedEmails) {
-          const newEmails = fetchedEmails.filter((email: Email) => {
-            const received = new Date(email.received_at || '');
-            return received > lastSyncTime.current!;
-          });
-          setNewEmailCount(newEmails.length);
-          
-          if (newEmails.length > 0) {
-            toast.success(`${newEmails.length} new email${newEmails.length > 1 ? 's' : ''} received`);
-          }
-        }
-
-        setEmails(fetchedEmails || []);
-        setInboxInfo(fetchedInboxInfo);
-        lastSyncTime.current = new Date();
+      // Defensive data handling - ensure we have valid arrays
+      if (data.emails && Array.isArray(data.emails)) {
+        setEmails(data.emails);
+        setInboxInfo({
+          totalCount: data.totalCount || data.emails.length,
+          unreadCount: data.unreadCount || data.emails.filter((e: any) => e.unread || !e.is_read).length
+        });
       } else {
-        setError(result.message || 'Failed to fetch emails');
-        toast.error(result.message || 'Failed to load emails');
+        // Defensive fallback - set empty data if response is invalid
+        console.warn('[useOutlookInbox] Invalid response format:', data);
+        setEmails([]);
+        setInboxInfo({ totalCount: 0, unreadCount: 0 });
       }
     } catch (error) {
-      console.error('❌ Error in fetchEmails:', error);
-      setError('Failed to load emails');
-      toast.error('Failed to load emails');
+      // Defensive error handling - don't throw, just set error state
+      console.error('[useOutlookInbox] Fetch error:', error);
+      setError(error instanceof Error ? error.message : 'Failed to fetch emails');
+      setEmails([]);
+      setInboxInfo({ totalCount: 0, unreadCount: 0 });
     } finally {
       setLoading(false);
     }

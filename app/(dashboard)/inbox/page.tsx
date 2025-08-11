@@ -8,9 +8,9 @@ import PageHero from '@/components/PageHero'
 export default async function InboxPage() {
   console.log('🚀 InboxPage: Starting to render...')
   
-  const supabase = createClient(cookies())
-
   try {
+    const supabase = createClient(cookies())
+
     // ✅ STEP 1: USER AUTHENTICATION
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
