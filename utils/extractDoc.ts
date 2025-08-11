@@ -11,6 +11,11 @@ export async function extractDocumentText(
   file: File | Buffer,
   fileName?: string
 ): Promise<ExtractionResult> {
+  // Ensure we're on the server side
+  if (typeof window !== 'undefined') {
+    throw new Error('Document extraction can only be performed on the server side');
+  }
+
   const buffer = file instanceof File ? Buffer.from(await file.arrayBuffer()) : file;
   const contentType = file instanceof File ? file.type : 'application/octet-stream';
   
@@ -36,6 +41,7 @@ export async function extractDocumentText(
 
 async function extractPDFText(buffer: Buffer): Promise<ExtractionResult> {
   try {
+    // Dynamic import to prevent build-time evaluation
     const pdfParse = await import('pdf-parse');
     const data = await pdfParse.default(buffer);
     
@@ -126,6 +132,11 @@ export function truncateText(text: string, maxLength: number = 15000): string {
 
 // Simplified PDF extraction function for direct use
 export async function extractFromPDF(input: File | Blob | Buffer) {
+  // Ensure we're on the server side
+  if (typeof window !== 'undefined') {
+    throw new Error('PDF extraction can only be performed on the server side');
+  }
+
   let buffer: Buffer;
   if (Buffer.isBuffer(input as any)) {
     buffer = input as Buffer;
@@ -136,10 +147,19 @@ export async function extractFromPDF(input: File | Blob | Buffer) {
     throw new Error("Unsupported input for PDF extraction");
   }
 
-  const data = await (await import('pdf-parse')).default(buffer);
-  return {
-    text: (data.text || "").trim(),
-    pageCount: data.numpages || 0,
-    ocrTried: false
-  };
+  try {
+    const data = await (await import('pdf-parse')).default(buffer);
+    return {
+      text: (data.text || "").trim(),
+      pageCount: data.numpages || 0,
+      ocrTried: false
+    };
+  } catch (error) {
+    console.error('PDF extraction failed:', error);
+    return {
+      text: "",
+      pageCount: 0,
+      ocrTried: false
+    };
+  }
 }
