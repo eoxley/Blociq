@@ -1,9 +1,10 @@
-'use client'
+// If a TDZ error persists, check for circular imports and call sites at module scope.
+"use client";
 
-import React, { useState } from 'react'
-import { Plus, Folder, FolderOpen, Trash2, RefreshCw } from 'lucide-react'
-import { useOutlookFolders } from '@/hooks/useOutlookFolders'
-import CreateFolderModal from './CreateFolderModal'
+import React, { useState } from 'react';
+import { FolderOpen, Plus, RefreshCw } from 'lucide-react';
+import { useOutlookFolders } from '@/hooks/useOutlookFolders';
+import CreateFolderModal from './CreateFolderModal';
 
 interface Folder {
   id: string

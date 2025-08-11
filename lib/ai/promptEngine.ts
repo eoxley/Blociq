@@ -309,5 +309,12 @@ Please provide a comprehensive answer using the available building and leasehold
   }
 }
 
-// Export singleton instance
-export const promptEngine = new PromptEngine();
+// Export singleton instance - lazy initialization
+let _promptEngine: PromptEngine | null = null;
+
+export function getPromptEngine(): PromptEngine {
+  if (!_promptEngine) {
+    _promptEngine = new PromptEngine();
+  }
+  return _promptEngine;
+}

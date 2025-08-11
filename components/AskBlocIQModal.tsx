@@ -1,3 +1,4 @@
+// If a TDZ error persists, check for circular imports and call sites at module scope.
 "use client";
 
 import React from 'react';

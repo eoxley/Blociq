@@ -39,10 +39,23 @@ export async function GET() {
   try {
     const token = await getOutlookAccessToken();
     if (!token) {
-      return NextResponse.json(
-        { error: "No Outlook token available" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "No Outlook token available" }, { status: 401 });
+    }
+
+    // DIAGNOSTIC: who is this token for?
+    try {
+      const meRes = await fetch("https://graph.microsoft.com/v1.0/me", {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      if (meRes.ok) {
+        const me = await meRes.json();
+        console.log("[folders] token for:", me?.userPrincipalName || me?.mail || "(unknown)");
+      } else {
+        console.warn("[folders] /me lookup failed:", meRes.status, await meRes.text().catch(()=>"..."));
+      }
+    } catch (e:any) {
+      console.warn("[folders] /me lookup error:", e?.message || e);
     }
 
     // Fetch standard folders explicitly (most reliable)
@@ -53,76 +66,53 @@ export async function GET() {
             `https://graph.microsoft.com/v1.0/me/mailFolders/${s.path}?$select=id,displayName,parentFolderId,childFolderCount,totalItemCount,unreadItemCount`,
             token
           );
-          return {
-            ...f,
-            __standardKey: s.key,
-            __labelOverride: s.label
-          };
+          return { ...f, __standardKey: s.key, __labelOverride: s.label };
         } catch {
           return null; // tolerate missing archive etc.
         }
       })
     );
-    
     const stdResults = std.filter(Boolean) as any[];
 
-    // Try to fetch all folders (custom + root); tolerate failure
-    let allFolders: any[] = [];
+    // Try to fetch all folders (may fail)
+    let allResults: any[] = [];
     try {
-      allFolders = await fetchAllFolders(token);
+      allResults = await fetchAllFolders(token);
     } catch (e) {
-      // swallow — we can still render standard set; include detail for debugging
-      console.warn("Graph mailFolders listing failed:", e);
+      console.warn("[folders] all folders fetch failed:", e);
     }
 
-    // Merge by id
-    const map = new Map<string, any>();
-    [...stdResults, ...allFolders].forEach((f) => {
-      if (!f?.id) return;
-      if (!map.has(f.id)) map.set(f.id, f);
-      else map.set(f.id, { ...map.get(f.id), ...f });
+    // Merge and deduplicate
+    const merged = new Map<string, any>();
+    
+    // Add standard folders first
+    stdResults.forEach(f => {
+      if (f.id) merged.set(f.id, f);
+    });
+    
+    // Add other folders, preferring standard if duplicate
+    allResults.forEach(f => {
+      if (f.id && !merged.has(f.id)) {
+        merged.set(f.id, f);
+      }
     });
 
-    // Sort: standard first, then A–Z
-    const order = new Map(STANDARD.map((s, i) => [s.key, i]));
-    const folders = Array.from(map.values())
-      .map((f: any) => {
-        const label = f.__labelOverride ?? f.displayName ?? "Folder";
-        const stdIndex = f.__standardKey ? order.get(f.__standardKey) ?? 999 : 999;
-        return {
-          id: f.id,
-          name: label,
-          unread: f.unreadItemCount ?? 0,
-          total: f.totalItemCount ?? 0,
-          parentFolderId: f.parentFolderId ?? null,
-          childFolderCount: f.childFolderCount ?? 0,
-          isStandard: Boolean(f.__standardKey),
-          stdIndex,
-        };
-      })
-      .sort((a, b) => a.stdIndex - b.stdIndex || a.name.localeCompare(b.name));
-
-    // Fallback: if somehow empty, provide a synthetic standard set
-    const fallback = folders.length > 0 ? folders : STANDARD.map((s, i) => ({
-      id: `std-${s.key}`,
-      name: s.label,
-      unread: 0,
-      total: 0,
-      parentFolderId: null,
-      childFolderCount: 0,
-      isStandard: true,
-      stdIndex: i,
+    const folders = Array.from(merged.values()).map(f => ({
+      id: f.id,
+      name: f.__labelOverride || f.displayName,
+      unread: f.unreadItemCount || 0,
+      total: f.totalItemCount || 0,
+      isStandard: !!f.__standardKey,
+      childCount: f.childFolderCount || 0
     }));
 
-    return NextResponse.json({ folders: fallback });
+    return NextResponse.json({ folders });
 
-  } catch (err: any) {
+  } catch (err:any) {
+    console.error("[folders] error:", err?.message, err);
     return NextResponse.json(
-      { 
-        error: "Failed to list folders", 
-        detail: err?.message ?? String(err) 
-      },
-      { status: 500 }
+      { error: "Failed to list folders", detail: err?.message ?? String(err) },
+      { status: 400 }
     );
   }
 }

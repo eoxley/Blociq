@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import { promptEngine, AIMode, Tone } from '@/lib/ai/promptEngine';
+import { getPromptEngine, AIMode, Tone } from '@/lib/ai/promptEngine';
 
 export async function POST(req: NextRequest) {
   try {
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     const finalThreadId = threadId || `thread_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     // Run AI through the prompt engine
-    const result = await promptEngine.runAI({
+    const result = await getPromptEngine().runAI({
       mode,
       input,
       threadId: finalThreadId,

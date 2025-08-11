@@ -12,6 +12,8 @@ const nextConfig: NextConfig = {
     // your project has TypeScript errors.
     ignoreBuildErrors: true,
   },
+  // Enable production browser source maps for TDZ error diagnostics
+  productionBrowserSourceMaps: true,
   // Add optimizations to prevent chunk loading errors
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
