@@ -174,14 +174,22 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
     
     setIsGenerating(true);
     try {
-      const response = await fetch('/api/ask-ai', {
+      const response = await fetch('/api/v2/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          context_type: 'email_reply',
-          action: action,
-          emailId: email.id,
-          source: 'inbox-v2'
+          question: `Generate a ${action} draft in professional property management tone.`,
+          context: {
+            email: {
+              id: email?.id,
+              outlookId: email?.outlook_id,
+              subject: email?.subject,
+              from: email?.from_email || email?.from_name,
+              bodyText: email?.body_preview || email?.body_full
+            },
+            tone: 'professional',
+            mode: 'draft'
+          }
         }),
       });
 
@@ -190,7 +198,7 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
       }
 
       const data = await response.json();
-      const aiText = data.response || data.answer || '';
+      const aiText = data.answer || '';
 
       if (editorRef.current) {
         const currentContent = editorRef.current.innerHTML;
