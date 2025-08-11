@@ -5,9 +5,10 @@ import { usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Calendar, Loader2, Send, Upload, FileText, X, Check, Sparkles, File, FileText as FileTextIcon, Building2, AlertTriangle } from 'lucide-react';
+import { Plus, Calendar, Loader2, Send, Upload, FileText, X, Check, Sparkles, File, FileText as FileTextIcon, Building2, AlertTriangle, Edit3, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import CommunicationModal from './CommunicationModal';
+import { AIMode, Tone } from '@/lib/ai/promptEngine';
 
 type Message = {
   id: string;
@@ -44,14 +45,18 @@ type DocumentSearchResult = {
 
 type AIResponse = {
   success: boolean;
-  response: string;
-  documentSearch?: boolean;
-  documents?: DocumentSearchResult[];
-  suggested_action?: SuggestedAction;
+  content: string;
+  subject?: string;
+  placeholders?: string[];
   context?: {
+    building_name?: string;
+    leaseholder_name?: string;
+    sources?: string[];
     majorWorksUsed?: boolean;
     complianceUsed?: boolean;
   };
+  draft_id?: string;
+  thread_id?: string;
 };
 
 interface AskBlocIQProps {
@@ -110,6 +115,13 @@ export default function AskBlocIQ({
   placeholder = "Ask BlocIQ anything...",
   className = ""
 }: AskBlocIQProps) {
+  // AI state
+  const [aiMode, setAiMode] = useState<AIMode>('ask');
+  const [selectedTone, setSelectedTone] = useState<Tone>('CasualChaser');
+  const [currentThreadId, setCurrentThreadId] = useState<string>('');
+  const [showToneSelector, setShowToneSelector] = useState(false);
+  const [showContextChips, setShowContextChips] = useState(false);
+  const [contextChips, setContextChips] = useState<string[]>([]);
   const pathname = usePathname();
   const projectId = extractProjectId(pathname || '');
   const isMajorWorksContext = pathname?.includes('major-works') && projectId;
@@ -386,37 +398,72 @@ export default function AskBlocIQ({
     setIsDocumentSearch(false);
     
     try {
-      // Create FormData if files are uploaded
-      let requestBody: FormData | string;
-      let headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-
+      // Handle file uploads first
+      let documentIds: string[] = [];
       if (uploadedFiles.length > 0) {
-        const formData = new FormData();
-        formData.append('prompt', question.trim());
-        formData.append('building_id', buildingId || 'null');
-        
-        uploadedFiles.forEach((uploadedFile) => {
-          formData.append(`file`, uploadedFile.file);
-          formData.append(`fileName`, uploadedFile.name);
-        });
-        
-        requestBody = formData;
-        delete headers['Content-Type'];
-      } else {
-        requestBody = JSON.stringify({
-          prompt: question.trim(),
-          building_id: buildingId,
-          contextType: isMajorWorksContext ? 'major_works' : 'general',
-          projectId: isMajorWorksContext ? projectId : undefined,
-        });
+        for (const uploadedFile of uploadedFiles) {
+          try {
+            const fileName = `${Date.now()}-${uploadedFile.name}`;
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from('ai-documents')
+              .upload(fileName, uploadedFile.file);
+
+            if (uploadError) {
+              console.error('File upload error:', uploadError);
+              continue;
+            }
+
+            // Get public URL
+            const { data: { publicUrl } } = supabase.storage
+              .from('ai-documents')
+              .getPublicUrl(fileName);
+
+            // Store document reference
+            const { data: docData, error: docError } = await supabase
+              .from('building_documents')
+              .insert({
+                building_id: buildingId || null,
+                file_name: uploadedFile.name,
+                file_url: publicUrl,
+                type: 'ai-document'
+              })
+              .select('id')
+              .single();
+
+            if (docError) {
+              console.error('Document reference error:', docError);
+              continue;
+            }
+
+            documentIds.push(docData.id);
+          } catch (error) {
+            console.error('Error processing file:', uploadedFile.name, error);
+          }
+        }
       }
 
-      const response = await fetch('/api/ask-ai', {
+      // Generate thread ID for this conversation
+      const threadId = currentThreadId || `thread_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      setCurrentThreadId(threadId);
+
+      // Call unified AI API
+      const response = await fetch('/api/ai', {
         method: 'POST',
-        headers,
-        body: requestBody,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          mode: aiMode,
+          input: question.trim(),
+          threadId: threadId,
+          tone: selectedTone,
+          contextHints: {
+            building_id: buildingId,
+            document_ids: documentIds || [],
+            context_type: context || 'general',
+            context_id: projectId || null
+          }
+        }),
       });
 
       if (!response.ok) {
@@ -425,30 +472,27 @@ export default function AskBlocIQ({
 
       const data: AIResponse = await response.json();
       
-      if (data.success && data.response) {
-        // Check if Major Works data was used
-        setUsedMajorWorksData(data.context?.majorWorksUsed || false);
-        
+      if (data.success && data.content) {
         // Add assistant message to history
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: data.response,
+          content: data.content,
           timestamp: new Date()
         };
 
         setMessages(prev => [...prev, assistantMessage]);
-        setAnswer(data.response);
+        setAnswer(data.content);
         
-        // Handle document search results
-        if (data.documentSearch && data.documents) {
-          setIsDocumentSearch(true);
-          setDocumentResults(data.documents);
+        // Update context chips
+        if (data.context?.sources) {
+          setContextChips(data.context.sources);
+          setShowContextChips(true);
         }
-        
-        // Check if there's a suggested action
-        if (data.suggested_action) {
-          setSuggestedAction(data.suggested_action);
+
+        // Handle placeholders
+        if (data.placeholders && data.placeholders.length > 0) {
+          toast.warning(`Please fill in: ${data.placeholders.join(', ')}`);
         }
 
         // Log the interaction to ai_logs
@@ -458,11 +502,11 @@ export default function AskBlocIQ({
             .insert({
               user_id: userId,
               question: question.trim(),
-              response: data.response,
+              response: data.content,
               timestamp: new Date().toISOString(),
               building_id: buildingId,
-              document_search: data.documentSearch || false,
-              documents_found: data.documents?.length || 0
+              context_type: aiMode,
+              context_id: threadId,
             });
         } catch (logError) {
           console.error('Failed to log AI interaction:', logError);
@@ -538,6 +582,22 @@ export default function AskBlocIQ({
     } finally {
       setAddingToCalendar(false);
     }
+  };
+
+  const handleTransformDraft = async (content: string) => {
+    if (!currentThreadId) {
+      toast.error('No draft available to transform');
+      return;
+    }
+
+    // Set mode to transform and show tone selector
+    setAiMode('transform_reply');
+    setShowToneSelector(true);
+    
+    // Pre-fill input with transform request
+    setQuestion('Make this more casual');
+    
+    toast.info('Transform mode activated. Select a new tone and submit to transform the draft.');
   };
 
   const suggestedPrompts = getSuggestedPrompts(buildingName, !!isMajorWorksContext, projectId || undefined);
@@ -633,6 +693,17 @@ export default function AskBlocIQ({
                       >
                         📄 Save as Notice
                       </button>
+                      
+                      {/* Transform Button - only show if this is an email draft */}
+                      {aiMode === 'generate_reply' && (
+                        <button
+                          onClick={() => handleTransformDraft(message.content)}
+                          className="flex items-center gap-1 px-2 py-1 text-xs bg-orange-100 text-orange-700 rounded hover:bg-orange-200 transition-colors"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                          Transform
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -668,6 +739,90 @@ export default function AskBlocIQ({
 
 
         <form onSubmit={handleSubmit} className="space-y-3">
+          {/* AI Mode and Tone Selector */}
+          <div className="flex items-center space-x-2 mb-4">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowToneSelector(!showToneSelector)}
+              className="flex items-center space-x-2"
+            >
+              <Edit3 className="h-4 w-4" />
+              <span>{showToneSelector ? 'Hide' : 'AI Mode'}</span>
+            </Button>
+          </div>
+
+          {showToneSelector && (
+            <Card className="mb-4">
+              <CardContent className="p-4">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">AI Mode</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(['ask', 'generate_reply', 'transform_reply'] as AIMode[]).map((mode) => (
+                        <Button
+                          key={mode}
+                          type="button"
+                          variant={aiMode === mode ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setAiMode(mode)}
+                          className="text-xs"
+                        >
+                          {mode === 'ask' && 'Ask Question'}
+                          {mode === 'generate_reply' && 'Generate Email'}
+                          {mode === 'transform_reply' && 'Transform Draft'}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {aiMode === 'generate_reply' && (
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Tone</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {(['Holding', 'SolicitorFormal', 'ResidentNotice', 'SupplierRequest', 'CasualChaser'] as Tone[]).map((tone) => (
+                          <Button
+                            key={tone}
+                            type="button"
+                            variant={selectedTone === tone ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setSelectedTone(tone)}
+                            className="text-xs"
+                          >
+                            {tone}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {aiMode === 'transform_reply' && currentThreadId && (
+                    <div className="text-sm text-muted-foreground">
+                      Will transform the last draft from thread: {currentThreadId.slice(-8)}...
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Context Chips */}
+          {showContextChips && contextChips.length > 0 && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Context</label>
+              <div className="flex flex-wrap gap-2">
+                {contextChips.map((chip, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                  >
+                    {chip}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
 
           {/* Main Input */}
