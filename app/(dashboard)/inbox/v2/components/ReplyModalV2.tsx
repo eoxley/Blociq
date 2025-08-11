@@ -6,6 +6,7 @@ import { toPlainQuoted, sanitizeEmailHtml, looksLikeHtml } from '@/utils/emailFo
 import RichTextToolbar from './RichTextToolbar';
 import { BiqPrimary, BiqSecondary } from '@/components/ui/biq-button';
 import { toast } from 'sonner';
+import { askBlocIQ } from '@/lib/ai/client';
 
 interface Address {
   name?: string;
@@ -23,6 +24,7 @@ interface ReplyModalV2Props {
 export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail }: ReplyModalV2Props) {
   const [replyHtml, setReplyHtml] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
   const [showOriginal, setShowOriginal] = useState(true);
   const [toRecipients, setToRecipients] = useState('');
   const [ccRecipients, setCcRecipients] = useState('');
@@ -35,6 +37,20 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
 
   // Ensure the quoted block can be inserted once
   const quoted = useMemo(() => toPlainQuoted(email), [email]);
+
+  // Helper functions
+  function toPlain(input?: string) {
+    if (!input) return '';
+    return input.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  function setEditorValue(text: string) {
+    if (typeof setReplyHtml === 'function') return setReplyHtml(text);
+    if (editorRef?.current?.innerHTML !== undefined) {
+      editorRef.current.innerHTML = text;
+      setReplyHtml(text);
+    }
+  }
 
   // Render the original email preview content (sanitised HTML or plain text)
   const originalHtml = email?.body_html ?? (looksLikeHtml(email?.body_full) ? email?.body_full : null);
@@ -214,6 +230,56 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
     }
   };
 
+  async function handleAiDraft() {
+    try {
+      if (aiLoading) return;
+      setAiLoading(true);
+
+      // Pull context from props (adjust names to this file's props)
+      const subject  = email?.subject ?? '';
+      const from     = email?.from_name || email?.from || email?.from_email || '';
+      const bodyHtml = email?.body_html || email?.bodyFull || email?.body_full || '';
+      const bodyText = email?.body_text || email?.bodyText || toPlain(bodyHtml);
+      const to       = email?.to || email?.to_recipients || [];
+      const cc       = email?.cc || email?.cc_recipients || [];
+
+      // Pick task by mode
+      let task = 'Draft a polite, concise reply as a UK property manager. Keep under 150 words.';
+      if (action === 'reply-all') {
+        task = 'Draft a polite, concise REPLY ALL as a UK property manager. Keep under 150 words.';
+      } else if (action === 'forward') {
+        task = 'Draft a brief, professional forward cover note summarising the issue and action required. Keep under 120 words.';
+      }
+
+      const { status, answer } = await askBlocIQ({
+        question: task,
+        context: {
+          email: {
+            id: email?.id,
+            outlookId: email?.outlook_id,
+            subject,
+            from,
+            bodyText
+          },
+          recipients: { to, cc },
+          mode: action
+        }
+      });
+
+      if (status !== 'ok' || !answer) {
+        toast.error('AI couldn\'t generate a draft. Please try again.');
+        return;
+      }
+
+      setEditorValue(answer);
+      toast.success('Draft inserted');
+    } catch (e:any) {
+      toast.error(e?.message || 'AI draft failed');
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
   const handleSend = async () => {
     if (!replyHtml.trim()) return;
 
@@ -262,6 +328,10 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       e.preventDefault();
       handleSend();
+    }
+    if ((e.metaKey || e.ctrlKey) && e.key === 'i') {
+      e.preventDefault();
+      handleAiDraft();
     }
   };
 
@@ -327,12 +397,12 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
                 {isPlainText ? 'Rich Text' : 'Plain Text'}
               </button>
               <button
-                onClick={handleGenerateAI}
-                disabled={isGenerating}
+                onClick={handleAiDraft}
+                disabled={aiLoading}
                 className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Sparkles className="h-4 w-4" />
-                <span>{isGenerating ? 'Generating...' : 'Generate AI Reply'}</span>
+                <span>{aiLoading ? 'Thinking…' : 'AI Draft'}</span>
               </button>
               <div className="text-xs text-gray-500">
                 Press Cmd+Enter (Mac) or Ctrl+Enter (Windows) to send
