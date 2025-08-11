@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import AskBlocIQ from '@/components/AskBlocIQ';
-import AskBlocIQModal from '@/components/AskBlocIQModal';
+import React from 'react';
+import dynamic from 'next/dynamic';
+const AskBlocIQModal = dynamic(() => import('@/components/AskBlocIQModal'), { ssr: false });
 
 export default function TestMajorWorksHubPage() {
   const [currentProjectId, setCurrentProjectId] = useState<string>('');

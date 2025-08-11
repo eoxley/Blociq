@@ -2,7 +2,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Paperclip, Loader2 } from 'lucide-react';
-import AskBlocIQModal from './AskBlocIQModal';
+import dynamic from 'next/dynamic';
+const AskBlocIQModal = dynamic(() => import('./AskBlocIQModal'), { ssr: false });
 
 type ChatMessage = {
   id: string
