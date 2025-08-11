@@ -36,7 +36,6 @@ export async function extractDocumentText(
 
 async function extractPDFText(buffer: Buffer): Promise<ExtractionResult> {
   try {
-    // Try pdf-parse first
     const pdfParse = await import('pdf-parse');
     const data = await pdfParse.default(buffer);
     
@@ -48,38 +47,12 @@ async function extractPDFText(buffer: Buffer): Promise<ExtractionResult> {
     };
   } catch (error) {
     console.error('PDF parsing failed:', error);
-    
-    // Fallback to pdfjs-dist if available
-    try {
-      const pdfjsLib = await import('pdfjs-dist');
-      const loadingTask = pdfjsLib.getDocument({ data: buffer });
-      const pdf = await loadingTask.promise;
-      
-      let fullText = '';
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items
-          .map((item: any) => item.str)
-          .join(' ');
-        fullText += pageText + '\n';
-      }
-      
-      return {
-        text: fullText.trim(),
-        pageCount: pdf.numPages,
-        ocrTried: false,
-        ocrNeeded: false
-      };
-    } catch (pdfjsError) {
-      console.error('PDF.js parsing also failed:', pdfjsError);
-      return {
-        text: '',
-        pageCount: 0,
-        ocrTried: false,
-        ocrNeeded: true
-      };
-    }
+    return {
+      text: '',
+      pageCount: 0,
+      ocrTried: false,
+      ocrNeeded: true
+    };
   }
 }
 
@@ -149,4 +122,24 @@ export function truncateText(text: string, maxLength: number = 15000): string {
   }
   
   return truncated + '...';
+}
+
+// Simplified PDF extraction function for direct use
+export async function extractFromPDF(input: File | Blob | Buffer) {
+  let buffer: Buffer;
+  if (Buffer.isBuffer(input as any)) {
+    buffer = input as Buffer;
+  } else if (typeof (input as any)?.arrayBuffer === "function") {
+    const ab = await (input as Blob).arrayBuffer();
+    buffer = Buffer.from(ab);
+  } else {
+    throw new Error("Unsupported input for PDF extraction");
+  }
+
+  const data = await (await import('pdf-parse')).default(buffer);
+  return {
+    text: (data.text || "").trim(),
+    pageCount: data.numpages || 0,
+    ocrTried: false
+  };
 }
