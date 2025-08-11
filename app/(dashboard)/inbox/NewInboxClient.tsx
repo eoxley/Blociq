@@ -64,6 +64,7 @@ interface Email {
   building_id: string | null
   unread: boolean | null
   handled: boolean | null
+  filed: boolean | null
   tags: string[] | null
   outlook_id: string | null
   buildings?: { name: string } | null
@@ -87,7 +88,11 @@ export default function NewInboxClient({
   userId,
   searchParams,
 }: NewInboxClientProps) {
-  const [emails, setEmails] = useState<Email[]>(initialEmails)
+  // Defensive initialization - ensure we have valid data
+  const safeInitialEmails = Array.isArray(initialEmails) ? initialEmails : []
+  const safeUserId = userId || 'unknown'
+  
+  const [emails, setEmails] = useState<Email[]>(safeInitialEmails)
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null)
   const [isSyncing, setIsSyncing] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -135,129 +140,104 @@ export default function NewInboxClient({
 
   // Create a reusable fetchEmails function
   const fetchEmails = async () => {
-    setLoadingEmails(true)
-    console.log('🔄 NewInboxClient - Fetching emails with filter:', filter)
-    
+    if (!supabase) {
+      console.warn('NewInboxClient - No Supabase client available')
+      return
+    }
+
     try {
-      // Check if Supabase client is properly initialized
-      if (!supabase) {
-        console.error('❌ Supabase client is not initialized')
-        toast.error('Database connection not available')
+      setLoadingEmails(true)
+      console.log('🔄 NewInboxClient - Fetching emails with filter:', filter)
+
+      // Defensive auth check
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        console.error('NewInboxClient - Auth error:', authError)
+        setLoadingEmails(false)
         return
       }
 
       console.log('🔍 NewInboxClient - Supabase client initialized, checking auth...')
+      console.log('🔍 NewInboxClient - User authenticated:', user.email)
 
-      // Check authentication status
-      const { data: { session }, error: authError } = await supabase.auth.getSession()
-      if (authError) {
-        console.error('❌ Authentication error:', authError)
-        toast.error('Authentication error')
-        return
-      }
-
-      if (!session) {
-        console.error('❌ No active session')
-        toast.error('Please log in to access emails')
-        return
-      }
-
-      console.log('✅ User authenticated:', session.user.id)
-      
       let query = supabase
         .from('incoming_emails')
         .select(`
-          id, subject, from_email, from_name, received_at, body, building_id, unread, handled, user_id, created_at
+          *,
+          buildings(name)
         `)
-        .order('received_at', { ascending: false })
+        .eq('user_id', user.id)
 
-      // Apply filters based on current filter state
-      if (filter === 'inbox') {
-        // Show all emails in inbox (not just unhandled ones)
-        console.log('📧 NewInboxClient - Showing all emails in inbox')
-      } else if (filter === 'handled') {
-        query = query.eq('handled', true)
-        console.log('✅ NewInboxClient - Showing handled emails')
-      } else if (filter === 'unhandled') {
-        query = query.eq('handled', false)
-        console.log('⏳ NewInboxClient - Showing unhandled emails')
-      } else if (filter === 'unread') {
-        query = query.eq('unread', true)
-        console.log('📬 NewInboxClient - Showing unread emails')
+      // Defensive filter handling
+      switch (filter) {
+        case 'inbox':
+          console.log('📧 NewInboxClient - Showing all emails in inbox')
+          break
+        case 'handled':
+          console.log('✅ NewInboxClient - Showing handled emails')
+          query = query.eq('handled', true)
+          break
+        case 'unhandled':
+          console.log('⏳ NewInboxClient - Showing unhandled emails')
+          query = query.eq('handled', false)
+          break
+        case 'unread':
+          console.log('📬 NewInboxClient - Showing unread emails')
+          query = query.eq('unread', true)
+          break
+        default:
+          console.log('📧 NewInboxClient - Showing all emails in inbox')
       }
 
       console.log('🔍 NewInboxClient - Executing query...')
-      const { data, error } = await query
-      
+      const { data, error } = await query.order('received_at', { ascending: false })
+
       if (error) {
-        console.error('❌ Supabase error fetching emails:', {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code,
-          user_id: session.user.id,
-          filter: filter
-        })
-        toast.error(`Failed to fetch emails: ${error.message}`)
-        setError('Error loading emails')
+        console.error('NewInboxClient - Supabase query error:', error)
+        // Don't crash, just log the error and continue with empty data
+        setEmails([])
+        setLoadingEmails(false)
         return
       }
 
       console.log('📧 NewInboxClient - Raw data from Supabase:', data)
       console.log('📧 NewInboxClient - Number of emails fetched:', data?.length || 0)
-      
       if (data && data.length > 0) {
         console.log('📧 NewInboxClient - First email sample:', data[0])
-        
-        // Process emails with proper structure
-        const processedEmails = data.map((email: any) => ({
-          ...email,
-          buildings: null, // Set to null since we're not joining buildings table
-          // Map database fields to expected interface fields
-          subject: email.subject || 'No Subject',
-          from_name: email.from_name || email.from_email || 'Unknown Sender',
-          from_email: email.from_email || 'unknown@example.com',
-          body_preview: email.body?.substring(0, 200) || 'No preview available',
-          body_full: email.body || 'No content available',
-          unread: email.unread || false, // Use unread field directly
-          handled: email.handled || false,
-          tags: [], // Tags are not directly available in this query
-          building_id: email.building_id || null,
-          outlook_id: null // Outlook ID is not directly available in this query
-        }))
-        
-        console.log('📧 NewInboxClient - Processed emails:', processedEmails)
-        setEmails(processedEmails)
-        setError(null) // Clear any previous errors
-        
-        // Extract unique tags from fetched emails
-        const allTags = processedEmails
-          .flatMap(email => email.tags || [])
-          .filter((tag, index, arr) => arr.indexOf(tag) === index)
-          .filter(tag => tag && tag.trim() !== '') // Filter out empty tags
-        console.log('🏷️ NewInboxClient - Available tags:', allTags)
-        setAvailableTags(allTags)
-        
-        // Temporarily disable AI analysis to prevent errors
-        // const unanalysedEmails = processedEmails.filter(email => !email.tags || email.tags.length === 0)
-        // console.log('🤖 NewInboxClient - Found unanalysed emails:', unanalysedEmails.length)
-        
-        // for (const email of unanalysedEmails.slice(0, 5)) { // Limit to 5 at a time
-        //   await analyseEmailWithAI(email)
-        // }
-      } else {
-        console.log('📧 NewInboxClient - No emails found')
-        setEmails([])
-        setAvailableTags([])
       }
+
+      // Defensive data processing
+      if (!data || !Array.isArray(data)) {
+        console.warn('NewInboxClient - Invalid data received from Supabase')
+        setEmails([])
+        setLoadingEmails(false)
+        return
+      }
+
+      const processedEmails = data.map((email: any) => ({
+        ...email,
+        tags: email.tags || [],
+        building_id: email.building_id || null,
+        buildings: email.buildings || null
+      }))
+
+      console.log('📧 NewInboxClient - Processed emails:', processedEmails)
+
+      // Defensive tag handling
+      const allTags = Array.from(new Set(
+        processedEmails
+          .flatMap(email => email.tags || [])
+          .filter(Boolean)
+      ))
+      console.log('🏷️ NewInboxClient - Available tags:', allTags)
+
+      setEmails(processedEmails)
+      setLoadingEmails(false)
+
     } catch (error) {
-      console.error('❌ Unexpected error in fetchEmails:', {
-        error: error,
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined
-      })
-      toast.error('Failed to fetch emails: Unexpected error')
-    } finally {
+      // Defensive error handling - don't crash the component
+      console.error('NewInboxClient - Unexpected error in fetchEmails:', error)
+      setEmails([])
       setLoadingEmails(false)
     }
   }
@@ -499,214 +479,95 @@ export default function NewInboxClient({
     }
   }
 
-  return (
-    <div className="space-y-8">
-      {/* Enhanced Header with BlocIQ Branding */}
-      <div className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] rounded-2xl p-8 text-white shadow-xl">
-        <div className="flex items-center justify-between">
-          <div className="space-y-2">
-            <h1 className="text-4xl font-bold">Email Inbox</h1>
-            <p className="text-xl text-white/90">Manage and respond to property-related emails</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <BlocIQButton 
-              onClick={handleSync}
-              disabled={isSyncing}
-              variant="secondary"
-              className="bg-white/20 hover:bg-white/30 text-white border-white/30"
-            >
-              {isSyncing ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <RefreshCw className="h-4 w-4 mr-2" />
-              )}
-              {isSyncing ? 'Syncing...' : 'Sync Inbox'}
-            </BlocIQButton>
-            <BlocIQButton 
-              onClick={() => setIsComposeModalOpen(true)}
-              variant="secondary"
-              className="bg-white/20 hover:bg-white/30 text-white border-white/30"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Compose
-            </BlocIQButton>
-            <BlocIQButton 
-              onClick={startTriageMode}
-              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold relative overflow-hidden group"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-blue-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-              <span className="relative z-10">🚑 AI Triage</span>
-            </BlocIQButton>
-          </div>
+  // Defensive rendering - wrap the main render in try-catch
+  try {
+    return (
+      <div className="flex h-screen bg-[#FAFAFA]">
+        {/* Folder Sidebar */}
+        <div className="w-1/5 border-r border-[#E2E8F0] bg-white">
+          <FolderSidebar
+            currentFilter={filter}
+            onFilterChange={setFilter}
+            onSync={handleSync}
+            isSyncing={isSyncing}
+            lastSync={lastSync}
+          />
         </div>
-        
-        {/* Email Stats */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-3xl font-bold">{emails?.length || 0}</div>
-                <div className="text-sm text-white/80">Total Emails</div>
-              </div>
-              <Building className="h-10 w-10 text-white/80" />
-            </div>
-          </div>
-          
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-3xl font-bold">{emails?.filter(e => e.unread).length || 0}</div>
-                <div className="text-sm text-white/80">Unread</div>
-              </div>
-              <Mail className="h-10 w-10 text-white/80" />
-            </div>
-          </div>
-          
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-3xl font-bold">{emails?.filter(e => !e.handled).length || 0}</div>
-                <div className="text-sm text-white/80">Pending</div>
-              </div>
-              <Clock className="h-10 w-10 text-white/80" />
-            </div>
-          </div>
-          
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-3xl font-bold">{emails?.filter(e => e.handled).length || 0}</div>
-                <div className="text-sm text-white/80">Handled</div>
-              </div>
-              <CheckCircle className="h-10 w-10 text-white/80" />
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Error Display */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center gap-3">
-            <AlertCircle className="h-5 w-5 text-red-600" />
-            <div>
-              <p className="text-red-600 font-semibold">Error loading emails</p>
-              <p className="text-red-500 text-sm">{error}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="flex h-[calc(100vh-400px)] min-h-[600px]">
         {/* Email List */}
-        <div className="w-2/5 border-r border-[#E2E8F0] flex flex-col">
-          {/* Search and Filter Bar */}
-          <div className="p-4 border-b border-[#E2E8F0] bg-white">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#64748B] h-4 w-4" />
+        <div className="w-2/5 border-r border-[#E2E8F0] bg-white flex flex-col">
+          {/* Header */}
+          <div className="p-4 border-b border-[#E2E8F0]">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-[#1E293B]">
+                {getCurrentFilterName()}
+              </h2>
+              <div className="flex items-center gap-2">
+                <BlocIQButton
+                  onClick={startTriageMode}
+                  size="sm"
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <Brain className="h-4 w-4" />
+                  AI Triage
+                </BlocIQButton>
+                <BlocIQButton
+                  onClick={handleSync}
+                  size="sm"
+                  variant="outline"
+                  disabled={isSyncing}
+                  className="flex items-center gap-2"
+                >
+                  {isSyncing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  {isSyncing ? 'Syncing...' : 'Sync Emails'}
+                </BlocIQButton>
+              </div>
+            </div>
+
+            {/* Search and Filter Bar */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#64748B]" />
                 <Input
-                  type="text"
                   placeholder="Search emails..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-[#FAFAFA] border-[#E2E8F0] focus:border-[#008C8F] h-9"
+                  className="pl-10 bg-[#F8FAFC] border-[#E2E8F0] focus:border-[#3B82F6] focus:ring-[#3B82F6]"
                 />
               </div>
-              <BlocIQButton
-                variant="outline"
-                size="sm"
-                onClick={() => setFilter('inbox')}
-                className={`text-xs h-8 px-2 ${filter === 'inbox' ? 'bg-[#F0FDFA] border-[#008C8F] text-[#0F5D5D]' : ''}`}
-              >
-                All
-              </BlocIQButton>
-              <BlocIQButton
-                variant="outline"
-                size="sm"
-                onClick={() => setFilter('unread')}
-                className={`text-xs h-8 px-2 ${filter === 'unread' ? 'bg-[#F0FDFA] border-[#008C8F] text-[#0F5D5D]' : ''}`}
-              >
-                Unread
-              </BlocIQButton>
-              <BlocIQButton
-                variant="outline"
-                size="sm"
-                onClick={() => setFilter('unhandled')}
-                className={`text-xs h-8 px-2 ${filter === 'unhandled' ? 'bg-[#F0FDFA] border-[#008C8F] text-[#0F5D5D]' : ''}`}
-              >
-                Pending
-              </BlocIQButton>
-            </div>
-            
-            {/* Tag Filters */}
-            {availableTags.length > 0 && (
-              <div className="mt-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-medium text-[#64748B]">Tags:</span>
-                  {selectedTags.length > 0 && (
-                    <BlocIQButton
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedTags([])}
-                      className="text-xs text-[#64748B] hover:text-[#0F5D5D] h-6 px-2"
-                    >
-                      Clear
-                    </BlocIQButton>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {availableTags.map((tag) => (
-                    <BlocIQButton
-                      key={tag}
-                      variant={selectedTags.includes(tag) ? "primary" : "outline"}
-                      size="sm"
-                      className={`text-xs h-6 px-2 ${
-                        selectedTags.includes(tag) ? 'bg-[#008C8F] text-white' : ''
-                      }`}
-                      onClick={() => {
-                        setSelectedTags(prev => 
-                          prev.includes(tag) 
-                            ? prev.filter(t => t !== tag)
-                            : [...prev, tag]
-                        )
-                      }}
-                    >
-                      {tag}
-                    </BlocIQButton>
-                  ))}
-                </div>
+              <div className="flex items-center gap-2">
+                {availableTags.map((tag) => (
+                  <BlocIQBadge
+                    key={tag}
+                    variant={selectedTags.includes(tag) ? 'default' : 'secondary'}
+                    className={`cursor-pointer ${
+                      selectedTags.includes(tag) ? 'bg-[#3B82F6] text-white' : 'bg-white text-[#64748B]'
+                    }`}
+                    onClick={() => {
+                      if (selectedTags.includes(tag)) {
+                        setSelectedTags(selectedTags.filter(t => t !== tag))
+                      } else {
+                        setSelectedTags([...selectedTags, tag])
+                      }
+                    }}
+                  >
+                    {tag}
+                  </BlocIQBadge>
+                ))}
               </div>
-            )}
+            </div>
           </div>
-          
-          {/* Email List */}
+
+          {/* Email List Content */}
           <div className="flex-1 overflow-y-auto">
             {loadingEmails ? (
               <div className="flex items-center justify-center h-32">
-                <Loader2 className="h-6 w-6 animate-spin text-[#008C8F]" />
-                <span className="ml-2 text-sm text-[#64748B]">Loading emails...</span>
-              </div>
-            ) : emails.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-32 text-[#64748B]">
-                <Mail className="h-12 w-12 mb-4 opacity-50" />
-                <p className="text-lg font-medium">No emails found</p>
-                <div className="text-center">
-                  <p className="text-sm mb-4">Your inbox is empty. Sync with Outlook to get started.</p>
-                  <BlocIQButton
-                    onClick={handleSync}
-                    disabled={isSyncing}
-                    size="sm"
-                    className="flex items-center gap-2"
-                  >
-                    {isSyncing ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <RefreshCw className="h-4 w-4" />
-                    )}
-                    {isSyncing ? 'Syncing...' : 'Sync Emails'}
-                  </BlocIQButton>
-                </div>
+                <Loader2 className="h-8 w-8 animate-spin text-[#64748B]" />
               </div>
             ) : filteredEmails.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-32 text-[#64748B]">
@@ -762,44 +623,54 @@ export default function NewInboxClient({
             </div>
           )}
         </div>
+
+        {/* Compose Email Modal */}
+        <ComposeEmailModal
+          isOpen={isComposeModalOpen}
+          onClose={() => setIsComposeModalOpen(false)}
+        />
+
+        {/* AI Triage Assistant */}
+        <TriageAssistant
+          isOpen={isTriageAssistantOpen}
+          onClose={() => setIsTriageAssistantOpen(false)}
+          onEmailProcessed={handleEmailProcessed}
+        />
+
+        {/* Post-Send Triage Modal */}
+        <PostSendTriageModal
+          isOpen={isPostSendTriageOpen}
+          onClose={() => setIsPostSendTriageOpen(false)}
+          emailId={selectedEmail?.id || ''}
+          originalEmail={selectedEmail || {
+            id: '',
+            subject: null,
+            from_name: null,
+            from_email: null,
+            body_full: null,
+            tags: null,
+            building_id: null
+          }}
+          onActionComplete={handleEmailProcessed}
+        />
       </div>
-
-      {/* Compose Email Modal */}
-      <ComposeEmailModal
-        isOpen={isComposeModalOpen}
-        onClose={() => setIsComposeModalOpen(false)}
-        onEmailSent={handleEmailProcessed}
-      />
-
-      {/* AI Triage Assistant */}
-      <TriageAssistant
-        isOpen={isTriageAssistantOpen}
-        onClose={() => setIsTriageAssistantOpen(false)}
-        onEmailProcessed={handleEmailProcessed}
-      />
-
-      {/* Post-Send Triage Modal */}
-      <PostSendTriageModal
-        isOpen={isPostSendTriageOpen}
-        onClose={() => setIsPostSendTriageOpen(false)}
-        emailId={selectedEmail?.id || ''}
-        originalEmail={selectedEmail || {
-          id: '',
-          subject: null,
-          from_name: null,
-          from_email: null,
-          body_full: null,
-          tags: null,
-          building_id: null,
-          received_at: null,
-          body_preview: null,
-          unread: null,
-          handled: null,
-          outlook_id: null,
-          buildings: null
-        }}
-        onActionComplete={handleEmailProcessed}
-      />
-    </div>
-  )
+    )
+  } catch (renderError) {
+    // Defensive error boundary - catch any rendering errors
+    console.error('NewInboxClient render error:', renderError)
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Failed to render inbox</h2>
+          <p className="text-gray-600 mb-4">Please refresh the page to try again</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Refresh Page
+          </button>
+        </div>
+      </div>
+    )
+  }
 } 

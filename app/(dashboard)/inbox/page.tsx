@@ -2,7 +2,7 @@ import { cookies } from 'next/headers'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { AlertTriangle, Mail } from 'lucide-react'
-import InboxClient from './InboxClient'
+import NewInboxClient from './NewInboxClient'
 import PageHero from '@/components/PageHero'
 
 export default async function InboxPage() {
@@ -28,9 +28,35 @@ export default async function InboxPage() {
     const userEmail = user.email
     console.log('✅ User authenticated:', userEmail)
 
-    console.log('🎯 About to render InboxClient')
+    // ✅ STEP 2: FETCH INITIAL EMAILS FOR V2 INBOX
+    console.log('📧 Fetching initial emails for V2 inbox...')
+    const { data: emails, error: emailsError } = await supabase
+      .from('incoming_emails')
+      .select(`
+        *,
+        buildings(name)
+      `)
+      .eq('user_id', userId)
+      .order('received_at', { ascending: false })
+      .limit(50)
+
+    if (emailsError) {
+      console.error('❌ Error fetching emails:', emailsError)
+      // Don't fail the page, just pass empty array
+    }
+
+    // ✅ STEP 3: GET LAST SYNC TIME
+    const { data: syncData } = await supabase
+      .from('outlook_sync_status')
+      .select('last_sync_at')
+      .eq('user_id', userId)
+      .single()
+
+    const lastSyncTime = syncData?.last_sync_at || null
+
+    console.log('🎯 About to render NewInboxClient (V2)')
     
-    // InboxClient uses useInbox hook to fetch its own data
+    // NewInboxClient (V2) with initial data
     return (
       <div className="space-y-6">
         {/* Hero Banner */}
@@ -40,7 +66,11 @@ export default async function InboxPage() {
           icon={<Mail className="h-8 w-8 text-white" />}
         />
         
-        <InboxClient />
+        <NewInboxClient 
+          initialEmails={emails || []}
+          lastSyncTime={lastSyncTime}
+          userId={userId}
+        />
       </div>
     )
 
