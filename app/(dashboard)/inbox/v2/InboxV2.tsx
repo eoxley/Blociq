@@ -3,11 +3,12 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useOutlookInbox } from '@/hooks/useOutlookInbox';
 import { useSession } from '@/lib/auth';
-import { Search, RefreshCw, Reply, ReplyAll, Forward, Trash2 } from 'lucide-react';
+import { Search, RefreshCw, Reply, ReplyAll, Forward, Trash2, Mail } from 'lucide-react';
 import FolderListV2 from './components/FolderListV2';
 import EmailListV2 from './components/EmailListV2';
 import EmailDetailV2 from './components/EmailDetailV2';
 import ReplyModalV2 from './components/ReplyModalV2';
+import PageHero from '@/components/PageHero';
 import { toast } from 'sonner';
 
 interface OutlookFolder {
@@ -237,76 +238,85 @@ export default function InboxV2() {
   }, [selectedEmail, handleReply, handleDeleteEmail, selectEmail, showReplyModal]);
 
   return (
-    <div className="h-[calc(100vh-200px)] flex bg-white rounded-lg border border-gray-200 overflow-hidden">
-      {/* Folders Sidebar */}
-      <FolderListV2
-        folders={folders}
-        selectedFolderId={selectedFolderId}
-        loading={loadingFolders}
-        onSelect={(id) => {
-          if (id) handleSelectFolder(id);
-          else fetchFolders(); // if refresh clicked
-        }}
-        onDropEmail={handleDropEmailOnFolder}
+    <div>
+      {/* Page Hero */}
+      <PageHero 
+        title="Inbox" 
+        subtitle="AI triage • smart drafts • fast filing"
+        icon={<Mail className="h-10 w-10 text-white" />}
       />
 
-      {/* Email List */}
-      <div className="w-80 border-r border-gray-200 flex flex-col">
-        <div className="p-4 border-b border-gray-200 flex-shrink-0">
-          <div className="flex items-center justify-between mb-4">
-            <div className="relative flex-1 mr-4">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search emails..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+      <div className="h-[calc(100vh-200px)] flex bg-white rounded-lg border border-gray-200 overflow-hidden">
+        {/* Folders Sidebar */}
+        <FolderListV2
+          folders={folders}
+          selectedFolderId={selectedFolderId}
+          loading={loadingFolders}
+          onSelect={(id) => {
+            if (id) handleSelectFolder(id);
+            else fetchFolders(); // if refresh clicked
+          }}
+          onDropEmail={handleDropEmailOnFolder}
+        />
+
+        {/* Email List */}
+        <div className="w-80 border-r border-gray-200 flex flex-col">
+          <div className="p-4 border-b border-gray-200 flex-shrink-0">
+            <div className="flex items-center justify-between mb-4">
+              <div className="relative flex-1 mr-4">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search emails..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <button
+                onClick={() => manualSync()}
+                disabled={syncing}
+                className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+                title="Sync emails"
+              >
+                <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+              </button>
             </div>
-            <button
-              onClick={() => manualSync()}
-              disabled={syncing}
-              className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
-              title="Sync emails"
-            >
-              <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-            </button>
+          </div>
+          
+          <div className="flex-1 overflow-hidden">
+            <EmailListV2
+              emails={filteredEmails}
+              selectedEmailId={selectedEmail?.id}
+              onSelect={handleSelectEmail}
+              onToggleFlag={handleToggleFlag}
+              onDelete={handleDeleteEmail}
+              loading={loading}
+            />
           </div>
         </div>
-        
-        <div className="flex-1 overflow-hidden">
-          <EmailListV2
-            emails={filteredEmails}
-            selectedEmailId={selectedEmail?.id}
-            onSelect={handleSelectEmail}
+
+        {/* Email Detail */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <EmailDetailV2
+            email={selectedEmail}
+            onReply={handleReply}
             onToggleFlag={handleToggleFlag}
             onDelete={handleDeleteEmail}
-            loading={loading}
           />
         </div>
-      </div>
 
-      {/* Email Detail */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <EmailDetailV2
-          email={selectedEmail}
-          onReply={handleReply}
-          onToggleFlag={handleToggleFlag}
-          onDelete={handleDeleteEmail}
-        />
+        {/* Reply Modal */}
+        {showReplyModal && selectedEmail && (
+          <ReplyModalV2
+            isOpen={showReplyModal}
+            onClose={() => setShowReplyModal(false)}
+            email={selectedEmail}
+            action={replyAction}
+            userEmail={user?.email}
+          />
+        )}
       </div>
-
-      {/* Reply Modal */}
-      {showReplyModal && selectedEmail && (
-        <ReplyModalV2
-          isOpen={showReplyModal}
-          onClose={() => setShowReplyModal(false)}
-          email={selectedEmail}
-          action={replyAction}
-          userEmail={user?.email}
-        />
-      )}
     </div>
   );
 }
