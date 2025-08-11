@@ -212,12 +212,16 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     try {
       // Fetch from both property_events and manual_events tables
       const [propertyEventsResponse, manualEventsResponse] = await Promise.all([
-        supabase
-          .from('property_events')
-          .select('*')
-          .gte('date', new Date().toISOString().split('T')[0])
-          .order('date', { ascending: true })
-          .limit(5),
+        // Only fetch events from buildings the user has access to
+        buildings.length > 0 
+          ? supabase
+              .from('property_events')
+              .select('*')
+              .in('building_id', buildings.map(b => b.id))
+              .gte('start_time', new Date().toISOString().split('T')[0])
+              .order('start_time', { ascending: true })
+              .limit(5)
+          : Promise.resolve({ data: [], error: null }),
         supabase
           .from('manual_events')
           .select('*')
@@ -228,18 +232,30 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
       if (propertyEventsResponse.error) {
         console.error('Error fetching property events:', propertyEventsResponse.error)
+        console.error('[property_events] Full error details:', {
+          message: propertyEventsResponse.error.message,
+          details: propertyEventsResponse.error.details,
+          hint: propertyEventsResponse.error.hint,
+          code: propertyEventsResponse.error.code
+        })
         // Continue with empty array instead of crashing
       }
 
       if (manualEventsResponse.error) {
         console.error('Error fetching manual events:', manualEventsResponse.error)
+        console.error('[manual_events] Full error details:', {
+          message: manualEventsResponse.error.message,
+          details: manualEventsResponse.error.details,
+          hint: manualEventsResponse.error.hint,
+          code: manualEventsResponse.error.code
+        })
         // Continue with empty array instead of crashing
       }
 
       // Transform property events (handle missing data gracefully)
       const propertyEvents: PropertyEvent[] = (propertyEventsResponse.data || []).map(event => ({
-        building: event.building_name || 'General',
-        date: event.date,
+        building: event.building_id ? `Building ${event.building_id}` : 'General',
+        date: event.start_time,
         title: event.title,
         category: event.category || 'General',
         source: 'property',

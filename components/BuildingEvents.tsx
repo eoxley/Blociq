@@ -57,6 +57,13 @@ export default function BuildingEvents({ buildingId, buildingName }: BuildingEve
 
       if (error) {
         console.error('Error fetching events:', error?.message || JSON.stringify(error));
+        console.error('[BuildingEvents] Full error details:', {
+          message: error?.message,
+          details: error?.details,
+          hint: error?.hint,
+          code: error?.code,
+          buildingId
+        });
       } else {
         setEvents(data || []);
       }
