@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import AskBlocIQ from '@/components/AskBlocIQ';
+import AskBlocIQModal from '@/components/AskBlocIQModal';
 
 export default function TestMajorWorksHubPage() {
   const [currentProjectId, setCurrentProjectId] = useState<string>('');
+  const [isAskBlocIQOpen, setIsAskBlocIQOpen] = useState(false);
 
   const testProjects = [
     { id: '1', name: 'Roof Replacement Project' },
@@ -57,12 +59,21 @@ export default function TestMajorWorksHubPage() {
         {/* Ask BlocIQ Hub */}
         <div className="lg:col-span-2">
           <h2 className="text-xl font-semibold mb-4">Ask BlocIQ Hub</h2>
-          <div className="h-[600px] border rounded-lg">
-            <AskBlocIQ
-              buildingId="1"
-              buildingName="Test Building"
-              placeholder="Ask about major works projects..."
-            />
+          <div className="space-y-4">
+            <button
+              onClick={() => setIsAskBlocIQOpen(true)}
+              className="w-full p-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 font-medium text-lg"
+            >
+              🚀 Open Ask BlocIQ
+            </button>
+            
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h3 className="font-semibold text-blue-800 mb-2">💡 Quick Start</h3>
+              <p className="text-sm text-blue-700">
+                Click the button above to open Ask BlocIQ in a modal popout. You can ask questions about major works projects, 
+                upload documents, and get AI-powered assistance.
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -77,6 +88,18 @@ export default function TestMajorWorksHubPage() {
           <li>• <strong>Document Integration:</strong> References project documents</li>
         </ul>
       </div>
+
+      {/* Ask BlocIQ Modal */}
+      <AskBlocIQModal
+        open={isAskBlocIQOpen}
+        onClose={() => setIsAskBlocIQOpen(false)}
+      >
+        <AskBlocIQ
+          buildingId="1"
+          buildingName="Test Building"
+          placeholder="Ask about major works projects..."
+        />
+      </AskBlocIQModal>
     </div>
   );
 } 
