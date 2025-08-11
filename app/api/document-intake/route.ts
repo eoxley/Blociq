@@ -5,6 +5,10 @@ import { extractDocumentText, truncateText } from '@/utils/extractDoc';
 import { analyzeDocumentIntake } from '@/utils/ai/intake';
 import { DocumentIntakeSchema, createDefaultDocumentIntake } from '@/lib/zod/documentIntake';
 
+// Ensure Node.js runtime for file processing
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
