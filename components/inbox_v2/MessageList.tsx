@@ -9,7 +9,7 @@ import { formatDistanceToNow } from 'date-fns'
 interface MessageListProps {
   selectedFolderId: string | null
   selectedMessageId: string | null
-  onMessageSelect: (messageId: string) => void
+  onMessageSelect: (messageId: string | null) => void
 }
 
 export default function MessageList({ selectedFolderId, selectedMessageId, onMessageSelect }: MessageListProps) {
@@ -87,7 +87,7 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
       if (response.ok) {
         // Clear selection if the deleted message was selected
         if (selectedMessageId === messageId) {
-          onMessageSelect('')
+          onMessageSelect(null)
         }
         refresh()
       } else {
@@ -126,7 +126,7 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
       
       // Clear selection if the moved message was selected
       if (selectedMessageId === draggedMessage.id) {
-        onMessageSelect('')
+        onMessageSelect(null)
       }
       
       // Refresh to show the updated message list
@@ -184,9 +184,14 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
   return (
     <div className="bg-white rounded-lg border border-gray-200 flex flex-col">
       <div className="p-4 border-b border-gray-200">
-        <h3 className="text-sm font-semibold text-gray-900">
-          {messages.length} message{messages.length !== 1 ? 's' : ''}
-        </h3>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold text-gray-900">
+            {messages.length} message{messages.length !== 1 ? 's' : ''}
+          </h3>
+          <div className="text-xs text-gray-500">
+            <span className="hidden sm:inline">Keyboard: ↑↓ Navigate, Delete, Enter Select</span>
+          </div>
+        </div>
         {isDragging && (
           <p className="text-xs text-blue-600 mt-1">
             Drag message to another folder to move it
@@ -197,6 +202,9 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
             Moving message... Please wait
           </p>
         )}
+        <div className="text-xs text-gray-500 mt-1">
+          <span className="font-medium">Tip:</span> Use arrow keys to navigate, Delete to remove, or drag to move emails between folders
+        </div>
       </div>
       
       <div className="flex-1 overflow-y-auto">
@@ -220,7 +228,7 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
                   isSelected
                     ? 'bg-blue-50 border-r-2 border-blue-500'
                     : isFocused
-                    ? 'bg-blue-25 border-r-2 border-blue-300'
+                    ? 'bg-blue-100 border-r-2 border-blue-300'
                     : isBeingDragged
                     ? 'opacity-50 scale-95'
                     : 'hover:bg-gray-50'
