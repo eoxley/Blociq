@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
     // Get messages for the specified folder
     const response = await makeGraphRequest(
-      `/me/mailFolders/${folderId}/messages?$select=id,subject,from,receivedDateTime,bodyPreview,hasAttachments,webLink&$orderby=receivedDateTime desc&$top=100`
+      `/me/mailFolders/${folderId}/messages?$select=id,subject,from,toRecipients,ccRecipients,receivedDateTime,bodyPreview,hasAttachments,webLink,conversationId&$orderby=receivedDateTime desc&$top=100`
     )
     
     if (!response.ok) {

@@ -325,7 +325,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         return sorted.slice(0, 5)
       })
 
-      toast.success('Outlook calendar synced successfully!')
+      // toast.success('Outlook calendar synced successfully!')
     } catch (error) {
       console.error('Error syncing Outlook:', error)
       toast.error('Failed to sync Outlook calendar')
@@ -393,7 +393,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         return
       }
 
-      toast.success('Event added successfully!')
+      // toast.success('Event added successfully!')
       setShowAddEventForm(false)
       setNewEvent({ title: '', date: '', category: 'General' })
       fetchEvents() // Refresh events
@@ -560,7 +560,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       // Clear input and files after submission
       setAskInput('')
       setUploadedFiles([])
-      toast.success('Response received!')
+      // toast.success('Response received!')
     } catch (error) {
       console.error('❌ Error submitting to AI:', error)
       toast.error('Failed to get response from BlocIQ')
@@ -633,7 +633,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         }
         
         setUploadedFiles(prev => [...prev, uploadedFile])
-        toast.success(`✅ ${file.name} uploaded. You can now ask questions about it.`)
+        // toast.success(`✅ ${file.name} uploaded. You can now ask questions about it.`)
       }
     })
   }
@@ -760,7 +760,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
       if (error) throw error
 
-      toast.success(`${template.template_type.charAt(0).toUpperCase() + template.template_type.slice(1)} template saved!`)
+      // toast.success(`${template.template_type.charAt(0).toUpperCase() + template.template_type.slice(1)} template saved!`)
       
       // Log the action
       await supabase
