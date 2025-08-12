@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useFolders } from '@/hooks/inbox_v2'
+import { useInboxContext } from '@/app/(dashboard)/inbox/InboxV2'
 import { RefreshCw, Folder, Inbox, Archive, Trash2, Send, FileText, Shield, Plus, X } from 'lucide-react'
 
 interface FolderSidebarProps {
@@ -23,6 +24,7 @@ const getFolderIcon = (wellKnownName: string) => {
 
 export default function FolderSidebar({ selectedFolderId, onFolderSelect }: FolderSidebarProps) {
   const { folders, isFallback, isLoading, refresh, addManualFolder } = useFolders()
+  const { moveMessage } = useInboxContext()
   const [isAddingFolder, setIsAddingFolder] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
   const [dragOverFolder, setDragOverFolder] = useState<string | null>(null)
@@ -50,12 +52,20 @@ export default function FolderSidebar({ selectedFolderId, onFolderSelect }: Fold
     setDragOverFolder(null)
   }
 
-  const handleDrop = (e: React.DragEvent, folderId: string) => {
+  const handleDrop = async (e: React.DragEvent, folderId: string) => {
     e.preventDefault()
     setDragOverFolder(null)
     
-    // The actual drop handling is done in the MessageList component
-    // This just provides visual feedback
+    // Get the message ID from the drag data
+    const messageId = e.dataTransfer.getData('text/plain')
+    
+    if (messageId && folderId !== selectedFolderId) {
+      try {
+        await moveMessage(messageId, folderId)
+      } catch (error) {
+        console.error('Error moving message:', error)
+      }
+    }
   }
 
   return (

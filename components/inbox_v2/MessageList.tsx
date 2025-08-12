@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useMessages } from '@/hooks/inbox_v2'
+import { useInboxContext } from '@/app/(dashboard)/inbox/InboxV2'
 import { Trash2, Paperclip, Clock, Move } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -13,6 +14,7 @@ interface MessageListProps {
 
 export default function MessageList({ selectedFolderId, selectedMessageId, onMessageSelect }: MessageListProps) {
   const { messages, isLoading, refresh } = useMessages(selectedFolderId)
+  const { moveMessage } = useInboxContext()
   const [draggedMessage, setDraggedMessage] = useState<any>(null)
   const [isDragging, setIsDragging] = useState(false)
 
@@ -49,29 +51,12 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
   const handleDrop = async (e: React.DragEvent, targetFolderId: string) => {
     e.preventDefault()
     
-    if (!draggedMessage || draggedMessage.id === targetFolderId) {
+    if (!draggedMessage || targetFolderId === selectedFolderId) {
       return
     }
 
     try {
-      const response = await fetch('/api/outlook/v2/messages/move', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messageId: draggedMessage.id,
-          destinationFolderId: targetFolderId
-        })
-      })
-
-      if (response.ok) {
-        // Refresh both source and target folders
-        refresh()
-        // You might want to refresh the target folder's message list as well
-      } else {
-        console.error('Failed to move message')
-      }
+      await moveMessage(draggedMessage.id, targetFolderId)
     } catch (error) {
       console.error('Error moving message:', error)
     }
