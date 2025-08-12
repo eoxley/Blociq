@@ -1,7 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabaseClient'
+import React, { useState } from 'react'
 import {
   Inbox as InboxIcon,
   CheckCircle,
@@ -9,7 +8,6 @@ import {
   Building as BuildingIcon,
   Tag,
   RefreshCw,
-  Loader2,
   Archive,
   AlertTriangle,
   MessageSquare,
@@ -40,6 +38,7 @@ interface FolderSidebarProps {
   onSync: () => void
   isSyncing: boolean
   lastSync: string | null
+  emails: any[] // Add emails prop to get data from parent
 }
 
 export default function FolderSidebar({
@@ -48,134 +47,84 @@ export default function FolderSidebar({
   onSync,
   isSyncing,
   lastSync,
+  emails,
 }: FolderSidebarProps) {
-  const [buildings, setBuildings] = useState<Building[]>([])
-  const [tags, setTags] = useState<TagFolder[]>([])
-  const [loadingFolders, setLoadingFolders] = useState(true)
-  const [folderCounts, setFolderCounts] = useState({
-    inbox: 0,
-    handled: 0,
-    all: 0,
-    archived: 0,
-    complaints: 0,
-    queries: 0,
-    actionRequired: 0,
-    flagged: 0
-  })
 
-  // Fetch all folder data
-  useEffect(() => {
-    fetchFolderData()
-  }, [])
 
-  const fetchFolderData = async () => {
-    setLoadingFolders(true)
-    try {
-      await Promise.all([
-        fetchBuildingFolders(),
-        fetchTagFolders(),
-        fetchFolderCounts(),
-      ])
-    } catch (error) {
-      console.error('Error fetching folder data:', error)
-    } finally {
-      setLoadingFolders(false)
-    }
-  }
-
-  const fetchBuildingFolders = async () => {
-    try {
-      const { data: buildingData, error } = await supabase
-        .from('buildings')
-        .select(`
-          id,
-          name
-        `)
-        .order('name', { ascending: true })
-
-      if (!error && buildingData) {
-        const buildingsWithCounts = await Promise.all(
-          buildingData.map(async (building) => {
-            const [incomingCount, sentCount] = await Promise.all([
-              supabase
-                .from('incoming_emails')
-                .select('id', { count: 'exact', head: true })
-                .eq('building_id', building.id),
-              supabase
-                .from('sent_emails')
-                .select('id', { count: 'exact', head: true })
-                .eq('building_id', building.id)
-            ])
-
-            return {
-              id: building.id,
-              name: building.name,
-              emailCount: (incomingCount.count || 0) + (sentCount.count || 0)
-            }
-          })
-        )
-
-        setBuildings(buildingsWithCounts)
+  // Calculate folder counts from the emails prop
+  const folderCounts = React.useMemo(() => {
+    if (!emails || emails.length === 0) {
+      return {
+        inbox: 0,
+        handled: 0,
+        all: 0,
+        archived: 0,
+        complaints: 0,
+        queries: 0,
+        actionRequired: 0,
+        flagged: 0
       }
-    } catch (error) {
-      console.error('Error fetching building folders:', error)
     }
-  }
 
-  const fetchTagFolders = async () => {
-    try {
-      const { data: tagData, error } = await supabase
-        .from('incoming_emails')
-        .select('categories')
-        .not('categories', 'is', null)
+    return {
+      all: emails.length,
+      inbox: emails.filter(email => !email.is_read || email.unread).length,
+      handled: emails.filter(email => email.is_handled || email.handled).length,
+      flagged: emails.filter(email => email.flag_status === 'flagged').length,
+      archived: emails.filter(email => email.flag_status === 'archived').length,
+      complaints: emails.filter(email => email.categories?.includes('complaint')).length,
+      queries: emails.filter(email => email.categories?.includes('query')).length,
+      actionRequired: emails.filter(email => !email.is_handled && !email.handled).length
+    }
+  }, [emails])
 
-      if (!error && tagData) {
-        const tagCounts: Record<string, number> = {}
+  // Calculate building folders from emails
+  const buildings = React.useMemo(() => {
+    if (!emails || emails.length === 0) return []
+    
+    const buildingMap = new Map<string, { id: string, name: string, emailCount: number }>()
+    
+    emails.forEach(email => {
+      if (email.building_id) {
+        const buildingId = email.building_id.toString()
+        const existing = buildingMap.get(buildingId)
         
-        tagData.forEach(email => {
-          if (email.categories) {
-            email.categories.forEach(tag => {
-              tagCounts[tag] = (tagCounts[tag] || 0) + 1
-            })
-          }
-        })
-
-        const tagFolders = Object.entries(tagCounts).map(([tag, count]) => ({
-          tag,
-          emailCount: count
-        }))
-
-        setTags(tagFolders)
+        if (existing) {
+          existing.emailCount++
+        } else {
+          buildingMap.set(buildingId, {
+            id: buildingId,
+            name: email.building_name || `Building ${buildingId}`,
+            emailCount: 1
+          })
+        }
       }
-    } catch (error) {
-      console.error('Error fetching tag folders:', error)
-    }
-  }
+    })
+    
+    return Array.from(buildingMap.values()).sort((a, b) => a.name.localeCompare(b.name))
+  }, [emails])
 
-  const fetchFolderCounts = async () => {
-    try {
-      const [allCount, unreadCount, handledCount, flaggedCount, archivedCount] = await Promise.all([
-        supabase.from('incoming_emails').select('id', { count: 'exact', head: true }),
-        supabase.from('incoming_emails').select('id', { count: 'exact', head: true }).eq('is_read', false),
-        supabase.from('incoming_emails').select('id', { count: 'exact', head: true }).eq('is_handled', true),
-        supabase.from('incoming_emails').select('id', { count: 'exact', head: true }).eq('flag_status', 'flagged'),
-        supabase.from('incoming_emails').select('id', { count: 'exact', head: true }).eq('flag_status', 'archived')
-      ])
+  // Calculate tag folders from emails
+  const tags = React.useMemo(() => {
+    if (!emails || emails.length === 0) return []
+    
+    const tagMap = new Map<string, number>()
+    
+    emails.forEach(email => {
+      if (email.categories && Array.isArray(email.categories)) {
+        email.categories.forEach(tag => {
+          tagMap.set(tag, (tagMap.get(tag) || 0) + 1)
+        })
+      }
+    })
+    
+    return Array.from(tagMap.entries()).map(([tag, count]) => ({
+      tag,
+      emailCount: count
+    })).sort((a, b) => a.tag.localeCompare(b.tag))
+  }, [emails])
 
-      setFolderCounts({
-        all: allCount.count || 0,
-        inbox: unreadCount.count || 0,
-        handled: handledCount.count || 0,
-        flagged: flaggedCount.count || 0,
-        archived: archivedCount.count || 0,
-        complaints: 0, // Will be calculated from tags
-        queries: 0, // Will be calculated from tags
-        actionRequired: 0 // Will be calculated as unhandled
-      })
-    } catch (error) {
-      console.error('Error fetching folder counts:', error)
-    }
-  }
+
 
   const formatLastSync = (timestamp: string | null) => {
     if (!timestamp) return 'Never'
@@ -426,14 +375,7 @@ export default function FolderSidebar({
         </Card>
       )}
 
-      {loadingFolders && (
-        <Card className="p-4">
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-teal-600" />
-            <span className="ml-2 text-gray-600">Loading folders...</span>
-          </div>
-        </Card>
-      )}
+
     </div>
   )
 } 
