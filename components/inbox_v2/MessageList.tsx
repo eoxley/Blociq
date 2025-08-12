@@ -56,11 +56,17 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
     }
 
     try {
+      // Call the moveMessage function from context
       await moveMessage(draggedMessage.id, targetFolderId)
-      // Refresh the message list to show the updated state
+      
+      // The moveMessage function will handle refreshing, but we also refresh here
+      // to ensure immediate UI update
       refresh()
+      
+      console.log(`Message "${draggedMessage.subject}" moved to folder ${targetFolderId}`)
     } catch (error) {
       console.error('Error moving message:', error)
+      // You could add a user-facing error message here
     }
 
     setDraggedMessage(null)

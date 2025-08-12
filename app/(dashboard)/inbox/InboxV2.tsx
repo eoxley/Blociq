@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, createContext, useContext } from 'react'
-import { MessageSquare } from 'lucide-react'
+import { MessageSquare, X } from 'lucide-react'
 import FolderSidebar from '@/components/inbox_v2/FolderSidebar'
 import MessageList from '@/components/inbox_v2/MessageList'
 import MessagePreview from '@/components/inbox_v2/MessagePreview'
@@ -54,27 +54,33 @@ export default function InboxV2() {
       })
 
       if (response.ok) {
-        // Refresh the current folder's messages to remove the moved message
-        refreshMessages()
+        const data = await response.json()
         
-        // Clear selected message if it was moved
-        if (selectedMessage?.id === messageId) {
-          setSelectedMessage(null)
-        }
+        if (data.ok) {
+          // Clear selected message if it was moved
+          if (selectedMessage?.id === messageId) {
+            setSelectedMessage(null)
+          }
 
-        // Show success message
-        const message = messages.find((msg: any) => msg.id === messageId)
-        const subject = message?.subject || 'Message'
-        console.log(`✅ Successfully moved "${subject}" to folder ${destinationFolderId}`)
-        
-        // Force a refresh of all message lists to ensure consistency
-        // This will update both the source and destination folders
-        setTimeout(() => {
+          // Show success message
+          const message = messages.find((msg: any) => msg.id === messageId)
+          const subject = message?.subject || 'Message'
+          console.log(`✅ Successfully moved "${subject}" to folder ${destinationFolderId}`)
+          
+          // Immediately refresh the current folder to remove the moved message
           refreshMessages()
-        }, 100)
-        
-        // You could add a proper toast notification here
-        // For now, we'll use console.log
+          
+          // Force a refresh of all message lists to ensure consistency
+          // This will update both the source and destination folders
+          setTimeout(() => {
+            refreshMessages()
+          }, 500)
+          
+          // You could add a proper toast notification here
+          // For now, we'll use console.log
+        } else {
+          console.error('Failed to move message:', data.error)
+        }
       } else {
         console.error('Failed to move message')
       }
@@ -106,25 +112,36 @@ export default function InboxV2() {
 
   return (
     <InboxContext.Provider value={contextValue}>
-      {/* New Email Button */}
-      <div className="mb-4 flex justify-end">
-        <button
-          onClick={() => setNewEmailModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-        >
-          <MessageSquare className="h-4 w-4" />
-          New Email
-        </button>
-      </div>
-      
       <div className="grid grid-cols-[260px_1fr_420px] gap-4 h-[calc(100vh-300px)]">
-        <FolderSidebar 
-          selectedFolderId={selectedFolderId}
-          onFolderSelect={(folderId) => {
-            setSelectedFolderId(folderId)
-            setSelectedMessage(null) // Clear selected message when changing folders
-          }}
-        />
+        <div className="flex flex-col">
+          {/* New Email and Triage Buttons */}
+          <div className="mb-4 flex gap-3">
+            <button
+              onClick={() => setNewEmailModalOpen(true)}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+            >
+              <MessageSquare className="h-4 w-4" />
+              New Email
+            </button>
+            
+            <button
+              onClick={() => console.log('Triage functionality coming soon')}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white text-red-600 border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-red-400 transition-colors shadow-sm"
+              title="Triage - Coming Soon"
+            >
+              <X className="h-4 w-4 text-red-600" />
+              Triage
+            </button>
+          </div>
+          
+          <FolderSidebar 
+            selectedFolderId={selectedFolderId}
+            onFolderSelect={(folderId) => {
+              setSelectedFolderId(folderId)
+              setSelectedMessage(null) // Clear selected message when changing folders
+            }}
+          />
+        </div>
         
         <MessageList 
           selectedFolderId={selectedFolderId}
