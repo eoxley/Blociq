@@ -8,6 +8,7 @@ import MessagePreview from '@/components/inbox_v2/MessagePreview'
 import ReplyModal from '@/components/inbox_v2/ReplyModal'
 import NewEmailModal from '@/components/inbox_v2/NewEmailModal'
 import { useMessages } from '@/hooks/inbox_v2'
+import { mutate } from 'swr'
 
 // Context for inbox state
 interface InboxContextType {
@@ -78,8 +79,11 @@ export default function InboxV2() {
           // Immediately refresh the current folder to remove the moved message
           refreshMessages()
           
-          // Force a refresh of all message lists to ensure consistency
+          // Invalidate all message caches to ensure consistency across folders
           // This will update both the source and destination folders
+          mutate((key: string) => key.startsWith('/api/outlook/v2/messages/list'))
+          
+          // Also refresh the current folder again to ensure immediate update
           setTimeout(() => {
             refreshMessages()
           }, 100)

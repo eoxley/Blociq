@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch messages in the conversation thread
     const response = await makeGraphRequest(
-      `/me/messages?$filter=conversationId eq '${conversationId}'&$select=id,subject,from,toRecipients,ccRecipients,receivedDateTime,body,hasAttachments&$orderby=receivedDateTime asc`
+      `/me/messages?$filter=conversationId eq '${conversationId}'&$select=id,subject,from,toRecipients,ccRecipients,receivedDateTime,body,hasAttachments,conversationId&$orderby=receivedDateTime asc`
     )
     
     if (!response.ok) {

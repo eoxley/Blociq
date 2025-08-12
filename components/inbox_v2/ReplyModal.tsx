@@ -35,17 +35,15 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
   const [sendError, setSendError] = useState<string | null>(null)
   const [sendSuccess, setSendSuccess] = useState(false)
   const [emailThread, setEmailThread] = useState<FullMessage[]>([])
-  const [isLoadingThread, setIsLoadingThread] = useState(false)
-  const [showFullThread, setShowFullThread] = useState(false)
   const [subject, setSubject] = useState('')
   const [toRecipients, setToRecipients] = useState<string[]>([])
   const [ccRecipients, setCcRecipients] = useState<string[]>([])
+  const [bccRecipients, setBccRecipients] = useState<string[]>([])
   const [isGeneratingAI, setIsGeneratingAI] = useState(false)
   const [aiGenerationError, setAiGenerationError] = useState<string | null>(null)
   const [attachments, setAttachments] = useState<File[]>([])
   
   const editorRef = useRef<HTMLDivElement>(null)
-  const threadRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Initialize reply content and recipients when modal opens
@@ -55,20 +53,22 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
       const currentSubject = message.subject || '(No subject)'
       setSubject(currentSubject.startsWith('Re:') ? currentSubject : `Re: ${currentSubject}`)
       
-      // Set recipients based on reply type
-      if (replyType === 'reply') {
-        setToRecipients([message.from?.emailAddress?.address || message.from?.emailAddress || ''])
-        setCcRecipients([])
-      } else {
-        // Reply all - include original recipients
-        const originalTo = message.toRecipients?.map((r: any) => r.emailAddress?.address || r.emailAddress) || []
-        const originalCc = message.ccRecipients?.map((r: any) => r.emailAddress?.address || r.emailAddress) || []
-        const sender = message.from?.emailAddress?.address || message.from?.emailAddress || ''
-        
-        // Remove sender from recipients if they're already there
-        setToRecipients(originalTo.filter((email: string) => email !== sender))
-        setCcRecipients([...originalCc, sender].filter((email: string) => email !== ''))
-      }
+              // Set recipients based on reply type
+        if (replyType === 'reply') {
+          setToRecipients([message.from?.emailAddress?.address || message.from?.emailAddress || ''])
+          setCcRecipients([])
+          setBccRecipients([])
+        } else {
+          // Reply all - include original recipients
+          const originalTo = message.toRecipients?.map((r: any) => r.emailAddress?.address || r.emailAddress) || []
+          const originalCc = message.ccRecipients?.map((r: any) => r.emailAddress?.address || r.emailAddress) || []
+          const sender = message.from?.emailAddress?.address || message.from?.emailAddress || ''
+          
+          // Remove sender from recipients if they're already there
+          setToRecipients(originalTo.filter((email: string) => email !== sender))
+          setCcRecipients([...originalCc, sender].filter((email: string) => email !== ''))
+          setBccRecipients([])
+        }
       
       // Initialize reply body with proper cursor positioning
       setHtmlBody('<p><br></p>')
@@ -80,33 +80,35 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
 
   // Load email thread for context
   const loadEmailThread = async () => {
+    // Always start with the current message in the thread
+    const currentThread = [message]
+    
     if (!message?.conversationId) {
-      // If no conversation ID, create a single-item thread with the current message
-      setEmailThread([message])
+      // If no conversation ID, just show the current message
+      setEmailThread(currentThread)
       return
     }
     
-    setIsLoadingThread(true)
     try {
       const response = await fetch(`/api/outlook/v2/messages/thread?conversationId=${message.conversationId}`)
       if (response.ok) {
         const data = await response.json()
-        if (data.ok && data.items) {
-          setEmailThread(data.items)
+        if (data.ok && data.items && data.items.length > 0) {
+          // Filter out the current message to avoid duplication
+          const otherMessages = data.items.filter((item: any) => item.id !== message.id)
+          setEmailThread([...currentThread, ...otherMessages])
         } else {
           // Fallback to single message if thread loading fails
-          setEmailThread([message])
+          setEmailThread(currentThread)
         }
       } else {
         // Fallback to single message if thread loading fails
-        setEmailThread([message])
+        setEmailThread(currentThread)
       }
     } catch (error) {
       console.error('Error loading email thread:', error)
       // Fallback to single message if thread loading fails
-      setEmailThread([message])
-    } finally {
-      setIsLoadingThread(false)
+      setEmailThread(currentThread)
     }
   }
 
@@ -163,6 +165,7 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
           messageId: message.id,
           to: toRecipients.filter(Boolean),
           cc: ccRecipients.filter(Boolean),
+          bcc: bccRecipients.filter(Boolean),
           subject: subject.trim(),
           htmlBody: htmlBody.trim()
         })
@@ -296,22 +299,26 @@ Generate the reply in plain text format (no HTML tags).`
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
 
-  const addRecipient = (type: 'to' | 'cc') => {
+  const addRecipient = (type: 'to' | 'cc' | 'bcc') => {
     const newEmail = prompt(`Enter ${type.toUpperCase()} email address:`)
     if (newEmail && newEmail.trim()) {
       if (type === 'to') {
         setToRecipients([...toRecipients, newEmail.trim()])
-      } else {
+      } else if (type === 'cc') {
         setCcRecipients([...ccRecipients, newEmail.trim()])
+      } else {
+        setBccRecipients([...bccRecipients, newEmail.trim()])
       }
     }
   }
 
-  const removeRecipient = (type: 'to' | 'cc', index: number) => {
+  const removeRecipient = (type: 'to' | 'cc' | 'bcc', index: number) => {
     if (type === 'to') {
       setToRecipients(toRecipients.filter((_, i) => i !== index))
-    } else {
+    } else if (type === 'cc') {
       setCcRecipients(ccRecipients.filter((_, i) => i !== index))
+    } else {
+      setBccRecipients(bccRecipients.filter((_, i) => i !== index))
     }
   }
 
@@ -393,6 +400,89 @@ Generate the reply in plain text format (no HTML tags).`
             </div>
           )}
           
+          {/* Recipients Management */}
+          <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-2xl p-6 border border-gray-200 shadow-sm">
+            <div className="space-y-5">
+              {/* To Recipients */}
+              <div className="flex items-start gap-4">
+                <label className="text-sm font-semibold text-gray-700 w-20 pt-3">To:</label>
+                <div className="flex-1">
+                  <div className="flex flex-wrap gap-3 mb-3">
+                    {toRecipients.map((email, index) => (
+                      <span key={index} className="inline-flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 text-sm rounded-xl border-2 border-blue-200 shadow-sm">
+                        {email}
+                        <button
+                          onClick={() => removeRecipient('to', index)}
+                          className="text-blue-600 hover:text-blue-800 hover:bg-blue-200 rounded-full p-1.5 transition-all duration-200"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => addRecipient('to')}
+                    className="text-blue-600 hover:text-blue-800 text-sm font-semibold hover:bg-blue-50 px-4 py-2 rounded-lg transition-all duration-200"
+                  >
+                    + Add recipient
+                  </button>
+                </div>
+              </div>
+              
+              {/* CC Recipients */}
+              <div className="flex items-start gap-4">
+                <label className="text-sm font-semibold text-gray-700 w-20 pt-3">CC:</label>
+                <div className="flex-1">
+                  <div className="flex flex-wrap gap-3 mb-3">
+                    {ccRecipients.map((email, index) => (
+                      <span key={index} className="inline-flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-gray-100 to-blue-50 text-gray-800 text-sm rounded-xl border-2 border-gray-200 shadow-sm">
+                        {email}
+                        <button
+                          onClick={() => removeRecipient('cc', index)}
+                          className="text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded-full p-1.5 transition-all duration-200"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => addRecipient('cc')}
+                    className="text-gray-600 hover:text-gray-800 text-sm font-semibold hover:bg-gray-50 px-4 py-2 rounded-lg transition-all duration-200"
+                  >
+                    + Add CC
+                  </button>
+                </div>
+              </div>
+              
+              {/* BCC Recipients */}
+              <div className="flex items-start gap-4">
+                <label className="text-sm font-semibold text-gray-700 w-20 pt-3">BCC:</label>
+                <div className="flex-1">
+                  <div className="flex flex-wrap gap-3 mb-3">
+                    {bccRecipients.map((email, index) => (
+                      <span key={index} className="inline-flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-gray-100 to-blue-50 text-gray-800 text-sm rounded-xl border-2 border-gray-200 shadow-sm">
+                        {email}
+                        <button
+                          onClick={() => removeRecipient('bcc', index)}
+                          className="text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded-full p-1.5 transition-all duration-200"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => addRecipient('bcc')}
+                    className="text-gray-600 hover:text-gray-800 text-sm font-semibold hover:bg-gray-50 px-4 py-2 rounded-lg transition-all duration-200"
+                  >
+                    + Add BCC
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* AI Reply Generation Button */}
           <div className="flex justify-center">
             <button
@@ -405,9 +495,8 @@ Generate the reply in plain text format (no HTML tags).`
                 {isGeneratingAI ? (
                   <Loader2 className="h-7 w-7 animate-spin" />
                 ) : (
-                  <Sparkles className="h-7 w-7" />
+                  <Brain className="h-7 w-7" />
                 )}
-                <Brain className="h-7 w-7" />
                 <span className="text-xl">
                   {isGeneratingAI ? 'Generating AI Reply...' : 'Generate AI Reply'}
                 </span>
@@ -616,59 +705,51 @@ Generate the reply in plain text format (no HTML tags).`
           {emailThread.length > 0 && (
             <div className="border-2 border-gray-200 rounded-2xl bg-gradient-to-r from-gray-50 to-blue-50 overflow-hidden shadow-sm">
               <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-gray-100 to-blue-100">
-                <button
-                  onClick={() => setShowFullThread(!showFullThread)}
-                  className="flex items-center gap-3 text-sm text-gray-700 hover:text-gray-900 w-full text-left font-semibold"
-                >
+                <div className="flex items-center gap-3 text-sm text-gray-700 font-semibold">
                   <MessageSquare className="h-5 w-5 text-blue-600" />
                   <span className="font-medium">
-                    {showFullThread ? 'Hide' : 'Show'} Email Thread ({emailThread.length} message{emailThread.length !== 1 ? 's' : ''})
+                    Email Thread ({emailThread.length} message{emailThread.length !== 1 ? 's' : ''})
                   </span>
-                  <span className={`transform transition-transform ml-auto text-blue-600 ${showFullThread ? 'rotate-180' : ''}`}>
-                    ▼
-                  </span>
-                </button>
+                </div>
               </div>
               
-              {showFullThread && (
-                <div className="max-h-96 overflow-y-auto p-4 space-y-4">
-                  {emailThread.map((threadMessage, index) => (
-                    <div
-                      key={threadMessage.id}
-                      className={`p-4 rounded-xl border-2 ${
-                        threadMessage.id === message?.id
-                          ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 shadow-md'
-                          : 'bg-white border-gray-200 shadow-sm'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 mb-3 text-xs text-gray-600">
-                        <User className="h-4 w-4 text-blue-500" />
-                        <span className="font-medium">
-                          {threadMessage.from?.emailAddress?.address || threadMessage.from?.emailAddress || 'Unknown'}
+              <div className="max-h-96 overflow-y-auto p-4 space-y-4">
+                {emailThread.map((threadMessage, index) => (
+                  <div
+                    key={threadMessage.id}
+                    className={`p-4 rounded-xl border-2 ${
+                      threadMessage.id === message?.id
+                        ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 shadow-md'
+                        : 'bg-white border-gray-200 shadow-sm'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 mb-3 text-xs text-gray-600">
+                      <User className="h-4 w-4 text-blue-500" />
+                      <span className="font-medium">
+                        {threadMessage.from?.emailAddress?.address || threadMessage.from?.emailAddress || 'Unknown'}
+                      </span>
+                      <span>•</span>
+                      <Clock className="h-4 w-4 text-indigo-500" />
+                      <span>{formatDistanceToNow(new Date(threadMessage.receivedDateTime), { addSuffix: true })}</span>
+                      {threadMessage.id === message?.id && (
+                        <span className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-3 py-1 rounded-full text-xs font-medium shadow-sm">
+                          Original Message
                         </span>
-                        <span>•</span>
-                        <Clock className="h-4 w-4 text-indigo-500" />
-                        <span>{formatDistanceToNow(new Date(threadMessage.receivedDateTime), { addSuffix: true })}</span>
-                        {threadMessage.id === message?.id && (
-                          <span className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-3 py-1 rounded-full text-xs font-medium shadow-sm">
-                            Original Message
-                          </span>
-                        )}
-                      </div>
-                      
-                      <div className="text-sm text-gray-800">
-                        <div className="font-medium mb-2 text-gray-900">{threadMessage.subject || '(No subject)'}</div>
-                        <div 
-                          className="text-gray-700 prose prose-sm max-w-none leading-relaxed"
-                          dangerouslySetInnerHTML={{
-                            __html: threadMessage.body?.content || 'No content'
-                          }}
-                        />
-                      </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              )}
+                    
+                    <div className="text-sm text-gray-800">
+                      <div className="font-medium mb-2 text-gray-900">{threadMessage.subject || '(No subject)'}</div>
+                      <div 
+                        className="text-gray-700 prose prose-sm max-w-none leading-relaxed"
+                        dangerouslySetInnerHTML={{
+                          __html: threadMessage.body?.content || 'No content'
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
           
