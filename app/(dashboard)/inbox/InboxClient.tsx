@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useOutlookInbox } from '@/hooks/useOutlookInbox';
 import EnhancedEmailDetailView from './components/EnhancedEmailDetailView';
-import SimpleFolderSidebar from './components/SimpleFolderSidebar';
+import FolderSidebar from './components/FolderSidebar';
 import TriageModal from './components/TriageModal';
 import ComposeEmailModal from './components/ComposeEmailModal';
 import ReplyModal from './components/ReplyModal';
@@ -448,14 +448,15 @@ export default function InboxClient() {
       <div className="grid xl:grid-cols-[280px_400px_1fr] lg:grid-cols-[320px_1fr] grid-cols-1 gap-6 w-full overflow-x-hidden">
         {/* Folder List - Fixed Width */}
         <div className={`w-full xl:w-[280px] lg:w-[320px] ${showMobileFolders ? 'block' : 'hidden'} lg:block`}>
-          <SimpleFolderSidebar 
-            folders={[...folders, ...aiFolders]} 
-            selectedFolder={selectedFolder}
-            onFolderSelect={(folderId) => {
+          <FolderSidebar 
+            currentFilter={selectedFolder}
+            onFilterChange={(folderId) => {
               handleFolderSelect(folderId);
               setShowMobileFolders(false); // Close mobile folders after selection
             }}
-            onEmailDrop={handleEmailDrop}
+            onSync={manualSync}
+            isSyncing={syncing}
+            lastSync={inboxInfo?.lastSync || null}
           />
         </div>
 
