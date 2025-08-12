@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -24,6 +22,9 @@ export async function POST(req: NextRequest) {
     
 Provide helpful, accurate advice about property management, compliance, tenant relations, maintenance, and general property-related topics. 
 Keep responses concise, professional, and practical. If you don't have specific information, provide general guidance.`;
+
+    // Initialize OpenAI client
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
     // Call OpenAI
     const completion = await openai.chat.completions.create({
