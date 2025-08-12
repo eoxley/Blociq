@@ -57,6 +57,8 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
 
     try {
       await moveMessage(draggedMessage.id, targetFolderId)
+      // Refresh the message list to show the updated state
+      refresh()
     } catch (error) {
       console.error('Error moving message:', error)
     }
