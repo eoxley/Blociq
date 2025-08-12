@@ -338,6 +338,34 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
             />
           </div>
 
+          {/* Original Email Display */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">Original Email</label>
+            <div className="border border-gray-300 rounded-lg p-4 bg-gray-50 max-h-48 overflow-y-auto">
+              <div className="space-y-2 text-sm">
+                <div>
+                  <span className="font-medium text-gray-700">From:</span> {email.from_name || email.from_email}
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Date:</span> {new Date(email.received_at).toLocaleString()}
+                </div>
+                {email.building_id && (
+                  <div>
+                    <span className="font-medium text-gray-700">Building ID:</span> {email.building_id}
+                  </div>
+                )}
+              </div>
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <div className="text-sm text-gray-600 whitespace-pre-wrap">
+                  {email.body_content_type === 'html' 
+                    ? email.body?.replace(/<[^>]*>/g, '') || email.body_preview || 'No content available'
+                    : email.body || email.body_preview || 'No content available'
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Body Field */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
