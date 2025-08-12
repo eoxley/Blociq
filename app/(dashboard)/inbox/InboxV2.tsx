@@ -7,7 +7,7 @@ import MessageList from '@/components/inbox_v2/MessageList'
 import MessagePreview from '@/components/inbox_v2/MessagePreview'
 import ReplyModal from '@/components/inbox_v2/ReplyModal'
 import NewEmailModal from '@/components/inbox_v2/NewEmailModal'
-import { useMessages } from '@/hooks/inbox_v2'
+import { useMessages, useFolders } from '@/hooks/inbox_v2'
 import { mutate } from 'swr'
 
 // Context for inbox state
@@ -30,7 +30,7 @@ export function useInboxContext() {
 }
 
 export default function InboxV2() {
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>('inbox')
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
   const [selectedMessage, setSelectedMessage] = useState<any | null>(null)
   const [replyModal, setReplyModal] = useState<{
     isOpen: boolean
@@ -39,8 +39,35 @@ export default function InboxV2() {
   const [newEmailModalOpen, setNewEmailModalOpen] = useState(false)
   const [moveSuccess, setMoveSuccess] = useState<{ message: string; timestamp: number } | null>(null)
 
-  // Get messages for the selected folder to find the selected message
+  // Get folders and messages
+  const { folders, isLoading: foldersLoading } = useFolders()
   const { messages, refresh: refreshMessages } = useMessages(selectedFolderId)
+
+  // Set the inbox folder as default when folders are loaded
+  useEffect(() => {
+    if (folders.length > 0 && !selectedFolderId) {
+      // Find the inbox folder (either from Graph API or default folders)
+      const inboxFolder = folders.find(folder => 
+        folder.wellKnownName === 'inbox' || 
+        folder.displayName.toLowerCase() === 'inbox'
+      )
+      if (inboxFolder) {
+        console.log('Setting inbox folder ID:', inboxFolder.id, 'for folder:', inboxFolder.displayName)
+        setSelectedFolderId(inboxFolder.id)
+      } else {
+        console.log('No inbox folder found in:', folders)
+      }
+    }
+  }, [folders, selectedFolderId])
+
+  // Debug logging
+  useEffect(() => {
+    console.log('Folders loaded:', folders.length, 'Selected folder ID:', selectedFolderId)
+  }, [folders, selectedFolderId])
+
+  useEffect(() => {
+    console.log('Messages loaded:', messages.length, 'for folder:', selectedFolderId)
+  }, [messages, selectedFolderId])
 
   // Global keyboard shortcuts for inbox
   useEffect(() => {

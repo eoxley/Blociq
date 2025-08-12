@@ -106,24 +106,35 @@ export async function deleteUserOutlookTokens(): Promise<void> {
 }
 
 /**
- * Get a valid access token for the current user
- * Automatically refreshes if expired
+ * Get a valid access token, refreshing if necessary
  */
 export async function getValidAccessToken(): Promise<string> {
-  const tokens = await getUserOutlookTokens()
-  if (!tokens) {
-    throw new Error('No Outlook tokens found. Please connect your Outlook account.')
+  try {
+    console.log('[outlookAuth] Getting valid access token')
+    const tokens = await getUserOutlookTokens()
+    
+    if (!tokens) {
+      console.error('[outlookAuth] No Outlook tokens found for user')
+      throw new Error('No Outlook connection found. Please connect your Outlook account first.')
+    }
+
+    const now = new Date()
+    const expiresAt = new Date(tokens.expires_at)
+    
+    console.log('[outlookAuth] Token expires at:', expiresAt.toISOString(), 'Current time:', now.toISOString())
+    
+    // Check if token is expired (with 5 minute buffer)
+    if (now >= expiresAt) {
+      console.log('[outlookAuth] Token expired, refreshing...')
+      return await refreshAccessToken(tokens.refresh_token)
+    }
+
+    console.log('[outlookAuth] Token is still valid, no refresh needed')
+    return tokens.access_token
+  } catch (error) {
+    console.error('[outlookAuth] Error getting valid access token:', error)
+    throw error
   }
-
-  const now = new Date()
-  const expiresAt = new Date(tokens.expires_at)
-
-  // If token is expired or expires within 5 minutes, refresh it
-  if (expiresAt <= new Date(now.getTime() + 5 * 60 * 1000)) {
-    return await refreshAccessToken(tokens.refresh_token)
-  }
-
-  return tokens.access_token
 }
 
 /**
@@ -225,13 +236,31 @@ export async function createGraphHeaders(): Promise<HeadersInit> {
  * Make a Microsoft Graph API request with automatic token management
  */
 export async function makeGraphRequest(endpoint: string, options: RequestInit = {}): Promise<Response> {
-  const headers = await createGraphHeaders()
-  
-  return fetch(`https://graph.microsoft.com/v1.0${endpoint}`, {
-    ...options,
-    headers: {
-      ...headers,
-      ...options.headers,
-    },
-  })
+  try {
+    console.log('[outlookAuth] Creating Graph headers for endpoint:', endpoint)
+    const headers = await createGraphHeaders()
+    
+    const url = `https://graph.microsoft.com/v1.0${endpoint}`
+    console.log('[outlookAuth] Making request to:', url)
+    
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        ...headers,
+        ...options.headers,
+      },
+    })
+    
+    console.log('[outlookAuth] Response status:', response.status, 'for endpoint:', endpoint)
+    
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('[outlookAuth] Graph API error:', response.status, errorText)
+    }
+    
+    return response
+  } catch (error) {
+    console.error('[outlookAuth] Error in makeGraphRequest:', error)
+    throw error
+  }
 }
