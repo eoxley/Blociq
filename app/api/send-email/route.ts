@@ -54,14 +54,14 @@ export async function POST(req: NextRequest) {
       saveToSentItems: true
     });
 
-    const json = { 
+    const responseData = { 
       success: true, 
       message: 'Email sent successfully',
       response,
       routeId: "app/api/send-email/route.ts",
       build: process.env.VERCEL_GIT_COMMIT_SHA ?? null
     };
-    const res = NextResponse.json(json);
+    const res = NextResponse.json(responseData);
     res.headers.set("x-blociq-route", "app/api/send-email/route.ts");
     return res;
 
@@ -71,23 +71,23 @@ export async function POST(req: NextRequest) {
     // Handle specific authentication errors
     if (err?.status === 401) {
       if (err.message?.includes('Outlook not connected')) {
-        const json = { 
+        const errorData = { 
           error: 'Outlook not connected. Please connect your Outlook account first.',
           code: 'OUTLOOK_NOT_CONNECTED',
           routeId: "app/api/send-email/route.ts",
           build: process.env.VERCEL_GIT_COMMIT_SHA ?? null
         };
-        const res = NextResponse.json(json, { status: 401 });
+        const res = NextResponse.json(errorData, { status: 401 });
         res.headers.set("x-blociq-route", "app/api/send-email/route.ts");
         return res;
       } else {
-        const json = { 
+        const errorData = { 
           error: 'Authentication failed. Please log in again.',
           code: 'AUTH_FAILED',
           routeId: "app/api/send-email/route.ts",
           build: process.env.VERCEL_GIT_COMMIT_SHA ?? null
         };
-        const res = NextResponse.json(json, { status: 401 });
+        const res = NextResponse.json(errorData, { status: 401 });
         res.headers.set("x-blociq-route", "app/api/send-email/route.ts");
         return res;
       }
@@ -98,8 +98,8 @@ export async function POST(req: NextRequest) {
       ? 'Permission denied. Ensure Mail.Send is granted.' 
       : err?.message || 'Failed to send email';
     
-    const json = { error: msg, routeId: "app/api/send-email/route.ts", build: process.env.VERCEL_GIT_COMMIT_SHA ?? null };
-    const res = NextResponse.json(json, { status: code });
+    const errorData = { error: msg, routeId: "app/api/send-email/route.ts", build: process.env.VERCEL_GIT_COMMIT_SHA ?? null };
+    const res = NextResponse.json(errorData, { status: code });
     res.headers.set("x-blociq-route", "app/api/send-email/route.ts");
     return res;
   }

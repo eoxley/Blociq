@@ -22,8 +22,8 @@ export async function POST(req: NextRequest) {
 
     if (!emailId) {
       console.error('❌ No email ID provided in request');
-      const json = { error: 'Email ID is required', routeId: "app/api/mark-read/route.ts", build: process.env.VERCEL_GIT_COMMIT_SHA ?? null };
-      const res = NextResponse.json(json, { status: 400 });
+      const errorData = { error: 'Email ID is required', routeId: "app/api/mark-read/route.ts", build: process.env.VERCEL_GIT_COMMIT_SHA ?? null };
+      const res = NextResponse.json(errorData, { status: 400 });
       res.headers.set("x-blociq-route", "app/api/mark-read/route.ts");
       return res;
     }
@@ -40,27 +40,27 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error('❌ Failed to mark as read:', error.message);
-      const json = { error: error.message, routeId: "app/api/mark-read/route.ts", build: process.env.VERCEL_GIT_COMMIT_SHA ?? null };
-      const res = NextResponse.json(json, { status: 500 });
+      const errorData = { error: error.message, routeId: "app/api/mark-read/route.ts", build: process.env.VERCEL_GIT_COMMIT_SHA ?? null };
+      const res = NextResponse.json(errorData, { status: 500 });
       res.headers.set("x-blociq-route", "app/api/mark-read/route.ts");
       return res;
     }
 
     console.log('✅ Email marked as read successfully');
-    const json = { success: true, routeId: "app/api/mark-read/route.ts", build: process.env.VERCEL_GIT_COMMIT_SHA ?? null };
-    const res = NextResponse.json(json);
+    const responseData = { success: true, routeId: "app/api/mark-read/route.ts", build: process.env.VERCEL_GIT_COMMIT_SHA ?? null };
+    const res = NextResponse.json(responseData);
     res.headers.set("x-blociq-route", "app/api/mark-read/route.ts");
     return res;
 
   } catch (error) {
     console.error('❌ Error in mark-read route:', error);
-    const json = { 
+    const errorData = { 
       error: 'Failed to mark email as read',
       details: process.env.NODE_ENV === 'development' ? error instanceof Error ? error.message : 'Unknown error' : undefined,
       routeId: "app/api/mark-read/route.ts",
       build: process.env.VERCEL_GIT_COMMIT_SHA ?? null
     };
-    const res = NextResponse.json(json, { status: 500 });
+    const res = NextResponse.json(errorData, { status: 500 });
     res.headers.set("x-blociq-route", "app/api/mark-read/route.ts");
     return res;
   }
