@@ -510,11 +510,12 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
             {/* Editor */}
             {isPlainText ? (
               <textarea
-                className="w-full p-6 border-0 resize-none focus:outline-none focus:ring-0 text-gray-900 leading-relaxed min-h-[200px]"
+                className="w-full p-6 border-0 resize-none focus:outline-none focus:ring-0 text-gray-900 leading-relaxed min-h-[200px] overflow-y-auto"
                 value={replyHtml.replace(/<[^>]*>/g, '')}
                 onChange={(e) => setReplyHtml(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Type your message here..."
+                style={{ minHeight: '300px', maxHeight: '400px' }}
               />
             ) : (
               <div
