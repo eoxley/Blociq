@@ -255,3 +255,16 @@
 .scrollbar-thin::-webkit-scrollbar-corner {
   background: transparent;
 }
+
+/* Inbox Compact Layout */
+.inbox-compact { 
+  zoom: 0.9; 
+}
+
+@supports not (zoom: 1) {
+  .inbox-compact { 
+    transform: scale(0.9); 
+    transform-origin: top left; 
+    width: calc(100% / 0.9); 
+  }
+}
