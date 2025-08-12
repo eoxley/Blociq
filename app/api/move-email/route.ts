@@ -8,6 +8,7 @@
 import { NextResponse } from 'next/server';
 import { getOutlookClient, ensureFolderId } from '@/lib/outlookClient';
 import { z } from 'zod';
+import { serverTrace } from '@/lib/trace';
 
 const Body = z.object({
   emailId: z.string().min(1),
@@ -15,6 +16,8 @@ const Body = z.object({
 });
 
 export async function POST(req: Request) {
+  serverTrace("API hit", { route: "app/api/move-email/route.ts", build: process.env.VERCEL_GIT_COMMIT_SHA ?? null });
+  
   try {
     const json = await req.json();
     const { emailId, folderId } = Body.parse(json);
@@ -27,7 +30,10 @@ export async function POST(req: Request) {
 
     const res = await client.api(`/me/messages/${emailId}/move`).post({ destinationId });
 
-    return NextResponse.json({ success: true, message: res }, { status: 200 });
+    const json = { success: true, message: res, routeId: "app/api/move-email/route.ts", build: process.env.VERCEL_GIT_COMMIT_SHA ?? null };
+    const response = NextResponse.json(json, { status: 200 });
+    response.headers.set("x-blociq-route", "app/api/move-email/route.ts");
+    return response;
   } catch (err: any) {
     const code = err?.statusCode || err?.status || 500;
     console.error('move-email failed:', err?.message || err);
@@ -37,6 +43,9 @@ export async function POST(req: Request) {
       : code === 403
         ? 'Permission denied. Ensure Mail.ReadWrite is granted.'
         : err?.message || 'Failed to move email';
-    return NextResponse.json({ error: msg }, { status: code });
+    const json = { error: msg, routeId: "app/api/move-email/route.ts", build: process.env.VERCEL_GIT_COMMIT_SHA ?? null };
+    const response = NextResponse.json(json, { status: code });
+    response.headers.set("x-blociq-route", "app/api/move-email/route.ts");
+    return response;
   }
 } 

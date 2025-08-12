@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOutlookClient } from '@/lib/outlookClient';
 import { z } from 'zod';
+import { serverTrace } from '@/lib/trace';
 
 const Body = z.object({
   to: z.string().min(1),
@@ -16,6 +17,8 @@ const Body = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  serverTrace("API hit", { route: "app/api/send-email/route.ts", build: process.env.VERCEL_GIT_COMMIT_SHA ?? null });
+  
   try {
     const json = await req.json();
     const { to, cc, subject, body, attachments } = Body.parse(json);
@@ -51,11 +54,16 @@ export async function POST(req: NextRequest) {
       saveToSentItems: true
     });
 
-    return NextResponse.json({ 
+    const json = { 
       success: true, 
       message: 'Email sent successfully',
-      response 
-    });
+      response,
+      routeId: "app/api/send-email/route.ts",
+      build: process.env.VERCEL_GIT_COMMIT_SHA ?? null
+    };
+    const res = NextResponse.json(json);
+    res.headers.set("x-blociq-route", "app/api/send-email/route.ts");
+    return res;
 
   } catch (err: any) {
     console.error('send-email failed:', err?.message || err);
@@ -63,15 +71,25 @@ export async function POST(req: NextRequest) {
     // Handle specific authentication errors
     if (err?.status === 401) {
       if (err.message?.includes('Outlook not connected')) {
-        return NextResponse.json({ 
+        const json = { 
           error: 'Outlook not connected. Please connect your Outlook account first.',
-          code: 'OUTLOOK_NOT_CONNECTED'
-        }, { status: 401 });
+          code: 'OUTLOOK_NOT_CONNECTED',
+          routeId: "app/api/send-email/route.ts",
+          build: process.env.VERCEL_GIT_COMMIT_SHA ?? null
+        };
+        const res = NextResponse.json(json, { status: 401 });
+        res.headers.set("x-blociq-route", "app/api/send-email/route.ts");
+        return res;
       } else {
-        return NextResponse.json({ 
+        const json = { 
           error: 'Authentication failed. Please log in again.',
-          code: 'AUTH_FAILED'
-        }, { status: 401 });
+          code: 'AUTH_FAILED',
+          routeId: "app/api/send-email/route.ts",
+          build: process.env.VERCEL_GIT_COMMIT_SHA ?? null
+        };
+        const res = NextResponse.json(json, { status: 401 });
+        res.headers.set("x-blociq-route", "app/api/send-email/route.ts");
+        return res;
       }
     }
 
@@ -80,6 +98,9 @@ export async function POST(req: NextRequest) {
       ? 'Permission denied. Ensure Mail.Send is granted.' 
       : err?.message || 'Failed to send email';
     
-    return NextResponse.json({ error: msg }, { status: code });
+    const json = { error: msg, routeId: "app/api/send-email/route.ts", build: process.env.VERCEL_GIT_COMMIT_SHA ?? null };
+    const res = NextResponse.json(json, { status: code });
+    res.headers.set("x-blociq-route", "app/api/send-email/route.ts");
+    return res;
   }
 }

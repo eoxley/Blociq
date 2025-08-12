@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useOutlookFolders } from '@/hooks/useOutlookFolders';
+import { trace } from '@/lib/trace';
 
 interface SimpleFolderSidebarProps {
   selectedFolderId: string | null;
@@ -16,6 +17,11 @@ export default function SimpleFolderSidebar({
 }: SimpleFolderSidebarProps) {
   const { folders, isLoading, isFallback, addCustomFolder, removeCustomFolder } = useOutlookFolders();
   const [newFolderName, setNewFolderName] = useState('');
+
+  useEffect(() => {
+    trace("Sidebar mounted", { file: "components/inbox/SimpleFolderSidebar.tsx" });
+    trace("Sidebar folders", { source: isFallback ? "fallback" : "graph", count: folders.length });
+  }, [folders.length, isFallback]);
 
   const handleAddFolder = (e: React.FormEvent) => {
     e.preventDefault();

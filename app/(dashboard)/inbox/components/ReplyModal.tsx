@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import DOMPurify from 'dompurify';
 import { toPlainQuoted, toSanitisedHtml } from '@/utils/emailFormatting';
 import { Card } from '@/components/ui/card';
+import { trace } from '@/lib/trace';
 
 interface Email {
   id: string;
@@ -61,6 +62,7 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
   // Prevent background scrolling when modal is open and focus first input
   useEffect(() => {
     if (isOpen) {
+      trace("ReplyModal mounted", { file: "app/(dashboard)/inbox/components/ReplyModal.tsx" });
       document.body.style.overflow = "hidden";
       // Focus the first input (To field) when modal opens
       setTimeout(() => {

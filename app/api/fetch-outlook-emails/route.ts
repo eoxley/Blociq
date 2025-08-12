@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { serverTrace } from '@/lib/trace';
 
 export async function GET(req: NextRequest) {
   return await POST(req);
 }
 
 export async function POST(req: NextRequest) {
+  serverTrace("API hit", { route: "app/api/fetch-outlook-emails/route.ts", build: process.env.VERCEL_GIT_COMMIT_SHA ?? null });
+  
   console.log('🔄 Starting Outlook email fetch...');
 
   try {
@@ -255,7 +258,7 @@ export async function POST(req: NextRequest) {
       console.log('✅ Backup sync completed');
     }
 
-    return NextResponse.json({
+    const json = {
       success: true,
       message: 'Emails fetched successfully from Outlook',
       data: {
@@ -266,15 +269,25 @@ export async function POST(req: NextRequest) {
         },
         tokenRefreshed: refreshedToken,
         source: 'microsoft_graph_api'
-      }
-    });
+      },
+      routeId: "app/api/fetch-outlook-emails/route.ts",
+      build: process.env.VERCEL_GIT_COMMIT_SHA ?? null
+    };
+    const res = NextResponse.json(json);
+    res.headers.set("x-blociq-route", "app/api/fetch-outlook-emails/route.ts");
+    return res;
 
   } catch (error) {
     console.error('❌ Unexpected error in fetch-outlook-emails:', error);
-    return NextResponse.json({ 
+    const json = { 
       error: 'Unexpected error',
       message: 'An unexpected error occurred while fetching emails',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    }, { status: 500 });
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      routeId: "app/api/fetch-outlook-emails/route.ts",
+      build: process.env.VERCEL_GIT_COMMIT_SHA ?? null
+    };
+    const res = NextResponse.json(json, { status: 500 });
+    res.headers.set("x-blociq-route", "app/api/fetch-outlook-emails/route.ts");
+    return res;
   }
 } 

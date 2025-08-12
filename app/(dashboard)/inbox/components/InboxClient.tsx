@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Mail, RefreshCw, AlertTriangle, Search, Filter, Clock, User, CheckCircle, Flag } from 'lucide-react'
+import { trace } from '@/lib/trace'
 
 interface Email {
   id: string
@@ -35,6 +36,7 @@ export default function InboxClient({ emails }: InboxClientProps) {
   const [selectedEmail, setSelectedEmail] = useState<string | null>(null)
 
   useEffect(() => {
+    trace("InboxClient mounted", { file: "components/inbox/InboxClient.tsx" });
     console.log('🎯 InboxClient: Component mounted with', emails.length, 'emails')
     console.log('📧 Emails data:', emails)
   }, [emails])
