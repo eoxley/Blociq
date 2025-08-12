@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Inbox, Archive, Trash2, Folder, Plus, X, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Inbox, Archive, Trash2, Folder, Plus, X, RefreshCw, CheckCircle, AlertTriangle, MessageSquare, Clock, Star, Building as BuildingIcon, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface OutlookFolder {
@@ -16,6 +16,7 @@ interface FolderListV2Props {
   loading: boolean;
   onSelect: (id: string | null) => void; // null means refresh
   onDropEmail: (emailId: string, folderId: string) => void;
+  emails?: any[]; // Add emails prop for dynamic folder counts
 }
 
 export default function FolderListV2({ 
@@ -23,12 +24,86 @@ export default function FolderListV2({
   selectedFolderId, 
   loading, 
   onSelect, 
-  onDropEmail 
+  onDropEmail,
+  emails = []
 }: FolderListV2Props) {
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [outlookConnected, setOutlookConnected] = useState(true);
+
+  // Calculate dynamic folder counts from emails
+  const folderCounts = React.useMemo(() => {
+    if (!emails || emails.length === 0) {
+      return {
+        inbox: 0,
+        handled: 0,
+        all: 0,
+        archived: 0,
+        complaints: 0,
+        queries: 0,
+        actionRequired: 0,
+        flagged: 0
+      }
+    }
+
+    return {
+      all: emails.length,
+      inbox: emails.filter(email => !email.is_read || email.unread).length,
+      handled: emails.filter(email => email.is_handled || email.handled).length,
+      flagged: emails.filter(email => email.flag_status === 'flagged').length,
+      archived: emails.filter(email => email.flag_status === 'archived').length,
+      complaints: emails.filter(email => email.categories?.includes('complaint')).length,
+      queries: emails.filter(email => email.categories?.includes('query')).length,
+      actionRequired: emails.filter(email => !email.is_handled && !email.handled).length
+    }
+  }, [emails])
+
+  // Calculate building folders from emails
+  const buildings = React.useMemo(() => {
+    if (!emails || emails.length === 0) return []
+    
+    const buildingMap = new Map<string, { id: string, name: string, emailCount: number }>()
+    
+    emails.forEach(email => {
+      if (email.building_id) {
+        const buildingId = email.building_id.toString()
+        const existing = buildingMap.get(buildingId)
+        
+        if (existing) {
+          existing.emailCount++
+        } else {
+          buildingMap.set(buildingId, {
+            id: buildingId,
+            name: email.building_name || `Building ${buildingId}`,
+            emailCount: 1
+          })
+        }
+      }
+    })
+    
+    return Array.from(buildingMap.values()).sort((a, b) => a.name.localeCompare(b.name))
+  }, [emails])
+
+  // Calculate tag folders from emails
+  const tags = React.useMemo(() => {
+    if (!emails || emails.length === 0) return []
+    
+    const tagMap = new Map<string, number>()
+    
+    emails.forEach(email => {
+      if (email.categories && Array.isArray(email.categories)) {
+        email.categories.forEach(tag => {
+          tagMap.set(tag, (tagMap.get(tag) || 0) + 1)
+        })
+      }
+    })
+    
+    return Array.from(tagMap.entries()).map(([tag, count]) => ({
+      tag,
+      emailCount: count
+    })).sort((a, b) => a.tag.localeCompare(b.tag))
+  }, [emails])
 
   const createFolder = async (name: string, parentFolderId?: string) => {
     try {
@@ -181,38 +256,190 @@ export default function FolderListV2({
             <div className="text-sm text-gray-500">No folders found</div>
           </div>
         ) : (
-          <div className="p-2">
-            <div className="space-y-1">
-              {folders.map((folder) => {
-                const isSelected = selectedFolderId === folder.id;
-                const Icon = getFolderIcon(folder);
-                
-                return (
+          <div className="p-2 space-y-4">
+            {/* Outlook Folders */}
+            <div>
+              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 px-3">Outlook Folders</h3>
+              <div className="space-y-1">
+                {folders.map((folder) => {
+                  const isSelected = selectedFolderId === folder.id;
+                  const Icon = getFolderIcon(folder);
+                  
+                  return (
+                    <div
+                      key={folder.id}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, folder.id)}
+                      className={`rounded-md transition-colors ${
+                        isSelected ? 'bg-blue-100' : 'hover:bg-gray-100'
+                      }`}
+                    >
+                      <button
+                        onClick={() => onSelect(folder.id)}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-left transition-colors ${
+                          isSelected 
+                            ? 'text-blue-700' 
+                            : 'text-gray-700'
+                        }`}
+                      >
+                        <div className="flex items-center">
+                          {Icon}
+                          <span className="ml-3 truncate">{folder.displayName}</span>
+                        </div>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* System Folders */}
+            <div>
+              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 px-3">System Folders</h3>
+              <div className="space-y-1">
+                {[
+                  { id: 'inbox', label: 'Inbox', icon: Inbox, count: folderCounts.inbox },
+                  { id: 'action-required', label: 'Action Required', icon: Clock, count: folderCounts.actionRequired },
+                  { id: 'flagged', label: 'Flagged', icon: Star, count: folderCounts.flagged },
+                  { id: 'handled', label: 'Handled', icon: CheckCircle, count: folderCounts.handled },
+                  { id: 'archived', label: 'Archived', icon: Archive, count: folderCounts.archived }
+                ].map((folder) => {
+                  const isSelected = selectedFolderId === folder.id;
+                  return (
+                    <div
+                      key={folder.id}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, folder.id)}
+                      className={`rounded-md transition-colors ${
+                        isSelected ? 'bg-blue-100' : 'hover:bg-gray-100'
+                      }`}
+                    >
+                      <button
+                        onClick={() => onSelect(folder.id)}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-left transition-colors ${
+                          isSelected 
+                            ? 'text-blue-700' 
+                            : 'text-gray-700'
+                        }`}
+                      >
+                        <div className="flex items-center">
+                          <folder.icon className="h-4 w-4" />
+                          <span className="ml-3 truncate">{folder.label}</span>
+                        </div>
+                        <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full">
+                          {folder.count}
+                        </span>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Category Folders */}
+            {[
+              { id: 'complaints', label: 'Complaints', icon: AlertTriangle, count: folderCounts.complaints },
+              { id: 'leaseholder-queries', label: 'Leaseholder Queries', icon: MessageSquare, count: folderCounts.queries }
+            ].filter(folder => folder.count > 0).map((folder) => (
+              <div key={folder.id}>
+                <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 px-3">Categories</h3>
+                <div className="space-y-1">
                   <div
-                    key={folder.id}
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, folder.id)}
-                    className={`rounded-md transition-colors ${
-                      isSelected ? 'bg-blue-100' : 'hover:bg-gray-100'
-                    }`}
+                    className="rounded-md transition-colors hover:bg-gray-100"
                   >
                     <button
                       onClick={() => onSelect(folder.id)}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-left transition-colors ${
-                        isSelected 
-                          ? 'text-blue-700' 
-                          : 'text-gray-700'
-                      }`}
+                      className="w-full flex items-center justify-between px-3 py-2 rounded-md text-left transition-colors text-gray-700"
                     >
                       <div className="flex items-center">
-                        {Icon}
-                        <span className="ml-3 truncate">{folder.displayName}</span>
+                        <folder.icon className="h-4 w-4" />
+                        <span className="ml-3 truncate">{folder.label}</span>
                       </div>
+                      <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full">
+                        {folder.count}
+                      </span>
                     </button>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              </div>
+            ))}
+
+            {/* Building Folders */}
+            {buildings.length > 0 && (
+              <div>
+                <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 px-3">Buildings</h3>
+                <div className="space-y-1">
+                  {buildings.map((building) => (
+                    <div
+                      key={building.id}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, `building-${building.id}`)}
+                      className="rounded-md transition-colors hover:bg-gray-100"
+                    >
+                      <button
+                        onClick={() => onSelect(`building-${building.id}`)}
+                        className="w-full flex items-center justify-between px-3 py-2 rounded-md text-left transition-colors text-gray-700"
+                      >
+                        <div className="flex items-center">
+                          <BuildingIcon className="h-4 w-4" />
+                          <span className="ml-3 truncate">{building.name}</span>
+                        </div>
+                        <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full">
+                          {building.emailCount}
+                        </span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Tag Folders */}
+            {tags.length > 0 && (
+              <div>
+                <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 px-3">Tags</h3>
+                <div className="space-y-1">
+                  {tags.map((tag) => (
+                    <div
+                      key={tag.tag}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, `tag-${tag.tag}`)}
+                      className="rounded-md transition-colors hover:bg-gray-100"
+                    >
+                      <button
+                        onClick={() => onSelect(`tag-${tag.tag}`)}
+                        className="w-full flex items-center justify-between px-3 py-2 rounded-md text-left transition-colors text-gray-700"
+                      >
+                        <div className="flex items-center">
+                          <Tag className="h-4 w-4" />
+                          <span className="ml-3 truncate">{tag.tag}</span>
+                        </div>
+                        <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full">
+                          {tag.tag}
+                        </span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Debug Info */}
+            {emails && emails.length > 0 && (
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <h3 className="text-xs font-medium text-blue-900 mb-2">Debug Info</h3>
+                <p className="text-xs text-blue-700">
+                  Total emails: {emails.length}<br/>
+                  Inbox: {folderCounts.inbox}<br/>
+                  Handled: {folderCounts.handled}<br/>
+                  Flagged: {folderCounts.flagged}<br/>
+                  Buildings: {buildings.length}<br/>
+                  Tags: {tags.length}
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>

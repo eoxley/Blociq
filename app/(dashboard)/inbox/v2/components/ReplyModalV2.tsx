@@ -507,6 +507,34 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
 
           {/* Scrollable Content Area */}
           <div className="flex-1 overflow-y-auto max-h-[70vh] overscroll-contain p-4 space-y-4">
+            {/* Original Email Display - Always Visible */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Original Email</label>
+              <div className="border border-gray-300 rounded-lg p-4 bg-gray-50 max-h-48 overflow-y-auto">
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-700">From:</span> {email?.from_name || email?.from_email || 'Unknown sender'}
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Date:</span> {email?.received_at ? new Date(email.received_at).toLocaleString() : 'Unknown date'}
+                  </div>
+                  {email?.building_id && (
+                    <div>
+                      <span className="font-medium text-gray-700">Building ID:</span> {email.building_id}
+                    </div>
+                  )}
+                </div>
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <div className="text-sm text-gray-600 whitespace-pre-wrap">
+                    {email?.body_content_type === 'html' 
+                      ? email?.body?.replace(/<[^>]*>/g, '') || email?.body_preview || 'No content available'
+                      : email?.body || email?.body_preview || 'No content available'
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Editor */}
             {isPlainText ? (
               <textarea
