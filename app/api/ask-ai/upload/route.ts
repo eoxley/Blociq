@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
-import { slugify } from '@/lib/ask/text'
+import { createAdminClient } from '../../../../lib/supabase/admin'
+import { slugify } from '../../../../lib/ask/text'
 
 export const runtime = "nodejs";
 

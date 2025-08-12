@@ -11,9 +11,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import OpenAI from 'openai';
-import { insertAiLog } from '@/lib/supabase/ai_logs';
-import { createAdminClient } from "@/lib/supabase/admin";
-import { MAX_CHARS_PER_DOC, MAX_TOTAL_DOC_CHARS, truncate, isSummariseLike, slugify } from "@/lib/ask/text";
+import { insertAiLog } from '../../../lib/supabase/ai_logs';
+import { createAdminClient } from "../../../lib/supabase/admin";
+import { MAX_CHARS_PER_DOC, MAX_TOTAL_DOC_CHARS, truncate, isSummariseLike, slugify } from "../../../lib/ask/text";
 
 export const runtime = "nodejs";
 
