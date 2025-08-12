@@ -375,7 +375,20 @@ export default function FolderSidebar({
         </Card>
       )}
 
-
+      {/* Debug Info - Remove this after testing */}
+      {emails && emails.length > 0 && (
+        <Card className="p-4 bg-blue-50 border-blue-200">
+          <h3 className="font-semibold text-blue-900 mb-2">Debug Info</h3>
+          <p className="text-xs text-blue-700">
+            Total emails: {emails.length}<br/>
+            Inbox: {folderCounts.inbox}<br/>
+            Handled: {folderCounts.handled}<br/>
+            Flagged: {folderCounts.flagged}<br/>
+            Buildings: {buildings.length}<br/>
+            Tags: {tags.length}
+          </p>
+        </Card>
+      )}
     </div>
   )
 } 
