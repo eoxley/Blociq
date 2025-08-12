@@ -19,6 +19,8 @@ export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
   const [htmlBody, setHtmlBody] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [showBlocIQNote, setShowBlocIQNote] = useState(false)
+  const [sendError, setSendError] = useState<string | null>(null)
+  const [sendSuccess, setSendSuccess] = useState(false)
   const [subject, setSubject] = useState('')
   const [toRecipients, setToRecipients] = useState<string[]>([])
   const [ccRecipients, setCcRecipients] = useState<string[]>([])
@@ -70,6 +72,9 @@ export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
     if (!htmlBody.trim() || toRecipients.length === 0) return
     
     setIsSending(true)
+    setSendError(null)
+    setSendSuccess(false)
+    
     try {
       const response = await fetch('/api/outlook/v2/messages/send', {
         method: 'POST',
@@ -86,14 +91,24 @@ export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
         })
       })
       
-      if (response.ok) {
-        onClose()
-        // You could add a success toast here
+      const data = await response.json()
+      
+      if (response.ok && data.ok) {
+        setSendSuccess(true)
+        console.log('Email sent successfully:', data.messageId)
+        
+        // Show success message briefly before closing
+        setTimeout(() => {
+          onClose()
+        }, 1000)
       } else {
-        console.error('Failed to send email')
-        // You could add an error toast here
+        const errorMessage = data?.error || 'Failed to send email'
+        setSendError(errorMessage)
+        console.error('Failed to send email:', errorMessage)
       }
     } catch (error) {
+      const errorMessage = 'Network error while sending email'
+      setSendError(errorMessage)
       console.error('Error sending email:', error)
     } finally {
       setIsSending(false)
@@ -436,6 +451,23 @@ export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
           
           {/* Editor - Scrollable Content */}
           <div className="flex-1 overflow-y-auto min-h-0">
+            {/* Success/Error Messages */}
+            {sendSuccess && (
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg m-4">
+                <p className="text-green-800 text-sm font-medium">
+                  ✅ Email sent successfully! Closing in a moment...
+                </p>
+              </div>
+            )}
+            
+            {sendError && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg m-4">
+                <p className="text-red-800 text-sm font-medium">
+                  ❌ {sendError}
+                </p>
+              </div>
+            )}
+            
             <div
               ref={editorRef}
               contentEditable

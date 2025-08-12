@@ -32,6 +32,8 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
   const [htmlBody, setHtmlBody] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [showBlocIQNote, setShowBlocIQNote] = useState(false)
+  const [sendError, setSendError] = useState<string | null>(null)
+  const [sendSuccess, setSendSuccess] = useState(false)
   const [emailThread, setEmailThread] = useState<FullMessage[]>([])
   const [isLoadingThread, setIsLoadingThread] = useState(false)
   const [showFullThread, setShowFullThread] = useState(false)
@@ -148,6 +150,9 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
     if (!message || !htmlBody.trim()) return
     
     setIsSending(true)
+    setSendError(null)
+    setSendSuccess(false)
+    
     try {
       const response = await fetch('/api/outlook/v2/messages/reply', {
         method: 'POST',
@@ -163,14 +168,24 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
         })
       })
       
-      if (response.ok) {
-        onClose()
-        // You could add a success toast here
+      const data = await response.json()
+      
+      if (response.ok && data.ok) {
+        setSendSuccess(true)
+        console.log('Reply sent successfully')
+        
+        // Show success message briefly before closing
+        setTimeout(() => {
+          onClose()
+        }, 1000)
       } else {
-        console.error('Failed to send reply')
-        // You could add an error toast here
+        const errorMessage = data?.error || 'Failed to send reply'
+        setSendError(errorMessage)
+        console.error('Failed to send reply:', errorMessage)
       }
     } catch (error) {
+      const errorMessage = 'Network error while sending reply'
+      setSendError(errorMessage)
       console.error('Error sending reply:', error)
     } finally {
       setIsSending(false)
@@ -394,6 +409,19 @@ Generate the reply in plain text format (no HTML tags).`
           {aiGenerationError && (
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
               <span className="font-medium">AI Generation Error:</span> {aiGenerationError}
+            </div>
+          )}
+          
+          {/* Send Success/Error Messages */}
+          {sendSuccess && (
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
+              <span className="font-medium">✅ Reply sent successfully! Closing in a moment...</span>
+            </div>
+          )}
+          
+          {sendError && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+              <span className="font-medium">❌ Send Error:</span> {sendError}
             </div>
           )}
           
