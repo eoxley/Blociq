@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { serverTrace } from '@/lib/trace';
 
 type FolderItem = { id: string; displayName: string; wellKnownName?: string };
 
 export async function GET(request: NextRequest) {
+  serverTrace("API hit", { route: "app/api/outlook/folders/route.ts", build: process.env.VERCEL_GIT_COMMIT_SHA ?? null });
+  
   try {
     const cookieStore = await cookies();
     const accessToken = cookieStore.get('outlook_access_token')?.value;
@@ -31,19 +34,29 @@ export async function GET(request: NextRequest) {
     const data = await response.json();
     const folders: FolderItem[] = data.value || [];
 
-    return NextResponse.json({ 
+    const json = { 
       ok: true, 
       folders,
-      diagnostic: null
-    });
+      diagnostic: null,
+      routeId: "app/api/outlook/folders/route.ts",
+      build: process.env.VERCEL_GIT_COMMIT_SHA ?? null
+    };
+    const res = NextResponse.json(json);
+    res.headers.set("x-blociq-route", "app/api/outlook/folders/route.ts");
+    return res;
   } catch (error) {
     console.error('Error fetching Outlook folders:', error);
     
     // Return 200 with empty folders array instead of throwing 5xx error
-    return NextResponse.json({ 
+    const json = { 
       ok: false, 
       folders: [], 
-      diagnostic: error instanceof Error ? error.message : 'Unknown error occurred'
-    }, { status: 200 });
+      diagnostic: error instanceof Error ? error.message : 'Unknown error occurred',
+      routeId: "app/api/outlook/folders/route.ts",
+      build: process.env.VERCEL_GIT_COMMIT_SHA ?? null
+    };
+    const res = NextResponse.json(json, { status: 200 });
+    res.headers.set("x-blociq-route", "app/api/outlook/folders/route.ts");
+    return res;
   }
 }

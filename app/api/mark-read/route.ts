@@ -8,8 +8,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { Database } from '@/lib/database.types';
+import { serverTrace } from '@/lib/trace';
 
 export async function POST(req: NextRequest) {
+  serverTrace("API hit", { route: "app/api/mark-read/route.ts", build: process.env.VERCEL_GIT_COMMIT_SHA ?? null });
+  
   try {
     const supabase = createRouteHandlerClient<Database>({ cookies: () => cookies() });
     
@@ -19,7 +22,10 @@ export async function POST(req: NextRequest) {
 
     if (!emailId) {
       console.error('❌ No email ID provided in request');
-      return NextResponse.json({ error: 'Email ID is required' }, { status: 400 });
+      const json = { error: 'Email ID is required', routeId: "app/api/mark-read/route.ts", build: process.env.VERCEL_GIT_COMMIT_SHA ?? null };
+      const res = NextResponse.json(json, { status: 400 });
+      res.headers.set("x-blociq-route", "app/api/mark-read/route.ts");
+      return res;
     }
 
     console.log('📧 Marking email as read:', emailId);
@@ -34,17 +40,28 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error('❌ Failed to mark as read:', error.message);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      const json = { error: error.message, routeId: "app/api/mark-read/route.ts", build: process.env.VERCEL_GIT_COMMIT_SHA ?? null };
+      const res = NextResponse.json(json, { status: 500 });
+      res.headers.set("x-blociq-route", "app/api/mark-read/route.ts");
+      return res;
     }
 
     console.log('✅ Email marked as read successfully');
-    return NextResponse.json({ success: true });
+    const json = { success: true, routeId: "app/api/mark-read/route.ts", build: process.env.VERCEL_GIT_COMMIT_SHA ?? null };
+    const res = NextResponse.json(json);
+    res.headers.set("x-blociq-route", "app/api/mark-read/route.ts");
+    return res;
 
   } catch (error) {
     console.error('❌ Error in mark-read route:', error);
-    return NextResponse.json({ 
+    const json = { 
       error: 'Failed to mark email as read',
-      details: process.env.NODE_ENV === 'development' ? error instanceof Error ? error.message : 'Unknown error' : undefined
-    }, { status: 500 });
+      details: process.env.NODE_ENV === 'development' ? error instanceof Error ? error.message : 'Unknown error' : undefined,
+      routeId: "app/api/mark-read/route.ts",
+      build: process.env.VERCEL_GIT_COMMIT_SHA ?? null
+    };
+    const res = NextResponse.json(json, { status: 500 });
+    res.headers.set("x-blociq-route", "app/api/mark-read/route.ts");
+    return res;
   }
 }
