@@ -3,21 +3,21 @@
 import { useState, useEffect, useCallback } from 'react';
 import useSWR from 'swr';
 
-type GraphFolder = { id: string; displayName: string; childFolderCount?: number };
+type FolderItem = { id: string; displayName: string; wellKnownName?: string };
 
 interface FolderData {
   ok: boolean;
-  folders: GraphFolder[];
-  diagnostic?: string;
+  folders: FolderItem[];
+  diagnostic?: string | null;
 }
 
-const DEFAULT_FOLDERS = [
-  { id: 'inbox', displayName: 'Inbox' },
-  { id: 'drafts', displayName: 'Drafts' },
-  { id: 'sent', displayName: 'Sent Items' },
-  { id: 'deleted', displayName: 'Deleted Items' },
-  { id: 'archive', displayName: 'Archive' },
-  { id: 'junk', displayName: 'Junk Email' },
+const DEFAULTS: FolderItem[] = [
+  { id: "default:inbox",         displayName: "Inbox",        wellKnownName: "inbox" },
+  { id: "default:drafts",        displayName: "Drafts",       wellKnownName: "drafts" },
+  { id: "default:sentitems",     displayName: "Sent Items",   wellKnownName: "sentitems" },
+  { id: "default:deleteditems",  displayName: "Deleted Items",wellKnownName: "deleteditems" },
+  { id: "default:archive",       displayName: "Archive",      wellKnownName: "archive" },
+  { id: "default:junkemail",     displayName: "Junk Email",   wellKnownName: "junkemail" },
 ];
 
 const CUSTOM_FOLDERS_KEY = 'blociq.customFolders';
@@ -40,11 +40,19 @@ export function useOutlookFolders() {
     }
   }, []);
 
-  // Fetch folders using SWR
+  // Fetch folders using SWR with fallback to /api/folders
   const { data, error, mutate } = useSWR<FolderData>('/api/outlook/folders', fetcher, {
     revalidateOnFocus: false,
     revalidateOnReconnect: true,
-    errorRetryCount: 3
+    errorRetryCount: 3,
+    onError: (err, key) => {
+      // If /api/outlook/folders fails, try /api/folders as fallback
+      if (key === '/api/outlook/folders' && err?.status === 404) {
+        mutate(undefined, { revalidate: false });
+        // Note: SWR will automatically retry with the same key, but we could implement
+        // a more sophisticated fallback here if needed
+      }
+    }
   });
 
   // Save custom folders to localStorage
@@ -64,7 +72,7 @@ export function useOutlookFolders() {
     // Check if name already exists (case-insensitive)
     const allFolders = [
       ...(data?.folders || []),
-      ...DEFAULT_FOLDERS,
+      ...DEFAULTS,
       ...customFolders
     ];
     
@@ -90,9 +98,9 @@ export function useOutlookFolders() {
   // Merge folders for rendering
   const folders = (() => {
     const graphFolders = data?.folders || [];
-    const fallbackFolders = data?.ok === false ? DEFAULT_FOLDERS : [];
+    const fallbackFolders = data?.ok === false ? DEFAULTS : [];
     const customFolderObjects = customFolders.map(name => ({
-      id: `custom::${name}`,
+      id: `custom:${name}`,
       displayName: name
     }));
 

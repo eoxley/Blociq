@@ -49,8 +49,8 @@ export default function SimpleFolderSidebar({
       {/* Folder list */}
       <ul className="space-y-1 p-2">
         {folders.map((folder) => {
-          const isSelected = selectedFolderId === folder.id;
-          const isCustom = folder.id?.startsWith('custom::');
+                     const isSelected = selectedFolderId === folder.id;
+           const isCustom = folder.id?.startsWith('custom:');
           
           return (
             <li
