@@ -40,9 +40,11 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
   const [ccRecipients, setCcRecipients] = useState<string[]>([])
   const [isGeneratingAI, setIsGeneratingAI] = useState(false)
   const [aiGenerationError, setAiGenerationError] = useState<string | null>(null)
+  const [attachments, setAttachments] = useState<File[]>([])
   
   const editorRef = useRef<HTMLDivElement>(null)
   const threadRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Initialize reply content and recipients when modal opens
   useEffect(() => {
@@ -66,7 +68,7 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
         setCcRecipients([...originalCc, sender].filter((email: string) => email !== ''))
       }
       
-      // Initialize reply body
+      // Initialize reply body with proper cursor positioning
       setHtmlBody('<p><br></p>')
       
       // Load email thread
@@ -111,7 +113,16 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
   useEffect(() => {
     if (isOpen && editorRef.current) {
       setTimeout(() => {
-        editorRef.current?.focus()
+        if (editorRef.current) {
+          editorRef.current.focus()
+          // Ensure cursor is at the end of content
+          const range = document.createRange()
+          const selection = window.getSelection()
+          range.selectNodeContents(editorRef.current)
+          range.collapse(false)
+          selection?.removeAllRanges()
+          selection?.addRange(range)
+        }
       }, 100)
     }
   }, [isOpen])
@@ -198,9 +209,9 @@ Generate the reply in HTML format with appropriate paragraph tags and formatting
       
       if (response.ok) {
         const data = await response.json()
-        if (data.reply) {
+        if (data.response) {
           // Clean and format the AI response
-          let aiReply = data.reply
+          let aiReply = data.response
           
           // Ensure it's wrapped in proper HTML
           if (!aiReply.includes('<p>') && !aiReply.includes('<div>')) {
@@ -209,11 +220,20 @@ Generate the reply in HTML format with appropriate paragraph tags and formatting
           
           // Add a separator and the AI-generated reply
           const currentContent = htmlBody === '<p><br></p>' ? '' : htmlBody
-          setHtmlBody(currentContent + (currentContent ? '<br><br>' : '') + aiReply)
+          const newContent = currentContent + (currentContent ? '<br><br>' : '') + aiReply
+          setHtmlBody(newContent)
           
-          // Focus the editor to show the generated content
+          // Focus the editor and position cursor at the end
           setTimeout(() => {
-            editorRef.current?.focus()
+            if (editorRef.current) {
+              editorRef.current.focus()
+              const range = document.createRange()
+              const selection = window.getSelection()
+              range.selectNodeContents(editorRef.current)
+              range.collapse(false)
+              selection?.removeAllRanges()
+              selection?.addRange(range)
+            }
           }, 100)
         } else {
           setAiGenerationError('AI generated an empty response. Please try again.')
@@ -232,6 +252,26 @@ Generate the reply in HTML format with appropriate paragraph tags and formatting
   const handleGenerateWithBlocIQ = () => {
     setShowBlocIQNote(true)
     setTimeout(() => setShowBlocIQNote(false), 3000)
+  }
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || [])
+    setAttachments(prev => [...prev, ...files])
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const removeAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes'
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
 
   const addRecipient = (type: 'to' | 'cc') => {
@@ -355,23 +395,64 @@ Generate the reply in HTML format with appropriate paragraph tags and formatting
             <div className="border-b border-gray-300 p-3 bg-gray-50 rounded-t-lg">
               <div className="flex gap-2">
                 <button
-                  onClick={() => setHtmlBody(htmlBody + '<strong>Bold</strong>')}
-                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                  onClick={() => document.execCommand('bold', false)}
+                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors font-bold"
+                  title="Bold"
                 >
                   B
                 </button>
                 <button
-                  onClick={() => setHtmlBody(htmlBody + '<em>Italic</em>')}
-                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                  onClick={() => document.execCommand('italic', false)}
+                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors italic"
+                  title="Italic"
                 >
                   I
                 </button>
                 <button
-                  onClick={() => setHtmlBody(htmlBody + '<br>')}
-                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                  onClick={() => document.execCommand('underline', false)}
+                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors underline"
+                  title="Underline"
                 >
-                  ↵
+                  U
                 </button>
+                <button
+                  onClick={() => document.execCommand('insertUnorderedList', false)}
+                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                  title="Bullet List"
+                >
+                  •
+                </button>
+                <button
+                  onClick={() => document.execCommand('insertOrderedList', false)}
+                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                  title="Numbered List"
+                >
+                  1.
+                </button>
+                <button
+                  onClick={() => document.execCommand('insertHorizontalRule', false)}
+                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                  title="Horizontal Line"
+                >
+                  ─
+                </button>
+                <div className="w-px h-6 bg-gray-300 mx-2"></div>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-1"
+                  title="Attach File"
+                >
+                  <Paperclip className="h-3 w-3" />
+                  Attach
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  accept="*/*"
+                />
               </div>
             </div>
             <div
@@ -380,8 +461,109 @@ Generate the reply in HTML format with appropriate paragraph tags and formatting
               className="p-4 min-h-[250px] focus:outline-none prose prose-sm max-w-none text-gray-900"
               dangerouslySetInnerHTML={{ __html: htmlBody }}
               onInput={(e) => setHtmlBody(e.currentTarget.innerHTML)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  document.execCommand('insertParagraph', false)
+                }
+              }}
+              onFocus={() => {
+                // Ensure cursor is at the end when editor is focused
+                if (editorRef.current) {
+                  const range = document.createRange()
+                  const selection = window.getSelection()
+                  range.selectNodeContents(editorRef.current)
+                  range.collapse(false)
+                  selection?.removeAllRanges()
+                  selection?.addRange(range)
+                }
+              }}
             />
           </div>
+          
+          {/* Attachments Display */}
+          {attachments.length > 0 && (
+            <div className="border border-gray-200 rounded-lg bg-gray-50 p-3">
+              <div className="text-sm font-medium text-gray-700 mb-2">Attachments ({attachments.length})</div>
+              <div className="space-y-2">
+                {attachments.map((file, index) => (
+                  <div key={index} className="flex items-center justify-between bg-white p-2 rounded border">
+                    <div className="flex items-center gap-2">
+                      <Paperclip className="h-4 w-4 text-gray-400" />
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{file.name}</div>
+                        <div className="text-xs text-gray-500">{formatFileSize(file.size)}</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => removeAttachment(index)}
+                      className="text-red-500 hover:text-red-700 p-1"
+                      title="Remove attachment"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Email Thread Display */}
+          {emailThread.length > 0 && (
+            <div className="border border-gray-200 rounded-lg bg-gray-50">
+              <div className="p-3 border-b border-gray-200 bg-gray-100 rounded-t-lg">
+                <button
+                  onClick={() => setShowFullThread(!showFullThread)}
+                  className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900 w-full text-left"
+                >
+                  <span className="font-medium">
+                    {showFullThread ? 'Hide' : 'Show'} Email Thread ({emailThread.length} message{emailThread.length !== 1 ? 's' : ''})
+                  </span>
+                  <span className={`transform transition-transform ml-auto ${showFullThread ? 'rotate-180' : ''}`}>
+                    ▼
+                  </span>
+                </button>
+              </div>
+              
+              {showFullThread && (
+                <div className="max-h-64 overflow-y-auto p-4 space-y-3">
+                  {emailThread.map((threadMessage, index) => (
+                    <div
+                      key={threadMessage.id}
+                      className={`p-3 rounded-lg border ${
+                        threadMessage.id === message?.id
+                          ? 'bg-blue-50 border-blue-200'
+                          : 'bg-white border-gray-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-2 text-xs text-gray-600">
+                        <span className="font-medium">
+                          {threadMessage.from?.emailAddress?.address || threadMessage.from?.emailAddress || 'Unknown'}
+                        </span>
+                        <span>•</span>
+                        <span>{formatDistanceToNow(new Date(threadMessage.receivedDateTime), { addSuffix: true })}</span>
+                        {threadMessage.id === message?.id && (
+                          <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs">
+                            Original
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div className="text-sm text-gray-800">
+                        <div className="font-medium mb-1">{threadMessage.subject || '(No subject)'}</div>
+                        <div 
+                          className="text-gray-600 line-clamp-3 prose prose-sm max-w-none"
+                          dangerouslySetInnerHTML={{
+                            __html: threadMessage.body?.content?.substring(0, 300) || 'No content'
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           
           {/* BlocIQ Note */}
           {showBlocIQNote && (
