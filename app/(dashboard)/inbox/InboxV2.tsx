@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, createContext, useContext } from 'react'
+import { MessageSquare } from 'lucide-react'
 import FolderSidebar from '@/components/inbox_v2/FolderSidebar'
 import MessageList from '@/components/inbox_v2/MessageList'
 import MessagePreview from '@/components/inbox_v2/MessagePreview'
@@ -111,7 +112,7 @@ export default function InboxV2() {
           onClick={() => setNewEmailModalOpen(true)}
           className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
         >
-          <Mail className="h-4 w-4" />
+          <MessageSquare className="h-4 w-4" />
           New Email
         </button>
       </div>
