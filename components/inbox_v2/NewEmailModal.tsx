@@ -228,21 +228,26 @@ export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
     <>
       {/* Overlay */}
       <div 
-        className="fixed inset-0 z-[9999] bg-black/50"
+        className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
       
       {/* Modal Panel */}
-      <div className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 w-auto md:w-[800px] lg:w-[900px] rounded-2xl bg-white shadow-2xl max-h-[90vh] flex flex-col z-[10000]">
+      <div className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 w-auto md:w-[900px] lg:w-[1000px] rounded-3xl bg-white shadow-2xl max-h-[95vh] flex flex-col z-[10000] border border-gray-100">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white rounded-t-2xl flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <MessageSquare className="h-5 w-5 text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-900">New Email</h2>
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-3xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+              <MessageSquare className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">New Email</h2>
+              <p className="text-sm text-gray-600 font-medium">Compose a new message</p>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-3 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-all duration-200 hover:scale-105"
           >
             <X className="h-6 w-6" />
           </button>
@@ -251,18 +256,18 @@ export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
         {/* Email Form - Scrollable Content */}
         <div className="flex-1 overflow-y-auto flex flex-col min-h-0">
           {/* Recipients and Subject */}
-          <div className="p-6 border-b border-gray-200 space-y-4 flex-shrink-0">
+          <div className="p-6 border-b border-gray-200 space-y-5 flex-shrink-0">
             {/* To */}
-            <div className="flex items-start gap-3">
-              <label className="text-sm font-medium text-gray-700 w-16 pt-2">To:</label>
+            <div className="flex items-start gap-4">
+              <label className="text-sm font-semibold text-gray-700 w-20 pt-3">To:</label>
               <div className="flex-1">
-                <div className="flex flex-wrap gap-2 mb-2">
+                <div className="flex flex-wrap gap-3 mb-3">
                   {toRecipients.map((email, index) => (
-                    <span key={index} className="inline-flex items-center gap-2 px-3 py-2 bg-blue-100 text-blue-800 text-sm rounded-lg border border-blue-200">
+                    <span key={index} className="inline-flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 text-sm rounded-xl border-2 border-blue-200 shadow-sm">
                       {email}
                       <button
                         onClick={() => removeRecipient('to', index)}
-                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-200 rounded-full p-1 transition-colors"
+                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-200 rounded-full p-1.5 transition-all duration-200"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -271,7 +276,7 @@ export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
                 </div>
                 <button
                   onClick={() => addRecipient('to')}
-                  className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:bg-blue-50 px-2 py-1 rounded-md transition-colors"
+                  className="text-blue-600 hover:text-blue-800 text-sm font-semibold hover:bg-blue-50 px-4 py-2 rounded-lg transition-all duration-200"
                 >
                   + Add recipient
                 </button>
@@ -279,16 +284,16 @@ export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
             </div>
             
             {/* CC */}
-            <div className="flex items-start gap-3">
-              <label className="text-sm font-medium text-gray-700 w-16 pt-2">CC:</label>
+            <div className="flex items-start gap-4">
+              <label className="text-sm font-semibold text-gray-700 w-20 pt-3">CC:</label>
               <div className="flex-1">
-                <div className="flex flex-wrap gap-2 mb-2">
+                <div className="flex flex-wrap gap-3 mb-3">
                   {ccRecipients.map((email, index) => (
-                    <span key={index} className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-800 text-sm rounded-lg border border-gray-200">
+                    <span key={index} className="inline-flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-gray-100 to-blue-50 text-gray-800 text-sm rounded-xl border-2 border-gray-200 shadow-sm">
                       {email}
                       <button
                         onClick={() => removeRecipient('cc', index)}
-                        className="text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded-full p-1 transition-colors"
+                        className="text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded-full p-1.5 transition-all duration-200"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -297,7 +302,7 @@ export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
                 </div>
                 <button
                   onClick={() => addRecipient('cc')}
-                  className="text-gray-600 hover:text-gray-800 text-sm font-medium hover:bg-gray-50 px-2 py-1 rounded-md transition-colors"
+                  className="text-gray-600 hover:text-gray-800 text-sm font-semibold hover:bg-gray-50 px-4 py-2 rounded-lg transition-all duration-200"
                 >
                   + Add CC
                 </button>
@@ -305,24 +310,24 @@ export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
             </div>
             
             {/* BCC */}
-            <div className="flex items-start gap-3">
-              <div className="w-16 flex items-center gap-2">
+            <div className="flex items-start gap-4">
+              <div className="w-20 flex items-center gap-3">
                 <button
                   onClick={() => setShowBcc(!showBcc)}
-                  className="text-xs text-gray-500 hover:text-gray-700 underline hover:bg-gray-50 px-2 py-1 rounded-md transition-colors"
+                  className="text-xs text-gray-500 hover:text-gray-700 underline hover:bg-gray-50 px-3 py-2 rounded-lg transition-all duration-200 font-medium"
                 >
                   {showBcc ? 'Hide' : 'Show'} BCC
                 </button>
               </div>
               {showBcc && (
                 <div className="flex-1">
-                  <div className="flex flex-wrap gap-2 mb-2">
+                  <div className="flex flex-wrap gap-3 mb-3">
                     {bccRecipients.map((email, index) => (
-                      <span key={index} className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-800 text-sm rounded-lg border border-gray-200">
+                      <span key={index} className="inline-flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-gray-100 to-blue-50 text-gray-800 text-sm rounded-xl border-2 border-gray-200 shadow-sm">
                         {email}
                         <button
                           onClick={() => removeRecipient('bcc', index)}
-                          className="text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded-full p-1 transition-colors"
+                          className="text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded-full p-1.5 transition-all duration-200"
                         >
                           <X className="h-3 w-3" />
                         </button>
@@ -331,7 +336,7 @@ export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
                   </div>
                   <button
                     onClick={() => addRecipient('bcc')}
-                    className="text-gray-600 hover:text-gray-800 text-sm font-medium hover:bg-gray-50 px-2 py-1 rounded-md transition-colors"
+                    className="text-gray-600 hover:text-gray-800 text-sm font-semibold hover:bg-gray-50 px-4 py-2 rounded-lg transition-all duration-200"
                   >
                     + Add BCC
                   </button>
@@ -340,13 +345,13 @@ export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
             </div>
             
             {/* Subject */}
-            <div className="flex items-center gap-3">
-              <label className="text-sm font-medium text-gray-700 w-16">Subject:</label>
+            <div className="flex items-center gap-4">
+              <label className="text-sm font-semibold text-gray-700 w-20">Subject:</label>
               <input
                 type="text"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                className="flex-1 px-5 py-4 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base shadow-sm focus:shadow-md transition-all duration-200"
                 placeholder="Enter subject line"
               />
             </div>
@@ -354,17 +359,20 @@ export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
           
           {/* Attachments */}
           {attachments.length > 0 && (
-            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+            <div className="px-6 py-5 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-blue-50 flex-shrink-0">
               <div className="flex items-center gap-3 flex-wrap">
-                <span className="text-sm font-medium text-gray-700">Attachments:</span>
+                <span className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <Paperclip className="h-4 w-4" />
+                  Attachments:
+                </span>
                 {attachments.map((attachment) => (
-                  <span key={attachment.id} className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm shadow-sm">
-                    <Paperclip className="h-4 w-4 text-gray-500" />
+                  <span key={attachment.id} className="inline-flex items-center gap-3 px-4 py-3 bg-white border-2 border-gray-300 rounded-xl text-sm shadow-md">
+                    <Paperclip className="h-4 w-4 text-blue-500" />
                     <span className="font-medium">{attachment.name}</span>
                     <span className="text-gray-500">({formatFileSize(attachment.size)})</span>
                     <button
                       onClick={() => removeAttachment(attachment.id)}
-                      className="text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full p-1 transition-colors"
+                      className="text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full p-1.5 transition-all duration-200"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -375,66 +383,66 @@ export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
           )}
           
           {/* Editor Toolbar */}
-          <div className="border-b border-gray-300 p-3 bg-gray-50 flex-shrink-0">
+          <div className="border-b border-gray-300 p-4 bg-gradient-to-r from-gray-50 to-blue-50 flex-shrink-0">
             <div className="flex items-center justify-between">
-              <div className="flex gap-2">
+              <div className="flex gap-3 flex-wrap">
                 <button
                   onClick={() => {
-                    document.execCommand('bold', false, null)
+                    document.execCommand('bold', false, undefined)
                     editorRef.current?.focus()
                   }}
-                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors font-bold"
+                  className="px-4 py-2 text-sm bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 font-bold shadow-sm hover:shadow-md"
                   title="Bold"
                 >
                   B
                 </button>
                 <button
                   onClick={() => {
-                    document.execCommand('italic', false, null)
+                    document.execCommand('italic', false, undefined)
                     editorRef.current?.focus()
                   }}
-                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors italic"
+                  className="px-4 py-2 text-sm bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 italic shadow-sm hover:shadow-md"
                   title="Italic"
                 >
                   I
                 </button>
                 <button
                   onClick={() => {
-                    document.execCommand('underline', false, null)
+                    document.execCommand('underline', false, undefined)
                     editorRef.current?.focus()
                   }}
-                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors underline"
+                  className="px-4 py-2 text-sm bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 underline shadow-sm hover:shadow-md"
                   title="Underline"
                 >
                   U
                 </button>
                 <button
                   onClick={() => {
-                    document.execCommand('insertUnorderedList', false, null)
+                    document.execCommand('insertUnorderedList', false, undefined)
                     editorRef.current?.focus()
                   }}
-                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 text-sm bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md"
                   title="Bullet List"
                 >
                   •
                 </button>
                 <button
                   onClick={() => {
-                    document.execCommand('insertOrderedList', false, null)
+                    document.execCommand('insertOrderedList', false, undefined)
                     editorRef.current?.focus()
                   }}
-                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 text-sm bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md"
                   title="Numbered List"
                 >
                   1.
                 </button>
-                <div className="w-px h-6 bg-gray-300 mx-2"></div>
+                <div className="w-px h-8 bg-gray-300 mx-2"></div>
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-1"
+                  className="px-4 py-2 text-sm bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 flex items-center gap-2 shadow-sm hover:shadow-md"
                   title="Attach File"
                 >
-                  <Paperclip className="h-3 w-3" />
+                  <Paperclip className="h-4 w-4" />
                   Attach
                 </button>
                 <input
@@ -453,7 +461,7 @@ export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
           <div className="flex-1 overflow-y-auto min-h-0">
             {/* Success/Error Messages */}
             {sendSuccess && (
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg m-4">
+              <div className="p-4 bg-green-50 border-2 border-green-200 rounded-xl m-4 shadow-sm">
                 <p className="text-green-800 text-sm font-medium">
                   ✅ Email sent successfully! Closing in a moment...
                 </p>
@@ -461,7 +469,7 @@ export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
             )}
             
             {sendError && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg m-4">
+              <div className="p-4 bg-red-50 border-2 border-red-200 rounded-xl m-4 shadow-sm">
                 <p className="text-red-800 text-sm font-medium">
                   ❌ {sendError}
                 </p>
@@ -471,13 +479,13 @@ export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
             <div
               ref={editorRef}
               contentEditable
-              className="p-6 focus:outline-none prose prose-sm max-w-none text-gray-900 min-h-[250px]"
+              className="p-6 focus:outline-none prose prose-lg max-w-none text-gray-900 min-h-[300px] leading-relaxed"
               dangerouslySetInnerHTML={{ __html: htmlBody }}
               onInput={(e) => setHtmlBody(e.currentTarget.innerHTML)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
-                  document.execCommand('insertParagraph', false, null)
+                  document.execCommand('insertParagraph', false, undefined)
                 }
               }}
               onFocus={() => {
@@ -503,48 +511,48 @@ export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
         </div>
         
         {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-white rounded-b-2xl flex-shrink-0">
-          <div className="flex gap-3">
+        <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gradient-to-r from-gray-50 to-blue-50 rounded-b-3xl flex-shrink-0">
+          <div className="flex gap-4">
             <button
               onClick={handleGenerateWithBlocIQ}
-              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              className="flex items-center gap-3 px-6 py-3 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-200 font-medium shadow-sm hover:shadow-md"
             >
-              <Brain className="h-4 w-4" />
+              <Brain className="h-5 w-5" />
               Generate with Ask BlocIQ
             </button>
             
             <button
               onClick={handleSaveDraft}
               disabled={isDraft || !htmlBody.trim()}
-              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+              className="px-6 py-3 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-all duration-200 font-medium shadow-sm hover:shadow-md disabled:opacity-50"
             >
               Save Draft
             </button>
           </div>
           
           {showBlocIQNote && (
-            <div className="absolute bottom-20 left-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800 max-w-xs">
-              <Brain className="h-4 w-4 inline mr-2" />
+            <div className="absolute bottom-20 left-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl text-sm text-blue-800 max-w-xs shadow-lg">
+              <Brain className="h-4 w-4 inline mr-2 text-blue-600" />
               Ask BlocIQ integration coming soon! This will allow AI-powered email drafting.
             </div>
           )}
           
-          <div className="flex gap-3">
+          <div className="flex gap-4">
             <button
               onClick={onClose}
-              className="px-6 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+              className="px-8 py-3 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-all duration-200 font-medium shadow-sm hover:shadow-md"
             >
               Cancel
             </button>
             <button
               onClick={handleSend}
               disabled={isSending || !htmlBody.trim() || !hasValidRecipients()}
-              className="flex items-center gap-2 px-6 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 rounded-lg transition-colors"
+              className="flex items-center gap-3 px-8 py-3 text-sm text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 rounded-xl transition-all duration-200 font-medium shadow-lg hover:shadow-xl disabled:shadow-sm"
             >
               {isSending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
-                <Send className="h-4 w-4" />
+                <Send className="h-5 w-5" />
               )}
               Send
             </button>

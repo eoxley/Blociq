@@ -233,8 +233,8 @@ Generate the reply in plain text format (no HTML tags).`
           let aiReply = data.response.trim()
           
           // Convert plain text to HTML paragraphs
-          const paragraphs = aiReply.split('\n').filter(line => line.trim())
-          const htmlReply = paragraphs.map(line => `<p>${line}</p>`).join('')
+          const paragraphs = aiReply.split('\n').filter((line: string) => line.trim())
+          const htmlReply = paragraphs.map((line: string) => `<p>${line}</p>`).join('')
           
           // Insert the AI reply at the beginning of the editor
           setHtmlBody(htmlReply)
@@ -338,28 +338,28 @@ Generate the reply in plain text format (no HTML tags).`
     <>
       {/* Overlay */}
       <div 
-        className="fixed inset-0 z-[9999] bg-black/50"
+        className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
       
       {/* Modal Panel */}
-      <div className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 w-auto md:w-[800px] lg:w-[900px] rounded-2xl bg-white shadow-2xl max-h-[90vh] flex flex-col z-[10000]">
+      <div className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 w-auto md:w-[900px] lg:w-[1000px] rounded-3xl bg-white shadow-2xl max-h-[95vh] flex flex-col z-[10000] border border-gray-100">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white rounded-t-2xl">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <MessageSquare className="h-5 w-5 text-blue-600" />
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-3xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+              <MessageSquare className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">
+              <h2 className="text-2xl font-bold text-gray-900">
                 {replyType === 'reply' ? 'Reply' : 'Reply All'}
               </h2>
-              <p className="text-sm text-gray-500">Compose your response</p>
+              <p className="text-sm text-gray-600 font-medium">Compose your response</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-3 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-all duration-200 hover:scale-105"
           >
             <X className="h-6 w-6" />
           </button>
@@ -367,17 +367,27 @@ Generate the reply in plain text format (no HTML tags).`
         
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Email Info */}
+          {/* Email Info Card */}
           {message && (
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-2xl p-6 border border-gray-200 shadow-sm">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="font-medium text-gray-700">To:</span>
-                  <span className="ml-2 text-gray-900">{message.from?.emailAddress?.address || message.from?.emailAddress || 'Unknown'}</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <User className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-700">From:</span>
+                    <span className="ml-2 text-gray-900 font-medium">{message.from?.emailAddress?.address || message.from?.emailAddress || 'Unknown'}</span>
+                  </div>
                 </div>
-                <div>
-                  <span className="font-medium text-gray-700">Subject:</span>
-                  <span className="ml-2 text-gray-900">{message.subject || '(No subject)'}</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                    <MessageSquare className="h-4 w-4 text-indigo-600" />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-700">Subject:</span>
+                    <span className="ml-2 text-gray-900 font-medium">{message.subject || '(No subject)'}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -388,17 +398,17 @@ Generate the reply in plain text format (no HTML tags).`
             <button
               onClick={handleGenerateAIReply}
               disabled={isGeneratingAI}
-              className="group relative inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-pink-500 via-purple-500 to-teal-500 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="group relative inline-flex items-center gap-4 px-10 py-5 bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 text-white font-bold rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-pink-600 via-purple-600 to-teal-600 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative flex items-center gap-3">
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative flex items-center gap-4">
                 {isGeneratingAI ? (
-                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <Loader2 className="h-7 w-7 animate-spin" />
                 ) : (
-                  <Sparkles className="h-6 w-6" />
+                  <Sparkles className="h-7 w-7" />
                 )}
-                <Brain className="h-6 w-6" />
-                <span className="text-lg">
+                <Brain className="h-7 w-7" />
+                <span className="text-xl">
                   {isGeneratingAI ? 'Generating AI Reply...' : 'Generate AI Reply'}
                 </span>
               </div>
@@ -407,125 +417,126 @@ Generate the reply in plain text format (no HTML tags).`
           
           {/* AI Generation Error */}
           {aiGenerationError && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+            <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-800 shadow-sm">
               <span className="font-medium">AI Generation Error:</span> {aiGenerationError}
             </div>
           )}
           
           {/* Send Success/Error Messages */}
           {sendSuccess && (
-            <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
+            <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-sm text-green-800 shadow-sm">
               <span className="font-medium">✅ Reply sent successfully! Closing in a moment...</span>
             </div>
           )}
           
           {sendError && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+            <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-800 shadow-sm">
               <span className="font-medium">❌ Send Error:</span> {sendError}
             </div>
           )}
           
           {/* Editor */}
-          <div className="border border-gray-300 rounded-lg bg-white">
-            <div className="border-b border-gray-300 p-3 bg-gray-50 rounded-t-lg">
-              <div className="flex gap-2">
+          <div className="border-2 border-gray-200 rounded-2xl bg-white shadow-sm overflow-hidden">
+            <div className="border-b border-gray-200 p-4 bg-gradient-to-r from-gray-50 to-blue-50">
+              <div className="flex gap-3 flex-wrap">
                 <button
                   onClick={() => {
-                    document.execCommand('bold', false, null)
+                    document.execCommand('bold', false, undefined)
                     editorRef.current?.focus()
                   }}
-                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors font-bold"
+                  className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 font-bold shadow-sm hover:shadow-md"
                   title="Bold"
                 >
                   B
                 </button>
                 <button
                   onClick={() => {
-                    document.execCommand('italic', false, null)
+                    document.execCommand('italic', false, undefined)
                     editorRef.current?.focus()
                   }}
-                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors italic"
+                  className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 italic shadow-sm hover:shadow-md"
                   title="Italic"
                 >
                   I
                 </button>
                 <button
                   onClick={() => {
-                    document.execCommand('underline', false, null)
+                    document.execCommand('underline', false, undefined)
                     editorRef.current?.focus()
                   }}
-                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors underline"
+                  className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 underline shadow-sm hover:shadow-md"
                   title="Underline"
                 >
                   U
                 </button>
                 <button
                   onClick={() => {
-                    document.execCommand('insertUnorderedList', false, null)
+                    document.execCommand('insertUnorderedList', false, undefined)
                     editorRef.current?.focus()
                   }}
-                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md"
                   title="Bullet List"
                 >
                   •
                 </button>
                 <button
                   onClick={() => {
-                    document.execCommand('insertOrderedList', false, null)
+                    document.execCommand('insertOrderedList', false, undefined)
                     editorRef.current?.focus()
                   }}
-                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md"
                   title="Numbered List"
                 >
                   1.
                 </button>
                 <button
                   onClick={() => {
-                    document.execCommand('insertHorizontalRule', false, null)
+                    document.execCommand('insertHorizontalRule', false, undefined)
                     editorRef.current?.focus()
                   }}
-                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md"
                   title="Horizontal Line"
                 >
                   ─
                 </button>
+                <div className="w-px h-8 bg-gray-300 mx-2"></div>
                 <button
                   onClick={() => {
-                    document.execCommand('justifyLeft', false, null)
+                    document.execCommand('justifyLeft', false, undefined)
                     editorRef.current?.focus()
                   }}
-                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md"
                   title="Align Left"
                 >
                   ⬅
                 </button>
                 <button
                   onClick={() => {
-                    document.execCommand('justifyCenter', false, null)
+                    document.execCommand('justifyCenter', false, undefined)
                     editorRef.current?.focus()
                   }}
-                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md"
                   title="Align Center"
                 >
                   ↔
                 </button>
                 <button
                   onClick={() => {
-                    document.execCommand('justifyRight', false, null)
+                    document.execCommand('justifyRight', false, undefined)
                     editorRef.current?.focus()
                   }}
-                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md"
                   title="Align Right"
                 >
                   ➡
                 </button>
-                <div className="w-px h-6 bg-gray-300 mx-2"></div>
+                <div className="w-px h-8 bg-gray-300 mx-2"></div>
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-1"
+                  className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 flex items-center gap-2 shadow-sm hover:shadow-md"
                   title="Attach File"
                 >
-                  <Paperclip className="h-3 w-3" />
+                  <Paperclip className="h-4 w-4" />
                   Attach
                 </button>
                 <input
@@ -541,17 +552,16 @@ Generate the reply in plain text format (no HTML tags).`
             <div
               ref={editorRef}
               contentEditable
-              className="p-4 min-h-[250px] focus:outline-none prose prose-sm max-w-none text-gray-900"
+              className="p-6 min-h-[300px] focus:outline-none prose prose-lg max-w-none text-gray-900 leading-relaxed"
               dangerouslySetInnerHTML={{ __html: htmlBody }}
               onInput={(e) => setHtmlBody(e.currentTarget.innerHTML)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
-                  document.execCommand('insertParagraph', false, null)
+                  document.execCommand('insertParagraph', false, undefined)
                 }
               }}
               onFocus={() => {
-                // Ensure cursor is at the end when editor is focused
                 if (editorRef.current) {
                   const range = document.createRange()
                   const selection = window.getSelection()
@@ -567,7 +577,6 @@ Generate the reply in plain text format (no HTML tags).`
                 }
               }}
               onClick={() => {
-                // Ensure editor is focused when clicked
                 editorRef.current?.focus()
               }}
             />
@@ -575,13 +584,16 @@ Generate the reply in plain text format (no HTML tags).`
           
           {/* Attachments Display */}
           {attachments.length > 0 && (
-            <div className="border border-gray-200 rounded-lg bg-gray-50 p-3">
-              <div className="text-sm font-medium text-gray-700 mb-2">Attachments ({attachments.length})</div>
-              <div className="space-y-2">
+            <div className="border-2 border-gray-200 rounded-2xl bg-gradient-to-r from-gray-50 to-blue-50 p-4 shadow-sm">
+              <div className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <Paperclip className="h-4 w-4" />
+                Attachments ({attachments.length})
+              </div>
+              <div className="space-y-3">
                 {attachments.map((file, index) => (
-                  <div key={index} className="flex items-center justify-between bg-white p-2 rounded border">
-                    <div className="flex items-center gap-2">
-                      <Paperclip className="h-4 w-4 text-gray-400" />
+                  <div key={index} className="flex items-center justify-between bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <Paperclip className="h-5 w-5 text-blue-500" />
                       <div>
                         <div className="text-sm font-medium text-gray-900">{file.name}</div>
                         <div className="text-xs text-gray-500">{formatFileSize(file.size)}</div>
@@ -589,7 +601,7 @@ Generate the reply in plain text format (no HTML tags).`
                     </div>
                     <button
                       onClick={() => removeAttachment(index)}
-                      className="text-red-500 hover:text-red-700 p-1"
+                      className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors"
                       title="Remove attachment"
                     >
                       <X className="h-4 w-4" />
@@ -602,43 +614,43 @@ Generate the reply in plain text format (no HTML tags).`
           
           {/* Email Thread Display */}
           {emailThread.length > 0 && (
-            <div className="border border-gray-200 rounded-lg bg-gray-50">
-              <div className="p-3 border-b border-gray-200 bg-gray-100 rounded-t-lg">
+            <div className="border-2 border-gray-200 rounded-2xl bg-gradient-to-r from-gray-50 to-blue-50 overflow-hidden shadow-sm">
+              <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-gray-100 to-blue-100">
                 <button
                   onClick={() => setShowFullThread(!showFullThread)}
-                  className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900 w-full text-left"
+                  className="flex items-center gap-3 text-sm text-gray-700 hover:text-gray-900 w-full text-left font-semibold"
                 >
-                  <MessageSquare className="h-4 w-4" />
+                  <MessageSquare className="h-5 w-5 text-blue-600" />
                   <span className="font-medium">
                     {showFullThread ? 'Hide' : 'Show'} Email Thread ({emailThread.length} message{emailThread.length !== 1 ? 's' : ''})
                   </span>
-                  <span className={`transform transition-transform ml-auto ${showFullThread ? 'rotate-180' : ''}`}>
+                  <span className={`transform transition-transform ml-auto text-blue-600 ${showFullThread ? 'rotate-180' : ''}`}>
                     ▼
                   </span>
                 </button>
               </div>
               
               {showFullThread && (
-                <div className="max-h-80 overflow-y-auto p-4 space-y-4">
+                <div className="max-h-96 overflow-y-auto p-4 space-y-4">
                   {emailThread.map((threadMessage, index) => (
                     <div
                       key={threadMessage.id}
-                      className={`p-4 rounded-lg border ${
+                      className={`p-4 rounded-xl border-2 ${
                         threadMessage.id === message?.id
-                          ? 'bg-blue-50 border-blue-200'
-                          : 'bg-white border-gray-200'
+                          ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 shadow-md'
+                          : 'bg-white border-gray-200 shadow-sm'
                       }`}
                     >
-                      <div className="flex items-center gap-2 mb-3 text-xs text-gray-600">
-                        <User className="h-3 w-3" />
+                      <div className="flex items-center gap-3 mb-3 text-xs text-gray-600">
+                        <User className="h-4 w-4 text-blue-500" />
                         <span className="font-medium">
                           {threadMessage.from?.emailAddress?.address || threadMessage.from?.emailAddress || 'Unknown'}
                         </span>
                         <span>•</span>
-                        <Clock className="h-3 w-3" />
+                        <Clock className="h-4 w-4 text-indigo-500" />
                         <span>{formatDistanceToNow(new Date(threadMessage.receivedDateTime), { addSuffix: true })}</span>
                         {threadMessage.id === message?.id && (
-                          <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs">
+                          <span className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-3 py-1 rounded-full text-xs font-medium shadow-sm">
                             Original Message
                           </span>
                         )}
@@ -662,39 +674,39 @@ Generate the reply in plain text format (no HTML tags).`
           
           {/* BlocIQ Note */}
           {showBlocIQNote && (
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
-              <Brain className="h-4 w-4 inline mr-2" />
+            <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl text-sm text-blue-800 shadow-sm">
+              <Brain className="h-5 w-5 inline mr-2 text-blue-600" />
               Ask BlocIQ integration coming soon! This will allow AI-powered email drafting.
             </div>
           )}
         </div>
         
         {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-white rounded-b-2xl">
+        <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gradient-to-r from-gray-50 to-blue-50 rounded-b-3xl">
           <button
             onClick={handleGenerateWithBlocIQ}
-            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            className="flex items-center gap-3 px-6 py-3 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-200 font-medium shadow-sm hover:shadow-md"
           >
-            <Brain className="h-4 w-4" />
+            <Brain className="h-5 w-5" />
             Generate with Ask BlocIQ
           </button>
           
-          <div className="flex gap-3">
+          <div className="flex gap-4">
             <button
               onClick={onClose}
-              className="px-6 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+              className="px-8 py-3 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-all duration-200 font-medium shadow-sm hover:shadow-md"
             >
               Cancel
             </button>
             <button
               onClick={handleSend}
               disabled={isSending || !htmlBody.trim()}
-              className="flex items-center gap-2 px-6 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 rounded-lg transition-colors"
+              className="flex items-center gap-3 px-8 py-3 text-sm text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 rounded-xl transition-all duration-200 font-medium shadow-lg hover:shadow-xl disabled:shadow-sm"
             >
               {isSending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
-                <Send className="h-4 w-4" />
+                <Send className="h-5 w-5" />
               )}
               Send
             </button>
