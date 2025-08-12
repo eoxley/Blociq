@@ -1,18 +1,17 @@
-// LEGACY REPLY UI – superseded by ReplyModalV2 in Inbox V2.
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { X, Send, Save, Maximize2, Minimize2, Mail, Users, Bot } from 'lucide-react';
+import { X, Send, Save, Users, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import DOMPurify from 'dompurify';
-import { toPlainQuoted, toSanitisedHtml } from '@/utils/emailFormatting';
-import { Card } from '@/components/ui/card';
+import { toPlainQuoted } from '@/utils/emailFormatting';
 
 interface Email {
   id: string;
   from_email: string | null;
   from_name: string | null;
+  to_email: string[] | null;
+  cc_email: string[] | null;
   subject: string | null;
   body_preview: string | null;
   body_full: string | null;
@@ -36,17 +35,14 @@ interface Email {
   triage_category?: string | null;
 }
 
-interface ReplyModalProps {
+interface ReplyAllModalProps {
   isOpen: boolean;
   onClose: () => void;
   email: Email | null;
-  action: 'reply' | 'reply-all' | 'forward';
+  userEmail?: string;
 }
 
-type ReplyAction = 'reply' | 'reply-all' | 'forward';
-
-export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModalProps) {
-  const [isFullscreen, setIsFullscreen] = useState(false);
+export default function ReplyAllModal({ isOpen, onClose, email, userEmail }: ReplyAllModalProps) {
   const [isSending, setIsSending] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [to, setTo] = useState<string[]>([]);
@@ -98,73 +94,30 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
   useEffect(() => {
     if (!email || !isOpen) return;
 
-    let newTo: string[] = [];
-    let newCc: string[] = [];
-    let newSubject = '';
-
-    switch (action) {
-      case 'reply':
-        newTo = [email.from_email || ''];
-        newSubject = email.subject?.startsWith('RE:') ? email.subject : `RE: ${email.subject}`;
-        break;
-      case 'reply-all':
-        // For reply-all, we'd need to parse the original email headers
-        // For now, just reply to sender
-        newTo = [email.from_email || ''];
-        newSubject = email.subject?.startsWith('RE:') ? email.subject : `RE: ${email.subject}`;
-        break;
-      case 'forward':
-        newSubject = email.subject?.startsWith('FWD:') ? email.subject : `FWD: ${email.subject}`;
-        break;
-    }
-
-    setTo(newTo);
-    setCc(newCc);
-    setSubject(newSubject || '');
-
-    // Check for generated reply from AI
-    const generatedReply = localStorage.getItem('generatedReply');
-    const replyContext = localStorage.getItem('replyContext');
+    // For Reply All, include original sender and all recipients
+    const originalSender = email.from_email;
+    const originalRecipients = email.to_email || [];
+    const originalCc = email.cc_email || [];
     
-    if (action === 'reply' && generatedReply) {
-      // Use the AI-generated reply
-      setBody(generatedReply);
-      setIsAIGenerated(true);
-      // Clear the stored reply after using it
-      localStorage.removeItem('generatedReply');
-      localStorage.removeItem('replyContext');
-      console.log('🤖 Using AI-generated reply');
-    } else {
-      setIsAIGenerated(false);
-      // Initialize with empty body - quoted content will be added separately
-      setBody('');
-    }
-  }, [email, action, isOpen]);
-
-  // Add quoted content when email changes
-  useEffect(() => {
-    if (!email || !isOpen) return;
-
-    console.log('🔍 ReplyModal: email data:', {
-      from_name: email.from_name,
-      from_email: email.from_email,
-      subject: email.subject,
-      body_full: email.body_full?.substring(0, 100),
-      body_html: email.body_html?.substring(0, 100),
-      body_content_type: email.body_content_type
-    });
-
+    // Filter out current user from recipients and CC
+    const filteredRecipients = originalRecipients.filter(email => email !== userEmail);
+    const filteredCc = originalCc.filter(email => email !== userEmail);
+    
+    // Set To field to original sender + filtered recipients
+    const toField = [originalSender, ...filteredRecipients].filter(Boolean) as string[];
+    setTo(toField);
+    
+    // Set CC field to filtered CC recipients
+    setCc(filteredCc);
+    
+    // Set subject with Re: prefix
+    const originalSubject = email.subject || '';
+    setSubject(originalSubject.startsWith('Re:') ? originalSubject : `Re: ${originalSubject}`);
+    
+    // Set body with quoted original
     const quoted = toPlainQuoted(email);
-    console.log('🔍 ReplyModal: quoted result preview:', quoted.substring(0, 200));
-    
-    // If the quoted block isn't already present, append it
-    setBody(prev => {
-      if (!prev || !prev.includes('--- Original Message ---')) {
-        return (prev ? `${prev.trim()}\n\n` : '') + quoted;
-      }
-      return prev;
-    });
-  }, [email, action, isOpen]);
+    setBody(`\n\n${quoted}`);
+  }, [email, isOpen, userEmail]);
 
   const handleSend = async () => {
     if (!email || to.length === 0 || !subject.trim() || !body.trim()) {
@@ -174,22 +127,18 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
 
     setIsSending(true);
     try {
-      // Use plain text body for sending
-      const plainTextBody = body.trim();
-      
-      const response = await fetch('/api/send-reply', {
+      const response = await fetch('/api/send-email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          reply_to_message_id: email.outlook_id || email.id,
-          reply_text: plainTextBody,
-          to: to,
-          cc: cc,
+          to,
+          cc,
           subject: subject.trim(),
-          building_id: email.building_id,
-          user_id: email.user_id
+          body: body.trim(),
+          relatedEmailId: email.id,
+          status: 'sent'
         }),
       });
 
@@ -226,8 +175,8 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
           to,
           cc,
           subject: subject.trim(),
-          body: body.trim(), // Already plain text
-          relatedEmailId: action !== 'forward' ? email.id : null,
+          body: body.trim(),
+          relatedEmailId: email.id,
           status: 'draft'
         }),
       });
@@ -248,46 +197,22 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
     }
   };
 
-  const handlePopOut = () => {
-    // TODO: Implement pop-out functionality
-    // This could open a new window or route to a dedicated compose page
-    toast.info('Pop-out functionality coming soon');
-  };
-
-  const getActionLabel = () => {
-    switch (action) {
-      case 'reply': return 'Reply';
-      case 'reply-all': return 'Reply All';
-      case 'forward': return 'Forward';
-      default: return 'Compose';
-    }
-  };
-
-  const getActionIcon = () => {
-    switch (action) {
-      case 'reply': return <Mail className="h-4 w-4" />;
-      case 'reply-all': return <Users className="h-4 w-4" />;
-      case 'forward': return <Mail className="h-4 w-4" />;
-      default: return <Mail className="h-4 w-4" />;
-    }
-  };
-
   if (!isOpen || !email) return null;
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/10 backdrop-blur-md">
       <div 
-        className="fixed inset-x-0 bottom-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 w-full md:w-[840px] rounded-2xl bg-white shadow-xl max-h-[85vh] flex flex-col z-[101]"
-        role="dialog"
+        role="dialog" 
         aria-modal="true"
+        className="fixed inset-x-0 bottom-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 w-full md:w-[840px] rounded-2xl bg-white shadow-xl max-h-[85vh] flex flex-col z-[101]"
       >
         {/* Header */}
         <div className="p-4 border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {getActionIcon()}
+              <Users className="h-4 w-4" />
               <h2 className="text-lg font-semibold text-gray-900">
-                {getActionLabel()} to: {email.from_name || email.from_email}
+                Reply All to: {email.from_name || email.from_email}
               </h2>
             </div>
             <button
@@ -381,26 +306,26 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
                       // Show loading state
                       setBody('Thinking...');
                       
-                                             const response = await fetch('/api/ask-ai', {
-                         method: 'POST',
-                         headers: { 'Content-Type': 'application/json' },
-                         body: JSON.stringify({ 
-                           context_type: 'email_reply',
-                           action_type: action,
-                           emailId: email.id,
-                           building_id: email.building_id,
-                           tone: 'Professional'
-                         })
-                       });
-                       
-                       if (response.ok) {
-                         const data = await response.json();
-                         if (data.success && data.reply) {
-                           const quoted = toPlainQuoted(email);
-                           // Fill the textarea with the AI draft + quoted original, as plain text
-                           setBody(`${data.reply.trim()}\n\n${quoted}`);
-                           setIsAIGenerated(true);
-                           toast.success('AI reply generated!');
+                      const response = await fetch('/api/ask-ai', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                          context_type: 'email_reply',
+                          action_type: 'reply-all',
+                          emailId: email.id,
+                          building_id: email.building_id,
+                          tone: 'Professional'
+                        })
+                      });
+                      
+                      if (response.ok) {
+                        const data = await response.json();
+                        if (data.success && data.reply) {
+                          const quoted = toPlainQuoted(email);
+                          // Fill the textarea with the AI draft + quoted original, as plain text
+                          setBody(`${data.reply.trim()}\n\n${quoted}`);
+                          setIsAIGenerated(true);
+                          toast.success('AI reply generated!');
                         } else {
                           // Restore original body if AI generation failed
                           setBody(originalBody);
@@ -411,21 +336,21 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
                         setBody(originalBody);
                         toast.error('Failed to generate AI reply');
                       }
-                                         } catch (error) {
-                       // Restore original body on error
-                       setBody(originalBody);
-                       toast.error('Failed to generate AI reply');
-                     } finally {
-                       setIsGenerating(false);
-                     }
+                    } catch (error) {
+                      // Restore original body on error
+                      setBody(originalBody);
+                      toast.error('Failed to generate AI reply');
+                    } finally {
+                      setIsGenerating(false);
+                    }
                   }}
                   variant="outline"
                   size="sm"
                   className="flex items-center gap-2"
-                                     disabled={isAIGenerated || isGenerating}
-                 >
-                   <Bot className="h-3 w-3" />
-                   {isGenerating ? 'Generating...' : isAIGenerated ? 'AI Generated' : 'Generate AI Reply'}
+                  disabled={isAIGenerated || isGenerating}
+                >
+                  <Bot className="h-3 w-3" />
+                  {isGenerating ? 'Generating...' : isAIGenerated ? 'AI Generated' : 'Generate AI Reply'}
                 </Button>
               </div>
             </div>
@@ -507,46 +432,43 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
               />
             </div>
             
-                         {/* Preview */}
-             {body && (
-               <div className="mt-2 p-3 bg-gray-50 rounded-lg">
-                 <div className="text-xs text-gray-500 mb-2">Preview:</div>
-                 <div className="prose prose-sm max-w-none">
-                   {(() => {
-                     console.log('🔍 ReplyModal: preview body content:', body.substring(0, 200));
-                     const parts = body.split('--- Original Message ---');
-                     console.log('🔍 ReplyModal: preview parts count:', parts.length);
-                     return parts.map((part, index) => {
-                       if (index === 0) {
-                         // This is the new reply content - render as plain text
-                         return (
-                           <div key="new-content" className="mb-4">
-                             <div className="whitespace-pre-wrap text-gray-900">
-                               {part.trim()}
-                             </div>
-                           </div>
-                         );
-                       } else {
-                         // This is the quoted content - render as plain text
-                         console.log('🔍 ReplyModal: quoted part preview:', part.substring(0, 100));
-                         return (
-                           <details key="quoted-content" className="mt-4" open>
-                             <summary className="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-800 mb-2">
-                               📧 Original Message (click to expand/collapse)
-                             </summary>
-                             <div className="pl-4 border-l-2 border-gray-300 bg-white p-3 rounded">
-                               <div className="text-sm text-gray-700 whitespace-pre-wrap">
-                                 {part.trim()}
-                               </div>
-                             </div>
-                           </details>
-                         );
-                       }
-                     });
-                   })()}
-                 </div>
-               </div>
-             )}
+            {/* Preview */}
+            {body && (
+              <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                <div className="text-xs text-gray-500 mb-2">Preview:</div>
+                <div className="prose prose-sm max-w-none">
+                  {(() => {
+                    const parts = body.split('--- Original Message ---');
+                    return parts.map((part, index) => {
+                      if (index === 0) {
+                        // This is the new reply content - render as plain text
+                        return (
+                          <div key="new-content" className="mb-4">
+                            <div className="whitespace-pre-wrap text-gray-900">
+                              {part.trim()}
+                            </div>
+                          </div>
+                        );
+                      } else {
+                        // This is the quoted content - render as plain text
+                        return (
+                          <details key="quoted-content" className="mt-4" open>
+                            <summary className="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-800 mb-2">
+                              📧 Original Message (click to expand/collapse)
+                            </summary>
+                            <div className="pl-4 border-l-2 border-gray-300 bg-white p-3 rounded">
+                              <div className="text-sm text-gray-700 whitespace-pre-wrap">
+                                {part.trim()}
+                              </div>
+                            </div>
+                          </details>
+                        );
+                      }
+                    });
+                  })()}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Signature */}
@@ -569,11 +491,11 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
             <Save className="h-4 w-4" />
             {isSaving ? 'Saving...' : 'Save Draft'}
           </Button>
-                      <Button
-              onClick={handleSend}
-              disabled={isSending}
-              className="flex items-center gap-2"
-            >
+          <Button
+            onClick={handleSend}
+            disabled={isSending}
+            className="flex items-center gap-2"
+          >
             <Send className="h-4 w-4" />
             {isSending ? 'Sending...' : 'Send'}
           </Button>
@@ -581,4 +503,4 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
       </div>
     </div>
   );
-} 
+}
