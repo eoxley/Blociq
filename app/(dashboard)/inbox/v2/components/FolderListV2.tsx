@@ -30,7 +30,27 @@ export default function FolderListV2({
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
-  const [outlookConnected, setOutlookConnected] = useState(true);
+  const [outlookConnected, setOutlookConnected] = useState(false);
+
+  // Check Outlook connection status
+  useEffect(() => {
+    const checkOutlookConnection = async () => {
+      try {
+        const response = await fetch('/api/folders');
+        if (response.ok) {
+          const data = await response.json();
+          setOutlookConnected(data.ok && data.folders && data.folders.length > 0);
+        } else {
+          setOutlookConnected(false);
+        }
+      } catch (error) {
+        console.error('Error checking Outlook connection:', error);
+        setOutlookConnected(false);
+      }
+    };
+
+    checkOutlookConnection();
+  }, []);
 
   // Calculate dynamic folder counts from emails
   const folderCounts = React.useMemo(() => {
@@ -426,7 +446,7 @@ export default function FolderListV2({
               </div>
             )}
 
-            {/* Debug Info */}
+            {/* Debug Info - Always show when emails exist */}
             {emails && emails.length > 0 && (
               <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <h3 className="text-xs font-medium text-blue-900 mb-2">Debug Info</h3>
@@ -436,7 +456,22 @@ export default function FolderListV2({
                   Handled: {folderCounts.handled}<br/>
                   Flagged: {folderCounts.flagged}<br/>
                   Buildings: {buildings.length}<br/>
-                  Tags: {tags.length}
+                  Tags: {tags.length}<br/>
+                  Outlook Connected: {outlookConnected ? 'Yes' : 'No'}<br/>
+                  Folders Loaded: {folders.length}
+                </p>
+              </div>
+            )}
+
+            {/* No Emails Message */}
+            {(!emails || emails.length === 0) && (
+              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <h3 className="text-xs font-medium text-yellow-900 mb-2">No Emails Found</h3>
+                <p className="text-xs text-yellow-700">
+                  No emails are currently loaded. This could mean:<br/>
+                  • Outlook is not connected<br/>
+                  • Emails are still syncing<br/>
+                  • There's an issue with the email fetch
                 </p>
               </div>
             )}
