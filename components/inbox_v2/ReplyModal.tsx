@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useState, useRef } from 'react'
-import { X, Send, Brain, Loader2, Paperclip, Bold, Italic, List, Link, Quote, Undo, Redo } from 'lucide-react'
+import { Reply, ReplyAll, Paperclip, Clock, User, Mail, Calendar, Download, Brain, Sparkles, Loader2, X, Send } from 'lucide-react'
+import { formatDistanceToNow, format } from 'date-fns'
 
 interface ReplyModalProps {
   isOpen: boolean
@@ -10,7 +11,7 @@ interface ReplyModalProps {
   replyType: 'reply' | 'replyAll'
 }
 
-interface EmailThread {
+interface FullMessage {
   id: string
   subject: string
   from: any
@@ -22,18 +23,23 @@ interface EmailThread {
     content: string
   }
   hasAttachments: boolean
+  attachments: any[]
+  conversationId: string
+  webLink: string
 }
 
 export default function ReplyModal({ isOpen, onClose, message, replyType }: ReplyModalProps) {
   const [htmlBody, setHtmlBody] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [showBlocIQNote, setShowBlocIQNote] = useState(false)
-  const [emailThread, setEmailThread] = useState<EmailThread[]>([])
+  const [emailThread, setEmailThread] = useState<FullMessage[]>([])
   const [isLoadingThread, setIsLoadingThread] = useState(false)
   const [showFullThread, setShowFullThread] = useState(false)
   const [subject, setSubject] = useState('')
   const [toRecipients, setToRecipients] = useState<string[]>([])
   const [ccRecipients, setCcRecipients] = useState<string[]>([])
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false)
+  const [aiGenerationError, setAiGenerationError] = useState<string | null>(null)
   
   const editorRef = useRef<HTMLDivElement>(null)
   const threadRef = useRef<HTMLDivElement>(null)
@@ -143,6 +149,86 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
     }
   }
 
+  const handleGenerateAIReply = async () => {
+    if (!message || emailThread.length === 0) return
+    
+    setIsGeneratingAI(true)
+    setAiGenerationError(null)
+    
+    try {
+      // Prepare the email thread context for AI
+      const threadContext = emailThread.map(msg => ({
+        from: msg.from?.emailAddress?.address || msg.from?.emailAddress || 'Unknown',
+        subject: msg.subject || '(No subject)',
+        content: msg.body?.content || '',
+        receivedDateTime: msg.receivedDateTime,
+        isOriginalMessage: msg.id === message.id
+      }))
+      
+      // Create a prompt for AI reply generation
+      const aiPrompt = `Generate a professional email reply based on this email thread. 
+      
+Original Email:
+From: ${message.from?.emailAddress?.address || message.from?.emailAddress || 'Unknown'}
+Subject: ${message.subject || '(No subject)'}
+Content: ${message.body?.content || ''}
+
+Thread Context: ${JSON.stringify(threadContext, null, 2)}
+
+Please generate a professional, contextual reply that:
+1. Addresses the original sender appropriately
+2. Provides a relevant response to the email content
+3. Maintains professional tone and formatting
+4. Is concise but comprehensive
+5. Uses proper email etiquette
+
+Generate the reply in HTML format with appropriate paragraph tags and formatting.`
+
+      const response = await fetch('/api/ask-ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: aiPrompt,
+          context: 'email_reply_generation',
+          threadData: threadContext
+        })
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.reply) {
+          // Clean and format the AI response
+          let aiReply = data.reply
+          
+          // Ensure it's wrapped in proper HTML
+          if (!aiReply.includes('<p>') && !aiReply.includes('<div>')) {
+            aiReply = aiReply.split('\n').map(line => `<p>${line}</p>`).join('')
+          }
+          
+          // Add a separator and the AI-generated reply
+          const currentContent = htmlBody === '<p><br></p>' ? '' : htmlBody
+          setHtmlBody(currentContent + (currentContent ? '<br><br>' : '') + aiReply)
+          
+          // Focus the editor to show the generated content
+          setTimeout(() => {
+            editorRef.current?.focus()
+          }, 100)
+        } else {
+          setAiGenerationError('AI generated an empty response. Please try again.')
+        }
+      } else {
+        setAiGenerationError('Failed to generate AI reply. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error generating AI reply:', error)
+      setAiGenerationError('Error generating AI reply. Please try again.')
+    } finally {
+      setIsGeneratingAI(false)
+    }
+  }
+
   const handleGenerateWithBlocIQ = () => {
     setShowBlocIQNote(true)
     setTimeout(() => setShowBlocIQNote(false), 3000)
@@ -167,9 +253,12 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
     }
   }
 
-  const formatEmailList = (emails: string[]) => {
-    if (emails.length === 0) return 'None'
-    return emails.join(', ')
+  const formatEmailList = (recipients: any[]) => {
+    if (!recipients || recipients.length === 0) return 'None'
+    return recipients
+      .map((r: any) => r.emailAddress?.address || r.emailAddress || r)
+      .filter(Boolean)
+      .join(', ')
   }
 
   const sanitizeHtml = (html: string) => {
@@ -192,9 +281,9 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
       />
       
       {/* Modal Panel */}
-      <div className="fixed inset-x-4 top-4 bottom-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 w-auto md:w-[900px] lg:w-[1000px] rounded-2xl bg-white shadow-2xl max-h-[90vh] flex flex-col">
+      <div className="fixed inset-x-0 bottom-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 w-full md:w-[840px] rounded-2xl bg-white shadow-xl max-h-[85vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">
             {replyType === 'reply' ? 'Reply' : 'Reply All'}
           </h2>
@@ -206,169 +295,88 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
           </button>
         </div>
         
-        {/* Email Form */}
-        <div className="flex-1 overflow-hidden flex flex-col">
-          {/* Recipients and Subject */}
-          <div className="p-4 border-b border-gray-200 space-y-3 flex-shrink-0">
-            {/* To */}
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700 w-12">To:</label>
-              <div className="flex-1 flex flex-wrap gap-2">
-                {toRecipients.map((email, index) => (
-                  <span key={index} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-md">
-                    {email}
-                    <button
-                      onClick={() => removeRecipient('to', index)}
-                      className="text-blue-600 hover:text-blue-800"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
-                ))}
-                <button
-                  onClick={() => addRecipient('to')}
-                  className="text-blue-600 hover:text-blue-800 text-sm underline"
-                >
-                  + Add
-                </button>
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto max-h-[70vh] overscroll-contain p-4 space-y-4">
+          {message && (
+            <div className="text-sm text-gray-600 space-y-1">
+              <p><strong>To:</strong> {message.from?.emailAddress?.address}</p>
+              <p><strong>Subject:</strong> {message.subject || '(No subject)'}</p>
+            </div>
+          )}
+          
+          {/* AI Reply Generation Button */}
+          <div className="flex justify-center">
+            <button
+              onClick={handleGenerateAIReply}
+              disabled={isGeneratingAI || emailThread.length === 0}
+              className="group relative inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-pink-500 via-purple-500 to-teal-500 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-pink-600 via-purple-600 to-teal-600 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative flex items-center gap-3">
+                {isGeneratingAI ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Sparkles className="h-5 w-5" />
+                )}
+                <Brain className="h-5 w-5" />
+                <span className="text-lg">
+                  {isGeneratingAI ? 'Generating AI Reply...' : 'Generate AI Reply'}
+                </span>
               </div>
-            </div>
-            
-            {/* CC */}
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700 w-12">CC:</label>
-              <div className="flex-1 flex flex-wrap gap-2">
-                {ccRecipients.map((email, index) => (
-                  <span key={index} className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-800 text-sm rounded-md">
-                    {email}
-                    <button
-                      onClick={() => removeRecipient('cc', index)}
-                      className="text-gray-600 hover:text-gray-800"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
-                ))}
-                <button
-                  onClick={() => addRecipient('cc')}
-                  className="text-blue-600 hover:text-blue-800 text-sm underline"
-                >
-                  + Add
-                </button>
-              </div>
-            </div>
-            
-            {/* Subject */}
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700 w-12">Subject:</label>
-              <input
-                type="text"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter subject"
-              />
-            </div>
+            </button>
           </div>
           
-          {/* Editor Toolbar */}
-          <div className="border-b border-gray-300 p-2 bg-gray-50 flex-shrink-0">
-            <div className="flex gap-2">
-              <button
-                onClick={() => document.execCommand('bold', false)}
-                className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded transition-colors"
-                title="Bold"
-              >
-                <Bold className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => document.execCommand('italic', false)}
-                className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded transition-colors"
-                title="Italic"
-              >
-                <Italic className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => document.execCommand('insertUnorderedList', false)}
-                className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded transition-colors"
-                title="Bullet List"
-              >
-                <List className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => document.execCommand('createLink', false)}
-                className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded transition-colors"
-                title="Insert Link"
-              >
-                <Link className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setHtmlBody(htmlBody + '<blockquote>Quote</blockquote>')}
-                className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded transition-colors"
-                title="Quote"
-              >
-                <Quote className="h-4 w-4" />
-              </button>
+          {/* AI Generation Error */}
+          {aiGenerationError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+              <span className="font-medium">AI Generation Error:</span> {aiGenerationError}
             </div>
-          </div>
+          )}
           
           {/* Editor */}
-          <div className="flex-1 overflow-hidden flex flex-col">
+          <div className="border border-gray-300 rounded-lg">
+            <div className="border-b border-gray-300 p-2 bg-gray-50">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setHtmlBody(htmlBody + '<strong>Bold</strong>')}
+                  className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50"
+                >
+                  B
+                </button>
+                <button
+                  onClick={() => setHtmlBody(htmlBody + '<em>Italic</em>')}
+                  className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50"
+                >
+                  I
+                </button>
+                <button
+                  onClick={() => setHtmlBody(htmlBody + '<br>')}
+                  className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50"
+                >
+                  ↵
+                </button>
+              </div>
+            </div>
             <div
               ref={editorRef}
               contentEditable
-              className="flex-1 p-4 focus:outline-none prose prose-sm max-w-none overflow-y-auto"
+              className="p-3 min-h-[200px] focus:outline-none prose prose-sm max-w-none"
               dangerouslySetInnerHTML={{ __html: htmlBody }}
               onInput={(e) => setHtmlBody(e.currentTarget.innerHTML)}
-              style={{ minHeight: '200px' }}
             />
           </div>
           
-          {/* Email Thread */}
-          {emailThread.length > 0 && (
-            <div className="border-t border-gray-200 flex-shrink-0">
-              <div className="p-3 bg-gray-50 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium text-gray-700">Email Thread</h4>
-                  <button
-                    onClick={() => setShowFullThread(!showFullThread)}
-                    className="text-xs text-blue-600 hover:text-blue-800 underline"
-                  >
-                    {showFullThread ? 'Show Less' : 'Show Full Thread'}
-                  </button>
-                </div>
-              </div>
-              
-              <div 
-                ref={threadRef}
-                className={`overflow-y-auto transition-all duration-300 ${
-                  showFullThread ? 'max-h-96' : 'max-h-32'
-                }`}
-              >
-                <div className="p-3 space-y-3">
-                  {emailThread.map((threadMessage, index) => (
-                    <div key={threadMessage.id} className="border-l-2 border-gray-200 pl-3">
-                      <div className="text-xs text-gray-500 mb-1">
-                        {threadMessage.from?.emailAddress?.address || threadMessage.from?.emailAddress} • {new Date(threadMessage.receivedDateTime).toLocaleString()}
-                      </div>
-                      <div className="text-sm text-gray-700 line-clamp-2">
-                        <div 
-                          className="prose prose-xs max-w-none"
-                          dangerouslySetInnerHTML={{ 
-                            __html: sanitizeHtml(threadMessage.body?.content || '') 
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+          {/* BlocIQ Note */}
+          {showBlocIQNote && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+              <Brain className="h-4 w-4 inline mr-2" />
+              Ask BlocIQ integration coming soon! This will allow AI-powered email drafting.
             </div>
           )}
         </div>
         
         {/* Footer */}
-        <div className="flex items-center justify-between p-4 border-t border-gray-200 flex-shrink-0">
+        <div className="flex items-center justify-between p-4 border-t border-gray-200">
           <button
             onClick={handleGenerateWithBlocIQ}
             className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
@@ -376,13 +384,6 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
             <Brain className="h-4 w-4" />
             Generate with Ask BlocIQ
           </button>
-          
-          {showBlocIQNote && (
-            <div className="absolute bottom-20 left-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800 max-w-xs">
-              <Brain className="h-4 w-4 inline mr-2" />
-              Ask BlocIQ integration coming soon! This will allow AI-powered email drafting.
-            </div>
-          )}
           
           <div className="flex gap-3">
             <button
@@ -393,7 +394,7 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
             </button>
             <button
               onClick={handleSend}
-              disabled={isSending || !htmlBody.trim() || toRecipients.length === 0}
+              disabled={isSending || !htmlBody.trim()}
               className="flex items-center gap-2 px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 rounded-md transition-colors"
             >
               {isSending ? (
