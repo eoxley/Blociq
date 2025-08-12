@@ -276,31 +276,48 @@ Generate the reply in HTML format with appropriate paragraph tags and formatting
     <>
       {/* Overlay */}
       <div 
-        className="fixed inset-0 z-[100] bg-black/20 backdrop-blur-sm"
+        className="fixed inset-0 z-[9999] bg-black/50"
         onClick={onClose}
       />
       
       {/* Modal Panel */}
-      <div className="fixed inset-x-0 bottom-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 w-full md:w-[840px] rounded-2xl bg-white shadow-xl max-h-[85vh] flex flex-col">
+      <div className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 w-auto md:w-[800px] lg:w-[900px] rounded-2xl bg-white shadow-2xl max-h-[90vh] flex flex-col z-[10000]">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">
-            {replyType === 'reply' ? 'Reply' : 'Reply All'}
-          </h2>
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white rounded-t-2xl">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Mail className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">
+                {replyType === 'reply' ? 'Reply' : 'Reply All'}
+              </h2>
+              <p className="text-sm text-gray-500">Compose your response</p>
+            </div>
+          </div>
           <button
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            <X className="h-5 w-5" />
+            <X className="h-6 w-6" />
           </button>
         </div>
         
         {/* Content */}
-        <div className="flex-1 overflow-y-auto max-h-[70vh] overscroll-contain p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Email Info */}
           {message && (
-            <div className="text-sm text-gray-600 space-y-1">
-              <p><strong>To:</strong> {message.from?.emailAddress?.address}</p>
-              <p><strong>Subject:</strong> {message.subject || '(No subject)'}</p>
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-gray-700">To:</span>
+                  <span className="ml-2 text-gray-900">{message.from?.emailAddress?.address || message.from?.emailAddress || 'Unknown'}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Subject:</span>
+                  <span className="ml-2 text-gray-900">{message.subject || '(No subject)'}</span>
+                </div>
+              </div>
             </div>
           )}
           
@@ -309,16 +326,16 @@ Generate the reply in HTML format with appropriate paragraph tags and formatting
             <button
               onClick={handleGenerateAIReply}
               disabled={isGeneratingAI || emailThread.length === 0}
-              className="group relative inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-pink-500 via-purple-500 to-teal-500 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="group relative inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-pink-500 via-purple-500 to-teal-500 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-pink-600 via-purple-600 to-teal-600 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="relative flex items-center gap-3">
                 {isGeneratingAI ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <Loader2 className="h-6 w-6 animate-spin" />
                 ) : (
-                  <Sparkles className="h-5 w-5" />
+                  <Sparkles className="h-6 w-6" />
                 )}
-                <Brain className="h-5 w-5" />
+                <Brain className="h-6 w-6" />
                 <span className="text-lg">
                   {isGeneratingAI ? 'Generating AI Reply...' : 'Generate AI Reply'}
                 </span>
@@ -328,30 +345,30 @@ Generate the reply in HTML format with appropriate paragraph tags and formatting
           
           {/* AI Generation Error */}
           {aiGenerationError && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
               <span className="font-medium">AI Generation Error:</span> {aiGenerationError}
             </div>
           )}
           
           {/* Editor */}
-          <div className="border border-gray-300 rounded-lg">
-            <div className="border-b border-gray-300 p-2 bg-gray-50">
+          <div className="border border-gray-300 rounded-lg bg-white">
+            <div className="border-b border-gray-300 p-3 bg-gray-50 rounded-t-lg">
               <div className="flex gap-2">
                 <button
                   onClick={() => setHtmlBody(htmlBody + '<strong>Bold</strong>')}
-                  className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50"
+                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
                 >
                   B
                 </button>
                 <button
                   onClick={() => setHtmlBody(htmlBody + '<em>Italic</em>')}
-                  className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50"
+                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
                 >
                   I
                 </button>
                 <button
                   onClick={() => setHtmlBody(htmlBody + '<br>')}
-                  className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50"
+                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
                 >
                   ↵
                 </button>
@@ -360,7 +377,7 @@ Generate the reply in HTML format with appropriate paragraph tags and formatting
             <div
               ref={editorRef}
               contentEditable
-              className="p-3 min-h-[200px] focus:outline-none prose prose-sm max-w-none"
+              className="p-4 min-h-[250px] focus:outline-none prose prose-sm max-w-none text-gray-900"
               dangerouslySetInnerHTML={{ __html: htmlBody }}
               onInput={(e) => setHtmlBody(e.currentTarget.innerHTML)}
             />
@@ -368,7 +385,7 @@ Generate the reply in HTML format with appropriate paragraph tags and formatting
           
           {/* BlocIQ Note */}
           {showBlocIQNote && (
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
               <Brain className="h-4 w-4 inline mr-2" />
               Ask BlocIQ integration coming soon! This will allow AI-powered email drafting.
             </div>
@@ -376,10 +393,10 @@ Generate the reply in HTML format with appropriate paragraph tags and formatting
         </div>
         
         {/* Footer */}
-        <div className="flex items-center justify-between p-4 border-t border-gray-200">
+        <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-white rounded-b-2xl">
           <button
             onClick={handleGenerateWithBlocIQ}
-            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
           >
             <Brain className="h-4 w-4" />
             Generate with Ask BlocIQ
@@ -388,14 +405,14 @@ Generate the reply in HTML format with appropriate paragraph tags and formatting
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors"
+              className="px-6 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleSend}
               disabled={isSending || !htmlBody.trim()}
-              className="flex items-center gap-2 px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 rounded-md transition-colors"
+              className="flex items-center gap-2 px-6 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 rounded-lg transition-colors"
             >
               {isSending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
