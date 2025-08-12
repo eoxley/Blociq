@@ -34,9 +34,27 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
   const [isSending, setIsSending] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const toInputRef = useRef<HTMLInputElement>(null);
 
   // Ensure the quoted block can be inserted once
   const quoted = useMemo(() => toPlainQuoted(email), [email]);
+
+  // Prevent background scrolling when modal is open and focus first input
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+      // Focus the first input (To field) when modal opens
+      setTimeout(() => {
+        toInputRef.current?.focus();
+      }, 100);
+    } else {
+      document.body.style.overflow = "";
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
 
   // Helper functions
   function toPlain(input?: string) {
@@ -344,8 +362,12 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-[100] bg-black/10 backdrop-blur-md">
+      <div 
+        className="fixed inset-x-0 bottom-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 w-full md:w-[840px] rounded-2xl bg-white shadow-xl max-h-[85vh] flex flex-col z-[101]"
+        role="dialog"
+        aria-modal="true"
+      >
         {/* Header - Fixed */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center space-x-3">
@@ -415,6 +437,7 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">To:</label>
               <input
+                ref={toInputRef}
                 type="text"
                 value={toRecipients}
                 onChange={(e) => setToRecipients(e.target.value)}
@@ -483,7 +506,7 @@ export default function ReplyModalV2({ isOpen, onClose, email, action, userEmail
           )}
 
           {/* Scrollable Content Area */}
-          <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 pr-2">
+          <div className="flex-1 overflow-y-auto max-h-[70vh] overscroll-contain p-4 space-y-4">
             {/* Editor */}
             {isPlainText ? (
               <textarea
