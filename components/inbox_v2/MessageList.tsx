@@ -70,6 +70,12 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
     e.dataTransfer.dropEffect = 'move'
   }
 
+  const truncateText = (text: string, maxLength: number) => {
+    if (!text) return ''
+    if (text.length <= maxLength) return text
+    return text.substring(0, maxLength) + '...'
+  }
+
   if (!selectedFolderId) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
@@ -132,9 +138,9 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-2">
                       <Move className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                      <h4 className="text-sm font-medium text-gray-900 truncate">
+                      <h4 className="text-sm font-medium text-gray-900 line-clamp-2 leading-tight">
                         {message.subject || '(No subject)'}
                       </h4>
                       {message.hasAttachments && (
@@ -142,9 +148,16 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
                       )}
                     </div>
                     
-                    <p className="text-sm text-gray-600 truncate mb-1">
+                    <p className="text-sm text-gray-600 truncate mb-2">
                       {message.from?.emailAddress?.address || 'Unknown sender'}
                     </p>
+                    
+                    {/* Email preview content */}
+                    {message.bodyPreview && (
+                      <p className="text-xs text-gray-500 line-clamp-2 mb-2 leading-relaxed">
+                        {truncateText(message.bodyPreview, 120)}
+                      </p>
+                    )}
                     
                     <div className="flex items-center gap-2 text-xs text-gray-500">
                       <Clock className="h-3 w-3" />

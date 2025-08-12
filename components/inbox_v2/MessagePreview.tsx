@@ -1,7 +1,8 @@
 "use client"
 
-import { Reply, ReplyAll, Paperclip, Clock, User } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
+import { useState, useEffect } from 'react'
+import { Reply, ReplyAll, Paperclip, Clock, User, Mail, Calendar, Download } from 'lucide-react'
+import { formatDistanceToNow, format } from 'date-fns'
 
 interface MessagePreviewProps {
   selectedMessage: any | null
@@ -9,21 +10,100 @@ interface MessagePreviewProps {
   onReplyAll: () => void
 }
 
+interface FullMessage {
+  id: string
+  subject: string
+  from: any
+  toRecipients: any[]
+  ccRecipients: any[]
+  receivedDateTime: string
+  body: {
+    contentType: string
+    content: string
+  }
+  hasAttachments: boolean
+  attachments: any[]
+  conversationId: string
+  webLink: string
+}
+
 export default function MessagePreview({ selectedMessage, onReply, onReplyAll }: MessagePreviewProps) {
+  const [fullMessage, setFullMessage] = useState<FullMessage | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Fetch full message content when a message is selected
+  useEffect(() => {
+    if (!selectedMessage?.id) {
+      setFullMessage(null)
+      return
+    }
+
+    const fetchFullMessage = async () => {
+      setIsLoading(true)
+      setError(null)
+      
+      try {
+        const response = await fetch(`/api/outlook/v2/messages/${selectedMessage.id}`)
+        
+        if (response.ok) {
+          const data = await response.json()
+          if (data.ok && data.items?.[0]) {
+            setFullMessage(data.items[0])
+          } else {
+            setError('Failed to load message content')
+          }
+        } else {
+          setError('Failed to load message content')
+        }
+      } catch (error) {
+        console.error('Error fetching message:', error)
+        setError('Failed to load message content')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchFullMessage()
+  }, [selectedMessage?.id])
+
   if (!selectedMessage) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+        <Mail className="h-12 w-12 text-gray-400 mx-auto mb-4" />
         <p className="text-gray-500">Select a message to preview</p>
       </div>
     )
   }
 
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="text-gray-500 mt-2">Loading message...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+        <p className="text-red-500 mb-2">{error}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="text-sm text-blue-600 hover:text-blue-800 underline"
+        >
+          Try again
+        </button>
+      </div>
+    )
+  }
+
   const receivedDate = new Date(selectedMessage.receivedDateTime)
-  
-  // Simple HTML sanitization - in production, use a proper library like DOMPurify
+  const message = fullMessage || selectedMessage
+
   const sanitizeHtml = (html: string) => {
     if (!html) return ''
-    // Remove script tags and other potentially dangerous elements
     return html
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
       .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
@@ -31,12 +111,49 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
       .replace(/on\w+\s*=/gi, '')
   }
 
+  const formatEmailList = (recipients: any[]) => {
+    if (!recipients || recipients.length === 0) return 'None'
+    return recipients
+      .map((r: any) => r.emailAddress?.address || r.emailAddress || r)
+      .filter(Boolean)
+      .join(', ')
+  }
+
+  const renderEmailBody = () => {
+    if (!message.body?.content) {
+      return (
+        <div className="text-gray-500 italic">
+          No message content available
+        </div>
+      )
+    }
+
+    if (message.body.contentType === 'HTML') {
+      return (
+        <div 
+          className="prose prose-sm max-w-none text-gray-800 leading-relaxed"
+          dangerouslySetInnerHTML={{ 
+            __html: sanitizeHtml(message.body.content) 
+          }}
+        />
+      )
+    } else {
+      // Plain text
+      return (
+        <div className="whitespace-pre-wrap text-gray-800 leading-relaxed font-mono text-sm">
+          {message.body.content}
+        </div>
+      )
+    }
+  }
+
   return (
     <div className="bg-white rounded-lg border border-gray-200 flex flex-col h-full">
-      <div className="p-4 border-b border-gray-200">
+      {/* Header */}
+      <div className="p-4 border-b border-gray-200 flex-shrink-0">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold text-gray-900">
-            {selectedMessage.subject || '(No subject)'}
+          <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
+            {message.subject || '(No subject)'}
           </h3>
           <div className="flex gap-2">
             <button
@@ -56,42 +173,82 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
           </div>
         </div>
         
+        {/* Message Details */}
         <div className="space-y-2 text-sm">
+          <div className="flex items-start gap-2">
+            <User className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <span className="text-gray-600 font-medium">From:</span>
+              <span className="text-gray-800 ml-2 break-all">
+                {message.from?.emailAddress?.address || message.from?.emailAddress || 'Unknown sender'}
+              </span>
+            </div>
+          </div>
+          
+          <div className="flex items-start gap-2">
+            <Mail className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <span className="text-gray-600 font-medium">To:</span>
+              <span className="text-gray-800 ml-2 break-all">
+                {formatEmailList(message.toRecipients || [])}
+              </span>
+            </div>
+          </div>
+          
+          {(message.ccRecipients || []).length > 0 && (
+            <div className="flex items-start gap-2">
+              <Mail className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <span className="text-gray-600 font-medium">CC:</span>
+                <span className="text-gray-800 ml-2 break-all">
+                  {formatEmailList(message.ccRecipients)}
+                </span>
+              </div>
+            </div>
+          )}
+          
           <div className="flex items-center gap-2">
-            <User className="h-4 w-4 text-gray-400" />
-            <span className="text-gray-600">
-              From: {selectedMessage.from?.emailAddress?.address || 'Unknown sender'}
+            <Calendar className="h-4 w-4 text-gray-400" />
+            <span className="text-gray-600 font-medium">Received:</span>
+            <span className="text-gray-800 ml-2">
+              {format(receivedDate, 'PPP p')} ({formatDistanceToNow(receivedDate, { addSuffix: true })})
             </span>
           </div>
           
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-gray-400" />
-            <span className="text-gray-600">
-              {formatDistanceToNow(receivedDate, { addSuffix: true })}
-            </span>
-          </div>
-          
-          {selectedMessage.hasAttachments && (
+          {message.hasAttachments && (
             <div className="flex items-center gap-2">
               <Paperclip className="h-4 w-4 text-gray-400" />
-              <span className="text-gray-600">Has attachments</span>
+              <span className="text-gray-600 font-medium">Attachments:</span>
+              <span className="text-gray-800 ml-2">
+                {message.attachments?.length || 0} file(s)
+              </span>
             </div>
           )}
         </div>
       </div>
       
-      <div className="flex-1 overflow-y-auto p-4">
-        {selectedMessage.bodyPreview ? (
-          <div className="prose prose-sm max-w-none">
-            <div 
-              className="text-gray-800 leading-relaxed"
-              dangerouslySetInnerHTML={{ 
-                __html: sanitizeHtml(selectedMessage.bodyPreview) 
-              }}
-            />
+      {/* Message Body - Scrollable */}
+      <div className="flex-1 overflow-y-auto p-4 min-h-0">
+        <div className="max-w-none">
+          {renderEmailBody()}
+        </div>
+        
+        {/* Email Chain Indicator */}
+        {message.conversationId && (
+          <div className="mt-6 pt-4 border-t border-gray-200">
+            <div className="text-xs text-gray-500 mb-2">
+              This message is part of a conversation
+            </div>
+            <a
+              href={message.webLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 underline"
+            >
+              <Mail className="h-4 w-4" />
+              View in Outlook
+            </a>
           </div>
-        ) : (
-          <p className="text-gray-500">No message content to display</p>
         )}
       </div>
     </div>
