@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Reply, ReplyAll, Paperclip, Clock, User, Mail, Calendar, Download } from 'lucide-react'
+import { Reply, ReplyAll, Paperclip, Clock, User, MessageSquare, Calendar, Download } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
 
 interface MessagePreviewProps {
@@ -70,7 +70,7 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
   if (!selectedMessage) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-        <Mail className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+        <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
         <p className="text-gray-500">Select a message to preview</p>
       </div>
     )
@@ -217,7 +217,7 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
           </div>
           
           <div className="flex items-start gap-2">
-            <Mail className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+            <MessageSquare className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <span className="text-gray-600 font-medium">To:</span>
               <span className="text-gray-800 ml-2 break-all">
@@ -228,7 +228,7 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
           
           {(message.ccRecipients || []).length > 0 && (
             <div className="flex items-start gap-2">
-              <Mail className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+              <MessageSquare className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <span className="text-gray-600 font-medium">CC:</span>
                 <span className="text-gray-800 ml-2 break-all">
@@ -276,7 +276,7 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 underline"
             >
-              <Mail className="h-4 w-4" />
+              <MessageSquare className="h-4 w-4" />
               View in Outlook
             </a>
           </div>

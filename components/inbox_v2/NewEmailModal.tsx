@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef } from 'react'
-import { X, Send, Brain, Loader2, Paperclip, Bold, Italic, List, Link, Quote, Trash2, Plus, Mail } from 'lucide-react'
+import { X, Send, Brain, Loader2, Paperclip, Bold, Italic, List, Link, Quote, Trash2, Plus, MessageSquare } from 'lucide-react'
 
 interface NewEmailModalProps {
   isOpen: boolean
@@ -222,7 +222,7 @@ export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <Mail className="h-5 w-5 text-blue-600" />
+            <MessageSquare className="h-5 w-5 text-blue-600" />
             <h2 className="text-lg font-semibold text-gray-900">New Email</h2>
           </div>
           <button

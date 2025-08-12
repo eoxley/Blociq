@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef } from 'react'
-import { Reply, ReplyAll, Paperclip, Clock, User, Mail, Calendar, Download, Brain, Sparkles, Loader2, X, Send } from 'lucide-react'
+import { Reply, ReplyAll, Paperclip, Clock, User, MessageSquare, Calendar, Download, Brain, Sparkles, Loader2, X, Send } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
 
 interface ReplyModalProps {
@@ -333,7 +333,7 @@ Generate the reply in plain text format (no HTML tags).`
         <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white rounded-t-2xl">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 rounded-lg">
-              <Mail className="h-5 w-5 text-blue-600" />
+              <MessageSquare className="h-5 w-5 text-blue-600" />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-gray-900">
@@ -580,6 +580,7 @@ Generate the reply in plain text format (no HTML tags).`
                   onClick={() => setShowFullThread(!showFullThread)}
                   className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900 w-full text-left"
                 >
+                  <MessageSquare className="h-4 w-4" />
                   <span className="font-medium">
                     {showFullThread ? 'Hide' : 'Show'} Email Thread ({emailThread.length} message{emailThread.length !== 1 ? 's' : ''})
                   </span>
@@ -601,10 +602,12 @@ Generate the reply in plain text format (no HTML tags).`
                       }`}
                     >
                       <div className="flex items-center gap-2 mb-3 text-xs text-gray-600">
+                        <User className="h-3 w-3" />
                         <span className="font-medium">
                           {threadMessage.from?.emailAddress?.address || threadMessage.from?.emailAddress || 'Unknown'}
                         </span>
                         <span>•</span>
+                        <Clock className="h-3 w-3" />
                         <span>{formatDistanceToNow(new Date(threadMessage.receivedDateTime), { addSuffix: true })}</span>
                         {threadMessage.id === message?.id && (
                           <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs">
