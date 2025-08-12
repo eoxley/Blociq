@@ -153,6 +153,30 @@ export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
     setTimeout(() => setShowBlocIQNote(false), 3000)
   }
 
+  const sanitizeHtml = (html: string) => {
+    if (!html) return ''
+    
+    let sanitized = html
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+      .replace(/javascript:/gi, '')
+      .replace(/on\w+\s*=/gi, '')
+    
+    // Allow images but ensure they're safe
+    sanitized = sanitized
+      .replace(/<img([^>]*?)>/gi, (match, attributes) => {
+        // Only allow safe image attributes
+        const safeAttributes = attributes
+          .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '') // Remove event handlers
+          .replace(/javascript:/gi, '') // Remove javascript: URLs
+          .replace(/data:/gi, '') // Remove data: URLs
+          .replace(/<[^>]*>/gi, '') // Remove any nested tags
+        return `<img${safeAttributes}>`
+      })
+    
+    return sanitized
+  }
+
   const addRecipient = (type: 'to' | 'cc' | 'bcc') => {
     const newEmail = prompt(`Enter ${type.toUpperCase()} email address:`)
     if (newEmail && newEmail.trim()) {
@@ -480,7 +504,7 @@ export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
               ref={editorRef}
               contentEditable
               className="p-6 focus:outline-none prose prose-lg max-w-none text-gray-900 min-h-[300px] leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: htmlBody }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(htmlBody) }}
               onInput={(e) => setHtmlBody(e.currentTarget.innerHTML)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {

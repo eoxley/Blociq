@@ -332,11 +332,26 @@ Generate the reply in plain text format (no HTML tags).`
 
   const sanitizeHtml = (html: string) => {
     if (!html) return ''
-    return html
+    
+    let sanitized = html
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
       .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
       .replace(/javascript:/gi, '')
       .replace(/on\w+\s*=/gi, '')
+    
+    // Allow images but ensure they're safe
+    sanitized = sanitized
+      .replace(/<img([^>]*?)>/gi, (match, attributes) => {
+        // Only allow safe image attributes
+        const safeAttributes = attributes
+          .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '') // Remove event handlers
+          .replace(/javascript:/gi, '') // Remove javascript: URLs
+          .replace(/data:/gi, '') // Remove data: URLs
+          .replace(/<[^>]*>/gi, '') // Remove any nested tags
+        return `<img${safeAttributes}>`
+      })
+    
+    return sanitized
   }
 
   if (!isOpen) return null
@@ -743,7 +758,7 @@ Generate the reply in plain text format (no HTML tags).`
                       <div 
                         className="text-gray-700 prose prose-sm max-w-none leading-relaxed"
                         dangerouslySetInnerHTML={{
-                          __html: threadMessage.body?.content || 'No content'
+                          __html: sanitizeHtml(threadMessage.body?.content || 'No content')
                         }}
                       />
                     </div>

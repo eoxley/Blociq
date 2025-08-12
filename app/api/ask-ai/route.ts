@@ -17,6 +17,47 @@ import { MAX_CHARS_PER_DOC, MAX_TOTAL_DOC_CHARS, truncate, isSummariseLike, slug
 
 export const runtime = "nodejs";
 
+// Leak triage policy helpers
+const LEAK_REGEX = /\b(leak|water ingress|ceiling leak|dripping|escape of water|leaking|damp|stain)\b/i;
+function isLeakIssue(s?: string) { return !!(s && LEAK_REGEX.test(s)); }
+
+const LEAK_POLICY = `
+You must follow BlocIQ's leak triage policy for UK long-lease blocks:
+
+1) Demised vs Communal:
+   - "Demised" = within a leaseholder's property (e.g., internal pipework/appliances/fixtures up to their demise). 
+   - "Communal" = roofs, communal risers/stacks, structure, external walls, common pipes before they branch to a private demise.
+   - If the ceiling is below another flat, assume "likely demised above" unless clear evidence indicates roof/communal.
+
+2) First step – flat-to-flat:
+   - Ask the reporting leaseholder to make contact with the flat above to attempt a quick local check/stop (e.g., stop taps, appliance checks).
+   - If they cannot contact or it doesn't resolve, proceed to investigations.
+
+3) Investigations (if unresolved or origin unknown):
+   - Arrange non-invasive leak detection/plumber attendance with BOTH parties informed and consenting to access windows.
+   - Make clear in writing that costs will be recharged to the responsible party if the source is demised; if communal, costs fall to the block.
+
+4) Cost liability:
+   - If the source is found within a demise (private pipework/fixture), the responsible leaseholder is liable for detection and repairs.
+   - If the source is communal (e.g., roof/communal stack), the block/communal budget handles repairs.
+
+5) Insurance / excess:
+   - If the expected repair/damage costs are likely to exceed the building policy excess, consider a block insurance claim.
+   - In such cases it is normal for the responsible party (flat of origin) to cover the policy excess; the insurer handles the works.
+   - If below the excess, costs are private and recharged as above.
+
+6) Communications & tone:
+   - Use British English.
+   - Be clear, neutral, and practical. Avoid legal overreach; refer to the lease as the primary authority.
+   - DO NOT cite "Leasehold Property Act 2002 s.11". If you mention legislation at all, note that LTA 1985 s.11 applies to short tenancies, not long-leasehold service obligations; rely on the lease terms.
+
+When preparing an email to the reporting leaseholder and (if relevant) the upstairs leaseholder:
+- Include flat-to-flat first step.
+- Explain investigation process + consent.
+- State cost responsibility rules (demised vs communal).
+- Mention insurance-excess option when likely beneficial.
+`;
+
 export async function POST(req: NextRequest) {
   try {
     const supabase = createRouteHandlerClient({ cookies });
@@ -441,6 +482,29 @@ Return a STRICT JSON object with keys:
 Do not include any text before or after the JSON.`;
     }
 
+    // 🚰 Leak triage policy detection and enforcement
+    const leakMode = isLeakIssue(prompt) || isLeakIssue(emailContext) || isLeakIssue(documentContext);
+    let wantLeakStructured = false;
+    
+    if (leakMode) {
+      // Append leak policy to system prompt
+      systemPrompt += LEAK_POLICY;
+      
+      // Set structured output mode for leak cases
+      wantLeakStructured = true;
+      
+      // Add structured output instructions for leak cases
+      systemPrompt += `
+Return a STRICT JSON object for leak cases with keys:
+- "email_to_reporter": string      // an email to the reporting leaseholder implementing the policy
+- "email_to_upstairs": string|null // if applicable (flat above scenario), otherwise null
+- "internal_actions": string[]     // step-by-step tasks for the manager (investigation, consent, bookings)
+- "costs_summary": string          // a clear summary of cost liability and insurance-excess option
+No preamble or trailing text; output raw JSON only for leak cases.`;
+      
+      console.log('🚰 Leak triage mode activated');
+    }
+
     console.log('🤖 Calling OpenAI API...');
     
     const completion = await openai.chat.completions.create({
@@ -450,7 +514,7 @@ Do not include any text before or after the JSON.`;
         { role: 'user', content: finalPrompt }
       ],
       temperature: 0.3,
-      max_tokens: 2000,
+      max_tokens: 3000, // Increased to ensure sufficient tokens for leak triage responses
     });
 
     const aiResponse = completion.choices[0]?.message?.content || 'No response generated';
@@ -463,6 +527,19 @@ Do not include any text before or after the JSON.`;
         structured = JSON.parse(aiResponse);
       } catch (parseError) {
         console.warn('Failed to parse structured output:', parseError);
+      }
+    }
+
+    // 🚰 Parse leak triage response if in leak mode
+    let leakResponse: any = null;
+    if (leakMode && wantLeakStructured) {
+      try {
+        leakResponse = JSON.parse(aiResponse);
+        console.log('✅ Leak triage response parsed successfully');
+      } catch (parseError) {
+        console.warn('Failed to parse leak triage response, falling back to plain text:', parseError);
+        // Fall back to plain text response
+        leakResponse = null;
       }
     }
 
@@ -494,6 +571,11 @@ Do not include any text before or after the JSON.`;
         email_thread_id: emailThreadId,
       });
       contextMetadata.ai_log_id = logId;
+      
+      // Add leak policy metadata if applicable
+      if (leakMode) {
+        contextMetadata.leakPolicyApplied = true;
+      }
     } catch (logError) {
       console.error('Failed to log AI interaction:', logError);
     }

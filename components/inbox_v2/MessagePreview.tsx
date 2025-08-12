@@ -127,6 +127,18 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
       .replace(/<v:[^>]*>/gi, '') // Remove Vector tags
       .replace(/<\/v:[^>]*>/gi, '')
     
+    // Allow images but ensure they're safe
+    sanitized = sanitized
+      .replace(/<img([^>]*?)>/gi, (match, attributes) => {
+        // Only allow safe image attributes
+        const safeAttributes = attributes
+          .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '') // Remove event handlers
+          .replace(/javascript:/gi, '') // Remove javascript: URLs
+          .replace(/data:/gi, '') // Remove data: URLs
+          .replace(/<[^>]*>/gi, '') // Remove any nested tags
+        return `<img${safeAttributes}>`
+      })
+    
     // Ensure proper paragraph spacing
     sanitized = sanitized
       .replace(/<p[^>]*>/gi, '<p class="mb-3">')
