@@ -259,7 +259,8 @@ export default function CommunicationModal({
                   onChange={(e) => setContent(e.target.value)}
                   placeholder="Enter content"
                   rows={12}
-                  className="resize-none"
+                  className="resize-none overflow-y-auto"
+                  style={{ minHeight: '300px', maxHeight: '400px' }}
                 />
               </div>
 

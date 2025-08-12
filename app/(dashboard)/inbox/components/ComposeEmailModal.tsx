@@ -220,9 +220,10 @@ export default function ComposeEmailModal({ isOpen, onClose }: ComposeEmailModal
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent resize-none"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent resize-none overflow-y-auto"
               rows={12}
               placeholder="Enter your message..."
+              style={{ minHeight: '300px', maxHeight: '400px' }}
             />
             {/* Signature Preview */}
             {signature && (

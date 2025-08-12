@@ -501,9 +501,10 @@ export default function ReplyModal({ isOpen, onClose, email, action }: ReplyModa
                     setIsAIGenerated(false);
                   }
                 }}
-                className="w-full px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent resize-none"
+                className="w-full px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent resize-none overflow-y-auto"
                 rows={12}
                 placeholder="Enter your message..."
+                style={{ minHeight: '300px', maxHeight: '400px' }}
               />
             </div>
             

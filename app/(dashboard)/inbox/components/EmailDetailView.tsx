@@ -210,9 +210,10 @@ export default function EmailDetailView({
             <textarea
               value={editedReply || replyResponse}
               onChange={(e) => onUpdateEditedReply(e.target.value)}
-              className="w-full p-4 border border-teal-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
+              className="w-full p-4 border border-teal-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none overflow-y-auto"
               rows={12}
               placeholder="Edit your reply here..."
+              style={{ minHeight: '300px', maxHeight: '400px' }}
             />
           ) : (
             <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
