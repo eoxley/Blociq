@@ -5,6 +5,7 @@ import FolderSidebar from '@/components/inbox_v2/FolderSidebar'
 import MessageList from '@/components/inbox_v2/MessageList'
 import MessagePreview from '@/components/inbox_v2/MessagePreview'
 import ReplyModal from '@/components/inbox_v2/ReplyModal'
+import NewEmailModal from '@/components/inbox_v2/NewEmailModal'
 import { useMessages } from '@/hooks/inbox_v2'
 
 // Context for inbox state
@@ -33,6 +34,7 @@ export default function InboxV2() {
     isOpen: boolean
     type: 'reply' | 'replyAll'
   }>({ isOpen: false, type: 'reply' })
+  const [newEmailModalOpen, setNewEmailModalOpen] = useState(false)
 
   // Get messages for the selected folder to find the selected message
   const { messages, refresh } = useMessages(selectedFolderId)
@@ -97,7 +99,18 @@ export default function InboxV2() {
 
   return (
     <InboxContext.Provider value={contextValue}>
-      <div className="grid grid-cols-[260px_1fr_420px] gap-4 h-[calc(100vh-260px)]">
+      {/* New Email Button */}
+      <div className="mb-4 flex justify-end">
+        <button
+          onClick={() => setNewEmailModalOpen(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+        >
+          <Mail className="h-4 w-4" />
+          New Email
+        </button>
+      </div>
+      
+      <div className="grid grid-cols-[260px_1fr_420px] gap-4 h-[calc(100vh-300px)]">
         <FolderSidebar 
           selectedFolderId={selectedFolderId}
           onFolderSelect={(folderId) => {
@@ -124,6 +137,11 @@ export default function InboxV2() {
         onClose={handleCloseReplyModal}
         message={selectedMessage}
         replyType={replyModal.type}
+      />
+      
+      <NewEmailModal
+        isOpen={newEmailModalOpen}
+        onClose={() => setNewEmailModalOpen(false)}
       />
     </InboxContext.Provider>
   )
