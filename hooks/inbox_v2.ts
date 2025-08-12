@@ -41,10 +41,13 @@ export function useFolders() {
   
   // Combine Graph folders with manual folders
   const graphFolders = data?.ok && data?.items?.length > 0 ? data.items : []
-  const allFolders = [...graphFolders, ...manualFolders]
   
-  // Use all folders if available, otherwise fall back to defaults
-  const folders = allFolders.length > 0 ? allFolders : DEFAULT_FOLDERS
+  // Always include manual folders, combine with Graph folders or defaults
+  // This ensures manual folders are never lost
+  const folders = graphFolders.length > 0 
+    ? [...graphFolders, ...manualFolders] 
+    : [...DEFAULT_FOLDERS, ...manualFolders]
+  
   const isFallback = graphFolders.length === 0
   
   const addManualFolder = useCallback((folderName: string) => {
