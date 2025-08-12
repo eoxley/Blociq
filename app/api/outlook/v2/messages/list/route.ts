@@ -9,7 +9,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const folderId = searchParams.get('folderId')
     
+    console.log(`[${routeId}] Fetching messages for folder: ${folderId}`)
+    
     if (!folderId) {
+      console.log(`[${routeId}] No folderId provided`)
       return NextResponse.json({
         ok: false,
         error: 'folderId parameter is required',
@@ -20,17 +23,21 @@ export async function GET(request: NextRequest) {
     }
 
     // Get messages for the specified folder
-    const response = await makeGraphRequest(
-      `/me/mailFolders/${folderId}/messages?$select=id,subject,from,toRecipients,ccRecipients,receivedDateTime,bodyPreview,hasAttachments,webLink,conversationId&$orderby=receivedDateTime desc&$top=100`
-    )
+    const graphEndpoint = `/me/mailFolders/${folderId}/messages?$select=id,subject,from,toRecipients,ccRecipients,receivedDateTime,bodyPreview,hasAttachments,webLink,conversationId&$orderby=receivedDateTime desc&$top=100`
+    console.log(`[${routeId}] Making Graph request to: ${graphEndpoint}`)
+    
+    const response = await makeGraphRequest(graphEndpoint)
+    
+    console.log(`[${routeId}] Graph API response status: ${response.status}`)
     
     if (!response.ok) {
       const errorText = await response.text()
-      console.error(`Graph API error (${response.status}):`, errorText)
+      console.error(`[${routeId}] Graph API error (${response.status}):`, errorText)
       
       return NextResponse.json({
         ok: false,
         error: `Graph API error: ${response.status}`,
+        diagnostic: errorText,
         items: [],
         routeId,
         build
@@ -38,6 +45,7 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json()
+    console.log(`[${routeId}] Successfully fetched ${data.value?.length || 0} messages`)
     
     return NextResponse.json({
       ok: true,
@@ -47,11 +55,12 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error fetching messages:', error)
+    console.error(`[${routeId}] Error fetching messages:`, error)
     
     return NextResponse.json({
       ok: false,
       error: 'Failed to fetch messages',
+      diagnostic: error instanceof Error ? error.message : 'Unknown error',
       items: [],
       routeId,
       build

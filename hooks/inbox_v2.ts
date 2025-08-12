@@ -83,6 +83,11 @@ export function useMessages(folderId: string | null) {
   
   const messages = data?.ok ? data.items : []
   
+  // Debug logging
+  if (typeof window !== 'undefined') {
+    console.log('useMessages hook:', { folderId, messagesCount: messages.length, isLoading, error })
+  }
+  
   return {
     messages,
     isLoading,

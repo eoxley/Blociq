@@ -159,7 +159,8 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
   if (!selectedFolderId) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-        <p className="text-gray-500">Select a folder to view messages</p>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-500">Loading folders...</p>
       </div>
     )
   }
@@ -167,8 +168,9 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
   if (isLoading) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
         <p className="text-gray-500 mt-2">Loading messages...</p>
+        <p className="text-xs text-gray-400 mt-2">Folder: {selectedFolderId}</p>
       </div>
     )
   }
