@@ -1,7 +1,8 @@
 "use client"
 
+import { useState } from 'react'
 import { useMessages } from '@/hooks/inbox_v2'
-import { Trash2, Paperclip, Clock } from 'lucide-react'
+import { Trash2, Paperclip, Clock, Move } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
 interface MessageListProps {
@@ -12,6 +13,8 @@ interface MessageListProps {
 
 export default function MessageList({ selectedFolderId, selectedMessageId, onMessageSelect }: MessageListProps) {
   const { messages, isLoading, refresh } = useMessages(selectedFolderId)
+  const [draggedMessage, setDraggedMessage] = useState<any>(null)
+  const [isDragging, setIsDragging] = useState(false)
 
   const handleDelete = async (messageId: string) => {
     if (!confirm('Are you sure you want to delete this message?')) return
@@ -29,6 +32,57 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
     } catch (error) {
       console.error('Error deleting message:', error)
     }
+  }
+
+  const handleDragStart = (e: React.DragEvent, message: any) => {
+    setDraggedMessage(message)
+    setIsDragging(true)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', message.id)
+  }
+
+  const handleDragEnd = () => {
+    setDraggedMessage(null)
+    setIsDragging(false)
+  }
+
+  const handleDrop = async (e: React.DragEvent, targetFolderId: string) => {
+    e.preventDefault()
+    
+    if (!draggedMessage || draggedMessage.id === targetFolderId) {
+      return
+    }
+
+    try {
+      const response = await fetch('/api/outlook/v2/messages/move', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messageId: draggedMessage.id,
+          destinationFolderId: targetFolderId
+        })
+      })
+
+      if (response.ok) {
+        // Refresh both source and target folders
+        refresh()
+        // You might want to refresh the target folder's message list as well
+      } else {
+        console.error('Failed to move message')
+      }
+    } catch (error) {
+      console.error('Error moving message:', error)
+    }
+
+    setDraggedMessage(null)
+    setIsDragging(false)
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
   }
 
   if (!selectedFolderId) {
@@ -62,27 +116,39 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
         <h3 className="text-sm font-semibold text-gray-900">
           {messages.length} message{messages.length !== 1 ? 's' : ''}
         </h3>
+        {isDragging && (
+          <p className="text-xs text-blue-600 mt-1">
+            Drag message to another folder to move it
+          </p>
+        )}
       </div>
       
       <div className="flex-1 overflow-y-auto">
         <div className="divide-y divide-gray-100">
           {messages.map((message) => {
             const isSelected = selectedMessageId === message.id
+            const isBeingDragged = draggedMessage?.id === message.id
             const receivedDate = new Date(message.receivedDateTime)
             
             return (
               <div
                 key={message.id}
-                className={`p-4 cursor-pointer transition-colors ${
+                draggable
+                onDragStart={(e) => handleDragStart(e, message)}
+                onDragEnd={handleDragEnd}
+                className={`p-4 cursor-pointer transition-all duration-200 ${
                   isSelected
                     ? 'bg-blue-50 border-r-2 border-blue-500'
+                    : isBeingDragged
+                    ? 'opacity-50 scale-95'
                     : 'hover:bg-gray-50'
-                }`}
+                } ${isDragging && !isBeingDragged ? 'cursor-grab' : ''}`}
                 onClick={() => onMessageSelect(message.id)}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
+                      <Move className="h-3 w-3 text-gray-400 flex-shrink-0" />
                       <h4 className="text-sm font-medium text-gray-900 truncate">
                         {message.subject || '(No subject)'}
                       </h4>

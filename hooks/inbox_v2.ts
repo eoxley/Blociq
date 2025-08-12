@@ -1,4 +1,5 @@
 import useSWR from 'swr'
+import { useState, useCallback } from 'react'
 
 // Default folders fallback when Graph API is unavailable
 const DEFAULT_FOLDERS = [
@@ -12,17 +13,62 @@ const DEFAULT_FOLDERS = [
 
 const fetcher = (url: string) => fetch(url).then(res => res.json())
 
+// Get manual folders from localStorage
+const getManualFolders = (): any[] => {
+  if (typeof window === 'undefined') return []
+  try {
+    const stored = localStorage.getItem('inbox-manual-folders')
+    return stored ? JSON.parse(stored) : []
+  } catch {
+    return []
+  }
+}
+
+// Save manual folders to localStorage
+const saveManualFolders = (folders: any[]): void => {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem('inbox-manual-folders', JSON.stringify(folders))
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 export function useFolders() {
+  const [manualFolders, setManualFolders] = useState(getManualFolders)
+  
   const { data, error, isLoading, mutate } = useSWR('/api/outlook/v2/folders', fetcher)
   
-  const folders = data?.ok && data?.items?.length > 0 ? data.items : DEFAULT_FOLDERS
-  const isFallback = !data?.ok || data?.items?.length === 0
+  // Combine Graph folders with manual folders
+  const graphFolders = data?.ok && data?.items?.length > 0 ? data.items : []
+  const allFolders = [...graphFolders, ...manualFolders]
+  
+  // Use all folders if available, otherwise fall back to defaults
+  const folders = allFolders.length > 0 ? allFolders : DEFAULT_FOLDERS
+  const isFallback = graphFolders.length === 0
+  
+  const addManualFolder = useCallback((folderName: string) => {
+    const newFolder = {
+      id: `manual-${Date.now()}`,
+      displayName: folderName,
+      wellKnownName: 'custom'
+    }
+    
+    const updatedManualFolders = [...manualFolders, newFolder]
+    setManualFolders(updatedManualFolders)
+    saveManualFolders(updatedManualFolders)
+  }, [manualFolders])
+  
+  const refresh = useCallback(() => {
+    mutate()
+  }, [mutate])
   
   return {
     folders,
     isFallback,
     isLoading,
-    refresh: mutate
+    refresh,
+    addManualFolder
   }
 }
 
