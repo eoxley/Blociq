@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, createContext, useContext } from 'react'
+import { useState, createContext, useContext, useEffect } from 'react'
 import { MessageSquare, X } from 'lucide-react'
 import FolderSidebar from '@/components/inbox_v2/FolderSidebar'
 import MessageList from '@/components/inbox_v2/MessageList'
@@ -41,6 +41,58 @@ export default function InboxV2() {
 
   // Get messages for the selected folder to find the selected message
   const { messages, refresh: refreshMessages } = useMessages(selectedFolderId)
+
+  // Global keyboard shortcuts for inbox
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Only handle shortcuts when not in input fields
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLDivElement && e.target.contentEditable === 'true') {
+        return
+      }
+
+      switch (e.key) {
+        case 'Delete':
+          if (selectedMessage) {
+            e.preventDefault()
+            handleDeleteMessage(selectedMessage.id)
+          }
+          break
+        case 'Escape':
+          if (replyModal.isOpen) {
+            e.preventDefault()
+            handleCloseReplyModal()
+          } else if (newEmailModalOpen) {
+            e.preventDefault()
+            setNewEmailModalOpen(false)
+          }
+          break
+      }
+    }
+
+    document.addEventListener('keydown', handleGlobalKeyDown)
+    return () => document.removeEventListener('keydown', handleGlobalKeyDown)
+  }, [selectedMessage, replyModal.isOpen, newEmailModalOpen])
+
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!confirm('Are you sure you want to delete this message?')) return
+    
+    try {
+      const response = await fetch(`/api/outlook/v2/messages/${messageId}`, {
+        method: 'DELETE'
+      })
+      
+      if (response.ok) {
+        // Clear selected message
+        setSelectedMessage(null)
+        // Refresh messages
+        refreshMessages()
+      } else {
+        console.error('Failed to delete message')
+      }
+    } catch (error) {
+      console.error('Error deleting message:', error)
+    }
+  }
 
   const moveMessage = async (messageId: string, destinationFolderId: string) => {
     try {
@@ -117,9 +169,13 @@ export default function InboxV2() {
     setReplyModal({ isOpen: false, type: 'reply' })
   }
 
-  const handleMessageSelect = (messageId: string) => {
-    const message = messages.find((msg: any) => msg.id === messageId)
-    setSelectedMessage(message || null)
+  const handleMessageSelect = (messageId: string | null) => {
+    if (messageId === null) {
+      setSelectedMessage(null)
+    } else {
+      const message = messages.find((msg: any) => msg.id === messageId)
+      setSelectedMessage(message || null)
+    }
   }
 
   return (
