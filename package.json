@@ -69,13 +69,14 @@
     "react-dom": "^19.0.0",
     "react-dropzone": "^14.3.8",
     "sonner": "^2.0.6",
+    "swr": "^2.3.6",
     "tailwind-merge": "^3.3.1",
     "tailwind-scrollbar": "^4.0.2",
+    "tesseract.js": "^5.0.5",
     "tsx": "^4.20.3",
     "uuid": "^11.1.0",
     "xlsx": "^0.18.5",
-    "zod": "^3.23.8",
-    "tesseract.js": "^5.0.5"
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
