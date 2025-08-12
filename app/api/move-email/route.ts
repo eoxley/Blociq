@@ -30,8 +30,8 @@ export async function POST(req: Request) {
 
     const res = await client.api(`/me/messages/${emailId}/move`).post({ destinationId });
 
-    const json = { success: true, message: res, routeId: "app/api/move-email/route.ts", build: process.env.VERCEL_GIT_COMMIT_SHA ?? null };
-    const response = NextResponse.json(json, { status: 200 });
+    const responseData = { success: true, message: res, routeId: "app/api/move-email/route.ts", build: process.env.VERCEL_GIT_COMMIT_SHA ?? null };
+    const response = NextResponse.json(responseData, { status: 200 });
     response.headers.set("x-blociq-route", "app/api/move-email/route.ts");
     return response;
   } catch (err: any) {
@@ -43,8 +43,8 @@ export async function POST(req: Request) {
       : code === 403
         ? 'Permission denied. Ensure Mail.ReadWrite is granted.'
         : err?.message || 'Failed to move email';
-    const json = { error: msg, routeId: "app/api/move-email/route.ts", build: process.env.VERCEL_GIT_COMMIT_SHA ?? null };
-    const response = NextResponse.json(json, { status: code });
+    const errorData = { error: msg, routeId: "app/api/move-email/route.ts", build: process.env.VERCEL_GIT_COMMIT_SHA ?? null };
+    const response = NextResponse.json(errorData, { status: code });
     response.headers.set("x-blociq-route", "app/api/move-email/route.ts");
     return response;
   }

@@ -258,7 +258,7 @@ export async function POST(req: NextRequest) {
       console.log('✅ Backup sync completed');
     }
 
-    const json = {
+    const responseData = {
       success: true,
       message: 'Emails fetched successfully from Outlook',
       data: {
@@ -273,20 +273,20 @@ export async function POST(req: NextRequest) {
       routeId: "app/api/fetch-outlook-emails/route.ts",
       build: process.env.VERCEL_GIT_COMMIT_SHA ?? null
     };
-    const res = NextResponse.json(json);
+    const res = NextResponse.json(responseData);
     res.headers.set("x-blociq-route", "app/api/fetch-outlook-emails/route.ts");
     return res;
 
   } catch (error) {
     console.error('❌ Unexpected error in fetch-outlook-emails:', error);
-    const json = { 
+    const errorData = { 
       error: 'Unexpected error',
       message: 'An unexpected error occurred while fetching emails',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined,
       routeId: "app/api/fetch-outlook-emails/route.ts",
       build: process.env.VERCEL_GIT_COMMIT_SHA ?? null
     };
-    const res = NextResponse.json(json, { status: 500 });
+    const res = NextResponse.json(errorData, { status: 500 });
     res.headers.set("x-blociq-route", "app/api/fetch-outlook-emails/route.ts");
     return res;
   }
