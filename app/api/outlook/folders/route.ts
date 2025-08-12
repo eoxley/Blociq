@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
-type GraphFolder = { id: string; displayName: string; childFolderCount?: number };
+type FolderItem = { id: string; displayName: string; wellKnownName?: string };
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,8 +16,8 @@ export async function GET(request: NextRequest) {
       }, { status: 200 });
     }
 
-    // Try to fetch folders from Microsoft Graph
-    const response = await fetch('https://graph.microsoft.com/v1.0/me/mailFolders', {
+    // Try to fetch folders from Microsoft Graph with optimized fields
+    const response = await fetch('https://graph.microsoft.com/v1.0/me/mailFolders?$select=id,displayName,wellKnownName', {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
@@ -29,11 +29,12 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json();
-    const folders: GraphFolder[] = data.value || [];
+    const folders: FolderItem[] = data.value || [];
 
     return NextResponse.json({ 
       ok: true, 
-      folders 
+      folders,
+      diagnostic: null
     });
   } catch (error) {
     console.error('Error fetching Outlook folders:', error);
