@@ -114,8 +114,11 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
     e.preventDefault()
     
     if (!draggedMessage || targetFolderId === selectedFolderId) {
+      console.log('Drop cancelled: same folder or no dragged message')
       return
     }
+
+    console.log(`Dropping message "${draggedMessage.subject}" to folder ${targetFolderId}`)
 
     try {
       // Set the moving state to show visual feedback
@@ -129,8 +132,15 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
         onMessageSelect(null)
       }
       
-      // Refresh to show the updated message list
-      refresh()
+      // Force refresh to show the updated message list
+      console.log('Forcing refresh after message move...')
+      await refresh()
+      
+      // Add a small delay and refresh again to ensure the message is removed
+      setTimeout(async () => {
+        console.log('Performing delayed refresh to ensure message removal...')
+        await refresh()
+      }, 500)
       
       console.log(`Message "${draggedMessage.subject}" moved to folder ${targetFolderId}`)
     } catch (error) {
@@ -190,9 +200,6 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
           <h3 className="text-sm font-semibold text-gray-900">
             {messages.length} message{messages.length !== 1 ? 's' : ''}
           </h3>
-          <div className="text-xs text-gray-500">
-            <span className="hidden sm:inline">Keyboard: ↑↓ Navigate, Delete, Enter Select</span>
-          </div>
         </div>
         {isDragging && (
           <p className="text-xs text-blue-600 mt-1">
@@ -204,9 +211,6 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
             Moving message... Please wait
           </p>
         )}
-        <div className="text-xs text-gray-500 mt-1">
-          <span className="font-medium">Tip:</span> Use arrow keys to navigate, Delete to remove, or drag to move emails between folders
-        </div>
       </div>
       
       <div className="flex-1 overflow-y-auto">

@@ -10,6 +10,7 @@ export async function POST(request: NextRequest) {
     const { messageId, destinationFolderId } = body
 
     if (!messageId || !destinationFolderId) {
+      console.log(`[${routeId}] Missing required fields:`, { messageId, destinationFolderId })
       return NextResponse.json({
         ok: false,
         error: 'messageId and destinationFolderId are required',
@@ -18,22 +19,29 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    console.log(`Moving message ${messageId} to folder ${destinationFolderId}`)
+    console.log(`[${routeId}] Moving message ${messageId} to folder ${destinationFolderId}`)
 
     // Move the message using Microsoft Graph
-    const response = await makeGraphRequest(`/me/messages/${messageId}/move`, {
+    const graphEndpoint = `/me/messages/${messageId}/move`
+    const requestBody = {
+      destinationId: destinationFolderId
+    }
+    
+    console.log(`[${routeId}] Making Graph request to: ${graphEndpoint}`, requestBody)
+    
+    const response = await makeGraphRequest(graphEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        destinationId: destinationFolderId
-      })
+      body: JSON.stringify(requestBody)
     })
+    
+    console.log(`[${routeId}] Graph API response status: ${response.status}`)
     
     if (!response.ok) {
       const errorText = await response.text()
-      console.error(`Graph API error (${response.status}):`, errorText)
+      console.error(`[${routeId}] Graph API error (${response.status}):`, errorText)
       
       return NextResponse.json({
         ok: false,
@@ -45,7 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await response.json()
-    console.log(`Successfully moved message ${messageId} to folder ${destinationFolderId}`)
+    console.log(`[${routeId}] Successfully moved message ${messageId} to folder ${destinationFolderId}`, result)
     
     return NextResponse.json({
       ok: true,
@@ -55,7 +63,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error moving message:', error)
+    console.error(`[${routeId}] Error moving message:`, error)
     
     return NextResponse.json({
       ok: false,

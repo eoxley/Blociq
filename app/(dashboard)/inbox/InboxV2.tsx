@@ -123,6 +123,8 @@ export default function InboxV2() {
 
   const moveMessage = async (messageId: string, destinationFolderId: string) => {
     try {
+      console.log(`Moving message ${messageId} to folder ${destinationFolderId}`)
+      
       const response = await fetch('/api/outlook/v2/messages/move', {
         method: 'POST',
         headers: {
@@ -155,20 +157,41 @@ export default function InboxV2() {
           // Clear success message after 3 seconds
           setTimeout(() => setMoveSuccess(null), 3000)
           
-          // Immediately refresh the current folder to remove the moved message
-          refreshMessages()
-          
-          // Invalidate all message caches to ensure consistency across folders
+          // Immediately invalidate all message caches to ensure consistency across folders
           // This will update both the source and destination folders
-          mutate((key: string) => key.startsWith('/api/outlook/v2/messages/list'))
+          console.log('Invalidating all message caches...')
           
-          // Also refresh the current folder again to ensure immediate update
-          setTimeout(() => {
-            refreshMessages()
-          }, 100)
+          // Invalidate all message list caches with more specific pattern matching
+          const cacheKeys = await mutate((key: string) => {
+            const isMessageList = key.includes('/api/outlook/v2/messages/list')
+            console.log('Checking cache key:', key, 'isMessageList:', isMessageList)
+            return isMessageList
+          })
           
-          // You could add a proper toast notification here
-          // For now, we'll use console.log
+          console.log('Cache invalidation result:', cacheKeys)
+          
+          // Also try to manually clear specific caches for better reliability
+          try {
+            // Clear the current folder's cache specifically
+            const currentFolderKey = `/api/outlook/v2/messages/list?folderId=${selectedFolderId}`
+            console.log('Manually clearing current folder cache:', currentFolderKey)
+            await mutate(currentFolderKey, undefined, false)
+            
+            // Clear the destination folder's cache if it's different
+            if (destinationFolderId !== selectedFolderId) {
+              const destFolderKey = `/api/outlook/v2/messages/list?folderId=${destinationFolderId}`
+              console.log('Manually clearing destination folder cache:', destFolderKey)
+              await mutate(destFolderKey, undefined, false)
+            }
+          } catch (cacheError) {
+            console.warn('Cache clearing warning:', cacheError)
+          }
+          
+          // Force refresh the current folder to show the updated message list
+          console.log('Refreshing current folder messages...')
+          await refreshMessages()
+          
+          console.log('Message move completed successfully')
         } else {
           console.error('Failed to move message:', data.error)
         }
