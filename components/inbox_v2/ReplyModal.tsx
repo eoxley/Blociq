@@ -78,7 +78,11 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
 
   // Load email thread for context
   const loadEmailThread = async () => {
-    if (!message?.conversationId) return
+    if (!message?.conversationId) {
+      // If no conversation ID, create a single-item thread with the current message
+      setEmailThread([message])
+      return
+    }
     
     setIsLoadingThread(true)
     try {
@@ -87,10 +91,18 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
         const data = await response.json()
         if (data.ok && data.items) {
           setEmailThread(data.items)
+        } else {
+          // Fallback to single message if thread loading fails
+          setEmailThread([message])
         }
+      } else {
+        // Fallback to single message if thread loading fails
+        setEmailThread([message])
       }
     } catch (error) {
       console.error('Error loading email thread:', error)
+      // Fallback to single message if thread loading fails
+      setEmailThread([message])
     } finally {
       setIsLoadingThread(false)
     }
@@ -118,8 +130,13 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
           // Ensure cursor is at the end of content
           const range = document.createRange()
           const selection = window.getSelection()
-          range.selectNodeContents(editorRef.current)
-          range.collapse(false)
+          if (editorRef.current.lastChild && editorRef.current.lastChild.nodeType === Node.ELEMENT_NODE) {
+            range.setStartAfter(editorRef.current.lastChild)
+            range.collapse(true)
+          } else {
+            range.selectNodeContents(editorRef.current)
+            range.collapse(false)
+          }
           selection?.removeAllRanges()
           selection?.addRange(range)
         }
@@ -161,30 +178,18 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
   }
 
   const handleGenerateAIReply = async () => {
-    if (!message || emailThread.length === 0) return
+    if (!message) return
     
     setIsGeneratingAI(true)
     setAiGenerationError(null)
     
     try {
-      // Prepare the email thread context for AI
-      const threadContext = emailThread.map(msg => ({
-        from: msg.from?.emailAddress?.address || msg.from?.emailAddress || 'Unknown',
-        subject: msg.subject || '(No subject)',
-        content: msg.body?.content || '',
-        receivedDateTime: msg.receivedDateTime,
-        isOriginalMessage: msg.id === message.id
-      }))
-      
       // Create a prompt for AI reply generation
-      const aiPrompt = `Generate a professional email reply based on this email thread. 
-      
-Original Email:
+      const aiPrompt = `Generate a professional email reply to this email:
+
 From: ${message.from?.emailAddress?.address || message.from?.emailAddress || 'Unknown'}
 Subject: ${message.subject || '(No subject)'}
 Content: ${message.body?.content || ''}
-
-Thread Context: ${JSON.stringify(threadContext, null, 2)}
 
 Please generate a professional, contextual reply that:
 1. Addresses the original sender appropriately
@@ -193,7 +198,7 @@ Please generate a professional, contextual reply that:
 4. Is concise but comprehensive
 5. Uses proper email etiquette
 
-Generate the reply in HTML format with appropriate paragraph tags and formatting.`
+Generate the reply in plain text format (no HTML tags).`
 
       const response = await fetch('/api/ask-ai', {
         method: 'POST',
@@ -202,35 +207,37 @@ Generate the reply in HTML format with appropriate paragraph tags and formatting
         },
         body: JSON.stringify({
           prompt: aiPrompt,
-          context: 'email_reply_generation',
-          threadData: threadContext
+          context: 'email_reply_generation'
         })
       })
       
       if (response.ok) {
         const data = await response.json()
         if (data.response) {
-          // Clean and format the AI response
-          let aiReply = data.response
+          // Clean the AI response and convert to HTML
+          let aiReply = data.response.trim()
           
-          // Ensure it's wrapped in proper HTML
-          if (!aiReply.includes('<p>') && !aiReply.includes('<div>')) {
-            aiReply = aiReply.split('\n').map(line => `<p>${line}</p>`).join('')
-          }
+          // Convert plain text to HTML paragraphs
+          const paragraphs = aiReply.split('\n').filter(line => line.trim())
+          const htmlReply = paragraphs.map(line => `<p>${line}</p>`).join('')
           
-          // Add a separator and the AI-generated reply
-          const currentContent = htmlBody === '<p><br></p>' ? '' : htmlBody
-          const newContent = currentContent + (currentContent ? '<br><br>' : '') + aiReply
-          setHtmlBody(newContent)
+          // Insert the AI reply at the beginning of the editor
+          setHtmlBody(htmlReply)
           
           // Focus the editor and position cursor at the end
           setTimeout(() => {
             if (editorRef.current) {
               editorRef.current.focus()
+              // Position cursor at the end
               const range = document.createRange()
               const selection = window.getSelection()
-              range.selectNodeContents(editorRef.current)
-              range.collapse(false)
+              if (editorRef.current.lastChild) {
+                range.setStartAfter(editorRef.current.lastChild)
+                range.collapse(true)
+              } else {
+                range.selectNodeContents(editorRef.current)
+                range.collapse(false)
+              }
               selection?.removeAllRanges()
               selection?.addRange(range)
             }
@@ -365,7 +372,7 @@ Generate the reply in HTML format with appropriate paragraph tags and formatting
           <div className="flex justify-center">
             <button
               onClick={handleGenerateAIReply}
-              disabled={isGeneratingAI || emailThread.length === 0}
+              disabled={isGeneratingAI}
               className="group relative inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-pink-500 via-purple-500 to-teal-500 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-pink-600 via-purple-600 to-teal-600 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -395,46 +402,94 @@ Generate the reply in HTML format with appropriate paragraph tags and formatting
             <div className="border-b border-gray-300 p-3 bg-gray-50 rounded-t-lg">
               <div className="flex gap-2">
                 <button
-                  onClick={() => document.execCommand('bold', false)}
+                  onClick={() => {
+                    document.execCommand('bold', false, null)
+                    editorRef.current?.focus()
+                  }}
                   className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors font-bold"
                   title="Bold"
                 >
                   B
                 </button>
                 <button
-                  onClick={() => document.execCommand('italic', false)}
+                  onClick={() => {
+                    document.execCommand('italic', false, null)
+                    editorRef.current?.focus()
+                  }}
                   className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors italic"
                   title="Italic"
                 >
                   I
                 </button>
                 <button
-                  onClick={() => document.execCommand('underline', false)}
+                  onClick={() => {
+                    document.execCommand('underline', false, null)
+                    editorRef.current?.focus()
+                  }}
                   className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors underline"
                   title="Underline"
                 >
                   U
                 </button>
                 <button
-                  onClick={() => document.execCommand('insertUnorderedList', false)}
+                  onClick={() => {
+                    document.execCommand('insertUnorderedList', false, null)
+                    editorRef.current?.focus()
+                  }}
                   className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
                   title="Bullet List"
                 >
                   •
                 </button>
                 <button
-                  onClick={() => document.execCommand('insertOrderedList', false)}
+                  onClick={() => {
+                    document.execCommand('insertOrderedList', false, null)
+                    editorRef.current?.focus()
+                  }}
                   className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
                   title="Numbered List"
                 >
                   1.
                 </button>
                 <button
-                  onClick={() => document.execCommand('insertHorizontalRule', false)}
+                  onClick={() => {
+                    document.execCommand('insertHorizontalRule', false, null)
+                    editorRef.current?.focus()
+                  }}
                   className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
                   title="Horizontal Line"
                 >
                   ─
+                </button>
+                <button
+                  onClick={() => {
+                    document.execCommand('justifyLeft', false, null)
+                    editorRef.current?.focus()
+                  }}
+                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                  title="Align Left"
+                >
+                  ⬅
+                </button>
+                <button
+                  onClick={() => {
+                    document.execCommand('justifyCenter', false, null)
+                    editorRef.current?.focus()
+                  }}
+                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                  title="Align Center"
+                >
+                  ↔
+                </button>
+                <button
+                  onClick={() => {
+                    document.execCommand('justifyRight', false, null)
+                    editorRef.current?.focus()
+                  }}
+                  className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                  title="Align Right"
+                >
+                  ➡
                 </button>
                 <div className="w-px h-6 bg-gray-300 mx-2"></div>
                 <button
@@ -464,7 +519,7 @@ Generate the reply in HTML format with appropriate paragraph tags and formatting
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
-                  document.execCommand('insertParagraph', false)
+                  document.execCommand('insertParagraph', false, null)
                 }
               }}
               onFocus={() => {
@@ -472,11 +527,20 @@ Generate the reply in HTML format with appropriate paragraph tags and formatting
                 if (editorRef.current) {
                   const range = document.createRange()
                   const selection = window.getSelection()
-                  range.selectNodeContents(editorRef.current)
-                  range.collapse(false)
+                  if (editorRef.current.lastChild && editorRef.current.lastChild.nodeType === Node.ELEMENT_NODE) {
+                    range.setStartAfter(editorRef.current.lastChild)
+                    range.collapse(true)
+                  } else {
+                    range.selectNodeContents(editorRef.current)
+                    range.collapse(false)
+                  }
                   selection?.removeAllRanges()
                   selection?.addRange(range)
                 }
+              }}
+              onClick={() => {
+                // Ensure editor is focused when clicked
+                editorRef.current?.focus()
               }}
             />
           </div>
@@ -526,17 +590,17 @@ Generate the reply in HTML format with appropriate paragraph tags and formatting
               </div>
               
               {showFullThread && (
-                <div className="max-h-64 overflow-y-auto p-4 space-y-3">
+                <div className="max-h-80 overflow-y-auto p-4 space-y-4">
                   {emailThread.map((threadMessage, index) => (
                     <div
                       key={threadMessage.id}
-                      className={`p-3 rounded-lg border ${
+                      className={`p-4 rounded-lg border ${
                         threadMessage.id === message?.id
                           ? 'bg-blue-50 border-blue-200'
                           : 'bg-white border-gray-200'
                       }`}
                     >
-                      <div className="flex items-center gap-2 mb-2 text-xs text-gray-600">
+                      <div className="flex items-center gap-2 mb-3 text-xs text-gray-600">
                         <span className="font-medium">
                           {threadMessage.from?.emailAddress?.address || threadMessage.from?.emailAddress || 'Unknown'}
                         </span>
@@ -544,17 +608,17 @@ Generate the reply in HTML format with appropriate paragraph tags and formatting
                         <span>{formatDistanceToNow(new Date(threadMessage.receivedDateTime), { addSuffix: true })}</span>
                         {threadMessage.id === message?.id && (
                           <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs">
-                            Original
+                            Original Message
                           </span>
                         )}
                       </div>
                       
                       <div className="text-sm text-gray-800">
-                        <div className="font-medium mb-1">{threadMessage.subject || '(No subject)'}</div>
+                        <div className="font-medium mb-2 text-gray-900">{threadMessage.subject || '(No subject)'}</div>
                         <div 
-                          className="text-gray-600 line-clamp-3 prose prose-sm max-w-none"
+                          className="text-gray-700 prose prose-sm max-w-none leading-relaxed"
                           dangerouslySetInnerHTML={{
-                            __html: threadMessage.body?.content?.substring(0, 300) || 'No content'
+                            __html: threadMessage.body?.content || 'No content'
                           }}
                         />
                       </div>
