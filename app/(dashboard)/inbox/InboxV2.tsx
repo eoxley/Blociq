@@ -36,6 +36,7 @@ export default function InboxV2() {
     type: 'reply' | 'replyAll'
   }>({ isOpen: false, type: 'reply' })
   const [newEmailModalOpen, setNewEmailModalOpen] = useState(false)
+  const [moveSuccess, setMoveSuccess] = useState<{ message: string; timestamp: number } | null>(null)
 
   // Get messages for the selected folder to find the selected message
   const { messages, refresh: refreshMessages } = useMessages(selectedFolderId)
@@ -65,7 +66,14 @@ export default function InboxV2() {
           // Show success message
           const message = messages.find((msg: any) => msg.id === messageId)
           const subject = message?.subject || 'Message'
-          console.log(`✅ Successfully moved "${subject}" to folder ${destinationFolderId}`)
+          const successMessage = `✅ Successfully moved "${subject}" to folder ${destinationFolderId}`
+          console.log(successMessage)
+          
+          // Set success state for UI feedback
+          setMoveSuccess({ message: successMessage, timestamp: Date.now() })
+          
+          // Clear success message after 3 seconds
+          setTimeout(() => setMoveSuccess(null), 3000)
           
           // Immediately refresh the current folder to remove the moved message
           refreshMessages()
@@ -74,7 +82,7 @@ export default function InboxV2() {
           // This will update both the source and destination folders
           setTimeout(() => {
             refreshMessages()
-          }, 500)
+          }, 100)
           
           // You could add a proper toast notification here
           // For now, we'll use console.log

@@ -18,9 +18,14 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    console.log(`Moving message ${messageId} to folder ${destinationFolderId}`)
+
     // Move the message using Microsoft Graph
     const response = await makeGraphRequest(`/me/messages/${messageId}/move`, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
         destinationId: destinationFolderId
       })
@@ -33,12 +38,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         ok: false,
         error: `Graph API error: ${response.status}`,
+        diagnostic: errorText,
         routeId,
         build
       })
     }
 
     const result = await response.json()
+    console.log(`Successfully moved message ${messageId} to folder ${destinationFolderId}`)
     
     return NextResponse.json({
       ok: true,
@@ -53,6 +60,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ok: false,
       error: 'Failed to move message',
+      diagnostic: error instanceof Error ? error.message : 'Unknown error',
       routeId,
       build
     })

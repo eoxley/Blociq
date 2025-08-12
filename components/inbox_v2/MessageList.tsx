@@ -17,6 +17,7 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
   const { moveMessage } = useInboxContext()
   const [draggedMessage, setDraggedMessage] = useState<any>(null)
   const [isDragging, setIsDragging] = useState(false)
+  const [movingMessageId, setMovingMessageId] = useState<string | null>(null)
 
   const handleDelete = async (messageId: string) => {
     if (!confirm('Are you sure you want to delete this message?')) return
@@ -56,6 +57,9 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
     }
 
     try {
+      // Set the moving state to show visual feedback
+      setMovingMessageId(draggedMessage.id)
+      
       // Call the moveMessage function from context
       await moveMessage(draggedMessage.id, targetFolderId)
       
@@ -67,6 +71,9 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
     } catch (error) {
       console.error('Error moving message:', error)
       // You could add a user-facing error message here
+    } finally {
+      // Clear the moving state
+      setMovingMessageId(null)
     }
 
     setDraggedMessage(null)
@@ -120,13 +127,19 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
             Drag message to another folder to move it
           </p>
         )}
+        {movingMessageId && (
+          <p className="text-xs text-green-600 mt-1">
+            Moving message... Please wait
+          </p>
+        )}
       </div>
       
       <div className="flex-1 overflow-y-auto">
         <div className="divide-y divide-gray-100">
-          {messages.map((message) => {
+          {messages.map((message: any) => {
             const isSelected = selectedMessageId === message.id
             const isBeingDragged = draggedMessage?.id === message.id
+            const isMoving = movingMessageId === message.id
             const receivedDate = new Date(message.receivedDateTime)
             
             return (
@@ -135,13 +148,15 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
                 draggable
                 onDragStart={(e) => handleDragStart(e, message)}
                 onDragEnd={handleDragEnd}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, selectedFolderId || '')} // Drop to self for now, will be handled by handleDrop
                 className={`p-4 cursor-pointer transition-all duration-200 ${
                   isSelected
                     ? 'bg-blue-50 border-r-2 border-blue-500'
                     : isBeingDragged
                     ? 'opacity-50 scale-95'
                     : 'hover:bg-gray-50'
-                } ${isDragging && !isBeingDragged ? 'cursor-grab' : ''}`}
+                } ${isDragging && !isBeingDragged ? 'cursor-grab' : ''} ${isMoving ? 'opacity-50 scale-95' : ''}`}
                 onClick={() => onMessageSelect(message.id)}
               >
                 <div className="flex items-start justify-between gap-3">

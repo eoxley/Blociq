@@ -220,7 +220,7 @@ export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
       {/* Modal Panel */}
       <div className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 w-auto md:w-[800px] lg:w-[900px] rounded-2xl bg-white shadow-2xl max-h-[90vh] flex flex-col z-[10000]">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white rounded-t-2xl">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white rounded-t-2xl flex-shrink-0">
           <div className="flex items-center gap-3">
             <MessageSquare className="h-5 w-5 text-blue-600" />
             <h2 className="text-xl font-semibold text-gray-900">New Email</h2>
@@ -233,8 +233,8 @@ export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
           </button>
         </div>
         
-        {/* Email Form */}
-        <div className="flex-1 overflow-hidden flex flex-col">
+        {/* Email Form - Scrollable Content */}
+        <div className="flex-1 overflow-y-auto flex flex-col min-h-0">
           {/* Recipients and Subject */}
           <div className="p-6 border-b border-gray-200 space-y-4 flex-shrink-0">
             {/* To */}
@@ -434,12 +434,12 @@ export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
             </div>
           </div>
           
-          {/* Editor */}
-          <div className="flex-1 overflow-hidden flex flex-col">
+          {/* Editor - Scrollable Content */}
+          <div className="flex-1 overflow-y-auto min-h-0">
             <div
               ref={editorRef}
               contentEditable
-              className="flex-1 p-6 focus:outline-none prose prose-sm max-w-none overflow-y-auto content-editor text-gray-900"
+              className="p-6 focus:outline-none prose prose-sm max-w-none text-gray-900 min-h-[250px]"
               dangerouslySetInnerHTML={{ __html: htmlBody }}
               onInput={(e) => setHtmlBody(e.currentTarget.innerHTML)}
               onKeyDown={(e) => {
@@ -466,13 +466,12 @@ export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
               onClick={() => {
                 editorRef.current?.focus()
               }}
-              style={{ minHeight: '250px' }}
             />
           </div>
         </div>
         
         {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-white rounded-b-2xl">
+        <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-white rounded-b-2xl flex-shrink-0">
           <div className="flex gap-3">
             <button
               onClick={handleGenerateWithBlocIQ}
