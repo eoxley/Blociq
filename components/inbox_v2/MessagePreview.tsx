@@ -104,11 +104,35 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
 
   const sanitizeHtml = (html: string) => {
     if (!html) return ''
-    return html
+    
+    // Remove potentially dangerous elements and attributes
+    let sanitized = html
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
       .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+      .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
+      .replace(/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, '')
       .replace(/javascript:/gi, '')
       .replace(/on\w+\s*=/gi, '')
+      .replace(/vbscript:/gi, '')
+      .replace(/data:/gi, '')
+    
+    // Clean up common email HTML issues
+    sanitized = sanitized
+      .replace(/<o:p[^>]*>/gi, '') // Remove Outlook paragraph tags
+      .replace(/<\/o:p>/gi, '')
+      .replace(/<w:[^>]*>/gi, '') // Remove Word tags
+      .replace(/<\/w:[^>]*>/gi, '')
+      .replace(/<m:[^>]*>/gi, '') // Remove Math tags
+      .replace(/<\/m:[^>]*>/gi, '')
+      .replace(/<v:[^>]*>/gi, '') // Remove Vector tags
+      .replace(/<\/v:[^>]*>/gi, '')
+    
+    // Ensure proper paragraph spacing
+    sanitized = sanitized
+      .replace(/<p[^>]*>/gi, '<p class="mb-3">')
+      .replace(/<br\s*\/?>/gi, '<br>')
+    
+    return sanitized
   }
 
   const formatEmailList = (recipients: any[]) => {
@@ -129,20 +153,27 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
     }
 
     if (message.body.contentType === 'HTML') {
+      const sanitizedHtml = sanitizeHtml(message.body.content)
       return (
         <div 
           className="prose prose-sm max-w-none text-gray-800 leading-relaxed"
           dangerouslySetInnerHTML={{ 
-            __html: sanitizeHtml(message.body.content) 
+            __html: sanitizedHtml
           }}
         />
       )
     } else {
-      // Plain text
+      // Plain text - convert line breaks to HTML
+      const formattedText = message.body.content
+        .replace(/\n/g, '<br>')
+        .replace(/\r\n/g, '<br>')
+        .replace(/\r/g, '<br>')
+      
       return (
-        <div className="whitespace-pre-wrap text-gray-800 leading-relaxed font-mono text-sm">
-          {message.body.content}
-        </div>
+        <div 
+          className="whitespace-pre-wrap text-gray-800 leading-relaxed font-mono text-sm"
+          dangerouslySetInnerHTML={{ __html: formattedText }}
+        />
       )
     }
   }
