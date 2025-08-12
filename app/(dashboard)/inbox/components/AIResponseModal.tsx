@@ -157,7 +157,8 @@ export default function AIResponseModal({
               onKeyPress={handleKeyPress}
               placeholder="e.g., 'Write a professional reply', 'Make it more urgent', 'Add a follow-up question', 'Make it more formal'..."
               rows={4}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors resize-none"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors resize-none overflow-y-auto"
+              style={{ minHeight: '120px' }}
             />
           </div>
 

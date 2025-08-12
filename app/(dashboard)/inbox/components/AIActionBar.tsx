@@ -356,7 +356,8 @@ export default function AIActionBar({
               value={replyDraft}
               onChange={(e) => setReplyDraft(e.target.value)}
               placeholder="Edit the AI-generated reply..."
-              className="min-h-[200px] resize-none border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+              className="min-h-[200px] resize-none border-gray-200 focus:border-blue-500 focus:ring-blue-500 overflow-y-auto"
+              style={{ maxHeight: '400px' }}
             />
             <div className="flex gap-3">
               <Button
