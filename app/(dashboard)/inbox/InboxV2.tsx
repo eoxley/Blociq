@@ -13,6 +13,7 @@ interface InboxContextType {
   selectedMessage: any | null
   setSelectedFolderId: (folderId: string) => void
   setSelectedMessage: (message: any) => void
+  moveMessage: (messageId: string, destinationFolderId: string) => Promise<void>
 }
 
 const InboxContext = createContext<InboxContextType | undefined>(undefined)
@@ -34,13 +35,51 @@ export default function InboxV2() {
   }>({ isOpen: false, type: 'reply' })
 
   // Get messages for the selected folder to find the selected message
-  const { messages } = useMessages(selectedFolderId)
+  const { messages, refresh } = useMessages(selectedFolderId)
+
+  const moveMessage = async (messageId: string, destinationFolderId: string) => {
+    try {
+      const response = await fetch('/api/outlook/v2/messages/move', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messageId,
+          destinationFolderId
+        })
+      })
+
+      if (response.ok) {
+        // Refresh the current folder's messages
+        refresh()
+        
+        // Clear selected message if it was moved
+        if (selectedMessage?.id === messageId) {
+          setSelectedMessage(null)
+        }
+
+        // Show success message
+        const message = messages.find((msg: any) => msg.id === messageId)
+        const subject = message?.subject || 'Message'
+        console.log(`✅ Successfully moved "${subject}" to new folder`)
+        
+        // You could add a proper toast notification here
+        // For now, we'll use console.log
+      } else {
+        console.error('Failed to move message')
+      }
+    } catch (error) {
+      console.error('Error moving message:', error)
+    }
+  }
 
   const contextValue: InboxContextType = {
     selectedFolderId,
     selectedMessage,
     setSelectedFolderId,
-    setSelectedMessage
+    setSelectedMessage,
+    moveMessage
   }
 
   const handleReply = (type: 'reply' | 'replyAll') => {
