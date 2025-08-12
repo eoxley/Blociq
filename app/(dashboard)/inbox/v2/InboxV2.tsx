@@ -257,6 +257,7 @@ export default function InboxV2() {
             else fetchFolders(); // if refresh clicked
           }}
           onDropEmail={handleDropEmailOnFolder}
+          emails={emails}
         />
 
         {/* Email List */}
