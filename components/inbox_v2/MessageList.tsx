@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useMessages } from '@/hooks/inbox_v2'
 import { useInboxContext } from '@/app/(dashboard)/inbox/InboxV2'
-import { Trash2, Paperclip, Clock, Move } from 'lucide-react'
+import { Move, Paperclip, Clock, Trash2 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
 interface MessageListProps {
@@ -18,6 +18,63 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
   const [draggedMessage, setDraggedMessage] = useState<any>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [movingMessageId, setMovingMessageId] = useState<string | null>(null)
+  const [focusedMessageIndex, setFocusedMessageIndex] = useState<number>(-1)
+
+  // Keyboard navigation and shortcuts
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (!messages.length) return
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault()
+        setFocusedMessageIndex(prev => {
+          const newIndex = Math.min(prev + 1, messages.length - 1)
+          if (newIndex >= 0) {
+            onMessageSelect(messages[newIndex].id)
+          }
+          return newIndex
+        })
+        break
+      
+      case 'ArrowUp':
+        e.preventDefault()
+        setFocusedMessageIndex(prev => {
+          const newIndex = Math.max(prev - 1, 0)
+          if (newIndex < messages.length) {
+            onMessageSelect(messages[newIndex].id)
+          }
+          return newIndex
+        })
+        break
+      
+      case 'Delete':
+        e.preventDefault()
+        if (focusedMessageIndex >= 0 && focusedMessageIndex < messages.length) {
+          const message = messages[focusedMessageIndex]
+          handleDelete(message.id)
+        }
+        break
+      
+      case 'Enter':
+        e.preventDefault()
+        if (focusedMessageIndex >= 0 && focusedMessageIndex < messages.length) {
+          const message = messages[focusedMessageIndex]
+          onMessageSelect(message.id)
+        }
+        break
+    }
+  }, [messages, focusedMessageIndex, onMessageSelect])
+
+  // Set up keyboard event listener
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [handleKeyDown])
+
+  // Reset focused index when messages change
+  useEffect(() => {
+    setFocusedMessageIndex(-1)
+  }, [messages])
 
   const handleDelete = async (messageId: string) => {
     if (!confirm('Are you sure you want to delete this message?')) return
@@ -28,6 +85,10 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
       })
       
       if (response.ok) {
+        // Clear selection if the deleted message was selected
+        if (selectedMessageId === messageId) {
+          onMessageSelect('')
+        }
         refresh()
       } else {
         console.error('Failed to delete message')
@@ -63,8 +124,12 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
       // Call the moveMessage function from context
       await moveMessage(draggedMessage.id, targetFolderId)
       
-      // The moveMessage function will handle refreshing, but we also refresh here
-      // to ensure immediate UI update
+      // Clear selection if the moved message was selected
+      if (selectedMessageId === draggedMessage.id) {
+        onMessageSelect('')
+      }
+      
+      // Refresh to show the updated message list
       refresh()
       
       console.log(`Message "${draggedMessage.subject}" moved to folder ${targetFolderId}`)
@@ -136,10 +201,11 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
       
       <div className="flex-1 overflow-y-auto">
         <div className="divide-y divide-gray-100">
-          {messages.map((message: any) => {
+          {messages.map((message: any, index: number) => {
             const isSelected = selectedMessageId === message.id
             const isBeingDragged = draggedMessage?.id === message.id
             const isMoving = movingMessageId === message.id
+            const isFocused = focusedMessageIndex === index
             const receivedDate = new Date(message.receivedDateTime)
             
             return (
@@ -149,15 +215,24 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
                 onDragStart={(e) => handleDragStart(e, message)}
                 onDragEnd={handleDragEnd}
                 onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, selectedFolderId || '')} // Drop to self for now, will be handled by handleDrop
+                onDrop={(e) => handleDrop(e, selectedFolderId || '')}
                 className={`p-4 cursor-pointer transition-all duration-200 ${
                   isSelected
                     ? 'bg-blue-50 border-r-2 border-blue-500'
+                    : isFocused
+                    ? 'bg-blue-25 border-r-2 border-blue-300'
                     : isBeingDragged
                     ? 'opacity-50 scale-95'
                     : 'hover:bg-gray-50'
                 } ${isDragging && !isBeingDragged ? 'cursor-grab' : ''} ${isMoving ? 'opacity-50 scale-95' : ''}`}
-                onClick={() => onMessageSelect(message.id)}
+                onClick={() => {
+                  onMessageSelect(message.id)
+                  setFocusedMessageIndex(index)
+                }}
+                onFocus={() => setFocusedMessageIndex(index)}
+                tabIndex={0}
+                role="button"
+                aria-label={`Email: ${message.subject || 'No subject'} from ${message.from?.emailAddress?.address || 'Unknown sender'}`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
