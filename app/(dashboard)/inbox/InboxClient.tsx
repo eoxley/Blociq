@@ -457,6 +457,7 @@ export default function InboxClient() {
             onSync={manualSync}
             isSyncing={syncing}
             lastSync={inboxInfo?.lastSync || null}
+            emails={emails}
           />
         </div>
 
