@@ -17,8 +17,6 @@ import { MAX_CHARS_PER_DOC, MAX_TOTAL_DOC_CHARS, truncate, isSummariseLike, slug
 
 export const runtime = "nodejs";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 export async function POST(req: NextRequest) {
   try {
     const supabase = createRouteHandlerClient({ cookies });
@@ -40,6 +38,9 @@ export async function POST(req: NextRequest) {
     let tone = 'Professional';
     let isPublic = false;
     let uploadedMeta: any = null;
+
+    // Initialize OpenAI client
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
     if (contentType.includes('multipart/form-data')) {
       // Handle file upload
