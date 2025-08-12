@@ -198,20 +198,22 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
           <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
             {message.subject || '(No subject)'}
           </h3>
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <button
               onClick={onReply}
-              className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-              title="Reply"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-sm hover:shadow-md font-medium text-sm transform hover:scale-105 active:scale-95"
+              title="Reply to this message"
             >
               <Reply className="h-4 w-4" />
+              Reply
             </button>
             <button
               onClick={onReplyAll}
-              className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-              title="Reply All"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow-md font-medium text-sm transform hover:scale-105 active:scale-95"
+              title="Reply to all recipients"
             >
               <ReplyAll className="h-4 w-4" />
+              Reply All
             </button>
           </div>
         </div>

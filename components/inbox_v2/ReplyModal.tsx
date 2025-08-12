@@ -274,11 +274,6 @@ Generate the reply in plain text format (no HTML tags).`
     }
   }
 
-  const handleGenerateWithBlocIQ = () => {
-    setShowBlocIQNote(true)
-    setTimeout(() => setShowBlocIQNote(false), 3000)
-  }
-
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || [])
     setAttachments(prev => [...prev, ...files])
@@ -768,23 +763,16 @@ Generate the reply in plain text format (no HTML tags).`
             </div>
           )}
           
-          {/* BlocIQ Note */}
-          {showBlocIQNote && (
-            <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl text-sm text-blue-800 shadow-sm">
-              <Brain className="h-5 w-5 inline mr-2 text-blue-600" />
-              Ask BlocIQ integration coming soon! This will allow AI-powered email drafting.
-            </div>
-          )}
         </div>
         
         {/* Footer */}
         <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gradient-to-r from-gray-50 to-blue-50 rounded-b-3xl">
           <button
-            onClick={handleGenerateWithBlocIQ}
+            onClick={handleGenerateAIReply}
             className="flex items-center gap-3 px-6 py-3 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-200 font-medium shadow-sm hover:shadow-md"
           >
             <Brain className="h-5 w-5" />
-            Generate with Ask BlocIQ
+            {isGeneratingAI ? 'Generating AI Reply...' : 'Generate with Ask BlocIQ'}
           </button>
           
           <div className="flex gap-4">
