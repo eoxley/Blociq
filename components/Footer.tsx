@@ -94,6 +94,10 @@ export default function Footer() {
             AI-Powered Property Management Platform
           </p>
         </div>
+        
+        <div className="mt-2 border-t pt-2 text-center text-xs text-muted-foreground">
+          BlocIQ Ltd — Company No. 16533839 — Registered in England and Wales — Registered office: 3 Cliveden Court, The Broadway, Lamberhurst TN3 8DA
+        </div>
       </div>
     </footer>
   )
