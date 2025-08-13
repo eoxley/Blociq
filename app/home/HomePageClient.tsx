@@ -19,8 +19,7 @@ import { toast } from 'sonner'
 import { checkOutlookConnection, fetchOutlookEvents, getOutlookAuthUrl } from '@/lib/outlookUtils'
 import { getTimeBasedGreeting } from '@/utils/greeting'
 import CommunicationModal from '@/components/CommunicationModal'
-import { UploadDropzone } from '@/components/ask/UploadDropzone'
-import { AskResultCard } from '@/components/ask/AskResultCard'
+
 
 type PropertyEvent = {
   building: string
@@ -110,7 +109,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const [uploadedFiles, setUploadedFiles] = useState<Array<{file: File, id: string, name: string, size: number, type: string}>>([])
   const [isDragOver, setIsDragOver] = useState(false)
   const [showCommunicationModal, setShowCommunicationModal] = useState(false)
-  const [uploadResult, setUploadResult] = useState<any>(null)
+
   const [communicationModalData, setCommunicationModalData] = useState<{
     aiContent: string
     templateType: 'letter' | 'email' | 'notice'
@@ -459,35 +458,85 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     try {
       console.log('🤖 Sending request to /api/ask-ai:', { prompt, contextType: 'general' })
       
-      // Create FormData if files are uploaded
-      let requestBody: FormData | string
-      let headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      }
-
+      // Handle file uploads separately from text-only requests
       if (uploadedFiles.length > 0) {
-        const formData = new FormData()
-        formData.append('prompt', prompt.trim())
-        formData.append('contextType', 'general')
+        // Process multiple files sequentially
+        let allSummaries: string[] = []
+        let allSuggestions: string[] = []
         
-        uploadedFiles.forEach((uploadedFile) => {
-          formData.append(`file`, uploadedFile.file)
-          formData.append(`fileName`, uploadedFile.name)
-        })
+        for (const uploadedFile of uploadedFiles) {
+          const formData = new FormData()
+          formData.append('file', uploadedFile.file)
+          
+          const uploadResponse = await fetch('/api/ask-ai/upload', {
+            method: 'POST',
+            body: formData,
+          })
+
+          if (!uploadResponse.ok) {
+            const errorText = await uploadResponse.text()
+            console.error('❌ Upload API Error for', uploadedFile.name, ':', errorText)
+            throw new Error(`Upload failed for ${uploadedFile.name}: ${errorText}`)
+          }
+
+          const uploadData = await uploadResponse.json()
+          
+          if (!uploadData.success) {
+            throw new Error(uploadData.error || `Upload failed for ${uploadedFile.name}`)
+          }
+
+          if (uploadData.summary) {
+            allSummaries.push(`**${uploadedFile.name}:**\n${uploadData.summary}`)
+          }
+          
+          if (uploadData.suggestedActions) {
+            allSuggestions.push(...uploadData.suggestedActions)
+          }
+        }
+
+        // Combine all summaries and suggestions
+        const combinedSummary = allSummaries.join('\n\n')
+        const uniqueSuggestions = [...new Set(allSuggestions)] // Remove duplicates
+
+        // Add AI response to chat
+        const aiMessage = { 
+          sender: 'ai' as const, 
+          text: combinedSummary || 'All documents processed successfully', 
+          timestamp: new Date() 
+        }
+        setMessages(prev => [...prev, aiMessage])
+
+        // Add suggested actions if available
+        if (uniqueSuggestions.length > 0) {
+          const actionsMessage = { 
+            sender: 'ai' as const, 
+            text: `**Suggested Actions:**\n${uniqueSuggestions.join('\n')}`, 
+            timestamp: new Date() 
+          }
+          setMessages(prev => [...prev, actionsMessage])
+        }
+
+        // Show chat interface
+        setShowChat(true)
         
-        requestBody = formData
-        delete headers['Content-Type']
-      } else {
-        requestBody = JSON.stringify({ 
-          prompt: prompt,
-          contextType: 'general'
-        })
+        // Clear input and files after submission
+        setAskInput('')
+        setUploadedFiles([])
+        return
       }
 
-      // Call the actual AI API
+      // For text-only requests, use the main AI endpoint
+      const requestBody = JSON.stringify({ 
+        prompt: prompt,
+        contextType: 'general'
+      })
+
+      // Call the main AI API
       const response = await fetch('/api/ask-ai', {
         method: 'POST',
-        headers,
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: requestBody,
       })
 
@@ -1179,26 +1228,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           </div>
         </div>
 
-        {/* Document Upload Section */}
-        {!showChat && (
-          <div className="space-y-6">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Document Analysis</h2>
-              <p className="text-gray-600">Upload documents to get AI-powered summaries and suggested actions</p>
-            </div>
-            
-            <div className="max-w-2xl mx-auto">
-              <UploadDropzone 
-                onResult={setUploadResult} 
-                defaultBuildingId={null}
-              />
-              
-              {uploadResult && (
-                <AskResultCard data={uploadResult} />
-              )}
-            </div>
-          </div>
-        )}
+
 
         {/* Today's Tasks Section */}
         <div className="space-y-6">
