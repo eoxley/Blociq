@@ -1,5 +1,26 @@
 import { redirect } from 'next/navigation';
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
+import AIAssistantClient from './AIAssistantClient';
 
-export default function AIAssistantRedirect() {
-  redirect('/home');
+export default async function AIAssistantPage() {
+  const cookieStore = cookies();
+  const supabase = createServerComponentClient({ cookies: () => cookieStore });
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) redirect('/login');
+
+  // Get user profile data
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name, email')
+    .eq('id', user.id)
+    .single();
+
+  const userData = {
+    name: profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Property Manager',
+    email: user.email || ''
+  };
+
+  return <AIAssistantClient userData={userData} />;
 } 

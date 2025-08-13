@@ -19,6 +19,8 @@ import { toast } from 'sonner'
 import { checkOutlookConnection, fetchOutlookEvents, getOutlookAuthUrl } from '@/lib/outlookUtils'
 import { getTimeBasedGreeting } from '@/utils/greeting'
 import CommunicationModal from '@/components/CommunicationModal'
+import { UploadDropzone } from '@/components/ask/UploadDropzone'
+import { AskResultCard } from '@/components/ask/AskResultCard'
 
 type PropertyEvent = {
   building: string
@@ -108,6 +110,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const [uploadedFiles, setUploadedFiles] = useState<Array<{file: File, id: string, name: string, size: number, type: string}>>([])
   const [isDragOver, setIsDragOver] = useState(false)
   const [showCommunicationModal, setShowCommunicationModal] = useState(false)
+  const [uploadResult, setUploadResult] = useState<any>(null)
   const [communicationModalData, setCommunicationModalData] = useState<{
     aiContent: string
     templateType: 'letter' | 'email' | 'notice'
@@ -1175,6 +1178,27 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             )}
           </div>
         </div>
+
+        {/* Document Upload Section */}
+        {!showChat && (
+          <div className="space-y-6">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Document Analysis</h2>
+              <p className="text-gray-600">Upload documents to get AI-powered summaries and suggested actions</p>
+            </div>
+            
+            <div className="max-w-2xl mx-auto">
+              <UploadDropzone 
+                onResult={setUploadResult} 
+                defaultBuildingId={null}
+              />
+              
+              {uploadResult && (
+                <AskResultCard data={uploadResult} />
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Today's Tasks Section */}
         <div className="space-y-6">
