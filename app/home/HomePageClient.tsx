@@ -3,7 +3,7 @@
 // Home page client component - Major works dashboard removed for cleaner interface
 import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2, ExternalLink, RefreshCw, MessageCircle, Sparkles, Upload, FileText, Send, Bot, ArrowRight, HelpCircle, Brain, X as XIcon, ChevronDown, ChevronUp } from 'lucide-react'
+import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2, ExternalLink, RefreshCw, MessageCircle, Sparkles, Upload, FileText, Send, Bot, ArrowRight, HelpCircle, Brain, X as XIcon, ChevronDown, ChevronUp, Minimize2, Move, CornerDownRight } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 
 
@@ -106,6 +106,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [messages, setMessages] = useState<Array<{sender: 'user' | 'ai', text: string, timestamp: Date}>>([])
   const [showChat, setShowChat] = useState(false)
+  const [chatSize, setChatSize] = useState({ width: 600, height: 500 })
+  const [chatPosition, setChatPosition] = useState({ x: 0, y: 0 })
+  const [isDragging, setIsDragging] = useState(false)
+  const [isResizing, setIsResizing] = useState(false)
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 })
   const [uploadedFiles, setUploadedFiles] = useState<Array<{file: File, id: string, name: string, size: number, type: string}>>([])
   const [isDragOver, setIsDragOver] = useState(false)
   const [showCommunicationModal, setShowCommunicationModal] = useState(false)
@@ -442,6 +448,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
   // Handle Ask BlocIQ submission
   const handleAskSubmit = async (prompt: string) => {
+    // Center the chat window when it first opens
+    if (!showChat) {
+      const centerX = (window.innerWidth - chatSize.width) / 2
+      const centerY = (window.innerHeight - chatSize.height) / 2
+      setChatPosition({ x: centerX, y: centerY })
+    }
     console.log('🚀 NEW handleAskSubmit called with prompt:', prompt)
     
     if (!prompt.trim() && uploadedFiles.length === 0) {
@@ -831,6 +843,75 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     }
   }
 
+  // Drag and resize handlers for chat interface
+  const handleMouseDown = (e: React.MouseEvent, type: 'drag' | 'resize') => {
+    e.preventDefault()
+    if (type === 'drag') {
+      setIsDragging(true)
+      setDragStart({ x: e.clientX - chatPosition.x, y: e.clientY - chatPosition.y })
+    } else if (type === 'resize') {
+      setIsResizing(true)
+      setResizeStart({ 
+        x: e.clientX, 
+        y: e.clientY, 
+        width: chatSize.width, 
+        height: chatSize.height 
+      })
+    }
+  }
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (isDragging) {
+      const newX = e.clientX - dragStart.x
+      const newY = e.clientY - dragStart.y
+      
+      // Constrain to viewport bounds
+      const maxX = window.innerWidth - chatSize.width
+      const maxY = window.innerHeight - chatSize.height
+      
+      setChatPosition({
+        x: Math.max(0, Math.min(maxX, newX)),
+        y: Math.max(0, Math.min(maxY, newY))
+      })
+    } else if (isResizing) {
+      const deltaX = e.clientX - resizeStart.x
+      const deltaY = e.clientY - resizeStart.y
+      
+      const newWidth = Math.max(400, Math.min(800, resizeStart.width + deltaX))
+      const newHeight = Math.max(400, Math.min(600, resizeStart.height + deltaY))
+      
+      // Adjust position if resizing would push window out of bounds
+      let adjustedX = chatPosition.x
+      let adjustedY = chatPosition.y
+      
+      if (chatPosition.x + newWidth > window.innerWidth) {
+        adjustedX = window.innerWidth - newWidth
+      }
+      if (chatPosition.y + newHeight > window.innerHeight) {
+        adjustedY = window.innerHeight - newHeight
+      }
+      
+      setChatSize({ width: newWidth, height: newHeight })
+      setChatPosition({ x: adjustedX, y: adjustedY })
+    }
+  }
+
+  const handleMouseUp = () => {
+    setIsDragging(false)
+    setIsResizing(false)
+  }
+
+  useEffect(() => {
+    if (isDragging || isResizing) {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove)
+        document.removeEventListener('mouseup', handleMouseUp)
+      }
+    }
+  }, [isDragging, isResizing, dragStart, resizeStart])
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Enhanced Hero Banner - BlocIQ Landing Page Style */}
@@ -1002,9 +1083,27 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
             {/* Chat Interface */}
             {showChat && messages.length > 0 && (
-              <div className="fixed inset-0 bg-white z-50 flex flex-col">
-                {/* Chat Header */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white shadow-sm">
+              <div 
+                className="fixed bg-white z-50 flex flex-col rounded-lg shadow-2xl border border-gray-200"
+                style={{
+                  width: `${chatSize.width}px`,
+                  height: `${chatSize.height}px`,
+                  left: `${chatPosition.x}px`,
+                  top: `${chatPosition.y}px`
+                }}
+              >
+                {/* Chat Header - Draggable */}
+                <div 
+                  className="flex items-center justify-between p-4 border-b border-gray-200 bg-white shadow-sm rounded-t-lg cursor-move hover:bg-gray-50 transition-colors"
+                  onMouseDown={(e) => handleMouseDown(e, 'drag')}
+                  onDoubleClick={() => {
+                    const centerX = (window.innerWidth - 600) / 2
+                    const centerY = (window.innerHeight - 500) / 2
+                    setChatPosition({ x: centerX, y: centerY })
+                    setChatSize({ width: 600, height: 500 })
+                  }}
+                  title="Drag to move chat window, double-click to reset size and position"
+                >
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full flex items-center justify-center">
                       <Brain className="h-5 w-5 text-white" />
@@ -1014,13 +1113,29 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                       <p className="text-sm text-gray-500">{messages.length} message{messages.length !== 1 ? 's' : ''}</p>
                     </div>
                   </div>
-                  <button
-                    onClick={() => setShowChat(false)}
-                    className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-lg"
-                    aria-label="Hide Chat"
-                  >
-                    <X className="h-6 w-6" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {/* Minimize button */}
+                    <button
+                      onClick={() => setShowChat(false)}
+                      className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-lg"
+                      aria-label="Minimize Chat"
+                    >
+                      <Minimize2 className="h-4 w-4" />
+                    </button>
+                    {/* Close button */}
+                    <button
+                      onClick={() => {
+                        setShowChat(false)
+                        setMessages([])
+                        setAskInput('')
+                        setUploadedFiles([])
+                      }}
+                      className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-lg"
+                      aria-label="Close Chat"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
                 
                 {/* Scrollable Messages Area */}
@@ -1193,6 +1308,15 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                       Clear Chat
                     </button>
                   </div>
+                </div>
+                
+                {/* Resize Handle */}
+                <div 
+                  className="absolute bottom-0 right-0 w-6 h-6 cursor-se-resize flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors border-l border-t border-gray-200 bg-white rounded-tl hover:bg-gray-50"
+                  onMouseDown={(e) => handleMouseDown(e, 'resize')}
+                  title="Resize chat window"
+                >
+                  <CornerDownRight className="h-4 w-4" />
                 </div>
               </div>
             )}
