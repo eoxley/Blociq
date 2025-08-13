@@ -253,9 +253,16 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
       // Transform property events (handle missing data gracefully)
       const propertyEvents: PropertyEvent[] = (propertyEventsResponse.data || []).map(event => {
+        // Ensure proper timezone handling for property events
         const normalizedTimes = normalizeEventTimes({
-          start: { dateTime: event.date, timeZone: 'Europe/London' },
-          end: { dateTime: event.date, timeZone: 'Europe/London' }
+          start: { 
+            dateTime: event.date, 
+            timeZone: 'Europe/London' 
+          },
+          end: { 
+            dateTime: event.date, 
+            timeZone: 'Europe/London' 
+          }
         })
         
         return {
@@ -269,16 +276,23 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           organiser_name: event.organiser_name,
           startUtc: normalizedTimes.startUtc || undefined,
           endUtc: normalizedTimes.endUtc || undefined,
-          timeZoneIana: normalizedTimes.timeZoneIana || undefined,
+          timeZoneIana: normalizedTimes.timeZoneIana || 'Europe/London',
           isAllDay: normalizedTimes.isAllDay || false
         }
       })
 
       // Transform manual events (handle missing data gracefully)
       const manualEvents: PropertyEvent[] = (manualEventsResponse.data || []).map(event => {
+        // Ensure proper timezone handling for manual events
         const normalizedTimes = normalizeEventTimes({
-          start: { dateTime: event.start_time, timeZone: 'Europe/London' },
-          end: { dateTime: event.end_time || event.start_time, timeZone: 'Europe/London' }
+          start: { 
+            dateTime: event.start_time, 
+            timeZone: 'Europe/London' 
+          },
+          end: { 
+            dateTime: event.end_time || event.start_time, 
+            timeZone: 'Europe/London' 
+          }
         })
         
         return {
@@ -292,7 +306,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           organiser_name: event.organiser_name,
           startUtc: normalizedTimes.startUtc || undefined,
           endUtc: normalizedTimes.endUtc || undefined,
-          timeZoneIana: normalizedTimes.timeZoneIana || undefined,
+          timeZoneIana: normalizedTimes.timeZoneIana || 'Europe/London',
           isAllDay: normalizedTimes.isAllDay || false
         }
       })
@@ -302,6 +316,16 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         manualEvents: manualEventsResponse.data?.length || 0,
         manualEventsData: manualEventsResponse.data
       })
+
+      // Debug timezone conversion
+      if (propertyEvents.length > 0) {
+        console.log('🕒 Property event timezone debug:', {
+          original: propertyEventsResponse.data?.[0]?.date,
+          normalized: propertyEvents[0],
+          startUtc: propertyEvents[0]?.startUtc,
+          timeZoneIana: propertyEvents[0]?.timeZoneIana
+        })
+      }
 
       // Combine and sort all events
       const allEvents = [...propertyEvents, ...manualEvents].sort((a, b) => 
@@ -471,10 +495,13 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
     if (isToday) return 'Today'
     if (isTomorrow) return 'Tomorrow'
+    
+    // Ensure UK timezone for consistent display
     return date.toLocaleDateString('en-GB', { 
       weekday: 'short', 
       month: 'short', 
-      day: 'numeric' 
+      day: 'numeric',
+      timeZone: 'Europe/London'
     })
   }
 
@@ -1680,13 +1707,20 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                           } else if (event.startUtc) {
                             // Always use UK time for display
                             timeDisplay = formatInZone(event.startUtc, 'Europe/London', 'HH:mm')
+                          } else if (event.date) {
+                            // Fallback: parse the date and ensure UK timezone
+                            try {
+                              const eventDate = new Date(event.date)
+                              timeDisplay = eventDate.toLocaleTimeString('en-GB', { 
+                                hour: '2-digit', 
+                                minute: '2-digit',
+                                timeZone: 'Europe/London'
+                              })
+                            } catch (e) {
+                              timeDisplay = 'Time unavailable'
+                            }
                           } else {
-                            // Fallback to old method but ensure UK timezone
-                            timeDisplay = eventDate.toLocaleTimeString('en-GB', { 
-                              hour: '2-digit', 
-                              minute: '2-digit',
-                              timeZone: 'Europe/London'
-                            })
+                            timeDisplay = 'Time unavailable'
                           }
 
                           return (
