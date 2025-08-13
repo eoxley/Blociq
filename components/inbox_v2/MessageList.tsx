@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useMessages } from '@/hooks/inbox_v2'
-import { useInboxContext } from '@/app/(dashboard)/inbox/InboxV2'
-import { Move, Paperclip, Clock, Trash2 } from 'lucide-react'
+import { Paperclip, Clock, Trash2 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
+import { DraggableEmailRow } from './DraggableEmailRow'
 
 interface MessageListProps {
   selectedFolderId: string | null
@@ -14,10 +14,6 @@ interface MessageListProps {
 
 export default function MessageList({ selectedFolderId, selectedMessageId, onMessageSelect }: MessageListProps) {
   const { messages, isLoading, refresh } = useMessages(selectedFolderId)
-  const { moveMessage } = useInboxContext()
-  const [draggedMessage, setDraggedMessage] = useState<any>(null)
-  const [isDragging, setIsDragging] = useState(false)
-  const [movingMessageId, setMovingMessageId] = useState<string | null>(null)
   const [focusedMessageIndex, setFocusedMessageIndex] = useState<number>(-1)
 
   // Keyboard navigation and shortcuts
@@ -106,67 +102,7 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
     }
   }
 
-  const handleDragStart = (e: React.DragEvent, message: any) => {
-    setDraggedMessage(message)
-    setIsDragging(true)
-    e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.setData('text/plain', message.id)
-  }
 
-  const handleDragEnd = () => {
-    setDraggedMessage(null)
-    setIsDragging(false)
-  }
-
-  const handleDrop = async (e: React.DragEvent, targetFolderId: string) => {
-    e.preventDefault()
-    
-    if (!draggedMessage || targetFolderId === selectedFolderId) {
-      console.log('Drop cancelled: same folder or no dragged message')
-      return
-    }
-
-    console.log(`Dropping message "${draggedMessage.subject}" to folder ${targetFolderId}`)
-
-    try {
-      // Set the moving state to show visual feedback
-      setMovingMessageId(draggedMessage.id)
-      
-      // Call the moveMessage function from context
-      await moveMessage(draggedMessage.id, targetFolderId)
-      
-      // Clear selection if the moved message was selected
-      if (selectedMessageId === draggedMessage.id) {
-        onMessageSelect(null)
-      }
-      
-      // Force refresh to show the updated message list
-      console.log('Forcing refresh after message move...')
-      await refresh()
-      
-      // Add a small delay and refresh again to ensure the message is removed
-      setTimeout(async () => {
-        console.log('Performing delayed refresh to ensure message removal...')
-        await refresh()
-      }, 500)
-      
-      console.log(`Message "${draggedMessage.subject}" moved to folder ${targetFolderId}`)
-    } catch (error) {
-      console.error('Error moving message:', error)
-      // You could add a user-facing error message here
-    } finally {
-      // Clear the moving state
-      setMovingMessageId(null)
-    }
-
-    setDraggedMessage(null)
-    setIsDragging(false)
-  }
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
-  }
 
   const truncateText = (text: string, maxLength: number) => {
     if (!text) return ''
@@ -210,57 +146,42 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
             {messages.length} message{messages.length !== 1 ? 's' : ''}
           </h3>
         </div>
-        {isDragging && (
-          <p className="text-xs text-[#4f46e5] mt-1 font-medium">
-            ✨ Drag message to another folder to move it
-          </p>
-        )}
-        {movingMessageId && (
-          <p className="text-xs text-green-600 mt-1 font-medium">
-            📁 Moving message... Please wait
-          </p>
-        )}
+
       </div>
       
       <div className="flex-1 overflow-y-auto">
         <div className="divide-y divide-gray-100">
           {messages.map((message: any, index: number) => {
             const isSelected = selectedMessageId === message.id
-            const isBeingDragged = draggedMessage?.id === message.id
-            const isMoving = movingMessageId === message.id
             const isFocused = focusedMessageIndex === index
             const receivedDate = new Date(message.receivedDateTime)
             
             return (
-              <div
+              <DraggableEmailRow
                 key={message.id}
-                draggable
-                onDragStart={(e) => handleDragStart(e, message)}
-                onDragEnd={handleDragEnd}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, selectedFolderId || '')}
+                messageId={message.id}
+                sourceFolderId={selectedFolderId || ''}
                 className={`p-4 cursor-pointer transition-all duration-200 ${
                   isSelected
                     ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-r-2 border-[#4f46e5]'
                     : isFocused
-                    ? 'bg-gradient-to-r from-blue-100 to-indigo-100 border-r-2 border-[#a855f7]'
-                    : isBeingDragged
-                    ? 'opacity-50 scale-95'
+                    ? 'bg-gradient-to-r hover:from-blue-100 hover:to-indigo-100 border-r-2 border-[#a855f7]'
                     : 'hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50'
-                } ${isDragging && !isBeingDragged ? 'cursor-grab' : ''} ${isMoving ? 'opacity-50 scale-95' : ''}`}
-                onClick={() => {
-                  onMessageSelect(message.id)
-                  setFocusedMessageIndex(index)
-                }}
-                onFocus={() => setFocusedMessageIndex(index)}
-                tabIndex={0}
-                role="button"
-                aria-label={`Email: ${message.subject || 'No subject'} from ${message.from?.emailAddress?.address || 'Unknown sender'}`}
+                }`}
               >
-                <div className="flex items-start justify-between gap-3">
+                <div 
+                  className="flex items-start justify-between gap-3"
+                  onClick={() => {
+                    onMessageSelect(message.id)
+                    setFocusedMessageIndex(index)
+                  }}
+                  onFocus={() => setFocusedMessageIndex(index)}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`Email: ${message.subject || 'No subject'} from ${message.from?.emailAddress?.address || 'Unknown sender'}`}
+                >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
-                      <Move className="h-3 w-3 text-[#4f46e5] flex-shrink-0" />
                       <h4 className="text-sm font-semibold text-gray-900 line-clamp-2 leading-tight">
                         {message.subject || '(No subject)'}
                       </h4>
@@ -283,7 +204,7 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
                     <div className="flex items-center gap-2 text-xs text-gray-500">
                       <Clock className="h-3 w-3 text-[#4f46e5]" />
                       <span>{formatDistanceToNow(receivedDate, { addSuffix: true })}</span>
-                    </div>
+                </div>
                   </div>
                   
                   <button
@@ -297,7 +218,7 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
-              </div>
+              </DraggableEmailRow>
             )
           })}
         </div>
