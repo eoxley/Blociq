@@ -1,11 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { Building2, AlertTriangle, CheckCircle, Clock, Users, Shield, FileText, Mail, Search, Edit3, Save, X, Home, Wrench, Calendar } from 'lucide-react'
+import { Building2, AlertTriangle, CheckCircle, Clock, Users, Shield, FileText, Mail, Search, Edit3, Save, X, Home, Wrench, Calendar, Copy, Check } from 'lucide-react'
 import Link from 'next/link'
 import BuildingUnitsClient from './BuildingUnitsClient'
 import BuildingStructureOverview from '@/components/BuildingStructureOverview'
 import BuildingTodoPanel from '@/components/BuildingTodoPanel'
+import StructureCardClient from '../_components/StructureCardClient'
+import EditNotesButton from '../_components/EditNotesButton'
+import SummariseWithAI from '../_components/SummariseWithAI'
+import UnitsList from '../_components/UnitsList'
 import { supabase } from '@/lib/supabaseClient'
 
 interface Building {
@@ -65,7 +69,7 @@ export default function BuildingDetailClient({
   const [isEditingNotes, setIsEditingNotes] = useState(false)
   const [notes, setNotes] = useState(building.notes || '')
   const [isSaving, setIsSaving] = useState(false)
-
+  const [addressCopied, setAddressCopied] = useState(false)
 
   const handleSaveNotes = async () => {
     setIsSaving(true)
@@ -94,6 +98,28 @@ export default function BuildingDetailClient({
     window.location.reload()
   }
 
+  const copyAddress = async () => {
+    if (building.address) {
+      try {
+        await navigator.clipboard.writeText(building.address)
+        setAddressCopied(true)
+        setTimeout(() => setAddressCopied(false), 2000)
+      } catch (err) {
+        console.error('Failed to copy address:', err)
+      }
+    }
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* TOP: Building Header with BlocIQ Gradient */}
@@ -105,11 +131,41 @@ export default function BuildingDetailClient({
                 <Building2 className="h-8 w-8" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold">{building.name || 'Unnamed Building'}</h1>
-                <p className="text-white/80 text-lg">
-                  {building.address || 'No address provided'} • 
-                  {units?.length || 0} unit{(units?.length || 0) !== 1 ? 's' : ''}
-                </p>
+                <div className="flex items-center gap-3 mb-2">
+                  <h1 className="text-3xl font-bold">{building.name || 'Unnamed Building'}</h1>
+                  {/* Status Pill */}
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    building.is_hrb 
+                      ? 'bg-yellow-500/20 text-yellow-100 border border-yellow-300/30' 
+                      : 'bg-green-500/20 text-green-100 border border-green-300/30'
+                  }`}>
+                    {building.is_hrb ? 'HRB' : 'Standard'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-4 text-white/80 text-lg">
+                  <div className="flex items-center gap-2">
+                    <Home className="h-4 w-4" />
+                    <span>{building.address || 'No address provided'}</span>
+                    {building.address && (
+                      <button
+                        onClick={copyAddress}
+                        className="p-1 hover:bg-white/20 rounded transition-colors"
+                        title="Copy address"
+                        aria-label="Copy address to clipboard"
+                      >
+                        {addressCopied ? (
+                          <Check className="h-4 w-4 text-green-300" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                  <span>•</span>
+                  <span>{units?.length || 0} unit{(units?.length || 0) !== 1 ? 's' : ''}</span>
+                  <span>•</span>
+                  <span>Updated {formatDate(building.updated_at)}</span>
+                </div>
               </div>
             </div>
             <div className="flex items-center space-x-3">
@@ -134,12 +190,10 @@ export default function BuildingDetailClient({
           <div className="bg-white rounded-2xl shadow-xl p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900">Building Overview</h2>
-              <button
-                onClick={() => setIsEditingNotes(!isEditingNotes)}
-                className="text-[#008C8F] hover:text-[#7645ED] text-sm font-medium transition-colors"
-              >
-                {isEditingNotes ? 'Cancel' : 'Edit Notes'}
-              </button>
+              <div className="flex gap-2">
+                <SummariseWithAI buildingId={buildingId} />
+                <EditNotesButton buildingId={buildingId} initial={building?.notes} />
+              </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -200,11 +254,8 @@ export default function BuildingDetailClient({
             </div>
           </div>
 
-          {/* SECTION 1.5: Building Structure & Client */}
-          <BuildingStructureOverview 
-            buildingId={buildingId} 
-            buildingName={building.name || 'Unnamed Building'} 
-          />
+          {/* SECTION 1.5: Building Structure Card */}
+          <StructureCardClient buildingId={buildingId} />
 
           {/* SECTION 2: Compliance Overview */}
           <div className="bg-white rounded-2xl shadow-xl p-6">
@@ -299,37 +350,8 @@ export default function BuildingDetailClient({
             </div>
           </div>
 
-
-
-          {/* Units container with fixed height + scroll */}
-          <div className="bg-white rounded-xl shadow p-4">
-            <h3 className="text-lg font-semibold mb-2">Units</h3>
-            <div className="max-h-[500px] overflow-y-auto space-y-2">
-              {units?.map((unit) => (
-                <Link
-                  key={unit.id}
-                  href={`/buildings/${buildingId}/units/${unit.id}`}
-                  className="block p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-gray-900">Unit {unit.unit_number}</p>
-                      {unit.floor && (
-                        <p className="text-sm text-gray-600">Floor {unit.floor}</p>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <span className={`inline-block w-2 h-2 rounded-full ${
-                        unit.leaseholder_id ? 'bg-green-500' : 'bg-gray-300'
-                      }`}></span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-
+          {/* Units List with Search */}
+          <UnitsList units={units} buildingId={buildingId} />
         </div>
       </div>
     </div>
