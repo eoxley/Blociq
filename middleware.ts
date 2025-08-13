@@ -29,3 +29,8 @@ export async function middleware(req: NextRequest) {
 
   return res
 }
+
+// Ensure middleware never interferes with /api/* routes
+export const config = {
+  matcher: ['/((?!api|_next|static|.*\\..*).*)'],
+}

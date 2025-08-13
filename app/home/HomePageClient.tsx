@@ -710,10 +710,16 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   // File handling constants
   const acceptedFileTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
   const maxFiles = 5
+  const MAX_FILE_SIZE = 12 * 1024 * 1024 // 12MB
 
   const validateFile = (file: File): boolean => {
     if (!acceptedFileTypes.includes(file.type)) {
       toast.error(`File type not supported. Please upload PDF, DOCX, or TXT files.`)
+      return false
+    }
+    
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error(`File too large. Maximum size is ${(MAX_FILE_SIZE / (1024 * 1024)).toFixed(0)}MB.`)
       return false
     }
     
@@ -783,8 +789,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
   // Enhanced upload function that handles both small and large files
   const uploadToAskAI = async (file: File, buildingId?: string) => {
-    const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-    
     // Small file path - direct upload via multipart
     if (file.size <= MAX_FILE_SIZE) {
       console.log('📁 Processing small file via multipart:', file.name)
@@ -798,6 +802,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         json = await res.json() 
       } catch (e) {
         console.error('Failed to parse response:', e)
+        // Handle non-JSON responses (like 405 HTML)
+        throw new Error(`Upload failed for ${file.name}: ${res.status} ${res.statusText}`)
       }
       
       if (!res.ok || !json?.success) {
@@ -854,6 +860,30 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     }
 
     return procJson
+  }
+
+  // Helper function for processing already uploaded files
+  const processStoredPath = async (path: string, buildingId?: string) => {
+    const res = await fetch('/api/ask-ai/upload', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ path, buildingId: buildingId || null }),
+    })
+    
+    let json: any = null
+    try { 
+      json = await res.json() 
+    } catch (e) {
+      console.error('Failed to parse response:', e)
+      throw new Error(`Process failed: ${res.status} ${res.statusText}`)
+    }
+    
+    if (!res.ok || !json?.success) {
+      const detail = json?.error || `${res.status} ${res.statusText}`
+      throw new Error(`Process failed: ${detail}`)
+    }
+    
+    return json
   }
 
   // Communication action handlers
@@ -1173,10 +1203,10 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                                <span>{getFileIcon(file.type)}</span>
                                <span className="font-medium truncate max-w-[120px]">{file.name}</span>
                                <span className={`text-xs ${
-                                 file.size > 10 * 1024 * 1024 ? 'text-orange-500' : 'text-blue-500'
+                                 file.size > MAX_FILE_SIZE ? 'text-orange-500' : 'text-blue-500'
                                } opacity-70`}>
                                  ({formatFileSize(file.size)})
-                                 {file.size > 10 * 1024 * 1024 && ' ⚡'}
+                                 {file.size > MAX_FILE_SIZE && ' ⚡'}
                                </span>
                                <button
                                  type="button"
@@ -1386,10 +1416,10 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                             <span>{getFileIcon(file.type)}</span>
                             <span className="font-medium truncate max-w-[120px]">{file.name}</span>
                             <span className={`text-xs ${
-                              file.size > 10 * 1024 * 1024 ? 'text-orange-500' : 'text-blue-500'
+                              file.size > MAX_FILE_SIZE ? 'text-orange-500' : 'text-blue-500'
                             } opacity-70`}>
                               ({formatFileSize(file.size)})
-                              {file.size > 10 * 1024 * 1024 && ' ⚡'}
+                              {file.size > MAX_FILE_SIZE && ' ⚡'}
                             </span>
                             <button
                               type="button"
