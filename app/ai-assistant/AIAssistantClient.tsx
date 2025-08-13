@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Brain, Send, Upload, X, MessageSquare, RotateCcw, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAIConversation } from '@/hooks/useAIConversation';
-import { UploadDropzone } from '@/components/ask/UploadDropzone';
+import UploadDropzone from '@/components/ask/UploadDropzone';
 import { AskResultCard } from '@/components/ask/AskResultCard';
 
 interface UserData {

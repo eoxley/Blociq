@@ -38,6 +38,7 @@ function maskIp(ip: string) {
     : ip.split(":").map((p, i) => (i === 0 ? p : "x")).join(":");
 }
 
+// ✅ Resend-only; if not configured, silently skip
 async function sendTranscriptEmail({
   prompt,
   answer,
@@ -51,8 +52,12 @@ async function sendTranscriptEmail({
 }) {
   const to = process.env.LEAD_INBOX_EMAIL;
   const from = process.env.LEAD_FROM_EMAIL;
+  const key = process.env.RESEND_API_KEY;
 
-  if (!to || !from) return; // silently skip if not configured
+  if (!to || !from || !key) {
+    console.warn("Email disabled: missing RESEND_API_KEY/LEAD_INBOX_EMAIL/LEAD_FROM_EMAIL");
+    return;
+  }
 
   const subject = "Ask Bloc (public demo) — Transcript";
   const html = `
@@ -60,7 +65,7 @@ async function sendTranscriptEmail({
       <h2>Ask Bloc — Public Demo Transcript</h2>
       <p><strong>When:</strong> ${new Date().toISOString()}</p>
       <p><strong>From IP (masked):</strong> ${maskIp(ip)}</p>
-      ${userEmail ? `<p><strong>User Email:</strong> ${userEmail}</p>` : ""}
+      ${userEmail ? `<p><strong>User Email:</strong> ${escapeHtml(userEmail)}</p>` : ""}
       <hr/>
       <p><strong>Prompt</strong></p>
       <pre style="white-space:pre-wrap">${escapeHtml(prompt)}</pre>
@@ -69,47 +74,22 @@ async function sendTranscriptEmail({
     </div>
   `;
 
-  // --- Option A: Resend (recommended) ---
-  if (process.env.RESEND_API_KEY) {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from,
-        to: [to, ...(userEmail ? [userEmail] : [])],
-        subject,
-        html,
-      }),
-    });
-    if (!res.ok) {
-      console.error("Resend email failed", await res.text());
-    }
-    return;
-  }
-
-  // --- Option B: SMTP (NodeMailer) ---
-  const host = process.env.SMTP_HOST;
-  const port = Number(process.env.SMTP_PORT || 587);
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-
-  if (host && user && pass) {
-    const nodemailer = await import("nodemailer");
-    const transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure: port === 465,
-      auth: { user, pass },
-    });
-    await transporter.sendMail({
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
       from,
       to: [to, ...(userEmail ? [userEmail] : [])],
       subject,
       html,
-    });
+    }),
+  });
+
+  if (!res.ok) {
+    console.error("Resend email failed", await res.text());
   }
 }
 
