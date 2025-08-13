@@ -853,7 +853,14 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       }),
     })
     
-    const procJson = await procRes.json().catch(() => ({}))
+    let procJson: any = null
+    try {
+      procJson = await procRes.json()
+    } catch (e) {
+      console.error('Failed to parse processing response:', e)
+      throw new Error(`Process failed: ${procRes.status} ${procRes.statusText}`)
+    }
+    
     if (!procRes.ok || !procJson?.success) {
       const detail = procJson?.error || `${procRes.status} ${procRes.statusText}`
       throw new Error(`Process failed: ${detail}`)
