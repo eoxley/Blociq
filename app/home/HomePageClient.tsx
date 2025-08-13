@@ -1065,7 +1065,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Enhanced Hero Banner - BlocIQ Landing Page Style */}
       <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-none mx-auto px-6">
           <div className="text-center">
             <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
               <BlocIQLogo className="h-10 w-10 text-white" />
