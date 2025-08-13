@@ -283,7 +283,7 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
       </div>
       
       {/* Message Body - Scrollable */}
-      <div className="flex-1 overflow-y-auto p-4 min-h-0">
+      <div className="flex-1 overflow-y-auto p-4 min-h-0 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
         <div className="max-w-none">
           {renderEmailBody()}
         </div>

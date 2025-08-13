@@ -293,7 +293,7 @@ export default function InboxV2() {
       </section>
 
       <DragDropFrame onMoveSuccess={handleMoveSuccess} onMoveError={handleMoveError}>
-        <div className="grid grid-cols-[260px_380px_1fr] gap-4 h-[calc(100vh-400px)]">
+        <div className="grid grid-cols-[260px_380px_1fr] gap-4 h-[calc(100vh-400px)] overflow-hidden">
           <div className="flex flex-col">
             {/* New Email and Triage Buttons */}
             <div className="mb-4 flex gap-3">

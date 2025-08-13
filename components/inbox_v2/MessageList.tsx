@@ -180,9 +180,9 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
         />
       </div>
       
-      <div className="flex-1 overflow-y-auto max-h-[calc(100vh-300px)]">
-        <div className="divide-y divide-gray-100">
-          {filteredMessages.map((message: any, index: number) => {
+      <div className="flex-1 overflow-hidden">
+        <div className="divide-y divide-gray-100 h-[400px]">
+          {filteredMessages.slice(0, 5).map((message: any, index: number) => {
             const isSelected = selectedMessageId === message.id
             const isFocused = focusedMessageIndex === index
             const receivedDate = new Date(message.receivedDateTime)
