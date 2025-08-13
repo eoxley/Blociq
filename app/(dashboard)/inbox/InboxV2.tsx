@@ -7,6 +7,7 @@ import MessageList from '@/components/inbox_v2/MessageList'
 import MessagePreview from '@/components/inbox_v2/MessagePreview'
 import ReplyModal from '@/components/inbox_v2/ReplyModal'
 import NewEmailModal from '@/components/inbox_v2/NewEmailModal'
+import DragDropFrame from '@/components/inbox_v2/DragDropFrame'
 import { useMessages, useFolders } from '@/hooks/inbox_v2'
 import { mutate } from 'swr'
 
@@ -68,6 +69,16 @@ export default function InboxV2() {
   useEffect(() => {
     console.log('Messages loaded:', messages.length, 'for folder:', selectedFolderId)
   }, [messages, selectedFolderId])
+
+  // Clear success message after 3 seconds
+  useEffect(() => {
+    if (moveSuccess) {
+      const timer = setTimeout(() => {
+        setMoveSuccess(null)
+      }, 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [moveSuccess])
 
   // Global keyboard shortcuts for inbox
   useEffect(() => {
@@ -228,6 +239,29 @@ export default function InboxV2() {
     }
   }
 
+  const handleMoveSuccess = (messageId: string, destinationId: string) => {
+    // Optimistically remove the message from the current view
+    if (messages) {
+      const updatedMessages = messages.filter((msg: any) => msg.id !== messageId)
+      // Update the SWR cache
+      mutate(`/api/outlook/v2/messages/list?folderId=${selectedFolderId}`, { ...messages, items: updatedMessages }, false)
+    }
+    
+    // Clear selection if the moved message was selected
+    if (selectedMessage?.id === messageId) {
+      setSelectedMessage(null)
+    }
+    
+    // Show success message
+    setMoveSuccess({ message: `Email moved to ${destinationId}`, timestamp: Date.now() })
+  }
+
+  const handleMoveError = (messageId: string, error: string) => {
+    // Revert by refreshing the messages
+    refreshMessages()
+    console.error(`Failed to move message ${messageId}:`, error)
+  }
+
   return (
     <InboxContext.Provider value={contextValue}>
       {/* Hero Banner - Matching Home Page and Buildings Page Style */}
@@ -254,49 +288,58 @@ export default function InboxV2() {
         </div>
       </section>
 
-      <div className="grid grid-cols-[260px_380px_1fr] gap-4 h-[calc(100vh-400px)]">
-        <div className="flex flex-col">
-          {/* New Email and Triage Buttons */}
-          <div className="mb-4 flex gap-3">
-            <button
-              onClick={() => setNewEmailModalOpen(true)}
-              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white rounded-lg hover:brightness-110 transition-all duration-200 shadow-sm font-medium"
-            >
-              <MessageSquare className="h-4 w-4" />
-              New Email
-            </button>
+      <DragDropFrame onMoveSuccess={handleMoveSuccess} onMoveError={handleMoveError}>
+        <div className="grid grid-cols-[260px_380px_1fr] gap-4 h-[calc(100vh-400px)]">
+          <div className="flex flex-col">
+            {/* New Email and Triage Buttons */}
+            <div className="mb-4 flex gap-3">
+              <button
+                onClick={() => setNewEmailModalOpen(true)}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white rounded-lg hover:brightness-110 transition-all duration-200 shadow-sm font-medium"
+              >
+                <MessageSquare className="h-4 w-4" />
+                New Email
+              </button>
+              
+              <button
+                onClick={() => console.log('Triage functionality coming soon')}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white text-red-600 border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-red-400 transition-colors shadow-sm"
+                title="Triage - Coming Soon"
+              >
+                <X className="h-4 w-4 text-red-600" />
+                Triage
+              </button>
+            </div>
             
-            <button
-              onClick={() => console.log('Triage functionality coming soon')}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white text-red-600 border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-red-400 transition-colors shadow-sm"
-              title="Triage - Coming Soon"
-            >
-              <X className="h-4 w-4 text-red-600" />
-              Triage
-            </button>
+            <FolderSidebar 
+              selectedFolderId={selectedFolderId}
+              onFolderSelect={(folderId) => {
+                setSelectedFolderId(folderId)
+                setSelectedMessage(null) // Clear selected message when changing folders
+              }}
+            />
           </div>
           
-          <FolderSidebar 
+          <MessageList 
             selectedFolderId={selectedFolderId}
-            onFolderSelect={(folderId) => {
-              setSelectedFolderId(folderId)
-              setSelectedMessage(null) // Clear selected message when changing folders
-            }}
+            selectedMessageId={selectedMessage?.id || null}
+            onMessageSelect={handleMessageSelect}
+          />
+          
+          <MessagePreview 
+            selectedMessage={selectedMessage}
+            onReply={() => handleReply('reply')}
+            onReplyAll={() => handleReply('replyAll')}
           />
         </div>
-        
-        <MessageList 
-          selectedFolderId={selectedFolderId}
-          selectedMessageId={selectedMessage?.id || null}
-          onMessageSelect={handleMessageSelect}
-        />
-        
-        <MessagePreview 
-          selectedMessage={selectedMessage}
-          onReply={() => handleReply('reply')}
-          onReplyAll={() => handleReply('replyAll')}
-        />
-      </div>
+              </DragDropFrame>
+
+      {/* Success Message Display */}
+      {moveSuccess && (
+        <div className="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-in slide-in-from-bottom-2">
+          {moveSuccess.message}
+        </div>
+      )}
 
       <ReplyModal
         isOpen={replyModal.isOpen}

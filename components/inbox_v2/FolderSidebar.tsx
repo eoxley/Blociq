@@ -2,32 +2,18 @@
 
 import { useState } from 'react'
 import { useFolders } from '@/hooks/inbox_v2'
-import { useInboxContext } from '@/app/(dashboard)/inbox/InboxV2'
-import { RefreshCw, Folder, Inbox, Archive, Trash2, Send, FileText, Shield, Plus, X } from 'lucide-react'
+import { RefreshCw, Plus, X } from 'lucide-react'
+import { DroppableFolderItem } from './DroppableFolderItem'
 
 interface FolderSidebarProps {
   selectedFolderId: string | null
   onFolderSelect: (folderId: string) => void
 }
 
-const getFolderIcon = (wellKnownName: string) => {
-  switch (wellKnownName) {
-    case 'inbox': return Inbox
-    case 'drafts': return FileText
-    case 'sentitems': return Send
-    case 'deleteditems': return Trash2
-    case 'archive': return Archive
-    case 'junkemail': return Shield
-    default: return Folder
-  }
-}
-
 export default function FolderSidebar({ selectedFolderId, onFolderSelect }: FolderSidebarProps) {
   const { folders, isFallback, isLoading, refresh, addManualFolder } = useFolders()
-  const { moveMessage } = useInboxContext()
   const [isAddingFolder, setIsAddingFolder] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
-  const [dragOverFolder, setDragOverFolder] = useState<string | null>(null)
 
   const handleAddFolder = () => {
     if (newFolderName.trim()) {
@@ -40,32 +26,6 @@ export default function FolderSidebar({ selectedFolderId, onFolderSelect }: Fold
   const handleCancelAdd = () => {
     setNewFolderName('')
     setIsAddingFolder(false)
-  }
-
-  const handleDragOver = (e: React.DragEvent, folderId: string) => {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
-    setDragOverFolder(folderId)
-  }
-
-  const handleDragLeave = () => {
-    setDragOverFolder(null)
-  }
-
-  const handleDrop = async (e: React.DragEvent, folderId: string) => {
-    e.preventDefault()
-    setDragOverFolder(null)
-    
-    // Get the message ID from the drag data
-    const messageId = e.dataTransfer.getData('text/plain')
-    
-    if (messageId && folderId !== selectedFolderId) {
-      try {
-        await moveMessage(messageId, folderId)
-      } catch (error) {
-        console.error('Error moving message:', error)
-      }
-    }
   }
 
   return (
@@ -124,44 +84,15 @@ export default function FolderSidebar({ selectedFolderId, onFolderSelect }: Fold
       )}
       
       <div className="space-y-1">
-        {folders.map((folder) => {
-          const Icon = getFolderIcon(folder.wellKnownName)
-          const isSelected = selectedFolderId === folder.id
-          const isDragOver = dragOverFolder === folder.id
-          
-          return (
-            <div
-              key={folder.id}
-              onDragOver={(e) => handleDragOver(e, folder.id)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, folder.id)}
-              className={`transition-all duration-200 ${
-                isDragOver ? 'scale-105' : ''
-              }`}
-            >
-              <button
-                onClick={() => onFolderSelect(folder.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2 text-left text-sm rounded-md transition-all duration-200 ${
-                  isSelected
-                    ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-[#4f46e5] border border-[#4f46e5] shadow-sm'
-                    : isDragOver
-                    ? 'bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 border-2 border-dashed border-green-400'
-                    : 'text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50 hover:text-gray-900'
-                }`}
-              >
-                <Icon className={`h-4 w-4 flex-shrink-0 ${
-                  isSelected ? 'text-[#4f46e5]' : 'text-gray-500'
-                }`} />
-                <span className="truncate">{folder.displayName}</span>
-                {isDragOver && (
-                  <span className="ml-auto text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-medium">
-                    ✨ Drop here
-                  </span>
-                )}
-              </button>
-            </div>
-          )
-        })}
+        {folders.map((folder) => (
+          <DroppableFolderItem
+            key={folder.id}
+            id={folder.id}
+            displayName={folder.displayName}
+            isSelected={selectedFolderId === folder.id}
+            onSelect={onFolderSelect}
+          />
+        ))}
       </div>
     </div>
   )
