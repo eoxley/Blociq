@@ -1,13 +1,14 @@
 "use client"
 
 import { useState, createContext, useContext, useEffect } from 'react'
-import { MessageSquare, X } from 'lucide-react'
+import { MessageSquare } from 'lucide-react'
 import FolderSidebar from '@/components/inbox_v2/FolderSidebar'
 import MessageList from '@/components/inbox_v2/MessageList'
 import MessagePreview from '@/components/inbox_v2/MessagePreview'
 import ReplyModal from '@/components/inbox_v2/ReplyModal'
 import NewEmailModal from '@/components/inbox_v2/NewEmailModal'
 import DragDropFrame from '@/components/inbox_v2/DragDropFrame'
+import TriageButton from '@/components/inbox_v2/TriageButton'
 import { useMessages, useFolders } from '@/hooks/inbox_v2'
 import { mutate } from 'swr'
 
@@ -301,14 +302,7 @@ export default function InboxV2() {
                 New Email
               </button>
               
-              <button
-                onClick={() => console.log('Triage functionality coming soon')}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white text-red-600 border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-red-400 transition-colors shadow-sm"
-                title="Triage - Coming Soon"
-              >
-                <X className="h-4 w-4 text-red-600" />
-                Triage
-              </button>
+                          <TriageButton />
             </div>
             
             <FolderSidebar 
