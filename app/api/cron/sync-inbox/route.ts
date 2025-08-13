@@ -19,6 +19,11 @@ export async function GET() {
     .not('access_token', 'eq', '')
     .order('created_at', { ascending: false });
 
+  // Log the tokens found for debugging
+  if (tokenRows && tokenRows.length > 0) {
+    console.log('🔑 Found tokens for users:', tokenRows.map(t => t.user_email));
+  }
+
   if (tokenError || !tokenRows || tokenRows.length === 0) {
     console.error('❌ Failed to fetch access tokens:', tokenError);
     return NextResponse.json({ success: false, error: 'No tokens available' }, { status: 401 });
@@ -84,9 +89,8 @@ export async function GET() {
         }
       }
 
-      // Fetch recent emails (last 30 days)
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-      let url = `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=50&$orderby=receivedDateTime desc&$filter=receivedDateTime ge '${thirtyDaysAgo}'&$select=id,subject,bodyPreview,body,from,receivedDateTime,isRead,flag,importance,categories,hasAttachments,internetMessageId`;
+      // Fetch recent emails (last 30 days) - use a safer approach without date filtering
+      let url = `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=50&$orderby=receivedDateTime desc&$select=id,subject,bodyPreview,body,from,receivedDateTime,isRead,flag,importance,categories,hasAttachments,internetMessageId`;
       let userSynced = 0;
 
       while (url) {
@@ -100,6 +104,18 @@ export async function GET() {
 
         if (!res.ok) {
           console.error(`❌ Microsoft API error for ${tokenRow.user_email}:`, result);
+          console.error(`❌ Request URL: ${url}`);
+          console.error(`❌ Status: ${res.status} ${res.statusText}`);
+          
+          // If it's an authentication error, mark the token as invalid
+          if (res.status === 401 || res.status === 403) {
+            console.log(`🔄 Marking token as invalid for ${tokenRow.user_email}`);
+            await supabase
+              .from('outlook_tokens')
+              .update({ access_token: null, expires_at: new Date().toISOString() })
+              .eq('user_id', tokenRow.user_id);
+          }
+          
           break; // Skip this user and continue with next
         }
 
