@@ -49,12 +49,15 @@ export default function InboxV2() {
   useEffect(() => {
     if (folders.length > 0 && !selectedFolderId) {
       // Find the inbox folder (either from Graph API or default folders)
+      // Prioritize Graph folders over fallback folders
       const inboxFolder = folders.find(folder => 
-        folder.wellKnownName === 'inbox' || 
-        folder.displayName.toLowerCase() === 'inbox'
+        (folder.wellKnownName === 'inbox' || folder.displayName.toLowerCase() === 'inbox') &&
+        // Prefer Graph folders over fallback folders
+        (!folder.isFallback || folders.every(f => f.isFallback))
       )
+      
       if (inboxFolder) {
-        console.log('Setting inbox folder ID:', inboxFolder.id, 'for folder:', inboxFolder.displayName)
+        console.log('Setting inbox folder ID:', inboxFolder.id, 'for folder:', inboxFolder.displayName, 'isGraphFolder:', inboxFolder.isGraphFolder)
         setSelectedFolderId(inboxFolder.id)
       } else {
         console.log('No inbox folder found in:', folders)

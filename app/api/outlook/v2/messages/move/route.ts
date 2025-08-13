@@ -43,9 +43,23 @@ export async function POST(request: NextRequest) {
       const errorText = await response.text()
       console.error(`[${routeId}] Graph API error (${response.status}):`, errorText)
       
+      // Try to parse the error response for more details
+      let errorDetails = errorText
+      try {
+        const errorJson = JSON.parse(errorText)
+        if (errorJson.error?.message) {
+          errorDetails = errorJson.error.message
+        } else if (errorJson.error?.code) {
+          errorDetails = `${errorJson.error.code}: ${errorJson.error.message || errorText}`
+        }
+      } catch {
+        // If parsing fails, use the raw error text
+        errorDetails = errorText
+      }
+      
       return NextResponse.json({
         ok: false,
-        error: `Graph API error: ${response.status}`,
+        error: `Graph API error: ${errorDetails}`,
         diagnostic: errorText,
         routeId,
         build

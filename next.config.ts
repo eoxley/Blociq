@@ -12,6 +12,21 @@ const nextConfig: NextConfig = {
     // your project has TypeScript errors.
     ignoreBuildErrors: true,
   },
+  // Add redirects for dead navigation links
+  async redirects() {
+    return [
+      {
+        source: '/major-works',
+        destination: '/buildings',
+        permanent: true,
+      },
+      {
+        source: '/compliance',
+        destination: '/buildings',
+        permanent: true,
+      },
+    ]
+  },
   // Add optimizations to prevent chunk loading errors
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],

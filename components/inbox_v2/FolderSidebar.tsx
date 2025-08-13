@@ -90,6 +90,7 @@ export default function FolderSidebar({ selectedFolderId, onFolderSelect }: Fold
             id={folder.id}
             displayName={folder.displayName}
             isSelected={selectedFolderId === folder.id}
+            isFallback={folder.isFallback}
             onSelect={onFolderSelect}
           />
         ))}

@@ -8,17 +8,19 @@ interface DroppableFolderItemProps {
   displayName: string
   messageCount?: number
   isSelected?: boolean
+  isFallback?: boolean
   onSelect?: (folderId: string) => void
   className?: string
 }
 
-export function DroppableFolderItem({ 
-  id, 
-  displayName, 
-  messageCount, 
-  isSelected, 
+export function DroppableFolderItem({
+  id,
+  displayName,
+  messageCount,
+  isSelected,
+  isFallback,
   onSelect,
-  className 
+  className
 }: DroppableFolderItemProps) {
   const { setNodeRef, isOver } = useDroppable({ id: `folder:${id}` })
 
@@ -30,12 +32,13 @@ export function DroppableFolderItem({
     <div
       ref={setNodeRef}
       data-folder-id={id}
-      className={cn(
-        'px-3 py-2 rounded-md cursor-pointer transition-all duration-200 flex items-center justify-between group',
-        isOver ? 'bg-blue-100 border-2 border-blue-300 shadow-md' : 'hover:bg-gray-100',
-        isSelected ? 'bg-blue-50 border border-blue-200' : '',
-        className
-      )}
+                        className={cn(
+                    'px-3 py-2 rounded-md cursor-pointer transition-all duration-200 flex items-center justify-between group',
+                    isOver && !isFallback ? 'bg-blue-100 border-2 border-blue-300 shadow-md' : 'hover:bg-gray-100',
+                    isSelected ? 'bg-blue-50 border border-blue-200' : '',
+                    isFallback ? 'opacity-60 cursor-not-allowed' : '',
+                    className
+                  )}
       onClick={handleClick}
       title={`${displayName}${messageCount ? ` (${messageCount})` : ''}`}
     >

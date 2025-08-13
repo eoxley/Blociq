@@ -20,6 +20,13 @@ export default function DragDropFrame({ children, onMoveSuccess, onMoveError }: 
     if (!msg || !overId?.startsWith('folder:')) return
     const destinationId = overId.slice('folder:'.length)
     const { messageId, sourceFolderId } = msg
+    
+    // Prevent dropping on fallback folders (they don't support Graph operations)
+    if (destinationId.startsWith('default-')) {
+      toast.error('Cannot move emails to fallback folders. Please use a real Outlook folder.')
+      return
+    }
+    
     if (destinationId === sourceFolderId) return // no-op
 
     // optimistic UI removal

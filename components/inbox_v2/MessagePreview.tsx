@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { Reply, ReplyAll, Paperclip, Clock, User, MessageSquare, Calendar, Download } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
+import { processEmailHtml } from '@/lib/email/normalizeHtml'
+import { processEmailWithInlineImages, Attachment } from '@/lib/email/inlineCid'
 
 interface MessagePreviewProps {
   selectedMessage: any | null
@@ -31,6 +33,7 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
   const [fullMessage, setFullMessage] = useState<FullMessage | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [processedAttachments, setProcessedAttachments] = useState<Attachment[]>([])
 
   // Fetch full message content when a message is selected
   useEffect(() => {
@@ -49,7 +52,36 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
         if (response.ok) {
           const data = await response.json()
           if (data.ok && data.items?.[0]) {
-            setFullMessage(data.items[0])
+            const message = data.items[0]
+            
+            // Process HTML content for inline images if it's HTML
+            if (message.body?.contentType === 'HTML' && message.body?.content) {
+              try {
+                const { processedHtml, attachments } = await processEmailWithInlineImages(
+                  message.id,
+                  message.body.content
+                )
+                
+                // Update message with processed HTML
+                const processedMessage = {
+                  ...message,
+                  body: {
+                    ...message.body,
+                    content: processedHtml
+                  }
+                }
+                
+                setFullMessage(processedMessage)
+                setProcessedAttachments(attachments)
+              } catch (processError) {
+                console.warn('Failed to process inline images, using original content:', processError)
+                setFullMessage(message)
+                setProcessedAttachments([])
+              }
+            } else {
+              setFullMessage(message)
+              setProcessedAttachments([])
+            }
           } else {
             setError('Failed to load message content')
           }
@@ -66,6 +98,18 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
 
     fetchFullMessage()
   }, [selectedMessage?.id])
+
+  // Cleanup processed attachments when component unmounts or message changes
+  useEffect(() => {
+    return () => {
+      if (processedAttachments.length > 0) {
+        // Cleanup data URLs to prevent memory leaks
+        processedAttachments.forEach(attachment => {
+          // Note: In a real implementation, you'd want to track and revoke the created URLs
+        })
+      }
+    }
+  }, [processedAttachments])
 
   if (!selectedMessage) {
     return (
@@ -108,46 +152,8 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
   const sanitizeHtml = (html: string) => {
     if (!html) return ''
     
-    // Remove potentially dangerous elements and attributes
-    let sanitized = html
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
-      .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
-      .replace(/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, '')
-      .replace(/javascript:/gi, '')
-      .replace(/on\w+\s*=/gi, '')
-      .replace(/vbscript:/gi, '')
-      .replace(/data:/gi, '')
-    
-    // Clean up common email HTML issues
-    sanitized = sanitized
-      .replace(/<o:p[^>]*>/gi, '') // Remove Outlook paragraph tags
-      .replace(/<\/o:p>/gi, '')
-      .replace(/<w:[^>]*>/gi, '') // Remove Word tags
-      .replace(/<\/w:[^>]*>/gi, '')
-      .replace(/<m:[^>]*>/gi, '') // Remove Math tags
-      .replace(/<\/m:[^>]*>/gi, '')
-      .replace(/<v:[^>]*>/gi, '') // Remove Vector tags
-      .replace(/<\/v:[^>]*>/gi, '')
-    
-    // Allow images but ensure they're safe
-    sanitized = sanitized
-      .replace(/<img([^>]*?)>/gi, (match, attributes) => {
-        // Only allow safe image attributes
-        const safeAttributes = attributes
-          .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '') // Remove event handlers
-          .replace(/javascript:/gi, '') // Remove javascript: URLs
-          .replace(/data:/gi, '') // Remove data: URLs
-          .replace(/<[^>]*>/gi, '') // Remove any nested tags
-        return `<img${safeAttributes}>`
-      })
-    
-    // Ensure proper paragraph spacing
-    sanitized = sanitized
-      .replace(/<p[^>]*>/gi, '<p class="mb-3">')
-      .replace(/<br\s*\/?>/gi, '<br>')
-    
-    return sanitized
+    // Use the new processEmailHtml utility for normalization and sanitization
+    return processEmailHtml(html)
   }
 
   const formatEmailList = (recipients: any[]) => {

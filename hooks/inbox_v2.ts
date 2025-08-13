@@ -2,13 +2,14 @@ import useSWR from 'swr'
 import { useState, useCallback } from 'react'
 
 // Default folders fallback when Graph API is unavailable
+// Note: These are only used as fallback and should not be used for actual Graph operations
 const DEFAULT_FOLDERS = [
-  { id: 'inbox', displayName: 'Inbox', wellKnownName: 'inbox' },
-  { id: 'drafts', displayName: 'Drafts', wellKnownName: 'drafts' },
-  { id: 'sent', displayName: 'Sent Items', wellKnownName: 'sentitems' },
-  { id: 'deleted', displayName: 'Deleted Items', wellKnownName: 'deleteditems' },
-  { id: 'archive', displayName: 'Archive', wellKnownName: 'archive' },
-  { id: 'junk', displayName: 'Junk Email', wellKnownName: 'junkemail' }
+  { id: 'default-inbox', displayName: 'Inbox', wellKnownName: 'inbox', isFallback: true },
+  { id: 'default-drafts', displayName: 'Drafts', wellKnownName: 'drafts', isFallback: true },
+  { id: 'default-sent', displayName: 'Sent Items', wellKnownName: 'sentitems', isFallback: true },
+  { id: 'default-deleted', displayName: 'Deleted Items', wellKnownName: 'deleteditems', isFallback: true },
+  { id: 'default-archive', displayName: 'Archive', wellKnownName: 'archive', isFallback: true },
+  { id: 'default-junk', displayName: 'Junk Email', wellKnownName: 'junkemail', isFallback: true }
 ]
 
 const fetcher = (url: string) => fetch(url).then(res => res.json())
@@ -44,9 +45,19 @@ export function useFolders() {
   
   // Always include manual folders, combine with Graph folders or defaults
   // This ensures manual folders are never lost
+  // Graph folders take precedence over defaults
   const folders = graphFolders.length > 0 
     ? [...graphFolders, ...manualFolders] 
     : [...DEFAULT_FOLDERS, ...manualFolders]
+  
+  // Ensure all folders have proper IDs (Graph folders should have real IDs)
+  const processedFolders = folders.map(folder => ({
+    ...folder,
+    // Ensure Graph folders keep their real IDs, fallback folders are marked
+    id: folder.isFallback ? folder.id : folder.id,
+    // Mark if this is a real Graph folder
+    isGraphFolder: !folder.isFallback && graphFolders.some(gf => gf.id === folder.id)
+  }))
   
   const isFallback = graphFolders.length === 0
   
@@ -67,7 +78,7 @@ export function useFolders() {
   }, [mutate])
   
   return {
-    folders,
+    folders: processedFolders,
     isFallback,
     isLoading,
     refresh,
