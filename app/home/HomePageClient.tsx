@@ -17,6 +17,7 @@ import { BlocIQBadge } from '@/components/ui/blociq-badge'
 import BlocIQLogo from '@/components/BlocIQLogo'
 import { toast } from 'sonner'
 import { checkOutlookConnection, fetchOutlookEvents, getOutlookAuthUrl } from '@/lib/outlookUtils'
+import { normalizeEventTimes, formatInZone, getClientZone } from '@/lib/time'
 import { getTimeBasedGreeting } from '@/utils/greeting'
 import CommunicationModal from '@/components/CommunicationModal'
 
@@ -31,6 +32,11 @@ type PropertyEvent = {
   location?: string | null
   organiser_name?: string | null
   online_meeting?: any | null
+  // New time fields for proper timezone handling
+  startUtc?: string | null
+  endUtc?: string | null
+  timeZoneIana?: string | null
+  isAllDay?: boolean
 }
 
 type Building = {
@@ -246,28 +252,50 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       }
 
       // Transform property events (handle missing data gracefully)
-      const propertyEvents: PropertyEvent[] = (propertyEventsResponse.data || []).map(event => ({
-        building: event.building_name || 'General',
-        date: event.date,
-        title: event.title,
-        category: event.category || 'General',
-        source: 'property',
-        event_type: 'manual',
-        location: event.location,
-        organiser_name: event.organiser_name
-      }))
+      const propertyEvents: PropertyEvent[] = (propertyEventsResponse.data || []).map(event => {
+        const normalizedTimes = normalizeEventTimes({
+          start: { dateTime: event.date, timeZone: 'Europe/London' },
+          end: { dateTime: event.date, timeZone: 'Europe/London' }
+        })
+        
+        return {
+          building: event.building_name || 'General',
+          date: event.date,
+          title: event.title,
+          category: event.category || 'General',
+          source: 'property',
+          event_type: 'manual',
+          location: event.location,
+          organiser_name: event.organiser_name,
+          startUtc: normalizedTimes.startUtc || undefined,
+          endUtc: normalizedTimes.endUtc || undefined,
+          timeZoneIana: normalizedTimes.timeZoneIana || undefined,
+          isAllDay: normalizedTimes.isAllDay || false
+        }
+      })
 
       // Transform manual events (handle missing data gracefully)
-      const manualEvents: PropertyEvent[] = (manualEventsResponse.data || []).map(event => ({
-        building: event.building_id ? `Building ${event.building_id}` : 'General',
-        date: event.start_time,
-        title: event.title,
-        category: event.category || 'Manual Entry',
-        source: 'property',
-        event_type: 'manual',
-        location: event.location,
-        organiser_name: event.organiser_name
-      }))
+      const manualEvents: PropertyEvent[] = (manualEventsResponse.data || []).map(event => {
+        const normalizedTimes = normalizeEventTimes({
+          start: { dateTime: event.start_time, timeZone: 'Europe/London' },
+          end: { dateTime: event.end_time || event.start_time, timeZone: 'Europe/London' }
+        })
+        
+        return {
+          building: event.building_id ? `Building ${event.building_id}` : 'General',
+          date: event.start_time,
+          title: event.title,
+          category: event.category || 'Manual Entry',
+          source: 'property',
+          event_type: 'manual',
+          location: event.location,
+          organiser_name: event.organiser_name,
+          startUtc: normalizedTimes.startUtc || undefined,
+          endUtc: normalizedTimes.endUtc || undefined,
+          timeZoneIana: normalizedTimes.timeZoneIana || undefined,
+          isAllDay: normalizedTimes.isAllDay || false
+        }
+      })
 
       console.log('📅 Fetched events:', {
         propertyEvents: propertyEventsResponse.data?.length || 0,
@@ -306,17 +334,28 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       const events = await fetchOutlookEvents()
       
       // Transform Outlook events to match PropertyEvent type
-      const transformedOutlookEvents: PropertyEvent[] = events.map((event: any) => ({
-        building: 'Outlook Calendar',
-        date: event.start_time,
-        title: event.title || event.subject || 'Untitled Event',
-        category: event.categories?.join(', ') || '📅 Outlook Event',
-        source: 'outlook',
-        event_type: 'outlook',
-        location: event.location,
-        organiser_name: event.organiser_name,
-        online_meeting: event.online_meeting
-      }))
+      const transformedOutlookEvents: PropertyEvent[] = events.map((event: any) => {
+        const normalizedTimes = normalizeEventTimes({
+          start: { dateTime: event.start_time, timeZone: event.timeZone || 'UTC' },
+          end: { dateTime: event.end_time || event.start_time, timeZone: event.timeZone || 'UTC' }
+        })
+        
+        return {
+          building: 'Outlook Calendar',
+          date: event.start_time,
+          title: event.title || event.subject || 'Untitled Event',
+          category: event.categories?.join(', ') || '📅 Outlook Event',
+          source: 'outlook',
+          event_type: 'outlook',
+          location: event.location,
+          organiser_name: event.organiser_name,
+          online_meeting: event.online_meeting,
+          startUtc: normalizedTimes.startUtc || undefined,
+          endUtc: normalizedTimes.endUtc || undefined,
+          timeZoneIana: normalizedTimes.timeZoneIana || undefined,
+          isAllDay: normalizedTimes.isAllDay || false
+        }
+      })
 
       // Replace existing Outlook events with new ones, filter out past events
       setUpcomingEvents(prev => {
@@ -1589,10 +1628,21 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                           const isTomorrow = eventDate.toDateString() === tomorrow.toDateString()
                           
                           const date = formatEventDate(event.date)
-                          const time = eventDate.toLocaleTimeString('en-GB', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })
+                          
+                          // Use new timezone-aware time formatting
+                          let timeDisplay: string
+                          if (event.isAllDay) {
+                            timeDisplay = 'All day'
+                          } else if (event.startUtc && event.timeZoneIana) {
+                            const clientZone = getClientZone()
+                            timeDisplay = formatInZone(event.startUtc, clientZone, 'HH:mm')
+                          } else {
+                            // Fallback to old method
+                            timeDisplay = eventDate.toLocaleTimeString('en-GB', { 
+                              hour: '2-digit', 
+                              minute: '2-digit' 
+                            })
+                          }
 
                           return (
                             <div key={index} className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200 hover:shadow-md transition-all duration-200">
@@ -1617,7 +1667,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                                     <div className="space-y-1 text-sm text-gray-600">
                                       <div className="flex items-center gap-1">
                                         <span>🕒</span>
-                                        <span>{date} at {time}</span>
+                                        <span>{date} at {timeDisplay}</span>
                                       </div>
                                       {event.category && (
                                         <div className="flex items-center gap-1">
