@@ -5,6 +5,7 @@ import { useMessages } from '@/hooks/inbox_v2'
 import { Paperclip, Clock, Trash2 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { DraggableEmailRow } from './DraggableEmailRow'
+import SearchBar from './SearchBar'
 
 interface MessageListProps {
   selectedFolderId: string | null
@@ -15,6 +16,8 @@ interface MessageListProps {
 export default function MessageList({ selectedFolderId, selectedMessageId, onMessageSelect }: MessageListProps) {
   const { messages, isLoading, refresh } = useMessages(selectedFolderId)
   const [focusedMessageIndex, setFocusedMessageIndex] = useState<number>(-1)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filteredMessages, setFilteredMessages] = useState<any[]>([])
 
   // Keyboard navigation and shortcuts
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -80,6 +83,29 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
     }
   }, [messages, selectedMessageId, onMessageSelect])
 
+  // Filter messages based on search query
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredMessages(messages)
+      return
+    }
+
+    const query = searchQuery.toLowerCase()
+    const filtered = messages.filter((message: any) => {
+      const subject = message.subject?.toLowerCase() || ''
+      const from = message.from?.emailAddress?.address?.toLowerCase() || ''
+      const bodyPreview = message.bodyPreview?.toLowerCase() || ''
+      
+      return subject.includes(query) || from.includes(query) || bodyPreview.includes(query)
+    })
+    
+    setFilteredMessages(filtered)
+  }, [messages, searchQuery])
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query)
+  }
+
   const handleDelete = async (messageId: string) => {
     if (!confirm('Are you sure you want to delete this message?')) return
     
@@ -140,18 +166,23 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
   return (
     <div className="bg-white rounded-lg border border-gray-200 flex flex-col shadow-sm">
       <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-blue-50">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
             <span className="w-2 h-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full"></span>
-            {messages.length} message{messages.length !== 1 ? 's' : ''}
+            {searchQuery ? `${filteredMessages.length} of ${messages.length}` : messages.length} message{(searchQuery ? filteredMessages.length : messages.length) !== 1 ? 's' : ''}
           </h3>
         </div>
-
+        
+        <SearchBar 
+          onSearch={handleSearch}
+          placeholder="Search emails by subject, sender, or content..."
+          className="w-full"
+        />
       </div>
       
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto max-h-[calc(100vh-300px)]">
         <div className="divide-y divide-gray-100">
-          {messages.map((message: any, index: number) => {
+          {filteredMessages.map((message: any, index: number) => {
             const isSelected = selectedMessageId === message.id
             const isFocused = focusedMessageIndex === index
             const receivedDate = new Date(message.receivedDateTime)
