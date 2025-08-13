@@ -1,7 +1,7 @@
 import { DateTime } from 'luxon'
 import { findIana } from 'windows-iana'
 
-export const DEFAULT_TZ = process.env.NEXT_PUBLIC_DEFAULT_TZ || 'Europe/London'
+export const DEFAULT_TZ = 'Europe/London'
 
 /**
  * Convert a Windows time zone (e.g., "GMT Standard Time") to an IANA zone.
@@ -40,20 +40,42 @@ export function graphToUTCISO(
 
   const { dateTime, timeZone } = start
   if (!dateTime) return null
-  const iana = toIanaZone(timeZone) || fallbackIana
+  
+  // Handle Windows timezone names properly
+  let iana = fallbackIana
+  if (timeZone) {
+    iana = toIanaZone(timeZone) || fallbackIana
+  }
+  
   const dt = DateTime.fromISO(dateTime, { zone: iana })
+  if (!dt.isValid) {
+    console.warn('Invalid date:', dateTime, 'with zone:', iana)
+    return null
+  }
+  
   return dt.toUTC().toISO()
 }
 
 /** Format a UTC ISO string into a local zone. */
-export function formatInZone(utcISO: string, zone = DEFAULT_TZ, fmt = 'EEE d LLL, HH:mm') {
-  return DateTime.fromISO(utcISO, { zone: 'utc' }).setZone(zone).toFormat(fmt)
+export function formatInZone(utcISO: string, zone = DEFAULT_TZ, fmt = 'HH:mm') {
+  try {
+    const dt = DateTime.fromISO(utcISO, { zone: 'utc' })
+    if (!dt.isValid) {
+      console.warn('Invalid UTC ISO:', utcISO)
+      return 'Invalid time'
+    }
+    return dt.setZone(zone).toFormat(fmt)
+  } catch (error) {
+    console.error('Error formatting time:', error)
+    return 'Error'
+  }
 }
 
 /** Detect browser zone safely on client; fallback to DEFAULT_TZ. */
 export function getClientZone(): string {
   if (typeof window === 'undefined') return DEFAULT_TZ
-  return Intl.DateTimeFormat().resolvedOptions().timeZone || DEFAULT_TZ
+  const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  return browserZone || DEFAULT_TZ
 }
 
 /**
@@ -92,8 +114,29 @@ export function normalizeEventTimes(event: any) {
     }
   }
   
-  const startUtc = graphToUTCISO(start)
-  const endUtc = graphToUTCISO(end)
+  // Ensure we have proper timezone handling
+  let startUtc = graphToUTCISO(start)
+  let endUtc = graphToUTCISO(end)
+  
+  // If conversion failed, try to parse as local time and convert
+  if (!startUtc && start?.dateTime) {
+    try {
+      const dt = DateTime.fromISO(start.dateTime, { zone: DEFAULT_TZ })
+      if (dt.isValid) {
+        startUtc = dt.toUTC().toISO()
+      }
+    } catch {}
+  }
+  
+  if (!endUtc && end?.dateTime) {
+    try {
+      const dt = DateTime.fromISO(end.dateTime, { zone: DEFAULT_TZ })
+      if (dt.isValid) {
+        endUtc = dt.toUTC().toISO()
+      }
+    } catch {}
+  }
+  
   const timeZoneIana = toIanaZone(start?.timeZone) || DEFAULT_TZ
   
   return {

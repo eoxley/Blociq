@@ -69,17 +69,20 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
 
   if (!selectedMessage) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-        <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-500">Select a message to preview</p>
+      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center shadow-sm">
+        <div className="w-16 h-16 bg-gradient-to-r from-gray-100 to-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <MessageSquare className="h-8 w-8 text-[#4f46e5]" />
+        </div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Select a message to preview</h3>
+        <p className="text-gray-500">Choose an email from the list to view its content</p>
       </div>
     )
   }
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center shadow-sm">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4f46e5] mx-auto"></div>
         <p className="text-gray-500 mt-2">Loading message...</p>
       </div>
     )
@@ -87,11 +90,11 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
 
   if (error) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center shadow-sm">
         <p className="text-red-500 mb-2">{error}</p>
         <button 
           onClick={() => window.location.reload()}
-          className="text-sm text-blue-600 hover:text-blue-800 underline"
+          className="text-sm text-[#4f46e5] hover:text-[#a855f7] underline"
         >
           Try again
         </button>
@@ -191,17 +194,18 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 flex flex-col h-full">
+    <div className="bg-white rounded-lg border border-gray-200 flex flex-col h-full shadow-sm">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 flex-shrink-0">
+      <div className="p-4 border-b border-gray-200 flex-shrink-0 bg-gradient-to-r from-gray-50 to-blue-50">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
+          <h3 className="text-lg font-semibold text-gray-900 line-clamp-2 flex items-center gap-2">
+            <span className="w-2 h-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full"></span>
             {message.subject || '(No subject)'}
           </h3>
           <div className="flex gap-3">
             <button
               onClick={onReply}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-sm hover:shadow-md font-medium text-sm transform hover:scale-105 active:scale-95"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white rounded-lg hover:brightness-110 transition-all duration-200 shadow-sm hover:shadow-md font-medium text-sm transform hover:scale-105 active:scale-95"
               title="Reply to this message"
             >
               <Reply className="h-4 w-4" />
@@ -209,7 +213,7 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
             </button>
             <button
               onClick={onReplyAll}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow-md font-medium text-sm transform hover:scale-105 active:scale-95"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a855f7] to-[#4f46e5] text-white rounded-lg hover:brightness-110 transition-all duration-200 shadow-sm hover:shadow-md font-medium text-sm transform hover:scale-105 active:scale-95"
               title="Reply to all recipients"
             >
               <ReplyAll className="h-4 w-4" />
@@ -221,7 +225,7 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
         {/* Message Details */}
         <div className="space-y-2 text-sm">
           <div className="flex items-start gap-2">
-            <User className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+            <User className="h-4 w-4 text-[#4f46e5] mt-0.5 flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <span className="text-gray-600 font-medium">From:</span>
               <span className="text-gray-800 ml-2 break-all">
@@ -231,7 +235,7 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
           </div>
           
           <div className="flex items-start gap-2">
-            <MessageSquare className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+            <MessageSquare className="h-4 w-4 text-[#a855f7] mt-0.5 flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <span className="text-gray-600 font-medium">To:</span>
               <span className="text-gray-800 ml-2 break-all">
@@ -242,7 +246,7 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
           
           {(message.ccRecipients || []).length > 0 && (
             <div className="flex items-start gap-2">
-              <MessageSquare className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+              <MessageSquare className="h-4 w-4 text-[#a855f7] mt-0.5 flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <span className="text-gray-600 font-medium">CC:</span>
                 <span className="text-gray-800 ml-2 break-all">
@@ -253,7 +257,7 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
           )}
           
           <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-gray-400" />
+            <Calendar className="h-4 w-4 text-[#4f46e5]" />
             <span className="text-gray-600 font-medium">Received:</span>
             <span className="text-gray-800 ml-2">
               {format(receivedDate, 'PPP p')} ({formatDistanceToNow(receivedDate, { addSuffix: true })})
@@ -262,7 +266,7 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
           
           {message.hasAttachments && (
             <div className="flex items-center gap-2">
-              <Paperclip className="h-4 w-4 text-gray-400" />
+              <Paperclip className="h-4 w-4 text-[#a855f7]" />
               <span className="text-gray-600 font-medium">Attachments:</span>
               <span className="text-gray-800 ml-2">
                 {message.attachments?.length || 0} file(s)
@@ -288,7 +292,7 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
               href={message.webLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 underline"
+              className="inline-flex items-center gap-2 text-sm text-[#4f46e5] hover:text-[#a855f7] underline"
             >
               <MessageSquare className="h-4 w-4" />
               View in Outlook

@@ -230,13 +230,13 @@ export default function InboxV2() {
 
   return (
     <InboxContext.Provider value={contextValue}>
-      <div className="grid grid-cols-[260px_1fr_420px] gap-4 h-[calc(100vh-300px)]">
+      <div className="grid grid-cols-[260px_380px_1fr] gap-4 h-[calc(100vh-300px)]">
         <div className="flex flex-col">
           {/* New Email and Triage Buttons */}
           <div className="mb-4 flex gap-3">
             <button
               onClick={() => setNewEmailModalOpen(true)}
-              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white rounded-lg hover:brightness-110 transition-all duration-200 shadow-sm font-medium"
             >
               <MessageSquare className="h-4 w-4" />
               New Email
