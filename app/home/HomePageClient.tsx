@@ -104,6 +104,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   // Ask BlocIQ state
   const [askInput, setAskInput] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [uploadStatus, setUploadStatus] = useState<string>('')
   const [messages, setMessages] = useState<Array<{sender: 'user' | 'ai', text: string, timestamp: Date}>>([])
   const [showChat, setShowChat] = useState(false)
   const [chatSize, setChatSize] = useState({ width: 600, height: 500 })
@@ -477,32 +478,30 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         let allSuggestions: string[] = []
         
         for (const uploadedFile of uploadedFiles) {
-          const formData = new FormData()
-          formData.append('file', uploadedFile.file)
-          
-          const uploadResponse = await fetch('/api/ask-ai/upload', {
-            method: 'POST',
-            body: formData,
-          })
-
-          if (!uploadResponse.ok) {
-            const errorText = await uploadResponse.text()
-            console.error('❌ Upload API Error for', uploadedFile.name, ':', errorText)
-            throw new Error(`Upload failed for ${uploadedFile.name}: ${errorText}`)
-          }
-
-          const uploadData = await uploadResponse.json()
-          
-          if (!uploadData.success) {
-            throw new Error(uploadData.error || `Upload failed for ${uploadedFile.name}`)
-          }
-
-          if (uploadData.summary) {
-            allSummaries.push(`**${uploadedFile.name}:**\n${uploadData.summary}`)
-          }
-          
-          if (uploadData.suggestedActions) {
-            allSuggestions.push(...uploadData.suggestedActions)
+          try {
+            const fileSize = formatFileSize(uploadedFile.file.size)
+            console.log(`📤 Uploading file: ${uploadedFile.name} (${fileSize})`)
+            
+            // Update status for each file
+            setUploadStatus(`Processing ${uploadedFile.name}...`)
+            
+            const uploadData = await uploadToAskAI(uploadedFile.file)
+            
+            if (uploadData.summary) {
+              allSummaries.push(`**${uploadedFile.name}:**\n${uploadData.summary}`)
+            }
+            
+            if (uploadData.suggestedActions) {
+              allSuggestions.push(...uploadData.suggestedActions)
+            }
+            
+            console.log(`✅ File processed successfully: ${uploadedFile.name}`)
+            setUploadStatus(`✅ ${uploadedFile.name} processed`)
+          } catch (error) {
+            console.error(`❌ Failed to process file ${uploadedFile.name}:`, error)
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+            setUploadStatus(`❌ Failed: ${uploadedFile.name} - ${errorMessage}`)
+            throw error
           }
         }
 
@@ -534,6 +533,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         // Clear input and files after submission
         setAskInput('')
         setUploadedFiles([])
+        setUploadStatus('')
         return
       }
 
@@ -632,6 +632,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       // Add error message to chat
       const errorMessage = { sender: 'ai' as const, text: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`, timestamp: new Date() }
       setMessages(prev => [...prev, errorMessage])
+      
+      // Clear upload status on error
+      setUploadStatus('')
     } finally {
       setIsSubmitting(false)
     }
@@ -660,17 +663,11 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
   // File handling constants
   const acceptedFileTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
-  const maxFileSize = 10 * 1024 * 1024 // 10MB
   const maxFiles = 5
 
   const validateFile = (file: File): boolean => {
     if (!acceptedFileTypes.includes(file.type)) {
       toast.error(`File type not supported. Please upload PDF, DOCX, or TXT files.`)
-      return false
-    }
-    
-    if (file.size > maxFileSize) {
-      toast.error(`File too large. Please upload files smaller than 10MB.`)
       return false
     }
     
@@ -704,6 +701,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
   const removeFile = (fileId: string) => {
     setUploadedFiles(prev => prev.filter(f => f.id !== fileId))
+    setUploadStatus('')
   }
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -735,6 +733,81 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     if (fileType.includes('word') || fileType.includes('document')) return '📝'
     if (fileType.includes('text')) return '📄'
     return '📎'
+  }
+
+  // Enhanced upload function that handles both small and large files
+  const uploadToAskAI = async (file: File, buildingId?: string) => {
+    const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+    
+    // Small file path - direct upload via multipart
+    if (file.size <= MAX_FILE_SIZE) {
+      console.log('📁 Processing small file via multipart:', file.name)
+      const formData = new FormData()
+      formData.append('file', file)
+      if (buildingId) formData.append('buildingId', buildingId)
+
+      const res = await fetch('/api/ask-ai/upload', { method: 'POST', body: formData })
+      let json: any = null
+      try { 
+        json = await res.json() 
+      } catch (e) {
+        console.error('Failed to parse response:', e)
+      }
+      
+      if (!res.ok || !json?.success) {
+        const detail = (json && (json.error || json.message)) || `${res.status} ${res.statusText}`
+        throw new Error(`Upload failed for ${file.name}: ${detail}`)
+      }
+      return json
+    }
+
+    // Large file path - signed URL upload
+    console.log('📁 Processing large file via signed URL:', file.name)
+    
+    // Step 1: Get signed upload URL
+    const signRes = await fetch('/api/ask-ai/upload/sign', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ 
+        filename: file.name, 
+        contentType: file.type || 'application/octet-stream' 
+      }),
+    })
+    
+    const signJson = await signRes.json().catch(() => ({}))
+    if (!signRes.ok || !signJson?.success || !signJson?.signedUrl) {
+      const detail = signJson?.error || `${signRes.status} ${signRes.statusText}`
+      throw new Error(`Could not prepare upload: ${detail}`)
+    }
+
+    // Step 2: Upload file directly to storage
+    const putRes = await fetch(signJson.signedUrl, {
+      method: 'PUT',
+      headers: { 'content-type': file.type || 'application/octet-stream' },
+      body: file,
+    })
+    
+    if (!putRes.ok) {
+      throw new Error(`Storage upload failed (${putRes.status} ${putRes.statusText})`)
+    }
+
+    // Step 3: Process the uploaded file
+    const procRes = await fetch('/api/ask-ai/upload', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ 
+        path: signJson.path, 
+        buildingId: buildingId ?? null 
+      }),
+    })
+    
+    const procJson = await procRes.json().catch(() => ({}))
+    if (!procRes.ok || !procJson?.success) {
+      const detail = procJson?.error || `${procRes.status} ${procRes.statusText}`
+      throw new Error(`Process failed: ${detail}`)
+    }
+
+    return procJson
   }
 
   // Communication action handlers
@@ -1038,32 +1111,61 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
 
 
-                 {/* Uploaded Files Display */}
-                 {uploadedFiles.length > 0 && (
-                   <div className="mt-3">
-                     <div className="flex items-center gap-2 mb-2">
-                       <span className="text-xs font-medium text-gray-600">📄 Included in AI context:</span>
-                     </div>
-                     <div className="flex flex-wrap gap-2">
-                       {uploadedFiles.map((file) => (
-                         <div
-                           key={file.id}
-                           className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer group"
-                           title={`${file.name} (${formatFileSize(file.size)})`}
-                         >
-                           <span>{getFileIcon(file.type)}</span>
-                           <span className="font-medium truncate max-w-[120px]">{file.name}</span>
-                           <span className="text-xs text-blue-500 opacity-70">({formatFileSize(file.size)})</span>
-                           <button
-                             type="button"
-                             onClick={() => removeFile(file.id)}
-                             className="ml-1 text-blue-400 hover:text-blue-600 transition-colors opacity-0 group-hover:opacity-100"
-                           >
-                             <XIcon className="h-3 w-3" />
-                           </button>
+                                      {/* Uploaded Files Display */}
+                     {uploadedFiles.length > 0 && (
+                       <div className="mt-3">
+                         <div className="flex items-center gap-2 mb-2">
+                           <span className="text-xs font-medium text-gray-600">📄 Included in AI context:</span>
                          </div>
-                       ))}
-                     </div>
+                         <div className="flex flex-wrap gap-2">
+                           {uploadedFiles.map((file) => (
+                             <div
+                               key={file.id}
+                               className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer group"
+                               title={`${file.name} (${formatFileSize(file.size)})`}
+                             >
+                               <span>{getFileIcon(file.type)}</span>
+                               <span className="font-medium truncate max-w-[120px]">{file.name}</span>
+                               <span className={`text-xs ${
+                                 file.size > 10 * 1024 * 1024 ? 'text-orange-500' : 'text-blue-500'
+                               } opacity-70`}>
+                                 ({formatFileSize(file.size)})
+                                 {file.size > 10 * 1024 * 1024 && ' ⚡'}
+                               </span>
+                               <button
+                                 type="button"
+                                 onClick={() => removeFile(file.id)}
+                                 className="ml-1 text-blue-400 hover:text-blue-600 transition-colors opacity-0 group-hover:opacity-100"
+                               >
+                                 <XIcon className="h-3 w-3" />
+                               </button>
+                             </div>
+                           ))}
+                         </div>
+                     
+                     {/* Upload Status Display */}
+                     {uploadStatus && (
+                       <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded-lg">
+                         <div className="flex items-center gap-2 text-xs">
+                           {uploadStatus.includes('Processing') && (
+                             <Loader2 className="h-3 w-3 animate-spin text-blue-600" />
+                           )}
+                           {uploadStatus.includes('✅') && (
+                             <span className="text-green-600">✓</span>
+                           )}
+                           {uploadStatus.includes('❌') && (
+                             <span className="text-red-600">✗</span>
+                           )}
+                           <span className={`text-xs ${
+                             uploadStatus.includes('❌') ? 'text-red-600' : 
+                             uploadStatus.includes('✅') ? 'text-green-600' : 
+                             'text-blue-600'
+                           }`}>
+                             {uploadStatus}
+                           </span>
+                         </div>
+                       </div>
+                     )}
                    </div>
                  )}
                </div>
@@ -1237,7 +1339,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                           >
                             <span>{getFileIcon(file.type)}</span>
                             <span className="font-medium truncate max-w-[120px]">{file.name}</span>
-                            <span className="text-xs text-blue-500 opacity-70">({formatFileSize(file.size)})</span>
+                            <span className={`text-xs ${
+                              file.size > 10 * 1024 * 1024 ? 'text-orange-500' : 'text-blue-500'
+                            } opacity-70`}>
+                              ({formatFileSize(file.size)})
+                              {file.size > 10 * 1024 * 1024 && ' ⚡'}
+                            </span>
                             <button
                               type="button"
                               onClick={() => removeFile(file.id)}
@@ -1308,6 +1415,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                         setMessages([])
                         setAskInput('')
                         setUploadedFiles([])
+                        setUploadStatus('')
                       }}
                       className="text-xs text-gray-500 hover:text-gray-700 transition-colors px-2 py-1 hover:bg-gray-100 rounded-lg"
                     >
