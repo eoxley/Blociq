@@ -5,7 +5,7 @@ import { MessageSquare } from 'lucide-react'
 import FolderSidebar from '@/components/inbox_v2/FolderSidebar'
 import MessageList from '@/components/inbox_v2/MessageList'
 import MessagePreview from '@/components/inbox_v2/MessagePreview'
-import ReplyModal from '@/components/inbox_v2/ReplyModal'
+import ReplyPopout from '@/components/mail/ReplyPopout'
 import NewEmailModal from '@/components/inbox_v2/NewEmailModal'
 import DragDropFrame from '@/components/inbox_v2/DragDropFrame'
 import TriageButton from '@/components/inbox_v2/TriageButton'
@@ -38,6 +38,7 @@ export default function InboxV2() {
     isOpen: boolean
     type: 'reply' | 'replyAll'
   }>({ isOpen: false, type: 'reply' })
+  const [replyContent, setReplyContent] = useState('')
   const [newEmailModalOpen, setNewEmailModalOpen] = useState(false)
   const [moveSuccess, setMoveSuccess] = useState<{ message: string; timestamp: number } | null>(null)
 
@@ -228,10 +229,154 @@ export default function InboxV2() {
 
   const handleReply = (type: 'reply' | 'replyAll') => {
     setReplyModal({ isOpen: true, type })
+    setReplyContent('') // Reset content when opening reply modal
   }
 
   const handleCloseReplyModal = () => {
     setReplyModal({ isOpen: false, type: 'reply' })
+  }
+
+  const handleSendEmail = async (payload: any) => {
+    if (!selectedMessage) return
+    
+    try {
+      const response = await fetch('/api/outlook/v2/messages/reply', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messageId: selectedMessage.id,
+          to: payload.to.map((r: any) => r.email),
+          cc: payload.cc.map((r: any) => r.email),
+          bcc: payload.bcc.map((r: any) => r.email),
+          subject: payload.subject.trim(),
+          htmlBody: payload.content.trim()
+        })
+      })
+      
+      const data = await response.json()
+      
+      if (response.ok && data.ok) {
+        console.log('Reply sent successfully')
+        // Optionally refresh messages or show success message
+      } else {
+        const errorMessage = data?.error || 'Failed to send reply'
+        console.error('Failed to send reply:', errorMessage)
+        throw new Error(errorMessage)
+      }
+    } catch (error) {
+      console.error('Error sending reply:', error)
+      throw error
+    }
+  }
+
+  const handleGenerateAIReply = async () => {
+    if (!selectedMessage) return
+    
+    try {
+      // Create a prompt for AI reply generation
+      const aiPrompt = `Generate a professional email reply to this email:
+
+From: ${selectedMessage.from?.emailAddress?.address || selectedMessage.from?.emailAddress || 'Unknown'}
+Subject: ${selectedMessage.subject || '(No subject)'}
+Content: ${selectedMessage.body?.content || ''}
+
+Please generate a professional, contextual reply that:
+1. Addresses the original sender appropriately
+2. Provides a relevant response to the email content
+3. Maintains professional tone and formatting
+4. Is concise but comprehensive
+5. Uses proper email etiquette
+
+Generate the reply in plain text format (no HTML tags).`
+
+      const response = await fetch('/api/ask-ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: aiPrompt,
+          context: 'email_reply_generation'
+        })
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.response) {
+          // Clean the AI response and convert to HTML
+          let aiReply = data.response.trim()
+          
+          // Convert plain text to HTML paragraphs
+          const paragraphs = aiReply.split('\n').filter((line: string) => line.trim())
+          const htmlReply = paragraphs.map((line: string) => `<p>${line}</p>`).join('')
+          
+          // Update the reply content with the AI-generated response
+          setReplyContent(aiReply)
+        } else {
+          console.error('AI generated an empty response')
+        }
+      } else {
+        console.error('Failed to generate AI reply')
+      }
+    } catch (error) {
+      console.error('Error generating AI reply:', error)
+    }
+  }
+
+  const transformMessageForReply = (message: any, type: 'reply' | 'replyAll') => {
+    if (!message) return { initialTo: [], initialSubject: '', threadMessages: [], fromEmail: '' }
+    
+    // Set initial recipients based on reply type
+    let initialTo: Array<{ name?: string; email: string }> = []
+    if (type === 'reply') {
+      // Reply to sender only
+      const senderEmail = message.from?.emailAddress?.address || message.from?.emailAddress || ''
+      if (senderEmail) {
+        initialTo = [{ 
+          name: message.from?.emailAddress?.name || message.from?.name || undefined,
+          email: senderEmail 
+        }]
+      }
+    } else {
+      // Reply all - include original recipients
+      const originalTo = message.toRecipients?.map((r: any) => ({
+        name: r.emailAddress?.name || r.name || undefined,
+        email: r.emailAddress?.address || r.emailAddress || ''
+      })) || []
+      const senderEmail = message.from?.emailAddress?.address || message.from?.emailAddress || ''
+      
+      // Remove sender from recipients if they're already there
+      initialTo = originalTo.filter((r: any) => r.email !== senderEmail)
+    }
+    
+    // Set subject with Re: prefix if not already present
+    const currentSubject = message.subject || '(No subject)'
+    const initialSubject = currentSubject.startsWith('Re:') ? currentSubject : `Re: ${currentSubject}`
+    
+    // Transform message to thread format
+    const threadMessages = [{
+      id: message.id,
+      from: {
+        name: message.from?.emailAddress?.name || message.from?.name || undefined,
+        email: message.from?.emailAddress?.address || message.from?.emailAddress || ''
+      },
+      to: (message.toRecipients || []).map((r: any) => ({
+        name: r.emailAddress?.name || r.name || undefined,
+        email: r.emailAddress?.address || r.emailAddress || ''
+      })),
+      subject: message.subject || '(No subject)',
+      date: message.receivedDateTime || new Date().toISOString(),
+      snippet: message.body?.content?.substring(0, 100) || '',
+      html: message.body?.content || undefined,
+      text: message.body?.content || undefined
+    }]
+    
+    // For now, use a placeholder email - in a real app, this would come from user context
+    const fromEmail = "user@example.com" // TODO: Get from user context
+    
+    return { initialTo, initialSubject, threadMessages, fromEmail }
   }
 
   const handleMessageSelect = (messageId: string | null) => {
@@ -352,11 +497,13 @@ export default function InboxV2() {
         </div>
       )}
 
-      <ReplyModal
-        isOpen={replyModal.isOpen}
+      <ReplyPopout
+        open={replyModal.isOpen}
         onClose={handleCloseReplyModal}
-        message={selectedMessage}
-        replyType={replyModal.type}
+        onSend={handleSendEmail}
+        onGenerateAIReply={handleGenerateAIReply}
+        content={replyContent}
+        {...transformMessageForReply(selectedMessage, replyModal.type)}
       />
       
       <NewEmailModal
