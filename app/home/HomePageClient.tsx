@@ -335,9 +335,16 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       
       // Transform Outlook events to match PropertyEvent type
       const transformedOutlookEvents: PropertyEvent[] = events.map((event: any) => {
+        // Ensure proper timezone handling for Outlook events
         const normalizedTimes = normalizeEventTimes({
-          start: { dateTime: event.start_time, timeZone: event.timeZone || 'UTC' },
-          end: { dateTime: event.end_time || event.start_time, timeZone: event.timeZone || 'UTC' }
+          start: { 
+            dateTime: event.start_time, 
+            timeZone: event.timeZone || 'Europe/London' 
+          },
+          end: { 
+            dateTime: event.end_time || event.start_time, 
+            timeZone: event.timeZone || 'Europe/London' 
+          }
         })
         
         return {
@@ -352,7 +359,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           online_meeting: event.online_meeting,
           startUtc: normalizedTimes.startUtc || undefined,
           endUtc: normalizedTimes.endUtc || undefined,
-          timeZoneIana: normalizedTimes.timeZoneIana || undefined,
+          timeZoneIana: normalizedTimes.timeZoneIana || 'Europe/London',
           isAllDay: normalizedTimes.isAllDay || false
         }
       })
@@ -1633,14 +1640,15 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                           let timeDisplay: string
                           if (event.isAllDay) {
                             timeDisplay = 'All day'
-                          } else if (event.startUtc && event.timeZoneIana) {
-                            const clientZone = getClientZone()
-                            timeDisplay = formatInZone(event.startUtc, clientZone, 'HH:mm')
+                          } else if (event.startUtc) {
+                            // Always use UK time for display
+                            timeDisplay = formatInZone(event.startUtc, 'Europe/London', 'HH:mm')
                           } else {
-                            // Fallback to old method
+                            // Fallback to old method but ensure UK timezone
                             timeDisplay = eventDate.toLocaleTimeString('en-GB', { 
                               hour: '2-digit', 
-                              minute: '2-digit' 
+                              minute: '2-digit',
+                              timeZone: 'Europe/London'
                             })
                           }
 

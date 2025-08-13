@@ -76,6 +76,14 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
     setFocusedMessageIndex(-1)
   }, [messages])
 
+  // Auto-select first message when messages load
+  useEffect(() => {
+    if (messages.length > 0 && !selectedMessageId) {
+      onMessageSelect(messages[0].id)
+      setFocusedMessageIndex(0)
+    }
+  }, [messages, selectedMessageId, onMessageSelect])
+
   const handleDelete = async (messageId: string) => {
     if (!confirm('Are you sure you want to delete this message?')) return
     
@@ -169,7 +177,7 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
   if (!selectedFolderId) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4f46e5] mx-auto mb-4"></div>
         <p className="text-gray-500">Loading folders...</p>
       </div>
     )
@@ -178,7 +186,7 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
   if (isLoading) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4f46e5] mx-auto mb-4"></div>
         <p className="text-gray-500 mt-2">Loading messages...</p>
         <p className="text-xs text-gray-400 mt-2">Folder: {selectedFolderId}</p>
       </div>
@@ -194,21 +202,22 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 flex flex-col">
-      <div className="p-4 border-b border-gray-200">
+    <div className="bg-white rounded-lg border border-gray-200 flex flex-col shadow-sm">
+      <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-blue-50">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold text-gray-900">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <span className="w-2 h-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full"></span>
             {messages.length} message{messages.length !== 1 ? 's' : ''}
           </h3>
         </div>
         {isDragging && (
-          <p className="text-xs text-blue-600 mt-1">
-            Drag message to another folder to move it
+          <p className="text-xs text-[#4f46e5] mt-1 font-medium">
+            ✨ Drag message to another folder to move it
           </p>
         )}
         {movingMessageId && (
-          <p className="text-xs text-green-600 mt-1">
-            Moving message... Please wait
+          <p className="text-xs text-green-600 mt-1 font-medium">
+            📁 Moving message... Please wait
           </p>
         )}
       </div>
@@ -232,12 +241,12 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
                 onDrop={(e) => handleDrop(e, selectedFolderId || '')}
                 className={`p-4 cursor-pointer transition-all duration-200 ${
                   isSelected
-                    ? 'bg-blue-50 border-r-2 border-blue-500'
+                    ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-r-2 border-[#4f46e5]'
                     : isFocused
-                    ? 'bg-blue-100 border-r-2 border-blue-300'
+                    ? 'bg-gradient-to-r from-blue-100 to-indigo-100 border-r-2 border-[#a855f7]'
                     : isBeingDragged
                     ? 'opacity-50 scale-95'
-                    : 'hover:bg-gray-50'
+                    : 'hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50'
                 } ${isDragging && !isBeingDragged ? 'cursor-grab' : ''} ${isMoving ? 'opacity-50 scale-95' : ''}`}
                 onClick={() => {
                   onMessageSelect(message.id)
@@ -251,28 +260,28 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
-                      <Move className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                      <h4 className="text-sm font-medium text-gray-900 line-clamp-2 leading-tight">
+                      <Move className="h-3 w-3 text-[#4f46e5] flex-shrink-0" />
+                      <h4 className="text-sm font-semibold text-gray-900 line-clamp-2 leading-tight">
                         {message.subject || '(No subject)'}
                       </h4>
                       {message.hasAttachments && (
-                        <Paperclip className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                        <Paperclip className="h-3 w-3 text-[#a855f7] flex-shrink-0" />
                       )}
                     </div>
                     
-                    <p className="text-sm text-gray-600 truncate mb-2">
+                    <p className="text-sm text-gray-700 truncate mb-2 font-medium">
                       {message.from?.emailAddress?.address || 'Unknown sender'}
                     </p>
                     
                     {/* Email preview content */}
                     {message.bodyPreview && (
-                      <p className="text-xs text-gray-500 line-clamp-2 mb-2 leading-relaxed">
+                      <p className="text-xs text-gray-600 line-clamp-2 mb-2 leading-relaxed">
                         {truncateText(message.bodyPreview, 120)}
                       </p>
                     )}
                     
                     <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <Clock className="h-3 w-3" />
+                      <Clock className="h-3 w-3 text-[#4f46e5]" />
                       <span>{formatDistanceToNow(receivedDate, { addSuffix: true })}</span>
                     </div>
                   </div>
