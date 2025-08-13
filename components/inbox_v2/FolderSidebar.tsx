@@ -29,8 +29,9 @@ export default function FolderSidebar({ selectedFolderId, onFolderSelect }: Fold
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm h-full flex flex-col">
+      {/* Header - Fixed height, no scroll */}
+      <div className="flex items-center justify-between mb-4 flex-shrink-0">
         <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
           <span className="w-2 h-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full"></span>
           Folders
@@ -54,9 +55,9 @@ export default function FolderSidebar({ selectedFolderId, onFolderSelect }: Fold
         </div>
       </div>
       
-      {/* Add Folder Input */}
+      {/* Add Folder Input - Fixed height, no scroll */}
       {isAddingFolder && (
-        <div className="mb-3 p-3 bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg border border-gray-200">
+        <div className="mb-3 p-3 bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg border border-gray-200 flex-shrink-0">
           <div className="flex gap-2">
             <input
               type="text"
@@ -83,17 +84,20 @@ export default function FolderSidebar({ selectedFolderId, onFolderSelect }: Fold
         </div>
       )}
       
-      <div className="space-y-1">
-        {folders.map((folder) => (
-          <DroppableFolderItem
-            key={folder.id}
-            id={folder.id}
-            displayName={folder.displayName}
-            isSelected={selectedFolderId === folder.id}
-            isFallback={folder.isFallback}
-            onSelect={onFolderSelect}
-          />
-        ))}
+      {/* Folder List - Scrollable with remaining height */}
+      <div className="flex-1 overflow-y-auto min-h-0 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+        <div className="space-y-1">
+          {folders.map((folder) => (
+            <DroppableFolderItem
+              key={folder.id}
+              id={folder.id}
+              displayName={folder.displayName}
+              isSelected={selectedFolderId === folder.id}
+              isFallback={folder.isFallback}
+              onSelect={onFolderSelect}
+            />
+          ))}
+        </div>
       </div>
     </div>
   )

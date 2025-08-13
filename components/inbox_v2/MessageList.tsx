@@ -128,8 +128,6 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
     }
   }
 
-
-
   const truncateText = (text: string, maxLength: number) => {
     if (!text) return ''
     if (text.length <= maxLength) return text
@@ -138,7 +136,7 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
 
   if (!selectedFolderId) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center h-full flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4f46e5] mx-auto mb-4"></div>
         <p className="text-gray-500">Loading folders...</p>
       </div>
@@ -147,7 +145,7 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center h-full flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4f46e5] mx-auto mb-4"></div>
         <p className="text-gray-500 mt-2">Loading messages...</p>
         <p className="text-xs text-gray-400 mt-2">Folder: {selectedFolderId}</p>
@@ -157,15 +155,16 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
 
   if (messages.length === 0) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center h-full flex items-center justify-center">
         <p className="text-gray-500">No messages in this folder</p>
       </div>
     )
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 flex flex-col shadow-sm">
-      <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-blue-50">
+    <div className="bg-white rounded-lg border border-gray-200 flex flex-col h-full shadow-sm">
+      {/* Header - Fixed height, no scroll */}
+      <div className="p-4 border-b border-gray-200 flex-shrink-0 bg-gradient-to-r from-gray-50 to-blue-50">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
             <span className="w-2 h-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full"></span>
@@ -180,9 +179,10 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
         />
       </div>
       
-      <div className="flex-1 overflow-hidden">
-        <div className="divide-y divide-gray-100 h-[400px]">
-          {filteredMessages.slice(0, 5).map((message: any, index: number) => {
+      {/* Message List - Scrollable with full height */}
+      <div className="flex-1 overflow-y-auto min-h-0 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+        <div className="divide-y divide-gray-100">
+          {filteredMessages.map((message: any, index: number) => {
             const isSelected = selectedMessageId === message.id
             const isFocused = focusedMessageIndex === index
             const receivedDate = new Date(message.receivedDateTime)
@@ -235,7 +235,7 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
                     <div className="flex items-center gap-2 text-xs text-gray-500">
                       <Clock className="h-3 w-3 text-[#4f46e5]" />
                       <span>{formatDistanceToNow(receivedDate, { addSuffix: true })}</span>
-                </div>
+                    </div>
                   </div>
                   
                   <button

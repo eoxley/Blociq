@@ -293,43 +293,57 @@ export default function InboxV2() {
       </section>
 
       <DragDropFrame onMoveSuccess={handleMoveSuccess} onMoveError={handleMoveError}>
-        <div className="grid grid-cols-[260px_380px_1fr] gap-4 h-[calc(100vh-400px)] overflow-hidden">
-          <div className="flex flex-col">
-            {/* New Email and Triage Buttons */}
-            <div className="mb-4 flex gap-3">
-              <button
-                onClick={() => setNewEmailModalOpen(true)}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white rounded-lg hover:brightness-110 transition-all duration-200 shadow-sm font-medium"
-              >
-                <MessageSquare className="h-4 w-4" />
-                New Email
-              </button>
+        {/* Main Inbox Container - Locked Height with Overflow Hidden */}
+        <div className="h-[calc(100vh-400px)] overflow-hidden">
+          {/* Grid Layout - All columns now have equal height and proper scroll boxes */}
+          <div className="grid grid-cols-[260px_380px_1fr] gap-4 h-full">
+            {/* Column 1: Folder Sidebar - Fixed height, no scroll needed */}
+            <div className="flex flex-col h-full">
+              {/* New Email and Triage Buttons */}
+              <div className="mb-4 flex gap-3 flex-shrink-0">
+                <button
+                  onClick={() => setNewEmailModalOpen(true)}
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white rounded-lg hover:brightness-110 transition-all duration-200 shadow-sm font-medium"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  New Email
+                </button>
+                
+                <TriageButton />
+              </div>
               
-                          <TriageButton />
+              {/* Folder Sidebar - Takes remaining height */}
+              <div className="flex-1 min-h-0">
+                <FolderSidebar 
+                  selectedFolderId={selectedFolderId}
+                  onFolderSelect={(folderId) => {
+                    setSelectedFolderId(folderId)
+                    setSelectedMessage(null) // Clear selected message when changing folders
+                  }}
+                />
+              </div>
             </div>
             
-            <FolderSidebar 
-              selectedFolderId={selectedFolderId}
-              onFolderSelect={(folderId) => {
-                setSelectedFolderId(folderId)
-                setSelectedMessage(null) // Clear selected message when changing folders
-              }}
-            />
+            {/* Column 2: Message List - Full height with scroll box */}
+            <div className="h-full min-h-0">
+              <MessageList 
+                selectedFolderId={selectedFolderId}
+                selectedMessageId={selectedMessage?.id || null}
+                onMessageSelect={handleMessageSelect}
+              />
+            </div>
+            
+            {/* Column 3: Message Preview - Full height with scroll box */}
+            <div className="h-full min-h-0">
+              <MessagePreview 
+                selectedMessage={selectedMessage}
+                onReply={() => handleReply('reply')}
+                onReplyAll={() => handleReply('replyAll')}
+              />
+            </div>
           </div>
-          
-          <MessageList 
-            selectedFolderId={selectedFolderId}
-            selectedMessageId={selectedMessage?.id || null}
-            onMessageSelect={handleMessageSelect}
-          />
-          
-          <MessagePreview 
-            selectedMessage={selectedMessage}
-            onReply={() => handleReply('reply')}
-            onReplyAll={() => handleReply('replyAll')}
-          />
         </div>
-              </DragDropFrame>
+      </DragDropFrame>
 
       {/* Success Message Display */}
       {moveSuccess && (

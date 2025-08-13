@@ -113,7 +113,7 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
 
   if (!selectedMessage) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center shadow-sm">
+      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center h-full flex items-center justify-center shadow-sm">
         <div className="w-16 h-16 bg-gradient-to-r from-gray-100 to-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <MessageSquare className="h-8 w-8 text-[#4f46e5]" />
         </div>
@@ -125,7 +125,7 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center shadow-sm">
+      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center h-full flex items-center justify-center shadow-sm">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4f46e5] mx-auto"></div>
         <p className="text-gray-500 mt-2">Loading message...</p>
       </div>
@@ -134,7 +134,7 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
 
   if (error) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center shadow-sm">
+      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center h-full flex items-center justify-center shadow-sm">
         <p className="text-red-500 mb-2">{error}</p>
         <button 
           onClick={() => window.location.reload()}
@@ -201,7 +201,7 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 flex flex-col h-full shadow-sm">
-      {/* Header */}
+      {/* Header - Fixed height, no scroll */}
       <div className="p-4 border-b border-gray-200 flex-shrink-0 bg-gradient-to-r from-gray-50 to-blue-50">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold text-gray-900 line-clamp-2 flex items-center gap-2">
@@ -282,7 +282,7 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
         </div>
       </div>
       
-      {/* Message Body - Scrollable */}
+      {/* Message Body - Scrollable with full height */}
       <div className="flex-1 overflow-y-auto p-4 min-h-0 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
         <div className="max-w-none">
           {renderEmailBody()}
