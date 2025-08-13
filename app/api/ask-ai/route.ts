@@ -6,11 +6,7 @@
 // - File uploads handled by /api/ask-ai/upload endpoint
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import OpenAI from 'openai';
-import { insertAiLog } from '../../../lib/supabase/ai_logs';
-import { MAX_CHARS_PER_DOC, MAX_TOTAL_DOC_CHARS, truncate, isSummariseLike } from "../../../lib/ask/text";
 
 export const runtime = "nodejs";
 
@@ -64,6 +60,20 @@ export async function POST(req: NextRequest) {
         error: 'Service not configured. Please check environment variables.' 
       }, { status: 500 });
     }
+
+    // Check if OpenAI is configured
+    if (!process.env.OPENAI_API_KEY) {
+      console.error('❌ OpenAI not configured');
+      return NextResponse.json({ 
+        error: 'AI service not configured. Please check environment variables.' 
+      }, { status: 500 });
+    }
+
+    // Dynamic imports to prevent build-time execution
+    const { createRouteHandlerClient } = await import('@supabase/auth-helpers-nextjs');
+    const { default: OpenAI } = await import('openai');
+    const { insertAiLog } = await import('../../../lib/supabase/ai_logs');
+    const { MAX_CHARS_PER_DOC, MAX_TOTAL_DOC_CHARS, truncate, isSummariseLike } = await import("../../../lib/ask/text");
 
     const supabase = createRouteHandlerClient({ cookies });
     
