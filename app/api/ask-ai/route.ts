@@ -1,19 +1,16 @@
-// ✅ UNIFIED AI ENDPOINT [2025-01-15]
-// - Single endpoint for all AI functionality
+// ✅ UNIFIED AI ENDPOINT [2025-01-15] - TEXT ONLY
+// - Single endpoint for text-based AI queries
 // - Comprehensive building and document context
 // - Proper logging to ai_logs table
 // - Consistent response format
-// - Support for file uploads and document analysis
-// - Email reply generation support
-// - Public access support (no auth for general questions)
+// - File uploads handled by /api/ask-ai/upload endpoint
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import OpenAI from 'openai';
 import { insertAiLog } from '../../../lib/supabase/ai_logs';
-import { createAdminClient } from "../../../lib/supabase/admin";
-import { MAX_CHARS_PER_DOC, MAX_TOTAL_DOC_CHARS, truncate, isSummariseLike, slugify } from "../../../lib/ask/text";
+import { MAX_CHARS_PER_DOC, MAX_TOTAL_DOC_CHARS, truncate, isSummariseLike } from "../../../lib/ask/text";
 
 export const runtime = "nodejs";
 
@@ -60,153 +57,47 @@ When preparing an email to the reporting leaseholder and (if relevant) the upsta
 
 export async function POST(req: NextRequest) {
   try {
+    // Check if Supabase is configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      console.error('❌ Supabase not configured');
+      return NextResponse.json({ 
+        error: 'Service not configured. Please check environment variables.' 
+      }, { status: 500 });
+    }
+
     const supabase = createRouteHandlerClient({ cookies });
     
     // Get current user (optional for public access)
-    const { data: { user } } = await supabase.auth.getUser();
-    const isPublicAccess = !user;
+    let user = null;
+    let isPublicAccess = true;
+    
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      user = authUser;
+      isPublicAccess = !user;
+    } catch (authError) {
+      console.warn('Auth check failed, proceeding as public access:', authError);
+      isPublicAccess = true;
+    }
 
-    // Check if request is FormData (file upload) or JSON
-    const contentType = req.headers.get('content-type') || '';
-    let prompt = '';
-    let building_id = '';
-    let document_ids: string[] = [];
-    let leaseholder_id = '';
-    let contextType = 'general';
-    let contextId = '';
-    let uploadedFiles: File[] = [];
-    let emailThreadId = '';
-    let tone = 'Professional';
-    let isPublic = false;
-    let uploadedMeta: any = null;
+    // Handle JSON request only
+    const body = await req.json();
+    const prompt = body.message || body.prompt || body.question || '';
+    let building_id = body.building_id || body.buildingId || '';
+    const document_ids = body.document_ids || body.documentIds || [];
+    const leaseholder_id = body.leaseholder_id || body.leaseholderId || '';
+    const contextType = body.context_type || body.contextType || 'general';
+    const contextId = body.context_id || body.contextId || '';
+    const emailThreadId = body.email_thread_id || body.emailThreadId || '';
+    const tone = body.tone || 'Professional';
+    const isPublic = body.is_public || body.isPublic || false;
+
+    if (!prompt) {
+      return NextResponse.json({ error: 'Missing prompt' }, { status: 400 });
+    }
 
     // Initialize OpenAI client
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-    if (contentType.includes('multipart/form-data')) {
-      // Handle file upload
-      const formData = await req.formData();
-      prompt = formData.get('message') as string || formData.get('prompt') as string || '';
-      building_id = formData.get('building_id') as string || '';
-      const docType = formData.get('doc_type') as string || null;
-      contextType = formData.get('context_type') as string || formData.get('contextType') as string || 'general';
-      contextId = formData.get('context_id') as string || '';
-      emailThreadId = formData.get('email_thread_id') as string || '';
-      tone = formData.get('tone') as string || 'Professional';
-      isPublic = formData.get('is_public') === 'true';
-      
-      // Extract uploaded files
-      const files = formData.getAll('file') as File[];
-      uploadedFiles = files.filter(file => file instanceof File);
-      
-      console.log('📁 Received file upload:', uploadedFiles.length, 'files');
-      
-      // Handle file uploads if present
-      let uploadedMeta = null;
-      if (uploadedFiles.length > 0) {
-        if (!building_id) {
-          return NextResponse.json({ 
-            error: 'building_id required for file upload',
-            success: false
-          }, { status: 400 });
-        }
-        
-        try {
-          const admin = createAdminClient();
-          
-          // Process each uploaded file
-          for (const file of uploadedFiles) {
-            const buffer = Buffer.from(await file.arrayBuffer());
-            const timestamp = Date.now();
-            const fileName = slugify(file.name);
-            const storagePath = `${building_id}/${timestamp}-${fileName}`;
-            
-            // Upload to Supabase Storage
-            const { error: uploadError } = await admin.storage
-              .from('building-docs')
-              .upload(storagePath, buffer, {
-                contentType: file.type,
-                upsert: false
-              });
-            
-            if (uploadError) {
-              console.error('Storage upload failed:', uploadError);
-              continue;
-            }
-            
-            // Extract text content based on file type
-            let textContent = '';
-            if (file.type.startsWith('application/pdf')) {
-              // For PDFs, we'll leave text_content empty for now
-              // You can integrate with lib/extractTextFromPdf if available
-              textContent = '';
-            } else if (file.type.startsWith('text/')) {
-              textContent = buffer.toString('utf8');
-            }
-            
-            // Insert into building_documents table
-            const { data: docData, error: insertError } = await admin
-              .from('building_documents')
-              .insert({
-                building_id: building_id,
-                file_name: file.name,
-                type: docType || null,
-                storage_path: storagePath,
-                mime_type: file.type,
-                size_bytes: file.size,
-                text_content: textContent
-              })
-              .select('id')
-              .single();
-            
-            if (insertError) {
-              console.error('Database insert failed:', insertError);
-              continue;
-            }
-            
-            // Add to document_ids for processing
-            document_ids.push(docData.id);
-          }
-          
-          // Set uploaded metadata for response
-          uploadedMeta = uploadedFiles.map(file => ({
-            file_name: file.name,
-            size: file.size,
-            type: file.type
-          }));
-          
-          // Set default prompt if empty
-          if (!prompt) {
-            prompt = "Summarise this document in ≤ 10 sentences, list 5–10 key points, then propose concrete next actions for a UK block manager.";
-          }
-          
-          console.log('✅ Successfully processed', uploadedFiles.length, 'files');
-          
-        } catch (error) {
-          console.error('Error processing file uploads:', error);
-          return NextResponse.json({ 
-            error: 'Failed to process file uploads',
-            success: false
-          }, { status: 500 });
-        }
-      }
-    } else {
-      // Handle JSON request
-      const body = await req.json();
-      prompt = body.prompt || body.question || '';
-      building_id = body.building_id || body.buildingId || '';
-      document_ids = body.document_ids || body.documentIds || [];
-      leaseholder_id = body.leaseholder_id || body.leaseholderId || '';
-      contextType = body.context_type || body.contextType || 'general';
-      contextId = body.context_id || body.contextId || '';
-      emailThreadId = body.email_thread_id || body.emailThreadId || '';
-      tone = body.tone || 'Professional';
-      isPublic = body.is_public || body.isPublic || false;
-    }
-
-    if (!prompt && uploadedFiles.length === 0) {
-      return NextResponse.json({ error: 'Missing prompt or files' }, { status: 400 });
-    }
 
     // For public access, use simplified prompt
     if (isPublicAccess || isPublic) {
@@ -269,40 +160,32 @@ Keep responses concise, professional, and practical. If you don't have specific 
           
           const { data: building } = await supabase
             .from('buildings')
-            .select('id, name, unit_count, address')
+            .select('id, name, address, unit_count')
             .ilike('name', `%${potentialName}%`)
-            .maybeSingle();
+            .limit(1)
+            .single();
           
           if (building) {
-            contextMetadata.buildingDetected = true;
-            contextMetadata.buildingName = building.name;
-            contextMetadata.building_id = building.id;
-            contextMetadata.unit_count = building.unit_count;
-            buildingContext += `Building: ${building.name}\nUnits: ${building.unit_count || 'Unknown'}\nAddress: ${building.address || 'Not specified'}\n\n`;
-            
-            // Add unit count to system prompt for better context
-            systemPrompt += `\nThe building "${building.name}" contains ${building.unit_count || 'an unknown number of'} units.\n`;
-            
-            console.log('✅ Found building context:', building.name);
+            building_id = building.id;
+            console.log('✅ Auto-detected building:', building.name);
             break;
           }
         }
       }
     }
 
-    // 🏢 Building Context (if building_id provided)
+    // 🏢 Building Context
     if (building_id) {
       try {
         const { data: building } = await supabase
           .from('buildings')
-          .select('id, name, unit_count, address')
+          .select('id, name, address, unit_count')
           .eq('id', building_id)
           .single();
 
         if (building) {
           contextMetadata.buildingName = building.name;
-          contextMetadata.building_id = building.id;
-          contextMetadata.unit_count = building.unit_count;
+          contextMetadata.unitCount = building.unit_count;
           buildingContext += `Building: ${building.name}\nUnits: ${building.unit_count || 'Unknown'}\nAddress: ${building.address || 'Not specified'}\n\n`;
           
           // Add unit count to system prompt for better context
@@ -395,39 +278,40 @@ Keep responses concise, professional, and practical. If you don't have specific 
           .from('building_documents')
           .select('id, file_name, text_content, type, created_at')
           .eq('building_id', building_id)
+          .not('text_content', 'is', null)
           .order('created_at', { ascending: false })
-          .limit(1);
+          .limit(5);
         usedDocs = data ?? [];
       } catch (error) {
         console.warn('Could not fetch building documents:', error);
       }
     }
-    
-    // Build document context with character limits
+
     if (usedDocs.length > 0) {
-      let included = 0;
-      let citations = [];
+      console.log('📄 Using', usedDocs.length, 'documents for context');
       
-      for (const d of usedDocs) {
-        if (!d?.text_content) continue;
-        if (included >= MAX_TOTAL_DOC_CHARS) break;
+      // Truncate documents to stay within token limits
+      let totalChars = 0;
+      const truncatedDocs = usedDocs.map(doc => {
+        if (!doc.text_content) return doc;
         
-        const remaining = MAX_TOTAL_DOC_CHARS - included;
-        const slice = truncate(d.text_content, Math.min(remaining, MAX_CHARS_PER_DOC));
-        included += slice.length;
+        const maxChars = Math.floor(MAX_CHARS_PER_DOC);
+        const truncated = truncate(doc.text_content, maxChars);
+        totalChars += truncated.length;
         
-        citations.push({ 
-          id: d.id, 
-          file_name: d.file_name, 
-          type: d.type ?? null, 
-          created_at: d.created_at 
-        });
+        if (totalChars > MAX_TOTAL_DOC_CHARS) {
+          return { ...doc, text_content: truncated.substring(0, truncated.length - (totalChars - MAX_TOTAL_DOC_CHARS)) };
+        }
         
-        documentContext += `Document: ${d.file_name}\nType: ${d.type ?? "unknown"}\nContent:\n${slice}\n\n`;
-      }
+        return { ...doc, text_content: truncated };
+      });
+
+      documentContext = truncatedDocs.map(doc => 
+        `Document: ${doc.file_name} (${doc.type || 'Unknown type'})\n${doc.text_content || 'No text content'}\n`
+      ).join('\n---\n');
       
-      contextMetadata.documentCount = usedDocs.length;
-      contextMetadata.citations = citations;
+      contextMetadata.documentCount = truncatedDocs.length;
+      contextMetadata.totalDocumentChars = totalChars;
     }
 
     // 📧 Email Thread Context
@@ -436,181 +320,145 @@ Keep responses concise, professional, and practical. If you don't have specific 
       try {
         const { data: emails } = await supabase
           .from('incoming_emails')
-          .select('subject, body_full, from_email, received_at')
+          .select('subject, body, from_email, created_at')
           .eq('thread_id', emailThreadId)
-          .order('received_at', { ascending: true })
-          .limit(5);
+          .order('created_at', { ascending: true })
+          .limit(10);
 
         if (emails && emails.length > 0) {
           emailContext = emails.map(email => 
-            `Email: ${email.subject}\nFrom: ${email.from_email}\nContent: ${email.body_full?.substring(0, 1000) || 'No content'}\n`
-          ).join('\n');
+            `Email: ${email.subject}\nFrom: ${email.from_email}\nDate: ${email.created_at}\n${email.body}\n`
+          ).join('\n---\n');
           contextMetadata.emailCount = emails.length;
         }
       } catch (error) {
-        console.warn('Could not fetch email thread data:', error);
+        console.warn('Could not fetch email thread:', error);
       }
     }
 
-    // 🎯 Build the final prompt
-    let finalPrompt = prompt;
+    // 👤 Leaseholder Context
+    let leaseholderContext = "";
+    if (leaseholder_id) {
+      try {
+        const { data: leaseholder } = await supabase
+          .from('leaseholders')
+          .select('name, email, unit_number, phone')
+          .eq('id', leaseholder_id)
+          .single();
+
+        if (leaseholder) {
+          leaseholderContext = `Leaseholder: ${leaseholder.name}\nUnit: ${leaseholder.unit_number}\nEmail: ${leaseholder.email}\nPhone: ${leaseholder.phone || 'Not provided'}\n`;
+          contextMetadata.leaseholderName = leaseholder.name;
+          contextMetadata.leaseholderUnit = leaseholder.unit_number;
+        }
+      } catch (error) {
+        console.warn('Could not fetch leaseholder data:', error);
+      }
+    }
+
+    // 🧠 Build AI Prompt
+    let fullPrompt = prompt;
     
     if (buildingContext) {
-      finalPrompt = `Building Context:\n${buildingContext}\n\nQuestion: ${prompt}`;
+      fullPrompt = `Building Context:\n${buildingContext}\n\nQuestion: ${prompt}`;
     }
     
     if (documentContext) {
-      finalPrompt = `Document Context:\n${documentContext}\n\n${finalPrompt}`;
+      fullPrompt = `${fullPrompt}\n\nDocument Context:\n${documentContext}`;
     }
     
     if (emailContext) {
-      finalPrompt = `Email Thread Context:\n${emailContext}\n\n${finalPrompt}`;
-    }
-
-    // Add tone instruction for email replies
-    if (contextType === 'email_reply') {
-      systemPrompt += `\nYou are drafting an email reply. Use a ${tone.toLowerCase()} tone. Be professional and concise.`;
+      fullPrompt = `${fullPrompt}\n\nEmail Thread:\n${emailContext}`;
     }
     
-    // Add structured output instructions for document analysis
-    if (wantStructured) {
-      systemPrompt += `
-Return a STRICT JSON object with keys:
-- "summary": string (≤ 10 sentences)
-- "key_points": string[] (5–10 bullets)
-- "suggested_actions": string[] (5–10 concrete, UK leasehold-specific steps)
-Do not include any text before or after the JSON.`;
+    if (leaseholderContext) {
+      fullPrompt = `${fullPrompt}\n\nLeaseholder Context:\n${leaseholderContext}`;
     }
 
-    // 🚰 Leak triage policy detection and enforcement
-    const leakMode = isLeakIssue(prompt) || isLeakIssue(emailContext) || isLeakIssue(documentContext);
-    let wantLeakStructured = false;
-    
-    if (leakMode) {
-      // Append leak policy to system prompt
-      systemPrompt += LEAK_POLICY;
-      
-      // Set structured output mode for leak cases
-      wantLeakStructured = true;
-      
-      // Add structured output instructions for leak cases
-      systemPrompt += `
-Return a STRICT JSON object for leak cases with keys:
-- "email_to_reporter": string      // an email to the reporting leaseholder implementing the policy
-- "email_to_upstairs": string|null // if applicable (flat above scenario), otherwise null
-- "internal_actions": string[]     // step-by-step tasks for the manager (investigation, consent, bookings)
-- "costs_summary": string          // a clear summary of cost liability and insurance-excess option
-No preamble or trailing text; output raw JSON only for leak cases.`;
-      
-      console.log('🚰 Leak triage mode activated');
+    // Add leak policy if relevant
+    if (isLeakIssue(prompt)) {
+      systemPrompt += `\n${LEAK_POLICY}\n`;
+      console.log('🚰 Applied leak triage policy');
     }
 
-    console.log('🤖 Calling OpenAI API...');
-    
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: finalPrompt }
-      ],
-      temperature: 0.3,
-      max_tokens: 3000, // Increased to ensure sufficient tokens for leak triage responses
-    });
+    console.log('🤖 Building unified prompt for BlocIQ assistant');
+
+    // Build unified prompt with all context
+    const finalPrompt = fullPrompt;
+
+    console.log('📝 Prompt built, calling OpenAI...');
+
+    // Call OpenAI
+    let completion;
+    try {
+      completion = await openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: finalPrompt }
+        ],
+        temperature: 0.3,
+        max_tokens: 1500,
+      });
+    } catch (openaiError: any) {
+      console.error('❌ OpenAI API error:', openaiError);
+      
+      if (openaiError.status === 401) {
+        return NextResponse.json({ 
+          error: 'OpenAI API key is invalid or expired. Please check your configuration.' 
+        }, { status: 500 });
+      } else if (openaiError.status === 429) {
+        return NextResponse.json({ 
+          error: 'OpenAI API rate limit exceeded. Please try again in a moment.' 
+        }, { status: 500 });
+      } else if (openaiError.status === 500) {
+        return NextResponse.json({ 
+          error: 'OpenAI service is temporarily unavailable. Please try again later.' 
+        }, { status: 500 });
+      } else {
+        return NextResponse.json({ 
+          error: 'Failed to generate AI response. Please try again.',
+          details: openaiError.message || 'Unknown OpenAI error'
+        }, { status: 500 });
+      }
+    }
 
     const aiResponse = completion.choices[0]?.message?.content || 'No response generated';
+
     console.log('✅ OpenAI response received');
-    
-    // Parse structured output if requested
-    let structured: any = null;
-    if (wantStructured) {
-      try {
-        structured = JSON.parse(aiResponse);
-      } catch (parseError) {
-        console.warn('Failed to parse structured output:', parseError);
-      }
-    }
 
-    // 🚰 Parse leak triage response if in leak mode
-    let leakResponse: any = null;
-    if (leakMode && wantLeakStructured) {
-      try {
-        leakResponse = JSON.parse(aiResponse);
-        console.log('✅ Leak triage response parsed successfully');
-      } catch (parseError) {
-        console.warn('Failed to parse leak triage response, falling back to plain text:', parseError);
-        // Fall back to plain text response
-        leakResponse = null;
-      }
-    }
-
-    // Check for no-docs fallback for summarization
-    if (isSummariseLike(prompt) && usedDocs.length === 0) {
-      return NextResponse.json({
-        success: true,
-        response: "I couldn't find a recent document for this building to summarise. Please upload a file or specify which document to use.",
-        result: "I couldn't find a recent document for this building to summarise. Please upload a file or specify which document to use.",
-        context_type: contextType,
-        building_id: building_id || null,
-        document_count: 0,
-        citations: [],
-        structured: null,
-        routeId: "app/api/ask-ai/route.ts"
-      });
-    }
-    
-    // 📊 Log the interaction
-    try {
-      const logId = await insertAiLog({
-        user_id: user.id,
+    // Log the AI interaction
+    let logId = null;
+    if (user?.id) {
+      logId = await insertAiLog({
         question: prompt,
         response: aiResponse,
+        user_id: user.id,
         context_type: contextType,
-        building_id: building_id,
-        document_ids: usedDocs?.map(d=>d.id) ?? document_ids,
-        leaseholder_id: leaseholder_id,
-        email_thread_id: emailThreadId,
+        building_id: building_id || undefined,
+        document_ids: document_ids,
+        leaseholder_id: leaseholder_id || undefined,
+        email_thread_id: emailThreadId || undefined,
       });
-      contextMetadata.ai_log_id = logId;
-      
-      // Add leak policy metadata if applicable
-      if (leakMode) {
-        contextMetadata.leakPolicyApplied = true;
-      }
-    } catch (logError) {
-      console.error('Failed to log AI interaction:', logError);
     }
 
-    const payload = {
+    console.log('📝 AI interaction logged with ID:', logId);
+
+    return NextResponse.json({
       success: true,
-      response: aiResponse,
-      result: aiResponse, // For backward compatibility
+      result: aiResponse,
+      response: aiResponse, // For backward compatibility
+      conversationId: null, // Not using conversation system in this endpoint
       context_type: contextType,
       building_id: building_id || null,
-      document_count: (usedDocs?.length || document_ids?.length || 0),
-      used_document_ids: usedDocs?.map(d=>d.id) ?? document_ids ?? [],
-      citations: contextMetadata.citations || [],
-      structured: structured ? {
-        summary: structured.summary ?? null,
-        key_points: Array.isArray(structured.key_points) ? structured.key_points : null,
-        suggested_actions: Array.isArray(structured.suggested_actions) ? structured.suggested_actions : null
-      } : null,
+      document_count: usedDocs.length,
       has_email_thread: !!emailThreadId,
       has_leaseholder: !!leaseholder_id,
-      context: {
-        complianceUsed: contextMetadata.complianceCount > 0,
-        majorWorksUsed: contextType === 'major_works'
-      },
-      metadata: contextMetadata,
-      uploaded: uploadedMeta ?? null,
-      routeId: "app/api/ask-ai/route.ts"
-    };
-    
-    const res = NextResponse.json(payload);
-    res.headers.set("x-route-id", "app/api/ask-ai/route.ts");
-    return res;
+      context: contextMetadata
+    });
 
   } catch (error) {
-    console.error('❌ Error in unified ask-ai route:', error);
+    console.error('❌ Error in ask-ai route:', error);
     return NextResponse.json({ 
       error: 'Failed to process AI request',
       details: error instanceof Error ? error.message : 'Unknown error'

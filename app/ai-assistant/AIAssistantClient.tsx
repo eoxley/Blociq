@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Brain, Send, Upload, X, MessageSquare, RotateCcw } from 'lucide-react';
+import { Brain, Send, Upload, X, MessageSquare, RotateCcw, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAIConversation } from '@/hooks/useAIConversation';
+import { UploadDropzone } from '@/components/ask/UploadDropzone';
+import { AskResultCard } from '@/components/ask/AskResultCard';
 
 interface UserData {
   name: string;
@@ -29,6 +31,7 @@ export default function AIAssistantClient({ userData }: AIAssistantClientProps) 
 
   const [inputValue, setInputValue] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [uploadResult, setUploadResult] = useState<any>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -73,6 +76,11 @@ export default function AIAssistantClient({ userData }: AIAssistantClientProps) 
     const newFiles = Array.from(files);
     setUploadedFiles(prev => [...prev, ...newFiles]);
     toast.success(`Added ${newFiles.length} file(s)`);
+  };
+
+  const handleUploadResult = (result: any) => {
+    setUploadResult(result);
+    toast.success('Document analyzed successfully!');
   };
 
   const removeFile = (index: number) => {
@@ -131,6 +139,22 @@ export default function AIAssistantClient({ userData }: AIAssistantClientProps) 
             </button>
           </div>
         </div>
+
+        {/* Document Upload Section */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Upload Document for Analysis</h3>
+            <p className="text-sm text-gray-600">
+              Drag and drop any document to get an AI-powered summary and suggested actions
+            </p>
+          </div>
+          <UploadDropzone onResult={handleUploadResult} defaultBuildingId={null} />
+        </div>
+
+        {/* Upload Results */}
+        {uploadResult && (
+          <AskResultCard data={uploadResult} />
+        )}
 
         {/* Chat Messages */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
