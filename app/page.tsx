@@ -1,6 +1,7 @@
 import React from 'react'
 import Link from 'next/link'
-import { ArrowRight, Brain, FileText, Calendar, Shield, Zap, Building2, Users, Home, CheckCircle, Star, MessageSquare, Settings, BarChart3 } from 'lucide-react'
+import { ArrowRight, FileText, Calendar, Shield, Zap, Building2, Users, Home, CheckCircle, Star, MessageSquare, Settings, BarChart3 } from 'lucide-react'
+import BrainIcon from '@/components/icons/BrainIcon'
 import { Metadata } from 'next'
 import BlocIQLogo from '@/components/BlocIQLogo'
 
@@ -46,7 +47,7 @@ export default function LandingPage() {
           <div className="text-center text-white">
             <div className="mb-6">
               <div className="w-16 h-16 flex items-center justify-center mx-auto mb-6">
-                <Brain className="h-8 w-8 text-white" />
+                <BrainIcon className="h-8 w-8 text-white" />
               </div>
               <h1 className="text-5xl md:text-7xl font-bold mb-2 animate-fade-in text-center">
                 AI-Powered Property Management,{' '}
@@ -129,7 +130,7 @@ export default function LandingPage() {
               </div>
               <div className="flex items-start gap-4 p-6 bg-white/50 rounded-xl hover:bg-white/70 transition-colors">
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <Brain className="h-6 w-6 text-white" />
+                  <BrainIcon className="h-6 w-6 text-white" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-2 text-lg">AI with oversight</h3>
@@ -175,7 +176,7 @@ export default function LandingPage() {
             {/* AI Inbox Assistant */}
             <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 text-center">
               <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg mx-auto">
-                <Brain className="h-8 w-8 text-white" />
+                <BrainIcon className="h-8 w-8 text-white" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-4">
                 AI Inbox Assistant

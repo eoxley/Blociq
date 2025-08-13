@@ -9,9 +9,6 @@ export default function AskBlocPublic() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // NEW
-  const [sendTranscript, setSendTranscript] = useState(false);
-  const [userEmail, setUserEmail] = useState("");
   const [accepted, setAccepted] = useState(false);
 
   const enabled = process.env.NEXT_PUBLIC_PUBLIC_ASK_ENABLED === "1";
@@ -36,9 +33,6 @@ export default function AskBlocPublic() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           prompt: value.trim(),
-          // NEW
-          sendTranscript,
-          userEmail: sendTranscript && userEmail.trim() ? userEmail.trim() : undefined,
         }),
       });
       if (!res.ok) {
@@ -94,37 +88,7 @@ export default function AskBlocPublic() {
           </label>
         )}
 
-        {/* Existing opt-in email bits (keep if you've added them) */}
-        <label className="flex items-start gap-2 text-sm">
-          <input
-            type="checkbox"
-            className="mt-1"
-            checked={sendTranscript}
-            onChange={(e) => setSendTranscript(e.target.checked)}
-          />
-          <span>
-            Email me this answer and share with BlocIQ for follow-up (optional).{" "}
-            <span className="text-xs text-muted-foreground">
-              We'll only use this to send the transcript and may contact you about BlocIQ.
-            </span>
-          </span>
-        </label>
 
-        {sendTranscript && (
-          <input
-            type="email"
-            className="rounded-xl border px-3 py-2"
-            placeholder="Your email (optional)"
-            value={userEmail}
-            onChange={(e) => setUserEmail(e.target.value)}
-          />
-        )}
-
-        {sendTranscript && (
-          <p className="text-xs text-muted-foreground">
-            You can opt out anytime by unchecking.
-          </p>
-        )}
       </form>
 
       {/* Disclaimer */}

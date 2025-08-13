@@ -4,6 +4,7 @@ import { useAsk } from "./AskBlociqProvider"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import AskBlociqSheet from "./AskBlociqSheet"
+import BrainIcon from "@/components/icons/BrainIcon"
 
 export default function AskBlociqBubble(){
   const { open, setOpen, unread, setUnread } = useAsk()
@@ -35,7 +36,7 @@ export default function AskBlociqBubble(){
               )}
             >
               {/* brain icon */}
-              <span className="text-white text-xl">🧠</span>
+              <BrainIcon className="h-6 w-6 text-white" />
               {unread && <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 ring-2 ring-white" />}
             </button>
           </TooltipTrigger>
