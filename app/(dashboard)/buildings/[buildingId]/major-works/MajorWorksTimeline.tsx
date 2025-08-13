@@ -388,19 +388,19 @@ export default function MajorWorksTimeline({ buildingId, buildingName }: MajorWo
 
                     {/* Project Actions */}
                     <div className="flex items-center gap-2 pt-2 border-t">
-                      <Link href={`/major-works/${project.id}`}>
+                      <Link href={`/buildings/${buildingId}/major-works/${project.id}`}>
                         <Button variant="outline" size="sm">
                           <Eye className="h-3 w-3 mr-1" />
                           View Details
                         </Button>
                       </Link>
-                      <Link href={`/major-works/${project.id}/edit`}>
+                      <Link href={`/buildings/${buildingId}/major-works/${project.id}/edit`}>
                         <Button variant="outline" size="sm">
                           <Edit className="h-3 w-3 mr-1" />
                           Edit
                         </Button>
                       </Link>
-                      <Link href={`/major-works/${project.id}/upload`}>
+                      <Link href={`/buildings/${buildingId}/major-works/${project.id}/upload`}>
                         <Button variant="outline" size="sm">
                           <Upload className="h-3 w-3 mr-1" />
                           Upload Document
