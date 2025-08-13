@@ -511,7 +511,6 @@ export default function ComplianceTrackerClient({ complianceData }: ComplianceTr
               </div>
             </div>
           )}
-        </div>
 
         {/* Upload Compliance Modal */}
         {selectedAssetForUpload && (
