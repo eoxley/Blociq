@@ -64,11 +64,24 @@ export default function AskBlocIQHomepage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
 
-  // Auto-resize textarea
+  // Auto-resize textarea with better handling for long text
   const adjustTextareaHeight = () => {
     if (inputRef.current) {
       inputRef.current.style.height = 'auto'
-      inputRef.current.style.height = `${Math.min(inputRef.current.scrollHeight, 120)}px`
+      // Allow up to 200px height for better visibility of long text
+      const newHeight = Math.min(inputRef.current.scrollHeight, 200)
+      inputRef.current.style.height = `${newHeight}px`
+      
+      // If content exceeds max height, add scrollbar styling and ensure proper positioning
+      if (inputRef.current.scrollHeight > 200) {
+        inputRef.current.style.overflowY = 'auto'
+        // Ensure cursor is visible by scrolling to bottom when typing
+        if (inputRef.current === document.activeElement) {
+          inputRef.current.scrollTop = inputRef.current.scrollHeight
+        }
+      } else {
+        inputRef.current.style.overflowY = 'hidden'
+      }
     }
   }
 
@@ -326,7 +339,24 @@ export default function AskBlocIQHomepage() {
   }
 
   return (
-    <div className="flex flex-col h-[600px] bg-white rounded-2xl shadow-xl border border-gray-200">
+    <>
+      <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+      `}</style>
+      <div className="flex flex-col h-[600px] bg-white rounded-2xl shadow-xl border border-gray-200">
       {/* Chat Messages */}
       <div 
         ref={chatContainerRef}
@@ -465,14 +495,19 @@ export default function AskBlocIQHomepage() {
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               onKeyDown={handleKeyPress}
-              placeholder="Ask BlocIQ anything, upload documents, or search for files (e.g., 'show me the last FRA')..."
-              className="w-full pl-4 pr-20 py-3 bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent transition-all duration-200 resize-none text-gray-900 placeholder-gray-500"
+              placeholder="Ask BlocIQ anything, upload documents, or search for files (e.g., 'show me the last FRA')... Type as much as you need - the textarea will expand automatically."
+              className="w-full pl-4 pr-20 py-3 bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent transition-all duration-200 resize-none text-gray-900 placeholder-gray-500 custom-scrollbar"
               rows={1}
               disabled={isLoading}
-              style={{ minHeight: '48px', maxHeight: '120px' }}
+              style={{ minHeight: '48px' }}
             />
             
-
+            {/* Character count indicator for long text */}
+            {prompt.length > 100 && (
+              <div className="absolute left-4 bottom-2 text-xs text-gray-400 bg-white/80 px-2 py-1 rounded">
+                {prompt.length} characters
+              </div>
+            )}
             
             {/* Send Button */}
             <button
@@ -508,10 +543,11 @@ export default function AskBlocIQHomepage() {
 
           {/* Keyboard Shortcut Hint */}
           <p className="text-xs text-gray-500 text-center">
-            Press Cmd+Enter to send
+            Press Cmd+Enter to send • Textarea expands automatically for long content
           </p>
         </form>
       </div>
-    </div>
+      </div>
+    </>
   )
 } 

@@ -31,7 +31,7 @@ interface MajorWorksProject {
 export default function DocumentUploadPage() {
   const params = useParams();
   const router = useRouter();
-  const projectId = params?.id as string;
+  const projectId = params?.buildingId as string;
 
   const [project, setProject] = useState<MajorWorksProject | null>(null);
   const [loading, setLoading] = useState(true);
@@ -186,7 +186,7 @@ export default function DocumentUploadPage() {
       });
 
       // Redirect back to project details
-      router.push(`/major-works/${projectId}`);
+      router.push(`/buildings/${buildingId}/major-works/${projectId}`);
 
     } catch (error) {
       console.error('Error uploading document:', error);
@@ -250,7 +250,7 @@ export default function DocumentUploadPage() {
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="mb-8">
-        <Link href={`/major-works/${projectId}`} className="inline-flex items-center text-primary hover:text-dark mb-4">
+                  <Link href={`/buildings/${buildingId}/major-works/${projectId}`} className="inline-flex items-center text-primary hover:text-dark mb-4">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Project
         </Link>
