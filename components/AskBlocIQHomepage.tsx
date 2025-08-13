@@ -356,7 +356,11 @@ export default function AskBlocIQHomepage() {
           background: #94a3b8;
         }
       `}</style>
-      <div className="flex flex-col h-[600px] bg-white rounded-2xl shadow-xl border border-gray-200">
+      <div className="relative">
+        {/* Backdrop */}
+        <div className="absolute inset-0 bg-black/5 backdrop-blur-[2px] rounded-2xl -m-2"></div>
+        {/* Main Chat Container */}
+        <div className="relative flex flex-col h-[500px] w-[450px] bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-200/50 mx-auto">
       {/* Chat Messages */}
       <div 
         ref={chatContainerRef}
@@ -547,6 +551,7 @@ export default function AskBlocIQHomepage() {
           </p>
         </form>
       </div>
+        </div>
       </div>
     </>
   )
