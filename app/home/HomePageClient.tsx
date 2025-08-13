@@ -3,7 +3,7 @@
 // Home page client component - Major works dashboard removed for cleaner interface
 import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2, ExternalLink, RefreshCw, MessageCircle, Sparkles, Upload, FileText, Send, Bot, ArrowRight, HelpCircle, Brain, X as XIcon, ChevronDown, ChevronUp, Minimize2, Move, CornerDownRight } from 'lucide-react'
+import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2, ExternalLink, RefreshCw, MessageCircle, Sparkles, Upload, FileText, Send, Bot, ArrowRight, HelpCircle, Brain, X as XIcon, ChevronDown, ChevronUp, Minimize2, Move, CornerDownRight, FileText as FileTextIcon, Mail, Bell } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 
 
@@ -1155,7 +1155,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                       <div className={`max-w-[70%] rounded-xl p-3 shadow-sm ${
                         message.sender === 'user' 
                           ? 'bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white' 
-                          : 'bg-gray-50 text-gray-900 border border-gray-200'
+                          : 'bg-white text-gray-900 border border-gray-200 shadow-sm'
                       }`}>
                         {/* Message Content */}
                         <div className="text-sm whitespace-pre-line leading-relaxed mb-2">
@@ -1164,31 +1164,37 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                         
                         {/* Action Buttons for AI Responses */}
                         {message.sender === 'ai' && (
-                          <div className="flex gap-2 mt-3 pt-2 border-t border-gray-200">
+                          <div className="flex gap-3 mt-3 pt-3 border-t border-gray-100 bg-gradient-to-r from-gray-50/50 to-white/50 rounded-lg p-2 -mx-2">
                             <button
                               onClick={() => handleCreateLetter(message.text)}
-                              className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                              className="group relative p-2.5 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-95"
+                              title="Create Letter"
                             >
-                              📝 Create Letter
+                              <FileTextIcon className="h-4 w-4" />
+                              <div className="absolute -top-2 -right-2 w-2 h-2 bg-pink-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
                             </button>
                             <button
                               onClick={() => handleSendEmail(message.text)}
-                              className="flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+                              className="group relative p-2.5 bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-95"
+                              title="Send Email"
                             >
-                              📨 Send Email
+                              <Mail className="h-4 w-4" />
+                              <div className="absolute -top-2 -right-2 w-2 h-2 bg-teal-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
                             </button>
                             <button
                               onClick={() => handleSaveAsNotice(message.text)}
-                              className="flex items-center gap-1 px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+                              className="group relative p-2.5 bg-gradient-to-r from-teal-400 to-pink-500 hover:from-teal-500 hover:to-pink-600 text-white rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-95"
+                              title="Save as Notice"
                             >
-                              📄 Save as Notice
+                              <Bell className="h-4 w-4" />
+                              <div className="absolute -top-2 -right-2 w-2 h-2 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
                             </button>
                           </div>
                         )}
                         
                         {/* Timestamp */}
-                        <div className={`text-xs mt-1 ${
-                          message.sender === 'user' ? 'text-white/70' : 'text-gray-400'
+                        <div className={`text-xs mt-2 ${
+                          message.sender === 'user' ? 'text-white/70' : 'text-gray-500'
                         }`}>
                           {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
@@ -1199,13 +1205,13 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                   {/* Loading indicator */}
                   {isSubmitting && (
                     <div className="flex justify-start">
-                      <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-sm max-w-[70%]">
+                      <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm max-w-[70%]">
                         <div className="flex items-center gap-3">
-                          <div className="w-6 h-6 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full flex items-center justify-center">
+                          <div className="w-6 h-6 bg-gradient-to-r from-teal-500 to-pink-500 rounded-full flex items-center justify-center animate-pulse">
                             <Brain className="h-4 w-4 text-white" />
                           </div>
                           <div className="flex items-center gap-2 text-gray-600">
-                            <Loader2 className="animate-spin h-4 w-4" />
+                            <Loader2 className="animate-spin h-4 w-4 text-teal-600" />
                             <span className="text-sm font-medium">Thinking...</span>
                           </div>
                         </div>
