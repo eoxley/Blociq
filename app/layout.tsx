@@ -5,7 +5,8 @@ import SupabaseProvider from '@/components/SupabaseProvider';
 import { BlocIQProvider } from '@/components/BlocIQContext';
 import Footer from '@/components/Footer';
 import { Toaster } from 'sonner';
-import AskAiFabWrapper from '@/components/AskAiFabWrapper'
+import AskBlociqProvider from '@/components/ask/AskBlociqProvider'
+import AskBlociqBubble from '@/components/ask/AskBlociqBubble'
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -30,8 +31,10 @@ export default function RootLayout({
               </main>
               <Footer />
             </div>
-            <AskAiFabWrapper href="/ai-assistant" />
           </SupabaseProvider>
+          <AskBlociqProvider>
+            <AskBlociqBubble />
+          </AskBlociqProvider>
           <Toaster 
             position="top-right" 
             toastOptions={{

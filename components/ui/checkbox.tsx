@@ -1,19 +1,18 @@
 import * as React from "react";
 
 interface CheckboxProps {
-  id: string;
-  checked: boolean;
-  onCheckedChange: (checked: boolean) => void;
+  checked?: boolean;
+  onCheckedChange?: (checked: boolean) => void;
+  className?: string;
 }
 
-export function Checkbox({ id, checked, onCheckedChange }: CheckboxProps) {
+export function Checkbox({ checked = false, onCheckedChange, className }: CheckboxProps) {
   return (
     <input
-      id={id}
       type="checkbox"
-      className="w-4 h-4 text-primary focus:ring-primary border-gray-300 rounded"
+      className={`w-4 h-4 text-primary focus:ring-primary border-gray-300 rounded ${className || ''}`}
       checked={checked}
-      onChange={(e) => onCheckedChange(e.target.checked)}
+      onChange={(e) => onCheckedChange?.(e.target.checked)}
     />
   );
 }
