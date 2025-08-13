@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const DEMO_HEADER = { "X-Ask-Disclaimer": "demo-only; no personal data; not professional advice" };
+
 // If you have a shared LLM client/util, import and reuse it.
 // Otherwise, do a minimal fetch to OpenAI (or your provider).
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY!;
@@ -124,7 +126,7 @@ export async function POST(req: NextRequest) {
     if (!prompt || typeof prompt !== "string") {
       return NextResponse.json(
         { error: "Missing prompt" },
-        { status: 400, headers: { "X-Robots-Tag": "noindex, nofollow" } }
+        { status: 400, headers: { "X-Robots-Tag": "noindex, nofollow", ...DEMO_HEADER } }
       );
     }
 
@@ -136,7 +138,7 @@ export async function POST(req: NextRequest) {
     if (!rl.allowed) {
       return NextResponse.json(
         { error: "Rate limit exceeded. Please try later." },
-        { status: 429, headers: { "X-Robots-Tag": "noindex, nofollow" } }
+        { status: 429, headers: { "X-Robots-Tag": "noindex, nofollow", ...DEMO_HEADER } }
       );
     }
 
@@ -169,7 +171,7 @@ Invite them to sign in for building-linked insights and document processing.
       const text = await resp.text();
       return NextResponse.json(
         { error: "LLM error", detail: text },
-        { status: 500, headers: { "X-Robots-Tag": "noindex, nofollow" } }
+        { status: 500, headers: { "X-Robots-Tag": "noindex, nofollow", ...DEMO_HEADER } }
       );
     }
 
@@ -188,12 +190,12 @@ Invite them to sign in for building-linked insights and document processing.
 
     return NextResponse.json(
       { answer },
-      { headers: { "X-Robots-Tag": "noindex, nofollow" } }
+      { headers: { "X-Robots-Tag": "noindex, nofollow", ...DEMO_HEADER } }
     );
   } catch (e: any) {
     return NextResponse.json(
       { error: e?.message ?? "Unexpected error" },
-      { status: 500, headers: { "X-Robots-Tag": "noindex, nofollow" } }
+      { status: 500, headers: { "X-Robots-Tag": "noindex, nofollow", ...DEMO_HEADER } }
     );
   }
 } 
