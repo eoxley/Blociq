@@ -15,6 +15,10 @@ export function DraggableEmailRow({ messageId, sourceFolderId, children, classNa
     data: { messageId, sourceFolderId },
   })
 
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData("messageId", messageId);
+  }
+
   const style = transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined
 
   return (
@@ -26,6 +30,7 @@ export function DraggableEmailRow({ messageId, sourceFolderId, children, classNa
         isDragging ? 'opacity-60 shadow-lg scale-105' : 'hover:shadow-md transition-all duration-200',
         className
       )}
+      onDragStart={handleDragStart}
       {...listeners}
       {...attributes}
     >
