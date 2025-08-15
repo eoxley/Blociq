@@ -111,200 +111,179 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
     }
   }, [processedAttachments])
 
-  if (!selectedMessage) {
-    return (
-      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center h-full flex items-center justify-center shadow-sm">
-        <div className="w-16 h-16 bg-gradient-to-r from-gray-100 to-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <MessageSquare className="h-8 w-8 text-[#4f46e5]" />
-        </div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Select a message to preview</h3>
-        <p className="text-gray-500">Choose an email from the list to view its content</p>
-      </div>
-    )
-  }
-
-  if (isLoading) {
-    return (
-      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center h-full flex items-center justify-center shadow-sm">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4f46e5] mx-auto"></div>
-        <p className="text-gray-500 mt-2">Loading message...</p>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center h-full flex items-center justify-center shadow-sm">
-        <p className="text-red-500 mb-2">{error}</p>
-        <button 
-          onClick={() => window.location.reload()}
-          className="text-sm text-[#4f46e5] hover:text-[#a855f7] underline"
-        >
-          Try again
-        </button>
-      </div>
-    )
-  }
-
-  const receivedDate = new Date(selectedMessage.receivedDateTime)
-  const message = fullMessage || selectedMessage
-
-  const sanitizeHtml = (html: string) => {
-    if (!html) return ''
-    
-    // Use the new processEmailHtml utility for normalization and sanitization
-    return processEmailHtml(html)
-  }
-
-  const formatEmailList = (recipients: any[]) => {
-    if (!recipients || recipients.length === 0) return 'None'
-    return recipients
-      .map((r: any) => r.emailAddress?.address || r.emailAddress || r)
-      .filter(Boolean)
-      .join(', ')
-  }
-
-  const renderEmailBody = () => {
-    if (!message.body?.content) {
-      return (
-        <div className="text-gray-500 italic">
-          No message content available
-        </div>
-      )
+  const downloadAttachment = async (attachment: Attachment) => {
+    try {
+      const response = await fetch(attachment.url);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = attachment.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading attachment:', error);
+      setError('Failed to download attachment');
     }
-
-    if (message.body.contentType === 'HTML') {
-      const sanitizedHtml = sanitizeHtml(message.body.content)
-      return (
-        <div 
-          className="prose prose-sm max-w-none text-gray-800 leading-relaxed"
-          dangerouslySetInnerHTML={{ 
-            __html: sanitizedHtml
-          }}
-        />
-      )
-    } else {
-      // Plain text - convert line breaks to HTML
-      const formattedText = message.body.content
-        .replace(/\n/g, '<br>')
-        .replace(/\r\n/g, '<br>')
-        .replace(/\r/g, '<br>')
-      
-      return (
-        <div 
-          className="whitespace-pre-wrap text-gray-800 leading-relaxed font-mono text-sm"
-          dangerouslySetInnerHTML={{ __html: formattedText }}
-        />
-      )
-    }
-  }
+  };
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 flex flex-col h-full shadow-sm">
       {/* Header - Fixed height, no scroll */}
       <div className="p-4 border-b border-gray-200 flex-shrink-0 bg-gradient-to-r from-gray-50 to-blue-50">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold text-gray-900 line-clamp-2 flex items-center gap-2">
-            <span className="w-2 h-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full"></span>
-            {message.subject || '(No subject)'}
-          </h3>
-          <div className="flex gap-3">
-            <button
-              onClick={onReply}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white rounded-lg hover:brightness-110 transition-all duration-200 shadow-sm hover:shadow-md font-medium text-sm transform hover:scale-105 active:scale-95"
-              title="Reply to this message"
-            >
-              <Reply className="h-4 w-4" />
-              Reply
-            </button>
-            <button
-              onClick={onReplyAll}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a855f7] to-[#4f46e5] text-white rounded-lg hover:brightness-110 transition-all duration-200 shadow-sm hover:shadow-md font-medium text-sm transform hover:scale-105 active:scale-95"
-              title="Reply to all recipients"
-            >
-              <ReplyAll className="h-4 w-4" />
-              Reply All
-            </button>
-          </div>
-        </div>
-        
-        {/* Message Details */}
-        <div className="space-y-2 text-sm">
-          <div className="flex items-start gap-2">
-            <User className="h-4 w-4 text-[#4f46e5] mt-0.5 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <span className="text-gray-600 font-medium">From:</span>
-              <span className="text-gray-800 ml-2 break-all">
-                {message.from?.emailAddress?.address || message.from?.emailAddress || 'Unknown sender'}
-              </span>
-            </div>
-          </div>
-          
-          <div className="flex items-start gap-2">
-            <MessageSquare className="h-4 w-4 text-[#a855f7] mt-0.5 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <span className="text-gray-600 font-medium">To:</span>
-              <span className="text-gray-800 ml-2 break-all">
-                {formatEmailList(message.toRecipients || [])}
-              </span>
-            </div>
-          </div>
-          
-          {(message.ccRecipients || []).length > 0 && (
-            <div className="flex items-start gap-2">
-              <MessageSquare className="h-4 w-4 text-[#a855f7] mt-0.5 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <span className="text-gray-600 font-medium">CC:</span>
-                <span className="text-gray-800 ml-2 break-all">
-                  {formatEmailList(message.ccRecipients)}
-                </span>
-              </div>
-            </div>
-          )}
-          
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-[#4f46e5]" />
-            <span className="text-gray-600 font-medium">Received:</span>
-            <span className="text-gray-800 ml-2">
-              {format(receivedDate, 'PPP p')} ({formatDistanceToNow(receivedDate, { addSuffix: true })})
-            </span>
-          </div>
-          
-          {message.hasAttachments && (
-            <div className="flex items-center gap-2">
-              <Paperclip className="h-4 w-4 text-[#a855f7]" />
-              <span className="text-gray-600 font-medium">Attachments:</span>
-              <span className="text-gray-800 ml-2">
-                {message.attachments?.length || 0} file(s)
-              </span>
-            </div>
-          )}
-        </div>
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <span className="w-2 h-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full"></span>
+          Message Preview
+        </h3>
       </div>
       
-      {/* Message Body - Scrollable with full height */}
-      <div className="flex-1 overflow-y-auto p-4 min-h-0 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-        <div className="max-w-none">
-          {renderEmailBody()}
-        </div>
-        
-        {/* Email Chain Indicator */}
-        {message.conversationId && (
-          <div className="mt-6 pt-4 border-t border-gray-200">
-            <div className="text-xs text-gray-500 mb-2">
-              This message is part of a conversation
+      {/* Message Content - Scrollable with remaining height */}
+      <div className="flex-1 overflow-y-auto min-h-0 p-4">
+        {!selectedMessage ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <MessageSquare className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 text-lg">Select a message to preview</p>
+              <p className="text-gray-400 text-sm">Choose an email from the list to view its content</p>
             </div>
-            <a
-              href={message.webLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm text-[#4f46e5] hover:text-[#a855f7] underline"
-            >
-              <MessageSquare className="h-4 w-4" />
-              View in Outlook
-            </a>
           </div>
-        )}
+        ) : isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4f46e5] mx-auto mb-2"></div>
+              <p className="text-gray-500 text-sm">Loading message...</p>
+            </div>
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="text-red-500 text-lg mb-2">⚠️</div>
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          </div>
+        ) : fullMessage ? (
+          <div className="space-y-4">
+            {/* Message Header */}
+            <div className="border-b border-gray-200 pb-4">
+              <h2 className="text-xl font-semibold text-gray-900 mb-3">
+                {fullMessage.subject || '(No subject)'}
+              </h2>
+              
+              <div className="space-y-2 text-sm text-gray-600">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-[#4f46e5]" />
+                  <span className="font-medium">From:</span>
+                  <span>{fullMessage.from?.emailAddress?.name || fullMessage.from?.emailAddress?.address || 'Unknown sender'}</span>
+                  {fullMessage.from?.emailAddress?.address && (
+                    <span className="text-gray-400">({fullMessage.from.emailAddress.address})</span>
+                  )}
+                </div>
+                
+                {fullMessage.toRecipients && fullMessage.toRecipients.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4 text-[#4f46e5]" />
+                    <span className="font-medium">To:</span>
+                    <span>{fullMessage.toRecipients.map((r: any) => r.emailAddress?.name || r.emailAddress?.address).join(', ')}</span>
+                  </div>
+                )}
+                
+                {fullMessage.ccRecipients && fullMessage.ccRecipients.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4 text-[#4f46e5]" />
+                    <span className="font-medium">CC:</span>
+                    <span>{fullMessage.ccRecipients.map((r: any) => r.emailAddress?.name || r.emailAddress?.address).join(', ')}</span>
+                  </div>
+                )}
+                
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-[#4f46e5]" />
+                  <span className="font-medium">Received:</span>
+                  <span>{formatDistanceToNow(new Date(fullMessage.receivedDateTime), { addSuffix: true })}</span>
+                  <span className="text-gray-400">({format(new Date(fullMessage.receivedDateTime), 'PPP p')})</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Message Actions */}
+            <div className="flex gap-2 pb-4 border-b border-gray-200">
+              <button
+                onClick={onReply}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white rounded-lg hover:brightness-110 transition-all duration-200 text-sm font-medium"
+              >
+                <Reply className="h-4 w-4" />
+                Reply
+              </button>
+              
+              <button
+                onClick={onReplyAll}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-lg hover:brightness-110 transition-all duration-200 text-sm font-medium"
+              >
+                <ReplyAll className="h-4 w-4" />
+                Reply All
+              </button>
+              
+              {fullMessage.webLink && (
+                <a
+                  href={fullMessage.webLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-lg hover:brightness-110 transition-all duration-200 text-sm font-medium"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  Open in Outlook
+                </a>
+              )}
+            </div>
+            
+            {/* Message Body */}
+            <div className="prose prose-sm max-w-none">
+              {fullMessage.body?.contentType === 'HTML' ? (
+                <div 
+                  dangerouslySetInnerHTML={{ __html: fullMessage.body.content }}
+                  className="email-content"
+                />
+              ) : (
+                <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans">
+                  {fullMessage.body?.content || 'No content available'}
+                </pre>
+              )}
+            </div>
+            
+            {/* Attachments */}
+            {processedAttachments.length > 0 && (
+              <div className="border-t border-gray-200 pt-4">
+                <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <Paperclip className="h-4 w-4 text-[#a855f7]" />
+                  Attachments ({processedAttachments.length})
+                </h4>
+                
+                <div className="space-y-2">
+                  {processedAttachments.map((attachment, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Paperclip className="h-4 w-4 text-[#a855f7]" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{attachment.filename}</p>
+                          <p className="text-xs text-gray-500">{attachment.contentType}</p>
+                        </div>
+                      </div>
+                      
+                      <button
+                        onClick={() => downloadAttachment(attachment)}
+                        className="p-2 text-[#4f46e5] hover:text-[#a855f7] hover:bg-white rounded-md transition-colors"
+                        title="Download attachment"
+                      >
+                        <Download className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : null}
       </div>
     </div>
   )

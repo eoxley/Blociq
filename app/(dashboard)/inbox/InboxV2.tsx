@@ -43,12 +43,14 @@ export default function InboxV2() {
   const [moveSuccess, setMoveSuccess] = useState<{ message: string; timestamp: number } | null>(null)
 
   // Get folders and messages
-  const { folders, isLoading: foldersLoading } = useFolders()
+  const { folders, isLoading: foldersLoading, hasGraphError } = useFolders()
   const { messages, refresh: refreshMessages } = useMessages(selectedFolderId)
 
   // Set the inbox folder as default when folders are loaded
   useEffect(() => {
     if (folders.length > 0 && !selectedFolderId) {
+      console.log('Attempting to set default folder from:', folders.length, 'folders')
+      
       // Find the inbox folder (either from Graph API or default folders)
       // Prioritize Graph folders over fallback folders
       const inboxFolder = folders.find(folder => 
@@ -62,14 +64,19 @@ export default function InboxV2() {
         setSelectedFolderId(inboxFolder.id)
       } else {
         console.log('No inbox folder found in:', folders)
+        // Fallback: select the first available folder
+        if (folders.length > 0) {
+          console.log('Falling back to first folder:', folders[0].displayName, 'ID:', folders[0].id)
+          setSelectedFolderId(folders[0].id)
+        }
       }
     }
   }, [folders, selectedFolderId])
 
   // Debug logging
   useEffect(() => {
-    console.log('Folders loaded:', folders.length, 'Selected folder ID:', selectedFolderId)
-  }, [folders, selectedFolderId])
+    console.log('Folders loaded:', folders.length, 'Selected folder ID:', selectedFolderId, 'Folders loading:', foldersLoading)
+  }, [folders, selectedFolderId, foldersLoading])
 
   useEffect(() => {
     console.log('Messages loaded:', messages.length, 'for folder:', selectedFolderId)
@@ -437,56 +444,113 @@ Generate the reply in plain text format (no HTML tags).`
         </div>
       </section>
 
+      {/* Connection Status Banner */}
+      {hasGraphError && (
+        <div className="mb-6 mx-6">
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="text-amber-600 text-lg">⚠️</div>
+                <div>
+                  <h3 className="text-amber-800 font-medium">Outlook Connection Required</h3>
+                  <p className="text-amber-700 text-sm">Connect your Outlook account to access your emails</p>
+                </div>
+              </div>
+              <a
+                href="/outlook/connect"
+                className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium"
+              >
+                Connect Outlook
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
       <DragDropFrame onMoveSuccess={handleMoveSuccess} onMoveError={handleMoveError}>
         {/* Main Inbox Container - Locked Height with Overflow Hidden */}
         <div className="h-[calc(100vh-400px)] overflow-hidden">
-          {/* Grid Layout - All columns now have equal height and proper scroll boxes */}
-          <div className="grid grid-cols-[260px_380px_1fr] gap-4 h-full">
-            {/* Column 1: Folder Sidebar - Fixed height, no scroll needed */}
-            <div className="flex flex-col h-full">
-              {/* New Email and Triage Buttons */}
-              <div className="mb-4 flex gap-3 flex-shrink-0">
-                <button
-                  onClick={() => setNewEmailModalOpen(true)}
-                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white rounded-lg hover:brightness-110 transition-all duration-200 shadow-sm font-medium"
+          {/* Show loading state when folders are loading */}
+          {foldersLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4f46e5] mx-auto mb-4"></div>
+                <p className="text-gray-600 text-lg">Loading inbox...</p>
+                <p className="text-gray-500 text-sm">Please wait while we connect to your email</p>
+              </div>
+            </div>
+          ) : folders.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <MessageSquare className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-600 text-lg">No folders available</p>
+                <p className="text-gray-500 text-sm mb-4">Unable to load email folders</p>
+                <a
+                  href="/outlook/connect"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white rounded-lg hover:brightness-110 transition-all duration-200 font-medium"
                 >
                   <MessageSquare className="h-4 w-4" />
-                  New Email
-                </button>
+                  Connect Outlook
+                </a>
+              </div>
+            </div>
+          ) : !selectedFolderId ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <MessageSquare className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-600 text-lg">Select a folder</p>
+                <p className="text-gray-500 text-sm">Choose a folder from the sidebar to view emails</p>
+              </div>
+            </div>
+          ) : (
+            /* Grid Layout - All columns now have equal height and proper scroll boxes */
+            <div className="grid grid-cols-[260px_380px_1fr] gap-4 h-full">
+              {/* Column 1: Folder Sidebar - Fixed height, no scroll needed */}
+              <div className="flex flex-col h-full">
+                {/* New Email and Triage Buttons */}
+                <div className="mb-4 flex gap-3 flex-shrink-0">
+                  <button
+                    onClick={() => setNewEmailModalOpen(true)}
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white rounded-lg hover:brightness-110 transition-all duration-200 shadow-sm font-medium"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    New Email
+                  </button>
+                  
+                  <TriageButton />
+                </div>
                 
-                <TriageButton />
+                {/* Folder Sidebar - Takes remaining height */}
+                <div className="flex-1 min-h-0">
+                  <FolderSidebar 
+                    selectedFolderId={selectedFolderId}
+                    onFolderSelect={(folderId) => {
+                      setSelectedFolderId(folderId)
+                      setSelectedMessage(null) // Clear selected message when changing folders
+                    }}
+                  />
+                </div>
               </div>
               
-              {/* Folder Sidebar - Takes remaining height */}
-              <div className="flex-1 min-h-0">
-                <FolderSidebar 
+              {/* Column 2: Message List - Full height with scroll box */}
+              <div className="h-full min-h-0">
+                <MessageList 
                   selectedFolderId={selectedFolderId}
-                  onFolderSelect={(folderId) => {
-                    setSelectedFolderId(folderId)
-                    setSelectedMessage(null) // Clear selected message when changing folders
-                  }}
+                  selectedMessageId={selectedMessage?.id || null}
+                  onMessageSelect={handleMessageSelect}
+                />
+              </div>
+              
+              {/* Column 3: Message Preview - Full height with scroll box */}
+              <div className="h-full min-h-0">
+                <MessagePreview 
+                  selectedMessage={selectedMessage}
+                  onReply={() => handleReply('reply')}
+                  onReplyAll={() => handleReply('replyAll')}
                 />
               </div>
             </div>
-            
-            {/* Column 2: Message List - Full height with scroll box */}
-            <div className="h-full min-h-0">
-              <MessageList 
-                selectedFolderId={selectedFolderId}
-                selectedMessageId={selectedMessage?.id || null}
-                onMessageSelect={handleMessageSelect}
-              />
-            </div>
-            
-            {/* Column 3: Message Preview - Full height with scroll box */}
-            <div className="h-full min-h-0">
-              <MessagePreview 
-                selectedMessage={selectedMessage}
-                onReply={() => handleReply('reply')}
-                onReplyAll={() => handleReply('replyAll')}
-              />
-            </div>
-          </div>
+          )}
         </div>
       </DragDropFrame>
 

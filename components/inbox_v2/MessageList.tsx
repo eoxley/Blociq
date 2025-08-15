@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useMessages } from '@/hooks/inbox_v2'
-import { Paperclip, Clock, Trash2 } from 'lucide-react'
+import { Paperclip, Clock, Trash2, MessageSquare } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { DraggableEmailRow } from './DraggableEmailRow'
 import SearchBar from './SearchBar'
@@ -14,7 +14,7 @@ interface MessageListProps {
 }
 
 export default function MessageList({ selectedFolderId, selectedMessageId, onMessageSelect }: MessageListProps) {
-  const { messages, isLoading, refresh } = useMessages(selectedFolderId)
+  const { messages, isLoading, error, hasError, refresh } = useMessages(selectedFolderId)
   const [focusedMessageIndex, setFocusedMessageIndex] = useState<number>(-1)
   const [searchQuery, setSearchQuery] = useState('')
   const [filteredMessages, setFilteredMessages] = useState<any[]>([])
@@ -181,78 +181,109 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
       
       {/* Message List - Scrollable with full height */}
       <div className="flex-1 overflow-y-auto min-h-0 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-        <div className="divide-y divide-gray-100">
-          {filteredMessages.map((message: any, index: number) => {
-            const isSelected = selectedMessageId === message.id
-            const isFocused = focusedMessageIndex === index
-            const receivedDate = new Date(message.receivedDateTime)
-            
-            return (
-              <DraggableEmailRow
-                key={message.id}
-                messageId={message.id}
-                sourceFolderId={selectedFolderId || ''}
-                className={`p-4 cursor-pointer transition-all duration-200 ${
-                  isSelected
-                    ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-r-2 border-[#4f46e5]'
-                    : isFocused
-                    ? 'bg-gradient-to-r hover:from-blue-100 hover:to-indigo-100 border-r-2 border-[#a855f7]'
-                    : 'hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50'
-                }`}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4f46e5] mx-auto mb-2"></div>
+              <p className="text-gray-500 text-sm">Loading messages...</p>
+            </div>
+          </div>
+        ) : hasError ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="text-center">
+              <div className="text-red-500 text-lg mb-2">⚠️</div>
+              <p className="text-red-600 text-sm mb-2">Failed to load messages</p>
+              <button
+                onClick={() => refresh()}
+                className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
               >
-                <div 
-                  className="flex items-start justify-between gap-3"
-                  onClick={() => {
-                    onMessageSelect(message.id)
-                    setFocusedMessageIndex(index)
-                  }}
-                  onFocus={() => setFocusedMessageIndex(index)}
-                  tabIndex={0}
-                  role="button"
-                  aria-label={`Email: ${message.subject || 'No subject'} from ${message.from?.emailAddress?.address || 'Unknown sender'}`}
+                Retry
+              </button>
+            </div>
+          </div>
+        ) : filteredMessages.length === 0 ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="text-center">
+              <MessageSquare className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+              <p className="text-gray-500 text-sm">
+                {searchQuery ? 'No messages match your search' : 'No messages in this folder'}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {filteredMessages.map((message: any, index: number) => {
+              const isSelected = selectedMessageId === message.id
+              const isFocused = focusedMessageIndex === index
+              const receivedDate = new Date(message.receivedDateTime)
+              
+              return (
+                <DraggableEmailRow
+                  key={message.id}
+                  messageId={message.id}
+                  sourceFolderId={selectedFolderId || ''}
+                  className={`p-4 cursor-pointer transition-all duration-200 ${
+                    isSelected
+                      ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-r-2 border-[#4f46e5]'
+                      : isFocused
+                      ? 'bg-gradient-to-r hover:from-blue-100 hover:to-indigo-100 border-r-2 border-[#a855f7]'
+                      : 'hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50'
+                  }`}
                 >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h4 className="text-sm font-semibold text-gray-900 line-clamp-2 leading-tight">
-                        {message.subject || '(No subject)'}
-                      </h4>
-                      {message.hasAttachments && (
-                        <Paperclip className="h-3 w-3 text-[#a855f7] flex-shrink-0" />
-                      )}
-                    </div>
-                    
-                    <p className="text-sm text-gray-700 truncate mb-2 font-medium">
-                      {message.from?.emailAddress?.address || 'Unknown sender'}
-                    </p>
-                    
-                    {/* Email preview content */}
-                    {message.bodyPreview && (
-                      <p className="text-xs text-gray-600 line-clamp-2 mb-2 leading-relaxed">
-                        {truncateText(message.bodyPreview, 120)}
-                      </p>
-                    )}
-                    
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <Clock className="h-3 w-3 text-[#4f46e5]" />
-                      <span>{formatDistanceToNow(receivedDate, { addSuffix: true })}</span>
-                    </div>
-                  </div>
-                  
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleDelete(message.id)
+                  <div 
+                    className="flex items-center justify-between gap-3"
+                    onClick={() => {
+                      onMessageSelect(message.id)
+                      setFocusedMessageIndex(index)
                     }}
-                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                    title="Delete message"
+                    onFocus={() => setFocusedMessageIndex(index)}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`Email: ${message.subject || 'No subject'} from ${message.from?.emailAddress?.address || 'Unknown sender'}`}
                   >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </DraggableEmailRow>
-            )
-          })}
-        </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h4 className="text-sm font-semibold text-gray-900 line-clamp-2 leading-tight">
+                          {message.subject || '(No subject)'}
+                        </h4>
+                        {message.hasAttachments && (
+                          <Paperclip className="h-3 w-3 text-[#a855f7] flex-shrink-0" />
+                        )}
+                      </div>
+                      
+                      <p className="text-sm text-gray-700 truncate mb-2 font-medium">
+                        {message.from?.emailAddress?.address || 'Unknown sender'}
+                      </p>
+                      
+                      {/* Email preview content */}
+                      {message.bodyPreview && (
+                        <p className="text-xs text-gray-600 line-clamp-2 mb-2 leading-relaxed">
+                          {truncateText(message.bodyPreview, 120)}
+                        </p>
+                      )}
+                      
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <Clock className="h-3 w-3 text-[#4f46e5]" />
+                        <span>{formatDistanceToNow(receivedDate, { addSuffix: true })}</span>
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDelete(message.id)
+                      }}
+                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                      title="Delete message"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </DraggableEmailRow>
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )

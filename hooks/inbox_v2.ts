@@ -38,10 +38,32 @@ const saveManualFolders = (folders: any[]): void => {
 export function useFolders() {
   const [manualFolders, setManualFolders] = useState(getManualFolders)
   
-  const { data, error, isLoading, mutate } = useSWR('/api/outlook/v2/folders', fetcher)
+  const { data, error, isLoading, mutate } = useSWR('/api/outlook/v2/folders', fetcher, {
+    // Add retry logic and error handling
+    errorRetryCount: 3,
+    errorRetryInterval: 1000,
+    onError: (err) => {
+      console.error('Failed to fetch folders:', err)
+    }
+  })
+  
+  // Debug logging
+  if (typeof window !== 'undefined') {
+    console.log('useFolders hook:', { 
+      data, 
+      error, 
+      isLoading, 
+      manualFolders: manualFolders.length,
+      dataOk: data?.ok,
+      dataItems: data?.items?.length || 0
+    })
+  }
   
   // Combine Graph folders with manual folders
   const graphFolders = data?.ok && data?.items?.length > 0 ? data.items : []
+  
+  // Check if there was an error with the Graph API
+  const hasGraphError = data?.ok === false || error
   
   // Always include manual folders, combine with Graph folders or defaults
   // This ensures manual folders are never lost
@@ -56,7 +78,7 @@ export function useFolders() {
     // Ensure Graph folders keep their real IDs, fallback folders are marked
     id: folder.isFallback ? folder.id : folder.id,
     // Mark if this is a real Graph folder
-    isGraphFolder: !folder.isFallback && graphFolders.some(gf => gf.id === folder.id)
+    isGraphFolder: !folder.isFallback && graphFolders.some((gf: any) => gf.id === folder.id)
   }))
   
   const isFallback = graphFolders.length === 0
@@ -81,6 +103,8 @@ export function useFolders() {
     folders: processedFolders,
     isFallback,
     isLoading,
+    error,
+    hasGraphError,
     refresh,
     addManualFolder
   }
@@ -89,19 +113,38 @@ export function useFolders() {
 export function useMessages(folderId: string | null) {
   const { data, error, isLoading, mutate } = useSWR(
     folderId ? `/api/outlook/v2/messages/list?folderId=${folderId}` : null,
-    fetcher
+    fetcher,
+    {
+      // Add retry logic and error handling
+      errorRetryCount: 3,
+      errorRetryInterval: 1000,
+      onError: (err) => {
+        console.error('Failed to fetch messages:', err)
+      }
+    }
   )
   
   const messages = data?.ok ? data.items : []
+  const hasError = data?.ok === false || error
   
   // Debug logging
   if (typeof window !== 'undefined') {
-    console.log('useMessages hook:', { folderId, messagesCount: messages.length, isLoading, error })
+    console.log('useMessages hook:', { 
+      folderId, 
+      messagesCount: messages.length, 
+      isLoading, 
+      error, 
+      hasError,
+      dataOk: data?.ok,
+      dataItems: data?.items?.length || 0
+    })
   }
   
   return {
     messages,
     isLoading,
+    error,
+    hasError,
     refresh: mutate
   }
 }

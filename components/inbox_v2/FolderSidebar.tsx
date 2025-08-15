@@ -11,7 +11,7 @@ interface FolderSidebarProps {
 }
 
 export default function FolderSidebar({ selectedFolderId, onFolderSelect }: FolderSidebarProps) {
-  const { folders, isFallback, isLoading, refresh, addManualFolder } = useFolders()
+  const { folders, isFallback, isLoading, error, hasGraphError, refresh, addManualFolder } = useFolders()
   const [isAddingFolder, setIsAddingFolder] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
 
@@ -55,6 +55,23 @@ export default function FolderSidebar({ selectedFolderId, onFolderSelect }: Fold
         </div>
       </div>
       
+      {/* Connection Error State */}
+      {hasGraphError && (
+        <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg flex-shrink-0">
+          <div className="text-center">
+            <div className="text-red-500 text-lg mb-1">⚠️</div>
+            <p className="text-red-700 text-sm font-medium">Outlook Connection Issue</p>
+            <p className="text-red-600 text-xs">Using fallback folders. Check your Outlook connection.</p>
+            <button
+              onClick={() => refresh()}
+              className="mt-2 px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+            >
+              Retry Connection
+            </button>
+          </div>
+        </div>
+      )}
+      
       {/* Add Folder Input - Fixed height, no scroll */}
       {isAddingFolder && (
         <div className="mb-3 p-3 bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg border border-gray-200 flex-shrink-0">
@@ -86,18 +103,27 @@ export default function FolderSidebar({ selectedFolderId, onFolderSelect }: Fold
       
       {/* Folder List - Scrollable with remaining height */}
       <div className="flex-1 overflow-y-auto min-h-0 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-        <div className="space-y-1">
-          {folders.map((folder) => (
-            <DroppableFolderItem
-              key={folder.id}
-              id={folder.id}
-              displayName={folder.displayName}
-              isSelected={selectedFolderId === folder.id}
-              isFallback={folder.isFallback}
-              onSelect={onFolderSelect}
-            />
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4f46e5] mx-auto mb-2"></div>
+              <p className="text-gray-500 text-sm">Loading folders...</p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {folders.map((folder) => (
+              <DroppableFolderItem
+                key={folder.id}
+                id={folder.id}
+                displayName={folder.displayName}
+                isSelected={selectedFolderId === folder.id}
+                isFallback={folder.isFallback}
+                onSelect={onFolderSelect}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
