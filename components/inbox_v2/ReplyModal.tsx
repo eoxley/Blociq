@@ -726,37 +726,30 @@ Generate the reply in plain text format (no HTML tags).`
               <div className="max-h-96 overflow-y-auto p-4 space-y-4">
                 {emailThread.map((threadMessage, index) => (
                   <div
-                    key={threadMessage.id}
-                    className={`p-4 rounded-xl border-2 ${
+                    key={threadMessage.id || index}
+                    className={`mb-4 p-4 rounded-lg border ${
                       threadMessage.id === message?.id
-                        ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 shadow-md'
-                        : 'bg-white border-gray-200 shadow-sm'
-                    }`}
+                        ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200'
+                        : 'bg-white border-gray-200'
+                    } text-sm`}
                   >
-                    <div className="flex items-center gap-3 mb-3 text-xs text-gray-600">
-                      <User className="h-4 w-4 text-blue-500" />
+                    <div className="flex items-center justify-between mb-1">
                       <span className="font-medium">
                         {threadMessage.from?.emailAddress?.address || threadMessage.from?.emailAddress || 'Unknown'}
                       </span>
-                      <span>•</span>
-                      <Clock className="h-4 w-4 text-indigo-500" />
-                      <span>{formatDistanceToNow(new Date(threadMessage.receivedDateTime), { addSuffix: true })}</span>
-                      {threadMessage.id === message?.id && (
-                        <span className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-3 py-1 rounded-full text-xs font-medium shadow-sm">
-                          Original Message
-                        </span>
-                      )}
+                      <span className="text-gray-500 text-xs">
+                        {new Date(threadMessage.receivedDateTime).toLocaleString('en-GB')}
+                      </span>
                     </div>
-                    
-                    <div className="text-sm text-gray-800">
-                      <div className="font-medium mb-2 text-gray-900">{threadMessage.subject || '(No subject)'}</div>
-                      <div 
-                        className="text-gray-700 prose prose-sm max-w-none leading-relaxed"
-                        dangerouslySetInnerHTML={{
-                          __html: sanitizeHtml(threadMessage.body?.content || 'No content')
-                        }}
-                      />
+                    <div className="text-sm text-gray-600 font-semibold mb-2">
+                      {threadMessage.subject || '(No subject)'}
                     </div>
+                    <div
+                      className="text-gray-800 whitespace-pre-wrap text-sm prose prose-sm max-w-none leading-relaxed"
+                      dangerouslySetInnerHTML={{
+                        __html: sanitizeHtml(threadMessage.body?.content || '(No content)')
+                      }}
+                    />
                   </div>
                 ))}
               </div>
