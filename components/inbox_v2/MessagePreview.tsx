@@ -32,7 +32,6 @@ interface FullMessage {
 export default function MessagePreview({ selectedMessage, onReply, onReplyAll }: MessagePreviewProps) {
   const [fullMessage, setFullMessage] = useState<FullMessage | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [processedAttachments, setProcessedAttachments] = useState<Attachment[]>([])
 
   // Fetch full message content when a message is selected
@@ -44,7 +43,6 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
 
     const fetchFullMessage = async () => {
       setIsLoading(true)
-      setError(null)
       
       try {
         const response = await fetch(`/api/outlook/v2/messages/${selectedMessage.id}`)
@@ -82,15 +80,10 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
               setFullMessage(message)
               setProcessedAttachments([])
             }
-          } else {
-            setError('Failed to load message content')
           }
-        } else {
-          setError('Failed to load message content')
         }
       } catch (error) {
         console.error('Error fetching message:', error)
-        setError('Failed to load message content')
       } finally {
         setIsLoading(false)
       }
@@ -113,21 +106,28 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
 
   const downloadAttachment = async (attachment: Attachment) => {
     try {
-      const response = await fetch(attachment.url);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = attachment.filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      // Create data URL from contentBytes
+      const byteCharacters = atob(attachment.contentBytes)
+      const byteNumbers = new Array(byteCharacters.length)
+      
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i)
+      }
+      
+      const byteArray = new Uint8Array(byteNumbers)
+      const blob = new Blob([byteArray], { type: attachment.contentType })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = attachment.name
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
     } catch (error) {
-      console.error('Error downloading attachment:', error);
-      setError('Failed to download attachment');
+      console.error('Error downloading attachment:', error)
     }
-  };
+  }
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 flex flex-col h-full shadow-sm">
@@ -154,13 +154,6 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4f46e5] mx-auto mb-2"></div>
               <p className="text-gray-500 text-sm">Loading message...</p>
-            </div>
-          </div>
-        ) : error ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <div className="text-red-500 text-lg mb-2">⚠️</div>
-              <p className="text-red-600 text-sm">{error}</p>
             </div>
           </div>
         ) : fullMessage ? (
@@ -265,7 +258,7 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
                       <div className="flex items-center gap-3">
                         <Paperclip className="h-4 w-4 text-[#a855f7]" />
                         <div>
-                          <p className="text-sm font-medium text-gray-900">{attachment.filename}</p>
+                          <p className="text-sm font-medium text-gray-900">{attachment.name}</p>
                           <p className="text-xs text-gray-500">{attachment.contentType}</p>
                         </div>
                       </div>

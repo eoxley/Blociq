@@ -43,7 +43,7 @@ export default function InboxV2() {
   const [moveSuccess, setMoveSuccess] = useState<{ message: string; timestamp: number } | null>(null)
 
   // Get folders and messages
-  const { folders, isLoading: foldersLoading, hasGraphError } = useFolders()
+  const { folders, isLoading: foldersLoading } = useFolders()
   const { messages, refresh: refreshMessages } = useMessages(selectedFolderId)
 
   // Set the inbox folder as default when folders are loaded
@@ -444,29 +444,6 @@ Generate the reply in plain text format (no HTML tags).`
         </div>
       </section>
 
-      {/* Connection Status Banner */}
-      {hasGraphError && (
-        <div className="mb-6 mx-6">
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="text-amber-600 text-lg">⚠️</div>
-                <div>
-                  <h3 className="text-amber-800 font-medium">Outlook Connection Required</h3>
-                  <p className="text-amber-700 text-sm">Connect your Outlook account to access your emails</p>
-                </div>
-              </div>
-              <a
-                href="/outlook/connect"
-                className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium"
-              >
-                Connect Outlook
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
-
       <DragDropFrame onMoveSuccess={handleMoveSuccess} onMoveError={handleMoveError}>
         {/* Main Inbox Container - Locked Height with Overflow Hidden */}
         <div className="h-[calc(100vh-400px)] overflow-hidden">
@@ -477,29 +454,6 @@ Generate the reply in plain text format (no HTML tags).`
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4f46e5] mx-auto mb-4"></div>
                 <p className="text-gray-600 text-lg">Loading inbox...</p>
                 <p className="text-gray-500 text-sm">Please wait while we connect to your email</p>
-              </div>
-            </div>
-          ) : folders.length === 0 ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <MessageSquare className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-600 text-lg">No folders available</p>
-                <p className="text-gray-500 text-sm mb-4">Unable to load email folders</p>
-                <a
-                  href="/outlook/connect"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white rounded-lg hover:brightness-110 transition-all duration-200 font-medium"
-                >
-                  <MessageSquare className="h-4 w-4" />
-                  Connect Outlook
-                </a>
-              </div>
-            </div>
-          ) : !selectedFolderId ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <MessageSquare className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-600 text-lg">Select a folder</p>
-                <p className="text-gray-500 text-sm">Choose a folder from the sidebar to view emails</p>
               </div>
             </div>
           ) : (

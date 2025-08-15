@@ -14,7 +14,7 @@ interface MessageListProps {
 }
 
 export default function MessageList({ selectedFolderId, selectedMessageId, onMessageSelect }: MessageListProps) {
-  const { messages, isLoading, error, hasError, refresh } = useMessages(selectedFolderId)
+  const { messages, isLoading, refresh } = useMessages(selectedFolderId)
   const [focusedMessageIndex, setFocusedMessageIndex] = useState<number>(-1)
   const [searchQuery, setSearchQuery] = useState('')
   const [filteredMessages, setFilteredMessages] = useState<any[]>([])
@@ -186,28 +186,6 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4f46e5] mx-auto mb-2"></div>
               <p className="text-gray-500 text-sm">Loading messages...</p>
-            </div>
-          </div>
-        ) : hasError ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="text-center">
-              <div className="text-red-500 text-lg mb-2">⚠️</div>
-              <p className="text-red-600 text-sm mb-2">Failed to load messages</p>
-              <button
-                onClick={() => refresh()}
-                className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-              >
-                Retry
-              </button>
-            </div>
-          </div>
-        ) : filteredMessages.length === 0 ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="text-center">
-              <MessageSquare className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-              <p className="text-gray-500 text-sm">
-                {searchQuery ? 'No messages match your search' : 'No messages in this folder'}
-              </p>
             </div>
           </div>
         ) : (
