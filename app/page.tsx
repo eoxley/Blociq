@@ -1,56 +1,10 @@
-'use client'
-
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import Link from 'next/link'
 import { ArrowRight, Brain, FileText, Calendar, Shield, Zap, Building2, Users, Home, CheckCircle, Star, MessageSquare, Settings, BarChart3 } from 'lucide-react'
 import BlocIQLogo from '@/components/BlocIQLogo'
-import PublicAskBlocIQ from '@/components/assistant/AskBlocIQ'
-import PublicAskBlocPopup from '@/components/assistant/PublicAskBlocPopup'
-import EmailConsentModal from '@/components/assistant/EmailConsentModal'
+import PublicAskBlocIQ from '@/components/assistant/PublicAskBlocIQ'
 
 export default function LandingPage() {
-  const [showInitialPopup, setShowInitialPopup] = useState(false)
-  const [showEmailModal, setShowEmailModal] = useState(false)
-  const [showChat, setShowChat] = useState(false)
-  const [hasUnlocked, setHasUnlocked] = useState(false)
-
-  // Check if popup has been shown and if user has unlocked
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const popupShown = sessionStorage.getItem('askBlocPopupShown')
-      const userEmail = localStorage.getItem('askBlocEmail')
-      
-      if (!popupShown) {
-        setShowInitialPopup(true)
-      }
-      
-      if (userEmail) {
-        setHasUnlocked(true)
-        setShowChat(true)
-      }
-    }
-  }, [])
-
-  const handleBrainIconClick = () => {
-    if (hasUnlocked) {
-      setShowChat(true)
-    } else {
-      setShowEmailModal(true)
-    }
-  }
-
-  const handleEmailUnlock = (email: string) => {
-    setHasUnlocked(true)
-    setShowChat(true)
-  }
-
-  const handleCloseEmailModal = () => {
-    setShowEmailModal(false)
-  }
-
-  const handleCloseInitialPopup = () => {
-    setShowInitialPopup(false)
-  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -125,7 +79,7 @@ export default function LandingPage() {
               Experience the power of AI-powered property management. Ask questions, upload documents, and see how BlocIQ can help streamline your workflow.
             </p>
           </div>
-          <PublicAskBlocIQ isVisible={showChat} />
+          <PublicAskBlocIQ />
         </div>
       </section>
 
@@ -347,27 +301,6 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
-
-      {/* Fixed Brain Icon Button */}
-      <button
-        onClick={handleBrainIconClick}
-        className="fixed bottom-6 right-6 z-50 w-16 h-16 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:from-[#4338ca] hover:to-[#9333ea] text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-110 flex items-center justify-center"
-        title="Ask BlocIQ"
-      >
-        <Brain className="h-8 w-8" />
-      </button>
-
-      {/* Popups */}
-      <PublicAskBlocPopup 
-        isOpen={showInitialPopup} 
-        onClose={handleCloseInitialPopup} 
-      />
-      
-      <EmailConsentModal
-        isOpen={showEmailModal}
-        onClose={handleCloseEmailModal}
-        onUnlock={handleEmailUnlock}
-      />
     </div>
   )
 }
