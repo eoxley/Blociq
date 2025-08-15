@@ -11,7 +11,10 @@ import { Brain } from 'lucide-react'
 export default function AskAiFab({ href = '/ai-assistant' }: { href?: string }) {
   const pathname = usePathname()
   const isOnAsk = pathname?.startsWith(href)
-  if (isOnAsk) return null
+  const isOnLandingPage = pathname === '/'
+  
+  // Hide on Ask AI pages and landing page
+  if (isOnAsk || isOnLandingPage) return null
 
   return (
     <Link
