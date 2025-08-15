@@ -25,7 +25,12 @@ type AIResponse = {
   response: string;
 };
 
-export default function PublicAskBlocIQ() {
+interface PublicAskBlocIQProps {
+  isPublic?: boolean;
+  isVisible?: boolean;
+}
+
+export default function PublicAskBlocIQ({ isPublic = true, isVisible = false }: PublicAskBlocIQProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(false);
@@ -205,8 +210,11 @@ export default function PublicAskBlocIQ() {
     }
   };
 
+  if (!isVisible) return null;
+
   return (
     <div className="max-w-3xl mx-auto bg-white rounded-2xl p-6 shadow-xl">
+
       {/* BlocIQ Brain Icon */}
       <div className="w-16 h-16 flex items-center justify-center bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full mb-4 mx-auto text-white">
         <Brain className="h-8 w-8" />
@@ -354,7 +362,7 @@ export default function PublicAskBlocIQ() {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="text-blue-600 hover:text-blue-700 font-medium"
+                className="font-medium text-blue-600 hover:text-blue-700"
               >
                 browse
               </button>
