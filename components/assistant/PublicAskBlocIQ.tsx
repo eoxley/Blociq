@@ -402,205 +402,207 @@ export default function PublicAskBlocIQ() {
         </>
       )}
 
-      {/* Public Chat Widget */}
+      {/* Public Chat Widget - Modal Style */}
       {showChat && (
-        <div className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 w-auto md:w-[800px] lg:w-[900px] rounded-2xl bg-white shadow-2xl z-[10000] border border-gray-100 max-h-[90vh] flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full flex items-center justify-center">
-                <Brain className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">Ask BlocIQ</h2>
-                <p className="text-sm text-gray-600">Your AI-powered property management assistant</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowChat(false)}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200"
-            >
-              <X className="h-6 w-6" />
-            </button>
-          </div>
-
-          {/* Chat Messages */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-4 max-h-96">
-            {messages.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Sparkles className="h-8 w-8 text-white" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full flex items-center justify-center">
+                  <Brain className="h-6 w-6 text-white" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Welcome to BlocIQ Assistant</h3>
-                <p className="text-gray-600 mb-6">Ask me anything about property management, compliance, or upload documents for analysis.</p>
-                
-                {/* Suggested Prompts */}
-                <div className="space-y-3">
-                  <p className="text-sm font-medium text-gray-700">Try asking:</p>
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    <button
-                      onClick={() => setQuestion("What are the key compliance requirements for residential properties?")}
-                      className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm border border-blue-200"
-                    >
-                      What are the key compliance requirements for residential properties?
-                    </button>
-                    <button
-                      onClick={() => setQuestion("How can I improve my property management workflow?")}
-                      className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm border border-blue-200"
-                    >
-                      How can I improve my property management workflow?
-                    </button>
-                    <button
-                      onClick={() => setQuestion("What should I include in a Section 20 notice?")}
-                      className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm border border-blue-200"
-                    >
-                      What should I include in a Section 20 notice?
-                    </button>
-                  </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Ask BlocIQ</h2>
+                  <p className="text-sm text-gray-600">Your AI-powered property management assistant</p>
                 </div>
               </div>
-            ) : (
-              messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} transition-all duration-300 ease-in-out`}
-                >
-                  <div className={`max-w-[80%] ${message.role === 'user' ? 'order-2' : 'order-1'}`}>
-                    <div className={`rounded-2xl px-4 py-3 ${
-                      message.role === 'user' 
-                        ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white' 
-                        : 'bg-gray-100 text-gray-900'
-                    }`}>
-                      <div className="whitespace-pre-wrap leading-relaxed">
-                        {message.content}
-                      </div>
-                      
-                      {/* Files */}
-                      {message.files && message.files.length > 0 && (
-                        <div className="mt-3 space-y-2">
-                          {message.files.map((file) => (
-                            <div key={file.id} className="flex items-center gap-2 text-sm">
-                              <span>{getFileIcon(file.type)}</span>
-                              <span className="truncate">{file.name}</span>
-                              <span className="text-xs opacity-70">({formatFileSize(file.size)})</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-
-            {/* Loading Message */}
-            {loading && (
-              <div className="flex justify-start transition-all duration-300 ease-in-out">
-                <div className="max-w-[80%]">
-                  <div className="bg-gray-100 rounded-2xl px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                        <Sparkles className="h-3 w-3 text-white" />
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-                        <span className="text-sm text-gray-600">BlocIQ is thinking...</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Input Area */}
-          <div className="border-t border-gray-200 p-6">
-            <form onSubmit={handleSubmit} className="space-y-3">
-              {/* Main Input */}
-              <div className="relative">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  placeholder="Ask BlocIQ anything..."
-                  className="w-full px-4 py-3 pr-20 bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-500"
-                  disabled={loading}
-                />
-                
-                {/* Send Button */}
-                <button
-                  type="submit"
-                  disabled={loading || (!question.trim() && uploadedFiles.length === 0)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 p-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 text-white rounded-xl transition-all duration-200 disabled:cursor-not-allowed shadow-sm"
-                  title="Send with BlocIQ"
-                >
-                  {loading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-
-              {/* File Upload Section */}
-              <div 
-                className={`border-2 border-dashed rounded-xl p-4 text-center transition-colors ${
-                  isDragOver ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
-                }`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
+              <button
+                onClick={() => setShowChat(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200"
               >
-                <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-                <p className="text-sm text-gray-600 mb-2">
-                  Drag and drop files here, or{' '}
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="font-medium text-blue-600 hover:text-blue-700"
-                  >
-                    browse
-                  </button>
-                </p>
-                <p className="text-xs text-gray-500">
-                  Supports PDF, DOCX, TXT (max 10MB each, up to 5 files)
-                </p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  accept=".pdf,.docx,.txt"
-                  onChange={(e) => handleFileSelect(e.target.files)}
-                  className="hidden"
-                />
-              </div>
+                <X className="h-6 w-6" />
+              </button>
+            </div>
 
-              {/* Uploaded Files */}
-              {uploadedFiles.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-gray-700">Uploaded files:</p>
-                  {uploadedFiles.map((file) => (
-                    <div key={file.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm text-gray-700">{file.name}</span>
-                        <span className="text-xs text-gray-500">({formatFileSize(file.size)})</span>
-                      </div>
+            {/* Chat Messages */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
+              {messages.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Sparkles className="h-8 w-8 text-white" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Welcome to BlocIQ Assistant</h3>
+                  <p className="text-gray-600 mb-6">Ask me anything about property management, compliance, or upload documents for analysis.</p>
+                  
+                  {/* Suggested Prompts */}
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium text-gray-700">Try asking:</p>
+                    <div className="flex flex-wrap gap-2 justify-center">
                       <button
-                        type="button"
-                        onClick={() => removeFile(file.id)}
-                        className="text-gray-400 hover:text-gray-600"
+                        onClick={() => setQuestion("What are the key compliance requirements for residential properties?")}
+                        className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm border border-blue-200"
                       >
-                        <X className="h-4 w-4" />
+                        What are the key compliance requirements for residential properties?
+                      </button>
+                      <button
+                        onClick={() => setQuestion("How can I improve my property management workflow?")}
+                        className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm border border-blue-200"
+                      >
+                        How can I improve my property management workflow?
+                      </button>
+                      <button
+                        onClick={() => setQuestion("What should I include in a Section 20 notice?")}
+                        className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm border border-blue-200"
+                      >
+                        What should I include in a Section 20 notice?
                       </button>
                     </div>
-                  ))}
+                  </div>
+                </div>
+              ) : (
+                messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} transition-all duration-300 ease-in-out`}
+                  >
+                    <div className={`max-w-[80%] ${message.role === 'user' ? 'order-2' : 'order-1'}`}>
+                      <div className={`rounded-2xl px-4 py-3 ${
+                        message.role === 'user' 
+                          ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white' 
+                          : 'bg-gray-100 text-gray-900'
+                      }`}>
+                        <div className="whitespace-pre-wrap leading-relaxed">
+                          {message.content}
+                        </div>
+                        
+                        {/* Files */}
+                        {message.files && message.files.length > 0 && (
+                          <div className="mt-3 space-y-2">
+                            {message.files.map((file) => (
+                              <div key={file.id} className="flex items-center gap-2 text-sm">
+                                <span>{getFileIcon(file.type)}</span>
+                                <span className="truncate">{file.name}</span>
+                                <span className="text-xs opacity-70">({formatFileSize(file.size)})</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+
+              {/* Loading Message */}
+              {loading && (
+                <div className="flex justify-start transition-all duration-300 ease-in-out">
+                  <div className="max-w-[80%]">
+                    <div className="bg-gray-100 rounded-2xl px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                          <Sparkles className="h-3 w-3 text-white" />
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                          <span className="text-sm text-gray-600">BlocIQ is thinking...</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
-            </form>
+
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input Area */}
+            <div className="border-t border-gray-200 p-6">
+              <form onSubmit={handleSubmit} className="space-y-3">
+                {/* Main Input */}
+                <div className="relative">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={question}
+                    onChange={(e) => setQuestion(e.target.value)}
+                    placeholder="Ask BlocIQ anything..."
+                    className="w-full px-4 py-3 pr-20 bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-500"
+                    disabled={loading}
+                  />
+                  
+                  {/* Send Button */}
+                  <button
+                    type="submit"
+                    disabled={loading || (!question.trim() && uploadedFiles.length === 0)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 p-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 text-white rounded-xl transition-all duration-200 disabled:cursor-not-allowed shadow-sm"
+                    title="Send with BlocIQ"
+                  >
+                    {loading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+
+                {/* File Upload Section */}
+                <div 
+                  className={`border-2 border-dashed rounded-xl p-4 text-center transition-colors ${
+                    isDragOver ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
+                  }`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
+                  <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                  <p className="text-sm text-gray-600 mb-2">
+                    Drag and drop files here, or{' '}
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="font-medium text-blue-600 hover:text-blue-700"
+                    >
+                      browse
+                    </button>
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Supports PDF, DOCX, TXT (max 10MB each, up to 5 files)
+                  </p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept=".pdf,.docx,.txt"
+                    onChange={(e) => handleFileSelect(e.target.files)}
+                    className="hidden"
+                  />
+                </div>
+
+                {/* Uploaded Files */}
+                {uploadedFiles.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-gray-700">Uploaded files:</p>
+                    {uploadedFiles.map((file) => (
+                      <div key={file.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm text-gray-700">{file.name}</span>
+                          <span className="text-xs text-gray-500">({formatFileSize(file.size)})</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(file.id)}
+                          className="text-gray-400 hover:text-gray-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </form>
+            </div>
           </div>
         </div>
       )}
