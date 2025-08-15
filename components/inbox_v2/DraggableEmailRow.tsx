@@ -39,4 +39,4 @@ export const DraggableEmailRow = memo(function DraggableEmailRow({ messageId, so
       {children}
     </div>
   )
-}
+})

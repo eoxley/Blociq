@@ -69,4 +69,4 @@ export const DroppableFolderItem = memo(function DroppableFolderItem({
       )}
     </div>
   )
-}
+})
