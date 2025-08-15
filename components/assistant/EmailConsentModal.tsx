@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { X, Mail, Lock, Shield, Brain } from 'lucide-react';
-import { toast } from 'sonner';
+import { Brain, X, Mail, Shield } from 'lucide-react';
 
 interface EmailConsentModalProps {
   isOpen: boolean;
@@ -12,41 +11,39 @@ interface EmailConsentModalProps {
 
 export default function EmailConsentModal({ isOpen, onClose, onUnlock }: EmailConsentModalProps) {
   const [email, setEmail] = useState('');
-  const [agreedToConsent, setAgreedToConsent] = useState(false);
+  const [agreedToResearch, setAgreedToResearch] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!email.trim()) {
-      toast.error('Please enter your email address');
+    setError('');
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address');
       return;
     }
 
-    if (!agreedToConsent) {
-      toast.error('Please agree to the terms to continue');
+    if (!agreedToResearch) {
+      setError('Please agree to the terms to continue');
       return;
     }
 
     setIsSubmitting(true);
-    
+
     try {
-      // Simple email validation
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        toast.error('Please enter a valid email address');
-        return;
-      }
-
-      // Store email and consent in localStorage
+      // Save to localStorage
       localStorage.setItem('askBlocEmail', email);
-      localStorage.setItem('askBlocConsent', 'true');
-      localStorage.setItem('askBlocConsentDate', new Date().toISOString());
-
-      toast.success('Welcome to BlocIQ!');
+      
+      // Call the unlock function
       onUnlock(email);
+      
+      // Close the modal
+      onClose();
     } catch (error) {
-      toast.error('Something went wrong. Please try again.');
+      setError('Failed to save your information. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -55,110 +52,105 @@ export default function EmailConsentModal({ isOpen, onClose, onUnlock }: EmailCo
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-lg max-w-md w-full mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-100">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 flex items-center justify-center bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full">
-              <Lock className="h-5 w-5 text-white" />
+    <>
+      {/* Overlay */}
+      <div 
+        className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      
+      {/* Modal */}
+      <div className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 w-auto md:w-[500px] rounded-2xl bg-white shadow-2xl z-[10000] border border-gray-100">
+        <div className="p-6">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full flex items-center justify-center">
+                <Brain className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Unlock Ask BlocIQ</h2>
+                <p className="text-sm text-gray-600">Enter your email to start using our AI assistant</p>
+              </div>
             </div>
-            <h3 className="text-xl font-bold text-gray-900">Unlock Ask BlocIQ</h3>
+            <button
+              onClick={onClose}
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <form onSubmit={handleSubmit} className="p-6">
-          <div className="mb-6">
-            <p className="text-gray-600 mb-4">
-              Enter your email to start using Ask BlocIQ and experience AI-powered property management.
-            </p>
-            
+          
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email Input */}
-            <div className="mb-4">
+            <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                 Email Address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-gray-400" />
+                </div>
                 <input
-                  type="email"
                   id="email"
+                  type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your@email.com"
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  placeholder="Enter your email address"
+                  className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   required
                 />
               </div>
             </div>
 
             {/* Consent Checkbox */}
-            <div className="mb-4">
-              <label className="flex items-start space-x-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={agreedToConsent}
-                  onChange={(e) => setAgreedToConsent(e.target.checked)}
-                  className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  required
-                />
-                <span className="text-sm text-gray-700">
-                  I agree to my email and chat queries being stored for research and product improvement.
-                </span>
+            <div className="flex items-start gap-3">
+              <input
+                id="consent"
+                type="checkbox"
+                checked={agreedToResearch}
+                onChange={(e) => setAgreedToResearch(e.target.checked)}
+                className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="consent" className="text-sm text-gray-700 leading-relaxed">
+                I agree to my email and chat queries being stored for research and product improvement.
               </label>
             </div>
 
             {/* Disclaimer */}
-            <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-              <div className="flex items-start space-x-2">
-                <Shield className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
-                <p className="text-xs text-gray-600">
-                  We do not share your data. View our{' '}
-                  <a href="/privacy" className="text-blue-600 hover:underline">
-                    Privacy Policy
-                  </a>
-                  .
-                </p>
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+              <div className="flex items-start gap-3">
+                <Shield className="h-5 w-5 text-gray-500 mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-gray-600">
+                  <p className="font-medium mb-1">Privacy & Data Protection</p>
+                  <p>We do not share your data with third parties. Your information is used solely to improve our AI assistant and provide you with a better experience. View our{' '}
+                    <a href="/privacy" className="text-blue-600 hover:text-blue-700 underline">
+                      Privacy Policy
+                    </a>.
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Buttons */}
-          <div className="flex space-x-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors duration-200"
-            >
-              Cancel
-            </button>
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                <p className="text-sm text-red-800">{error}</p>
+              </div>
+            )}
+
+            {/* Submit Button */}
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="flex-1 px-4 py-3 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:from-[#4338ca] hover:to-[#9333ea] disabled:from-gray-300 disabled:to-gray-400 text-white rounded-lg font-medium transition-all duration-200 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+              disabled={isSubmitting || !email.trim() || !agreedToResearch}
+              className="w-full bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:from-[#4338ca] hover:to-[#9333ea] disabled:from-gray-300 disabled:to-gray-400 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:transform-none disabled:cursor-not-allowed"
             >
-              {isSubmitting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Unlocking...</span>
-                </>
-              ) : (
-                <>
-                  <Brain className="h-4 w-4" />
-                  <span>Unlock Chat</span>
-                </>
-              )}
+              {isSubmitting ? 'Unlocking...' : 'Unlock Ask BlocIQ'}
             </button>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
