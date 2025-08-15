@@ -180,7 +180,7 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
         />
       </div>
       
-      <div className="flex-1 overflow-y-auto max-h-[calc(100vh-300px)]">
+      <div className="flex-1 overflow-y-auto max-h-[calc(100vh-300px)] scrollbar-thin">
         <div className="divide-y divide-gray-100">
           {filteredMessages.map((message: any, index: number) => {
             const isSelected = selectedMessageId === message.id

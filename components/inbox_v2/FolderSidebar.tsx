@@ -83,7 +83,7 @@ export default function FolderSidebar({ selectedFolderId, onFolderSelect }: Fold
         </div>
       )}
       
-      <div className="space-y-1">
+      <div className="space-y-1 overflow-y-auto max-h-[calc(100vh-300px)] scrollbar-thin">
         {folders.map((folder) => (
           <DroppableFolderItem
             key={folder.id}
