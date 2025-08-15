@@ -26,7 +26,13 @@ type AIResponse = {
 };
 
 export default function PublicAskBlocIQ() {
+  // State for the initial popup guide
+  const [showGuidePopup, setShowGuidePopup] = useState(false);
+  
+  // State for email unlock modal
   const [showEmailModal, setShowEmailModal] = useState(false);
+  
+  // State for chat widget
   const [showChat, setShowChat] = useState(false);
   const [hasUnlocked, setHasUnlocked] = useState(false);
   
@@ -52,18 +58,23 @@ export default function PublicAskBlocIQ() {
   const maxFileSize = 10 * 1024 * 1024; // 10MB
   const maxFiles = 5;
 
-  // Check if user has already unlocked
+  // Check if user has already unlocked and show guide popup on first visit
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const userEmail = localStorage.getItem('askBlocEmail');
+      const guideShown = sessionStorage.getItem('askBlocGuideShown');
+      
       if (userEmail) {
         setHasUnlocked(true);
-        setShowChat(true);
+      }
+      
+      if (!guideShown) {
+        setShowGuidePopup(true);
       }
     }
   }, []);
 
-  // Auto-focus input field on mount
+  // Auto-focus input field when chat opens
   useEffect(() => {
     if (showChat) {
       inputRef.current?.focus();
@@ -75,6 +86,7 @@ export default function PublicAskBlocIQ() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Handle brain icon click
   const handleBrainIconClick = () => {
     if (hasUnlocked) {
       setShowChat(true);
@@ -83,6 +95,13 @@ export default function PublicAskBlocIQ() {
     }
   };
 
+  // Handle guide popup close
+  const handleCloseGuide = () => {
+    setShowGuidePopup(false);
+    sessionStorage.setItem('askBlocGuideShown', 'true');
+  };
+
+  // Handle email submission
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -118,6 +137,7 @@ export default function PublicAskBlocIQ() {
     }
   };
 
+  // File validation
   const validateFile = (file: File): boolean => {
     if (!acceptedFileTypes.includes(file.type)) {
       toast.error(`File type not supported. Please upload PDF, DOCX, or TXT files.`);
@@ -137,6 +157,7 @@ export default function PublicAskBlocIQ() {
     return true;
   };
 
+  // Handle file selection
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;
     
@@ -157,10 +178,12 @@ export default function PublicAskBlocIQ() {
     });
   };
 
+  // Remove file
   const removeFile = (fileId: string) => {
     setUploadedFiles(prev => prev.filter(f => f.id !== fileId));
   };
 
+  // Drag and drop handlers
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(true);
@@ -177,6 +200,7 @@ export default function PublicAskBlocIQ() {
     handleFileSelect(e.dataTransfer.files);
   };
 
+  // Format file size
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -185,6 +209,7 @@ export default function PublicAskBlocIQ() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  // Get file icon
   const getFileIcon = (fileType: string) => {
     if (fileType.includes('pdf')) return '📄';
     if (fileType.includes('word') || fileType.includes('document')) return '📝';
@@ -192,6 +217,7 @@ export default function PublicAskBlocIQ() {
     return '📎';
   };
 
+  // Handle chat submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!question.trim() && uploadedFiles.length === 0) {
@@ -291,7 +317,7 @@ export default function PublicAskBlocIQ() {
 
   return (
     <>
-      {/* Fixed Brain Icon Button */}
+      {/* Fixed Brain Icon Button - Bottom Right */}
       <button
         onClick={handleBrainIconClick}
         className="fixed bottom-6 right-6 z-50 w-16 h-16 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:from-[#4338ca] hover:to-[#9333ea] text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-110 flex items-center justify-center"
@@ -299,6 +325,34 @@ export default function PublicAskBlocIQ() {
       >
         <Brain className="h-8 w-8" />
       </button>
+
+      {/* Initial Guide Popup */}
+      {showGuidePopup && (
+        <>
+          <div 
+            className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm"
+            onClick={handleCloseGuide}
+          />
+          
+          <div className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 w-auto md:w-[400px] rounded-2xl bg-white shadow-2xl z-[10000] border border-gray-100">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full flex items-center justify-center mx-auto mb-4">
+                <Brain className="h-8 w-8 text-white" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Use BlocIQ Today</h2>
+              <p className="text-gray-600 mb-6">
+                Click the Brain icon in the bottom right corner to start your free trial of Ask BlocIQ.
+              </p>
+              <button
+                onClick={handleCloseGuide}
+                className="w-full bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:from-[#4338ca] hover:to-[#9333ea] text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Email Consent Modal */}
       {showEmailModal && (
@@ -402,7 +456,7 @@ export default function PublicAskBlocIQ() {
         </>
       )}
 
-      {/* Public Chat Widget - Modal Style */}
+      {/* Chat Widget Modal */}
       {showChat && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
