@@ -1,22 +1,64 @@
-import React from 'react'
+'use client'
+
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowRight, Brain, FileText, Calendar, Shield, Zap, Building2, Users, Home, CheckCircle, Star, MessageSquare, Settings, BarChart3 } from 'lucide-react'
-import { Metadata } from 'next'
 import BlocIQLogo from '@/components/BlocIQLogo'
 import PublicAskBlocIQ from '@/components/assistant/AskBlocIQ'
-
-export const metadata: Metadata = {
-  title: 'BlocIQ | AI-Powered Property Management',
-  description: 'BlocIQ helps you stay compliant, work faster, and manage smarter — from inbox to inspection. AI-powered property management reimagined.',
-  keywords: 'property management, AI, compliance, housing, real estate, property software',
-  openGraph: {
-    title: 'BlocIQ | AI-Powered Property Management',
-    description: 'BlocIQ helps you stay compliant, work faster, and manage smarter — from inbox to inspection.',
-    type: 'website',
-  },
-}
+import PublicAskBlocPopup from '@/components/assistant/PublicAskBlocPopup'
+import EmailConsentModal from '@/components/assistant/EmailConsentModal'
 
 export default function LandingPage() {
+  const [showInitialPopup, setShowInitialPopup] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [hasUnlocked, setHasUnlocked] = useState(false);
+
+  // Check localStorage and sessionStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hasEmail = localStorage.getItem('askBlocEmail');
+      const popupShown = sessionStorage.getItem('askBlocPopupShown');
+      
+      if (hasEmail) {
+        setHasUnlocked(true);
+      }
+      
+      // Show initial popup if not shown before
+      if (!popupShown) {
+        const timer = setTimeout(() => {
+          setShowInitialPopup(true);
+        }, 1000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, []);
+
+  const handleBrainIconClick = () => {
+    const hasEmail = localStorage.getItem('askBlocEmail');
+    if (hasEmail) {
+      // User has already provided email, show chat directly
+      setShowChat(true);
+    } else {
+      // User needs to provide email first
+      setShowEmailModal(true);
+    }
+  };
+
+  const handleEmailUnlock = (email: string) => {
+    setHasUnlocked(true);
+    setShowEmailModal(false);
+    setShowChat(true);
+  };
+
+  const handleCloseEmailModal = () => {
+    setShowEmailModal(false);
+  };
+
+  const handleCloseInitialPopup = () => {
+    setShowInitialPopup(false);
+  };
+
   return (
     <div className="min-h-screen bg-white">
       {/* Enhanced Navigation */}
@@ -87,12 +129,34 @@ export default function LandingPage() {
               Try BlocIQ AI Assistant
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Experience the power of AI-powered property management. Ask questions, upload documents, and see how BlocIQ can help streamline your workflow.
+              Experience the power of AI-powered property management. Click the Brain icon in the bottom right to start your free trial.
             </p>
           </div>
-          <PublicAskBlocIQ />
+          <PublicAskBlocIQ isVisible={showChat} />
         </div>
       </section>
+
+      {/* Brain Icon - Fixed Position */}
+      <button
+        onClick={handleBrainIconClick}
+        className="fixed bottom-4 right-4 z-50 w-16 h-16 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:from-[#4338ca] hover:to-[#9333ea] text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-110 flex items-center justify-center"
+        title="Ask BlocIQ"
+      >
+        <Brain className="h-8 w-8" />
+      </button>
+
+      {/* Initial Popup */}
+      <PublicAskBlocPopup
+        isOpen={showInitialPopup}
+        onClose={handleCloseInitialPopup}
+      />
+
+      {/* Email Consent Modal */}
+      <EmailConsentModal
+        isOpen={showEmailModal}
+        onClose={handleCloseEmailModal}
+        onUnlock={handleEmailUnlock}
+      />
 
 
 
