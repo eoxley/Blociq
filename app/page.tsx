@@ -68,20 +68,8 @@ export default function LandingPage() {
         <div className="absolute bottom-8 left-8 w-24 h-24 bg-white/5 rounded-full"></div>
       </section>
 
-      {/* Public AskBlocIQ Chat Widget */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Try BlocIQ AI Assistant
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Experience the power of AI-powered property management. Ask questions, upload documents, and see how BlocIQ can help streamline your workflow.
-            </p>
-          </div>
-          <PublicAskBlocIQ />
-        </div>
-      </section>
+      {/* Public AskBlocIQ Component - Renders Brain Icon and Modals */}
+      <PublicAskBlocIQ />
 
 
 
