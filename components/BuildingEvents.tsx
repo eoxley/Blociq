@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Calendar, Plus, Clock, MapPin, Filter, ExternalLink } from 'lucide-react';
 import CreateEventModal from './CreateEventModal';
+import { formatEventTimeUK } from '@/utils/date';
 
 interface BuildingEvent {
   id: string;
@@ -95,10 +96,7 @@ export default function BuildingEvents({ buildingId, buildingName }: BuildingEve
         day: 'numeric',
         month: 'short'
       }),
-      time: date.toLocaleTimeString('en-GB', {
-        hour: '2-digit',
-        minute: '2-digit'
-      }),
+      time: formatEventTimeUK(dateString),
       fullDate: date.toLocaleDateString('en-GB', {
         weekday: 'long',
         day: 'numeric',

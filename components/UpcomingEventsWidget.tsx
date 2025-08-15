@@ -6,6 +6,7 @@ import { Calendar, MapPin, Clock, Building, Loader2, RefreshCw, Plus } from "luc
 import { BlocIQButton } from "@/components/ui/blociq-button";
 import { BlocIQBadge } from "@/components/ui/blociq-badge";
 import ManualDiaryInput from "./ManualDiaryInput";
+import { formatEventRangeUK, formatEventTimeUK } from "@/utils/date";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -206,25 +207,11 @@ export default function UpcomingEventsWidget() {
     
     if (!startTime) return "Time TBD";
     
-    const start = new Date(startTime);
-    if (isNaN(start.getTime())) return "Invalid Time";
+    if (!endTime) {
+      return formatEventTimeUK(startTime);
+    }
     
-    const startFormatted = start.toLocaleTimeString('en-GB', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
-    
-    if (!endTime) return startFormatted;
-    
-    const end = new Date(endTime);
-    if (isNaN(end.getTime())) return startFormatted;
-    
-    const endFormatted = end.toLocaleTimeString('en-GB', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
-    
-    return `${startFormatted} - ${endFormatted}`;
+    return formatEventRangeUK(startTime, endTime);
   };
 
   const formatEventDate = (dateString: string) => {
