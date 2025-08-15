@@ -412,15 +412,34 @@ export default function CommunicationsPage() {
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-8">
+      {/* Hero Banner */}
+      <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16 mb-8 rounded-2xl shadow-xl">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center">
+            <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl">
+              <Mail className="h-10 w-10 text-white" />
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Communications</h1>
+            <p className="text-lg text-white/90 max-w-2xl mx-auto">
+              Send email or letters to buildings, leaseholders, or your whole portfolio
+            </p>
+          </div>
+        </div>
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-10 right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+        </div>
+      </section>
+
       {/* Header */}
       <div>
-        <h1 className="text-4xl font-bold text-[#4f46e5]">Communications</h1>
+        <h2 className="text-2xl font-bold text-gray-800">Message Composer</h2>
         <p className="text-gray-600 mt-2">Send email or letters to buildings, leaseholders, or your whole portfolio.</p>
       </div>
 
       {/* Message Composer */}
       <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-6">Message Composer</h2>
+        <h3 className="text-xl font-semibold text-gray-800 mb-6">Message Composer</h3>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Target Selection */}
@@ -575,7 +594,7 @@ export default function CommunicationsPage() {
       <div className="bg-white rounded-xl shadow-md border border-gray-100">
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-800">Communication Log</h2>
+            <h3 className="text-xl font-semibold text-gray-800">Communication Log</h3>
             <button
               onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
               className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800"
