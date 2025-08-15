@@ -360,9 +360,9 @@ Generate the reply in plain text format (no HTML tags).`
       />
       
       {/* Modal Panel */}
-      <div className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 w-auto md:w-[900px] lg:w-[1000px] rounded-3xl bg-white shadow-2xl max-h-[95vh] flex flex-col z-[10000] border border-gray-100">
+      <div className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 w-auto md:w-[800px] lg:w-[900px] rounded-xl bg-white shadow-2xl max-h-[90vh] flex flex-col z-[10000] border border-gray-100">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-3xl">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
               <MessageSquare className="h-6 w-6 text-white" />
@@ -383,7 +383,7 @@ Generate the reply in plain text format (no HTML tags).`
         </div>
         
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Compact Email Info */}
           {message && (
             <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
@@ -595,7 +595,7 @@ Generate the reply in plain text format (no HTML tags).`
             <div
               ref={editorRef}
               contentEditable
-              className="p-6 min-h-[300px] focus:outline-none prose prose-lg max-w-none text-gray-900 leading-relaxed"
+              className="p-4 min-h-[250px] focus:outline-none prose prose-sm max-w-none text-gray-900 leading-relaxed"
               dangerouslySetInnerHTML={{ __html: htmlBody }}
               onInput={(e) => setHtmlBody(e.currentTarget.innerHTML)}
               onKeyDown={(e) => {
@@ -625,18 +625,18 @@ Generate the reply in plain text format (no HTML tags).`
             />
           </div>
           
-          {/* Attachments Display */}
+          {/* Compact Attachments Display */}
           {attachments.length > 0 && (
-            <div className="border-2 border-gray-200 rounded-2xl bg-gradient-to-r from-gray-50 to-blue-50 p-4 shadow-sm">
-              <div className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+            <div className="border border-gray-200 rounded-lg bg-gray-50 p-3">
+              <div className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                 <Paperclip className="h-4 w-4" />
                 Attachments ({attachments.length})
               </div>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {attachments.map((file, index) => (
-                  <div key={index} className="flex items-center justify-between bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <Paperclip className="h-5 w-5 text-blue-500" />
+                  <div key={index} className="flex items-center justify-between bg-white p-2 rounded border border-gray-200">
+                    <div className="flex items-center gap-2">
+                      <Paperclip className="h-4 w-4 text-blue-500" />
                       <div>
                         <div className="text-sm font-medium text-gray-900">{file.name}</div>
                         <div className="text-xs text-gray-500">{formatFileSize(file.size)}</div>
@@ -644,10 +644,10 @@ Generate the reply in plain text format (no HTML tags).`
                     </div>
                     <button
                       onClick={() => removeAttachment(index)}
-                      className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors"
+                      className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded transition-colors"
                       title="Remove attachment"
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-3 w-3" />
                     </button>
                   </div>
                 ))}
@@ -655,41 +655,41 @@ Generate the reply in plain text format (no HTML tags).`
             </div>
           )}
           
-          {/* Email Thread Display */}
+          {/* Compact Email Thread Display */}
           {emailThread.length > 0 && (
-            <div className="border-2 border-gray-200 rounded-2xl bg-gradient-to-r from-gray-50 to-blue-50 overflow-hidden shadow-sm">
-              <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-gray-100 to-blue-100">
-                <div className="flex items-center gap-3 text-sm text-gray-700 font-semibold">
-                  <MessageSquare className="h-5 w-5 text-blue-600" />
-                  <span className="font-medium">
+            <div className="border border-gray-200 rounded-lg bg-gray-50 overflow-hidden">
+              <div className="p-3 border-b border-gray-200 bg-gray-100">
+                <div className="flex items-center gap-2 text-sm text-gray-700 font-medium">
+                  <MessageSquare className="h-4 w-4 text-blue-600" />
+                  <span>
                     Email Thread ({emailThread.length} message{emailThread.length !== 1 ? 's' : ''})
                   </span>
                 </div>
               </div>
               
-              <div className="max-h-96 overflow-y-auto p-4 space-y-4">
+              <div className="max-h-64 overflow-y-auto p-3 space-y-3">
                 {emailThread.map((threadMessage, index) => (
                   <div
                     key={threadMessage.id || index}
-                    className={`mb-4 p-4 rounded-lg border ${
+                    className={`p-3 rounded border text-sm ${
                       threadMessage.id === message?.id
-                        ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200'
+                        ? 'bg-blue-50 border-blue-200'
                         : 'bg-white border-gray-200'
-                    } text-sm`}
+                    }`}
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="font-medium">
+                      <span className="font-medium text-xs">
                         {threadMessage.from?.emailAddress?.address || threadMessage.from?.emailAddress || 'Unknown'}
                       </span>
                       <span className="text-gray-500 text-xs">
                         {new Date(threadMessage.receivedDateTime).toLocaleString('en-GB')}
                       </span>
                     </div>
-                    <div className="text-sm text-gray-600 font-semibold mb-2">
+                    <div className="text-xs text-gray-600 font-medium mb-1">
                       {threadMessage.subject || '(No subject)'}
                     </div>
                     <div
-                      className="text-gray-800 whitespace-pre-wrap text-sm prose prose-sm max-w-none leading-relaxed"
+                      className="text-gray-800 whitespace-pre-wrap text-xs leading-relaxed max-h-20 overflow-hidden"
                       dangerouslySetInnerHTML={{
                         __html: sanitizeHtml(threadMessage.body?.content || '(No content)')
                       }}
@@ -702,32 +702,32 @@ Generate the reply in plain text format (no HTML tags).`
           
         </div>
         
-        {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gradient-to-r from-gray-50 to-blue-50 rounded-b-3xl">
+        {/* Compact Footer */}
+        <div className="flex items-center justify-between p-4 border-t border-gray-200 bg-gray-50 rounded-b-lg">
           <button
             onClick={handleGenerateAIReply}
-            className="flex items-center gap-3 px-6 py-3 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-200 font-medium shadow-sm hover:shadow-md"
+            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors font-medium"
           >
-            <Brain className="h-5 w-5" />
-            {isGeneratingAI ? 'Generating AI Reply...' : 'Generate with Ask BlocIQ'}
+            <Brain className="h-4 w-4" />
+            {isGeneratingAI ? 'Generating...' : 'Generate with Ask BlocIQ'}
           </button>
           
-          <div className="flex gap-4">
+          <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="px-8 py-3 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-all duration-200 font-medium shadow-sm hover:shadow-md"
+              className="px-6 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors font-medium"
             >
               Cancel
             </button>
             <button
               onClick={handleSend}
               disabled={isSending || !htmlBody.trim()}
-              className="flex items-center gap-3 px-8 py-3 text-sm text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 rounded-xl transition-all duration-200 font-medium shadow-lg hover:shadow-xl disabled:shadow-sm"
+              className="flex items-center gap-2 px-6 py-2 text-sm text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 rounded transition-colors font-medium"
             >
               {isSending ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Send className="h-5 w-5" />
+                <Send className="h-4 w-4" />
               )}
               Send
             </button>
