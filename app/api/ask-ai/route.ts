@@ -187,16 +187,56 @@ Keep responses concise, professional, and practical. If you don't have specific 
     // 🏢 Building Context
     if (building_id) {
       try {
-        const { data: building } = await supabase
-          .from('buildings')
-          .select('id, name, address, unit_count')
-          .eq('id', building_id)
-          .single();
-
-        if (building) {
+        // Import building context utility
+        const { getBuildingContext } = await import('../../../lib/updateBuilding');
+        
+        const buildingData = await getBuildingContext(building_id);
+        
+        if (buildingData) {
+          const { building, units, leaseholders, setup } = buildingData;
+          
           contextMetadata.buildingName = building.name;
-          contextMetadata.unitCount = building.unit_count;
-          buildingContext += `Building: ${building.name}\nUnits: ${building.unit_count || 'Unknown'}\nAddress: ${building.address || 'Not specified'}\n\n`;
+          contextMetadata.unitCount = units.length;
+          
+          // Enhanced building context with all information
+          buildingContext += `Building Information:
+Name: ${building.name}
+Address: ${building.address || 'Not specified'}
+Units: ${units.length}
+Status: ${building.is_hrb ? 'HRB' : 'Standard'}
+Notes: ${building.notes || 'No notes'}
+
+Structure Information:
+Type: ${setup?.structure_type || 'Not set'}
+Freeholder/RMC: ${setup?.client_name || 'Not set'}
+Managing Agent: ${setup?.client_contact || 'Not set'}
+Agent Email: ${setup?.client_email || 'Not set'}
+Operational Notes: ${setup?.operational_notes || 'Not set'}
+
+Units and Leaseholders:
+${units.map(unit => {
+  const leaseholder = leaseholders.find(l => l.id === unit.leaseholder_id);
+  return `- Flat ${unit.unit_number}: ${leaseholder ? `${leaseholder.name} (${leaseholder.email})` : 'No leaseholder'}`
+}).join('\n')}
+
+Access Information:
+Gate Code: ${setup?.operational_notes || 'Not set'}
+Fire Panel Code: ${building.notes || 'Not set'}
+Keys Location: Not set
+Emergency Access: Not set
+
+Contacts:
+Managing Agent: ${setup?.client_contact || 'Not set'}
+Agent Email: ${setup?.client_email || 'Not set'}
+Insurance Contact: Not set
+Cleaners: Not set
+Contractors: Not set
+
+Site Staff: No site staff assigned
+
+Notes & Instructions: ${building.notes || 'No notes added yet'}
+
+`;
           
           // Add unit count to system prompt for better context
           systemPrompt += `\nThe building "${building.name}" contains ${building.unit_count || 'an unknown number of'} units.\n`;
