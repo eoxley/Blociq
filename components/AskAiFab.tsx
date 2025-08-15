@@ -12,9 +12,10 @@ export default function AskAiFab({ href = '/ai-assistant' }: { href?: string }) 
   const pathname = usePathname()
   const isOnAsk = pathname?.startsWith(href)
   const isOnLandingPage = pathname === '/'
+  const isOnInbox = pathname?.startsWith('/inbox')
   
-  // Hide on Ask AI pages and landing page
-  if (isOnAsk || isOnLandingPage) return null
+  // Hide on Ask AI pages, landing page, and inbox page
+  if (isOnAsk || isOnLandingPage || isOnInbox) return null
 
   return (
     <Link

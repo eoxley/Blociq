@@ -384,133 +384,117 @@ Generate the reply in plain text format (no HTML tags).`
         
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Email Info Card */}
+          {/* Compact Email Info */}
           {message && (
-            <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-2xl p-6 border border-gray-200 shadow-sm">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <User className="h-4 w-4 text-blue-600" />
+            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-gray-600">From:</span>
+                    <span className="text-gray-900">{message.from?.emailAddress?.address || message.from?.emailAddress || 'Unknown'}</span>
                   </div>
-                  <div>
-                    <span className="font-semibold text-gray-700">From:</span>
-                    <span className="ml-2 text-gray-900 font-medium">{message.from?.emailAddress?.address || message.from?.emailAddress || 'Unknown'}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
-                    <MessageSquare className="h-4 w-4 text-indigo-600" />
-                  </div>
-                  <div>
-                    <span className="font-semibold text-gray-700">Subject:</span>
-                    <span className="ml-2 text-gray-900 font-medium">{message.subject || '(No subject)'}</span>
+                  <div className="w-px h-4 bg-gray-300"></div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-gray-600">Subject:</span>
+                    <span className="text-gray-900">{message.subject || '(No subject)'}</span>
                   </div>
                 </div>
               </div>
             </div>
           )}
           
-          {/* Recipients Management */}
-          <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-2xl p-6 border border-gray-200 shadow-sm">
-            <div className="space-y-5">
-              {/* To Recipients */}
-              <div className="flex items-start gap-4">
-                <label className="text-sm font-semibold text-gray-700 w-20 pt-3">To:</label>
-                <div className="flex-1">
-                  <div className="flex flex-wrap gap-3 mb-3">
-                    {toRecipients.map((email, index) => (
-                      <span key={index} className="inline-flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 text-sm rounded-xl border-2 border-blue-200 shadow-sm">
-                        {email}
-                        <button
-                          onClick={() => removeRecipient('to', index)}
-                          className="text-blue-600 hover:text-blue-800 hover:bg-blue-200 rounded-full p-1.5 transition-all duration-200"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
+          {/* Compact Recipients Section */}
+          <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+            <div className="space-y-3">
+              {/* To Recipients - Compact */}
+              <div className="flex items-center gap-3">
+                <label className="text-sm font-medium text-gray-700 w-12">To:</label>
+                <div className="flex-1 flex flex-wrap gap-2">
+                  {toRecipients.map((email, index) => (
+                    <span key={index} className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 text-sm rounded-lg border border-blue-200">
+                      {email}
+                      <button
+                        onClick={() => removeRecipient('to', index)}
+                        className="text-blue-500 hover:text-blue-700 hover:bg-blue-100 rounded-full p-0.5 transition-colors"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
                   <button
                     onClick={() => addRecipient('to')}
-                    className="text-blue-600 hover:text-blue-800 text-sm font-semibold hover:bg-blue-50 px-4 py-2 rounded-lg transition-all duration-200"
+                    className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:bg-blue-50 px-2 py-1 rounded transition-colors"
                   >
-                    + Add recipient
+                    + Add
                   </button>
                 </div>
               </div>
               
-              {/* CC Recipients */}
-              <div className="flex items-start gap-4">
-                <label className="text-sm font-semibold text-gray-700 w-20 pt-3">CC:</label>
-                <div className="flex-1">
-                  <div className="flex flex-wrap gap-3 mb-3">
-                    {ccRecipients.map((email, index) => (
-                      <span key={index} className="inline-flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-gray-100 to-blue-50 text-gray-800 text-sm rounded-xl border-2 border-gray-200 shadow-sm">
-                        {email}
-                        <button
-                          onClick={() => removeRecipient('cc', index)}
-                          className="text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded-full p-1.5 transition-all duration-200"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
+              {/* CC Recipients - Compact */}
+              <div className="flex items-center gap-3">
+                <label className="text-sm font-medium text-gray-700 w-12">CC:</label>
+                <div className="flex-1 flex flex-wrap gap-2">
+                  {ccRecipients.map((email, index) => (
+                    <span key={index} className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-50 text-gray-700 text-sm rounded-lg border border-gray-200">
+                      {email}
+                      <button
+                        onClick={() => removeRecipient('cc', index)}
+                        className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full p-0.5 transition-colors"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
                   <button
                     onClick={() => addRecipient('cc')}
-                    className="text-gray-600 hover:text-gray-800 text-sm font-semibold hover:bg-gray-50 px-4 py-2 rounded-lg transition-all duration-200"
+                    className="text-gray-600 hover:text-gray-800 text-sm font-medium hover:bg-gray-50 px-2 py-1 rounded transition-colors"
                   >
-                    + Add CC
+                    + Add
                   </button>
                 </div>
               </div>
               
-              {/* BCC Recipients */}
-              <div className="flex items-start gap-4">
-                <label className="text-sm font-semibold text-gray-700 w-20 pt-3">BCC:</label>
-                <div className="flex-1">
-                  <div className="flex flex-wrap gap-3 mb-3">
-                    {bccRecipients.map((email, index) => (
-                      <span key={index} className="inline-flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-gray-100 to-blue-50 text-gray-800 text-sm rounded-xl border-2 border-gray-200 shadow-sm">
-                        {email}
-                        <button
-                          onClick={() => removeRecipient('bcc', index)}
-                          className="text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded-full p-1.5 transition-all duration-200"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
+              {/* BCC Recipients - Compact */}
+              <div className="flex items-center gap-3">
+                <label className="text-sm font-medium text-gray-700 w-12">BCC:</label>
+                <div className="flex-1 flex flex-wrap gap-2">
+                  {bccRecipients.map((email, index) => (
+                    <span key={index} className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-50 text-gray-700 text-sm rounded-lg border border-gray-200">
+                      {email}
+                      <button
+                        onClick={() => removeRecipient('bcc', index)}
+                        className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full p-0.5 transition-colors"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
                   <button
                     onClick={() => addRecipient('bcc')}
-                    className="text-gray-600 hover:text-gray-800 text-sm font-semibold hover:bg-gray-50 px-4 py-2 rounded-lg transition-all duration-200"
+                    className="text-gray-600 hover:text-gray-800 text-sm font-medium hover:bg-gray-50 px-2 py-1 rounded transition-colors"
                   >
-                    + Add BCC
+                    + Add
                   </button>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* AI Reply Generation Button */}
+          {/* Compact AI Reply Generation Button */}
           <div className="flex justify-center">
             <button
               onClick={handleGenerateAIReply}
               disabled={isGeneratingAI}
-              className="group relative inline-flex items-center gap-4 px-10 py-5 bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 text-white font-bold rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative flex items-center gap-4">
-                {isGeneratingAI ? (
-                  <Loader2 className="h-7 w-7 animate-spin" />
-                ) : (
-                  <Brain className="h-7 w-7" />
-                )}
-                <span className="text-xl">
-                  {isGeneratingAI ? 'Generating AI Reply...' : 'Generate AI Reply'}
-                </span>
-              </div>
+              {isGeneratingAI ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Brain className="h-5 w-5" />
+              )}
+              <span className="text-sm">
+                {isGeneratingAI ? 'Generating...' : 'Generate AI Reply'}
+              </span>
             </button>
           </div>
           
@@ -534,16 +518,16 @@ Generate the reply in plain text format (no HTML tags).`
             </div>
           )}
           
-          {/* Editor */}
-          <div className="border-2 border-gray-200 rounded-2xl bg-white shadow-sm overflow-hidden">
-            <div className="border-b border-gray-200 p-4 bg-gradient-to-r from-gray-50 to-blue-50">
-              <div className="flex gap-3 flex-wrap">
+          {/* Compact Editor */}
+          <div className="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
+            <div className="border-b border-gray-200 p-2 bg-gray-50">
+              <div className="flex gap-1 flex-wrap">
                 <button
                   onClick={() => {
                     document.execCommand('bold', false, undefined)
                     editorRef.current?.focus()
                   }}
-                  className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 font-bold shadow-sm hover:shadow-md"
+                  className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors font-bold"
                   title="Bold"
                 >
                   B
@@ -553,7 +537,7 @@ Generate the reply in plain text format (no HTML tags).`
                     document.execCommand('italic', false, undefined)
                     editorRef.current?.focus()
                   }}
-                  className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 italic shadow-sm hover:shadow-md"
+                  className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors italic"
                   title="Italic"
                 >
                   I
@@ -563,17 +547,18 @@ Generate the reply in plain text format (no HTML tags).`
                     document.execCommand('underline', false, undefined)
                     editorRef.current?.focus()
                   }}
-                  className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 underline shadow-sm hover:shadow-md"
+                  className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors underline"
                   title="Underline"
                 >
                   U
                 </button>
+                <div className="w-px h-6 bg-gray-300 mx-1"></div>
                 <button
                   onClick={() => {
                     document.execCommand('insertUnorderedList', false, undefined)
                     editorRef.current?.focus()
                   }}
-                  className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md"
+                  className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
                   title="Bullet List"
                 >
                   •
@@ -583,59 +568,18 @@ Generate the reply in plain text format (no HTML tags).`
                     document.execCommand('insertOrderedList', false, undefined)
                     editorRef.current?.focus()
                   }}
-                  className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md"
+                  className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
                   title="Numbered List"
                 >
                   1.
                 </button>
-                <button
-                  onClick={() => {
-                    document.execCommand('insertHorizontalRule', false, undefined)
-                    editorRef.current?.focus()
-                  }}
-                  className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md"
-                  title="Horizontal Line"
-                >
-                  ─
-                </button>
-                <div className="w-px h-8 bg-gray-300 mx-2"></div>
-                <button
-                  onClick={() => {
-                    document.execCommand('justifyLeft', false, undefined)
-                    editorRef.current?.focus()
-                  }}
-                  className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md"
-                  title="Align Left"
-                >
-                  ⬅
-                </button>
-                <button
-                  onClick={() => {
-                    document.execCommand('justifyCenter', false, undefined)
-                    editorRef.current?.focus()
-                  }}
-                  className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md"
-                  title="Align Center"
-                >
-                  ↔
-                </button>
-                <button
-                  onClick={() => {
-                    document.execCommand('justifyRight', false, undefined)
-                    editorRef.current?.focus()
-                  }}
-                  className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md"
-                  title="Align Right"
-                >
-                  ➡
-                </button>
-                <div className="w-px h-8 bg-gray-300 mx-2"></div>
+                <div className="w-px h-6 bg-gray-300 mx-1"></div>
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 flex items-center gap-2 shadow-sm hover:shadow-md"
+                  className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center gap-1"
                   title="Attach File"
                 >
-                  <Paperclip className="h-4 w-4" />
+                  <Paperclip className="h-3 w-3" />
                   Attach
                 </button>
                 <input
