@@ -281,12 +281,43 @@ ${complianceContext}
 
 `;
             }
-          } catch (complianceError) {
-            console.warn('Could not fetch compliance data:', complianceError);
-          }
-          
-          // Add unit count to system prompt for better context
-          systemPrompt += `\nThe building "${building.name}" contains ${building.unit_count || 'an unknown number of'} units.\n`;
+                     } catch (complianceError) {
+             console.warn('Could not fetch compliance data:', complianceError);
+           }
+
+           // Add communications data to building context
+           try {
+             const { data: communications } = await supabase
+               .from('communications_log')
+               .select(`
+                 id,
+                 type,
+                 subject,
+                 content,
+                 sent_at,
+                 leaseholder_name,
+                 unit_number
+               `)
+               .eq('building_id', buildingId)
+               .order('sent_at', { ascending: false })
+               .limit(10);
+
+             if (communications && communications.length > 0) {
+               const communicationsContext = communications.map(comm => 
+                 `- ${comm.type.toUpperCase()}: "${comm.subject}" to ${comm.leaseholder_name} (${comm.unit_number}) on ${new Date(comm.sent_at).toLocaleDateString()}`
+               ).join('\n');
+
+               buildingContext += `Recent Communications:
+${communicationsContext}
+
+`;
+             }
+           } catch (communicationsError) {
+             console.warn('Could not fetch communications data:', communicationsError);
+           }
+           
+           // Add unit count to system prompt for better context
+           systemPrompt += `\nThe building "${building.name}" contains ${building.unit_count || 'an unknown number of'} units.\n`;
         }
       } catch (error) {
         console.warn('Could not fetch building data:', error);
