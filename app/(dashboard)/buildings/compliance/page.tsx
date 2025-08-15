@@ -261,21 +261,40 @@ export default async function CompliancePage() {
     const totalUpcoming = transformedData.filter(item => item.status === 'upcoming').length
     const totalMissing = transformedData.filter(item => item.status === 'missing').length
 
-    return (
-      <div className="max-w-7xl mx-auto p-6 space-y-8">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-[#4f46e5]">Compliance Overview</h1>
-            <p className="text-gray-600 mt-1">Track and manage building compliance requirements across all properties</p>
+      return (
+    <div className="max-w-7xl mx-auto p-6 space-y-8">
+      {/* Hero Banner */}
+      <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16 mb-8 rounded-2xl shadow-xl">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center">
+            <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl">
+              <Shield className="h-10 w-10 text-white" />
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Compliance Overview</h1>
+            <p className="text-lg text-white/90 max-w-2xl mx-auto">
+              Track and manage building compliance requirements across your portfolio
+            </p>
           </div>
-          <Link
-            href="/buildings"
-            className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            Back to Buildings
-          </Link>
         </div>
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-10 right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+        </div>
+      </section>
+
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">Compliance Tracker</h2>
+          <p className="text-gray-600 mt-1">Track and manage building compliance requirements across all properties</p>
+        </div>
+        <Link
+          href="/buildings"
+          className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
+        >
+          Back to Buildings
+        </Link>
+      </div>
 
         {/* Summary Bar */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
