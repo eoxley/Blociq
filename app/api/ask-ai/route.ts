@@ -237,6 +237,53 @@ Site Staff: No site staff assigned
 Notes & Instructions: ${building.notes || 'No notes added yet'}
 
 `;
+
+          // Add compliance data to building context
+          try {
+            const { data: complianceAssets } = await supabase
+              .from('building_compliance_assets')
+              .select(`
+                id,
+                status,
+                next_due_date,
+                last_renewed_date,
+                notes,
+                compliance_assets (
+                  name,
+                  category,
+                  description,
+                  frequency_months
+                )
+              `)
+              .eq('building_id', buildingId)
+              .order('next_due_date', { ascending: true });
+
+            if (complianceAssets && complianceAssets.length > 0) {
+              const calculateStatus = (nextDueDate: string | null) => {
+                if (!nextDueDate) return 'missing';
+                const now = new Date();
+                const nextDue = new Date(nextDueDate);
+                const thirtyDaysFromNow = new Date();
+                thirtyDaysFromNow.setDate(now.getDate() + 30);
+                
+                if (nextDue < now) return 'overdue';
+                if (nextDue < thirtyDaysFromNow) return 'upcoming';
+                return 'compliant';
+              };
+
+              const complianceContext = complianceAssets.map(asset => {
+                const status = calculateStatus(asset.next_due_date);
+                return `- ${asset.compliance_assets?.name || 'Unknown'}: ${status} (due: ${asset.next_due_date ? new Date(asset.next_due_date).toLocaleDateString() : 'Not set'})`;
+              }).join('\n');
+
+              buildingContext += `Compliance Requirements:
+${complianceContext}
+
+`;
+            }
+          } catch (complianceError) {
+            console.warn('Could not fetch compliance data:', complianceError);
+          }
           
           // Add unit count to system prompt for better context
           systemPrompt += `\nThe building "${building.name}" contains ${building.unit_count || 'an unknown number of'} units.\n`;
