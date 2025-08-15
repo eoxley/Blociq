@@ -485,7 +485,14 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   }
 
   const formatEventDate = (dateString: string) => {
-    const date = new Date(dateString)
+    // If the date string doesn't have timezone info, assume it's in UTC
+    let dateToParse = dateString
+    if (!/[zZ]|[+\-]\d{2}:\d{2}$/.test(dateString)) {
+      // Add 'Z' to indicate UTC if no timezone info
+      dateToParse = dateString.replace(/\.\d{3}$/, '') + 'Z'
+    }
+    
+    const date = new Date(dateToParse)
     const now = new Date()
     const tomorrow = new Date(now)
     tomorrow.setDate(tomorrow.getDate() + 1)
@@ -1710,7 +1717,13 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                           } else if (event.date) {
                             // Fallback: parse the date and ensure UK timezone
                             try {
-                              const eventDate = new Date(event.date)
+                              // If the date string doesn't have timezone info, assume it's in UTC
+                              let dateString = event.date
+                              if (!/[zZ]|[+\-]\d{2}:\d{2}$/.test(dateString)) {
+                                // Add 'Z' to indicate UTC if no timezone info
+                                dateString = dateString.replace(/\.\d{3}$/, '') + 'Z'
+                              }
+                              const eventDate = new Date(dateString)
                               timeDisplay = eventDate.toLocaleTimeString('en-GB', { 
                                 hour: '2-digit', 
                                 minute: '2-digit',
