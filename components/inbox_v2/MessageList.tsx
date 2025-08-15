@@ -202,7 +202,11 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
               >
                 <div 
                   className="flex items-start justify-between gap-3"
-                  onClick={() => {
+                  onClick={(e) => {
+                    // Prevent click if we're in a drag operation
+                    if (e.currentTarget.closest('[data-draggable]')?.getAttribute('data-dragging') === 'true') {
+                      return
+                    }
                     onMessageSelect(message.id)
                     setFocusedMessageIndex(index)
                   }}

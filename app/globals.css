@@ -452,3 +452,47 @@
   max-height: 24rem;
   overflow-y: auto;
 }
+
+/* Drag and Drop Enhancements */
+.dragging {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  cursor: grabbing !important;
+}
+
+.dragging * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  pointer-events: none;
+}
+
+.dragging [data-draggable] {
+  pointer-events: auto;
+}
+
+/* Smooth drag transitions */
+[data-draggable] {
+  transition: transform 0.1s ease-out;
+}
+
+/* Prevent text selection during drag */
+[data-draggable]:active {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Enhanced drop zone feedback */
+[data-droppable] {
+  transition: all 0.2s ease-out;
+}
+
+[data-droppable][data-over] {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
