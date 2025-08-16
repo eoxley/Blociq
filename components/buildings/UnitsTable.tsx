@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import TagChip from "@/components/ui/TagChip";
 import { displayUnit, fmtPct, safe } from "@/components/buildings/format";
-import { getUnitsLeaseholders, UnitLeaseholderRow } from "@/lib/queries/getUnitsLeaseholders";
+import { UnitLeaseholderRow } from "@/lib/queries/getUnitsLeaseholders";
 
 export default function UnitsTable({ buildingId }: { buildingId: string }) {
   const [rows, setRows] = useState<UnitLeaseholderRow[]>([]);
@@ -12,8 +12,13 @@ export default function UnitsTable({ buildingId }: { buildingId: string }) {
     let alive = true;
     (async () => {
       try {
-        const data = await getUnitsLeaseholders(buildingId);
-        if (alive) setRows(data);
+        const response = await fetch(`/api/buildings/${buildingId}/units`);
+        if (!response.ok) throw new Error('Failed to fetch units');
+        const data = await response.json();
+        if (alive) setRows(data.units || []);
+      } catch (error) {
+        console.error('Error fetching units:', error);
+        if (alive) setRows([]);
       } finally {
         if (alive) setLoading(false);
       }
