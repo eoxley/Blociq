@@ -75,7 +75,7 @@ export default function EmailConsentModal({ isOpen, onClose, onUnlock }: EmailCo
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-900">Unlock Ask BlocIQ</h2>
-                <p className="text-sm text-gray-600">Enter your email to start using our AI assistant</p>
+                <p className="text-sm text-gray-600">Your UK leasehold co-pilot</p>
               </div>
             </div>
             <button
@@ -86,6 +86,28 @@ export default function EmailConsentModal({ isOpen, onClose, onUnlock }: EmailCo
             </button>
           </div>
           
+          {/* Description */}
+          <div className="mb-6">
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Open the brain in the bottom-right to get instant help with block management: draft replies, summarise documents, and spin up contractor works orders — in seconds.
+            </p>
+            
+            <div className="space-y-3 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <span>UK leasehold guidance aligned with RICS & TPI</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <span>Instant document analysis & compliance dates</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <span>Smart suggestions: emails, tasks, works orders</span>
+              </div>
+            </div>
+          </div>
+
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email Input */}
@@ -129,7 +151,7 @@ export default function EmailConsentModal({ isOpen, onClose, onUnlock }: EmailCo
                 <Shield className="h-5 w-5 text-gray-500 mt-0.5 flex-shrink-0" />
                 <div className="text-sm text-gray-600">
                   <p className="font-medium mb-1">Privacy & Data Protection</p>
-                  <p>We do not share your data with third parties. Your information is used solely to improve our AI assistant and provide you with a better experience. View our{' '}
+                  <p>Your data stays within your BlocIQ account and is handled in line with GDPR. View our{' '}
                     <a href="/privacy" className="text-blue-600 hover:text-blue-700 underline">
                       Privacy Policy
                     </a>.
@@ -151,8 +173,24 @@ export default function EmailConsentModal({ isOpen, onClose, onUnlock }: EmailCo
               disabled={isSubmitting || !email.trim() || !agreedToResearch}
               className="w-full bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:from-[#4338ca] hover:to-[#9333ea] disabled:from-gray-300 disabled:to-gray-400 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:transform-none disabled:cursor-not-allowed"
             >
-              {isSubmitting ? 'Unlocking...' : 'Unlock Ask BlocIQ'}
+              {isSubmitting ? 'Unlocking...' : 'Open Ask BlocIQ'}
             </button>
+
+            {/* Not Now Button */}
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full px-6 py-3 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl font-medium transition-all duration-200"
+            >
+              Not now
+            </button>
+
+            {/* Free Trial Badge */}
+            <div className="text-center">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                Free trial available
+              </span>
+            </div>
           </form>
         </div>
       </div>
