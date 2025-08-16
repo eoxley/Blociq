@@ -20,10 +20,16 @@ import {
   User,
   AlertTriangle,
   CheckCircle,
-  Clock
+  Clock,
+  ChevronLeft
 } from 'lucide-react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
+import SectionCard from '@/components/ui/SectionCard'
+import { InfoRow } from '@/components/ui/InfoRow'
+import EditIconButton from '@/components/ui/EditIconButton'
+import EmptyValue from '@/components/ui/EmptyValue'
+import Revealable from '@/components/ui/Revealable'
 
 interface Building {
   id: string
@@ -200,48 +206,47 @@ export default function BuildingDetailClient({
     const isEditing = editingField === field
     
     return (
-      <div className="flex items-center justify-between">
-        <span className="text-gray-600">{label}:</span>
-        {isEditing ? (
-          <div className="flex items-center gap-2">
-            <input
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              className="border px-2 py-1 rounded text-sm w-48"
-              placeholder={placeholder}
-            />
-            <button
-              onClick={saveEdit}
-              disabled={isSaving}
-              className="text-green-600 hover:text-green-800"
-            >
-              <Save className="h-4 w-4" />
-            </button>
-            <button
-              onClick={cancelEdit}
-              className="text-gray-600 hover:text-gray-800"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <span className="font-medium">{value || 'Not set'}</span>
-            <button
-              onClick={() => startEditing(field, value)}
-              className="text-blue-600 hover:text-blue-800"
-            >
-              <Edit3 className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-      </div>
+      <InfoRow
+        label={label}
+        value={
+          isEditing ? (
+            <div className="flex items-center gap-2">
+              <input
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                className="border px-2 py-1 rounded text-sm w-48"
+                placeholder={placeholder}
+              />
+              <button
+                onClick={saveEdit}
+                disabled={isSaving}
+                className="text-green-600 hover:text-green-800"
+              >
+                <Save className="h-4 w-4" />
+              </button>
+              <button
+                onClick={cancelEdit}
+                className="text-gray-600 hover:text-gray-800"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="font-medium">
+                {value || <EmptyValue label="Add" onClick={() => startEditing(field, value)} />}
+              </span>
+              <EditIconButton onClick={() => startEditing(field, value)} />
+            </div>
+          )
+        }
+      />
     )
   }
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-8">
-      {/* Hero Banner */}
+      {/* Hero Banner - UNTOUCHED */}
       <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16 mb-8 rounded-2xl shadow-xl">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center">
@@ -268,90 +273,125 @@ export default function BuildingDetailClient({
         </div>
         <Link
           href="/buildings"
-          className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
+          className="inline-flex items-center gap-2 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50"
         >
+          <ChevronLeft className="h-4 w-4" />
           Back to Buildings
         </Link>
       </div>
 
       {/* General Info Section */}
-      <div className="bg-white rounded-xl p-6 shadow-md space-y-4">
-        <div className="flex items-center gap-2">
-          <Building2 className="h-5 w-5 text-[#4f46e5]" />
-          <h2 className="text-xl font-semibold text-gray-800">General Information</h2>
+      <SectionCard className="group">
+        <div className="px-4 py-3">
+          <h3 className="flex items-center gap-2 text-neutral-800 font-semibold">
+            <Building2 className="h-5 w-5 text-[#4f46e5]" />
+            General Information
+          </h3>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {renderEditableField('name', building.name || '', 'Building Name', 'Enter building name')}
-          {renderEditableField('address', building.address || '', 'Address', 'Enter full address')}
-          {renderEditableField('setup_structure_type', buildingSetup?.structure_type || '', 'Structure Type', 'Freehold/RMC/Tripartite')}
-          {renderEditableField('setup_client_name', buildingSetup?.client_name || '', 'Freeholder/RMC', 'Enter client name')}
-          <div className="flex items-center justify-between">
-            <span className="text-gray-600">Number of Units:</span>
-            <span className="font-medium">{units?.length || 0}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-gray-600">Status:</span>
-            <span className={`px-2 py-1 rounded text-xs font-medium ${
-              building.is_hrb ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-            }`}>
-              {building.is_hrb ? 'HRB' : 'Standard'}
-            </span>
-          </div>
+          {renderEditableField('name', building.name || '', 'Building Name')}
+          <InfoRow
+            label="Address:"
+            value={
+              building.address ? (
+                <span className="whitespace-pre-wrap">{building.address}</span>
+              ) : (
+                <EmptyValue label="Add address" onClick={() => startEditing('address', building.address || '')} />
+              )
+            }
+          />
+          {renderEditableField('setup_structure_type', buildingSetup?.structure_type || '', 'Structure Type')}
+          {renderEditableField('setup_client_name', buildingSetup?.client_name || '', 'Freeholder/RMC')}
+          <InfoRow label="Number of Units:" value={<span>{units?.length || 0}</span>} />
+          <InfoRow 
+            label="Status:" 
+            value={
+              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                building.is_hrb ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+              }`}>
+                {building.is_hrb ? 'HRB' : 'Standard'}
+              </span>
+            } 
+          />
         </div>
-      </div>
+      </SectionCard>
 
       {/* Access Information Section */}
-      <div className="bg-white rounded-xl p-6 shadow-md space-y-4">
-        <div className="flex items-center gap-2">
-          <Lock className="h-5 w-5 text-[#4f46e5]" />
-          <h2 className="text-xl font-semibold text-gray-800">Access Information</h2>
+      <SectionCard className="group">
+        <div className="px-4 py-3">
+          <h3 className="flex items-center gap-2 text-neutral-800 font-semibold">
+            <Lock className="h-5 w-5 text-[#4f46e5]" />
+            Access Information
+          </h3>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {renderEditableField('setup_operational_notes', buildingSetup?.operational_notes || '', 'Gate Code', 'Enter gate code')}
-          {renderEditableField('notes', building.notes || '', 'Fire Panel Code', 'Enter fire panel code')}
-          <div className="flex items-center justify-between">
-            <span className="text-gray-600">Keys Location:</span>
-            <span className="font-medium">Not set</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-gray-600">Emergency Access:</span>
-            <span className="font-medium">Not set</span>
-          </div>
+          <InfoRow
+            label="Gate Code:"
+            value={
+              buildingSetup?.operational_notes ? (
+                <Revealable text={buildingSetup.operational_notes} />
+              ) : (
+                <EmptyValue label="Add code" onClick={() => startEditing('setup_operational_notes', buildingSetup?.operational_notes || '')} />
+              )
+            }
+          />
+          <InfoRow
+            label="Fire Panel Code:"
+            value={
+              building.notes ? (
+                <Revealable text={building.notes} />
+              ) : (
+                <EmptyValue label="Add code" onClick={() => startEditing('notes', building.notes || '')} />
+              )
+            }
+          />
+          <InfoRow
+            label="Keys Location:"
+            value={<EmptyValue label="Add location" />}
+          />
+          <InfoRow
+            label="Emergency Access:"
+            value={<EmptyValue label="Add access" />}
+          />
         </div>
-      </div>
+      </SectionCard>
 
       {/* Contacts Section */}
-      <div className="bg-white rounded-xl p-6 shadow-md space-y-4">
-        <div className="flex items-center gap-2">
-          <Users className="h-5 w-5 text-[#4f46e5]" />
-          <h2 className="text-xl font-semibold text-gray-800">Contacts</h2>
+      <SectionCard className="group">
+        <div className="px-4 py-3">
+          <h3 className="flex items-center gap-2 text-neutral-800 font-semibold">
+            <Users className="h-5 w-5 text-[#4f46e5]" />
+            Contacts
+          </h3>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {renderEditableField('setup_client_contact', buildingSetup?.client_contact || '', 'Managing Agent', 'Enter contact name')}
-          {renderEditableField('setup_client_email', buildingSetup?.client_email || '', 'Managing Agent Email', 'Enter email address')}
-          <div className="flex items-center justify-between">
-            <span className="text-gray-600">Insurance Contact:</span>
-            <span className="font-medium">Not set</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-gray-600">Cleaners:</span>
-            <span className="font-medium">Not set</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-gray-600">Contractors:</span>
-            <span className="font-medium">Not set</span>
-          </div>
+          {renderEditableField('setup_client_contact', buildingSetup?.client_contact || '', 'Managing Agent')}
+          {renderEditableField('setup_client_email', buildingSetup?.client_email || '', 'Managing Agent Email')}
+          <InfoRow
+            label="Insurance Contact:"
+            value={<EmptyValue label="Add contact" />}
+          />
+          <InfoRow
+            label="Cleaners:"
+            value={<EmptyValue label="Add cleaners" />}
+          />
+          <InfoRow
+            label="Contractors:"
+            value={<EmptyValue label="Add contractors" />}
+          />
         </div>
-      </div>
+      </SectionCard>
 
       {/* Site Staff Section */}
-      <div className="bg-white rounded-xl p-6 shadow-md space-y-4">
-        <div className="flex items-center gap-2">
-          <User className="h-5 w-5 text-[#4f46e5]" />
-          <h2 className="text-xl font-semibold text-gray-800">Site Staff</h2>
+      <SectionCard className="group">
+        <div className="px-4 py-3">
+          <h3 className="flex items-center gap-2 text-neutral-800 font-semibold">
+            <User className="h-5 w-5 text-[#4f46e5]" />
+            Site Staff
+          </h3>
         </div>
         
         <div className="space-y-3">
@@ -360,23 +400,23 @@ export default function BuildingDetailClient({
               <div className="font-medium">No site staff assigned</div>
               <div className="text-sm text-gray-600">Add site staff information</div>
             </div>
-            <button className="text-blue-600 hover:text-blue-800">
-              <Edit3 className="h-4 w-4" />
-            </button>
+            <EditIconButton />
           </div>
         </div>
-      </div>
+      </SectionCard>
 
       {/* Notes & Instructions Section */}
-      <div className="bg-white rounded-xl p-6 shadow-md space-y-4">
-        <div className="flex items-center gap-2">
-          <FileText className="h-5 w-5 text-[#4f46e5]" />
-          <h2 className="text-xl font-semibold text-gray-800">Notes & Instructions</h2>
+      <SectionCard className="group">
+        <div className="px-4 py-3">
+          <h3 className="flex items-center gap-2 text-neutral-800 font-semibold">
+            <FileText className="h-5 w-5 text-[#4f46e5]" />
+            Notes & Instructions
+          </h3>
         </div>
         
         <div className="space-y-3">
           {editingField === 'notes' ? (
-            <div className="space-y-3">
+            <div className="space-y-3 p-4">
               <textarea
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
@@ -401,29 +441,26 @@ export default function BuildingDetailClient({
               </div>
             </div>
           ) : (
-            <div className="flex items-start justify-between">
+            <div className="flex items-start justify-between p-4">
               <p className="text-gray-600 flex-1">
                 {building.notes || 'No notes added yet. Click edit to add building information and instructions.'}
               </p>
-              <button
-                onClick={() => startEditing('notes', building.notes || '')}
-                className="text-blue-600 hover:text-blue-800 ml-2"
-              >
-                <Edit3 className="h-4 w-4" />
-              </button>
+              <EditIconButton onClick={() => startEditing('notes', building.notes || '')} />
             </div>
           )}
         </div>
-      </div>
+      </SectionCard>
 
       {/* Units List Section */}
-      <div className="bg-white rounded-xl p-6 shadow-md space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Home className="h-5 w-5 text-[#4f46e5]" />
-            <h2 className="text-xl font-semibold text-gray-800">Units & Leaseholders</h2>
+      <SectionCard className="group">
+        <div className="px-4 py-3">
+          <div className="flex items-center justify-between">
+            <h3 className="flex items-center gap-2 text-neutral-800 font-semibold">
+              <Home className="h-5 w-5 text-[#4f46e5]" />
+              Units & Leaseholders
+            </h3>
+            <span className="text-sm text-gray-600">{units?.length || 0} units</span>
           </div>
-          <span className="text-sm text-gray-600">{units?.length || 0} units</span>
         </div>
         
         <div className="max-h-[400px] overflow-y-auto rounded border">
@@ -457,24 +494,26 @@ export default function BuildingDetailClient({
             </div>
           )}
         </div>
-      </div>
+      </SectionCard>
 
       {/* Compliance Summary Section */}
-      <div className="bg-white rounded-xl p-6 shadow-md space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-[#4f46e5]" />
-            <h2 className="text-xl font-semibold text-gray-800">Compliance Overview</h2>
+      <SectionCard className="group">
+        <div className="px-4 py-3">
+          <div className="flex items-center justify-between">
+            <h3 className="flex items-center gap-2 text-neutral-800 font-semibold">
+              <Shield className="h-5 w-5 text-[#4f46e5]" />
+              Compliance Overview
+            </h3>
+            <Link
+              href={`/buildings/${buildingId}/compliance`}
+              className="text-[#4f46e5] hover:text-[#4338ca] text-sm font-medium transition-colors"
+            >
+              View All
+            </Link>
           </div>
-          <Link
-            href={`/buildings/${buildingId}/compliance`}
-            className="text-[#4f46e5] hover:text-[#4338ca] text-sm font-medium transition-colors"
-          >
-            View All
-          </Link>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
           <div className="bg-gray-50 rounded-xl p-4 text-center">
             <div className="text-2xl font-bold text-gray-900">{complianceSummary.total}</div>
             <div className="text-sm text-gray-600">Total</div>
@@ -492,13 +531,15 @@ export default function BuildingDetailClient({
             <div className="text-sm text-red-600">Overdue</div>
           </div>
         </div>
-      </div>
+      </SectionCard>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-xl p-6 shadow-md space-y-4">
-        <h2 className="text-xl font-semibold text-gray-800">Quick Actions</h2>
+      <SectionCard className="group">
+        <div className="px-4 py-3">
+          <h3 className="text-neutral-800 font-semibold">Quick Actions</h3>
+        </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
           <Link
             href={`/buildings/${buildingId}/compliance/setup`}
             className="flex items-center p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
@@ -521,7 +562,7 @@ export default function BuildingDetailClient({
             <span className="text-gray-700">Major Works</span>
           </Link>
         </div>
-      </div>
+      </SectionCard>
     </div>
   )
 }
