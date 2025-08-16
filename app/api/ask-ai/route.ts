@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
       
       // Determine context and build appropriate prompt
       const context = AIContextHandler.determineContext(prompt);
-      const systemPrompt = AIContextHandler.buildPrompt(context, prompt);
+      const systemPrompt = await AIContextHandler.buildPrompt(context, prompt);
       
       console.log('🎯 Using context:', context);
 
@@ -163,7 +163,7 @@ export async function POST(req: NextRequest) {
     
     // Determine context and build appropriate prompt
     const context = AIContextHandler.determineContext(prompt);
-    let systemPrompt = AIContextHandler.buildPrompt(context, prompt, buildingContext);
+            let systemPrompt = await AIContextHandler.buildPrompt(context, prompt, buildingContext);
 
     // 🏢 Smart Building Detection from Prompt
     if (!building_id) {

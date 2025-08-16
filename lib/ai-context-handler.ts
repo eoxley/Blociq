@@ -1,4 +1,5 @@
 import { AI_PROMPTS, getPromptForContext, shouldAutoPolish, isComplaint, isDocumentSummaryRequest } from './ai-prompts';
+import { formatBuildingContextForAI, formatUnitSpecificContext } from './ai/buildingContextFormatter';
 
 export interface AIResponse {
   content: string;
@@ -68,17 +69,68 @@ export class AIContextHandler {
   }
 
   /**
+   * Detects if the user is asking about a specific building or unit
+   */
+  static detectBuildingQuery(userInput: string): { buildingId?: string; unitNumber?: string } {
+    const input = userInput.toLowerCase();
+    
+    // Look for building ID patterns (UUID)
+    const buildingIdMatch = input.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+    
+    // Look for unit number patterns
+    const unitMatch = input.match(/(?:flat|apartment|unit)\s*(\d+)/i);
+    
+    return {
+      buildingId: buildingIdMatch ? buildingIdMatch[0] : undefined,
+      unitNumber: unitMatch ? unitMatch[1] : undefined
+    };
+  }
+
+  /**
+   * Fetches building context data for a specific building
+   */
+  static async fetchBuildingContext(buildingId: string): Promise<string | null> {
+    try {
+      const response = await fetch('/api/ask-ai/building-context', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ buildingId })
+      });
+
+      if (!response.ok) {
+        console.error('Failed to fetch building context:', response.status);
+        return null;
+      }
+
+      const data = await response.json();
+      return formatBuildingContextForAI(data);
+    } catch (error) {
+      console.error('Error fetching building context:', error);
+      return null;
+    }
+  }
+
+  /**
    * Builds the complete prompt with context and user input
    */
-  static buildPrompt(
+  static async buildPrompt(
     context: 'core' | 'doc_summary' | 'auto_polish' | 'complaints',
     userInput: string,
     buildingContext?: string,
     uploadedFiles?: File[]
-  ): string {
+  ): Promise<string> {
     const basePrompt = getPromptForContext(context);
     
     let fullPrompt = `${basePrompt}\n\n`;
+    
+    // Detect if user is asking about a specific building
+    const buildingQuery = this.detectBuildingQuery(userInput);
+    if (buildingQuery.buildingId && !buildingContext) {
+      const fetchedContext = await this.fetchBuildingContext(buildingQuery.buildingId);
+      if (fetchedContext) {
+        buildingContext = fetchedContext;
+      }
+    }
     
     // Add building context if available
     if (buildingContext) {
