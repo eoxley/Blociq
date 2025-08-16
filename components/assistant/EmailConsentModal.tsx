@@ -2,11 +2,12 @@
 
 import React, { useState } from 'react';
 import { Brain, X, Mail, Shield } from 'lucide-react';
+import { startPublicChat } from '@/lib/publicChatClient';
 
 interface EmailConsentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onUnlock: (email: string) => void;
+  onUnlock: (email: string, sessionId?: string) => void;
 }
 
 export default function EmailConsentModal({ isOpen, onClose, onUnlock }: EmailConsentModalProps) {
@@ -34,15 +35,19 @@ export default function EmailConsentModal({ isOpen, onClose, onUnlock }: EmailCo
     setIsSubmitting(true);
 
     try {
-      // Save to localStorage
+      // Start public chat session
+      const sessionId = await startPublicChat(email, agreedToResearch);
+      
+      // Save to localStorage (legacy support)
       localStorage.setItem('askBlocEmail', email);
       
-      // Call the unlock function
-      onUnlock(email);
+      // Call the unlock function with session ID
+      onUnlock(email, sessionId);
       
       // Close the modal
       onClose();
     } catch (error) {
+      console.error('Failed to start session:', error);
       setError('Failed to save your information. Please try again.');
     } finally {
       setIsSubmitting(false);

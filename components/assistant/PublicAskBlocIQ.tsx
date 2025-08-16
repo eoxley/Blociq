@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Brain, X, Mail, Shield, Send, Loader2, Sparkles, Upload, FileText } from 'lucide-react';
 import { toast } from 'sonner';
+import { startPublicChat, logPublicChatMessage, getExistingSession, getExistingEmail } from '@/lib/publicChatClient';
 
 type Message = {
   id: string;
@@ -49,6 +50,9 @@ export default function PublicAskBlocIQ() {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   
+  // Session management
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -64,7 +68,14 @@ export default function PublicAskBlocIQ() {
       const userEmail = localStorage.getItem('askBlocEmail');
       const guideShown = sessionStorage.getItem('askBlocGuideShown');
       
-      if (userEmail) {
+      // Check for existing session
+      const existingSession = getExistingSession();
+      const existingEmail = getExistingEmail();
+      
+      if (existingSession && existingEmail) {
+        setSessionId(existingSession);
+        setHasUnlocked(true);
+      } else if (userEmail) {
         setHasUnlocked(true);
       }
       
@@ -121,7 +132,11 @@ export default function PublicAskBlocIQ() {
     setIsSubmitting(true);
 
     try {
-      // Save to localStorage
+      // Start public chat session
+      const newSessionId = await startPublicChat(email, agreedToResearch);
+      setSessionId(newSessionId);
+      
+      // Save to localStorage (legacy support)
       localStorage.setItem('askBlocEmail', email);
       
       // Unlock the chat
@@ -131,6 +146,7 @@ export default function PublicAskBlocIQ() {
       
       toast.success('Welcome to BlocIQ!');
     } catch (error) {
+      console.error('Failed to start session:', error);
       setError('Failed to save your information. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -238,21 +254,9 @@ export default function PublicAskBlocIQ() {
     setLoading(true);
     
     try {
-      // Log usage if email exists
-      const userEmail = localStorage.getItem('askBlocEmail');
-      if (userEmail) {
-        try {
-          await fetch("/api/log-public-usage", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
-              email: userEmail, 
-              query: question.trim() 
-            }),
-          });
-        } catch (error) {
-          console.log('Usage logging failed:', error);
-        }
+      // Log user message if session exists
+      if (sessionId) {
+        await logPublicChatMessage(sessionId, 'user', question.trim());
       }
 
       // Create FormData if files are uploaded
@@ -294,6 +298,11 @@ export default function PublicAskBlocIQ() {
       const data: AIResponse = await response.json();
       
       if (data.success && data.response) {
+        // Log assistant message if session exists
+        if (sessionId) {
+          await logPublicChatMessage(sessionId, 'assistant', data.response);
+        }
+        
         // Add assistant message to history
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
