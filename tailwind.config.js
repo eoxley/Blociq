@@ -65,7 +65,21 @@ module.exports = {
       },
       boxShadow: {
         soft: "0 4px 12px rgba(0,0,0,0.05)"
-      }
+      },
+      keyframes: {
+        wiggle: {
+          '0%, 100%': { transform: 'rotate(-2deg)' },
+          '50%': { transform: 'rotate(2deg)' },
+        },
+        'bounce-slow': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-6px)' },
+        },
+      },
+      animation: {
+        wiggle: 'wiggle 0.5s ease-in-out 2', // quick nudge, 2 cycles
+        'bounce-slow': 'bounce-slow 2s infinite',
+      },
     }
   },
   plugins: [

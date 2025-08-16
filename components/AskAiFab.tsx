@@ -23,6 +23,7 @@ export default function AskAiFab({ href = '/ai-assistant' }: { href?: string }) 
       aria-label="Open Ask AI"
       className="fixed z-50 bottom-6 right-6 group focus:outline-none"
       prefetch
+      id="ask-blociq-fab"
     >
       <span className="sr-only">Open Ask AI</span>
       <div className="relative">
