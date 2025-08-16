@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { AIContextHandler } from '../../../lib/ai-context-handler';
+import { logBuildingQuery, detectQueryContextType } from '../../../lib/ai/buildingQueryLogger';
 
 export const runtime = "nodejs";
 
@@ -585,6 +586,32 @@ ${communicationsContext}
     }
 
     console.log('📝 AI interaction logged with ID:', logId);
+
+    // Log building query if building context was used
+    if (building_id || buildingContext) {
+      try {
+        await logBuildingQuery({
+          buildingId: building_id,
+          unitId: undefined, // Could be extracted from query if needed
+          leaseholderId: leaseholder_id,
+          query: prompt,
+          response: displayContent,
+          contextType: detectQueryContextType(prompt),
+          userId: user?.id,
+          sessionId: null, // Could be extracted from session if needed
+          metadata: {
+            contextType,
+            hasBuildingContext: !!buildingContext,
+            hasDocumentContext: !!documentContext,
+            hasEmailContext: !!emailContext,
+            hasLeaseholderContext: !!leaseholderContext,
+            logId
+          }
+        });
+      } catch (logError) {
+        console.warn('Failed to log building query:', logError);
+      }
+    }
 
     return NextResponse.json({
       success: true,

@@ -1,0 +1,121 @@
+# BlocIQ AI Policy Configuration
+# UK Letters + Agendas + Minutes prompts
+
+prompts:
+  # ——— UK Letter Style ———
+  - id: uk-letter-style
+    role: system
+    name: UK Business Letter Rules (BlocIQ)
+    content: |
+      You draft UK business letters for leasehold block management.
+      Rules:
+        • UK English spelling + dates (e.g., 16 August 2025).
+        • Recipient block at top; optional subject line "Re: …".
+        • Greeting: "Dear [Name]" (no comma). Sign off: "Kind regards".
+        • Clear 3–6 paragraph structure: purpose → facts → request/next steps → closing.
+        • Never advise withholding service charges; reference FTT s27A for payability if relevant.
+        • If formal: include our letterhead hint (do not draw it), reference, enclosures, cc.
+        • Replace empty data with sensible placeholders in [square brackets].
+      Output: A finished letter body text (ready to paste) and minimal JSON metadata.
+
+    expected_json_schema:
+      type: object
+      required: [subject, to_name, body]
+      properties:
+        subject: { type: string }
+        to_name: { type: string }
+        to_address: { type: [string,"null"] }
+        cc: { type: array, items: { type: string } }
+        enclosures: { type: array, items: { type: string } }
+        body: { type: string, description: "Full letter text, ready to paste" }
+
+  # ——— Meeting Agenda ———
+  - id: meeting-agenda
+    role: system
+    name: Meeting Agenda Drafter (AGM/Directors/Contractor)
+    content: |
+      You produce concise UK block-management agendas. Defaults: 60 mins; AGM 120 mins.
+      Include typical items: Apologies; Declarations; Approve previous minutes; Matters arising; Building updates (repairs, compliance, safety); Finance snapshot; Major works/Section 20; Contractor/Insurer items; AOB; Next meeting.
+      Each item has: title, outcome (info/decision), owner, duration, linked docs.
+      Output both a human agenda and strict JSON.
+
+    expected_json_schema:
+      type: object
+      required: [title, date, time, location, chair, secretary, items]
+      properties:
+        title: { type: string }
+        date: { type: string }
+        time: { type: string }
+        location: { type: string }
+        chair: { type: string }
+        secretary: { type: string }
+        attendees: { type: array, items: { type: string } }
+        apologies: { type: array, items: { type: string } }
+        items:
+          type: array
+          items:
+            type: object
+            required: [id, title, outcome, owner, duration_mins]
+            properties:
+              id: { type: string }
+              title: { type: string }
+              outcome: { type: string, enum: ["info","decision"] }
+              owner: { type: string }
+              duration_mins: { type: integer }
+              docs: { type: array, items: { type: string } }
+        notes: { type: [string,"null"] }
+
+  # ——— Meeting Minutes ———
+  - id: meeting-minutes
+    role: system
+    name: Meeting Minutes Drafter (Actions & Decisions)
+    content: |
+      You create concise UK minutes from bullet notes/transcripts.
+      Include: attendees & apologies; agenda items with brief summary; decisions; actions with owner & due date; votes/resolutions if any; risks; next meeting.
+      Keep neutral tone; show action list clearly (owner, action, due date).
+      Output readable minutes followed by strict JSON.
+
+    expected_json_schema:
+      type: object
+      required: [title, date, attendees, items, actions]
+      properties:
+        title: { type: string }
+        date: { type: string }
+        attendees: { type: array, items: { type: string } }
+        apologies: { type: array, items: { type: string } }
+        items:
+          type: array
+          items:
+            type: object
+            required: [id, title]
+            properties:
+              id: { type: string }
+              title: { type: string }
+              summary: { type: string }
+              decision: { type: [string,"null"] }
+              vote: { type: [string,"null"] }
+        actions:
+          type: array
+          items:
+            type: object
+            required: [id, owner, action, due_date]
+            properties:
+              id: { type: string }
+              owner: { type: string }
+              action: { type: string }
+              due_date: { type: string }
+        next_meeting:
+          type: object
+          properties:
+            date: { type: [string,"null"] }
+            time: { type: [string,"null"] }
+            location: { type: [string,"null"] }
+
+# ——— Merge rules ———
+merge_rules:
+  - when: context == 'letter'
+    include: ['ask-blociq-core','uk-letter-style']
+  - when: context == 'agenda'
+    include: ['ask-blociq-core','meeting-agenda']
+  - when: context == 'minutes'
+    include: ['ask-blociq-core','meeting-minutes']
