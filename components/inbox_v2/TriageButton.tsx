@@ -17,7 +17,8 @@ interface ProgressState {
 export default function TriageButton({ className = "" }: TriageButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [progress, setProgress] = useState<ProgressState | null>(null)
-  const { session } = useSession()
+  const { data: session, status } = useSession()
+  const disabled = status !== "authenticated"
 
   const triageOptions = [
     { id: 'urgent', label: 'Mark as Urgent', icon: AlertTriangle, color: 'text-red-600', bgColor: 'bg-red-50' },
@@ -88,8 +89,9 @@ export default function TriageButton({ className = "" }: TriageButtonProps) {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className={`inline-flex items-center justify-center gap-2 px-4 py-2 bg-white text-red-600 border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-red-400 transition-colors shadow-sm ${className}`}
-        title="AI Triage Options"
+        disabled={disabled}
+        className={`inline-flex items-center justify-center gap-2 px-4 py-2 bg-white text-red-600 border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-red-400 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+        title={disabled ? "Connect Outlook to enable AI triage" : "AI Triage Options"}
       >
         <AlertTriangle className="h-4 w-4 text-red-600" />
         Triage
@@ -128,14 +130,17 @@ export default function TriageButton({ className = "" }: TriageButtonProps) {
             <div className="mt-4 pt-4 border-t border-gray-200">
               <button
                 onClick={runAITriage}
-                disabled={!session?.user?.id}
+                disabled={disabled}
                 className="w-full flex items-center justify-center gap-3 p-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium transition-all duration-200 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed"
               >
                 <Bot className="h-5 w-5" />
                 Run AI Triage
               </button>
               <p className="text-sm text-gray-500 text-center mt-2">
-                AI triage runs in small batches. We'll tag and flag emails and create draft replies in Outlook. Nothing is moved or sent automatically.
+                {disabled 
+                  ? "Connect your Outlook account to enable AI triage functionality."
+                  : "AI triage runs in small batches. We'll tag and flag emails and create draft replies in Outlook. Nothing is moved or sent automatically."
+                }
               </p>
             </div>
           </div>
