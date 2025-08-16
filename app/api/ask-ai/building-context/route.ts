@@ -10,23 +10,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Building ID is required" }, { status: 400 });
     }
 
-    // Fetch comprehensive building data
+    // Fetch building information
     const { data: building, error: buildingError } = await supabaseAdmin
       .from('buildings')
       .select('*')
       .eq('id', buildingId)
       .single();
 
-    if (buildingError) throw buildingError;
+    if (buildingError) {
+      console.error('Error fetching building:', buildingError);
+      return NextResponse.json({ error: "Failed to fetch building" }, { status: 500 });
+    }
 
-    // Fetch building setup data
+    // Fetch building setup
     const { data: buildingSetup, error: setupError } = await supabaseAdmin
       .from('building_setup')
       .select('*')
       .eq('building_id', buildingId)
       .single();
 
-    // Fetch units and leaseholders data
+    // Fetch units and leaseholders
     const unitsLeaseholders = await getUnitsLeaseholders(buildingId);
 
     // Fetch compliance summary
@@ -72,14 +75,6 @@ export async function POST(req: Request) {
       .order('created_at', { ascending: false })
       .limit(10);
 
-    // Fetch financial data (if you have financial tables)
-    const { data: financialData = [], error: financialError } = await supabaseAdmin
-      .from('unit_financials')
-      .select('*')
-      .eq('building_id', buildingId)
-      .order('period', { ascending: false })
-      .limit(20);
-
     return NextResponse.json({
       building,
       buildingSetup,
@@ -88,17 +83,16 @@ export async function POST(req: Request) {
       complianceAssets,
       callLogs,
       correspondence,
-      financialData,
       metadata: {
         totalUnits: unitsLeaseholders.length,
-        unitsWithLeaseholders: unitsLeaseholders.filter(u => u.leaseholder_id).length,
+        totalLeaseholders: unitsLeaseholders.filter(u => u.leaseholder_id).length,
         directors: unitsLeaseholders.filter(u => u.is_director).length,
         lastUpdated: new Date().toISOString()
       }
     });
 
   } catch (error: any) {
-    console.error('Error fetching building context:', error);
+    console.error('Error in building context API:', error);
     return NextResponse.json(
       { error: "Failed to fetch building context" },
       { status: 500 }
