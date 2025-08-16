@@ -7,6 +7,16 @@ import { getComplianceContext } from '@/lib/supabase/compliance';
 import { getMajorWorksContext, getMajorWorksProjectContext } from '@/lib/supabase/majorWorks';
 import { createClient } from '@supabase/supabase-js';
 
+// ADD: tiny detector (non-breaking)
+export function detectContext(input: string, meta?: { hasAttachment?: boolean; wordCount?: number }) {
+  const t = (input || "").toLowerCase();
+  const wc = meta?.wordCount ?? t.split(/\s+/).length;
+  if (meta?.hasAttachment || /\b(summarise|summary|document|pdf|attachment)\b/.test(t)) return "doc_summary";
+  if (/\b(complain|complaint|dissatisfied|escalate|chp|ombudsman|redress)\b/.test(t)) return "complaints";
+  if (wc > 300) return "auto_polish";
+  return "core";
+}
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -34,8 +44,33 @@ export async function buildPrompt({
   let contextSections: string[] = [];
 
   // 📘 Founder Guidance
-  const founder = await getFounderGuidance(question);
-  if (founder) contextSections.push(`Founder Guidance:\n${founder}`);
+  const ctx = detectContext(question, { wordCount: question.split(/\s+/).length });
+  
+  // Pick tags by context (simple, extend later)
+  const founderTags =
+    ctx === "complaints" ? ["tone","complaints","governance"] :
+    ctx === "doc_summary" ? ["tone","governance"] :
+    ctx === "auto_polish" ? ["tone"] :
+    ["tone","governance"];
+
+  const guidance = await getFounderGuidance({ 
+    topicHints: [ctx], 
+    contexts: [ctx], 
+    tags: founderTags, 
+    limit: 6 
+  });
+
+  // Build a merge block if we got anything
+  let founderBlock = "";
+  if (Array.isArray(guidance) && guidance.length) {
+    const items = guidance.map(g => `• ${g.title || 'Guidance'}\n${(g.content || "").trim()}`).join("\n\n");
+    founderBlock = `\n# Founder Knowledge (merge)\n${items}\n`;
+  } else if (typeof guidance === 'string' && guidance) {
+    // Backward compatibility for string format
+    founderBlock = `\n# Founder Knowledge (merge)\n${guidance}\n`;
+  }
+  
+  if (founderBlock) contextSections.push(founderBlock);
 
   // 🏢 Building
   if (buildingId) {
