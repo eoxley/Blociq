@@ -4,7 +4,7 @@ import { cookies } from 'next/headers'
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { buildingId: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     const supabase = createClient(cookies())
@@ -19,7 +19,7 @@ export async function GET(
       )
     }
 
-    const buildingId = params.buildingId
+    const buildingId = params.id
 
     // Get all leaseholders for this building
     const { data: leaseholders, error: leaseholdersError } = await supabase

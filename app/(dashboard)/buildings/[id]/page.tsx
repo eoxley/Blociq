@@ -60,15 +60,15 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
     if (!session) redirect('/login')
 
     // Validate building ID format
-    if (!params.buildingId || typeof params.buildingId !== 'string') {
-      console.error('Invalid building ID:', params.buildingId)
+    if (!params.id || typeof params.id !== 'string') {
+      console.error('Invalid building ID:', params.id)
       notFound()
     }
 
     // Validate UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    if (!uuidRegex.test(params.buildingId)) {
-      console.error('Invalid UUID format for building ID:', params.buildingId)
+    if (!uuidRegex.test(params.id)) {
+      console.error('Invalid UUID format for building ID:', params.id)
       notFound()
     }
 
@@ -76,7 +76,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
     const { data: building, error: buildingError } = await supabase
       .from('buildings')
       .select('*')
-      .eq('id', params.buildingId)
+      .eq('id', params.id)
       .maybeSingle()
 
     if (buildingError) {
@@ -85,7 +85,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
     }
 
     if (!building) {
-      console.error('Building not found:', params.buildingId)
+      console.error('Building not found:', params.id)
       return <NotFound title="Building Not Found" message="We couldn't find the building you're looking for." />
     }
 
@@ -93,7 +93,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
     const { data: buildingSetup, error: setupError } = await supabase
       .from('building_setup')
       .select('*')
-      .eq('building_id', params.buildingId)
+      .eq('building_id', params.id)
       .maybeSingle()
 
     if (setupError) {
@@ -104,7 +104,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
     const { data: units = [], error: unitsError } = await supabase
       .from('units')
       .select('id, unit_number, type, floor, building_id, leaseholder_id, created_at')
-      .eq('building_id', params.buildingId)
+      .eq('building_id', params.id)
       .order('unit_number')
 
     if (unitsError) {
@@ -131,7 +131,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
           frequency_months
         )
       `)
-      .eq('building_id', params.buildingId)
+      .eq('building_id', params.id)
 
     if (complianceError) {
       console.error('Error fetching compliance assets:', complianceError)
@@ -152,7 +152,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
         buildingSetup={buildingSetup}
         units={units || []}
         complianceSummary={complianceSummary}
-        buildingId={params.buildingId}
+        buildingId={params.id}
       />
     )
 

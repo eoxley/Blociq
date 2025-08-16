@@ -7,12 +7,12 @@ import { redirect } from 'next/navigation'
 export default async function BuildingUnitsPage({ 
   params 
 }: { 
-  params: Promise<{ buildingId: string }> 
+  params: Promise<{ id: string }> 
 }) {
   console.log('=== UNITS PAGE DEBUG ===')
   
   // Wait for params to be available
-  const { buildingId } = await params
+  const { id: buildingId } = await params
   
   console.log('BuildingUnitsPage - buildingId from URL:', buildingId)
   console.log('BuildingUnitsPage - buildingId type:', typeof buildingId)
