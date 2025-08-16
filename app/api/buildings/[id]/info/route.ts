@@ -4,9 +4,9 @@ import { cookies } from 'next/headers'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { buildingId: string } }
+  { params }: { params: { id: string } }
 ) {
-  const routeId = 'app/api/buildings/[buildingId]/info/route.ts'
+  const routeId = 'app/api/buildings/[id]/info/route.ts'
   const build = process.env.VERCEL_GIT_COMMIT_SHA ?? null
 
   try {
@@ -23,7 +23,7 @@ export async function GET(
       }, { status: 401 })
     }
 
-    const buildingId = params.buildingId
+    const buildingId = params.id
 
     // Fetch building notes
     const { data: notesData, error: notesError } = await supabase

@@ -12,11 +12,11 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-export default async function MajorWorksProjectPage({ params }: { params: { buildingId: string } }) {
+export default async function MajorWorksProjectPage({ params }: { params: { id: string } }) {
   const { data: project } = await supabase
     .from('major_works_projects')
     .select('*')
-    .eq('id', params.buildingId)
+    .eq('id', params.id)
     .single()
 
   if (!project) {

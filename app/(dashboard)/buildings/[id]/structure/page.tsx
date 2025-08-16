@@ -5,7 +5,7 @@ import BuildingStructureCard from '@/components/BuildingStructureCard'
 
 interface PageProps {
   params: {
-    buildingId: string
+    id: string
   }
 }
 
@@ -29,7 +29,7 @@ export default async function BuildingStructurePage({ params }: PageProps) {
     const { data: building, error: buildingError } = await supabase
       .from('buildings')
       .select('id, name')
-      .eq('id', params.buildingId)
+      .eq('id', params.id)
       .single()
 
     if (buildingError || !building) {
@@ -49,7 +49,7 @@ export default async function BuildingStructurePage({ params }: PageProps) {
               </div>
               <div className="flex items-center space-x-4">
                 <a
-                  href={`/dashboard/buildings/${params.buildingId}`}
+                  href={`/dashboard/buildings/${params.id}`}
                   className="text-sm text-gray-500 hover:text-gray-700"
                 >
                   ← Back to Building
@@ -62,7 +62,7 @@ export default async function BuildingStructurePage({ params }: PageProps) {
         {/* Main Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="space-y-6">
-            <BuildingStructureCard buildingId={params.buildingId} />
+            <BuildingStructureCard buildingId={params.id} />
           </div>
         </div>
       </div>

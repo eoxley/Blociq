@@ -9,10 +9,10 @@ const supabase = createClient<Database>(
 
 export async function PUT(
   request: Request,
-  { params }: { params: Promise<{ buildingId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { buildingId } = await params
+    const { id: buildingId } = await params
     const body = await request.json()
     const { buildingData, setupData } = body
 
@@ -74,10 +74,10 @@ export async function PUT(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ buildingId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { buildingId } = await params
+    const { id: buildingId } = await params
     const body = await request.json()
     const { name, address, is_hrb } = body
 

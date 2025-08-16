@@ -4,9 +4,9 @@ import { cookies } from 'next/headers'
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { buildingId: string } }
+  { params }: { params: { id: string } }
 ) {
-  const routeId = 'app/api/buildings/[buildingId]/notes/route.ts'
+  const routeId = 'app/api/buildings/[id]/notes/route.ts'
   const build = process.env.VERCEL_GIT_COMMIT_SHA ?? null
 
   try {
@@ -23,7 +23,7 @@ export async function PUT(
       }, { status: 401 })
     }
 
-    const buildingId = params.buildingId
+    const buildingId = params.id
     const body = await request.json()
     const { content_markdown, content_html } = body
 

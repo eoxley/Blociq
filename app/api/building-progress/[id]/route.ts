@@ -8,7 +8,7 @@ const supabase = createClient(
 
 interface RouteParams {
   params: Promise<{
-    buildingId: string;
+    id: string;
   }>;
 }
 
@@ -17,7 +17,7 @@ export async function GET(
   { params }: RouteParams
 ) {
   try {
-    const { buildingId } = await params;
+    const { id: buildingId } = await params;
 
     if (!buildingId) {
       return NextResponse.json({ error: 'Building ID is required' }, { status: 400 });

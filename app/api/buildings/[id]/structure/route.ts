@@ -4,7 +4,7 @@ import { cookies } from 'next/headers'
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { buildingId: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     const supabase = createClient(cookies())
@@ -19,7 +19,7 @@ export async function GET(
       )
     }
 
-    const buildingId = params.buildingId
+    const buildingId = params.id
 
     // 1. Get building structure and status
     const { data: building, error: buildingError } = await supabase
@@ -101,7 +101,7 @@ export async function GET(
 // POST endpoint to update building structure
 export async function POST(
   req: NextRequest,
-  { params }: { params: { buildingId: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     const supabase = createClient(cookies())
@@ -116,7 +116,7 @@ export async function POST(
       )
     }
 
-    const buildingId = params.buildingId
+    const buildingId = params.id
     const body = await req.json()
 
     // Update building structure and status

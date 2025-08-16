@@ -5,7 +5,7 @@ import { cookies } from 'next/headers'
 interface BuildingLayoutProps {
   children: ReactNode
   params: {
-    buildingId: string
+    id: string
   }
 }
 
@@ -22,7 +22,7 @@ export default async function BuildingLayout({
     const { data: building } = await supabase
       .from('buildings')
       .select('name')
-      .eq('id', params.buildingId)
+      .eq('id', params.id)
       .single()
     
     if (building) {

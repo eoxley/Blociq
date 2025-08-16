@@ -3,10 +3,10 @@ import { getUnitsLeaseholders } from "@/lib/queries/getUnitsLeaseholders";
 
 export async function GET(
   request: Request,
-  { params }: { params: { buildingId: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const buildingId = params.buildingId;
+    const buildingId = params.id;
     
     if (!buildingId) {
       return NextResponse.json({ error: "Building ID is required" }, { status: 400 });
