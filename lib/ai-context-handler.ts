@@ -86,6 +86,26 @@ export class AIContextHandler {
     };
   }
 
+  async getBuildingContext(buildingId: string) {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ask-ai/building-context`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ buildingId })
+      });
+      
+      if (!response.ok) {
+        console.error('Failed to fetch building context:', response.status);
+        return null;
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching building context:', error);
+      return null;
+    }
+  }
+
   /**
    * Fetches building context data for a specific building
    */
@@ -103,11 +123,67 @@ export class AIContextHandler {
       }
 
       const data = await response.json();
-      return formatBuildingContextForAI(data);
+      return this.formatBuildingContextForAI(data);
     } catch (error) {
       console.error('Error fetching building context:', error);
       return null;
     }
+  }
+
+  /**
+   * Formats building context data for AI consumption
+   */
+  static formatBuildingContextForAI(data: any): string {
+    if (!data) return '';
+    
+    let context = '';
+    
+    // Building information
+    if (data.building) {
+      context += `BUILDING INFORMATION:\n`;
+      context += `Name: ${data.building.name || 'Unknown'}\n`;
+      context += `Address: ${data.building.address || 'Not set'}\n`;
+      context += `Postcode: ${data.building.postcode || 'Not set'}\n`;
+      context += `Total Units: ${data.metadata?.totalUnits || 0}\n`;
+      context += `Total Leaseholders: ${data.metadata?.totalLeaseholders || 0}\n`;
+      context += `Directors: ${data.metadata?.directors || 0}\n\n`;
+    }
+    
+    // Units and leaseholders
+    if (data.unitsLeaseholders && data.unitsLeaseholders.length > 0) {
+      context += `UNITS & LEASEHOLDERS:\n`;
+      data.unitsLeaseholders.forEach((unit: any, index: number) => {
+        context += `${index + 1}. Unit: ${unit.unit_label || unit.unit_number || 'Unknown'}\n`;
+        context += `   Leaseholder: ${unit.leaseholder_name || 'Not set'}\n`;
+        context += `   Email: ${unit.leaseholder_email || 'Not set'}\n`;
+        context += `   Phone: ${unit.leaseholder_phone || 'Not set'}\n`;
+        context += `   Apportionment: ${unit.apportionment_percent || 'Not set'}%\n`;
+        if (unit.is_director) {
+          context += `   Director Role: ${unit.director_role || 'Director'}\n`;
+        }
+        context += `\n`;
+      });
+    }
+    
+    // Compliance summary
+    if (data.complianceSummary) {
+      context += `COMPLIANCE SUMMARY:\n`;
+      context += `Total Assets: ${data.complianceSummary.total}\n`;
+      context += `Compliant: ${data.complianceSummary.compliant}\n`;
+      context += `Pending: ${data.complianceSummary.pending}\n`;
+      context += `Overdue: ${data.complianceSummary.overdue}\n\n`;
+    }
+    
+    // Recent call logs
+    if (data.callLogs && data.callLogs.length > 0) {
+      context += `RECENT CALL LOGS:\n`;
+      data.callLogs.slice(0, 5).forEach((log: any) => {
+        context += `- ${log.logged_at}: ${log.call_type} call - ${log.notes}\n`;
+      });
+      context += `\n`;
+    }
+    
+    return context;
   }
 
   /**
