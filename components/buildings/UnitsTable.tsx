@@ -19,6 +19,12 @@ export default function UnitsTable({ buildingId }: { buildingId: string }) {
     followUpDate: ""
   });
   const [loggingCall, setLoggingCall] = useState(false);
+  const [showEmailCompose, setShowEmailCompose] = useState(false);
+  const [emailDetails, setEmailDetails] = useState({
+    subject: "",
+    body: ""
+  });
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -103,6 +109,27 @@ export default function UnitsTable({ buildingId }: { buildingId: string }) {
     }
   };
 
+  const handleSendEmail = async () => {
+    if (!selectedUnit || !emailDetails.subject.trim() || !emailDetails.body.trim()) return;
+    
+    setSendingEmail(true);
+    try {
+      // For now, we'll use the mailto: approach but with pre-filled content
+      const mailtoUrl = `mailto:${selectedUnit.leaseholder_email}?subject=${encodeURIComponent(emailDetails.subject)}&body=${encodeURIComponent(emailDetails.body)}`;
+      window.open(mailtoUrl, '_blank');
+      
+      // Close the modal
+      setShowEmailCompose(false);
+      setEmailDetails({ subject: "", body: "" });
+      
+      // You could add a toast notification here
+    } catch (error) {
+      console.error('Error sending email:', error);
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
   if (loading) return <div className="text-sm text-neutral-500">Loading units…</div>;
 
   return (
@@ -148,17 +175,18 @@ export default function UnitsTable({ buildingId }: { buildingId: string }) {
                     {r.is_director ? <TagChip label={r.director_role || "Director"} /> : null}
                   </div>
                 </td>
-                <td className="px-4 py-2">
-                  <button 
-                    className="text-blue-600 hover:underline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // Keep existing action
-                    }}
-                  >
-                    Log call
-                  </button>
-                </td>
+                                 <td className="px-4 py-2">
+                   <button 
+                     className="text-blue-600 hover:underline"
+                     onClick={(e) => {
+                       e.stopPropagation();
+                       setSelectedUnit(r);
+                       setShowLogCall(true);
+                     }}
+                   >
+                     Log call
+                   </button>
+                 </td>
               </tr>
             ))}
           </tbody>
@@ -289,17 +317,13 @@ export default function UnitsTable({ buildingId }: { buildingId: string }) {
                  >
                    Log Call
                  </button>
-                 <button 
-                   onClick={() => {
-                     if (selectedUnit.leaseholder_email) {
-                       window.open(`mailto:${selectedUnit.leaseholder_email}`, '_blank');
-                     }
-                   }}
-                   disabled={!selectedUnit.leaseholder_email}
-                   className="flex-1 bg-neutral-100 text-neutral-700 px-4 py-2 rounded-lg hover:bg-neutral-200 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                 >
-                   Send Email
-                 </button>
+                                   <button 
+                    onClick={() => setShowEmailCompose(true)}
+                    disabled={!selectedUnit.leaseholder_email}
+                    className="flex-1 bg-neutral-100 text-neutral-700 px-4 py-2 rounded-lg hover:bg-neutral-200 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Send Email
+                  </button>
                  <button className="flex-1 bg-neutral-100 text-neutral-700 px-4 py-2 rounded-lg hover:bg-neutral-200 transition-colors text-sm">
                    View Documents
                  </button>
@@ -414,8 +438,87 @@ export default function UnitsTable({ buildingId }: { buildingId: string }) {
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
-  );
-}
+                 </div>
+       )}
+
+       {/* Email Compose Modal */}
+       {showEmailCompose && selectedUnit && (
+         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+             <div className="px-6 py-4 border-b border-neutral-200">
+               <div className="flex items-center justify-between">
+                 <h3 className="text-lg font-semibold text-neutral-800">
+                   Compose Email - {displayUnit(selectedUnit.unit_label, selectedUnit.unit_number)}
+                 </h3>
+                 <button
+                   onClick={() => setShowEmailCompose(false)}
+                   className="text-neutral-400 hover:text-neutral-600 p-1"
+                 >
+                   <X className="h-5 w-5" />
+                 </button>
+               </div>
+             </div>
+             
+             <div className="p-6 space-y-4">
+               <div>
+                 <label className="block text-sm font-medium text-neutral-700 mb-2">
+                   To
+                 </label>
+                 <input
+                   type="email"
+                   value={selectedUnit.leaseholder_email || ""}
+                   disabled
+                   className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm bg-neutral-50 text-neutral-600"
+                 />
+               </div>
+
+               <div>
+                 <label className="block text-sm font-medium text-neutral-700 mb-2">
+                   Subject *
+                 </label>
+                 <input
+                   type="text"
+                   value={emailDetails.subject}
+                   onChange={(e) => setEmailDetails(prev => ({ ...prev, subject: e.target.value }))}
+                   className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#4f46e5]"
+                   placeholder="Enter email subject..."
+                   required
+                 />
+               </div>
+
+               <div>
+                 <label className="block text-sm font-medium text-neutral-700 mb-2">
+                   Message *
+                 </label>
+                 <textarea
+                   value={emailDetails.body}
+                   onChange={(e) => setEmailDetails(prev => ({ ...prev, body: e.target.value }))}
+                   className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#4f46e5]"
+                   rows={8}
+                   placeholder="Enter your message..."
+                   required
+                 />
+               </div>
+
+               <div className="flex gap-3 pt-4">
+                 <button
+                   onClick={() => setShowEmailCompose(false)}
+                   className="flex-1 bg-neutral-100 text-neutral-700 px-4 py-2 rounded-lg hover:bg-neutral-200 transition-colors text-sm"
+                 >
+                   Cancel
+                 </button>
+                 <button
+                   onClick={handleSendEmail}
+                   disabled={!emailDetails.subject.trim() || !emailDetails.body.trim() || sendingEmail}
+                   className="flex-1 bg-[#4f46e5] text-white px-4 py-2 rounded-lg hover:bg-[#4338ca] transition-colors text-sm disabled:opacity-50"
+                 >
+                   {sendingEmail ? "Opening..." : "Send Email"}
+                 </button>
+               </div>
+             </div>
+           </div>
+         </div>
+       )}
+     </div>
+   );
+ }
