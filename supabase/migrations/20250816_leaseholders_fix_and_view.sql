@@ -1,38 +1,34 @@
--- 1) Ensure UI can read a display name
--- If your column is text 'true'/'false', cast it to boolean once; otherwise skip the ALTER.
-do $$
-begin
-  if exists (
-    select 1 from information_schema.columns
-    where table_name='leaseholders' and column_name='is_director' and data_type in ('text','character varying')
-  ) then
-    alter table public.leaseholders
-      alter column is_director type boolean using (nullif(is_director,'')::boolean);
-  end if;
-end$$;
+-- Drop the view first since it depends on the is_director column
+DROP VIEW IF EXISTS public.vw_units_leaseholders;
 
--- 2) Normalise name for display without overwriting your data:
-create or replace view public.vw_units_leaseholders as
-select
+-- Ensure is_director is boolean
+ALTER TABLE public.leaseholders ALTER COLUMN is_director TYPE boolean USING is_director::boolean;
+
+-- Create view for units and leaseholders with normalized names
+CREATE OR REPLACE VIEW public.vw_units_leaseholders AS
+SELECT 
   u.id as unit_id,
   u.building_id,
   u.unit_number,
-  u.label as unit_label,
+  u.unit_number as unit_label,
   u.apportionment_percent,
   l.id as leaseholder_id,
-  coalesce(l.name, l.full_name) as leaseholder_name,
+  COALESCE(l.full_name, l.name) as leaseholder_name,
   l.email as leaseholder_email,
-  l.phone_number as leaseholder_phone,
+  l.phone as leaseholder_phone,
   l.is_director,
+  CASE 
+    WHEN l.is_director THEN 
+      CASE 
+        WHEN l.name ILIKE '%chair%' THEN 'Chair'
+        WHEN l.name ILIKE '%secretary%' THEN 'Secretary'
+        WHEN l.name ILIKE '%treasurer%' THEN 'Treasurer'
+        ELSE 'Director'
+      END
+    ELSE NULL
+  END as director_role,
   l.director_since,
-  l.director_notes,
-  -- derive a role tag from director_notes
-  case
-    when l.is_director is true and l.director_notes ilike '%chair%' then 'Chair'
-    when l.is_director is true and l.director_notes ilike '%secretary%' then 'Secretary'
-    when l.is_director is true and l.director_notes ilike '%treasurer%' then 'Treasurer'
-    when l.is_director is true then 'Director'
-    else null
-  end as director_role
-from public.units u
-left join public.leaseholders l on l.unit_id = u.id;
+  l.director_notes
+FROM public.units u
+LEFT JOIN public.leaseholders l ON u.leaseholder_id = l.id
+ORDER BY u.unit_number;
