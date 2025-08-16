@@ -59,18 +59,39 @@ export async function POST(req: Request) {
       overdue: complianceAssets?.filter(asset => asset.status === 'overdue').length || 0
     };
 
-    // Fetch recent call logs (if you have a call_logs table)
+    // Fetch recent call logs
     const { data: callLogs = [], error: callLogsError } = await supabaseAdmin
       .from('call_logs')
-      .select('*')
+      .select(`
+        id,
+        call_type,
+        duration_minutes,
+        notes,
+        follow_up_required,
+        follow_up_date,
+        logged_at,
+        units (unit_number, unit_label),
+        leaseholders (name, full_name)
+      `)
       .eq('building_id', buildingId)
       .order('logged_at', { ascending: false })
       .limit(10);
 
-    // Fetch recent correspondence (if you have a correspondence table)
+    // Fetch recent correspondence
     const { data: correspondence = [], error: correspondenceError } = await supabaseAdmin
       .from('correspondence')
-      .select('*')
+      .select(`
+        id,
+        type,
+        subject,
+        direction,
+        sent_at,
+        received_at,
+        status,
+        created_at,
+        units (unit_number, unit_label),
+        leaseholders (name, full_name)
+      `)
       .eq('building_id', buildingId)
       .order('created_at', { ascending: false })
       .limit(10);

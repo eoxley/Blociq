@@ -18,6 +18,7 @@ export default function UnitsTable({ buildingId }: { buildingId: string }) {
     followUpRequired: false,
     followUpDate: ""
   });
+  const [loggingCall, setLoggingCall] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -60,6 +61,46 @@ export default function UnitsTable({ buildingId }: { buildingId: string }) {
 
   const closeUnitDetails = () => {
     setSelectedUnit(null);
+  };
+
+  const handleLogCall = async () => {
+    if (!selectedUnit || !callDetails.notes.trim()) return;
+    
+    setLoggingCall(true);
+    try {
+      const response = await fetch('/api/call-logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          building_id: buildingId,
+          unit_id: selectedUnit.unit_id,
+          leaseholder_id: selectedUnit.leaseholder_id,
+          call_type: callDetails.callType,
+          duration_minutes: callDetails.duration ? parseInt(callDetails.duration) : null,
+          notes: callDetails.notes,
+          follow_up_required: callDetails.followUpRequired,
+          follow_up_date: callDetails.followUpDate || null
+        })
+      });
+
+      if (response.ok) {
+        setShowLogCall(false);
+        setCallDetails({
+          callType: "incoming",
+          duration: "",
+          notes: "",
+          followUpRequired: false,
+          followUpDate: ""
+        });
+        // You could add a toast notification here
+      } else {
+        console.error('Failed to log call');
+      }
+    } catch (error) {
+      console.error('Error logging call:', error);
+    } finally {
+      setLoggingCall(false);
+    }
   };
 
   if (loading) return <div className="text-sm text-neutral-500">Loading units…</div>;
@@ -240,16 +281,135 @@ export default function UnitsTable({ buildingId }: { buildingId: string }) {
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-4 border-t border-neutral-200">
-                <button className="flex-1 bg-[#4f46e5] text-white px-4 py-2 rounded-lg hover:bg-[#4338ca] transition-colors text-sm">
-                  Log Call
+                             {/* Action Buttons */}
+               <div className="flex gap-3 pt-4 border-t border-neutral-200">
+                 <button 
+                   onClick={() => setShowLogCall(true)}
+                   className="flex-1 bg-[#4f46e5] text-white px-4 py-2 rounded-lg hover:bg-[#4338ca] transition-colors text-sm"
+                 >
+                   Log Call
+                 </button>
+                 <button 
+                   onClick={() => {
+                     if (selectedUnit.leaseholder_email) {
+                       window.open(`mailto:${selectedUnit.leaseholder_email}`, '_blank');
+                     }
+                   }}
+                   disabled={!selectedUnit.leaseholder_email}
+                   className="flex-1 bg-neutral-100 text-neutral-700 px-4 py-2 rounded-lg hover:bg-neutral-200 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                 >
+                   Send Email
+                 </button>
+                 <button className="flex-1 bg-neutral-100 text-neutral-700 px-4 py-2 rounded-lg hover:bg-neutral-200 transition-colors text-sm">
+                   View Documents
+                 </button>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Log Call Modal */}
+      {showLogCall && selectedUnit && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full">
+            <div className="px-6 py-4 border-b border-neutral-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-neutral-800">
+                  Log Call - {displayUnit(selectedUnit.unit_label, selectedUnit.unit_number)}
+                </h3>
+                <button
+                  onClick={() => setShowLogCall(false)}
+                  className="text-neutral-400 hover:text-neutral-600 p-1"
+                >
+                  <X className="h-5 w-5" />
                 </button>
-                <button className="flex-1 bg-neutral-100 text-neutral-700 px-4 py-2 rounded-lg hover:bg-neutral-200 transition-colors text-sm">
-                  Send Email
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">
+                  Call Type
+                </label>
+                <select
+                  value={callDetails.callType}
+                  onChange={(e) => setCallDetails(prev => ({ ...prev, callType: e.target.value }))}
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#4f46e5]"
+                >
+                  <option value="incoming">Incoming</option>
+                  <option value="outgoing">Outgoing</option>
+                  <option value="missed">Missed</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">
+                  Duration (minutes)
+                </label>
+                <input
+                  type="number"
+                  value={callDetails.duration}
+                  onChange={(e) => setCallDetails(prev => ({ ...prev, duration: e.target.value }))}
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#4f46e5]"
+                  placeholder="Optional"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">
+                  Notes *
+                </label>
+                <textarea
+                  value={callDetails.notes}
+                  onChange={(e) => setCallDetails(prev => ({ ...prev, notes: e.target.value }))}
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#4f46e5]"
+                  rows={3}
+                  placeholder="Enter call details..."
+                  required
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="followUp"
+                  checked={callDetails.followUpRequired}
+                  onChange={(e) => setCallDetails(prev => ({ ...prev, followUpRequired: e.target.checked }))}
+                  className="h-4 w-4"
+                />
+                <label htmlFor="followUp" className="text-sm text-neutral-700">
+                  Follow-up required
+                </label>
+              </div>
+
+              {callDetails.followUpRequired && (
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Follow-up Date
+                  </label>
+                  <input
+                    type="date"
+                    value={callDetails.followUpDate}
+                    onChange={(e) => setCallDetails(prev => ({ ...prev, followUpDate: e.target.value }))}
+                    className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#4f46e5]"
+                  />
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => setShowLogCall(false)}
+                  className="flex-1 bg-neutral-100 text-neutral-700 px-4 py-2 rounded-lg hover:bg-neutral-200 transition-colors text-sm"
+                >
+                  Cancel
                 </button>
-                <button className="flex-1 bg-neutral-100 text-neutral-700 px-4 py-2 rounded-lg hover:bg-neutral-200 transition-colors text-sm">
-                  View Documents
+                <button
+                  onClick={handleLogCall}
+                  disabled={!callDetails.notes.trim() || loggingCall}
+                  className="flex-1 bg-[#4f46e5] text-white px-4 py-2 rounded-lg hover:bg-[#4338ca] transition-colors text-sm disabled:opacity-50"
+                >
+                  {loggingCall ? "Saving..." : "Save Call"}
                 </button>
               </div>
             </div>
