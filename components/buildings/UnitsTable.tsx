@@ -3,13 +3,21 @@ import { useEffect, useState } from "react";
 import TagChip from "@/components/ui/TagChip";
 import { displayUnit, fmtPct, safe } from "@/components/buildings/format";
 import { UnitLeaseholderRow } from "@/lib/queries/getUnitsLeaseholders";
-import { Search } from "lucide-react";
+import { Search, Phone, Mail, FileText, X, Save } from "lucide-react";
 
 export default function UnitsTable({ buildingId }: { buildingId: string }) {
   const [rows, setRows] = useState<UnitLeaseholderRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUnit, setSelectedUnit] = useState<UnitLeaseholderRow | null>(null);
+  const [showLogCall, setShowLogCall] = useState(false);
+  const [callDetails, setCallDetails] = useState({
+    callType: "incoming",
+    duration: "",
+    notes: "",
+    followUpRequired: false,
+    followUpDate: ""
+  });
 
   useEffect(() => {
     let alive = true;
