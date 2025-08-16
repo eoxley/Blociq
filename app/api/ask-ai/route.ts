@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { AIContextHandler } from '../../../lib/ai-context-handler';
 
 export const runtime = "nodejs";
 
@@ -109,14 +110,15 @@ export async function POST(req: NextRequest) {
     // Initialize OpenAI client
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    // For public access, use simplified prompt
+    // For public access, use intelligent context detection
     if (isPublicAccess || isPublic) {
       console.log('🌐 Public AI request:', prompt.substring(0, 100) + '...');
       
-      const systemPrompt = `You are BlocIQ, a helpful AI assistant for UK property management. 
+      // Determine context and build appropriate prompt
+      const context = AIContextHandler.determineContext(prompt);
+      const systemPrompt = AIContextHandler.buildPrompt(context, prompt);
       
-Provide helpful, accurate advice about property management, compliance, tenant relations, maintenance, and general property-related topics. 
-Keep responses concise, professional, and practical. If you don't have specific information, provide general guidance.`;
+      console.log('🎯 Using context:', context);
 
       const completion = await openai.chat.completions.create({
         model: 'gpt-4',
@@ -129,11 +131,15 @@ Keep responses concise, professional, and practical. If you don't have specific 
       });
 
       const aiResponse = completion.choices[0]?.message?.content || 'No response generated';
+      
+      // Process response based on context
+      const processedResponse = AIContextHandler.processResponse(aiResponse, context);
+      const displayContent = AIContextHandler.formatResponseForDisplay(processedResponse);
 
       return NextResponse.json({ 
         success: true,
-        response: aiResponse,
-        result: aiResponse, // For backward compatibility
+        response: displayContent,
+        result: displayContent, // For backward compatibility
         context_type: 'public',
         building_id: null,
         document_count: 0,
@@ -142,7 +148,8 @@ Keep responses concise, professional, and practical. If you don't have specific 
         context: {
           complianceUsed: false,
           majorWorksUsed: false
-        }
+        },
+        metadata: AIContextHandler.getResponseMetadata(processedResponse)
       });
     }
 
@@ -153,7 +160,10 @@ Keep responses concise, professional, and practical. If you don't have specific 
 
     let buildingContext = "";
     let contextMetadata: any = {};
-    let systemPrompt = `You are BlocIQ, an AI assistant for UK leasehold property managers. Use British English. Be legally accurate and cite documents or founder guidance where relevant. If unsure, advise the user to refer to legal documents or professional advice.\n\n`;
+    
+    // Determine context and build appropriate prompt
+    const context = AIContextHandler.determineContext(prompt);
+    let systemPrompt = AIContextHandler.buildPrompt(context, prompt, buildingContext);
 
     // 🏢 Smart Building Detection from Prompt
     if (!building_id) {
@@ -555,12 +565,16 @@ ${communicationsContext}
 
     console.log('✅ OpenAI response received');
 
+    // Process response based on context
+    const processedResponse = AIContextHandler.processResponse(aiResponse, context);
+    const displayContent = AIContextHandler.formatResponseForDisplay(processedResponse);
+
     // Log the AI interaction
     let logId = null;
     if (user?.id) {
       logId = await insertAiLog({
         question: prompt,
-        response: aiResponse,
+        response: displayContent,
         user_id: user.id,
         context_type: contextType,
         building_id: building_id || undefined,
@@ -574,15 +588,16 @@ ${communicationsContext}
 
     return NextResponse.json({
       success: true,
-      result: aiResponse,
-      response: aiResponse, // For backward compatibility
+      result: displayContent,
+      response: displayContent, // For backward compatibility
       conversationId: null, // Not using conversation system in this endpoint
       context_type: contextType,
       building_id: building_id || null,
       document_count: usedDocs.length,
       has_email_thread: !!emailThreadId,
       has_leaseholder: !!leaseholder_id,
-      context: contextMetadata
+      context: contextMetadata,
+      metadata: AIContextHandler.getResponseMetadata(processedResponse)
     });
 
   } catch (error) {
