@@ -1,30 +1,37 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { createClient } from '@/utils/supabase/server';
+import { cookies } from 'next/headers';
 
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    const supabase = createClient(cookies());
+    
+    // Check authentication
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const buildingId = params.id;
 
     if (!buildingId) {
       return NextResponse.json({ error: "Building ID is required" }, { status: 400 });
     }
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabase
       .from("building_compliance_assets")
       .select(`
         id as bca_id,
         compliance_asset_id as asset_id,
-        last_renewed_date,
-        next_due_date,
+        due_date,
         status,
         notes,
-        contractor,
         compliance_assets (
           id,
-          name as asset_name,
+          title as asset_name,
           category,
           description,
           frequency_months
@@ -32,9 +39,12 @@ export async function GET(
       `)
       .eq("building_id", buildingId)
       .order("compliance_assets(category)", { ascending: true })
-      .order("compliance_assets(name)", { ascending: true });
+      .order("compliance_assets(title)", { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching compliance data:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 
     // Transform the data to flatten the nested compliance_assets
     const transformedData = (data || []).map(row => ({
@@ -43,12 +53,9 @@ export async function GET(
       asset_name: row.compliance_assets?.asset_name || "Unknown",
       category: row.compliance_assets?.category || "Unknown",
       frequency_months: row.compliance_assets?.frequency_months,
-      last_renewed_date: row.last_renewed_date,
-      next_due_date: row.next_due_date,
-      status: row.status || "unknown",
-      docs_count: 0, // TODO: implement docs count
-      notes: row.notes,
-      contractor: row.contractor
+      due_date: row.due_date,
+      status: row.status || "pending",
+      notes: row.notes
     }));
 
     return NextResponse.json({ data: transformedData });
