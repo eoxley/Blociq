@@ -1,31 +1,13 @@
 import { NextResponse } from "next/server";
-import { createClient } from '@/utils/supabase/server';
-import { cookies } from 'next/headers';
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function GET() {
-  try {
-    const supabase = createClient(cookies());
-    
-    // Check authentication
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || !session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data, error } = await supabase
-      .from("compliance_assets")
-      .select("id,title,category,description,frequency_months")
-      .order("category", { ascending: true })
-      .order("title", { ascending: true });
-
-    if (error) {
-      console.error('Error fetching compliance assets:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ data });
-  } catch (error) {
-    console.error('Error in compliance assets list API:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
+  const { data, error } = await supabaseAdmin
+    .from("compliance_assets")
+    .select("id, title, category, description, frequency_months, frequency")
+    .order("category", { ascending: true })
+    .order("title", { ascending: true });
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const rows = (data || []).map((r: any) => ({ ...r, name: r.title }));
+  return NextResponse.json({ data: rows });
 }
