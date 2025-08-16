@@ -30,6 +30,7 @@ import { InfoRow } from '@/components/ui/InfoRow'
 import EditIconButton from '@/components/ui/EditIconButton'
 import EmptyValue from '@/components/ui/EmptyValue'
 import Revealable from '@/components/ui/Revealable'
+import UnitsTable from '@/components/buildings/UnitsTable'
 
 interface Building {
   id: string
@@ -282,11 +283,14 @@ export default function BuildingDetailClient({
 
       {/* General Info Section */}
       <SectionCard className="group">
-        <div className="px-4 py-3">
-          <h3 className="flex items-center gap-2 text-neutral-800 font-semibold">
-            <Building2 className="h-5 w-5 text-[#4f46e5]" />
-            General Information
-          </h3>
+        <div className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] px-4 py-3 rounded-t-2xl">
+          <div className="flex items-center gap-2 text-white">
+            <Building2 className="h-5 w-5" />
+            <h3 className="font-semibold">General Information</h3>
+          </div>
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full blur-xl"></div>
+          <div className="absolute bottom-0 left-4 w-8 h-8 bg-white/5 rounded-full blur-lg"></div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -319,11 +323,14 @@ export default function BuildingDetailClient({
 
       {/* Access Information Section */}
       <SectionCard className="group">
-        <div className="px-4 py-3">
-          <h3 className="flex items-center gap-2 text-neutral-800 font-semibold">
-            <Lock className="h-5 w-5 text-[#4f46e5]" />
-            Access Information
-          </h3>
+        <div className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] px-4 py-3 rounded-t-2xl">
+          <div className="flex items-center gap-2 text-white">
+            <Lock className="h-5 w-5" />
+            <h3 className="font-semibold">Access Information</h3>
+          </div>
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full blur-xl"></div>
+          <div className="absolute bottom-0 left-4 w-8 h-8 bg-white/5 rounded-full blur-lg"></div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -360,11 +367,14 @@ export default function BuildingDetailClient({
 
       {/* Contacts Section */}
       <SectionCard className="group">
-        <div className="px-4 py-3">
-          <h3 className="flex items-center gap-2 text-neutral-800 font-semibold">
-            <Users className="h-5 w-5 text-[#4f46e5]" />
-            Contacts
-          </h3>
+        <div className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] px-4 py-3 rounded-t-2xl">
+          <div className="flex items-center gap-2 text-white">
+            <Users className="h-5 w-5" />
+            <h3 className="font-semibold">Contacts</h3>
+          </div>
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full blur-xl"></div>
+          <div className="absolute bottom-0 left-4 w-8 h-8 bg-white/5 rounded-full blur-lg"></div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -387,11 +397,14 @@ export default function BuildingDetailClient({
 
       {/* Site Staff Section */}
       <SectionCard className="group">
-        <div className="px-4 py-3">
-          <h3 className="flex items-center gap-2 text-neutral-800 font-semibold">
-            <User className="h-5 w-5 text-[#4f46e5]" />
-            Site Staff
-          </h3>
+        <div className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] px-4 py-3 rounded-t-2xl">
+          <div className="flex items-center gap-2 text-white">
+            <User className="h-5 w-5" />
+            <h3 className="font-semibold">Site Staff</h3>
+          </div>
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full blur-xl"></div>
+          <div className="absolute bottom-0 left-4 w-8 h-8 bg-white/5 rounded-full blur-lg"></div>
         </div>
         
         <div className="space-y-3">
@@ -407,11 +420,14 @@ export default function BuildingDetailClient({
 
       {/* Notes & Instructions Section */}
       <SectionCard className="group">
-        <div className="px-4 py-3">
-          <h3 className="flex items-center gap-2 text-neutral-800 font-semibold">
-            <FileText className="h-5 w-5 text-[#4f46e5]" />
-            Notes & Instructions
-          </h3>
+        <div className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] px-4 py-3 rounded-t-2xl">
+          <div className="flex items-center gap-2 text-white">
+            <FileText className="h-5 w-5" />
+            <h3 className="font-semibold">Notes & Instructions</h3>
+          </div>
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full blur-xl"></div>
+          <div className="absolute bottom-0 left-4 w-8 h-8 bg-white/5 rounded-full blur-lg"></div>
         </div>
         
         <div className="space-y-3">
@@ -453,64 +469,42 @@ export default function BuildingDetailClient({
 
       {/* Units List Section */}
       <SectionCard className="group">
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between">
-            <h3 className="flex items-center gap-2 text-neutral-800 font-semibold">
-              <Home className="h-5 w-5 text-[#4f46e5]" />
-              Units & Leaseholders
-            </h3>
-            <span className="text-sm text-gray-600">{units?.length || 0} units</span>
+        <div className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] px-4 py-3 rounded-t-2xl">
+          <div className="flex items-center justify-between text-white">
+            <div className="flex items-center gap-2">
+              <Home className="h-5 w-5" />
+              <h3 className="font-semibold">Units & Leaseholders</h3>
+            </div>
+            <span className="text-sm text-white/80">{units?.length || 0} units</span>
           </div>
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full blur-xl"></div>
+          <div className="absolute bottom-0 left-4 w-8 h-8 bg-white/5 rounded-full blur-lg"></div>
         </div>
         
-        <div className="max-h-[400px] overflow-y-auto rounded border">
-          <div className="grid grid-cols-4 gap-4 p-3 bg-gray-50 border-b font-medium text-sm text-gray-700">
-            <div>Unit</div>
-            <div>Leaseholder</div>
-            <div>Email</div>
-            <div>Actions</div>
-          </div>
-          
-          {units?.map((unit) => {
-            const leaseholder = unit.leaseholder_id ? leaseholders[unit.leaseholder_id] : null
-            return (
-              <div key={unit.id} className="grid grid-cols-4 gap-4 p-3 border-b text-sm hover:bg-gray-50">
-                <div className="font-medium">Flat {unit.unit_number}</div>
-                <div>{leaseholder?.name || 'No leaseholder'}</div>
-                <div className="text-gray-600">{leaseholder?.email || '-'}</div>
-                <div>
-                  <button className="text-blue-600 underline hover:text-blue-800">
-                    Log call
-                  </button>
-                </div>
-              </div>
-            )
-          })}
-          
-          {(!units || units.length === 0) && (
-            <div className="p-8 text-center text-gray-500">
-              <Home className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p>No units found for this building</p>
-            </div>
-          )}
+        <div className="p-4">
+          <UnitsTable buildingId={buildingId} />
         </div>
       </SectionCard>
 
       {/* Compliance Summary Section */}
       <SectionCard className="group">
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between">
-            <h3 className="flex items-center gap-2 text-neutral-800 font-semibold">
-              <Shield className="h-5 w-5 text-[#4f46e5]" />
-              Compliance Overview
-            </h3>
+        <div className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] px-4 py-3 rounded-t-2xl">
+          <div className="flex items-center justify-between text-white">
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              <h3 className="font-semibold">Compliance Overview</h3>
+            </div>
             <Link
               href={`/buildings/${buildingId}/compliance`}
-              className="text-[#4f46e5] hover:text-[#4338ca] text-sm font-medium transition-colors"
+              className="text-white/90 hover:text-white text-sm font-medium transition-colors"
             >
               View All
             </Link>
           </div>
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full blur-xl"></div>
+          <div className="absolute bottom-0 left-4 w-8 h-8 bg-white/5 rounded-full blur-lg"></div>
         </div>
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
@@ -535,8 +529,14 @@ export default function BuildingDetailClient({
 
       {/* Quick Actions */}
       <SectionCard className="group">
-        <div className="px-4 py-3">
-          <h3 className="text-neutral-800 font-semibold">Quick Actions</h3>
+        <div className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] px-4 py-3 rounded-t-2xl">
+          <div className="flex items-center gap-2 text-white">
+            <Wrench className="h-5 w-5" />
+            <h3 className="font-semibold">Quick Actions</h3>
+          </div>
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full blur-xl"></div>
+          <div className="absolute bottom-0 left-4 w-8 h-8 bg-white/5 rounded-full blur-lg"></div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
