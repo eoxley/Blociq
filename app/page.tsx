@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, Brain, FileText, Calendar, Shield, Zap, Building2, Users, Home, CheckCircle, Star, MessageSquare, Settings, BarChart3, Mail, Lock, Eye, Heart } from 'lucide-react';
 import BlocIQLogo from '@/components/BlocIQLogo';
+import PublicAskBlocIQ from '@/components/assistant/PublicAskBlocIQ';
 
 export default function LandingPage() {
   const featuresRef = useRef<HTMLElement>(null);
@@ -535,6 +536,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Public Ask BlocIQ Widget */}
+      <PublicAskBlocIQ />
 
       {/* Enhanced Footer */}
       <footer className="bg-gray-900 text-white py-12">
