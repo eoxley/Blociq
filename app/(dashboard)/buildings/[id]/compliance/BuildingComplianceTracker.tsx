@@ -271,7 +271,7 @@ export default function BuildingComplianceTracker({ complianceData }: BuildingCo
                           <div className="flex-1">
                             <div className="flex items-center space-x-3 mb-2">
                               <h4 className="text-lg font-serif font-semibold text-[#333333]">
-                                {asset.compliance_assets.name}
+                                {asset.compliance_assets.title}
                               </h4>
                               {getStatusBadge(asset)}
                             </div>

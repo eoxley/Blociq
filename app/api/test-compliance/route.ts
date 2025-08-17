@@ -6,7 +6,7 @@ export async function GET() {
     // Test 1: Check if compliance_assets exist
     const { data: assets, error: assetsError } = await supabaseAdmin
       .from("compliance_assets")
-      .select("id, name, category")
+      .select("id, title, category")
       .limit(5);
     
     if (assetsError) {
@@ -23,7 +23,7 @@ export async function GET() {
         status,
         compliance_assets (
           id,
-          name,
+          title,
           category
         )
       `)

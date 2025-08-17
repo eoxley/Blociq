@@ -246,7 +246,7 @@ export default async function CompliancePage() {
         latest_document_id: item.latest_document_id,
         building_name: item.buildings?.name || 'Unknown Building',
         building_address: item.buildings?.address || '',
-        asset_name: item.compliance_assets?.name || 'Unknown Asset',
+        asset_name: item.compliance_assets?.title || 'Unknown Asset',
         asset_category: item.compliance_assets?.category || 'Unknown',
         asset_description: item.compliance_assets?.description || '',
         frequency_months: item.compliance_assets?.frequency_months || 12,

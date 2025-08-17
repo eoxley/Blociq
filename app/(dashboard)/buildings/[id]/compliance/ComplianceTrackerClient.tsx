@@ -233,7 +233,7 @@ export default function ComplianceTrackerClient({ complianceData }: ComplianceTr
   // Filter assets based on search and filter
   const filteredGroupedAssets = Object.entries(complianceData.groupedAssets).reduce((acc, [category, assets]) => {
     const filteredAssets = assets.filter(asset => {
-      const matchesSearch = asset.compliance_assets.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              const matchesSearch = asset.compliance_assets.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            asset.compliance_assets.description?.toLowerCase().includes(searchTerm.toLowerCase())
       
       const assetStatus = getAssetStatus(asset)
@@ -384,7 +384,7 @@ export default function ComplianceTrackerClient({ complianceData }: ComplianceTr
                                   <div className="flex items-start justify-between">
                                     <div className="flex-1">
                                       <h3 className="font-semibold text-[#333333] leading-tight">
-                                        {asset.compliance_assets.name}
+                                        {asset.compliance_assets.title}
                                       </h3>
                                       {asset.compliance_assets.description && (
                                         <p className="text-sm text-gray-600 mt-1">
@@ -445,7 +445,7 @@ export default function ComplianceTrackerClient({ complianceData }: ComplianceTr
                                            size="sm"
                                            onClick={() => setSelectedAssetForUpload({
                                              id: asset.asset_id,
-                                             name: asset.compliance_assets.name
+                                             name: asset.compliance_assets.title
                                            })}
                                            className="text-xs"
                                          >

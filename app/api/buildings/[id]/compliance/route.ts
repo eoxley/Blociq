@@ -33,7 +33,7 @@ export async function GET(
         contractor,
         compliance_assets (
           id,
-          name as asset_name,
+          title as asset_name,
           category,
           description,
           frequency_months
@@ -41,7 +41,7 @@ export async function GET(
       `)
       .eq("building_id", buildingId)
       .order("compliance_assets(category)", { ascending: true })
-      .order("compliance_assets(name)", { ascending: true });
+      .order("compliance_assets(title)", { ascending: true });
 
     if (error) {
       console.error('Error fetching compliance data:', error);
