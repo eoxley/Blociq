@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { X, AlertTriangle, Clock, CheckCircle, MessageSquare, Bot, Loader2, Sparkles, Zap } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { X, AlertTriangle, Clock, CheckCircle, MessageSquare, Bot, Loader2, Sparkles, Zap, ExternalLink } from 'lucide-react'
 import { useSession } from '@/hooks/useSession'
 
 interface TriageButtonProps {
@@ -14,12 +14,49 @@ interface ProgressState {
   link?: string
 }
 
+interface OutlookConnectionStatus {
+  connected: boolean
+  email?: string
+  tokenExpired?: boolean
+  expiresAt?: string
+  needsReconnect?: boolean
+}
+
 export default function TriageButton({ className = "" }: TriageButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [progress, setProgress] = useState<ProgressState | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [outlookStatus, setOutlookStatus] = useState<OutlookConnectionStatus>({ connected: false })
+  const [checkingConnection, setCheckingConnection] = useState(true)
   const { data: session, status } = useSession()
-  const disabled = status !== "authenticated"
+
+  // Check Outlook connection status
+  useEffect(() => {
+    checkOutlookConnection()
+  }, [session])
+
+  const checkOutlookConnection = async () => {
+    setCheckingConnection(true)
+    try {
+      const response = await fetch('/api/outlook/status')
+      const data = await response.json()
+      
+      setOutlookStatus({
+        connected: data.connected || false,
+        email: data.email,
+        tokenExpired: data.tokenExpired || false,
+        expiresAt: data.expiresAt,
+        needsReconnect: data.tokenExpired || data.tokenInvalid || false
+      })
+    } catch (error) {
+      console.error('Error checking Outlook connection:', error)
+      setOutlookStatus({ connected: false })
+    } finally {
+      setCheckingConnection(false)
+    }
+  }
+
+  const disabled = status !== "authenticated" || !outlookStatus.connected || checkingConnection
 
   const triageOptions = [
     { id: 'urgent', label: 'Mark as Urgent', icon: AlertTriangle, color: 'text-red-600', bgColor: 'bg-red-50', borderColor: 'border-red-200' },
@@ -35,6 +72,11 @@ export default function TriageButton({ className = "" }: TriageButtonProps) {
   }
 
   const runAITriage = async () => {
+    if (!outlookStatus.connected) {
+      alert('Please connect your Outlook account first')
+      return
+    }
+
     setIsLoading(true)
     setProgress({ step: "Planning AI triage…" });
     
@@ -89,6 +131,10 @@ export default function TriageButton({ className = "" }: TriageButtonProps) {
     }
   }
 
+  const handleConnectOutlook = () => {
+    window.location.href = '/api/auth/outlook'
+  }
+
   return (
     <>
       {/* Enhanced Main Button */}
@@ -106,15 +152,25 @@ export default function TriageButton({ className = "" }: TriageButtonProps) {
           ${isLoading ? 'animate-pulse' : ''}
           ${className}
         `}
-        title={disabled ? "Connect Outlook to enable AI triage" : "AI Triage Options"}
+        title={
+          status !== "authenticated" 
+            ? "Please log in to use AI triage" 
+            : !outlookStatus.connected 
+            ? "Connect Outlook to enable AI triage" 
+            : "AI Triage Options"
+        }
       >
         {isLoading ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : checkingConnection ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
           <Sparkles className="h-4 w-4" />
         )}
-        <span className="font-medium">AI Triage</span>
-        {!disabled && !isLoading && (
+        <span className="font-medium">
+          {checkingConnection ? 'Checking...' : 'AI Triage'}
+        </span>
+        {outlookStatus.connected && !isLoading && !checkingConnection && (
           <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
         )}
       </button>
@@ -146,6 +202,28 @@ export default function TriageButton({ className = "" }: TriageButtonProps) {
 
             {/* Content */}
             <div className="p-6">
+              {/* Connection Status */}
+              {!outlookStatus.connected && (
+                <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-red-100 rounded-lg">
+                      <AlertTriangle className="h-4 w-4 text-red-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-red-800">Outlook Connection Required</h3>
+                      <p className="text-sm text-red-600">Connect your Outlook account to use AI triage</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleConnectOutlook}
+                    className="w-full flex items-center justify-center gap-2 p-3 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Connect Outlook Account
+                  </button>
+                </div>
+              )}
+
               {/* Manual Triage Options */}
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Quick Actions</h3>
@@ -156,10 +234,11 @@ export default function TriageButton({ className = "" }: TriageButtonProps) {
                       <button
                         key={option.id}
                         onClick={() => handleTriage(option.id)}
+                        disabled={!outlookStatus.connected}
                         className={`
                           flex items-center gap-2 p-3 rounded-lg border transition-all duration-200 
                           hover:shadow-md hover:scale-105 ${option.bgColor} ${option.borderColor}
-                          hover:brightness-95
+                          hover:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed
                         `}
                       >
                         <Icon className={`h-4 w-4 ${option.color}`} />
@@ -171,10 +250,10 @@ export default function TriageButton({ className = "" }: TriageButtonProps) {
               </div>
 
               {/* AI Triage Section */}
-              <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-200">
+              <div className={`rounded-xl p-4 border ${outlookStatus.connected ? 'bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg">
-                    <Bot className="h-4 w-4 text-white" />
+                  <div className={`p-2 rounded-lg ${outlookStatus.connected ? 'bg-gradient-to-r from-blue-500 to-purple-500' : 'bg-gray-300'}`}>
+                    <Bot className={`h-4 w-4 ${outlookStatus.connected ? 'text-white' : 'text-gray-500'}`} />
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900">AI-Powered Triage</h3>
@@ -184,14 +263,15 @@ export default function TriageButton({ className = "" }: TriageButtonProps) {
                 
                 <button
                   onClick={runAITriage}
-                  disabled={disabled || isLoading}
+                  disabled={!outlookStatus.connected || isLoading}
                   className={`
                     w-full flex items-center justify-center gap-3 p-3 
-                    bg-gradient-to-r from-blue-600 to-purple-600 text-white 
+                    ${outlookStatus.connected 
+                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700' 
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }
                     rounded-lg font-medium transition-all duration-200 
-                    hover:from-blue-700 hover:to-purple-700 
-                    disabled:from-gray-300 disabled:to-gray-400 
-                    disabled:cursor-not-allowed shadow-md hover:shadow-lg
+                    shadow-md hover:shadow-lg
                     ${isLoading ? 'animate-pulse' : ''}
                   `}
                 >
@@ -204,7 +284,7 @@ export default function TriageButton({ className = "" }: TriageButtonProps) {
                 </button>
                 
                 <p className="text-xs text-gray-500 text-center mt-2">
-                  {disabled 
+                  {!outlookStatus.connected 
                     ? "🔗 Connect your Outlook account to enable AI triage functionality."
                     : "🤖 AI analyzes emails, applies categories, flags, and creates draft replies. Safe mode - nothing is moved or sent automatically."
                   }
