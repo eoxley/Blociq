@@ -69,7 +69,16 @@ export default function InboxV2() {
 
   useEffect(() => {
     console.log('Messages loaded:', messages.length, 'for folder:', selectedFolderId)
-  }, [messages, selectedFolderId])
+    
+    // Clear selected message if it's no longer in the current message list
+    if (selectedMessage && messages.length > 0) {
+      const messageStillExists = messages.some((msg: any) => msg.id === selectedMessage.id)
+      if (!messageStillExists) {
+        console.log('Selected message no longer exists in current list, clearing selection')
+        setSelectedMessage(null)
+      }
+    }
+  }, [messages, selectedFolderId, selectedMessage])
 
   // Clear success message after 3 seconds
   useEffect(() => {
@@ -235,8 +244,17 @@ export default function InboxV2() {
     if (messageId === null) {
       setSelectedMessage(null)
     } else {
+      // Find message in current messages
       const message = messages.find((msg: any) => msg.id === messageId)
-      setSelectedMessage(message || null)
+      if (message) {
+        setSelectedMessage(message)
+      } else {
+        // If message not found, only clear selection if we don't have a current selection
+        // This prevents the preview from disappearing when messages are filtered
+        if (!selectedMessage || selectedMessage.id !== messageId) {
+          setSelectedMessage(null)
+        }
+      }
     }
   }
 
