@@ -485,7 +485,7 @@ Generate the reply in plain text format (no HTML tags).`
             <button
               onClick={handleGenerateAIReply}
               disabled={isGeneratingAI}
-              className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:from-[#4338ca] hover:to-[#9333ea] text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isGeneratingAI ? (
                 <Loader2 className="h-5 w-5 animate-spin" />

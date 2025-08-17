@@ -356,9 +356,8 @@ function BuildingsList() {
                         </BlocIQButton>
                         <BlocIQButton 
                           asChild
-                          variant="outline"
                           size="sm"
-                          className="w-full border-[#4f46e5] text-[#4f46e5] hover:bg-[#4f46e5] hover:text-white transition-all duration-200 rounded-xl font-semibold text-base"
+                          className="w-full bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:from-[#4338ca] hover:to-[#9333ea] text-white border-0 transition-all duration-200 rounded-xl font-semibold text-base shadow-lg hover:shadow-xl"
                         >
                           <Link href={`/buildings/${building.id}/compliance`}>
                             View Compliance
