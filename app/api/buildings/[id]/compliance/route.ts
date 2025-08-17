@@ -26,12 +26,14 @@ export async function GET(
       .select(`
         id as bca_id,
         compliance_asset_id as asset_id,
-        due_date,
+        next_due_date,
         status,
         notes,
+        last_renewed_date,
+        contractor,
         compliance_assets (
           id,
-          title as asset_name,
+          name as asset_name,
           category,
           description,
           frequency_months
@@ -39,7 +41,7 @@ export async function GET(
       `)
       .eq("building_id", buildingId)
       .order("compliance_assets(category)", { ascending: true })
-      .order("compliance_assets(title)", { ascending: true });
+      .order("compliance_assets(name)", { ascending: true });
 
     if (error) {
       console.error('Error fetching compliance data:', error);
@@ -53,9 +55,12 @@ export async function GET(
       asset_name: row.compliance_assets?.asset_name || "Unknown",
       category: row.compliance_assets?.category || "Unknown",
       frequency_months: row.compliance_assets?.frequency_months,
-      due_date: row.due_date,
+      last_renewed_date: row.last_renewed_date,
+      next_due_date: row.next_due_date,
       status: row.status || "pending",
-      notes: row.notes
+      notes: row.notes,
+      contractor: row.contractor,
+      docs_count: 0 // TODO: Calculate this from compliance_documents table
     }));
 
     return NextResponse.json({ data: transformedData });

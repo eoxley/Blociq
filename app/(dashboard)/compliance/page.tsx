@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import GradientHeader from "@/components/ui/GradientHeader";
+import Link from "next/link";
 
 type CountRow = { building_id:string; building_name:string; total:number; compliant:number; due_soon:number; overdue:number; missing:number };
 type UpcomingRow = { building_id:string; building_name:string; asset_name:string; category:string; bca_id:string; next_due_date:string; status:string };
@@ -27,7 +28,11 @@ export default function CompliancePortfolioPage() {
       {/* Summary grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
         {counts.map(row => (
-          <div key={row.building_id} className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
+          <Link 
+            key={row.building_id} 
+            href={`/buildings/${row.building_id}/compliance`}
+            className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+          >
             <div className="text-sm font-semibold text-neutral-800">{row.building_name}</div>
             <div className="mt-2 grid grid-cols-4 gap-2 text-center">
               <Card label="Total" v={row.total} />
@@ -35,7 +40,7 @@ export default function CompliancePortfolioPage() {
               <Card label="Due soon" v={row.due_soon} tone="text-amber-800" />
               <Card label="Overdue" v={row.overdue} tone="text-red-700" />
             </div>
-          </div>
+          </Link>
         ))}
       </div>
 
