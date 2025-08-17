@@ -138,12 +138,21 @@ export default function CommunicationsPage() {
 
       if (error) {
         console.error('Error loading communication logs:', error)
+        // Don't show error toast for missing table, just set empty array
+        if (error.code === '42703') {
+          console.log('communications_log table may not exist yet, setting empty array')
+          setCommunicationLogs([])
+          return
+        }
+        toast.error('Failed to load communication logs')
         return
       }
 
       setCommunicationLogs(logs || [])
     } catch (error) {
       console.error('Error loading communication logs:', error)
+      // Set empty array on any error to prevent UI issues
+      setCommunicationLogs([])
     }
   }
 
