@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Calendar, Plus, Clock, MapPin, Filter, ExternalLink } from 'lucide-react';
 import CreateEventModal from './CreateEventModal';
-import { formatEventTimeUK } from '@/utils/date';
+import { formatEventTimeUK, formatEventDateUK } from '@/utils/date';
 
 interface BuildingEvent {
   id: string;
@@ -81,29 +81,7 @@ export default function BuildingEvents({ buildingId, buildingName }: BuildingEve
       };
     }
     
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      return {
-        date: 'Invalid Date',
-        time: 'Invalid Time',
-        fullDate: 'Invalid Date'
-      };
-    }
-    
-    return {
-      date: date.toLocaleDateString('en-GB', {
-        weekday: 'short',
-        day: 'numeric',
-        month: 'short'
-      }),
-      time: formatEventTimeUK(dateString),
-      fullDate: date.toLocaleDateString('en-GB', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      })
-    };
+    return formatEventDateUK(dateString);
   };
 
   const getEventTypeEmoji = (eventType: string) => {

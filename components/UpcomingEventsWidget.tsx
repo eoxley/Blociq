@@ -220,19 +220,22 @@ export default function UpcomingEventsWidget() {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return "Invalid Date";
     
-    const today = new Date();
+    // Convert to UK timezone for comparison
+    const ukDate = new Date(date.toLocaleString("en-US", { timeZone: "Europe/London" }));
+    const today = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/London" }));
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     
-    if (date.toDateString() === today.toDateString()) {
+    if (ukDate.toDateString() === today.toDateString()) {
       return "Today";
-    } else if (date.toDateString() === tomorrow.toDateString()) {
+    } else if (ukDate.toDateString() === tomorrow.toDateString()) {
       return "Tomorrow";
     } else {
       return date.toLocaleDateString('en-GB', { 
         weekday: 'short', 
         day: 'numeric', 
-        month: 'short' 
+        month: 'short',
+        timeZone: 'Europe/London'
       });
     }
   };

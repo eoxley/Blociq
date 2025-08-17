@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Calendar, Clock, User, ExternalLink, Filter, Search } from 'lucide-react'
+import { formatEventDateUK, formatToUKTime, formatDateUK } from '@/utils/date'
 
 interface PropertyEvent {
   id: string
@@ -232,11 +233,11 @@ export default function PropertyEvents({ propertyEvents, manualEvents, buildingI
                         <div className="flex items-center gap-2 text-sm">
                           <Clock className="h-4 w-4 text-gray-400" />
                           <div>
-                            <p className="text-gray-600">Date</p>
+                            <p className="text-gray-600">Date & Time</p>
                             <p className="text-gray-900 font-medium">
-                              {new Date(event.start_date).toLocaleDateString()}
+                              {formatToUKTime(event.start_date)}
                               {event.end_date && event.end_date !== event.start_date && (
-                                <span> - {new Date(event.end_date).toLocaleDateString()}</span>
+                                <span> - {formatToUKTime(event.end_date)}</span>
                               )}
                             </p>
                             <p className={`text-xs ${
