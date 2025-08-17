@@ -426,10 +426,78 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="flex justify-center lg:justify-end">
-              <div className="w-64 h-64 bg-gradient-to-br from-[#6A00F5] to-[#8A2BE2] rounded-full flex items-center justify-center shadow-2xl">
-                <div className="text-white text-center">
-                  <div className="text-6xl mb-4">👩‍💼</div>
-                  <p className="text-sm">Founder Headshot Placeholder</p>
+              <div className="w-64 h-64 bg-gradient-to-br from-[#6A00F5] to-[#8A2BE2] rounded-full flex items-center justify-center shadow-2xl overflow-hidden">
+                <Image
+                  src="/assets/ellie-oxley-headshot.jpg"
+                  alt="Ellie Oxley - Founder of BlocIQ"
+                  width={256}
+                  height={256}
+                  className="w-full h-full object-cover rounded-full"
+                  priority
+                />
+              </div>
+            </div>
+          </div>
+          
+          {/* About the Founder Section */}
+          <div className="mt-20">
+            <div className="text-center mb-12">
+              <h3 className="text-3xl font-bold text-gray-900 mb-4">
+                About the Founder
+              </h3>
+              <h4 className="text-xl font-semibold text-[#6A00F5] mb-8">
+                Ellie Oxley — Founder of BlocIQ
+              </h4>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+              <div className="space-y-6 text-lg text-gray-600 leading-relaxed">
+                <p>
+                  Ellie has spent over 10 years working in property management, balancing the non-stop demands of block management with life as a mum of two — and, in her own words, "just a normal overstimulated human."
+                </p>
+                
+                <p>
+                  She has lived the pressures of the job:
+                </p>
+                
+                <ul className="space-y-3 ml-6">
+                  <li className="flex items-start">
+                    <span className="text-[#6A00F5] mr-3 mt-2">•</span>
+                    <span>Inboxes overflowing with urgent requests.</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-[#6A00F5] mr-3 mt-2">•</span>
+                    <span>Constantly changing legislation, from service charge rules to the Building Safety Act.</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-[#6A00F5] mr-3 mt-2">•</span>
+                    <span>Always striving to provide a better service to her clients despite these challenges.</span>
+                  </li>
+                </ul>
+                
+                <p>
+                  Recognising that the industry must embrace change and evolve, Ellie developed a passion for AI technology and software development — realising it could finally provide the support that property managers have always lacked.
+                </p>
+                
+                <blockquote className="bg-gradient-to-r from-purple-50 to-blue-50 border-l-4 border-[#6A00F5] pl-6 py-4 italic text-gray-700">
+                  "I built BlocIQ because I've lived the challenges. Managers deserve better tools — not more spreadsheets. With BlocIQ, we can protect residents, support staff, and finally bring property management into the modern age."
+                </blockquote>
+                
+                <p>
+                  BlocIQ is the result: a platform created by someone still working in the trenches, who understands both the human side of management and the power of technology to transform it.
+                </p>
+              </div>
+              
+              <div className="flex justify-center lg:justify-end">
+                <div className="w-80 h-80 bg-gradient-to-br from-[#6A00F5] to-[#8A2BE2] rounded-full flex items-center justify-center shadow-2xl overflow-hidden">
+                  <Image
+                    src="/assets/ellie-oxley-headshot.jpg"
+                    alt="Ellie Oxley - Founder of BlocIQ"
+                    width={320}
+                    height={320}
+                    className="w-full h-full object-cover rounded-full"
+                    priority
+                  />
                 </div>
               </div>
             </div>
