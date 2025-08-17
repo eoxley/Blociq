@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Brain, X, Mail, Shield, Send, Loader2, Sparkles, Upload, FileText } from 'lucide-react';
+import { Brain, X, Mail, Shield, Send, Loader2, Sparkles, Upload, FileText, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { startPublicChat, logPublicChatMessage, getExistingSession, getExistingEmail } from '@/lib/publicChatClient';
 
@@ -348,7 +348,7 @@ export default function PublicAskBlocIQ() {
         <Brain className="h-8 w-8" />
       </button>
 
-      {/* Initial Guide Popup */}
+      {/* Initial Guide Popup - Enhanced with Description and Disclosure */}
       {showGuidePopup && (
         <>
           <div 
@@ -356,20 +356,67 @@ export default function PublicAskBlocIQ() {
             onClick={handleCloseGuide}
           />
           
-          <div className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 w-auto md:w-[400px] rounded-2xl bg-white shadow-2xl z-[10000] border border-gray-100">
-            <div className="p-6 text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full flex items-center justify-center mx-auto mb-4">
-                <Brain className="h-8 w-8 text-white" />
+          <div className="fixed bottom-24 right-6 w-[380px] rounded-2xl bg-white shadow-2xl z-[10000] border border-gray-100">
+            <div className="p-6">
+              {/* Header */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center">
+                  <Brain className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">Ask BlocIQ</h2>
+                  <p className="text-sm text-gray-600">Your AI Property Assistant</p>
+                </div>
+                <button
+                  onClick={handleCloseGuide}
+                  className="ml-auto p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
-              <h2 className="text-xl font-bold text-gray-900 mb-2">Use BlocIQ Today</h2>
-              <p className="text-gray-600 mb-6">
-                Click the Brain icon in the bottom right corner to start your free trial of Ask BlocIQ.
-              </p>
+              
+              {/* Description */}
+              <div className="mb-4">
+                <p className="text-sm text-gray-700 leading-relaxed">
+                  Ask BlocIQ is your intelligent property management assistant. Get instant answers about compliance, 
+                  maintenance schedules, leaseholder queries, and more. Simply click the brain icon below to start chatting.
+                </p>
+              </div>
+              
+              {/* Features */}
+              <div className="mb-4 space-y-2">
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span>Compliance tracking & alerts</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span>Document analysis & search</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span>Maintenance scheduling</span>
+                </div>
+              </div>
+              
+              {/* Disclosure */}
+              <div className="bg-gray-50 rounded-lg p-3 mb-4 border border-gray-200">
+                <div className="flex items-start gap-2">
+                  <Shield className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
+                  <div className="text-xs text-gray-600">
+                    <p className="font-medium mb-1">Privacy Notice</p>
+                    <p>Your conversations and uploaded documents are used to improve our AI service. 
+                    We do not share your data with third parties.</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Action Button */}
               <button
                 onClick={handleCloseGuide}
-                className="w-full bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:from-[#4338ca] hover:to-[#9333ea] text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white px-4 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
               >
-                Got it
+                Start Using Ask BlocIQ
               </button>
             </div>
           </div>

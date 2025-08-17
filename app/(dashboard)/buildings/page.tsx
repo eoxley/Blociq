@@ -180,7 +180,7 @@ function BuildingsList() {
   return (
     <div>
       {/* Enhanced Hero Banner - BlocIQ Landing Page Style */}
-      <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16">
+      <section className="relative overflow-hidden bg-gradient-to-r from-[#6A00F5] via-[#7A2BE2] to-[#8A2BE2] py-16">
         <div className="max-w-none mx-auto px-6">
           <div className="text-center">
             <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
@@ -237,7 +237,7 @@ function BuildingsList() {
                 alert('Building creation feature coming soon!');
               }}
               size="lg"
-              className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white border-0 shadow-lg hover:shadow-xl hover:brightness-110 transition-all duration-200 rounded-xl"
+              className="bg-gradient-to-r from-pink-500 to-purple-600 text-white border-0 shadow-lg hover:shadow-xl hover:brightness-110 transition-all duration-200 rounded-xl"
             >
               <Plus className="h-6 w-6 mr-2" />
               Create New Building
@@ -265,7 +265,7 @@ function BuildingsList() {
             {filteredBuildings.map((building) => (
               <div 
                 key={building.id}
-                className="relative bg-white rounded-2xl shadow-lg border border-purple-200 hover:shadow-purple-200/50 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 text-center group overflow-hidden"
+                className="relative bg-white rounded-2xl shadow-lg border border-pink-200 hover:shadow-pink-200/50 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 text-center group overflow-hidden"
               >
                 {/* HRB Badge */}
                 {building.is_hrb && (
@@ -278,7 +278,7 @@ function BuildingsList() {
                 )}
                 <div className="p-8">
                   {/* Building Icon */}
-                  <div className="w-20 h-20 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-2xl flex items-center justify-center mb-8 shadow-lg mx-auto group-hover:scale-110 transition-transform duration-300">
+                  <div className="w-20 h-20 bg-gradient-to-r from-pink-500 to-purple-600 rounded-2xl flex items-center justify-center mb-8 shadow-lg mx-auto group-hover:scale-110 transition-transform duration-300">
                     <Building2 className="h-10 w-10 text-white" />
                   </div>
 
@@ -302,7 +302,7 @@ function BuildingsList() {
 
                   {/* Address */}
                   <div className="flex items-start gap-3 mb-6 justify-center">
-                    <MapPin className="h-5 w-5 text-[#4f46e5] mt-0.5 flex-shrink-0" />
+                    <MapPin className="h-5 w-5 text-pink-500 mt-0.5 flex-shrink-0" />
                     <p className="text-gray-600 leading-relaxed text-sm">
                       {building.address}
                     </p>
@@ -310,7 +310,7 @@ function BuildingsList() {
 
                   {/* Unit Count */}
                   <div className="flex items-center gap-3 mb-8 justify-center">
-                    <Users className="h-5 w-5 text-[#4f46e5]" />
+                    <Users className="h-5 w-5 text-pink-500" />
                     <p className="text-sm text-gray-600">
                       {(() => {
                         // Use dynamically calculated unit count from units table
@@ -344,11 +344,7 @@ function BuildingsList() {
                         <BlocIQButton 
                           asChild
                           size="sm"
-                          className={`w-full shadow-lg hover:shadow-xl transition-all duration-200 rounded-xl font-semibold text-base ${
-                            building.name === "Ashwood House" 
-                              ? "border border-purple-500 text-purple-600 bg-white hover:bg-gray-50" 
-                              : "bg-gradient-to-r from-[#4f46e5] to-[#a855f7] border-0 hover:brightness-110 text-white"
-                          }`}
+                          className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white border-0 transition-all duration-200 rounded-xl font-semibold text-base shadow-lg hover:shadow-xl"
                         >
                           <Link href={`/buildings/${building.id}`}>
                             View Details
@@ -357,7 +353,7 @@ function BuildingsList() {
                         <BlocIQButton 
                           asChild
                           size="sm"
-                          className="w-full bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:from-[#4338ca] hover:to-[#9333ea] text-white border-0 transition-all duration-200 rounded-xl font-semibold text-base shadow-lg hover:shadow-xl"
+                          className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white border-0 transition-all duration-200 rounded-xl font-semibold text-base shadow-lg hover:shadow-xl"
                         >
                           <Link href={`/buildings/${building.id}/compliance`}>
                             View Compliance
@@ -387,7 +383,7 @@ function BuildingsList() {
             <BlocIQButton
               onClick={() => setSearchTerm('')}
               size="lg"
-              className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white border-0 shadow-lg hover:shadow-xl hover:brightness-110 transition-all duration-200 rounded-xl"
+              className="bg-gradient-to-r from-pink-500 to-purple-600 text-white border-0 shadow-lg hover:shadow-xl hover:brightness-110 transition-all duration-200 rounded-xl"
             >
               Clear Search
             </BlocIQButton>
@@ -409,7 +405,7 @@ export default function BuildingsPage() {
       <section className="py-20 bg-gradient-to-br from-gray-50 to-gray-100">
         <div className="max-w-4xl mx-auto px-6">
           <div className="bg-white rounded-2xl p-12 shadow-xl border border-gray-100 text-center">
-            <div className="w-20 h-20 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
+            <div className="w-20 h-20 bg-gradient-to-r from-pink-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
               <Plus className="h-10 w-10 text-white" />
             </div>
             <h2 className="text-3xl font-bold text-gray-900 mb-6">
@@ -424,7 +420,7 @@ export default function BuildingsPage() {
                   e.preventDefault();
                   alert('Building creation feature coming soon!');
                 }}
-                className="inline-flex items-center gap-3 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white px-8 py-4 rounded-xl cursor-not-allowed opacity-75 hover:opacity-75 transition-all duration-200 font-semibold text-lg shadow-lg transform"
+                className="inline-flex items-center gap-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white px-8 py-4 rounded-xl cursor-not-allowed opacity-75 hover:opacity-75 transition-all duration-200 font-semibold text-lg shadow-lg transform"
               >
                 <Plus className="h-6 w-6" />
                 Add New Building

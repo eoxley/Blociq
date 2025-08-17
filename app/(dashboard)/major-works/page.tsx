@@ -98,7 +98,6 @@ export default function MajorWorksPage() {
   const totalProjects = rows.length;
   const activeProjects = rows.filter(p => p.stage !== 'complete' && p.stage !== 'cancelled').length;
   const s20Projects = rows.filter(p => p.s20_required).length;
-  const totalBudget = rows.reduce((sum, p) => sum + (p.budget_estimate || 0), 0);
 
   // Filter projects
   const filteredProjects = rows.filter(project => {
@@ -194,7 +193,7 @@ export default function MajorWorksPage() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 rounded-lg">
@@ -227,18 +226,6 @@ export default function MajorWorksPage() {
             <div>
               <p className="text-sm text-gray-600">Section 20 Projects</p>
               <p className="text-2xl font-bold text-purple-600">{s20Projects}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <DollarSign className="h-5 w-5 text-orange-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Total Budget</p>
-              <p className="text-2xl font-bold text-orange-600">£{totalBudget.toLocaleString()}</p>
             </div>
           </div>
         </div>
@@ -399,11 +386,13 @@ export default function MajorWorksPage() {
       </div>
 
       {openNew && (
-        <NewProjectModal 
-          onClose={() => setOpenNew(false)} 
-          onCreate={() => { setOpenNew(false); load(); }}
-          buildings={buildings}
-        />
+        <div className="fixed inset-0 z-50">
+          <NewProjectModal 
+            onClose={() => setOpenNew(false)} 
+            onCreate={() => { setOpenNew(false); load(); }}
+            buildings={buildings}
+          />
+        </div>
       )}
     </div>
   );

@@ -146,6 +146,8 @@ export default function SetupComplianceModalV2({
     setErr(null);
     
     try {
+      console.log("Saving compliance assets:", { buildingId, newlyChosen });
+      
       // 1) Add building assets
       const addResponse = await fetch(`/api/buildings/${buildingId}/compliance/bulk-add`, {
         method: "POST",
@@ -154,6 +156,7 @@ export default function SetupComplianceModalV2({
       });
       
       const add = await addResponse.json();
+      console.log("Bulk add response:", add);
       if (add.error) throw new Error(add.error);
 
       // 2) Map compliance_asset_id -> bca_id

@@ -20,17 +20,23 @@ export default function BuildingCompliancePage({ params }: { params: { id: strin
 
   async function refresh() {
     try {
+      console.log("Refreshing compliance data for building:", buildingId);
+      
       // Fetch building details
       const buildingResponse = await fetch(`/api/buildings/${buildingId}`, { cache: "no-store" });
       if (buildingResponse.ok) {
         const buildingData = await buildingResponse.json();
         setBuilding(buildingData.building);
+        console.log("Building data:", buildingData.building);
       }
 
       // Fetch compliance data
       const complianceResponse = await fetch(`/api/buildings/${buildingId}/compliance`, { cache: "no-store" });
       const complianceData = await complianceResponse.json();
+      console.log("Compliance data:", complianceData);
+      
       const any = (complianceData.data || []).length > 0;
+      console.log("Has rows:", any, "Data length:", complianceData.data?.length);
       setHasRows(any);
       if (any) setMode("tracking");
     } catch (error) {
