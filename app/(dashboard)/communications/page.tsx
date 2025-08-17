@@ -30,6 +30,7 @@ import {
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabaseClient'
 import AIGenerateModal from '@/components/communications/AIGenerateModal'
+import BatchGroupModal from '@/components/communications/BatchGroupModal'
 
 interface Building {
   id: string
@@ -78,6 +79,7 @@ export default function CommunicationsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [showAIModal, setShowAIModal] = useState(false)
+  const [showBatchGroupModal, setShowBatchGroupModal] = useState(false)
 
   // Message composer state
   const [selectedBuilding, setSelectedBuilding] = useState<string>('')
@@ -245,10 +247,27 @@ export default function CommunicationsPage() {
     return 0
   }
 
+  const getRecipientCountForAI = () => {
+    if (selectedLeaseholder) return 1
+    if (selectedUnit) return leaseholders.length
+    if (selectedBuilding) {
+      // For AI generation, we can estimate based on building selection
+      return leaseholders.length || 1 // Default to 1 if no specific count available
+    }
+    return 1 // Default to 1 for AI generation even if no recipients selected
+  }
+
   const handleAIGenerate = (generatedSubject: string, generatedContent: string) => {
     setSubject(generatedSubject)
     setContent(generatedContent)
     toast.success('AI-generated content applied to your message!')
+  }
+
+  const handleBatchGroupCreated = (groupName: string, recipients: any[]) => {
+    // For now, we'll just show a success message
+    // In a real implementation, you might want to save this group for future use
+    toast.success(`Created group "${groupName}" with ${recipients.length} members`)
+    console.log('Created batch group:', { groupName, recipients })
   }
 
   const handleSendMessage = async () => {
@@ -328,7 +347,7 @@ export default function CommunicationsPage() {
                 content,
                 sent_at: new Date().toISOString(),
                 sent_by: user.id,
-                building_name: recipient.unit?.buildings?.name || 'Unknown',
+                building_name: recipient.unit?.building?.name || 'Unknown',
                 leaseholder_name: recipient.name,
                 unit_number: recipient.unit?.unit_number || 'Unknown'
               })
@@ -352,7 +371,7 @@ export default function CommunicationsPage() {
                 content,
                 sent_at: new Date().toISOString(),
                 sent_by: user.id,
-                building_name: recipient.unit?.buildings?.name || 'Unknown',
+                building_name: recipient.unit?.building?.name || 'Unknown',
                 leaseholder_name: recipient.name,
                 unit_number: recipient.unit?.unit_number || 'Unknown'
               })
@@ -641,14 +660,23 @@ export default function CommunicationsPage() {
                     </div>
                   )}
 
-                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-blue-600" />
-                      <p className="text-sm text-blue-700">
-                        <strong>Recipients:</strong> {getRecipientCount()} {getRecipientCount() === 1 ? 'person' : 'people'}
-                      </p>
-                    </div>
-                  </div>
+                                     <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                     <div className="flex items-center gap-2">
+                       <Users className="h-4 w-4 text-blue-600" />
+                       <p className="text-sm text-blue-700">
+                         <strong>Recipients:</strong> {getRecipientCount()} {getRecipientCount() === 1 ? 'person' : 'people'}
+                       </p>
+                     </div>
+                   </div>
+
+                   {/* Create Batch Group Button */}
+                   <button
+                     onClick={() => setShowBatchGroupModal(true)}
+                     className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-3 px-6 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2"
+                   >
+                     <Users className="h-5 w-5" />
+                     Create Batch Group with AI
+                   </button>
                 </div>
               </div>
             </div>
@@ -696,8 +724,7 @@ export default function CommunicationsPage() {
                   {/* AI Generate Button */}
                   <button
                     onClick={() => setShowAIModal(true)}
-                    disabled={getRecipientCount() === 0}
-                    className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white py-3 px-6 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white py-3 px-6 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2"
                   >
                     <Brain className="h-5 w-5" />
                     Generate with AI
@@ -890,7 +917,15 @@ export default function CommunicationsPage() {
         onClose={() => setShowAIModal(false)}
         onGenerate={handleAIGenerate}
         messageType={messageType}
-        recipientCount={getRecipientCount()}
+        recipientCount={getRecipientCountForAI()}
+      />
+
+      {/* Batch Group Modal */}
+      <BatchGroupModal
+        open={showBatchGroupModal}
+        onClose={() => setShowBatchGroupModal(false)}
+        onGroupCreated={handleBatchGroupCreated}
+        buildings={buildings}
       />
     </div>
   )
