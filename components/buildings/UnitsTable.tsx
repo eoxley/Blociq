@@ -277,20 +277,16 @@ export default function UnitsTable({ buildingId }: { buildingId: string }) {
                  }`}
                  onClick={() => handleUnitClick(r)}
                >
-                <td className="px-4 py-2 font-medium">{displayUnit(r.unit_label, r.unit_number)}</td>
+                                 <td className="px-4 py-2 font-medium">{r.unit_number || '—'}</td>
                 <td className="px-4 py-2">{safe(r.leaseholder_name)}</td>
                 <td className="px-4 py-2">{safe(r.leaseholder_email)}</td>
                 <td className="px-4 py-2">{fmtPct(r.apportionment_percent)}</td>
-                                 <td className="px-4 py-2">
-                   <div className="flex flex-wrap gap-1.5">
-                     {r.is_director && <TagChip label={r.director_role || "Director"} />}
-                     {r.leaseholder_name && r.leaseholder_name.includes('John') && <TagChip label="Chairman" />}
-                     {r.leaseholder_name && r.leaseholder_name.includes('Sarah') && <TagChip label="Secretary" />}
-                     {r.leaseholder_name && r.leaseholder_name.includes('Michael') && <TagChip label="Treasurer" />}
-                     {r.leaseholder_name && r.leaseholder_name.includes('Emma') && <TagChip label="Committee Member" />}
-                     {r.leaseholder_name && r.leaseholder_name.includes('David') && <TagChip label="Vice Chair" />}
-                   </div>
-                 </td>
+                                                   <td className="px-4 py-2">
+                    <div className="flex flex-wrap gap-1.5">
+                      {r.is_director && r.director_role && <TagChip label={r.director_role} />}
+                      {r.is_director && !r.director_role && <TagChip label="Director" />}
+                    </div>
+                  </td>
                                  <td className="px-4 py-2">
                    <button 
                      className="text-blue-600 hover:underline"
@@ -321,9 +317,9 @@ export default function UnitsTable({ buildingId }: { buildingId: string }) {
            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="sticky top-0 bg-white border-b border-neutral-200 px-6 py-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-neutral-800">
-                  {displayUnit(selectedUnit.unit_label, selectedUnit.unit_number)} - Unit Details
-                </h3>
+                                 <h3 className="text-lg font-semibold text-neutral-800">
+                   {selectedUnit.unit_number || 'Unit'} - Unit Details
+                 </h3>
                 <button
                   onClick={closeUnitDetails}
                   className="text-neutral-400 hover:text-neutral-600 p-1"
@@ -356,7 +352,7 @@ export default function UnitsTable({ buildingId }: { buildingId: string }) {
                          className="w-full mt-1 px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4f46e5] text-sm"
                        />
                      ) : (
-                       <div className="font-medium">{displayUnit(selectedUnit.unit_label, selectedUnit.unit_number)}</div>
+                       <div className="font-medium">{selectedUnit.unit_number || '—'}</div>
                      )}
                    </div>
                    <div>
@@ -579,7 +575,7 @@ export default function UnitsTable({ buildingId }: { buildingId: string }) {
             <div className="px-6 py-4 border-b border-neutral-200">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-neutral-800">
-                  Log Call - {displayUnit(selectedUnit.unit_label, selectedUnit.unit_number)}
+                                     Log Call - {selectedUnit.unit_number || 'Unit'}
                 </h3>
                 <button
                   onClick={() => setShowLogCall(false)}
@@ -687,7 +683,7 @@ export default function UnitsTable({ buildingId }: { buildingId: string }) {
              <div className="px-6 py-4 border-b border-neutral-200">
                <div className="flex items-center justify-between">
                  <h3 className="text-lg font-semibold text-neutral-800">
-                   Compose Email - {displayUnit(selectedUnit.unit_label, selectedUnit.unit_number)}
+                                        Compose Email - {selectedUnit.unit_number || 'Unit'}
                  </h3>
                  <button
                    onClick={() => setShowEmailCompose(false)}
@@ -766,7 +762,7 @@ export default function UnitsTable({ buildingId }: { buildingId: string }) {
               <div className="px-6 py-4 border-b border-neutral-200">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-neutral-800">
-                    Documents & Correspondence - {displayUnit(selectedUnit.unit_label, selectedUnit.unit_number)}
+                                         Documents & Correspondence - {selectedUnit.unit_number || 'Unit'}
                   </h3>
                   <button
                     onClick={() => setShowDocuments(false)}
