@@ -40,18 +40,18 @@ export async function POST(req: Request) {
         // 1) Patch categories/flag
         await patchMessage(token, r.message_id, patchForCategory(r.category, r.due_date));
 
-                         // 2) Create reply draft text (keep simple for now)
-                 let polite = `Replying to your email regarding "${r.reason}".\n\nThank you for your message. We'll review and update you shortly.\n\nKind regards`;
-                 
-                 // Check if this is a document request
-                 const wantDoc = detectDocRequest(m.bodyPreview || "");
-                 if (wantDoc) {
-                   // For now, we'll just add a note about the document request
-                   // In a full implementation, you'd resolve the building context and get the actual document
-                   polite += `\n\nNote: This appears to be a request for a ${wantDoc.doc_type.replace(/_/g, " ")}. Please check if we have the latest version available.`;
-                 }
-                 
-                 const draft = await createReplyDraft(token, r.message_id, polite);
+        // 2) Create reply draft text (keep simple for now)
+        let polite = `Replying to your email regarding "${r.reason}".\n\nThank you for your message. We'll review and update you shortly.\n\nKind regards`;
+        
+        // Check if this is a document request - use the reason field which contains the email preview
+        const wantDoc = detectDocRequest(r.reason || "");
+        if (wantDoc) {
+          // For now, we'll just add a note about the document request
+          // In a full implementation, you'd resolve the building context and get the actual document
+          polite += `\n\nNote: This appears to be a request for a ${wantDoc.doc_type.replace(/_/g, " ")}. Please check if we have the latest version available.`;
+        }
+        
+        const draft = await createReplyDraft(token, r.message_id, polite);
 
         await supabaseAdmin.from("ai_triage_actions")
           .update({ applied: true, draft_id: draft.id, draft_weblink: draft.webLink })
@@ -60,6 +60,7 @@ export async function POST(req: Request) {
         ok++;
       } catch (e: any) {
         fail++;
+        console.error(`Failed to apply triage for message ${r.message_id}:`, e);
         await supabaseAdmin.from("ai_triage_actions").update({ error: e?.message || "apply failed" }).eq("id", r.id);
       }
     }
@@ -70,6 +71,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ applied: ok, failed: fail });
   } catch (e: any) {
+    console.error("Triage apply error:", e);
     return NextResponse.json({ error: e.message || "Failed to apply triage" }, { status: 500 });
   }
 }
