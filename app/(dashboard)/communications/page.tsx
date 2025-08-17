@@ -18,10 +18,18 @@ import {
   Plus,
   Filter,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Brain,
+  Sparkles,
+  MessageSquare,
+  BarChart3,
+  TrendingUp,
+  Activity,
+  Bell
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabaseClient'
+import AIGenerateModal from '@/components/communications/AIGenerateModal'
 
 interface Building {
   id: string
@@ -69,6 +77,7 @@ export default function CommunicationsPage() {
   const [isSending, setIsSending] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [showAIModal, setShowAIModal] = useState(false)
 
   // Message composer state
   const [selectedBuilding, setSelectedBuilding] = useState<string>('')
@@ -225,6 +234,12 @@ export default function CommunicationsPage() {
       return leaseholders.length
     }
     return 0
+  }
+
+  const handleAIGenerate = (generatedSubject: string, generatedContent: string) => {
+    setSubject(generatedSubject)
+    setContent(generatedContent)
+    toast.success('AI-generated content applied to your message!')
   }
 
   const handleSendMessage = async () => {
@@ -410,191 +425,341 @@ export default function CommunicationsPage() {
     }
   }
 
-  return (
-    <div className="max-w-7xl mx-auto p-6 space-y-8">
-      {/* Hero Banner */}
-      <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16 mb-8 rounded-2xl shadow-xl">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center">
-            <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl">
-              <Mail className="h-10 w-10 text-white" />
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Communications</h1>
-            <p className="text-lg text-white/90 max-w-2xl mx-auto">
-              Send email or letters to buildings, leaseholders, or your whole portfolio
-            </p>
+  // Calculate statistics
+  const totalCommunications = communicationLogs.length
+  const emailCount = communicationLogs.filter(log => log.type === 'email').length
+  const letterCount = communicationLogs.filter(log => log.type === 'letter').length
+  const recentCommunications = communicationLogs.filter(log => {
+    const logDate = new Date(log.sent_at)
+    const weekAgo = new Date()
+    weekAgo.setDate(weekAgo.getDate() - 7)
+    return logDate > weekAgo
+  }).length
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+        <div className="animate-pulse">
+          <div className="h-48 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl mb-6"></div>
+          <div className="space-y-4">
+            <div className="h-8 bg-gray-200 rounded-lg w-1/3"></div>
+            <div className="h-64 bg-white rounded-xl border border-gray-200"></div>
           </div>
         </div>
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-          <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-10 right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-        </div>
-      </section>
-
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-gray-800">Message Composer</h2>
-        <p className="text-gray-600 mt-2">Send email or letters to buildings, leaseholders, or your whole portfolio.</p>
       </div>
+    );
+  }
 
-      {/* Message Composer */}
-      <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6">
-        <h3 className="text-xl font-semibold text-gray-800 mb-6">Message Composer</h3>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      {/* Main Hero Banner */}
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 mb-8 shadow-2xl">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20"></div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Target Selection */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-700">Select Target</h3>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Send to:
-              </label>
-              <select
-                value={selectedBuilding}
-                onChange={(e) => handleBuildingChange(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
-              >
-                <option value="">Select Building</option>
-                {buildings.map(building => (
-                  <option key={building.id} value={building.id}>
-                    {building.name}
-                  </option>
-                ))}
-              </select>
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-0 w-32 h-32 bg-white rounded-full -translate-x-16 -translate-y-16"></div>
+          <div className="absolute top-1/2 right-0 w-24 h-24 bg-white rounded-full translate-x-12 -translate-y-12"></div>
+          <div className="absolute bottom-0 left-1/3 w-20 h-20 bg-white rounded-full translate-y-10"></div>
+        </div>
+
+        <div className="relative px-8 py-12">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+              <MessageSquare className="h-8 w-8 text-white" />
             </div>
-
-            {selectedBuilding && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Unit (Optional):
-                </label>
-                <select
-                  value={selectedUnit}
-                  onChange={(e) => handleUnitChange(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
-                >
-                  <option value="">All Units</option>
-                  {units.map(unit => (
-                    <option key={unit.id} value={unit.id}>
-                      {unit.unit_number}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {selectedUnit && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Leaseholder (Optional):
-                </label>
-                <select
-                  value={selectedLeaseholder}
-                  onChange={(e) => setSelectedLeaseholder(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
-                >
-                  <option value="">All Leaseholders</option>
-                  {leaseholders.map(leaseholder => (
-                    <option key={leaseholder.id} value={leaseholder.id}>
-                      {leaseholder.name} ({leaseholder.email})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <div className="bg-blue-50 p-3 rounded-lg">
-              <p className="text-sm text-blue-700">
-                <strong>Recipients:</strong> {getRecipientCount()} {getRecipientCount() === 1 ? 'person' : 'people'}
+            <div>
+              <h1 className="text-3xl font-bold text-white mb-2">
+                Communications Hub
+              </h1>
+              <p className="text-blue-100 text-lg">
+                Send emails and letters to buildings, leaseholders, or your whole portfolio
               </p>
             </div>
           </div>
-
-          {/* Message Type and Content */}
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Choose Type:
-              </label>
-              <div className="flex gap-4">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    value="email"
-                    checked={messageType === 'email'}
-                    onChange={(e) => setMessageType(e.target.value as 'email' | 'letter')}
-                    className="mr-2"
-                  />
-                  <Mail className="h-4 w-4 mr-1" />
-                  Email
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    value="letter"
-                    checked={messageType === 'letter'}
-                    onChange={(e) => setMessageType(e.target.value as 'email' | 'letter')}
-                    className="mr-2"
-                  />
-                  <FileText className="h-4 w-4 mr-1" />
-                  Letter
-                </label>
-              </div>
+          
+          <div className="flex flex-wrap gap-4 mt-6">
+            <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2">
+              <Mail className="h-5 w-5 text-blue-300" />
+              <span className="text-white font-medium">Email Management</span>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Subject:
-              </label>
-              <input
-                type="text"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="Enter subject..."
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
-              />
+            <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2">
+              <FileText className="h-5 w-5 text-purple-300" />
+              <span className="text-white font-medium">Letter Generation</span>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Message:
-              </label>
-              <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                rows={6}
-                placeholder="Enter your message..."
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
-              />
+            <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2">
+              <Brain className="h-5 w-5 text-orange-300" />
+              <span className="text-white font-medium">AI Assistance</span>
             </div>
-
-            <button
-              onClick={handleSendMessage}
-              disabled={isSending || getRecipientCount() === 0}
-              className="w-full bg-[#4f46e5] text-white py-3 px-6 rounded-lg hover:bg-[#4338ca] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {isSending ? (
-                <>
-                  <Clock className="h-4 w-4 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4" />
-                  Send {messageType.charAt(0).toUpperCase() + messageType.slice(1)}
-                </>
-              )}
-            </button>
           </div>
         </div>
       </div>
 
-      {/* Communication Log */}
-      <div className="bg-white rounded-xl shadow-md border border-gray-100">
-        <div className="p-6 border-b border-gray-200">
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <MessageSquare className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Total Communications</p>
+              <p className="text-2xl font-bold text-gray-900">{totalCommunications}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <Mail className="h-5 w-5 text-green-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Emails Sent</p>
+              <p className="text-2xl font-bold text-green-600">{emailCount}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <FileText className="h-5 w-5 text-purple-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Letters Generated</p>
+              <p className="text-2xl font-bold text-purple-600">{letterCount}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-orange-100 rounded-lg">
+              <Activity className="h-5 w-5 text-orange-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">This Week</p>
+              <p className="text-2xl font-bold text-orange-600">{recentCommunications}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Message Composer Section */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-8 overflow-hidden">
+        <div className="bg-gradient-to-r from-gray-50 to-blue-50 px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
-            <h3 className="text-xl font-semibold text-gray-800">Communication Log</h3>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Send className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800">Message Composer</h2>
+                <p className="text-sm text-gray-600">Create and send communications to your portfolio</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Target Selection */}
+            <div className="space-y-6">
+              <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg p-4">
+                <h3 className="text-md font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <Building className="h-4 w-4 text-blue-600" />
+                  Select Target
+                </h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Send to:
+                    </label>
+                    <select
+                      value={selectedBuilding}
+                      onChange={(e) => handleBuildingChange(e.target.value)}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                    >
+                      <option value="">Select Building</option>
+                      {buildings.map(building => (
+                        <option key={building.id} value={building.id}>
+                          {building.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {selectedBuilding && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Unit (Optional):
+                      </label>
+                      <select
+                        value={selectedUnit}
+                        onChange={(e) => handleUnitChange(e.target.value)}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                      >
+                        <option value="">All Units</option>
+                        {units.map(unit => (
+                          <option key={unit.id} value={unit.id}>
+                            {unit.unit_number}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {selectedUnit && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Leaseholder (Optional):
+                      </label>
+                      <select
+                        value={selectedLeaseholder}
+                        onChange={(e) => setSelectedLeaseholder(e.target.value)}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                      >
+                        <option value="">All Leaseholders</option>
+                        {leaseholders.map(leaseholder => (
+                          <option key={leaseholder.id} value={leaseholder.id}>
+                            {leaseholder.name} ({leaseholder.email})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-blue-600" />
+                      <p className="text-sm text-blue-700">
+                        <strong>Recipients:</strong> {getRecipientCount()} {getRecipientCount() === 1 ? 'person' : 'people'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Message Content */}
+            <div className="space-y-6">
+              <div className="bg-gradient-to-r from-gray-50 to-purple-50 rounded-lg p-4">
+                <h3 className="text-md font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-purple-600" />
+                  Message Content
+                </h3>
+                
+                <div className="space-y-4">
+                  {/* Message Type Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      Choose Type:
+                    </label>
+                    <div className="flex gap-4">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          value="email"
+                          checked={messageType === 'email'}
+                          onChange={(e) => setMessageType(e.target.value as 'email' | 'letter')}
+                          className="mr-2"
+                        />
+                        <Mail className="h-4 w-4 mr-1 text-blue-600" />
+                        Email
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          value="letter"
+                          checked={messageType === 'letter'}
+                          onChange={(e) => setMessageType(e.target.value as 'email' | 'letter')}
+                          className="mr-2"
+                        />
+                        <FileText className="h-4 w-4 mr-1 text-purple-600" />
+                        Letter
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* AI Generate Button */}
+                  <button
+                    onClick={() => setShowAIModal(true)}
+                    disabled={getRecipientCount() === 0}
+                    className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white py-3 px-6 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    <Brain className="h-5 w-5" />
+                    Generate with AI
+                  </button>
+
+                  {/* Subject */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Subject:
+                    </label>
+                    <input
+                      type="text"
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                      placeholder="Enter subject..."
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
+                    />
+                  </div>
+
+                  {/* Message */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Message:
+                    </label>
+                    <textarea
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      rows={6}
+                      placeholder="Enter your message..."
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white resize-none"
+                    />
+                  </div>
+
+                  {/* Send Button */}
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={isSending || getRecipientCount() === 0}
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 px-6 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isSending ? (
+                      <>
+                        <Clock className="h-5 w-5 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-5 w-5" />
+                        Send {messageType.charAt(0).toUpperCase() + messageType.slice(1)}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Communication Log Section */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="bg-gradient-to-r from-gray-50 to-green-50 px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <BarChart3 className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800">Communication Log</h2>
+                <p className="text-sm text-gray-600">Track all your sent communications</p>
+              </div>
+            </div>
             <button
               onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
               className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800"
@@ -607,7 +772,7 @@ export default function CommunicationsPage() {
         </div>
 
         <div className="p-6">
-          {/* Search and Filters */}
+          {/* Search */}
           <div className="mb-6">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -616,7 +781,7 @@ export default function CommunicationsPage() {
                 placeholder="Search communications..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
           </div>
@@ -645,7 +810,7 @@ export default function CommunicationsPage() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-gray-50">
+                  <tr key={log.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(log.type)}`}>
                         {getTypeIcon(log.type)}
@@ -702,13 +867,22 @@ export default function CommunicationsPage() {
 
           {filteredLogs.length === 0 && (
             <div className="text-center py-12">
-              <Mail className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <MessageSquare className="mx-auto h-12 w-12 text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No communications found</h3>
               <p className="text-gray-500">Start sending messages to see them appear here.</p>
             </div>
           )}
         </div>
       </div>
+
+      {/* AI Modal */}
+      <AIGenerateModal
+        open={showAIModal}
+        onClose={() => setShowAIModal(false)}
+        onGenerate={handleAIGenerate}
+        messageType={messageType}
+        recipientCount={getRecipientCount()}
+      />
     </div>
   )
 } 
