@@ -1,3 +1,15 @@
+-- Ensure users table exists before adding profile fields
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email VARCHAR(255) UNIQUE NOT NULL,
+  full_name VARCHAR(255),
+  role VARCHAR(50) DEFAULT 'user',
+  agency_id UUID,
+  building_id UUID,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Add profile fields to users table
 ALTER TABLE users 
 ADD COLUMN IF NOT EXISTS first_name VARCHAR(255),
