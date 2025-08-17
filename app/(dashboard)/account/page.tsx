@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import LayoutWithSidebar from '@/components/LayoutWithSidebar';
-import PageHero from '@/components/PageHero';
-import { Settings, User, Briefcase, Mail, FileText, Upload, X, Save, Loader2 } from 'lucide-react';
+import { Settings, User, Briefcase, Mail, FileText, Upload, X, Save, Loader2, Image, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -32,6 +31,7 @@ export default function AccountPage() {
   const [signatureMode, setSignatureMode] = useState<'typed' | 'upload'>('typed');
   const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   // Load user profile on component mount
   useEffect(() => {
@@ -124,6 +124,20 @@ export default function AccountPage() {
 
   const handleSignatureUpload = async (file: File) => {
     try {
+      setUploading(true);
+      
+      // Validate file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('File size must be less than 5MB');
+        return;
+      }
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please upload an image file');
+        return;
+      }
+
       // Upload to Supabase Storage
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}.${fileExt}`;
@@ -147,6 +161,8 @@ export default function AccountPage() {
     } catch (error) {
       console.error('Error uploading signature:', error);
       toast.error('Failed to upload signature');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -167,30 +183,24 @@ export default function AccountPage() {
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       const file = files[0];
-      if (file.type.startsWith('image/')) {
-        handleSignatureUpload(file);
-      } else {
-        toast.error('Please upload an image file');
-      }
+      handleSignatureUpload(file);
     }
   };
 
   const removeSignature = () => {
     setProfile(prev => prev ? { ...prev, signature_url: null } : null);
     setSignaturePreview(null);
+    toast.success('Signature removed');
   };
 
   if (loading) {
     return (
       <LayoutWithSidebar>
-        <div className="space-y-8">
-          <PageHero
-            title="Account Settings"
-            subtitle="Manage your account preferences and settings"
-            icon={<Settings className="h-8 w-8 text-white" />}
-          />
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+        <div className="p-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+            </div>
           </div>
         </div>
       </LayoutWithSidebar>
@@ -199,15 +209,21 @@ export default function AccountPage() {
 
   return (
     <LayoutWithSidebar>
-      <div className="space-y-8">
-        {/* Hero Banner */}
-        <PageHero
-          title="Account Settings"
-          subtitle="Manage your account preferences and settings"
-          icon={<Settings className="h-8 w-8 text-white" />}
-        />
-
+      <div className="p-8">
         <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-12 h-12 bg-gradient-to-br from-[#6A00F5] to-[#8A2BE2] rounded-xl flex items-center justify-center">
+                <Settings className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Account Settings</h1>
+                <p className="text-gray-600">Manage your account preferences and settings</p>
+              </div>
+            </div>
+          </div>
+
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-2xl">
@@ -279,11 +295,11 @@ export default function AccountPage() {
 
               {/* Signature Section */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">Signature</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Email Signature</h3>
                 <Tabs value={signatureMode} onValueChange={(value) => setSignatureMode(value as 'typed' | 'upload')}>
                   <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="typed">Typed Signature</TabsTrigger>
-                    <TabsTrigger value="upload">Upload Image</TabsTrigger>
+                    <TabsTrigger value="typed">Text Signature</TabsTrigger>
+                    <TabsTrigger value="upload">Image Signature</TabsTrigger>
                   </TabsList>
                   
                   <TabsContent value="typed" className="space-y-4">
@@ -312,55 +328,71 @@ export default function AccountPage() {
                   
                   <TabsContent value="upload" className="space-y-4">
                     <div
-                      className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                      className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
                         dragOver ? 'border-[#6A00F5] bg-purple-50' : 'border-gray-300 hover:border-gray-400'
                       }`}
                       onDragOver={handleDragOver}
                       onDragLeave={handleDragLeave}
                       onDrop={handleDrop}
                     >
-                      <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-                      <p className="text-sm text-gray-600 mb-2">
-                        Drag and drop an image here, or{' '}
-                        <button
-                          type="button"
-                          onClick={() => document.getElementById('signatureUpload')?.click()}
-                          className="font-medium text-[#6A00F5] hover:text-[#5A00E5]"
-                        >
-                          browse
-                        </button>
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Supports JPG, PNG, GIF (max 5MB)
-                      </p>
-                      <input
-                        id="signatureUpload"
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleSignatureUpload(file);
-                        }}
-                        className="hidden"
-                      />
+                      {uploading ? (
+                        <div className="space-y-4">
+                          <Loader2 className="mx-auto h-8 w-8 animate-spin text-[#6A00F5]" />
+                          <p className="text-sm text-gray-600">Uploading signature...</p>
+                        </div>
+                      ) : (
+                        <>
+                          <Image className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                          <p className="text-lg font-medium text-gray-900 mb-2">
+                            Upload your signature image
+                          </p>
+                          <p className="text-sm text-gray-600 mb-4">
+                            Drag and drop an image here, or{' '}
+                            <button
+                              type="button"
+                              onClick={() => document.getElementById('signatureUpload')?.click()}
+                              className="font-medium text-[#6A00F5] hover:text-[#5A00E5] underline"
+                            >
+                              browse files
+                            </button>
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Supports JPG, PNG, GIF • Max 5MB • Recommended: transparent background
+                          </p>
+                          <input
+                            id="signatureUpload"
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleSignatureUpload(file);
+                            }}
+                            className="hidden"
+                          />
+                        </>
+                      )}
                     </div>
                     
                     {signaturePreview && profile?.signature_url && (
-                      <div className="space-y-2">
-                        <Label className="text-sm text-gray-600">Preview:</Label>
-                        <div className="relative inline-block">
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium text-gray-700">Current Signature:</Label>
+                        <div className="relative inline-block p-4 bg-gray-50 rounded-lg">
                           <img
                             src={profile.signature_url}
                             alt="Signature preview"
-                            className="max-h-20 max-w-full rounded border"
+                            className="max-h-24 max-w-full rounded"
                           />
                           <button
                             onClick={removeSignature}
-                            className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                            className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                            title="Remove signature"
                           >
-                            <X className="h-3 w-3" />
+                            <Trash2 className="h-3 w-3" />
                           </button>
                         </div>
+                        <p className="text-xs text-gray-500">
+                          Your signature image will be automatically included in emails
+                        </p>
                       </div>
                     )}
                   </TabsContent>
@@ -369,34 +401,42 @@ export default function AccountPage() {
 
               <Separator />
 
-              {/* Email Signature */}
+              {/* Email Signature Template */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">Email Signature</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Email Signature Template</h3>
                 <div className="space-y-2">
                   <Label htmlFor="emailSignature" className="flex items-center gap-2">
                     <FileText className="h-4 w-4" />
-                    Email Signature
+                    Email Signature Template
                   </Label>
                   <Textarea
                     id="emailSignature"
                     value={profile?.email_signature || ''}
                     onChange={(e) => setProfile(prev => prev ? { ...prev, email_signature: e.target.value } : null)}
-                    placeholder="Enter your email signature (supports basic HTML like <b>bold</b>, <i>italic</i>, <a href='...'>links</a>)"
-                    rows={6}
+                    placeholder={`Best regards,
+
+${profile?.first_name || '[Your Name]'} ${profile?.last_name || ''}
+${profile?.job_title || '[Your Job Title]'}
+[Company Name]
+[Phone Number]
+[Website]`}
+                    rows={8}
                     className="font-mono text-sm"
                   />
-                  <p className="text-xs text-gray-500">
-                    You can use basic HTML tags for formatting: &lt;b&gt;bold&lt;/b&gt;, &lt;i&gt;italic&lt;/i&gt;, &lt;a href="..."&gt;link&lt;/a&gt;
-                  </p>
+                  <div className="text-xs text-gray-500 space-y-1">
+                    <p>You can use basic HTML tags for formatting:</p>
+                    <p>• <code>&lt;b&gt;bold&lt;/b&gt;</code> • <code>&lt;i&gt;italic&lt;/i&gt;</code> • <code>&lt;a href="..."&gt;link&lt;/a&gt;</code></p>
+                    <p>• Your signature image will be automatically included if uploaded</p>
+                  </div>
                 </div>
               </div>
 
               {/* Save Button */}
-              <div className="flex justify-end pt-4">
+              <div className="flex justify-end pt-6">
                 <Button
                   onClick={handleSave}
                   disabled={saving}
-                  className="bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2] hover:from-[#5A00E5] hover:to-[#7A2BD2] text-white px-6 py-2"
+                  className="bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2] hover:from-[#5A00E5] hover:to-[#7A2BD2] text-white px-8 py-3 rounded-lg font-medium"
                 >
                   {saving ? (
                     <>
