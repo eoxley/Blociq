@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useMessages } from '@/hooks/inbox_v2'
-import { Paperclip, Clock, Trash2 } from 'lucide-react'
+import { Paperclip, Clock, Trash2, Mail, Filter, Eye, EyeOff } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { DraggableEmailRow } from './DraggableEmailRow'
 import SearchBar from './SearchBar'
@@ -18,6 +18,11 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
   const [focusedMessageIndex, setFocusedMessageIndex] = useState<number>(-1)
   const [searchQuery, setSearchQuery] = useState('')
   const [filteredMessages, setFilteredMessages] = useState<any[]>([])
+  const [showUnreadOnly, setShowUnreadOnly] = useState(false)
+  const [sortByUnread, setSortByUnread] = useState(true)
+
+  // Calculate unread count
+  const unreadCount = messages.filter((message: any) => !message.isRead).length
 
   // Keyboard navigation and shortcuts
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -27,9 +32,9 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
       case 'ArrowDown':
         e.preventDefault()
         setFocusedMessageIndex(prev => {
-          const newIndex = Math.min(prev + 1, messages.length - 1)
+          const newIndex = Math.min(prev + 1, filteredMessages.length - 1)
           if (newIndex >= 0) {
-            onMessageSelect(messages[newIndex].id)
+            onMessageSelect(filteredMessages[newIndex].id)
           }
           return newIndex
         })
@@ -39,8 +44,8 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
         e.preventDefault()
         setFocusedMessageIndex(prev => {
           const newIndex = Math.max(prev - 1, 0)
-          if (newIndex < messages.length) {
-            onMessageSelect(messages[newIndex].id)
+          if (newIndex < filteredMessages.length) {
+            onMessageSelect(filteredMessages[newIndex].id)
           }
           return newIndex
         })
@@ -48,21 +53,21 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
       
       case 'Delete':
         e.preventDefault()
-        if (focusedMessageIndex >= 0 && focusedMessageIndex < messages.length) {
-          const message = messages[focusedMessageIndex]
+        if (focusedMessageIndex >= 0 && focusedMessageIndex < filteredMessages.length) {
+          const message = filteredMessages[focusedMessageIndex]
           handleDelete(message.id)
         }
         break
       
       case 'Enter':
         e.preventDefault()
-        if (focusedMessageIndex >= 0 && focusedMessageIndex < messages.length) {
-          const message = messages[focusedMessageIndex]
+        if (focusedMessageIndex >= 0 && focusedMessageIndex < filteredMessages.length) {
+          const message = filteredMessages[focusedMessageIndex]
           onMessageSelect(message.id)
         }
         break
     }
-  }, [messages, focusedMessageIndex, onMessageSelect])
+  }, [filteredMessages, focusedMessageIndex, onMessageSelect])
 
   // Set up keyboard event listener
   useEffect(() => {
@@ -77,30 +82,56 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
 
   // Auto-select first message when messages load
   useEffect(() => {
-    if (messages.length > 0 && !selectedMessageId) {
-      onMessageSelect(messages[0].id)
+    if (filteredMessages.length > 0 && !selectedMessageId) {
+      onMessageSelect(filteredMessages[0].id)
       setFocusedMessageIndex(0)
     }
-  }, [messages, selectedMessageId, onMessageSelect])
+  }, [filteredMessages, selectedMessageId, onMessageSelect])
 
-  // Filter messages based on search query
+  // Filter and sort messages
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredMessages(messages)
-      return
+    let filtered = messages
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter((message: any) => {
+        const subject = message.subject?.toLowerCase() || ''
+        const from = message.from?.emailAddress?.address?.toLowerCase() || ''
+        const bodyPreview = message.bodyPreview?.toLowerCase() || ''
+        
+        return subject.includes(query) || from.includes(query) || bodyPreview.includes(query)
+      })
     }
 
-    const query = searchQuery.toLowerCase()
-    const filtered = messages.filter((message: any) => {
-      const subject = message.subject?.toLowerCase() || ''
-      const from = message.from?.emailAddress?.address?.toLowerCase() || ''
-      const bodyPreview = message.bodyPreview?.toLowerCase() || ''
-      
-      return subject.includes(query) || from.includes(query) || bodyPreview.includes(query)
-    })
+    // Apply unread filter
+    if (showUnreadOnly) {
+      filtered = filtered.filter((message: any) => !message.isRead)
+    }
+
+    // Sort messages (unread first, then by date)
+    if (sortByUnread) {
+      filtered.sort((a: any, b: any) => {
+        // First sort by read status (unread first)
+        if (!a.isRead && b.isRead) return -1
+        if (a.isRead && !b.isRead) return 1
+        
+        // Then sort by date (newest first)
+        const dateA = new Date(a.receivedDateTime)
+        const dateB = new Date(b.receivedDateTime)
+        return dateB.getTime() - dateA.getTime()
+      })
+    } else {
+      // Sort by date only
+      filtered.sort((a: any, b: any) => {
+        const dateA = new Date(a.receivedDateTime)
+        const dateB = new Date(b.receivedDateTime)
+        return dateB.getTime() - dateA.getTime()
+      })
+    }
     
     setFilteredMessages(filtered)
-  }, [messages, searchQuery])
+  }, [messages, searchQuery, showUnreadOnly, sortByUnread])
 
   const handleSearch = (query: string) => {
     setSearchQuery(query)
@@ -128,7 +159,37 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
     }
   }
 
+  const markMessageAsRead = async (messageId: string) => {
+    try {
+      const response = await fetch('/api/outlook/v2/messages/mark-read', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ messageId, isRead: true })
+      })
+      
+      if (response.ok) {
+        // Refresh messages to update the UI
+        refresh()
+      } else {
+        console.error('Failed to mark message as read')
+      }
+    } catch (error) {
+      console.error('Error marking message as read:', error)
+    }
+  }
 
+  const handleMessageSelect = (messageId: string, index: number) => {
+    onMessageSelect(messageId)
+    setFocusedMessageIndex(index)
+    
+    // Mark message as read if it's unread
+    const message = messages.find((m: any) => m.id === messageId)
+    if (message && !message.isRead) {
+      markMessageAsRead(messageId)
+    }
+  }
 
   const truncateText = (text: string, maxLength: number) => {
     if (!text) return ''
@@ -167,10 +228,51 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
     <div className="bg-white rounded-lg border border-gray-200 flex flex-col shadow-sm">
       <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-blue-50">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <span className="w-2 h-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full"></span>
-            {searchQuery ? `${filteredMessages.length} of ${messages.length}` : messages.length} message{(searchQuery ? filteredMessages.length : messages.length) !== 1 ? 's' : ''}
-          </h3>
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <span className="w-2 h-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full"></span>
+              {searchQuery ? `${filteredMessages.length} of ${messages.length}` : messages.length} message{(searchQuery ? filteredMessages.length : messages.length) !== 1 ? 's' : ''}
+            </h3>
+            
+            {/* Unread count badge */}
+            {unreadCount > 0 && (
+              <div className="flex items-center gap-2">
+                <div className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                  <Mail className="h-3 w-3" />
+                  {unreadCount} unread
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* Filter controls */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowUnreadOnly(!showUnreadOnly)}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                showUnreadOnly 
+                  ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+              title={showUnreadOnly ? 'Show all messages' : 'Show unread only'}
+            >
+              {showUnreadOnly ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+              {showUnreadOnly ? 'All' : 'Unread'}
+            </button>
+            
+            <button
+              onClick={() => setSortByUnread(!sortByUnread)}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                sortByUnread 
+                  ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+              title={sortByUnread ? 'Sort by date only' : 'Sort unread first'}
+            >
+              <Filter className="h-3 w-3" />
+              {sortByUnread ? 'Unread First' : 'Date Only'}
+            </button>
+          </div>
         </div>
         
         <SearchBar 
@@ -185,6 +287,7 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
           {filteredMessages.map((message: any, index: number) => {
             const isSelected = selectedMessageId === message.id
             const isFocused = focusedMessageIndex === index
+            const isUnread = !message.isRead
             const receivedDate = new Date(message.receivedDateTime)
             
             return (
@@ -197,6 +300,8 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
                     ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-r-2 border-[#4f46e5]'
                     : isFocused
                     ? 'bg-gradient-to-r hover:from-blue-100 hover:to-indigo-100 border-r-2 border-[#a855f7]'
+                    : isUnread
+                    ? 'bg-gradient-to-r from-red-50 to-orange-50 hover:from-red-100 hover:to-orange-100'
                     : 'hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50'
                 }`}
               >
@@ -207,8 +312,7 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
                     if (e.currentTarget.closest('[data-draggable]')?.getAttribute('data-dragging') === 'true') {
                       return
                     }
-                    onMessageSelect(message.id)
-                    setFocusedMessageIndex(index)
+                    handleMessageSelect(message.id, index)
                   }}
                   onFocus={() => setFocusedMessageIndex(index)}
                   tabIndex={0}
@@ -217,21 +321,33 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
-                      <h4 className="text-sm font-semibold text-gray-900 line-clamp-2 leading-tight">
+                      {/* Unread indicator */}
+                      {isUnread && (
+                        <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></div>
+                      )}
+                      
+                      <h4 className={`text-sm font-semibold line-clamp-2 leading-tight ${
+                        isUnread ? 'text-gray-900 font-bold' : 'text-gray-900'
+                      }`}>
                         {message.subject || '(No subject)'}
                       </h4>
+                      
                       {message.hasAttachments && (
                         <Paperclip className="h-3 w-3 text-[#a855f7] flex-shrink-0" />
                       )}
                     </div>
                     
-                    <p className="text-sm text-gray-700 truncate mb-2 font-medium">
+                    <p className={`text-sm truncate mb-2 font-medium ${
+                      isUnread ? 'text-gray-900 font-semibold' : 'text-gray-700'
+                    }`}>
                       {message.from?.emailAddress?.address || 'Unknown sender'}
                     </p>
                     
                     {/* Email preview content */}
                     {message.bodyPreview && (
-                      <p className="text-xs text-gray-600 line-clamp-2 mb-2 leading-relaxed">
+                      <p className={`text-xs line-clamp-2 mb-2 leading-relaxed ${
+                        isUnread ? 'text-gray-800 font-medium' : 'text-gray-600'
+                      }`}>
                         {truncateText(message.bodyPreview, 120)}
                       </p>
                     )}
@@ -239,7 +355,10 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
                     <div className="flex items-center gap-2 text-xs text-gray-500">
                       <Clock className="h-3 w-3 text-[#4f46e5]" />
                       <span>{formatDistanceToNow(receivedDate, { addSuffix: true })}</span>
-                </div>
+                      {isUnread && (
+                        <span className="text-red-600 font-medium">• Unread</span>
+                      )}
+                    </div>
                   </div>
                   
                   <button

@@ -1,13 +1,14 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Reply, ReplyAll, Paperclip, Clock, User, MessageSquare, Calendar, Download } from 'lucide-react'
+import { Reply, ReplyAll, Paperclip, Clock, User, MessageSquare, Calendar, Download, Eye, EyeOff } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
 
 interface MessagePreviewProps {
   selectedMessage: any | null
   onReply: () => void
   onReplyAll: () => void
+  onMessageUpdate?: () => void
 }
 
 interface FullMessage {
@@ -25,12 +26,14 @@ interface FullMessage {
   attachments: any[]
   conversationId: string
   webLink: string
+  isRead?: boolean
 }
 
-export default function MessagePreview({ selectedMessage, onReply, onReplyAll }: MessagePreviewProps) {
+export default function MessagePreview({ selectedMessage, onReply, onReplyAll, onMessageUpdate }: MessagePreviewProps) {
   const [fullMessage, setFullMessage] = useState<FullMessage | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isMarkingRead, setIsMarkingRead] = useState(false)
 
   // Fetch full message content when a message is selected
   useEffect(() => {
@@ -66,6 +69,36 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
 
     fetchFullMessage()
   }, [selectedMessage?.id])
+
+  const markMessageAsRead = async (isRead: boolean) => {
+    if (!selectedMessage?.id) return
+    
+    setIsMarkingRead(true)
+    try {
+      const response = await fetch('/api/outlook/v2/messages/mark-read', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ messageId: selectedMessage.id, isRead })
+      })
+      
+      if (response.ok) {
+        // Update local state
+        setFullMessage(prev => prev ? { ...prev, isRead } : null)
+        // Notify parent component to refresh
+        if (onMessageUpdate) {
+          onMessageUpdate()
+        }
+      } else {
+        console.error('Failed to mark message as read')
+      }
+    } catch (error) {
+      console.error('Error marking message as read:', error)
+    } finally {
+      setIsMarkingRead(false)
+    }
+  }
 
   if (!selectedMessage) {
     return (
@@ -201,8 +234,36 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
           <h3 className="text-lg font-semibold text-gray-900 line-clamp-2 flex items-center gap-2">
             <span className="w-2 h-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full"></span>
             {message.subject || '(No subject)'}
+            {/* Unread indicator */}
+            {message.isRead === false && (
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                <EyeOff className="h-3 w-3 mr-1" />
+                Unread
+              </span>
+            )}
           </h3>
           <div className="flex gap-3">
+            {/* Mark as Read/Unread button */}
+            <button
+              onClick={() => markMessageAsRead(!message.isRead)}
+              disabled={isMarkingRead}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md font-medium text-sm transform hover:scale-105 active:scale-95 ${
+                message.isRead 
+                  ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
+                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+              }`}
+              title={message.isRead ? 'Mark as unread' : 'Mark as read'}
+            >
+              {isMarkingRead ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+              ) : message.isRead ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+              {message.isRead ? 'Mark Unread' : 'Mark Read'}
+            </button>
+            
             <button
               onClick={onReply}
               className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white rounded-lg hover:brightness-110 transition-all duration-200 shadow-sm hover:shadow-md font-medium text-sm transform hover:scale-105 active:scale-95"

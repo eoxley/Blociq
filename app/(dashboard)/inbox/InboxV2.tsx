@@ -324,6 +324,7 @@ export default function InboxV2() {
             selectedMessage={selectedMessage}
             onReply={() => handleReply('reply')}
             onReplyAll={() => handleReply('replyAll')}
+            onMessageUpdate={refreshMessages}
           />
         </div>
               </DragDropFrame>

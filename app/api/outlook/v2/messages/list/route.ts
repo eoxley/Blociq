@@ -22,8 +22,8 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Get messages for the specified folder
-    const graphEndpoint = `/me/mailFolders/${folderId}/messages?$select=id,subject,from,toRecipients,ccRecipients,receivedDateTime,bodyPreview,hasAttachments,webLink,conversationId&$orderby=receivedDateTime desc&$top=100`
+    // Get messages for the specified folder - now including isRead property
+    const graphEndpoint = `/me/mailFolders/${folderId}/messages?$select=id,subject,from,toRecipients,ccRecipients,receivedDateTime,bodyPreview,hasAttachments,webLink,conversationId,isRead&$orderby=receivedDateTime desc&$top=100`
     console.log(`[${routeId}] Making Graph request to: ${graphEndpoint}`)
     
     const response = await makeGraphRequest(graphEndpoint)
