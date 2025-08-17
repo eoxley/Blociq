@@ -1,3 +1,15 @@
+-- Create profiles table if it doesn't exist (for signature field)
+CREATE TABLE IF NOT EXISTS profiles (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID,
+  full_name VARCHAR(255),
+  role VARCHAR(50),
+  agency_id UUID,
+  building_id UUID,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Add signature field to profiles table
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS signature TEXT;
 
