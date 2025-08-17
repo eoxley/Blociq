@@ -20,6 +20,7 @@ import { checkOutlookConnection, fetchOutlookEvents, getOutlookAuthUrl } from '@
 import { normalizeEventTimes, formatInZone, getClientZone } from '@/lib/time'
 import { getTimeBasedGreeting } from '@/utils/greeting'
 import CommunicationModal from '@/components/CommunicationModal'
+import { getRandomWelcomeMessage } from '@/utils/messages'
 
 
 type PropertyEvent = {
@@ -134,45 +135,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Dynamic welcome messages - rotating pool of positive, motivational, humorous, and informative messages
-  const welcomeMessages = [
-    // 🔁 Motivational Messages
-    "You've already survived worse than a passive-aggressive leaseholder. Keep going.",
-    "Coffee in one hand, compliance in the other — classic BlocIQ move.",
-    "You're the reason building meetings *almost* run on time.",
-    "You've dodged Section 20 bullets all week — gold star ⭐",
-    "Risk assessed. Stress suppressed.",
-    "Your building doesn't need a hero. It has you.",
-    "You know the alarm panel code. You *are* the alarm panel code.",
-    "Property managers don't crack under pressure. They schedule it.",
-    "There's calm in your chaos. BlocIQ just makes it prettier.",
-    "That building doesn't run on vibes — it runs on your last 14 emails.",
-
-    // 😅 Humorous Management Quotes
-    "Today's forecast: 80% chance of leaseholder emails before lunch.",
-    "Another invoice, another mystery charge to decode. You've trained for this.",
-    "Your building's compliance status: 'It's complicated' (but you're handling it).",
-    "You've mastered the art of explaining why the lift is 'temporarily' out of service.",
-    "Your superpower: Making Section 20 notices sound exciting.",
-    "You're the person who knows every resident's preferred complaint format.",
-    "Your building runs on coffee, compliance, and your last nerve.",
-    "You've learned to smile while reading passive-aggressive emails.",
-    "Your building's maintenance schedule: 'When it breaks' (but you're on it).",
-    "You're the reason the building hasn't descended into chaos (yet).",
-
-    // 💪 Encouraging Messages
-    "You're not just managing properties — you're managing communities.",
-    "Every email you answer is one less crisis tomorrow.",
-    "Your attention to detail keeps residents safe and compliant.",
-    "You're the bridge between residents and regulations.",
-    "Your work makes buildings better places to live.",
-    "You're the unsung hero of property management.",
-    "Your patience with leaseholders is legendary.",
-    "You turn building problems into solutions daily.",
-    "Your compliance knowledge is your superpower.",
-    "You're making property management look easy (it's not)."
-  ]
-
   const [currentWelcomeMessage, setCurrentWelcomeMessage] = useState('')
   const [upcomingEvents, setUpcomingEvents] = useState<PropertyEvent[]>([])
   const [buildings, setBuildings] = useState<Building[]>([])
@@ -185,17 +147,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     category: 'General'
   })
 
-  // Rotate welcome messages
+  // Set random welcome message on page load
   useEffect(() => {
-    const interval = setInterval(() => {
-      const randomIndex = Math.floor(Math.random() * welcomeMessages.length)
-      setCurrentWelcomeMessage(welcomeMessages[randomIndex])
-    }, 10000) // Change every 10 seconds
-
-    // Set initial message
-    setCurrentWelcomeMessage(welcomeMessages[0])
-
-    return () => clearInterval(interval)
+    setCurrentWelcomeMessage(getRandomWelcomeMessage())
   }, [])
 
   useEffect(() => {
