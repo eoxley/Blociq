@@ -196,7 +196,7 @@ export default function ComplianceReportsClient({
 
     filteredBuildingStats.forEach(stat => {
       stat.building.building_compliance_assets?.forEach(asset => {
-        const assetName = asset.compliance_assets?.name || 'Unknown Asset'
+        const assetName = asset.compliance_assets?.title || 'Unknown Asset'
         const category = asset.compliance_assets?.category || 'Unknown'
         const status = asset.status || 'Not Started'
         const nextDue = asset.next_due_date ? new Date(asset.next_due_date).toLocaleDateString() : 'Not Set'
