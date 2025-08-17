@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { formatDateUK } from '@/utils/date';
 
 export interface UserContext {
   agency?: {
@@ -148,7 +149,7 @@ export function formatContextMessages(context: UserContext): Array<{ role: 'syst
   // Add recent emails context
   if (context.recentEmails.length > 0) {
     const emailContext = context.recentEmails
-      .map(email => `Recent email: "${email.subject}" from ${email.sender} on ${new Date(email.created_at).toLocaleDateString()}`)
+      .map(email => `Recent email: "${email.subject}" from ${email.sender} on ${formatDateUK(email.created_at)}`)
       .join('\n');
     messages.push({ role: 'system', content: `Recent emails:\n${emailContext}` });
   }
@@ -156,7 +157,7 @@ export function formatContextMessages(context: UserContext): Array<{ role: 'syst
   // Add compliance documents context
   if (context.complianceDocs.length > 0) {
     const docContext = context.complianceDocs
-      .map(doc => `${doc.document_type} uploaded ${new Date(doc.uploaded_at).toLocaleDateString()}`)
+      .map(doc => `${doc.document_type} uploaded ${formatDateUK(doc.uploaded_at)}`)
       .join('\n');
     messages.push({ role: 'system', content: `Recent compliance documents:\n${docContext}` });
   }
@@ -164,7 +165,7 @@ export function formatContextMessages(context: UserContext): Array<{ role: 'syst
   // Add recent events context
   if (context.recentEvents.length > 0) {
     const eventContext = context.recentEvents
-      .map(event => `${event.title} (${event.category}) on ${new Date(event.start_time).toLocaleDateString()}`)
+      .map(event => `${event.title} (${event.category}) on ${formatDateUK(event.start_time)}`)
       .join('\n');
     messages.push({ role: 'system', content: `Recent events:\n${eventContext}` });
   }
