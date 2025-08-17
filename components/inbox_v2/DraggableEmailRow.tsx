@@ -1,7 +1,8 @@
 'use client'
 import { useDraggable } from '@dnd-kit/core'
 import { cn } from '@/lib/utils'
-import { memo } from 'react'
+import { memo, useState, useEffect } from 'react'
+import { GripVertical } from 'lucide-react'
 
 interface DraggableEmailRowProps {
   messageId: string
@@ -16,11 +17,19 @@ export const DraggableEmailRow = memo(function DraggableEmailRow({ messageId, so
     data: { messageId, sourceFolderId },
   })
 
-  // Remove conflicting native drag handler and use only @dnd-kit
+  const [isHovered, setIsHovered] = useState(false)
+
   const style = transform ? { 
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
     zIndex: isDragging ? 1000 : 'auto'
   } : undefined
+
+  // Handle hover state for better visual feedback
+  useEffect(() => {
+    if (isDragging) {
+      setIsHovered(false)
+    }
+  }, [isDragging])
 
   return (
     <div
@@ -29,14 +38,60 @@ export const DraggableEmailRow = memo(function DraggableEmailRow({ messageId, so
       data-draggable="true"
       data-dragging={isDragging ? "true" : "false"}
       className={cn(
-        'relative rounded-lg border bg-background cursor-grab active:cursor-grabbing select-none',
-        isDragging ? 'opacity-50 shadow-xl scale-[1.02] z-50' : 'hover:shadow-md transition-all duration-150',
+        'relative rounded-lg border bg-background transition-all duration-200',
+        isDragging 
+          ? 'opacity-60 shadow-2xl scale-[1.02] z-50 cursor-grabbing' 
+          : 'hover:shadow-md cursor-grab active:cursor-grabbing',
+        'select-none touch-none', // Prevent text selection and touch conflicts
         className
       )}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       {...listeners}
       {...attributes}
     >
+      {/* Enhanced drag handle indicator */}
+      <div className={cn(
+        'absolute top-2 left-2 w-6 h-6 flex items-center justify-center rounded-md transition-all duration-200',
+        'opacity-0 hover:opacity-100 group-hover:opacity-100',
+        isDragging && 'opacity-100',
+        isHovered && 'opacity-100'
+      )}>
+        <div className={cn(
+          'w-1 h-4 bg-gray-300 rounded-full transition-all duration-200',
+          isDragging && 'bg-blue-500 scale-110',
+          isHovered && 'bg-gray-400'
+        )} />
+      </div>
+      
+      {/* Drag handle icon */}
+      <div className={cn(
+        'absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-md transition-all duration-200',
+        'opacity-0 hover:opacity-100 group-hover:opacity-100',
+        isDragging && 'opacity-100',
+        isHovered && 'opacity-100'
+      )}>
+        <GripVertical className={cn(
+          'h-4 w-4 text-gray-400 transition-all duration-200',
+          isDragging && 'text-blue-500 scale-110',
+          isHovered && 'text-gray-500'
+        )} />
+      </div>
+      
       {children}
+      
+      {/* Enhanced drag overlay when dragging */}
+      {isDragging && (
+        <div className="absolute inset-0 bg-blue-50/50 border-2 border-blue-400 rounded-lg pointer-events-none">
+          <div className="absolute top-2 left-2 w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+          <div className="absolute bottom-2 right-2 w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+        </div>
+      )}
+      
+      {/* Hover indicator */}
+      {isHovered && !isDragging && (
+        <div className="absolute inset-0 bg-blue-50/20 border border-blue-200 rounded-lg pointer-events-none transition-all duration-200" />
+      )}
     </div>
   )
 })
