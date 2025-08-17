@@ -13,6 +13,18 @@ CREATE TABLE IF NOT EXISTS profiles (
 -- Add signature field to profiles table
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS signature TEXT;
 
+-- Create incoming_emails table first (if it doesn't exist)
+CREATE TABLE IF NOT EXISTS incoming_emails (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  building_id UUID REFERENCES buildings(id) ON DELETE CASCADE,
+  unit TEXT,
+  from_email TEXT NOT NULL,
+  subject TEXT,
+  body_preview TEXT,
+  received_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Create sent_emails table
 CREATE TABLE IF NOT EXISTS sent_emails (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
