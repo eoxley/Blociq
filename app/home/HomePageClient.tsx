@@ -107,6 +107,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const [showAddEventForm, setShowAddEventForm] = useState(false)
   const [recentEmails, setRecentEmails] = useState<Email[]>([])
   const [loadingEmails, setLoadingEmails] = useState(true)
+  const [userFirstName, setUserFirstName] = useState<string>('')
   
   // Ask BlocIQ state
   const [askInput, setAskInput] = useState('')
@@ -157,6 +158,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     fetchEvents()
     checkOutlook()
     fetchEmails()
+    fetchUserFirstName()
   }, [])
 
   const fetchBuildings = async () => {
@@ -1056,6 +1058,34 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     }
   }, [isDragging, isResizing, dragStart, resizeStart])
 
+  const fetchUserFirstName = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user?.email) {
+        const { data: profileData } = await supabase
+          .from('users')
+          .select('first_name')
+          .eq('email', user.email)
+          .single()
+        
+        if (profileData?.first_name) {
+          setUserFirstName(profileData.first_name)
+        } else {
+          // Fallback: use first part of email before @
+          const emailPrefix = user.email.split('@')[0]
+          setUserFirstName(emailPrefix)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user first name:', error)
+      // Fallback: use first part of email before @
+      if (userData.email) {
+        const emailPrefix = userData.email.split('@')[0]
+        setUserFirstName(emailPrefix)
+      }
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Enhanced Hero Banner - BlocIQ Landing Page Style */}
@@ -1066,7 +1096,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               <BlocIQLogo className="h-10 w-10 text-white" />
             </div>
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              {getTimeBasedGreeting(userData.name)}
+              {getTimeBasedGreeting(userFirstName || userData.name)}
             </h1>
             <p className="text-xl text-white/90 max-w-3xl mx-auto leading-relaxed">
               {currentWelcomeMessage}
