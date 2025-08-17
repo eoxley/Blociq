@@ -55,7 +55,7 @@ export default function PublicAskBlocIQ() {
   
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const inputRef = React.useRef<HTMLInputElement>(null);
+  const inputRef = React.useRef<HTMLTextAreaElement>(null);
 
   // File handling
   const acceptedFileTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
@@ -91,6 +91,19 @@ export default function PublicAskBlocIQ() {
       inputRef.current?.focus();
     }
   }, [showChat]);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    const textarea = inputRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      const scrollHeight = textarea.scrollHeight;
+      const minHeight = 40;
+      const maxHeight = 150;
+      const newHeight = Math.min(Math.max(scrollHeight, minHeight), maxHeight);
+      textarea.style.height = `${newHeight}px`;
+    }
+  }, [question]);
 
   // Scroll to bottom when new messages are added
   useEffect(() => {
@@ -584,14 +597,21 @@ export default function PublicAskBlocIQ() {
               <form onSubmit={handleSubmit} className="space-y-3">
                 {/* Main Input */}
                 <div className="relative">
-                  <input
+                  <textarea
                     ref={inputRef}
-                    type="text"
                     value={question}
                     onChange={(e) => setQuestion(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSubmit(e as any);
+                      }
+                    }}
                     placeholder="Ask BlocIQ anything..."
-                    className="w-full px-4 py-3 pr-20 bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-500"
+                    className="w-full px-4 py-3 pr-20 bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-500 resize-none overflow-y-auto"
+                    rows={1}
                     disabled={loading}
+                    style={{ minHeight: '40px', maxHeight: '150px' }}
                   />
                   
                   {/* Send Button */}
