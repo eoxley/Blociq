@@ -61,8 +61,15 @@ export function useMessages(folderId: string | null) {
       }
 
       const result = await response.json()
-      setTriage(result.triage)
-      return result.triage
+      
+      // Update the triage state with the result
+      setTriage({
+        ...result,
+        actionsPerformed: result.actions || [],
+        messageId: targetMessageId
+      })
+      
+      return result
 
     } catch (err: any) {
       const errorMessage = err.message || 'Triage failed'
@@ -90,8 +97,16 @@ export function useMessages(folderId: string | null) {
       }
 
       const result = await response.json()
-      setTriage(result.triage)
-      return result.triage
+      
+      // Update the triage state with the bulk result
+      setTriage({
+        ...result,
+        actionsPerformed: result.actions || [],
+        processed: result.processed || 0,
+        summary: result.summary || 'Bulk triage completed'
+      })
+      
+      return result
 
     } catch (err: any) {
       const errorMessage = err.message || 'Bulk triage failed'

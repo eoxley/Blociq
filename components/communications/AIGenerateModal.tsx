@@ -38,6 +38,7 @@ export default function AIGenerateModal({
   const handleGenerate = async () => {
     if (!description.trim()) return;
     
+    console.log('[AIGenerateModal] Starting content generation with description:', description);
     setIsGenerating(true);
     try {
       // Simulate AI generation - replace with actual AI API call
@@ -54,10 +55,11 @@ This communication is being sent to ${recipientCount} ${recipientCount === 1 ? '
 Best regards,
 Property Management Team`;
 
+      console.log('[AIGenerateModal] Content generated successfully:', { subject, content });
       setGeneratedSubject(subject);
       setGeneratedContent(content);
     } catch (error) {
-      console.error('Error generating content:', error);
+      console.error('[AIGenerateModal] Error generating content:', error);
     } finally {
       setIsGenerating(false);
     }
@@ -82,8 +84,10 @@ Property Management Team`;
 
   if (!open) return null;
 
+  console.log('[AIGenerateModal] Rendering modal, open:', open);
+
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-[9999] overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
         
@@ -214,9 +218,9 @@ Property Management Team`;
             )}
 
             {/* Tips */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="text-sm font-medium text-blue-800 mb-2">💡 Tips for better results:</h4>
-              <ul className="text-xs text-blue-700 space-y-1">
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-orange-800 mb-2">💡 Tips for better results:</h4>
+              <ul className="text-xs text-orange-700 space-y-1">
                 <li>• Be specific about the purpose and timing</li>
                 <li>• Mention any important details or requirements</li>
                 <li>• Include contact information if needed</li>

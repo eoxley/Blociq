@@ -89,6 +89,14 @@ export default function CommunicationsPage() {
   const [subject, setSubject] = useState('')
   const [content, setContent] = useState('')
 
+  // Debug logging for modal states
+  useEffect(() => {
+    console.log('[CommunicationsPage] Modal states:', {
+      showAIModal,
+      showBatchGroupModal
+    });
+  }, [showAIModal, showBatchGroupModal]);
+
   useEffect(() => {
     loadData()
   }, [])
@@ -671,8 +679,11 @@ export default function CommunicationsPage() {
 
                    {/* Create Batch Group Button */}
                    <button
-                     onClick={() => setShowBatchGroupModal(true)}
-                     className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-3 px-6 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2"
+                     onClick={() => {
+                       console.log('[CommunicationsPage] Opening Batch Group Modal');
+                       setShowBatchGroupModal(true);
+                     }}
+                     className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white py-3 px-6 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2"
                    >
                      <Users className="h-5 w-5" />
                      Create Batch Group with AI
@@ -723,7 +734,10 @@ export default function CommunicationsPage() {
 
                   {/* AI Generate Button */}
                   <button
-                    onClick={() => setShowAIModal(true)}
+                    onClick={() => {
+                      console.log('[CommunicationsPage] Opening AI Generate Modal');
+                      setShowAIModal(true);
+                    }}
                     className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white py-3 px-6 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2"
                   >
                     <Brain className="h-5 w-5" />
