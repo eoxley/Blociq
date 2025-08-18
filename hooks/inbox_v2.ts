@@ -117,10 +117,6 @@ export function useMessages(folderId: string | null) {
       throw new Error('No message selected for triage')
     }
     
-    if (!user?.id) {
-      throw new Error('User not authenticated')
-    }
-    
     setIsTriaging(true)
     setError(null)
     
@@ -131,8 +127,7 @@ export function useMessages(folderId: string | null) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          messageId: targetMessageId,
-          userId: user.id
+          messageId: targetMessageId
         })
       })
       
@@ -152,7 +147,7 @@ export function useMessages(folderId: string | null) {
     } finally {
       setIsTriaging(false)
     }
-  }, [selectedId, user?.id])
+  }, [selectedId])
   
   // Debug logging (development only)
   useEffect(() => {
