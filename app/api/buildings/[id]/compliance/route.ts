@@ -21,7 +21,8 @@ export async function GET(
       return NextResponse.json({ error: "Building ID is required" }, { status: 400 });
     }
 
-    const { data, error } = await supabase
+    // First, get the building compliance assets
+    const { data: bcaData, error: bcaError } = await supabase
       .from("building_compliance_assets")
       .select(`
         id as bca_id,
@@ -31,37 +32,60 @@ export async function GET(
         notes,
         last_renewed_date,
         contractor,
-        compliance_assets (
-          id,
-          title as asset_name,
-          category,
-          description,
-          frequency_months
-        )
+        frequency_months
       `)
-      .eq("building_id", buildingId)
-      .order("compliance_assets(category)", { ascending: true })
-      .order("compliance_assets(title)", { ascending: true });
+      .eq("building_id", buildingId);
 
-    if (error) {
-      console.error('Error fetching compliance data:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (bcaError) {
+      console.error('Error fetching building compliance assets:', bcaError);
+      return NextResponse.json({ error: bcaError.message }, { status: 500 });
     }
 
-    // Transform the data to flatten the nested compliance_assets
-    const transformedData = (data || []).map(row => ({
-      bca_id: row.bca_id,
-      asset_id: row.asset_id,
-      asset_name: row.compliance_assets?.asset_name || "Unknown",
-      category: row.compliance_assets?.category || "Unknown",
-      frequency_months: row.compliance_assets?.frequency_months,
-      last_renewed_date: row.last_renewed_date,
-      next_due_date: row.next_due_date,
-      status: row.status || "pending",
-      notes: row.notes,
-      contractor: row.contractor,
-      docs_count: 0 // TODO: Calculate this from compliance_documents table
-    }));
+    if (!bcaData || bcaData.length === 0) {
+      return NextResponse.json({ data: [] });
+    }
+
+    // Get the compliance assets details
+    const assetIds = bcaData.map(row => row.asset_id);
+    const { data: assetData, error: assetError } = await supabase
+      .from("compliance_assets")
+      .select(`
+        id,
+        title,
+        category,
+        description,
+        frequency
+      `)
+      .in("id", assetIds)
+      .order("category", { ascending: true })
+      .order("title", { ascending: true });
+
+    if (assetError) {
+      console.error('Error fetching compliance assets:', assetError);
+      return NextResponse.json({ error: assetError.message }, { status: 500 });
+    }
+
+    // Create a map for quick lookup
+    const assetMap = new Map(assetData?.map(asset => [asset.id, asset]) || []);
+
+    // Transform the data to combine both datasets
+    const transformedData = bcaData.map(row => {
+      const asset = assetMap.get(row.asset_id);
+      return {
+        bca_id: row.bca_id,
+        asset_id: row.asset_id,
+        asset_name: asset?.title || "Unknown",
+        category: asset?.category || "Unknown",
+        frequency: asset?.frequency || null,
+        frequency_months: row.frequency_months,
+        last_renewed_date: row.last_renewed_date,
+        next_due_date: row.next_due_date,
+        status: row.status || "pending",
+        notes: row.notes,
+        contractor: row.contractor,
+        docs_count: 0 // TODO: Calculate this from compliance_documents table
+      };
+    });
 
     return NextResponse.json({ data: transformedData });
   } catch (error: any) {

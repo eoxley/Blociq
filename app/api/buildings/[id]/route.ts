@@ -7,6 +7,36 @@ const supabase = createClient<Database>(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: buildingId } = await params
+
+    // Get building information
+    const { data: building, error: buildingError } = await supabase
+      .from('buildings')
+      .select('*')
+      .eq('id', buildingId)
+      .single()
+
+    if (buildingError) {
+      console.error('Error fetching building:', buildingError)
+      return NextResponse.json({ error: buildingError.message }, { status: 500 })
+    }
+
+    if (!building) {
+      return NextResponse.json({ error: 'Building not found' }, { status: 404 })
+    }
+
+    return NextResponse.json({ building })
+  } catch (error) {
+    console.error('Error in building GET API:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
