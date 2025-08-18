@@ -22,8 +22,10 @@ import {
   Upload,
   Save,
   Settings,
-  BarChart3
+  BarChart3,
+  Info
 } from "lucide-react";
+import { canonicaliseCategory, canonicaliseTitle, deriveFrequencyLabel } from "@/lib/compliance/normalise";
 
 type Asset = { 
   id: string; 
@@ -63,6 +65,7 @@ export default function SetupComplianceModalV2({
   const [err, setErr] = useState<string | null>(null);
   const [files, setFiles] = useState<Record<string, File | null>>({}); // per asset file
   const [loading, setLoading] = useState(true);
+  const [duplicateWarnings, setDuplicateWarnings] = useState<Record<string, string>>({}); // asset id -> warning message
 
   useEffect(() => {
     if (!open) return;
@@ -138,6 +141,43 @@ export default function SetupComplianceModalV2({
 
   const newlyChosen = Object.keys(selected).filter(id => selected[id] && !existing.has(id));
   const canSave = newlyChosen.length > 0 && !busy;
+
+  // Check for potential duplicates when selecting assets
+  useEffect(() => {
+    if (!master.length) return;
+    
+    const warnings: Record<string, string> = {};
+    const selectedAssets = master.filter(a => selected[a.id]);
+    
+    // Group by normalised category and title
+    const normalisedGroups: Record<string, Asset[]> = {};
+    
+    selectedAssets.forEach(asset => {
+      const normCategory = canonicaliseCategory(asset.category).toLowerCase();
+      const normTitle = canonicaliseTitle(asset.name).toLowerCase();
+      const key = `${normCategory}|${normTitle}`;
+      
+      if (!normalisedGroups[key]) {
+        normalisedGroups[key] = [];
+      }
+      normalisedGroups[key].push(asset);
+    });
+    
+    // Check for duplicates
+    Object.entries(normalisedGroups).forEach(([key, assets]) => {
+      if (assets.length > 1) {
+        const [category, title] = key.split('|');
+        const canonicalCategory = canonicaliseCategory(assets[0].category);
+        const canonicalTitle = canonicaliseTitle(assets[0].name);
+        
+        assets.forEach(asset => {
+          warnings[asset.id] = `This asset will be merged with similar items in "${canonicalCategory}" (e.g., "${canonicalTitle}")`;
+        });
+      }
+    });
+    
+    setDuplicateWarnings(warnings);
+  }, [selected, master]);
 
   // Save: add rows, fetch ids, then upload files mapped to each bca row
   async function save() {
@@ -309,10 +349,10 @@ export default function SetupComplianceModalV2({
                                     Every {a.frequency_months} months
                                   </span>
                                 )}
-                                {a.frequency && (
+                                {deriveFrequencyLabel(a.frequency_months, a.frequency) && (
                                   <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
                                     <Calendar className="h-3 w-3" />
-                                    {a.frequency}
+                                    {deriveFrequencyLabel(a.frequency_months, a.frequency)}
                                   </span>
                                 )}
                                 {isLocked(a.id) && (
@@ -331,6 +371,17 @@ export default function SetupComplianceModalV2({
                               
                               {a.description && (
                                 <p className="text-sm text-gray-600 mb-3">{a.description}</p>
+                              )}
+
+                              {/* Duplicate Warning */}
+                              {duplicateWarnings[a.id] && (
+                                <div className="mb-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                                  <div className="flex items-center gap-2">
+                                    <Info className="h-4 w-4 text-amber-600" />
+                                    <span className="text-sm text-amber-800 font-medium">Duplicate Warning</span>
+                                  </div>
+                                  <p className="text-xs text-amber-700 mt-1">{duplicateWarnings[a.id]}</p>
+                                </div>
                               )}
 
                               {/* File Upload Section */}

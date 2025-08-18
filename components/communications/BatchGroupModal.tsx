@@ -49,6 +49,7 @@ export default function BatchGroupModal({
   const handleGenerate = async () => {
     if (!description.trim()) return;
     
+    console.log('[BatchGroupModal] Starting group generation with description:', description);
     setIsGenerating(true);
     try {
       // Call the actual API to generate the group
@@ -60,7 +61,9 @@ export default function BatchGroupModal({
         body: JSON.stringify({ description }),
       });
 
+      console.log('[BatchGroupModal] API response status:', response.status);
       const result = await response.json();
+      console.log('[BatchGroupModal] API response:', result);
 
       if (!response.ok) {
         throw new Error(result.error || 'Failed to generate group');
@@ -69,6 +72,7 @@ export default function BatchGroupModal({
       if (result.success && result.group) {
         const { group } = result;
         
+        console.log('[BatchGroupModal] Group generated successfully:', group);
         setGeneratedGroup({
           name: group.name,
           members: group.members,
@@ -82,7 +86,7 @@ export default function BatchGroupModal({
         throw new Error('Invalid response from server');
       }
     } catch (error) {
-      console.error('Error generating group:', error);
+      console.error('[BatchGroupModal] Error generating group:', error);
       toast.error('Failed to generate group. Please try again.');
     } finally {
       setIsGenerating(false);
@@ -126,15 +130,17 @@ export default function BatchGroupModal({
 
   if (!open) return null;
 
+  console.log('[BatchGroupModal] Rendering modal, open:', open);
+
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-[9999] overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
         
         <div className="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
           
           {/* Hero Banner Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+          <div className="bg-gradient-to-r from-pink-500 to-purple-600 text-white">
             <div className="px-6 py-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-4">
@@ -143,7 +149,7 @@ export default function BatchGroupModal({
                   </div>
                   <div>
                     <h2 className="text-2xl font-bold">Create Batch Group</h2>
-                    <p className="text-blue-100">Use AI to automatically create groups based on your criteria</p>
+                    <p className="text-pink-100">Use AI to automatically create groups based on your criteria</p>
                   </div>
                 </div>
                 <button 
@@ -168,7 +174,7 @@ export default function BatchGroupModal({
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="e.g., all directors at Ashwood House, leaseholders in Building A, residents with overdue payments..."
                 rows={3}
-                className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent resize-none"
               />
             </div>
 
@@ -176,7 +182,7 @@ export default function BatchGroupModal({
             <button
               onClick={handleGenerate}
               disabled={!description.trim() || isGenerating}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 px-6 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white py-3 px-6 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isGenerating ? (
                 <>
@@ -208,7 +214,7 @@ export default function BatchGroupModal({
                         type="text"
                         value={groupName}
                         onChange={(e) => setGroupName(e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm"
                       />
                     </div>
                     <div>
@@ -228,7 +234,7 @@ export default function BatchGroupModal({
                       <div className="flex gap-2">
                         <button
                           onClick={selectAll}
-                          className="text-xs text-blue-600 hover:text-blue-800"
+                          className="text-xs text-pink-600 hover:text-pink-800"
                         >
                           Select All
                         </button>
@@ -247,7 +253,7 @@ export default function BatchGroupModal({
                           key={member.id}
                           className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
                             selectedMembers.includes(member.id)
-                              ? 'border-blue-500 bg-blue-50'
+                              ? 'border-pink-500 bg-pink-50'
                               : 'border-gray-200 hover:border-gray-300'
                           }`}
                           onClick={() => toggleMember(member.id)}
@@ -256,7 +262,7 @@ export default function BatchGroupModal({
                             type="checkbox"
                             checked={selectedMembers.includes(member.id)}
                             onChange={() => toggleMember(member.id)}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            className="rounded border-gray-300 text-pink-600 focus:ring-pink-500"
                           />
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
@@ -297,7 +303,7 @@ export default function BatchGroupModal({
                   <button
                     onClick={handleCreateGroup}
                     disabled={selectedMembers.length === 0}
-                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                   >
                     <Plus className="h-4 w-4" />
                     Create Group ({selectedMembers.length} members)
@@ -307,9 +313,9 @@ export default function BatchGroupModal({
             )}
 
             {/* Tips */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="text-sm font-medium text-blue-800 mb-2">💡 Tips for better results:</h4>
-              <ul className="text-xs text-blue-700 space-y-1">
+            <div className="bg-pink-50 border border-pink-200 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-pink-800 mb-2">💡 Tips for better results:</h4>
+              <ul className="text-xs text-pink-700 space-y-1">
                 <li>• Be specific about the building name</li>
                 <li>• Mention roles like "directors", "leaseholders", "residents"</li>
                 <li>• Include criteria like "with overdue payments", "new tenants"</li>
