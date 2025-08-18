@@ -87,7 +87,14 @@ export async function GET(
       };
     });
 
-    return NextResponse.json({ data: transformedData });
+    // Safe response format - ensure data is always an array
+    const safeData = Array.isArray(transformedData) ? transformedData : [];
+    
+    return NextResponse.json({ 
+      data: safeData,
+      count: safeData.length,
+      success: true
+    });
   } catch (error: any) {
     console.error("Error fetching compliance data:", error);
     return NextResponse.json(

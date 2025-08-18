@@ -6,6 +6,13 @@ import { IncomingEmail } from "@/lib/ai/triageSchema";
 
 export async function POST(req: Request) {
   try {
+    // Safe environment variable check
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json({ 
+        error: "AI triage not configured - missing OpenAI API key" 
+      }, { status: 400 });
+    }
+
     const { messageId, bulkTriage } = await req.json();
     
     if (bulkTriage) {
