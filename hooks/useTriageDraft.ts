@@ -19,7 +19,7 @@ export type TriageResult = {
   sla_target_days?: number;
   confidence: number;
   reasons: string[];
-  draft: {
+  reply: {
     subject: string;
     greeting: string;        // e.g. "Dear Chris"
     body_markdown: string;   // full body (markdown)

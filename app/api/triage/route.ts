@@ -108,70 +108,63 @@ async function performBulkTriage() {
 }
 
 async function performSingleTriage(messageId: string) {
-  const response = await makeGraphRequest(`/me/messages/${messageId}`);
-  
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to fetch message: ${response.status} - ${errorText}`);
-  }
+  try {
+    console.log('Performing single triage for message:', messageId)
+    
+    // Fetch message details from Outlook
+    const messageResponse = await makeGraphRequest(`/me/messages/${messageId}?$select=subject,body,from,toRecipients,ccRecipients,receivedDateTime,bodyPreview`);
+    
+    if (!messageResponse.ok) {
+      console.error('Failed to fetch message:', messageResponse.status, messageResponse.statusText)
+      throw new Error(`Failed to fetch message: ${messageResponse.status}`);
+    }
 
-  const message = await response.json();
-  
-  const rawEmail: IncomingEmail = {
-    subject: message.subject || "",
-    body: message.body?.content || "",
-    from: message.from?.emailAddress?.address || "",
-    to: message.toRecipients?.map((r: any) => r.emailAddress?.address || r.emailAddress) || [],
-    cc: message.ccRecipients?.map((r: any) => r.emailAddress?.address || r.emailAddress) || [],
-    date: message.receivedDateTime,
-    plainText: message.bodyPreview || ""
-  };
+    const message = await messageResponse.json();
+    console.log('Fetched message:', { subject: message.subject, from: message.from?.emailAddress?.address })
 
-  const triageResult = await triageEmail(rawEmail);
+    // Prepare email data for triage
+    const rawEmail: IncomingEmail = {
+      subject: message.subject || "",
+      body: message.body?.content || "",
+      from: message.from?.emailAddress?.address || "",
+      to: message.toRecipients?.map((r: any) => r.emailAddress?.address || r.emailAddress) || [],
+      cc: message.ccRecipients?.map((r: any) => r.emailAddress?.address || r.emailAddress) || [],
+      date: message.receivedDateTime,
+      plainText: message.bodyPreview || ""
+    };
 
-  if (!triageResult) {
-    throw new Error("Failed to classify email");
-  }
+    console.log('Prepared email data for triage:', { 
+      subject: rawEmail.subject, 
+      from: rawEmail.from,
+      hasBody: !!rawEmail.body,
+      hasPlainText: !!rawEmail.plainText
+    })
 
-  const actionsPerformed = await performTriageActions(messageId, triageResult, message);
+    // Perform AI triage
+    const triageResult = await triageEmail(rawEmail);
+    console.log('Triage result:', triageResult)
 
-  const { error: insertError } = await supabaseAdmin
-    .from("ai_triage_actions")
-    .insert({
-      message_id: messageId,
-      conversation_id: message.conversationId,
-      internet_message_id: message.internetMessageId,
-      category: triageResult.label,
-      priority: triageResult.priority,
-      reason: triageResult.reason,
-      due_date: triageResult.due_date,
-      applied: true,
-      applied_at: new Date().toISOString()
+    if (!triageResult) {
+      throw new Error("AI triage failed to return a result");
+    }
+
+    // Perform triage actions
+    const actions = await performTriageActions(messageId, triageResult, message);
+    console.log('Triage actions performed:', actions)
+
+    return NextResponse.json({
+      message: "Triage completed successfully",
+      triage: triageResult,
+      actions
     });
 
-  if (insertError) {
-    console.warn("Failed to store triage result:", insertError);
+  } catch (error: any) {
+    console.error("Single triage error:", error);
+    return NextResponse.json({ 
+      error: error.message || "Failed to triage message",
+      details: error.stack
+    }, { status: 500 });
   }
-
-  return NextResponse.json({
-    messageId,
-    triage: {
-      category: triageResult.label,
-      priority: triageResult.priority,
-      urgency: triageResult.label === "urgent" ? "high" : triageResult.label === "follow_up" ? "medium" : "low",
-      summary: triageResult.reason,
-      dueDate: triageResult.due_date,
-      suggestedActions: [
-        triageResult.label === "urgent" ? "Immediate action required" : null,
-        triageResult.label === "follow_up" ? "Schedule follow-up" : null,
-        "Update communication log",
-        triageResult.reply ? "Draft reply available" : null
-      ].filter(Boolean),
-      reply: triageResult.reply,
-      attachments_suggestions: triageResult.attachments_suggestions || [],
-      actionsPerformed
-    }
-  });
 }
 
 async function performTriageActions(messageId: string, triageResult: any, originalMessage: any) {

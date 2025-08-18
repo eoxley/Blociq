@@ -51,27 +51,68 @@ export default function ReplyAllModal({ isOpen, onClose, message, ownEmails = []
   }, [emailData]);
 
   const handleGenerate = async () => {
-    if (!emailData) return
-    
-    const r = await generate(emailData)
-    if (!r) return
-
-    // Greet the primary correspondent if model didn't
-    const draft = { ...r.draft }
-    const primaryName = displayNameFromAddress(emailData.from)
-    if (!draft.greeting?.trim().toLowerCase().startsWith("dear ")) {
-      draft.greeting = `Dear ${primaryName}`
+    if (!emailData) {
+      console.error('No email data available for AI generation')
+      return
     }
-    // Enforce our house sign-off
-    draft.signoff = "Kind regards"
+    
+    console.log('Starting AI generation with data:', emailData)
+    
+    try {
+      const r = await generate(emailData)
+      if (!r) {
+        throw new Error('AI generation returned no result')
+      }
 
-    setSubject(buildReplySubject(emailData.subject))
-    setBody(composeBody(draft, quoted))
+      console.log('AI generation successful:', r)
 
-    // Pre-tick suggested attachments
-    if (r.attachments_suggestions) {
-      setSuggestedAttachments(r.attachments_suggestions)
-      setAttachIds(r.attachments_suggestions.map(a => a.doc_id))
+      // Greet the primary correspondent if model didn't
+      const draft = { ...r.reply }
+      const primaryName = displayNameFromAddress(emailData.from)
+      if (!draft.greeting?.trim().toLowerCase().startsWith("dear ")) {
+        draft.greeting = `Dear ${primaryName}`
+      }
+      // Enforce our house sign-off
+      draft.signoff = "Kind regards"
+
+      setSubject(buildReplySubject(emailData.subject))
+      setBody(composeBody(draft, quoted))
+
+      // Pre-tick suggested attachments
+      if (r.attachments_suggestions) {
+        setSuggestedAttachments(r.attachments_suggestions)
+        setAttachIds(r.attachments_suggestions.map(a => a.doc_id))
+      }
+    } catch (error: any) {
+      console.error('Error generating AI reply:', error)
+      
+      // Provide more specific error messages
+      let errorMessage = 'Error generating AI reply. Please try again.'
+      
+      if (error?.message) {
+        if (error.message.includes('triage failed')) {
+          errorMessage = 'AI triage service unavailable. Please check your configuration.'
+        } else if (error.message.includes('Failed to generate draft')) {
+          errorMessage = 'AI draft generation failed. Please try again.'
+        } else if (error.message.includes('No email data')) {
+          errorMessage = 'No email data available for AI generation.'
+        } else {
+          errorMessage = `AI Generation Error: ${error.message}`
+        }
+      }
+      
+      // Show error to user (you might want to add a state for this)
+      console.error('AI Generation Error:', errorMessage)
+      
+      // Fallback: Create a basic reply template
+      try {
+        const primaryName = displayNameFromAddress(emailData.from)
+        const fallbackBody = `Dear ${primaryName},\n\nThank you for your email.\n\nKind regards`
+        setBody(fallbackBody)
+        console.log('Applied fallback reply template')
+      } catch (fallbackError) {
+        console.error('Fallback template also failed:', fallbackError)
+      }
     }
   };
 
