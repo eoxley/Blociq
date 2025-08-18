@@ -1,5 +1,5 @@
 import useSWR from 'swr'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 
 // Default folders fallback when Graph API is unavailable
 const DEFAULT_FOLDERS = [
@@ -76,20 +76,108 @@ export function useFolders() {
 }
 
 export function useMessages(folderId: string | null) {
-  const { data, error, isLoading, mutate } = useSWR(
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [triage, setTriage] = useState<any | null>(null)
+  const [isTriaging, setIsTriaging] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  
+  const { data, error: fetchError, isLoading, mutate } = useSWR(
     folderId ? `/api/outlook/v2/messages/list?folderId=${folderId}` : null,
     fetcher
   )
   
   const messages = data?.ok ? data.items : []
   
-  // Debug logging
-  if (typeof window !== 'undefined') {
-    console.log('useMessages hook:', { folderId, messagesCount: messages.length, isLoading, error })
-  }
+  // Selection stability: auto-select first message if none selected and messages exist
+  useEffect(() => {
+    if (messages.length > 0 && !selectedId) {
+      // Prefer first unread message if available
+      const firstUnread = messages.find((msg: any) => !msg.isRead)
+      const messageToSelect = firstUnread || messages[0]
+      if (messageToSelect) {
+        setSelectedId(messageToSelect.id)
+        if (process.env.NODE_ENV === 'development') {
+          console.debug('[useMessages] Auto-selecting first message:', messageToSelect.id)
+        }
+      }
+    }
+  }, [messages, selectedId])
+  
+  // Clear triage when changing folders
+  useEffect(() => {
+    setTriage(null)
+    setError(null)
+  }, [folderId])
+  
+  const triageMessage = useCallback(async (messageId?: string) => {
+    const targetMessageId = messageId || selectedId
+    if (!targetMessageId) {
+      throw new Error('No message selected for triage')
+    }
+    
+    setIsTriaging(true)
+    setError(null)
+    
+    try {
+      // Get user ID from session (you may need to adjust this based on your auth setup)
+      const sessionResponse = await fetch('/api/auth/session')
+      const sessionData = await sessionResponse.json()
+      const userId = sessionData?.user?.id
+      
+      if (!userId) {
+        throw new Error('User not authenticated')
+      }
+      
+      const response = await fetch('/api/triage', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messageId: targetMessageId,
+          userId
+        })
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Triage failed')
+      }
+      
+      const result = await response.json()
+      setTriage(result.triage)
+      return result.triage
+      
+    } catch (err: any) {
+      const errorMessage = err.message || 'Triage failed'
+      setError(errorMessage)
+      throw err
+    } finally {
+      setIsTriaging(false)
+    }
+  }, [selectedId])
+  
+  // Debug logging (development only)
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('[useMessages]', { 
+        folderId, 
+        messagesCount: messages.length, 
+        selectedId,
+        isLoading, 
+        error: fetchError 
+      })
+    }
+  }, [folderId, messages.length, selectedId, isLoading, fetchError])
   
   return {
     messages,
+    selectedId,
+    setSelectedId,
+    triage,
+    isTriaging,
+    error,
+    triageMessage,
     isLoading,
     refresh: mutate
   }

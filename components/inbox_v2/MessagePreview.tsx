@@ -9,6 +9,7 @@ interface MessagePreviewProps {
   onReply: () => void
   onReplyAll: () => void
   onMessageUpdate?: () => void
+  triageResult?: any
 }
 
 interface FullMessage {
@@ -29,7 +30,7 @@ interface FullMessage {
   isRead?: boolean
 }
 
-export default function MessagePreview({ selectedMessage, onReply, onReplyAll, onMessageUpdate }: MessagePreviewProps) {
+export default function MessagePreview({ selectedMessage, onReply, onReplyAll, onMessageUpdate, triageResult }: MessagePreviewProps) {
   const [fullMessage, setFullMessage] = useState<FullMessage | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -335,6 +336,51 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll, o
             </div>
           )}
         </div>
+        
+        {/* Triage Result Display */}
+        {triageResult && (
+          <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <MessageSquare className="h-4 w-4 text-blue-600" />
+              </div>
+              <h4 className="font-semibold text-blue-800">AI Triage Result</h4>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <span className="text-blue-600 font-medium">Category:</span>
+                <span className="ml-2 text-blue-800">{triageResult.category}</span>
+              </div>
+              <div>
+                <span className="text-blue-600 font-medium">Urgency:</span>
+                <span className="ml-2 text-blue-800 capitalize">{triageResult.urgency}</span>
+              </div>
+              {triageResult.dueDate && (
+                <div className="col-span-2">
+                  <span className="text-blue-600 font-medium">Due Date:</span>
+                  <span className="ml-2 text-blue-800">{triageResult.dueDate}</span>
+                </div>
+              )}
+              <div className="col-span-2">
+                <span className="text-blue-600 font-medium">Summary:</span>
+                <span className="ml-2 text-blue-800">{triageResult.summary}</span>
+              </div>
+              {triageResult.suggestedActions && triageResult.suggestedActions.length > 0 && (
+                <div className="col-span-2">
+                  <span className="text-blue-600 font-medium">Suggested Actions:</span>
+                  <ul className="ml-2 mt-1 space-y-1">
+                    {triageResult.suggestedActions.map((action: string, index: number) => (
+                      <li key={index} className="text-blue-800 text-xs flex items-center gap-1">
+                        <span className="w-1 h-1 bg-blue-400 rounded-full"></span>
+                        {action}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
       
       {/* Message Body - Scrollable */}

@@ -6,6 +6,11 @@ import { useSession } from '@/hooks/useSession'
 
 interface TriageButtonProps {
   className?: string
+  selectedMessageId?: string | null
+  onTriage?: (messageId?: string) => Promise<any>
+  isTriaging?: boolean
+  triageResult?: any
+  triageError?: string | null
 }
 
 interface ProgressState {
@@ -22,13 +27,23 @@ interface OutlookConnectionStatus {
   needsReconnect?: boolean
 }
 
-export default function TriageButton({ className = "" }: TriageButtonProps) {
+export default function TriageButton({ 
+  className = "", 
+  selectedMessageId,
+  onTriage,
+  isTriaging: externalIsTriaging,
+  triageResult,
+  triageError
+}: TriageButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [progress, setProgress] = useState<ProgressState | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [outlookStatus, setOutlookStatus] = useState<OutlookConnectionStatus>({ connected: false })
   const [checkingConnection, setCheckingConnection] = useState(true)
   const { data: session, status } = useSession()
+
+  // Use external triaging state if provided, otherwise use internal state
+  const isTriaging = externalIsTriaging !== undefined ? externalIsTriaging : isLoading
 
   // Check Outlook connection status
   useEffect(() => {
@@ -56,7 +71,7 @@ export default function TriageButton({ className = "" }: TriageButtonProps) {
     }
   }
 
-  const disabled = status !== "authenticated" || !outlookStatus.connected || checkingConnection
+  const disabled = status !== "authenticated" || !outlookStatus.connected || checkingConnection || !selectedMessageId
 
   const triageOptions = [
     { id: 'urgent', label: 'Mark as Urgent', icon: AlertTriangle, color: 'text-red-600', bgColor: 'bg-red-50', borderColor: 'border-red-200' },
@@ -66,7 +81,9 @@ export default function TriageButton({ className = "" }: TriageButtonProps) {
   ]
 
   const handleTriage = (optionId: string) => {
-    console.log(`Triage action: ${optionId}`)
+    if (process.env.NODE_ENV === 'development') {
+      console.debug(`[TriageButton] Triage action: ${optionId}`)
+    }
     // TODO: Implement actual triage logic
     setIsOpen(false)
   }
@@ -77,57 +94,22 @@ export default function TriageButton({ className = "" }: TriageButtonProps) {
       return
     }
 
-    setIsLoading(true)
-    setProgress({ step: "Planning AI triage…" });
-    
+    if (!onTriage) {
+      alert('Triage function not available')
+      return
+    }
+
+    if (!selectedMessageId) {
+      alert('Please select a message to triage')
+      return
+    }
+
     try {
-      const start = await fetch("/api/triage/start", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ 
-          batchSize: 10, 
-          dryRun: false, 
-          inbox_user_id: session?.user?.id 
-        })
-      }).then(r=>r.json());
-
-      if (start.error) {
-        throw new Error(start.error);
-      }
-
-      setProgress({ step: `Applying AI triage to ${start.planned} emails…` });
-      let applied = 0, failed = 0;
-
-      while (applied + failed < start.planned) {
-        const res = await fetch("/api/triage/apply", {
-          method: "POST",
-          headers: {"Content-Type":"application/json"},
-          body: JSON.stringify({ 
-            run_id: start.run_id, 
-            limit: 10, 
-            inbox_user_id: session?.user?.id 
-          })
-        }).then(r=>r.json());
-        
-        applied += res.applied || 0;
-        failed  += res.failed  || 0;
-
-        const s = await fetch(`/api/triage/status?run_id=${start.run_id}`).then(r=>r.json());
-        setProgress({ 
-          step: `Progress: ${applied}/${start.planned} emails processed (${failed} failed)`, 
-          link: s.run?.id 
-        });
-        
-        if (applied + failed >= start.planned) break;
-        await new Promise(r => setTimeout(r, 600)); // gentle pacing
-      }
-
-      setProgress({ step: `✅ AI triage completed: ${applied}/${start.planned} emails processed`, done: true });
+      await onTriage(selectedMessageId)
+      setIsOpen(false)
     } catch (error) {
-      console.error('AI Triage failed:', error);
-      setProgress({ step: `❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`, done: true });
-    } finally {
-      setIsLoading(false)
+      console.error('AI Triage failed:', error)
+      alert(`Triage failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -140,7 +122,7 @@ export default function TriageButton({ className = "" }: TriageButtonProps) {
       {/* Enhanced Main Button */}
       <button
         onClick={() => setIsOpen(true)}
-        disabled={disabled || isLoading}
+        disabled={disabled || isTriaging}
         className={`
           relative inline-flex items-center justify-center gap-2 px-4 py-2.5 
           bg-gradient-to-r from-orange-500 to-red-500 text-white 
@@ -149,18 +131,20 @@ export default function TriageButton({ className = "" }: TriageButtonProps) {
           active:from-orange-700 active:to-red-700
           transition-all duration-200 shadow-md hover:shadow-lg
           disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-sm
-          ${isLoading ? 'animate-pulse' : ''}
+          ${isTriaging ? 'animate-pulse' : ''}
           ${className}
         `}
         title={
-          status !== "authenticated" 
+          !selectedMessageId 
+            ? "Select a message to triage" 
+            : status !== "authenticated" 
             ? "Please log in to use AI triage" 
             : !outlookStatus.connected 
             ? "Connect Outlook to enable AI triage" 
             : "AI Triage Options"
         }
       >
-        {isLoading ? (
+        {isTriaging ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : checkingConnection ? (
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -168,9 +152,9 @@ export default function TriageButton({ className = "" }: TriageButtonProps) {
           <Sparkles className="h-4 w-4" />
         )}
         <span className="font-medium">
-          {checkingConnection ? 'Checking...' : 'AI Triage'}
+          {checkingConnection ? 'Checking...' : isTriaging ? 'Triaging...' : 'AI Triage'}
         </span>
-        {outlookStatus.connected && !isLoading && !checkingConnection && (
+        {outlookStatus.connected && !isTriaging && !checkingConnection && (
           <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
         )}
       </button>
@@ -224,6 +208,59 @@ export default function TriageButton({ className = "" }: TriageButtonProps) {
                 </div>
               )}
 
+              {/* Message Selection Status */}
+              {!selectedMessageId && (
+                <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-yellow-100 rounded-lg">
+                      <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-yellow-800">No Message Selected</h3>
+                      <p className="text-sm text-yellow-600">Please select a message from the list to triage</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Triage Result Display */}
+              {triageResult && (
+                <div className="mb-6 bg-green-50 border border-green-200 rounded-xl p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-green-100 rounded-lg">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-green-800">Triage Complete</h3>
+                      <p className="text-sm text-green-600">AI analysis results available</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div><strong>Category:</strong> {triageResult.category}</div>
+                    <div><strong>Urgency:</strong> {triageResult.urgency}</div>
+                    <div><strong>Summary:</strong> {triageResult.summary}</div>
+                    {triageResult.dueDate && (
+                      <div><strong>Due Date:</strong> {triageResult.dueDate}</div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Triage Error Display */}
+              {triageError && (
+                <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-red-100 rounded-lg">
+                      <AlertTriangle className="h-4 w-4 text-red-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-red-800">Triage Failed</h3>
+                      <p className="text-sm text-red-600">{triageError}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Manual Triage Options */}
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Quick Actions</h3>
@@ -250,10 +287,10 @@ export default function TriageButton({ className = "" }: TriageButtonProps) {
               </div>
 
               {/* AI Triage Section */}
-              <div className={`rounded-xl p-4 border ${outlookStatus.connected ? 'bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}>
+              <div className={`rounded-xl p-4 border ${outlookStatus.connected && selectedMessageId ? 'bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className={`p-2 rounded-lg ${outlookStatus.connected ? 'bg-gradient-to-r from-blue-500 to-purple-500' : 'bg-gray-300'}`}>
-                    <Bot className={`h-4 w-4 ${outlookStatus.connected ? 'text-white' : 'text-gray-500'}`} />
+                  <div className={`p-2 rounded-lg ${outlookStatus.connected && selectedMessageId ? 'bg-gradient-to-r from-blue-500 to-purple-500' : 'bg-gray-300'}`}>
+                    <Bot className={`h-4 w-4 ${outlookStatus.connected && selectedMessageId ? 'text-white' : 'text-gray-500'}`} />
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900">AI-Powered Triage</h3>
@@ -263,29 +300,31 @@ export default function TriageButton({ className = "" }: TriageButtonProps) {
                 
                 <button
                   onClick={runAITriage}
-                  disabled={!outlookStatus.connected || isLoading}
+                  disabled={!outlookStatus.connected || !selectedMessageId || isTriaging}
                   className={`
                     w-full flex items-center justify-center gap-3 p-3 
-                    ${outlookStatus.connected 
+                    ${outlookStatus.connected && selectedMessageId && !isTriaging
                       ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700' 
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     }
                     rounded-lg font-medium transition-all duration-200 
                     shadow-md hover:shadow-lg
-                    ${isLoading ? 'animate-pulse' : ''}
+                    ${isTriaging ? 'animate-pulse' : ''}
                   `}
                 >
-                  {isLoading ? (
+                  {isTriaging ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Sparkles className="h-4 w-4" />
                   )}
-                  {isLoading ? 'Processing...' : 'Run AI Triage'}
+                  {isTriaging ? 'Triaging...' : 'Run AI Triage'}
                 </button>
                 
                 <p className="text-xs text-gray-500 text-center mt-2">
                   {!outlookStatus.connected 
                     ? "🔗 Connect your Outlook account to enable AI triage functionality."
+                    : !selectedMessageId
+                    ? "📧 Select a message from the list to enable AI triage."
                     : "🤖 AI analyzes emails, applies categories, flags, and creates draft replies. Safe mode - nothing is moved or sent automatically."
                   }
                 </p>

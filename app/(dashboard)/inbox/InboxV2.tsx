@@ -43,7 +43,16 @@ export default function InboxV2() {
 
   // Get folders and messages
   const { folders, isLoading: foldersLoading } = useFolders()
-  const { messages, refresh: refreshMessages } = useMessages(selectedFolderId)
+  const { 
+    messages, 
+    selectedId, 
+    setSelectedId, 
+    triage, 
+    isTriaging, 
+    error: triageError,
+    triageMessage,
+    refresh: refreshMessages 
+  } = useMessages(selectedFolderId)
 
   // Set the inbox folder as default when folders are loaded
   useEffect(() => {
@@ -54,31 +63,51 @@ export default function InboxV2() {
         folder.displayName.toLowerCase() === 'inbox'
       )
       if (inboxFolder) {
-        console.log('Setting inbox folder ID:', inboxFolder.id, 'for folder:', inboxFolder.displayName)
+        if (process.env.NODE_ENV === 'development') {
+          console.debug('[Inbox] Setting inbox folder ID:', inboxFolder.id, 'for folder:', inboxFolder.displayName)
+        }
         setSelectedFolderId(inboxFolder.id)
       } else {
-        console.log('No inbox folder found in:', folders)
+        if (process.env.NODE_ENV === 'development') {
+          console.debug('[Inbox] No inbox folder found in:', folders)
+        }
       }
     }
   }, [folders, selectedFolderId])
 
-  // Debug logging
+  // Debug logging (development only)
   useEffect(() => {
-    console.log('Folders loaded:', folders.length, 'Selected folder ID:', selectedFolderId)
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('[Inbox] Folders loaded:', folders.length, 'Selected folder ID:', selectedFolderId)
+    }
   }, [folders, selectedFolderId])
 
   useEffect(() => {
-    console.log('Messages loaded:', messages.length, 'for folder:', selectedFolderId)
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('[Inbox] Messages loaded:', messages.length, 'for folder:', selectedFolderId)
+    }
     
     // Clear selected message if it's no longer in the current message list
     if (selectedMessage && messages.length > 0) {
       const messageStillExists = messages.some((msg: any) => msg.id === selectedMessage.id)
       if (!messageStillExists) {
-        console.log('Selected message no longer exists in current list, clearing selection')
+        if (process.env.NODE_ENV === 'development') {
+          console.debug('[Inbox] Selected message no longer exists in current list, clearing selection')
+        }
         setSelectedMessage(null)
       }
     }
   }, [messages, selectedFolderId, selectedMessage])
+
+  // Sync selectedId with selectedMessage
+  useEffect(() => {
+    if (selectedId && selectedId !== selectedMessage?.id) {
+      const message = messages.find((msg: any) => msg.id === selectedId)
+      if (message) {
+        setSelectedMessage(message)
+      }
+    }
+  }, [selectedId, selectedMessage, messages])
 
   // Clear success message after 3 seconds
   useEffect(() => {
@@ -132,6 +161,7 @@ export default function InboxV2() {
       if (response.ok) {
         // Clear selected message
         setSelectedMessage(null)
+        setSelectedId(null)
         // Refresh messages
         refreshMessages()
       } else {
@@ -144,7 +174,9 @@ export default function InboxV2() {
 
   const moveMessage = async (messageId: string, destinationFolderId: string) => {
     try {
-      console.log(`Moving message ${messageId} to folder ${destinationFolderId}`)
+      if (process.env.NODE_ENV === 'development') {
+        console.debug(`[Inbox] Moving message ${messageId} to folder ${destinationFolderId}`)
+      }
       
       const response = await fetch('/api/outlook/v2/messages/move', {
         method: 'POST',
@@ -164,13 +196,16 @@ export default function InboxV2() {
           // Clear selected message if it was moved
           if (selectedMessage?.id === messageId) {
             setSelectedMessage(null)
+            setSelectedId(null)
           }
 
           // Show success message
           const message = messages.find((msg: any) => msg.id === messageId)
           const subject = message?.subject || 'Message'
           const successMessage = `✅ Successfully moved "${subject}" to folder ${destinationFolderId}`
-          console.log(successMessage)
+          if (process.env.NODE_ENV === 'development') {
+            console.debug('[Inbox]', successMessage)
+          }
           
           // Set success state for UI feedback
           setMoveSuccess({ message: successMessage, timestamp: Date.now() })
@@ -180,39 +215,55 @@ export default function InboxV2() {
           
           // Immediately invalidate all message caches to ensure consistency across folders
           // This will update both the source and destination folders
-          console.log('Invalidating all message caches...')
+          if (process.env.NODE_ENV === 'development') {
+            console.debug('[Inbox] Invalidating all message caches...')
+          }
           
           // Invalidate all message list caches with more specific pattern matching
           const cacheKeys = await mutate((key: string) => {
             const isMessageList = key.includes('/api/outlook/v2/messages/list')
-            console.log('Checking cache key:', key, 'isMessageList:', isMessageList)
+            if (process.env.NODE_ENV === 'development') {
+              console.debug('[Inbox] Checking cache key:', key, 'isMessageList:', isMessageList)
+            }
             return isMessageList
           })
           
-          console.log('Cache invalidation result:', cacheKeys)
+          if (process.env.NODE_ENV === 'development') {
+            console.debug('[Inbox] Cache invalidation result:', cacheKeys)
+          }
           
           // Also try to manually clear specific caches for better reliability
           try {
             // Clear the current folder's cache specifically
             const currentFolderKey = `/api/outlook/v2/messages/list?folderId=${selectedFolderId}`
-            console.log('Manually clearing current folder cache:', currentFolderKey)
+            if (process.env.NODE_ENV === 'development') {
+              console.debug('[Inbox] Manually clearing current folder cache:', currentFolderKey)
+            }
             await mutate(currentFolderKey, undefined, false)
             
             // Clear the destination folder's cache if it's different
             if (destinationFolderId !== selectedFolderId) {
               const destFolderKey = `/api/outlook/v2/messages/list?folderId=${destinationFolderId}`
-              console.log('Manually clearing destination folder cache:', destFolderKey)
+              if (process.env.NODE_ENV === 'development') {
+                console.debug('[Inbox] Manually clearing destination folder cache:', destFolderKey)
+              }
               await mutate(destFolderKey, undefined, false)
             }
           } catch (cacheError) {
-            console.warn('Cache clearing warning:', cacheError)
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('[Inbox] Cache clearing warning:', cacheError)
+            }
           }
           
           // Force refresh the current folder to show the updated message list
-          console.log('Refreshing current folder messages...')
+          if (process.env.NODE_ENV === 'development') {
+            console.debug('[Inbox] Refreshing current folder messages...')
+          }
           await refreshMessages()
           
-          console.log('Message move completed successfully')
+          if (process.env.NODE_ENV === 'development') {
+            console.debug('[Inbox] Message move completed successfully')
+          }
         } else {
           console.error('Failed to move message:', data.error)
         }
@@ -243,16 +294,19 @@ export default function InboxV2() {
   const handleMessageSelect = (messageId: string | null) => {
     if (messageId === null) {
       setSelectedMessage(null)
+      setSelectedId(null)
     } else {
       // Find message in current messages
       const message = messages.find((msg: any) => msg.id === messageId)
       if (message) {
         setSelectedMessage(message)
+        setSelectedId(messageId)
       } else {
         // If message not found, only clear selection if we don't have a current selection
         // This prevents the preview from disappearing when messages are filtered
         if (!selectedMessage || selectedMessage.id !== messageId) {
           setSelectedMessage(null)
+          setSelectedId(null)
         }
       }
     }
@@ -269,6 +323,7 @@ export default function InboxV2() {
     // Clear selection if the moved message was selected
     if (selectedMessage?.id === messageId) {
       setSelectedMessage(null)
+      setSelectedId(null)
     }
     
     // Show success message
@@ -320,7 +375,13 @@ export default function InboxV2() {
                 New Email
               </button>
               
-                          <TriageButton />
+              <TriageButton 
+                selectedMessageId={selectedId}
+                onTriage={triageMessage}
+                isTriaging={isTriaging}
+                triageResult={triage}
+                triageError={triageError}
+              />
             </div>
             
             <FolderSidebar 
@@ -328,13 +389,14 @@ export default function InboxV2() {
               onFolderSelect={(folderId) => {
                 setSelectedFolderId(folderId)
                 setSelectedMessage(null) // Clear selected message when changing folders
+                setSelectedId(null)
               }}
             />
           </div>
           
           <MessageList 
             selectedFolderId={selectedFolderId}
-            selectedMessageId={selectedMessage?.id || null}
+            selectedMessageId={selectedId}
             onMessageSelect={handleMessageSelect}
           />
           
@@ -343,9 +405,10 @@ export default function InboxV2() {
             onReply={() => handleReply('reply')}
             onReplyAll={() => handleReply('replyAll')}
             onMessageUpdate={refreshMessages}
+            triageResult={triage}
           />
         </div>
-              </DragDropFrame>
+      </DragDropFrame>
 
       {/* Success Message Display */}
       {moveSuccess && (
