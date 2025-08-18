@@ -1,33 +1,22 @@
 import { NextResponse } from "next/server";
 import { classifyEmailForTriage } from "@/lib/ai/triage";
-import { getAccessTokenForUser } from "@/lib/outlook/graph";
+import { makeGraphRequest } from "@/lib/outlookAuth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function POST(req: Request) {
   try {
-    const { messageId, userId } = await req.json();
+    const { messageId } = await req.json();
     
     if (!messageId) {
       return NextResponse.json({ error: "messageId required" }, { status: 400 });
     }
-    
-    if (!userId) {
-      return NextResponse.json({ error: "userId required" }, { status: 400 });
-    }
 
-    // Get access token for the user
-    const token = await getAccessTokenForUser(userId);
+    // Get the specific message from Outlook using the existing auth system
+    const response = await makeGraphRequest(`/me/messages/${messageId}`);
     
-    // Get the specific message from Outlook
-    const response = await fetch(`https://graph.microsoft.com/v1.0/me/messages/${messageId}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
     if (!response.ok) {
-      throw new Error(`Failed to fetch message: ${response.statusText}`);
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch message: ${response.status} - ${errorText}`);
     }
 
     const message = await response.json();

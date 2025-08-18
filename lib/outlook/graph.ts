@@ -2,11 +2,18 @@
 // Microsoft Graph helpers for Outlook operations
 // Scopes needed: Mail.ReadWrite (drafts, categories, flags). Later if you send: Mail.Send.
 
+import { getValidAccessToken } from '@/lib/outlookAuth'
+
 type Recipient = { address: string; name?: string };
 
 export async function getAccessTokenForUser(userId?: string) {
-  // TODO: wire to your existing Outlook/MSAL token store (delegated token for testbloc@blociq.co.uk)
-  throw new Error("Outlook token lookup not implemented. Connect to your MSAL token store.");
+  // Note: userId parameter is ignored as we use the current session
+  // This maintains compatibility with existing code while using the working auth system
+  try {
+    return await getValidAccessToken()
+  } catch (error) {
+    throw new Error(`Failed to get Outlook access token: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
 }
 
 export async function listInboxMessages(token: string, top = 50) {
