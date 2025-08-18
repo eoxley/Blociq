@@ -38,15 +38,16 @@ select
   bca.id as bca_id,
   bca.building_id,
   ca.id as asset_id,
-  ca.title as asset_name,
+  ca.name as asset_name,
   ca.category,
-  bca.due_date as next_due_date,
-  bca.due_date as last_renewed_date,
+  bca.next_due_date,
+  bca.last_renewed_date,
   case
-    when bca.due_date is null then 'unknown'
-    when bca.due_date < current_date then 'overdue'
-    when bca.due_date <= current_date + interval '30 days' then 'due_soon'
-    when bca.due_date is not null then 'compliant'
+    when bca.status_override is not null then bca.status_override
+    when bca.next_due_date is null then 'unknown'
+    when bca.next_due_date < current_date then 'overdue'
+    when bca.next_due_date <= current_date + interval '30 days' then 'due_soon'
+    when bca.next_due_date is not null then 'compliant'
     else 'pending'
   end as status
 from public.building_compliance_assets bca
