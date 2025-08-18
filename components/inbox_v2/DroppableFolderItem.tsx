@@ -97,31 +97,31 @@ export const DroppableFolderItem = memo(function DroppableFolderItem({
         </span>
       )}
       
-      {/* Drop indicator */}
+      {/* Drop indicator - neutral colors only */}
       {isOver && (
         <div className="absolute inset-0 bg-zinc-200/30 border-2 border-zinc-400 rounded-md pointer-events-none" />
       )}
       
-      {/* Drop arrow indicator */}
+      {/* Drop arrow indicator - neutral colors only */}
       {isOver && (
         <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
           <ArrowRight className="h-4 w-4 text-zinc-600 animate-bounce" />
         </div>
       )}
       
-      {/* Success indicator */}
+      {/* Success indicator - neutral colors only */}
       {isOver && (
         <div className="absolute left-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
-          <CheckCircle className="h-4 w-4 text-green-600 animate-pulse" />
+          <CheckCircle className="h-4 w-4 text-zinc-500 animate-pulse" />
         </div>
       )}
       
-      {/* Glow effect when dragging over */}
+      {/* Glow effect when dragging over - neutral colors only */}
       {isOver && (
         <div className="absolute inset-0 bg-zinc-400/10 rounded-md pointer-events-none animate-ping" />
       )}
       
-      {/* Drop zone highlight */}
+      {/* Drop zone highlight - neutral colors only */}
       {isOver && (
         <div className="absolute inset-0 bg-zinc-500/5 rounded-md pointer-events-none border-2 border-dashed border-zinc-400" />
       )}

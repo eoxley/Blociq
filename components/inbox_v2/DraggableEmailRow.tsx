@@ -59,7 +59,7 @@ export const DraggableEmailRow = memo(function DraggableEmailRow({ messageId, so
       )}>
         <div className={cn(
           'w-1 h-4 bg-gray-300 rounded-full transition-all duration-200',
-          isDragging && 'bg-blue-500 scale-110',
+          isDragging && 'bg-zinc-500 scale-110',
           isHovered && 'bg-gray-400'
         )} />
       </div>
@@ -73,24 +73,24 @@ export const DraggableEmailRow = memo(function DraggableEmailRow({ messageId, so
       )}>
         <GripVertical className={cn(
           'h-4 w-4 text-gray-400 transition-all duration-200',
-          isDragging && 'text-blue-500 scale-110',
+          isDragging && 'text-zinc-500 scale-110',
           isHovered && 'text-gray-500'
         )} />
       </div>
       
       {children}
       
-      {/* Enhanced drag overlay when dragging */}
+      {/* Enhanced drag overlay when dragging - neutral colors only */}
       {isDragging && (
-        <div className="absolute inset-0 bg-blue-50/50 border-2 border-blue-400 rounded-lg pointer-events-none">
-          <div className="absolute top-2 left-2 w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-          <div className="absolute bottom-2 right-2 w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+        <div className="absolute inset-0 bg-zinc-50/50 border-2 border-zinc-400 rounded-lg pointer-events-none">
+          <div className="absolute top-2 left-2 w-2 h-2 bg-zinc-500 rounded-full animate-pulse" />
+          <div className="absolute bottom-2 right-2 w-2 h-2 bg-zinc-500 rounded-full animate-pulse" />
         </div>
       )}
       
-      {/* Hover indicator */}
+      {/* Hover indicator - neutral colors only */}
       {isHovered && !isDragging && (
-        <div className="absolute inset-0 bg-blue-50/20 border border-blue-200 rounded-lg pointer-events-none transition-all duration-200" />
+        <div className="absolute inset-0 bg-zinc-50/20 border border-zinc-200 rounded-lg pointer-events-none transition-all duration-200" />
       )}
     </div>
   )

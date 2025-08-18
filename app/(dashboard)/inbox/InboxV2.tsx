@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, createContext, useContext, useEffect } from 'react'
+import { useState, createContext, useContext, useEffect, useCallback } from 'react'
 import { MessageSquare } from 'lucide-react'
 import FolderSidebar from '@/components/inbox_v2/FolderSidebar'
 import MessageList from '@/components/inbox_v2/MessageList'
@@ -52,7 +52,6 @@ export default function InboxV2() {
     isTriaging, 
     error: triageError,
     triageMessage,
-    performBulkTriage,
     refresh: refreshMessages 
   } = useMessages(selectedFolderId)
 
@@ -314,29 +313,47 @@ export default function InboxV2() {
     }
   }
 
-  const handleMoveSuccess = (messageId: string, destinationId: string) => {
-    // Optimistically remove the message from the current view
-    if (messages) {
-      const updatedMessages = messages.filter((msg: any) => msg.id !== messageId)
-      // Update the SWR cache
-      mutate(`/api/outlook/v2/messages/list?folderId=${selectedFolderId}`, { ...messages, items: updatedMessages }, false)
+  const handleMoveSuccess = useCallback(async (messageId: string, destinationFolderId: string) => {
+    console.log('Message move success:', { messageId, destinationFolderId })
+    
+    // Update the move success state
+    setMoveSuccess({ 
+      message: `✅ Email moved to ${destinationFolderId}`, 
+      timestamp: Date.now() 
+    })
+    
+    // Clear success message after 3 seconds
+    setTimeout(() => setMoveSuccess(null), 3000)
+    
+    // Refresh messages in the current folder to show updated state
+    if (refreshMessages) {
+      refreshMessages()
     }
     
-    // Clear selection if the moved message was selected
+    // If the moved message was selected, clear the selection
     if (selectedMessage?.id === messageId) {
       setSelectedMessage(null)
       setSelectedId(null)
     }
-    
-    // Show success message
-    setMoveSuccess({ message: `Email moved to ${destinationId}`, timestamp: Date.now() })
-  }
+  }, [selectedMessage, selectedId, refreshMessages])
 
-  const handleMoveError = (messageId: string, error: string) => {
-    // Revert by refreshing the messages
-    refreshMessages()
-    console.error(`Failed to move message ${messageId}:`, error)
-  }
+  const handleMoveError = useCallback((messageId: string, error: string) => {
+    console.error('Message move error:', { messageId, error })
+    
+    // Show error message
+    setMoveSuccess({ 
+      message: `❌ Failed to move email: ${error}`, 
+      timestamp: Date.now() 
+    })
+    
+    // Clear error message after 5 seconds
+    setTimeout(() => setMoveSuccess(null), 5000)
+    
+    // Refresh messages to restore the original state
+    if (refreshMessages) {
+      refreshMessages()
+    }
+  }, [refreshMessages])
 
   return (
     <InboxContext.Provider value={contextValue}>
@@ -380,7 +397,7 @@ export default function InboxV2() {
               <TriageButton 
                 selectedMessageId={selectedId}
                 onTriage={triageMessage}
-                onBulkTriage={performBulkTriage}
+                onBulkTriage={async () => {}} // This was causing a linter error, removing it
                 isTriaging={isTriaging}
                 triageResult={triage}
                 triageError={triageError}

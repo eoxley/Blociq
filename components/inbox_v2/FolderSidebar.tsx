@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useFolders } from '@/hooks/inbox_v2'
 import { RefreshCw, Plus, X } from 'lucide-react'
 import { DroppableFolderItem } from './DroppableFolderItem'
@@ -15,8 +15,19 @@ export default function FolderSidebar({ selectedFolderId, onFolderSelect }: Fold
   const [isAddingFolder, setIsAddingFolder] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
 
+  // Debug logging
+  useEffect(() => {
+    console.log('FolderSidebar folders:', {
+      total: folders.length,
+      folders: folders.map(f => ({ id: f.id, name: f.displayName, type: f.wellKnownName || 'custom' })),
+      isFallback,
+      isLoading
+    })
+  }, [folders, isFallback, isLoading])
+
   const handleAddFolder = () => {
     if (newFolderName.trim()) {
+      console.log('Adding manual folder:', newFolderName.trim())
       addManualFolder(newFolderName.trim())
       setNewFolderName('')
       setIsAddingFolder(false)
