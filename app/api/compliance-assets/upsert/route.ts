@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { cookies } from 'next/headers'
-import { canonicaliseCategory, canonicaliseTitle, deriveFrequencyLabel, normaliseText } from '@/lib/compliance/normalise'
+import { canonicaliseCategory, canonicaliseTitle, deriveFrequencyLabel } from '@/lib/compliance/normalise'
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,18 +26,17 @@ export async function POST(request: NextRequest) {
     // Canonicalise inputs
     const canonicalCategory = canonicaliseCategory(category)
     const canonicalTitle = canonicaliseTitle(title)
-    const normCategory = normaliseText(canonicalCategory)
-    const normTitle = normaliseText(canonicalTitle)
     
     // Derive frequency label if missing
     const derivedFrequency = deriveFrequencyLabel(frequency_months, frequency)
 
-    // Check if a row with the same (norm_category, norm_title) exists
+    // Check if a row with the same canonical (category, title) exists
+    // Since norm_category and norm_title are generated columns, we check the canonical values
     const { data: existingAsset, error: checkError } = await supabase
       .from('compliance_assets')
-      .select('id, title, category, frequency, frequency_months')
-      .eq('norm_category', normCategory)
-      .eq('norm_title', normTitle)
+      .select('id, title, category, frequency, frequency_months, description')
+      .eq('category', canonicalCategory)
+      .eq('title', canonicalTitle)
       .single()
 
     if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
@@ -83,6 +82,7 @@ export async function POST(request: NextRequest) {
       })
     } else {
       // Insert new asset
+      // Note: norm_title and norm_category are generated columns, so we don't insert them
       const { data: newAsset, error: insertError } = await supabase
         .from('compliance_assets')
         .insert({
@@ -90,9 +90,8 @@ export async function POST(request: NextRequest) {
           category: canonicalCategory,
           description: description || null,
           frequency: derivedFrequency,
-          frequency_months: frequency_months || null,
-          norm_title: normTitle,
-          norm_category: normCategory
+          frequency_months: frequency_months || null
+          // norm_title and norm_category are generated automatically
         })
         .select('id, title, category, frequency')
         .single()
@@ -132,10 +131,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Fetch all compliance assets with deduplication info
+    // Fetch all compliance assets
     const { data: assets, error } = await supabase
       .from('compliance_assets')
-      .select('id, title, category, description, frequency, frequency_months, norm_title, norm_category, created_at, updated_at')
+      .select('id, title, category, description, frequency, frequency_months, created_at, updated_at')
       .order('category', { ascending: true })
       .order('title', { ascending: true })
 
