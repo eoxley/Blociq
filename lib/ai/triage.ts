@@ -48,10 +48,18 @@ function enforceJson(text: string, schema: any) {
     return schema.parse(json);
   } catch (error) {
     console.error("JSON parsing/validation error:", error);
-    // Return a safe fallback
+    // Return a safe fallback that matches the TriageOutput schema
     return {
       label: "follow_up",
       priority: "P3",
+      category: "GEN",
+      intent: "provide_info",
+      required_actions: ["acknowledge"],
+      routing: ["property_manager"],
+      sla_ack_mins: 120,
+      sla_target_hours: 24,
+      confidence: 0.5,
+      reasons: ["email_requires_follow_up"],
       reason: "Email requires follow-up",
       reply: {
         greeting: "Dear Sir/Madam",
@@ -90,49 +98,68 @@ export async function buildTriageContext(raw: IncomingEmail) {
 }
 
 export async function triageEmail(raw: IncomingEmail) {
-  const context = await buildTriageContext(raw);
+  try {
+    console.log('Starting triage for email:', { subject: raw.subject, from: raw.from })
+    
+    const context = await buildTriageContext(raw);
+    console.log('Built context:', { 
+      hasBuilding: !!context.buildingCtx, 
+      hasThread: !!context.threadCtx,
+      hasDocs: !!context.docsCtx,
+      docLibraryCount: context.docLibrary?.length || 0
+    })
 
-  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-    { role: "system", content: triageSystem },
-    {
-      role: "system",
-      name: "context",
-      content: JSON.stringify({
-        buildingCtx: context.buildingCtx,
-        threadCtx: context.threadCtx,
-        complianceCtx: context.complianceCtx,
-        issuesCtx: context.issuesCtx,
-        majorWorksCtx: context.majorWorksCtx,
-        docsCtx: context.docsCtx,
-        docLibrary: context.docLibrary
-      }).slice(0, 60000) // Limit context size
-    },
-    { role: "user", content: JSON.stringify({ email: context.base }) }
-  ];
+    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+      { role: "system", content: triageSystem },
+      {
+        role: "system",
+        name: "context",
+        content: JSON.stringify({
+          buildingCtx: context.buildingCtx,
+          threadCtx: context.threadCtx,
+          complianceCtx: context.complianceCtx,
+          issuesCtx: context.issuesCtx,
+          majorWorksCtx: context.majorWorksCtx,
+          docsCtx: context.docsCtx,
+          docLibrary: context.docLibrary
+        }).slice(0, 60000) // Limit context size
+      },
+      { role: "user", content: JSON.stringify({ email: context.base }) }
+    ];
 
-  const model = process.env.OPENAI_TRIAGE_MODEL || "gpt-4o-mini";
-  const resp = await openai.chat.completions.create({
-    model,
-    temperature: 0.2,
-    response_format: { type: "json_object" },
-    messages
-  });
+    const model = process.env.OPENAI_TRIAGE_MODEL || "gpt-4o-mini";
+    console.log('Calling OpenAI with model:', model)
+    
+    const resp = await openai.chat.completions.create({
+      model,
+      temperature: 0.2,
+      response_format: { type: "json_object" },
+      messages
+    });
 
-  const text = resp.choices?.[0]?.message?.content ?? "{}";
-  let output = enforceJson(text, TriageOutput);
+    const text = resp.choices?.[0]?.message?.content ?? "{}";
+    console.log('OpenAI response:', text)
+    
+    let output = enforceJson(text, TriageOutput);
+    console.log('Parsed output:', output)
 
-  // Keep label aligned to P-level
-  const correctedLabel = mapPriorityToLabel(output.priority);
-  if (output.label !== correctedLabel) {
-    output = { ...output, label: correctedLabel };
+    // Keep label aligned to P-level
+    const correctedLabel = mapPriorityToLabel(output.priority);
+    if (output.label !== correctedLabel) {
+      output = { ...output, label: correctedLabel };
+    }
+
+    // Ensure signoff is set
+    if (output.reply) {
+      output.reply.signoff = "Kind regards";
+    }
+
+    console.log('Final triage output:', output)
+    return output;
+  } catch (error) {
+    console.error('Error in triageEmail:', error)
+    throw error
   }
-
-  // Ensure signoff is set
-  if (output.reply) {
-    output.reply.signoff = "Kind regards";
-  }
-
-  return output;
 }
 
 // Legacy function for backward compatibility

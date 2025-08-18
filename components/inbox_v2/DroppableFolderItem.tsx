@@ -45,9 +45,10 @@ export const DroppableFolderItem = memo(function DroppableFolderItem({
       data-droppable="true"
       data-over={isOver ? "true" : "false"}
       className={cn(
-        'relative px-3 py-2 rounded-md cursor-pointer transition-all duration-200 flex items-center justify-between group no-blue-focus',
+        'relative px-3 py-2 rounded-md cursor-pointer transition-all duration-200 flex items-center justify-between group',
         'hover:bg-zinc-50 border border-transparent',
-        'outline-none focus-visible:ring-0',
+        'focus:outline-none focus:ring-0 focus:border-transparent',
+        'focus-visible:outline-none focus-visible:ring-0 focus-visible:border-transparent',
         isOver 
           ? 'bg-zinc-100 border-2 border-zinc-300 shadow-md scale-[1.02] transform z-10' 
           : '',
@@ -57,6 +58,13 @@ export const DroppableFolderItem = memo(function DroppableFolderItem({
       )}
       onClick={handleClick}
       title={`${displayName}${messageCount ? ` (${messageCount})` : ''}`}
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          handleClick()
+        }
+      }}
     >
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <div className="relative">
