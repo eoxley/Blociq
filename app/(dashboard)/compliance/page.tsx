@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import GradientHeader from "@/components/ui/GradientHeader";
+import { Shield, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 type CountRow = { building_id:string; building_name:string; total:number; compliant:number; due_soon:number; overdue:number; missing:number };
@@ -23,7 +23,37 @@ export default function CompliancePortfolioPage() {
 
   return (
     <div className="space-y-4">
-      <GradientHeader title="Compliance Portfolio" subtitle="Live status across all buildings" />
+      {/* Hero Banner - Matching Inbox Page Style */}
+      <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16 mb-8">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center">
+            <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
+              <Shield className="h-10 w-10 text-white" />
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
+              Compliance Portfolio
+            </h1>
+            <p className="text-xl text-white/90 max-w-3xl mx-auto leading-relaxed">
+              Live status across all buildings with comprehensive compliance tracking and management.
+            </p>
+            <div className="mt-6 bg-white/20 backdrop-blur-sm rounded-xl p-4 max-w-2xl mx-auto">
+              <div className="flex items-center justify-center gap-2 text-white/90">
+                <Sparkles className="h-5 w-5" />
+                <span className="text-sm font-medium">
+                  {loading ? 'Loading compliance data...' : `Monitoring ${counts.length} buildings`}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Decorative Elements */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-10 right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-white/5 rounded-full blur-2xl"></div>
+        </div>
+      </section>
 
       {/* Summary grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
