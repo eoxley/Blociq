@@ -1,6 +1,6 @@
 -- Migration: Add generated normalisation columns for compliance assets
 -- Date: 2025-01-18
--- Description: Adds generated columns for deduplication if they don't exist
+-- Description: Simple migration to add generated columns for deduplication
 
 -- Add normalisation columns as generated columns for deduplication
 -- These will be automatically computed from title and category
@@ -62,16 +62,9 @@ BEGIN
         WHERE conname = 'unique_norm_asset'
     ) THEN
         -- Try to add the constraint
-        BEGIN
-            ALTER TABLE compliance_assets 
-            ADD CONSTRAINT unique_norm_asset UNIQUE (norm_category, norm_title);
-            RAISE NOTICE 'Added unique constraint on (norm_category, norm_title)';
-        EXCEPTION 
-            WHEN duplicate_object THEN
-                RAISE NOTICE 'Constraint unique_norm_asset already exists';
-            WHEN others THEN
-                RAISE NOTICE 'Failed to add constraint: %', SQLERRM;
-        END;
+        ALTER TABLE compliance_assets 
+        ADD CONSTRAINT unique_norm_asset UNIQUE (norm_category, norm_title);
+        RAISE NOTICE 'Added unique constraint on (norm_category, norm_title)';
     ELSE
         RAISE NOTICE 'Constraint unique_norm_asset already exists';
     END IF;
