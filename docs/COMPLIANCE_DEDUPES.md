@@ -160,7 +160,7 @@ SET
 Run the test suite to verify normalisation works correctly:
 
 ```bash
-npm test src/lib/compliance/normalise.test.ts
+npm test lib/compliance/normalise.test.ts
 ```
 
 ## Future Enhancements

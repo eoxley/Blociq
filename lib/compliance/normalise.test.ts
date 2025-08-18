@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normaliseText, canonicaliseCategory, canonicaliseTitle, deriveFrequencyLabel } from './normalise'
+import { normaliseText, canonicaliseCategory, canonicaliseTitle, deriveFrequencyLabel, normalisedPair } from './normalise'
 
 describe('normaliseText', () => {
   it('should normalise text correctly', () => {
@@ -84,6 +84,20 @@ describe('deriveFrequencyLabel', () => {
     expect(deriveFrequencyLabel(99)).toBe(null) // Unknown frequency
     expect(deriveFrequencyLabel(12, '')).toBe('Annual') // Empty string label
     expect(deriveFrequencyLabel(12, '   ')).toBe('Annual') // Whitespace label
+  })
+})
+
+describe('normalisedPair', () => {
+  it('should return normalised category and title pair', () => {
+    const result = normalisedPair('Lifts', 'FRA')
+    expect(result.normCategory).toBe('lifts and access')
+    expect(result.normTitle).toBe('fire risk assessment fra')
+  })
+
+  it('should handle non-aliased inputs', () => {
+    const result = normalisedPair('Fire Safety', 'Emergency Lighting')
+    expect(result.normCategory).toBe('fire safety')
+    expect(result.normTitle).toBe('emergency lighting')
   })
 })
 
