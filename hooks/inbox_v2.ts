@@ -1,5 +1,6 @@
 import useSWR from 'swr'
 import { useState, useCallback, useEffect } from 'react'
+import { useUser } from '@supabase/auth-helpers-react'
 
 // Default folders fallback when Graph API is unavailable
 const DEFAULT_FOLDERS = [
@@ -80,6 +81,7 @@ export function useMessages(folderId: string | null) {
   const [triage, setTriage] = useState<any | null>(null)
   const [isTriaging, setIsTriaging] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const user = useUser()
   
   const { data, error: fetchError, isLoading, mutate } = useSWR(
     folderId ? `/api/outlook/v2/messages/list?folderId=${folderId}` : null,
@@ -115,19 +117,14 @@ export function useMessages(folderId: string | null) {
       throw new Error('No message selected for triage')
     }
     
+    if (!user?.id) {
+      throw new Error('User not authenticated')
+    }
+    
     setIsTriaging(true)
     setError(null)
     
     try {
-      // Get user ID from session (you may need to adjust this based on your auth setup)
-      const sessionResponse = await fetch('/api/auth/session')
-      const sessionData = await sessionResponse.json()
-      const userId = sessionData?.user?.id
-      
-      if (!userId) {
-        throw new Error('User not authenticated')
-      }
-      
       const response = await fetch('/api/triage', {
         method: 'POST',
         headers: {
@@ -135,7 +132,7 @@ export function useMessages(folderId: string | null) {
         },
         body: JSON.stringify({
           messageId: targetMessageId,
-          userId
+          userId: user.id
         })
       })
       
@@ -155,7 +152,7 @@ export function useMessages(folderId: string | null) {
     } finally {
       setIsTriaging(false)
     }
-  }, [selectedId])
+  }, [selectedId, user?.id])
   
   // Debug logging (development only)
   useEffect(() => {
@@ -165,10 +162,11 @@ export function useMessages(folderId: string | null) {
         messagesCount: messages.length, 
         selectedId,
         isLoading, 
-        error: fetchError 
+        error: fetchError,
+        userId: user?.id
       })
     }
-  }, [folderId, messages.length, selectedId, isLoading, fetchError])
+  }, [folderId, messages.length, selectedId, isLoading, fetchError, user?.id])
   
   return {
     messages,

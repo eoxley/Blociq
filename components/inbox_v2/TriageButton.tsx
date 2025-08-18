@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { X, AlertTriangle, Clock, CheckCircle, MessageSquare, Bot, Loader2, Sparkles, Zap, ExternalLink } from 'lucide-react'
-import { useSession } from '@/hooks/useSession'
+import { useUser } from '@supabase/auth-helpers-react'
 
 interface TriageButtonProps {
   className?: string
@@ -40,15 +40,31 @@ export default function TriageButton({
   const [isLoading, setIsLoading] = useState(false)
   const [outlookStatus, setOutlookStatus] = useState<OutlookConnectionStatus>({ connected: false })
   const [checkingConnection, setCheckingConnection] = useState(true)
-  const { data: session, status } = useSession()
+  const user = useUser()
 
   // Use external triaging state if provided, otherwise use internal state
   const isTriaging = externalIsTriaging !== undefined ? externalIsTriaging : isLoading
 
+  const disabled = !user || !outlookStatus.connected || checkingConnection || !selectedMessageId
+
+  // Debug logging
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('[TriageButton] State:', {
+        user: !!user,
+        userId: user?.id,
+        outlookStatus,
+        selectedMessageId,
+        disabled,
+        isTriaging
+      })
+    }
+  }, [user, outlookStatus, selectedMessageId, disabled, isTriaging])
+
   // Check Outlook connection status
   useEffect(() => {
     checkOutlookConnection()
-  }, [session])
+  }, [user])
 
   const checkOutlookConnection = async () => {
     setCheckingConnection(true)
@@ -71,8 +87,6 @@ export default function TriageButton({
     }
   }
 
-  const disabled = status !== "authenticated" || !outlookStatus.connected || checkingConnection || !selectedMessageId
-
   const triageOptions = [
     { id: 'urgent', label: 'Mark as Urgent', icon: AlertTriangle, color: 'text-red-600', bgColor: 'bg-red-50', borderColor: 'border-red-200' },
     { id: 'follow-up', label: 'Follow Up Later', icon: Clock, color: 'text-yellow-600', bgColor: 'bg-yellow-50', borderColor: 'border-yellow-200' },
@@ -89,6 +103,10 @@ export default function TriageButton({
   }
 
   const runAITriage = async () => {
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('[TriageButton] runAITriage called with:', { selectedMessageId, onTriage: !!onTriage })
+    }
+    
     if (!outlookStatus.connected) {
       alert('Please connect your Outlook account first')
       return
@@ -105,6 +123,9 @@ export default function TriageButton({
     }
 
     try {
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('[TriageButton] Calling onTriage with messageId:', selectedMessageId)
+      }
       await onTriage(selectedMessageId)
       setIsOpen(false)
     } catch (error) {
@@ -121,7 +142,12 @@ export default function TriageButton({
     <>
       {/* Enhanced Main Button */}
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={() => {
+          if (process.env.NODE_ENV === 'development') {
+            console.debug('[TriageButton] Button clicked, opening modal')
+          }
+          setIsOpen(true)
+        }}
         disabled={disabled || isTriaging}
         className={`
           relative inline-flex items-center justify-center gap-2 px-4 py-2.5 
@@ -135,10 +161,10 @@ export default function TriageButton({
           ${className}
         `}
         title={
-          !selectedMessageId 
-            ? "Select a message to triage" 
-            : status !== "authenticated" 
+          !user 
             ? "Please log in to use AI triage" 
+            : !selectedMessageId 
+            ? "Select a message to triage" 
             : !outlookStatus.connected 
             ? "Connect Outlook to enable AI triage" 
             : "AI Triage Options"
@@ -186,6 +212,21 @@ export default function TriageButton({
 
             {/* Content */}
             <div className="p-6">
+              {/* Authentication Status */}
+              {!user && (
+                <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-red-100 rounded-lg">
+                      <AlertTriangle className="h-4 w-4 text-red-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-red-800">Authentication Required</h3>
+                      <p className="text-sm text-red-600">Please log in to use AI triage</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Connection Status */}
               {!outlookStatus.connected && (
                 <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4">
@@ -321,7 +362,9 @@ export default function TriageButton({
                 </button>
                 
                 <p className="text-xs text-gray-500 text-center mt-2">
-                  {!outlookStatus.connected 
+                  {!user 
+                    ? "🔐 Please log in to enable AI triage functionality."
+                    : !outlookStatus.connected 
                     ? "🔗 Connect your Outlook account to enable AI triage functionality."
                     : !selectedMessageId
                     ? "📧 Select a message from the list to enable AI triage."
