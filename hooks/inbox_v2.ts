@@ -53,7 +53,7 @@ export function useFolders() {
   
   const addManualFolder = useCallback((folderName: string) => {
     const newFolder = {
-      id: `manual-${Date.now()}`,
+      id: `manual-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       displayName: folderName,
       wellKnownName: 'custom'
     }
@@ -61,11 +61,25 @@ export function useFolders() {
     const updatedManualFolders = [...manualFolders, newFolder]
     setManualFolders(updatedManualFolders)
     saveManualFolders(updatedManualFolders)
+    
+    // Log for debugging
+    console.log('Added manual folder:', newFolder)
+    console.log('Updated manual folders:', updatedManualFolders)
   }, [manualFolders])
   
   const refresh = useCallback(() => {
     mutate()
   }, [mutate])
+  
+  // Debug logging
+  useEffect(() => {
+    console.log('useFolders state:', {
+      graphFolders: graphFolders.length,
+      manualFolders: manualFolders.length,
+      totalFolders: folders.length,
+      isFallback
+    })
+  }, [graphFolders.length, manualFolders.length, folders.length, isFallback])
   
   return {
     folders,

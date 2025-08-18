@@ -160,9 +160,9 @@ export default function DragDropFrame({ children, onMoveSuccess, onMoveError }: 
       
       <DragOverlay>
         {activeId && dragData ? (
-          <div className="p-4 bg-white rounded-lg border-2 border-blue-400 shadow-2xl max-w-sm transform rotate-1">
+          <div className="p-4 bg-white rounded-lg border-2 border-zinc-400 shadow-2xl max-w-sm transform rotate-1">
             <div className="flex items-center gap-3">
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+              <div className="w-2 h-2 bg-zinc-500 rounded-full animate-pulse"></div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-gray-900 truncate">
                   Moving email...
@@ -176,11 +176,11 @@ export default function DragDropFrame({ children, onMoveSuccess, onMoveError }: 
         ) : null}
       </DragOverlay>
       
-      {/* Enhanced global drag indicator */}
+      {/* Enhanced global drag indicator - neutral colors only */}
       {isDragging && (
         <div className="fixed inset-0 pointer-events-none z-50">
           <div 
-            className="absolute bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg transform -translate-x-1/2 -translate-y-full"
+            className="absolute bg-zinc-600 text-white px-4 py-2 rounded-lg shadow-lg transform -translate-x-1/2 -translate-y-full"
             style={{
               left: dragPosition.x,
               top: dragPosition.y - 10
@@ -194,10 +194,10 @@ export default function DragDropFrame({ children, onMoveSuccess, onMoveError }: 
         </div>
       )}
       
-      {/* Drop zone highlight */}
+      {/* Drop zone highlight - neutral colors only */}
       {isDragging && !dragOverId && (
         <div className="fixed inset-0 pointer-events-none z-40">
-          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-yellow-500 text-white px-4 py-2 rounded-lg shadow-lg">
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-zinc-500 text-white px-4 py-2 rounded-lg shadow-lg">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
               <span className="text-sm font-medium">Drag to a folder</span>
