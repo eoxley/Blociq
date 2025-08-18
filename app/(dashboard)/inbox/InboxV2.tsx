@@ -40,6 +40,7 @@ export default function InboxV2() {
   }>({ isOpen: false, type: 'reply' })
   const [newEmailModalOpen, setNewEmailModalOpen] = useState(false)
   const [moveSuccess, setMoveSuccess] = useState<{ message: string; timestamp: number } | null>(null)
+  const [triageSuccess, setTriageSuccess] = useState<{ message: string; timestamp: number } | null>(null)
 
   // Get folders and messages
   const { folders, isLoading: foldersLoading } = useFolders()
@@ -381,6 +382,14 @@ export default function InboxV2() {
                 isTriaging={isTriaging}
                 triageResult={triage}
                 triageError={triageError}
+                onTriageSuccess={(result) => {
+                  setTriageSuccess({ 
+                    message: `✅ AI Triage completed! Email categorized as "${result.category}". Check your Outlook for draft replies and categories.`, 
+                    timestamp: Date.now() 
+                  })
+                  // Clear success message after 5 seconds
+                  setTimeout(() => setTriageSuccess(null), 5000)
+                }}
               />
             </div>
             
@@ -414,6 +423,12 @@ export default function InboxV2() {
       {moveSuccess && (
         <div className="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-in slide-in-from-bottom-2">
           {moveSuccess.message}
+        </div>
+      )}
+
+      {triageSuccess && (
+        <div className="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-in slide-in-from-bottom-2">
+          {triageSuccess.message}
         </div>
       )}
 
