@@ -1,8 +1,9 @@
-import useSWR from 'swr'
-import { useState, useCallback } from 'react'
+"use client";
+
+import useSWR from "swr";
+import { useState, useCallback } from "react";
 
 // Default folders fallback when Graph API is unavailable
-// Note: These are only used as fallback and should not be used for actual Graph operations
 const DEFAULT_FOLDERS = [
   { id: 'default-inbox', displayName: 'Inbox', wellKnownName: 'inbox', isFallback: true },
   { id: 'default-drafts', displayName: 'Drafts', wellKnownName: 'drafts', isFallback: true },
@@ -10,9 +11,13 @@ const DEFAULT_FOLDERS = [
   { id: 'default-deleted', displayName: 'Deleted Items', wellKnownName: 'deleteditems', isFallback: true },
   { id: 'default-archive', displayName: 'Archive', wellKnownName: 'archive', isFallback: true },
   { id: 'default-junk', displayName: 'Junk Email', wellKnownName: 'junkemail', isFallback: true }
-]
+];
 
-const fetcher = (url: string) => fetch(url).then(res => res.json())
+const jsonFetcher = async (url: string) => {
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`);
+  return r.json();
+};
 
 // Get manual folders from localStorage
 const getManualFolders = (): any[] => {
@@ -38,7 +43,12 @@ const saveManualFolders = (folders: any[]): void => {
 export function useFolders() {
   const [manualFolders, setManualFolders] = useState(getManualFolders)
   
-  const { data, error, isLoading, mutate } = useSWR('/api/outlook/v2/folders', fetcher)
+  const { data, error, isLoading, mutate } = useSWR('/api/outlook/v2/folders', jsonFetcher, {
+    revalidateOnFocus: false,
+    revalidateIfStale: true,
+    revalidateOnReconnect: true,
+    dedupingInterval: 3000,
+  })
   
   // Combine Graph folders with manual folders
   const graphFolders = data?.ok && data?.items?.length > 0 ? data.items : []
@@ -51,7 +61,7 @@ export function useFolders() {
     : [...DEFAULT_FOLDERS, ...manualFolders]
   
   // Ensure all folders have proper IDs (Graph folders should have real IDs)
-  const processedFolders = folders.map(folder => ({
+  const processedFolders = folders.map((folder: any) => ({
     ...folder,
     // Ensure Graph folders keep their real IDs, fallback folders are marked
     id: folder.isFallback ? folder.id : folder.id,
@@ -83,20 +93,5 @@ export function useFolders() {
     isLoading,
     refresh,
     addManualFolder
-  }
-}
-
-export function useMessages(folderId: string | null) {
-  const { data, error, isLoading, mutate } = useSWR(
-    folderId ? `/api/outlook/v2/messages/list?folderId=${folderId}` : null,
-    fetcher
-  )
-  
-  const messages = data?.ok ? data.items : []
-  
-  return {
-    messages,
-    isLoading,
-    refresh: mutate
   }
 }

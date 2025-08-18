@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, createContext, useContext, useEffect } from 'react'
+import { useState, createContext, useContext, useEffect, useMemo } from 'react'
 import { MessageSquare } from 'lucide-react'
 import FolderSidebar from '@/components/inbox_v2/FolderSidebar'
 import MessageList from '@/components/inbox_v2/MessageList'
@@ -9,7 +9,9 @@ import ReplyPopout from '@/components/mail/ReplyPopout'
 import NewEmailModal from '@/components/inbox_v2/NewEmailModal'
 import DragDropFrame from '@/components/inbox_v2/DragDropFrame'
 import TriageButton from '@/components/inbox_v2/TriageButton'
-import { useMessages, useFolders } from '@/hooks/inbox_v2'
+import { useFolders } from '@/lib/hooks/useFolders'
+import { useMessages } from '@/lib/hooks/useMessages'
+import { useMessageBody } from '@/lib/hooks/useMessageBody'
 import { mutate } from 'swr'
 
 // Context for inbox state
@@ -42,15 +44,27 @@ export default function InboxV2() {
   const [newEmailModalOpen, setNewEmailModalOpen] = useState(false)
   const [moveSuccess, setMoveSuccess] = useState<{ message: string; timestamp: number } | null>(null)
 
+  // Stable primitives only - no inline objects
+  const top = 50
+
   // Get folders and messages
   const { folders, isLoading: foldersLoading } = useFolders()
-  const { messages, refresh: refreshMessages } = useMessages(selectedFolderId)
+  const { messages, loading: messagesLoading, refresh: refreshMessages } = useMessages(selectedFolderId, top)
+  const { html: messageBody, loading: bodyLoading } = useMessageBody(selectedMessage?.id || null)
+
+  // When messages list changes, auto-select the first message exactly once per folder change
+  const firstMessageId = useMemo(() => (messages?.[0]?.id ?? null), [messages])
+  
+  // Auto-select first message when folder changes and no message is selected
+  useEffect(() => {
+    if (firstMessageId && !selectedMessage && selectedFolderId) {
+      setSelectedMessage(messages[0])
+    }
+  }, [firstMessageId, selectedMessage, selectedFolderId, messages])
 
   // Set the inbox folder as default when folders are loaded
   useEffect(() => {
     if (folders.length > 0 && !selectedFolderId) {
-      console.log('Attempting to set default folder from:', folders.length, 'folders')
-      
       // Find the inbox folder (either from Graph API or default folders)
       // Prioritize Graph folders over fallback folders
       const inboxFolder = folders.find(folder => 
@@ -60,27 +74,20 @@ export default function InboxV2() {
       )
       
       if (inboxFolder) {
-        console.log('Setting inbox folder ID:', inboxFolder.id, 'for folder:', inboxFolder.displayName, 'isGraphFolder:', inboxFolder.isGraphFolder)
         setSelectedFolderId(inboxFolder.id)
       } else {
-        console.log('No inbox folder found in:', folders)
         // Fallback: select the first available folder
         if (folders.length > 0) {
-          console.log('Falling back to first folder:', folders[0].displayName, 'ID:', folders[0].id)
           setSelectedFolderId(folders[0].id)
         }
       }
     }
   }, [folders, selectedFolderId])
 
-  // Debug logging
+  // Debug logging - single console.count for verification, then delete
   useEffect(() => {
-    console.log('Folders loaded:', folders.length, 'Selected folder ID:', selectedFolderId, 'Folders loading:', foldersLoading)
-  }, [folders, selectedFolderId, foldersLoading])
-
-  useEffect(() => {
-    console.log('Messages loaded:', messages.length, 'for folder:', selectedFolderId)
-  }, [messages, selectedFolderId])
+    console.count('InboxV2 render')
+  })
 
   // Clear success message after 3 seconds
   useEffect(() => {

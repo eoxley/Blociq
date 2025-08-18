@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from 'react'
-import { useFolders } from '@/hooks/inbox_v2'
+import { useFolders } from '@/lib/hooks/useFolders'
 import { RefreshCw, Plus, X } from 'lucide-react'
 import { DroppableFolderItem } from './DroppableFolderItem'
 

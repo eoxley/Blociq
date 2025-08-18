@@ -1,11 +1,11 @@
 "use client"
 
 import { useState, useEffect, useCallback } from 'react'
-import { useMessages } from '@/hooks/inbox_v2'
 import { Paperclip, Clock, Trash2, MessageSquare } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { DraggableEmailRow } from './DraggableEmailRow'
 import SearchBar from './SearchBar'
+import { useMessages } from '@/lib/hooks/useMessages'
 
 interface MessageListProps {
   selectedFolderId: string | null
@@ -14,7 +14,10 @@ interface MessageListProps {
 }
 
 export default function MessageList({ selectedFolderId, selectedMessageId, onMessageSelect }: MessageListProps) {
-  const { messages, isLoading, refresh } = useMessages(selectedFolderId)
+  // Stable primitives only
+  const top = 50
+  
+  const { messages, loading, refresh } = useMessages(selectedFolderId, top)
   const [focusedMessageIndex, setFocusedMessageIndex] = useState<number>(-1)
   const [searchQuery, setSearchQuery] = useState('')
   const [filteredMessages, setFilteredMessages] = useState<any[]>([])
@@ -143,7 +146,7 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
     )
   }
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-8 text-center h-full flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4f46e5] mx-auto mb-4"></div>
@@ -181,7 +184,7 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
       
       {/* Message List - Scrollable with full height */}
       <div className="flex-1 overflow-y-auto min-h-0 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-        {isLoading ? (
+        {loading ? (
           <div className="flex items-center justify-center py-8">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4f46e5] mx-auto mb-2"></div>

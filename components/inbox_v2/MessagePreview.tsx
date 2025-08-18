@@ -5,6 +5,7 @@ import { Reply, ReplyAll, Paperclip, Clock, User, MessageSquare, Calendar, Downl
 import { formatDistanceToNow, format } from 'date-fns'
 import { processEmailHtml } from '@/lib/email/normalizeHtml'
 import { processEmailWithInlineImages, Attachment } from '@/lib/email/inlineCid'
+import { useMessageBody } from '@/lib/hooks/useMessageBody'
 
 interface MessagePreviewProps {
   selectedMessage: any | null
@@ -12,85 +13,32 @@ interface MessagePreviewProps {
   onReplyAll: () => void
 }
 
-interface FullMessage {
-  id: string
-  subject: string
-  from: any
-  toRecipients: any[]
-  ccRecipients: any[]
-  receivedDateTime: string
-  body: {
-    contentType: string
-    content: string
-  }
-  hasAttachments: boolean
-  attachments: any[]
-  conversationId: string
-  webLink: string
-}
-
 export default function MessagePreview({ selectedMessage, onReply, onReplyAll }: MessagePreviewProps) {
-  const [fullMessage, setFullMessage] = useState<FullMessage | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
   const [processedAttachments, setProcessedAttachments] = useState<Attachment[]>([])
-
-  // Fetch full message content when a message is selected
+  
+  // Use the stable hook for message body
+  const { html: messageBody, loading: bodyLoading } = useMessageBody(selectedMessage?.id || null)
+  
+  // Process attachments when message body changes
   useEffect(() => {
-    if (!selectedMessage?.id) {
-      setFullMessage(null)
-      return
-    }
-
-    const fetchFullMessage = async () => {
-      setIsLoading(true)
-      
-      try {
-        const response = await fetch(`/api/outlook/v2/messages/${selectedMessage.id}`)
-        
-        if (response.ok) {
-          const data = await response.json()
-          if (data.ok && data.items?.[0]) {
-            const message = data.items[0]
-            
-            // Process HTML content for inline images if it's HTML
-            if (message.body?.contentType === 'HTML' && message.body?.content) {
-              try {
-                const { processedHtml, attachments } = await processEmailWithInlineImages(
-                  message.id,
-                  message.body.content
-                )
-                
-                // Update message with processed HTML
-                const processedMessage = {
-                  ...message,
-                  body: {
-                    ...message.body,
-                    content: processedHtml
-                  }
-                }
-                
-                setFullMessage(processedMessage)
-                setProcessedAttachments(attachments)
-              } catch (processError) {
-                console.warn('Failed to process inline images, using original content:', processError)
-                setFullMessage(message)
-                setProcessedAttachments([])
-              }
-            } else {
-              setFullMessage(message)
-              setProcessedAttachments([])
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching message:', error)
-      } finally {
-        setIsLoading(false)
+    if (selectedMessage?.id && messageBody) {
+      // Process HTML content for inline images if it's HTML
+      if (selectedMessage.body?.contentType === 'HTML' && messageBody) {
+        processEmailWithInlineImages(selectedMessage.id, messageBody)
+          .then(({ attachments }) => {
+            setProcessedAttachments(attachments)
+          })
+          .catch((error) => {
+            console.warn('Failed to process inline images:', error)
+            setProcessedAttachments([])
+          })
+      } else {
+        setProcessedAttachments([])
       }
+    } else {
+      setProcessedAttachments([])
     }
-
-    fetchFullMessage()
-  }, [selectedMessage?.id])
+  }, [selectedMessage?.id, messageBody])
 
   // Cleanup processed attachments when component unmounts or message changes
   useEffect(() => {
@@ -149,52 +97,52 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
               <p className="text-gray-400 text-sm">Choose an email from the list to view its content</p>
             </div>
           </div>
-        ) : isLoading ? (
+        ) : bodyLoading ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4f46e5] mx-auto mb-2"></div>
               <p className="text-gray-500 text-sm">Loading message...</p>
             </div>
           </div>
-        ) : fullMessage ? (
+        ) : messageBody ? (
           <div className="space-y-4">
             {/* Message Header */}
             <div className="border-b border-gray-200 pb-4">
               <h2 className="text-xl font-semibold text-gray-900 mb-3">
-                {fullMessage.subject || '(No subject)'}
+                {selectedMessage.subject || '(No subject)'}
               </h2>
               
               <div className="space-y-2 text-sm text-gray-600">
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4 text-[#4f46e5]" />
                   <span className="font-medium">From:</span>
-                  <span>{fullMessage.from?.emailAddress?.name || fullMessage.from?.emailAddress?.address || 'Unknown sender'}</span>
-                  {fullMessage.from?.emailAddress?.address && (
-                    <span className="text-gray-400">({fullMessage.from.emailAddress.address})</span>
+                  <span>{selectedMessage.from?.emailAddress?.name || selectedMessage.from?.emailAddress?.address || 'Unknown sender'}</span>
+                  {selectedMessage.from?.emailAddress?.address && (
+                    <span className="text-gray-400">({selectedMessage.from.emailAddress.address})</span>
                   )}
                 </div>
                 
-                {fullMessage.toRecipients && fullMessage.toRecipients.length > 0 && (
+                {selectedMessage.toRecipients && selectedMessage.toRecipients.length > 0 && (
                   <div className="flex items-center gap-2">
                     <MessageSquare className="h-4 w-4 text-[#4f46e5]" />
                     <span className="font-medium">To:</span>
-                    <span>{fullMessage.toRecipients.map((r: any) => r.emailAddress?.name || r.emailAddress?.address).join(', ')}</span>
+                    <span>{selectedMessage.toRecipients.map((r: any) => r.emailAddress?.name || r.emailAddress?.address).join(', ')}</span>
                   </div>
                 )}
                 
-                {fullMessage.ccRecipients && fullMessage.ccRecipients.length > 0 && (
+                {selectedMessage.ccRecipients && selectedMessage.ccRecipients.length > 0 && (
                   <div className="flex items-center gap-2">
                     <MessageSquare className="h-4 w-4 text-[#4f46e5]" />
                     <span className="font-medium">CC:</span>
-                    <span>{fullMessage.ccRecipients.map((r: any) => r.emailAddress?.name || r.emailAddress?.address).join(', ')}</span>
+                    <span>{selectedMessage.ccRecipients.map((r: any) => r.emailAddress?.name || r.emailAddress?.address).join(', ')}</span>
                   </div>
                 )}
                 
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-[#4f46e5]" />
                   <span className="font-medium">Received:</span>
-                  <span>{formatDistanceToNow(new Date(fullMessage.receivedDateTime), { addSuffix: true })}</span>
-                  <span className="text-gray-400">({format(new Date(fullMessage.receivedDateTime), 'PPP p')})</span>
+                  <span>{formatDistanceToNow(new Date(selectedMessage.receivedDateTime), { addSuffix: true })}</span>
+                  <span className="text-gray-400">({format(new Date(selectedMessage.receivedDateTime), 'PPP p')})</span>
                 </div>
               </div>
             </div>
@@ -217,9 +165,9 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
                 Reply All
               </button>
               
-              {fullMessage.webLink && (
+              {selectedMessage.webLink && (
                 <a
-                  href={fullMessage.webLink}
+                  href={selectedMessage.webLink}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-lg hover:brightness-110 transition-all duration-200 text-sm font-medium"
@@ -232,14 +180,14 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll }:
             
             {/* Message Body */}
             <div className="prose prose-sm max-w-none">
-              {fullMessage.body?.contentType === 'HTML' ? (
+              {selectedMessage.body?.contentType === 'HTML' ? (
                 <div 
-                  dangerouslySetInnerHTML={{ __html: fullMessage.body.content }}
+                  dangerouslySetInnerHTML={{ __html: messageBody }}
                   className="email-content"
                 />
               ) : (
                 <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans">
-                  {fullMessage.body?.content || 'No content available'}
+                  {selectedMessage.body?.content || 'No content available'}
                 </pre>
               )}
             </div>
