@@ -12,6 +12,7 @@ interface TriageButtonProps {
   triageResult?: any
   triageError?: string | null
   onTriageSuccess?: (result: any) => void
+  onBulkTriage?: () => Promise<any>
 }
 
 interface ProgressState {
@@ -35,7 +36,8 @@ export default function TriageButton({
   isTriaging: externalIsTriaging,
   triageResult,
   triageError,
-  onTriageSuccess
+  onTriageSuccess,
+  onBulkTriage
 }: TriageButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [progress, setProgress] = useState<ProgressState | null>(null)
@@ -138,6 +140,42 @@ export default function TriageButton({
     } catch (error) {
       console.error('AI Triage failed:', error)
       alert(`Triage failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  const runBulkTriage = async () => {
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('[TriageButton] runBulkTriage called')
+    }
+
+    if (!outlookStatus.connected) {
+      alert('Please connect your Outlook account first')
+      return
+    }
+
+    if (!onBulkTriage) {
+      alert('Bulk triage function not available')
+      return
+    }
+
+    setIsLoading(true)
+    setIsOpen(false) // Close modal
+
+    try {
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('[TriageButton] Calling onBulkTriage for bulk triage')
+      }
+      const result = await onBulkTriage() // Assuming onBulkTriage handles bulk triage
+      setIsLoading(false)
+
+      // Call success callback if provided
+      if (onTriageSuccess && result) {
+        onTriageSuccess(result)
+      }
+    } catch (error) {
+      console.error('Bulk Triage failed:', error)
+      alert(`Bulk triage failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setIsLoading(false)
     }
   }
 
@@ -361,27 +399,53 @@ export default function TriageButton({
                   </div>
                 </div>
                 
-                <button
-                  onClick={runAITriage}
-                  disabled={!outlookStatus.connected || !selectedMessageId || isTriaging}
-                  className={`
-                    w-full flex items-center justify-center gap-3 p-3 
-                    ${outlookStatus.connected && selectedMessageId && !isTriaging
-                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700' 
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    }
-                    rounded-lg font-medium transition-all duration-200 
-                    shadow-md hover:shadow-lg
-                    ${isTriaging ? 'animate-pulse' : ''}
-                  `}
-                >
-                  {isTriaging ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="h-4 w-4" />
-                  )}
-                  {isTriaging ? 'Triaging...' : 'Run AI Triage'}
-                </button>
+                <div className="space-y-3">
+                  {/* Single Message Triage */}
+                  <button
+                    onClick={runAITriage}
+                    disabled={!outlookStatus.connected || !selectedMessageId || isTriaging}
+                    className={`
+                      w-full flex items-center justify-center gap-3 p-3 
+                      ${outlookStatus.connected && selectedMessageId && !isTriaging
+                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700' 
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }
+                      rounded-lg font-medium transition-all duration-200 
+                      shadow-md hover:shadow-lg
+                      ${isTriaging ? 'animate-pulse' : ''}
+                    `}
+                  >
+                    {isTriaging ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <MessageSquare className="h-4 w-4" />
+                    )}
+                    {isTriaging ? 'Triaging...' : 'Triage Selected Email'}
+                  </button>
+
+                  {/* Bulk Triage */}
+                  <button
+                    onClick={runBulkTriage}
+                    disabled={!outlookStatus.connected || isTriaging}
+                    className={`
+                      w-full flex items-center justify-center gap-3 p-3 
+                      ${outlookStatus.connected && !isTriaging
+                        ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700' 
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }
+                      rounded-lg font-medium transition-all duration-200 
+                      shadow-md hover:shadow-lg
+                      ${isTriaging ? 'animate-pulse' : ''}
+                    `}
+                  >
+                    {isTriaging ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Zap className="h-4 w-4" />
+                    )}
+                    {isTriaging ? 'Processing...' : 'Triage All Inbox Emails'}
+                  </button>
+                </div>
                 
                 <p className="text-xs text-gray-500 text-center mt-2">
                   {!user 
@@ -389,8 +453,8 @@ export default function TriageButton({
                     : !outlookStatus.connected 
                     ? "🔗 Connect your Outlook account to enable AI triage functionality."
                     : !selectedMessageId
-                    ? "📧 Select a message from the list to enable AI triage."
-                    : "🤖 AI analyzes emails, applies categories, flags, and creates draft replies. Check your Outlook for categorized emails and draft replies in the Drafts folder."
+                    ? "📧 Select a message for single triage, or use bulk triage for all emails."
+                    : "🤖 AI analyzes emails, applies categories, flags, and creates intelligent draft replies with building context."
                   }
                 </p>
                 

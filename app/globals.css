@@ -47,6 +47,13 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* Utility class to ensure no blue focus rings on folder items */
+.no-blue-focus:focus,
+.no-blue-focus:focus-visible { 
+  outline: none !important; 
+  box-shadow: none !important; 
+}
+
 :root {
   --radius: 0.75rem; /* Increased for rounded-xl */
   
