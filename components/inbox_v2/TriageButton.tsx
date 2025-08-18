@@ -11,6 +11,7 @@ interface TriageButtonProps {
   isTriaging?: boolean
   triageResult?: any
   triageError?: string | null
+  onTriageSuccess?: (result: any) => void
 }
 
 interface ProgressState {
@@ -33,7 +34,8 @@ export default function TriageButton({
   onTriage,
   isTriaging: externalIsTriaging,
   triageResult,
-  triageError
+  triageError,
+  onTriageSuccess
 }: TriageButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [progress, setProgress] = useState<ProgressState | null>(null)
@@ -126,8 +128,13 @@ export default function TriageButton({
       if (process.env.NODE_ENV === 'development') {
         console.debug('[TriageButton] Calling onTriage with messageId:', selectedMessageId)
       }
-      await onTriage(selectedMessageId)
+      const result = await onTriage(selectedMessageId)
       setIsOpen(false)
+      
+      // Call success callback if provided
+      if (onTriageSuccess && result) {
+        onTriageSuccess(result)
+      }
     } catch (error) {
       console.error('AI Triage failed:', error)
       alert(`Triage failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
@@ -284,6 +291,21 @@ export default function TriageButton({
                       <div><strong>Due Date:</strong> {triageResult.dueDate}</div>
                     )}
                   </div>
+                  
+                  {/* Actions Performed */}
+                  {triageResult.actionsPerformed && triageResult.actionsPerformed.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-green-200">
+                      <div className="text-sm font-medium text-green-700 mb-2">Actions Performed:</div>
+                      <ul className="space-y-1">
+                        {triageResult.actionsPerformed.map((action: string, index: number) => (
+                          <li key={index} className="text-green-600 text-xs flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+                            {action}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -368,9 +390,20 @@ export default function TriageButton({
                     ? "🔗 Connect your Outlook account to enable AI triage functionality."
                     : !selectedMessageId
                     ? "📧 Select a message from the list to enable AI triage."
-                    : "🤖 AI analyzes emails, applies categories, flags, and creates draft replies. Safe mode - nothing is moved or sent automatically."
+                    : "🤖 AI analyzes emails, applies categories, flags, and creates draft replies. Check your Outlook for categorized emails and draft replies in the Drafts folder."
                   }
                 </p>
+                
+                {/* Success Message */}
+                {triageResult && triageResult.actionsPerformed && triageResult.actionsPerformed.length > 0 && (
+                  <div className="mt-3 p-3 bg-green-100 border border-green-300 rounded-lg">
+                    <div className="text-xs text-green-800 font-medium mb-1">✅ Triage Actions Completed:</div>
+                    <div className="text-xs text-green-700">
+                      {triageResult.actionsPerformed.slice(0, 2).join(', ')}
+                      {triageResult.actionsPerformed.length > 2 && ` and ${triageResult.actionsPerformed.length - 2} more`}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

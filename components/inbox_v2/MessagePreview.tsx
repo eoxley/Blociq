@@ -378,6 +378,21 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll, o
                   </ul>
                 </div>
               )}
+              
+              {/* Actions Performed */}
+              {triageResult.actionsPerformed && triageResult.actionsPerformed.length > 0 && (
+                <div className="col-span-2 mt-3 pt-3 border-t border-blue-200">
+                  <span className="text-blue-600 font-medium">Actions Performed:</span>
+                  <ul className="ml-2 mt-1 space-y-1">
+                    {triageResult.actionsPerformed.map((action: string, index: number) => (
+                      <li key={index} className="text-blue-800 text-xs flex items-center gap-1">
+                        <span className="w-1 h-1 bg-green-500 rounded-full"></span>
+                        {action}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
         )}
