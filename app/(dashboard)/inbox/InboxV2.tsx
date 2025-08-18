@@ -52,6 +52,7 @@ export default function InboxV2() {
     isTriaging, 
     error: triageError,
     triageMessage,
+    performBulkTriage,
     refresh: refreshMessages 
   } = useMessages(selectedFolderId)
 
@@ -379,12 +380,22 @@ export default function InboxV2() {
               <TriageButton 
                 selectedMessageId={selectedId}
                 onTriage={triageMessage}
+                onBulkTriage={performBulkTriage}
                 isTriaging={isTriaging}
                 triageResult={triage}
                 triageError={triageError}
                 onTriageSuccess={(result) => {
+                  let message = ''
+                  if (result.summary && result.summary.includes('Processed')) {
+                    // Bulk triage result
+                    message = `✅ ${result.summary} Please review your draft replies in Outlook.`
+                  } else {
+                    // Single triage result
+                    message = `✅ AI Triage completed! Email categorized as "${result.category}". Check your Outlook for draft replies and categories.`
+                  }
+                  
                   setTriageSuccess({ 
-                    message: `✅ AI Triage completed! Email categorized as "${result.category}". Check your Outlook for draft replies and categories.`, 
+                    message,
                     timestamp: Date.now() 
                   })
                   // Clear success message after 5 seconds

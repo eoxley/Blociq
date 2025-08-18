@@ -63,7 +63,7 @@ export default function FolderSidebar({ selectedFolderId, onFolderSelect }: Fold
               value={newFolderName}
               onChange={(e) => setNewFolderName(e.target.value)}
               placeholder="Folder name"
-              className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
+              className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-zinc-400 focus:border-transparent"
               onKeyPress={(e) => e.key === 'Enter' && handleAddFolder()}
               autoFocus
             />

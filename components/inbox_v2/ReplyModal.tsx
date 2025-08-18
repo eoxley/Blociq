@@ -1,8 +1,10 @@
 "use client"
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { Reply, ReplyAll, Paperclip, Clock, User, MessageSquare, Calendar, Download, Brain, Sparkles, Loader2, X, Send } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
+import { useTriageDraft } from '@/hooks/useTriageDraft'
+import { buildReplySubject, quoteThread, composeBody, displayNameFromAddress } from '@/lib/replyUtils'
 
 interface ReplyModalProps {
   isOpen: boolean
@@ -29,6 +31,7 @@ interface FullMessage {
 }
 
 export default function ReplyModal({ isOpen, onClose, message, replyType }: ReplyModalProps) {
+  const { loading, result, error, generate, reset } = useTriageDraft()
   const [htmlBody, setHtmlBody] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [showBlocIQNote, setShowBlocIQNote] = useState(false)
@@ -42,9 +45,30 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
   const [isGeneratingAI, setIsGeneratingAI] = useState(false)
   const [aiGenerationError, setAiGenerationError] = useState<string | null>(null)
   const [attachments, setAttachments] = useState<File[]>([])
+  const [suggestedAttachments, setSuggestedAttachments] = useState<any[]>([])
+  const [attachIds, setAttachIds] = useState<string[]>([])
   
   const editorRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Prepare email data for triage
+  const emailData = useMemo(() => {
+    if (!message) return null
+    return {
+      subject: message.subject || '',
+      plainText: message.bodyPreview || message.body?.content || '',
+      from: message.from?.emailAddress?.address || message.from?.emailAddress || '',
+      to: message.toRecipients?.map((r: any) => r.emailAddress?.address || r.emailAddress) || [],
+      cc: message.ccRecipients?.map((r: any) => r.emailAddress?.address || r.emailAddress) || [],
+      date: message.receivedDateTime
+    }
+  }, [message])
+
+  // Generate quoted thread
+  const quoted = useMemo(() => {
+    if (!emailData) return ''
+    return quoteThread(emailData.plainText)
+  }, [emailData])
 
   // Initialize reply content and recipients when modal opens
   useEffect(() => {
@@ -53,22 +77,22 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
       const currentSubject = message.subject || '(No subject)'
       setSubject(currentSubject.startsWith('Re:') ? currentSubject : `Re: ${currentSubject}`)
       
-              // Set recipients based on reply type
-        if (replyType === 'reply') {
-          setToRecipients([message.from?.emailAddress?.address || message.from?.emailAddress || ''])
-          setCcRecipients([])
-          setBccRecipients([])
-        } else {
-          // Reply all - include original recipients
-          const originalTo = message.toRecipients?.map((r: any) => r.emailAddress?.address || r.emailAddress) || []
-          const originalCc = message.ccRecipients?.map((r: any) => r.emailAddress?.address || r.emailAddress) || []
-          const sender = message.from?.emailAddress?.address || message.from?.emailAddress || ''
-          
-          // Remove sender from recipients if they're already there
-          setToRecipients(originalTo.filter((email: string) => email !== sender))
-          setCcRecipients([...originalCc, sender].filter((email: string) => email !== ''))
-          setBccRecipients([])
-        }
+      // Set recipients based on reply type
+      if (replyType === 'reply') {
+        setToRecipients([message.from?.emailAddress?.address || message.from?.emailAddress || ''])
+        setCcRecipients([])
+        setBccRecipients([])
+      } else {
+        // Reply all - include original recipients
+        const originalTo = message.toRecipients?.map((r: any) => r.emailAddress?.address || r.emailAddress) || []
+        const originalCc = message.ccRecipients?.map((r: any) => r.emailAddress?.address || r.emailAddress) || []
+        const sender = message.from?.emailAddress?.address || message.from?.emailAddress || ''
+        
+        // Remove sender from recipients if they're already there
+        setToRecipients(originalTo.filter((email: string) => email !== sender))
+        setCcRecipients([...originalCc, sender].filter((email: string) => email !== ''))
+        setBccRecipients([])
+      }
       
       // Initialize reply body with proper cursor positioning
       setHtmlBody('<p><br></p>')
@@ -148,6 +172,29 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
     }
   }, [isOpen])
 
+  // Check for triage results and attachment suggestions when modal opens
+  useEffect(() => {
+    if (isOpen && message) {
+      // Check if there are any triage results for this message
+      checkTriageResults();
+    }
+  }, [isOpen, message]);
+
+  const checkTriageResults = async () => {
+    try {
+      // Check if there's a triage result for this message
+      const response = await fetch(`/api/triage/check?messageId=${message?.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.triage && data.triage.attachments_suggestions) {
+          handleAttachmentSuggestions(data.triage.attachments_suggestions);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking triage results:', error);
+    }
+  }
+
   const handleSend = async () => {
     if (!message || !htmlBody.trim()) return
     
@@ -196,82 +243,105 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
   }
 
   const handleGenerateAIReply = async () => {
-    if (!message) return
+    if (!emailData) return
     
     setIsGeneratingAI(true)
     setAiGenerationError(null)
     
     try {
-      // Create a prompt for AI reply generation
-      const aiPrompt = `Generate a professional email reply to this email:
+      const r = await generate(emailData)
+      if (!r) return
 
-From: ${message.from?.emailAddress?.address || message.from?.emailAddress || 'Unknown'}
-Subject: ${message.subject || '(No subject)'}
-Content: ${message.body?.content || ''}
-
-Please generate a professional, contextual reply that:
-1. Addresses the original sender appropriately
-2. Provides a relevant response to the email content
-3. Maintains professional tone and formatting
-4. Is concise but comprehensive
-5. Uses proper email etiquette
-
-Generate the reply in plain text format (no HTML tags).`
-
-      const response = await fetch('/api/ask-ai', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          prompt: aiPrompt,
-          context: 'email_reply_generation'
-        })
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        if (data.response) {
-          // Clean the AI response and convert to HTML
-          let aiReply = data.response.trim()
-          
-          // Convert plain text to HTML paragraphs
-          const paragraphs = aiReply.split('\n').filter((line: string) => line.trim())
-          const htmlReply = paragraphs.map((line: string) => `<p>${line}</p>`).join('')
-          
-          // Insert the AI reply at the beginning of the editor
-          setHtmlBody(htmlReply)
-          
-          // Focus the editor and position cursor at the end
-          setTimeout(() => {
-            if (editorRef.current) {
-              editorRef.current.focus()
-              // Position cursor at the end
-              const range = document.createRange()
-              const selection = window.getSelection()
-              if (editorRef.current.lastChild) {
-                range.setStartAfter(editorRef.current.lastChild)
-                range.collapse(true)
-              } else {
-                range.selectNodeContents(editorRef.current)
-                range.collapse(false)
-              }
-              selection?.removeAllRanges()
-              selection?.addRange(range)
-            }
-          }, 100)
-        } else {
-          setAiGenerationError('AI generated an empty response. Please try again.')
-        }
-      } else {
-        setAiGenerationError('Failed to generate AI reply. Please try again.')
+      // Greet the primary correspondent if model didn't
+      const draft = { ...r.draft }
+      const primaryName = displayNameFromAddress(emailData.from)
+      if (!draft.greeting?.trim().toLowerCase().startsWith("dear ")) {
+        draft.greeting = `Dear ${primaryName}`
       }
+      // Enforce our house sign-off
+      draft.signoff = "Kind regards"
+
+      // Set subject and body
+      setSubject(buildReplySubject(emailData.subject))
+      const fullBody = composeBody(draft, quoted)
+      
+      // Convert markdown to HTML for the editor
+      const htmlBody = fullBody.split('\n').map(line => {
+        if (line.startsWith('> ')) {
+          return `<blockquote class="border-l-4 border-gray-300 pl-4 text-gray-600">${line.substring(2)}</blockquote>`
+        }
+        return `<p>${line}</p>`
+      }).join('')
+      
+      setHtmlBody(htmlBody)
+
+      // Pre-tick suggested attachments
+      if (r.attachments_suggestions) {
+        setSuggestedAttachments(r.attachments_suggestions)
+        setAttachIds(r.attachments_suggestions.map(a => a.doc_id))
+      }
+
+      // Focus the editor and position cursor at the end
+      setTimeout(() => {
+        if (editorRef.current) {
+          editorRef.current.focus()
+          // Position cursor at the end
+          const range = document.createRange()
+          const selection = window.getSelection()
+          if (editorRef.current.lastChild) {
+            range.setStartAfter(editorRef.current.lastChild)
+            range.collapse(true)
+          } else {
+            range.selectNodeContents(editorRef.current)
+            range.collapse(false)
+          }
+          selection?.removeAllRanges()
+          selection?.addRange(range)
+        }
+      }, 100)
+
     } catch (error) {
       console.error('Error generating AI reply:', error)
       setAiGenerationError('Error generating AI reply. Please try again.')
     } finally {
       setIsGeneratingAI(false)
     }
+  }
+
+  // Handle attachment suggestions from triage
+  const handleAttachmentSuggestions = (suggestions: any[]) => {
+    if (suggestions && suggestions.length > 0) {
+      setSuggestedAttachments(suggestions);
+      // Show a notification about suggested attachments
+      console.log('Attachment suggestions received:', suggestions);
+    }
+  }
+
+  // Add suggested attachment to the list
+  const addSuggestedAttachment = (suggestion: any) => {
+    // Convert suggestion to a file-like object for the attachments list
+    const attachmentFile = {
+      name: suggestion.title,
+      size: 0,
+      type: 'application/octet-stream',
+      doc_id: suggestion.doc_id,
+      kind: suggestion.kind,
+      url: suggestion.url
+    } as any;
+    
+    setAttachments(prev => [...prev, attachmentFile]);
+    // Remove from suggestions
+    setSuggestedAttachments(prev => prev.filter(s => s.doc_id !== suggestion.doc_id));
+  }
+
+  // Remove suggested attachment
+  const removeSuggestedAttachment = (docId: string) => {
+    setSuggestedAttachments(prev => prev.filter(s => s.doc_id !== docId));
+  }
+
+  // Toggle attachment selection
+  const toggleAttachment = (doc_id: string) => {
+    setAttachIds(prev => prev.includes(doc_id) ? prev.filter(x => x !== doc_id) : [...prev, doc_id]);
   }
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -384,6 +454,38 @@ Generate the reply in plain text format (no HTML tags).`
         
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* AI Triage Results */}
+          {result && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="text-sm text-blue-800 mb-2">
+                <div className="font-medium mb-2">🤖 AI Triage Results:</div>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    Priority {result.priority}
+                  </span>
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    {result.category}
+                  </span>
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    {result.label}
+                  </span>
+                </div>
+                {result.required_actions && result.required_actions.length > 0 && (
+                  <div className="text-xs">
+                    <span className="font-medium">Required actions:</span> {result.required_actions.join(', ')}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* AI Generation Error */}
+          {error && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-800 shadow-sm">
+              <span className="font-medium">AI Generation Error:</span> {error}
+            </div>
+          )}
+
           {/* Compact Email Info */}
           {message && (
             <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
@@ -484,19 +586,36 @@ Generate the reply in plain text format (no HTML tags).`
           <div className="flex justify-center">
             <button
               onClick={handleGenerateAIReply}
-              disabled={isGeneratingAI}
+              disabled={isGeneratingAI || loading}
               className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:from-[#4338ca] hover:to-[#9333ea] text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isGeneratingAI ? (
+              {isGeneratingAI || loading ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
                 <Brain className="h-5 w-5" />
               )}
               <span className="text-sm">
-                {isGeneratingAI ? 'Generating...' : 'Generate AI Reply'}
+                {isGeneratingAI || loading ? 'Generating AI Reply...' : 'Generate AI Reply'}
               </span>
             </button>
           </div>
+          
+          {/* Context Information */}
+          {message && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="text-sm text-blue-800">
+                <div className="font-medium mb-2">📧 Email Context:</div>
+                <div className="space-y-1 text-xs">
+                  <div><span className="font-medium">From:</span> {message.from?.emailAddress?.address || message.from?.emailAddress || 'Unknown'}</div>
+                  <div><span className="font-medium">Subject:</span> {message.subject || '(No subject)'}</div>
+                  <div><span className="font-medium">Type:</span> {replyType === 'reply' ? 'Reply' : 'Reply All'}</div>
+                  <div className="text-blue-600 mt-2">
+                    💡 AI will analyse this email and generate a contextual, professional reply
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           
           {/* AI Generation Error */}
           {aiGenerationError && (
@@ -655,6 +774,48 @@ Generate the reply in plain text format (no HTML tags).`
             </div>
           )}
           
+          {/* AI Suggested Attachments */}
+          {suggestedAttachments.length > 0 && (
+            <div className="border border-blue-200 rounded-lg bg-blue-50 p-3">
+              <div className="text-sm font-medium text-blue-700 mb-2 flex items-center gap-2">
+                <Brain className="h-4 w-4" />
+                AI Suggested Attachments ({suggestedAttachments.length})
+              </div>
+              <div className="text-xs text-blue-600 mb-3">
+                💡 AI has identified relevant documents that could be attached to this reply
+              </div>
+              <div className="space-y-2">
+                {suggestedAttachments.map((suggestion, index) => (
+                  <div key={index} className="flex items-center justify-between bg-white p-2 rounded border border-blue-200">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{suggestion.title}</div>
+                        <div className="text-xs text-gray-500 capitalize">{suggestion.kind.replace(/_/g, ' ')}</div>
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => addSuggestedAttachment(suggestion)}
+                        className="text-blue-600 hover:text-blue-800 text-xs font-medium hover:bg-blue-100 px-2 py-1 rounded transition-colors"
+                        title="Add to attachments"
+                      >
+                        + Add
+                      </button>
+                      <button
+                        onClick={() => removeSuggestedAttachment(suggestion.doc_id)}
+                        className="text-gray-500 hover:text-gray-700 text-xs font-medium hover:bg-gray-100 px-2 py-1 rounded transition-colors"
+                        title="Dismiss suggestion"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
           {/* Compact Email Thread Display */}
           {emailThread.length > 0 && (
             <div className="border border-gray-200 rounded-lg bg-gray-50 overflow-hidden">
@@ -709,7 +870,7 @@ Generate the reply in plain text format (no HTML tags).`
             className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors font-medium"
           >
             <Brain className="h-4 w-4" />
-            {isGeneratingAI ? 'Generating...' : 'Generate with Ask BlocIQ'}
+            {isGeneratingAI || loading ? 'Generating...' : 'Generate with Ask BlocIQ'}
           </button>
           
           <div className="flex gap-3">

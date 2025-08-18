@@ -45,12 +45,13 @@ export const DroppableFolderItem = memo(function DroppableFolderItem({
       data-droppable="true"
       data-over={isOver ? "true" : "false"}
       className={cn(
-        'relative px-3 py-2 rounded-md cursor-pointer transition-all duration-200 flex items-center justify-between group',
-        'hover:bg-gray-50 border border-transparent',
+        'relative px-3 py-2 rounded-md cursor-pointer transition-all duration-200 flex items-center justify-between group no-blue-focus',
+        'hover:bg-zinc-50 border border-transparent',
+        'outline-none focus-visible:ring-0',
         isOver 
-          ? 'bg-gradient-to-r from-blue-100 to-indigo-100 border-2 border-blue-500 shadow-lg scale-[1.02] transform z-10' 
+          ? 'bg-zinc-100 border-2 border-zinc-300 shadow-md scale-[1.02] transform z-10' 
           : '',
-        isSelected && !isOver ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-300' : '',
+        isSelected && !isOver ? 'bg-zinc-50 border border-zinc-300 font-medium' : '',
         isAnimating ? 'animate-pulse' : '',
         className
       )}
@@ -62,16 +63,16 @@ export const DroppableFolderItem = memo(function DroppableFolderItem({
           <FolderIcon className={cn(
             'h-4 w-4 flex-shrink-0 transition-all duration-200',
             isOver 
-              ? 'text-blue-600 scale-125' 
-              : 'text-gray-500 group-hover:text-gray-700'
+              ? 'text-zinc-600 scale-125' 
+              : 'text-zinc-500 group-hover:text-zinc-700'
           )} />
           {isOver && (
-            <div className="absolute inset-0 bg-blue-400 rounded-full animate-ping opacity-75" />
+            <div className="absolute inset-0 bg-zinc-400 rounded-full animate-ping opacity-75" />
           )}
         </div>
         <span className={cn(
           'truncate text-sm font-medium transition-all duration-200',
-          isOver ? 'text-blue-800 font-semibold' : 'text-gray-700'
+          isOver ? 'text-zinc-800 font-semibold' : 'text-zinc-700'
         )}>
           {displayName}
         </span>
@@ -81,8 +82,8 @@ export const DroppableFolderItem = memo(function DroppableFolderItem({
         <span className={cn(
           'text-xs px-2 py-1 rounded-full transition-all duration-200',
           isOver 
-            ? 'bg-blue-200 text-blue-800 scale-110 font-semibold' 
-            : 'bg-gray-200 text-gray-600'
+            ? 'bg-zinc-200 text-zinc-800 scale-110 font-semibold' 
+            : 'bg-zinc-200 text-zinc-600'
         )}>
           {messageCount}
         </span>
@@ -90,13 +91,13 @@ export const DroppableFolderItem = memo(function DroppableFolderItem({
       
       {/* Drop indicator */}
       {isOver && (
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-200/30 to-indigo-200/30 border-2 border-blue-500 rounded-md pointer-events-none" />
+        <div className="absolute inset-0 bg-zinc-200/30 border-2 border-zinc-400 rounded-md pointer-events-none" />
       )}
       
       {/* Drop arrow indicator */}
       {isOver && (
         <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
-          <ArrowRight className="h-4 w-4 text-blue-600 animate-bounce" />
+          <ArrowRight className="h-4 w-4 text-zinc-600 animate-bounce" />
         </div>
       )}
       
@@ -109,12 +110,12 @@ export const DroppableFolderItem = memo(function DroppableFolderItem({
       
       {/* Glow effect when dragging over */}
       {isOver && (
-        <div className="absolute inset-0 bg-blue-400/10 rounded-md pointer-events-none animate-ping" />
+        <div className="absolute inset-0 bg-zinc-400/10 rounded-md pointer-events-none animate-ping" />
       )}
       
       {/* Drop zone highlight */}
       {isOver && (
-        <div className="absolute inset-0 bg-blue-500/5 rounded-md pointer-events-none border-2 border-dashed border-blue-400" />
+        <div className="absolute inset-0 bg-zinc-500/5 rounded-md pointer-events-none border-2 border-dashed border-zinc-400" />
       )}
     </div>
   )

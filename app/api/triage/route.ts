@@ -1,76 +1,22 @@
 import { NextResponse } from "next/server";
-import { classifyEmailForTriage } from "@/lib/ai/triage";
+import { triageEmail } from "@/lib/ai/triage";
 import { makeGraphRequest } from "@/lib/outlookAuth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { IncomingEmail } from "@/lib/ai/triageSchema";
 
 export async function POST(req: Request) {
   try {
-    const { messageId } = await req.json();
+    const { messageId, bulkTriage } = await req.json();
+    
+    if (bulkTriage) {
+      return await performBulkTriage();
+    }
     
     if (!messageId) {
       return NextResponse.json({ error: "messageId required" }, { status: 400 });
     }
 
-    // Get the specific message from Outlook using the existing auth system
-    const response = await makeGraphRequest(`/me/messages/${messageId}`);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to fetch message: ${response.status} - ${errorText}`);
-    }
-
-    const message = await response.json();
-    
-    // Classify the email using AI
-    const triageResult = await classifyEmailForTriage({
-      subject: message.subject || "",
-      from: message.from?.emailAddress?.address,
-      preview: message.bodyPreview,
-      body: message.body?.content || ""
-    });
-
-    if (!triageResult) {
-      throw new Error("Failed to classify email");
-    }
-
-    // Perform triage actions based on the classification
-    const actionsPerformed = await performTriageActions(messageId, triageResult, message);
-
-    // Store the triage result
-    const { error: insertError } = await supabaseAdmin
-      .from("ai_triage_actions")
-      .insert({
-        message_id: messageId,
-        conversation_id: message.conversationId,
-        internet_message_id: message.internetMessageId,
-        category: triageResult.label,
-        reason: triageResult.reason,
-        due_date: triageResult.due_date,
-        applied: true,
-        applied_at: new Date().toISOString()
-      });
-
-    if (insertError) {
-      console.warn("Failed to store triage result:", insertError);
-    }
-
-    return NextResponse.json({
-      messageId,
-      triage: {
-        category: triageResult.label,
-        urgency: triageResult.label === "urgent" ? "high" : triageResult.label === "follow_up" ? "medium" : "low",
-        summary: triageResult.reason,
-        dueDate: triageResult.due_date,
-        suggestedActions: [
-          triageResult.label === "urgent" ? "Immediate action required" : null,
-          triageResult.label === "follow_up" ? "Schedule follow-up" : null,
-          "Update communication log",
-          triageResult.reply ? "Draft reply available" : null
-        ].filter(Boolean),
-        reply: triageResult.reply,
-        actionsPerformed
-      }
-    });
+    return await performSingleTriage(messageId);
 
   } catch (error: any) {
     console.error("Triage error:", error);
@@ -80,37 +26,173 @@ export async function POST(req: Request) {
   }
 }
 
+async function performBulkTriage() {
+  try {
+    const inboxResponse = await makeGraphRequest('/me/mailFolders/inbox/messages?$top=100&$orderby=receivedDateTime desc');
+    
+    if (!inboxResponse.ok) {
+      throw new Error(`Failed to fetch inbox messages: ${inboxResponse.status}`);
+    }
+
+    const inboxData = await inboxResponse.json();
+    const messages = inboxData.value || [];
+    
+    if (messages.length === 0) {
+      return NextResponse.json({
+        message: "No messages found in inbox",
+        triage: { processed: 0, actions: [] }
+      });
+    }
+
+    const results = [];
+    const actions = [];
+
+    for (const message of messages) {
+      try {
+        const rawEmail: IncomingEmail = {
+          subject: message.subject || "",
+          body: message.body?.content || "",
+          from: message.from?.emailAddress?.address || "",
+          to: message.toRecipients?.map((r: any) => r.emailAddress?.address || r.emailAddress) || [],
+          cc: message.ccRecipients?.map((r: any) => r.emailAddress?.address || r.emailAddress) || [],
+          date: message.receivedDateTime,
+          plainText: message.bodyPreview || ""
+        };
+
+        const triageResult = await triageEmail(rawEmail);
+
+        if (triageResult) {
+          const messageActions = await performTriageActions(message.id, triageResult, message);
+          
+          results.push({
+            messageId: message.id,
+            subject: message.subject,
+            category: triageResult.label,
+            priority: triageResult.priority,
+            actions: messageActions,
+            attachments: triageResult.attachments_suggestions || []
+          });
+
+          actions.push(...messageActions.map(action => `${message.subject}: ${action}`));
+        }
+      } catch (error) {
+        console.error(`Error processing message ${message.id}:`, error);
+        results.push({
+          messageId: message.id,
+          subject: message.subject,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    return NextResponse.json({
+      message: "Bulk triage completed",
+      triage: {
+        processed: results.length,
+        results,
+        actions,
+        summary: `Processed ${results.length} emails. Please review your draft replies.`
+      }
+    });
+
+  } catch (error: any) {
+    throw new Error(`Bulk triage failed: ${error.message}`);
+  }
+}
+
+async function performSingleTriage(messageId: string) {
+  const response = await makeGraphRequest(`/me/messages/${messageId}`);
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to fetch message: ${response.status} - ${errorText}`);
+  }
+
+  const message = await response.json();
+  
+  const rawEmail: IncomingEmail = {
+    subject: message.subject || "",
+    body: message.body?.content || "",
+    from: message.from?.emailAddress?.address || "",
+    to: message.toRecipients?.map((r: any) => r.emailAddress?.address || r.emailAddress) || [],
+    cc: message.ccRecipients?.map((r: any) => r.emailAddress?.address || r.emailAddress) || [],
+    date: message.receivedDateTime,
+    plainText: message.bodyPreview || ""
+  };
+
+  const triageResult = await triageEmail(rawEmail);
+
+  if (!triageResult) {
+    throw new Error("Failed to classify email");
+  }
+
+  const actionsPerformed = await performTriageActions(messageId, triageResult, message);
+
+  const { error: insertError } = await supabaseAdmin
+    .from("ai_triage_actions")
+    .insert({
+      message_id: messageId,
+      conversation_id: message.conversationId,
+      internet_message_id: message.internetMessageId,
+      category: triageResult.label,
+      priority: triageResult.priority,
+      reason: triageResult.reason,
+      due_date: triageResult.due_date,
+      applied: true,
+      applied_at: new Date().toISOString()
+    });
+
+  if (insertError) {
+    console.warn("Failed to store triage result:", insertError);
+  }
+
+  return NextResponse.json({
+    messageId,
+    triage: {
+      category: triageResult.label,
+      priority: triageResult.priority,
+      urgency: triageResult.label === "urgent" ? "high" : triageResult.label === "follow_up" ? "medium" : "low",
+      summary: triageResult.reason,
+      dueDate: triageResult.due_date,
+      suggestedActions: [
+        triageResult.label === "urgent" ? "Immediate action required" : null,
+        triageResult.label === "follow_up" ? "Schedule follow-up" : null,
+        "Update communication log",
+        triageResult.reply ? "Draft reply available" : null
+      ].filter(Boolean),
+      reply: triageResult.reply,
+      attachments_suggestions: triageResult.attachments_suggestions || [],
+      actionsPerformed
+    }
+  });
+}
+
 async function performTriageActions(messageId: string, triageResult: any, originalMessage: any) {
   const actions: string[] = [];
   
   try {
-    // 1. Apply categories to the email
     if (triageResult.label) {
       await applyEmailCategory(messageId, triageResult.label);
       actions.push(`Applied category: ${triageResult.label}`);
     }
 
-    // 2. Set importance flag for urgent items
     if (triageResult.label === "urgent") {
       await setEmailImportance(messageId, "high");
       actions.push("Set importance to high");
     }
 
-    // 3. Create draft reply if AI generated one
-    if (triageResult.reply?.body) {
-      const draftId = await createDraftReply(messageId, triageResult.reply, originalMessage);
+    if (triageResult.reply?.body_markdown) {
+      const draftId = await createIntelligentDraftReply(messageId, triageResult.reply, originalMessage);
       if (draftId) {
-        actions.push(`Created draft reply (ID: ${draftId})`);
+        actions.push(`Created intelligent draft reply (ID: ${draftId})`);
       }
     }
 
-    // 4. Set follow-up flag for follow_up items
     if (triageResult.label === "follow_up" && triageResult.due_date) {
       await setFollowUpFlag(messageId, triageResult.due_date);
       actions.push(`Set follow-up flag for ${triageResult.due_date}`);
     }
 
-    // 5. Move archive_candidate emails to archive folder
     if (triageResult.label === "archive_candidate") {
       await moveToArchive(messageId);
       actions.push("Moved to archive folder");
@@ -161,7 +243,7 @@ async function setEmailImportance(messageId: string, importance: "low" | "normal
   }
 }
 
-async function createDraftReply(messageId: string, replyData: any, originalMessage: any) {
+async function createIntelligentDraftReply(messageId: string, replyData: any, originalMessage: any) {
   try {
     // Create the draft reply
     const replyResponse = await makeGraphRequest(`/me/messages/${messageId}/createReply`, {
@@ -175,10 +257,11 @@ async function createDraftReply(messageId: string, replyData: any, originalMessa
     const replyDraft = await replyResponse.json();
     const draftId = replyDraft.id;
 
-    // Update the draft with AI-generated content
-    const subject = replyData.subject_prefix 
-      ? `${replyData.subject_prefix} ${originalMessage.subject || 'Re: Email'}`
-      : `Re: ${originalMessage.subject || 'Email'}`;
+    // Generate intelligent reply content with building context
+    const intelligentReply = await generateIntelligentReply(originalMessage, replyData);
+
+    // Update the draft with intelligent content
+    const subject = replyData.subject || `Re: ${originalMessage.subject || 'Email'}`;
 
     const updateResponse = await makeGraphRequest(`/me/messages/${draftId}`, {
       method: 'PATCH',
@@ -186,7 +269,7 @@ async function createDraftReply(messageId: string, replyData: any, originalMessa
         subject: subject,
         body: {
           contentType: "HTML",
-          content: `<div>${replyData.body}</div>`
+          content: intelligentReply
         }
       })
     });
@@ -197,8 +280,171 @@ async function createDraftReply(messageId: string, replyData: any, originalMessa
 
     return draftId;
   } catch (error) {
-    console.error("Error creating draft reply:", error);
+    console.error("Error creating intelligent draft reply:", error);
     throw error;
+  }
+}
+
+async function generateIntelligentReply(originalMessage: any, baseReply: any) {
+  try {
+    const buildingInfo = await extractBuildingInfo(originalMessage);
+    const leaseholderInfo = await extractLeaseholderInfo(originalMessage);
+    const relevantDocuments = await findRelevantDocuments(originalMessage);
+
+    let intelligentContent = baseReply.body_markdown;
+
+    // Add building context if available
+    if (buildingInfo) {
+      intelligentContent += `\n\n<strong>Building Context:</strong>\n`;
+      intelligentContent += `• Building: ${buildingInfo.name}\n`;
+      intelligentContent += `• Address: ${buildingInfo.address}\n`;
+      if (buildingInfo.manager) {
+        intelligentContent += `• Property Manager: ${buildingInfo.manager}\n`;
+      }
+    }
+
+    // Add leaseholder context if available
+    if (leaseholderInfo) {
+      intelligentContent += `\n<strong>Leaseholder Information:</strong>\n`;
+      intelligentContent += `• Unit: ${leaseholderInfo.unit}\n`;
+      intelligentContent += `• Leaseholder: ${leaseholderInfo.name}\n`;
+      if (leaseholderInfo.contact) {
+        intelligentContent += `• Contact: ${leaseholderInfo.contact}\n`;
+      }
+    }
+
+    // Add relevant documents if available
+    if (relevantDocuments.length > 0) {
+      intelligentContent += `\n<strong>Relevant Documents:</strong>\n`;
+      relevantDocuments.forEach(doc => {
+        intelligentContent += `• ${doc.name} (${doc.type})\n`;
+      });
+      intelligentContent += `\n<em>Note: These documents have been attached to this draft for your reference.</em>`;
+    }
+
+    // Add standard signature
+    intelligentContent += `\n\n<hr>\n<strong>Kind regards,</strong><br>`;
+    intelligentContent += `Property Management Team<br>`;
+    intelligentContent += `Blociq`;
+
+    return intelligentContent;
+
+  } catch (error) {
+    console.error("Error generating intelligent reply:", error);
+    // Fallback to base reply if context generation fails
+    return baseReply.body_markdown;
+  }
+}
+
+async function extractBuildingInfo(message: any) {
+  try {
+    // Search for building references in email content
+    const content = `${message.subject} ${message.bodyPreview} ${message.body?.content || ''}`;
+    
+    // Look for building names, addresses, or references
+    const buildingPatterns = [
+      /building[:\s]+([^\n\r,]+)/i,
+      /property[:\s]+([^\n\r,]+)/i,
+      /address[:\s]+([^\n\r,]+)/i,
+      /block[:\s]+([^\n\r,]+)/i
+    ];
+
+    for (const pattern of buildingPatterns) {
+      const match = content.match(pattern);
+      if (match) {
+        // Query building database for more details
+        const { data: building } = await supabaseAdmin
+          .from('buildings')
+          .select('*')
+          .ilike('name', `%${match[1].trim()}%`)
+          .single();
+
+        if (building) {
+          return {
+            name: building.name,
+            address: building.address,
+            manager: building.property_manager
+          };
+        }
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error extracting building info:", error);
+    return null;
+  }
+}
+
+async function extractLeaseholderInfo(message: any) {
+  try {
+    const content = `${message.subject} ${message.bodyPreview} ${message.body?.content || ''}`;
+    
+    // Look for leaseholder references
+    const leaseholderPatterns = [
+      /leaseholder[:\s]+([^\n\r,]+)/i,
+      /tenant[:\s]+([^\n\r,]+)/i,
+      /unit[:\s]+([^\n\r,]+)/i,
+      /apartment[:\s]+([^\n\r,]+)/i
+    ];
+
+    for (const pattern of leaseholderPatterns) {
+      const match = content.match(pattern);
+      if (match) {
+        // Query leaseholder database
+        const { data: leaseholder } = await supabaseAdmin
+          .from('leaseholders')
+          .select('*')
+          .ilike('name', `%${match[1].trim()}%`)
+          .single();
+
+        if (leaseholder) {
+          return {
+            unit: leaseholder.unit,
+            name: leaseholder.name,
+            contact: leaseholder.email || leaseholder.phone
+          };
+        }
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error extracting leaseholder info:", error);
+    return null;
+  }
+}
+
+async function findRelevantDocuments(message: any) {
+  try {
+    const content = `${message.subject} ${message.bodyPreview} ${message.body?.content || ''}`;
+    
+    // Look for document requests or references
+    const documentKeywords = ['document', 'certificate', 'report', 'inspection', 'maintenance', 'compliance'];
+    const relevantDocs = [];
+
+    for (const keyword of documentKeywords) {
+      if (content.toLowerCase().includes(keyword)) {
+        // Query document database for relevant files
+        const { data: documents } = await supabaseAdmin
+          .from('documents')
+          .select('*')
+          .ilike('name', `%${keyword}%`)
+          .limit(3);
+
+        if (documents && documents.length > 0) {
+          relevantDocs.push(...documents.map(doc => ({
+            name: doc.name,
+            type: doc.type || 'Document'
+          })));
+        }
+      }
+    }
+
+    return relevantDocs;
+  } catch (error) {
+    console.error("Error finding relevant documents:", error);
+    return [];
   }
 }
 
