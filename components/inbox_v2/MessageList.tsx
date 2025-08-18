@@ -131,7 +131,17 @@ export default function MessageList({ selectedFolderId, selectedMessageId, onMes
     }
     
     setFilteredMessages(filtered)
-  }, [messages, searchQuery, showUnreadOnly, sortByUnread])
+    
+    // Maintain selection if the selected message is still in the filtered list
+    if (selectedMessageId && filtered.length > 0) {
+      const messageStillExists = filtered.some((msg: any) => msg.id === selectedMessageId)
+      if (!messageStillExists && filtered.length > 0) {
+        // If selected message is not in filtered list, select the first available
+        onMessageSelect(filtered[0].id)
+        setFocusedMessageIndex(0)
+      }
+    }
+  }, [messages, searchQuery, showUnreadOnly, sortByUnread, selectedMessageId, onMessageSelect])
 
   const handleSearch = (query: string) => {
     setSearchQuery(query)
