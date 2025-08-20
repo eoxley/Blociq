@@ -26,6 +26,7 @@ export default function MessageList({
   const { messages, isLoading, refresh } = useMessages(selectedFolderId)
   const [focusedMessageIndex, setFocusedMessageIndex] = useState<number>(-1)
   const [filteredMessages, setFilteredMessages] = useState<any[]>([])
+  const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set())
 
   // Calculate unread count
   const unreadCount = messages.filter((message: any) => !message.isRead).length
@@ -59,7 +60,11 @@ export default function MessageList({
       
       case 'Delete':
         e.preventDefault()
-        if (focusedMessageIndex >= 0 && focusedMessageIndex < filteredMessages.length) {
+        if (selectedMessages.size > 0) {
+          // Delete all selected messages
+          handleDeleteMultiple(Array.from(selectedMessages))
+        } else if (focusedMessageIndex >= 0 && focusedMessageIndex < filteredMessages.length) {
+          // Delete single focused message
           const message = filteredMessages[focusedMessageIndex]
           handleDelete(message.id)
         }
@@ -73,7 +78,19 @@ export default function MessageList({
         }
         break
     }
-  }, [filteredMessages, focusedMessageIndex, onMessageSelect])
+
+    // Handle Ctrl+A for select all
+    if (e.ctrlKey && e.key === 'a') {
+      e.preventDefault()
+      const allMessageIds = filteredMessages.map(msg => msg.id)
+      setSelectedMessages(new Set(allMessageIds))
+    }
+
+    // Handle Escape to clear selection
+    if (e.key === 'Escape') {
+      setSelectedMessages(new Set())
+    }
+  }, [filteredMessages, focusedMessageIndex, onMessageSelect, selectedMessages])
 
   // Set up keyboard event listener
   useEffect(() => {
@@ -137,8 +154,16 @@ export default function MessageList({
     if (!confirm('Are you sure you want to delete this message?')) return
     
     try {
-      const response = await fetch(`/api/outlook/v2/messages/${messageId}`, {
-        method: 'DELETE'
+      // Move to deleted folder instead of permanent deletion
+      const response = await fetch('/api/outlook/v2/messages/move', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          messageId, 
+          destinationFolderId: 'deleteditems' // Move to deleted items folder
+        })
       })
       
       if (response.ok) {
@@ -149,10 +174,48 @@ export default function MessageList({
         // Refresh messages
         refresh()
       } else {
-        console.error('Failed to delete message')
+        console.error('Failed to move message to deleted folder')
       }
     } catch (error) {
-      console.error('Error deleting message:', error)
+      console.error('Error moving message to deleted folder:', error)
+    }
+  }
+
+  const handleDeleteMultiple = async (messageIds: string[]) => {
+    if (!confirm(`Are you sure you want to delete ${messageIds.length} messages?`)) return
+
+    try {
+      // Move all selected messages to deleted folder
+      const promises = messageIds.map(messageId => 
+        fetch('/api/outlook/v2/messages/move', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            messageId, 
+            destinationFolderId: 'deleteditems' // Move to deleted items folder
+          })
+        })
+      )
+
+      const responses = await Promise.all(promises)
+      const allSuccessful = responses.every(response => response.ok)
+
+      if (allSuccessful) {
+        // Clear selected messages
+        setSelectedMessages(new Set())
+        // Clear selected message if it was among the deleted ones
+        if (selectedMessageId && messageIds.includes(selectedMessageId)) {
+          onMessageSelect(null)
+        }
+        // Refresh messages
+        refresh()
+      } else {
+        console.error('Failed to move some messages to deleted folder')
+      }
+    } catch (error) {
+      console.error('Error moving messages to deleted folder:', error)
     }
   }
 
@@ -208,11 +271,36 @@ export default function MessageList({
       {/* Message List Header */}
       <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
         <div className="flex items-center justify-between text-sm text-gray-600">
-          <span>{filteredMessages.length} of {messages.length} messages</span>
-          {unreadCount > 0 && (
-            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-              {unreadCount} unread
-            </span>
+          <div className="flex items-center gap-3">
+            <span>{filteredMessages.length} of {messages.length} messages</span>
+            {selectedMessages.size > 0 && (
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                {selectedMessages.size} selected
+              </span>
+            )}
+            {unreadCount > 0 && (
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                {unreadCount} unread
+              </span>
+            )}
+          </div>
+          
+          {/* Selection Controls */}
+          {selectedMessages.size > 0 && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSelectedMessages(new Set())}
+                className="text-xs text-gray-600 hover:text-gray-800 px-2 py-1 rounded hover:bg-gray-200"
+              >
+                Clear
+              </button>
+              <button
+                onClick={() => handleDeleteMultiple(Array.from(selectedMessages))}
+                className="text-xs text-red-600 hover:text-red-800 px-2 py-1 rounded hover:bg-red-100"
+              >
+                Delete ({selectedMessages.size})
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -229,10 +317,28 @@ export default function MessageList({
               selectedMessageId === message.id ? 'bg-blue-50 border-l-4 border-l-[#4f46e5]' : ''
             }`}
           >
-            <div className="px-4 py-3" onClick={() => onMessageSelect(message.id)}>
-              {/* Message Header */}
+            <div className="px-4 py-3">
+              {/* Message Header with Selection Checkbox */}
               <div className="flex items-start gap-3 mb-2">
-                <div className="flex items-center gap-2 flex-1 min-w-0">
+                {/* Selection Checkbox */}
+                <input
+                  type="checkbox"
+                  checked={selectedMessages.has(message.id)}
+                  onChange={(e) => {
+                    e.stopPropagation()
+                    const newSelected = new Set(selectedMessages)
+                    if (e.target.checked) {
+                      newSelected.add(message.id)
+                    } else {
+                      newSelected.delete(message.id)
+                    }
+                    setSelectedMessages(newSelected)
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="mt-1 h-4 w-4 text-[#4f46e5] border-gray-300 rounded focus:ring-[#4f46e5] focus:ring-2"
+                />
+                
+                <div className="flex items-center gap-2 flex-1 min-w-0" onClick={() => onMessageSelect(message.id)}>
                   {/* Unread indicator */}
                   {!message.isRead && (
                     <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
@@ -257,12 +363,12 @@ export default function MessageList({
               {/* Subject */}
               <h4 className={`text-sm font-medium mb-1 truncate ${
                 !message.isRead ? 'text-gray-900' : 'text-gray-700'
-              }`}>
+              }`} onClick={() => onMessageSelect(message.id)}>
                 {message.subject || '(No subject)'}
               </h4>
 
               {/* Preview */}
-              <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+              <p className="text-sm text-gray-600 line-clamp-2 mb-2" onClick={() => onMessageSelect(message.id)}>
                 {message.bodyPreview || 'No preview available'}
               </p>
 
