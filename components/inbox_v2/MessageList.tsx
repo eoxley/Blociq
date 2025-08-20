@@ -118,10 +118,31 @@ export default function MessageList({
       
       // If the selected message is unread, mark it as read
       if (selectedMessage && !selectedMessage.isRead) {
-        handleMarkAsRead(selectedMessageId, true)
+        // Mark as read directly here to avoid dependency issues
+        const markAsRead = async () => {
+          try {
+            const response = await fetch('/api/outlook/v2/messages/mark-read', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ messageId: selectedMessageId, isRead: true })
+            })
+            
+            if (response.ok) {
+              // Refresh messages to show updated state
+              refresh()
+            } else {
+              console.error('Failed to mark message as read')
+            }
+          } catch (error) {
+            console.error('Error marking message as read:', error)
+          }
+        }
+        markAsRead()
       }
     }
-  }, [selectedMessageId, messages])
+  }, [selectedMessageId, messages, refresh])
 
   // Filter and sort messages
   useEffect(() => {
