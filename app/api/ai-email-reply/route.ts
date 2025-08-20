@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { cookies } from 'next/headers';
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     // Check if OpenAI is configured
     if (!process.env.OPENAI_API_KEY) {
@@ -17,11 +17,24 @@ export async function POST(req: Request) {
       replyType, 
       buildingContext, 
       leaseholderContext,
-      tone = 'Professional' 
+      tone = 'Professional',
+      emailData, // New field for direct email data
+      draftType = 'reply' // New field for draft type
     } = body;
 
-    if (!originalEmail) {
-      return NextResponse.json({ error: 'Missing original email content' }, { status: 400 });
+    // Support both originalEmail (legacy) and emailData (new) formats
+    let emailContent = originalEmail;
+    if (emailData) {
+      emailContent = {
+        from: emailData.from,
+        subject: emailData.subject,
+        content: emailData.plainText || emailData.body,
+        receivedAt: emailData.date
+      };
+    }
+
+    if (!emailContent) {
+      return NextResponse.json({ error: 'Missing email content' }, { status: 400 });
     }
 
     // Dynamic import to prevent build-time execution
@@ -29,21 +42,23 @@ export async function POST(req: Request) {
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
     // Build context-aware prompt
-    const systemPrompt = buildEmailReplyPrompt(replyType, buildingContext, leaseholderContext, tone);
+    const systemPrompt = buildEmailReplyPrompt(replyType || draftType, buildingContext, leaseholderContext, tone);
     
-    const userPrompt = `Generate a professional email reply to this email:
+    const userPrompt = `Generate a professional email ${draftType || replyType} to this email:
 
-From: ${originalEmail.from || 'Unknown'}
-Subject: ${originalEmail.subject || '(No subject)'}
-Content: ${originalEmail.content || ''}
+From: ${emailContent.from || 'Unknown'}
+Subject: ${emailContent.subject || '(No subject)'}
+Content: ${emailContent.content || ''}
 
-Please generate a professional, contextual reply that:
+Please generate a professional, contextual ${draftType || replyType} that:
 1. Addresses the original sender appropriately
 2. Provides a relevant response to the email content
 3. Maintains professional tone and formatting
 4. Is concise but comprehensive
 5. Uses proper email etiquette
 6. Includes relevant building/leaseholder context if available
+7. Uses British English spelling and terminology
+8. Ends with "Kind regards" or similar British formalities
 
 Generate the reply in plain text format (no HTML tags).`;
 
@@ -62,7 +77,7 @@ Generate the reply in plain text format (no HTML tags).`;
     return NextResponse.json({ 
       success: true,
       response: aiResponse,
-      replyType,
+      replyType: replyType || draftType,
       buildingContext: !!buildingContext,
       leaseholderContext: !!leaseholderContext
     });
@@ -87,7 +102,10 @@ Guidelines:
 - Keep replies concise but comprehensive
 - Address the specific points raised in the original email
 - Use proper email etiquette and formatting
-- Sign off with "Kind regards" or "Best regards"`;
+- Sign off with "Kind regards" or "Best regards"
+- Use British English spelling throughout (e.g., analyse, summarise, organise, recognise, apologise, customise, centre, defence)
+- Format dates as DD/MM/YYYY (British format)
+- Use British terminology and expressions appropriate for UK property management`;
 
   if (buildingContext) {
     prompt += `

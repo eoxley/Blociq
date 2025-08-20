@@ -53,15 +53,47 @@ export function useTriageDraft() {
     setLoading(true);
     setError(null);
     try {
-      const r = await fetch("/api/triage", {
+      // Use the updated AI email reply API
+      const r = await fetch("/api/ai-email-reply", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
-        body: JSON.stringify(p)
+        body: JSON.stringify({
+          emailData: p, // Send the email data directly
+          draftType: "reply",
+          tone: "professional"
+        })
       });
-      if (!r.ok) throw new Error((await r.json()).error ?? "triage failed");
-      const data = (await r.json()) as TriageResult;
-      setResult(data);
-      return data;
+      
+      if (!r.ok) {
+        const errorData = await r.json();
+        throw new Error(errorData.error ?? "Failed to generate AI draft");
+      }
+      
+      const data = await r.json();
+      
+      // Transform the AI email reply response to match the expected TriageResult format
+      const transformedResult: TriageResult = {
+        label: "follow_up",
+        priority: "P2",
+        category: "GEN",
+        intent: "request_action",
+        required_actions: ["acknowledge"],
+        routing: [],
+        sla_ack_mins: 60,
+        confidence: 0.8,
+        reasons: ["AI generated reply"],
+        reply: {
+          subject: `Re: ${p.subject}`,
+          greeting: "Dear " + (p.from.split('@')[0] || "there"),
+          body_markdown: data.response || "Thank you for your email. I will review and respond accordingly.",
+          signoff: "Kind regards",
+          signature_block: ""
+        },
+        attachments_suggestions: []
+      };
+      
+      setResult(transformedResult);
+      return transformedResult;
     } catch (e: any) {
       setError(e?.message ?? "Failed to generate draft");
       return null;
