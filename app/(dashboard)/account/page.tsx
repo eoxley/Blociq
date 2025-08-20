@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import LayoutWithSidebar from '@/components/LayoutWithSidebar';
 import { Settings, User, Briefcase, Mail, FileText, Upload, X, Save, Loader2, Image, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -106,17 +105,15 @@ export default function AccountPage() {
           job_title: profile.job_title,
           signature_text: profile.signature_text,
           signature_url: profile.signature_url,
-          email_signature: profile.email_signature,
-          updated_at: new Date().toISOString()
+          email_signature: profile.email_signature
         })
-        .eq('email', profile.email);
+        .eq('id', profile.id);
 
       if (error) throw error;
-      
       toast.success('Profile updated successfully!');
     } catch (error) {
-      console.error('Error saving profile:', error);
-      toast.error('Failed to save profile');
+      console.error('Error updating profile:', error);
+      toast.error('Failed to update profile');
     } finally {
       setSaving(false);
     }
@@ -195,266 +192,252 @@ export default function AccountPage() {
 
   if (loading) {
     return (
-      <LayoutWithSidebar>
-        <div className="p-8">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
-            </div>
+      <div className="p-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
           </div>
         </div>
-      </LayoutWithSidebar>
+      </div>
     );
   }
 
   return (
-    <LayoutWithSidebar>
-      <div className="p-8">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 bg-gradient-to-br from-[#6A00F5] to-[#8A2BE2] rounded-xl flex items-center justify-center">
-                <Settings className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Account Settings</h1>
-                <p className="text-gray-600">Manage your account preferences and settings</p>
-              </div>
+    <div className="p-8">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-12 h-12 bg-gradient-to-br from-[#6A00F5] to-[#8A2BE2] rounded-xl flex items-center justify-center">
+              <Settings className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Account Settings</h1>
+              <p className="text-gray-600">Manage your account preferences and settings</p>
             </div>
           </div>
+        </div>
 
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-2xl">
-                <User className="h-6 w-6 text-[#6A00F5]" />
-                Profile Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Basic Information */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName" className="flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      First Name
-                    </Label>
-                    <Input
-                      id="firstName"
-                      value={profile?.first_name || ''}
-                      onChange={(e) => setProfile(prev => prev ? { ...prev, first_name: e.target.value } : null)}
-                      placeholder="Enter your first name"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName" className="flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      Last Name
-                    </Label>
-                    <Input
-                      id="lastName"
-                      value={profile?.last_name || ''}
-                      onChange={(e) => setProfile(prev => prev ? { ...prev, last_name: e.target.value } : null)}
-                      placeholder="Enter your last name"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label htmlFor="jobTitle" className="flex items-center gap-2">
-                      <Briefcase className="h-4 w-4" />
-                      Job Title
-                    </Label>
-                    <Input
-                      id="jobTitle"
-                      value={profile?.job_title || ''}
-                      onChange={(e) => setProfile(prev => prev ? { ...prev, job_title: e.target.value } : null)}
-                      placeholder="e.g., Property Manager, Building Manager"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label htmlFor="email" className="flex items-center gap-2">
-                      <Mail className="h-4 w-4" />
-                      Email Address
-                    </Label>
-                    <Input
-                      id="email"
-                      value={profile?.email || ''}
-                      disabled
-                      className="bg-gray-50"
-                    />
-                    <p className="text-sm text-gray-500">Email address is managed by your authentication provider</p>
-                  </div>
-                </div>
+        {/* Profile Settings */}
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Profile Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Basic Information */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name</Label>
+                <Input
+                  id="firstName"
+                  value={profile?.first_name || ''}
+                  onChange={(e) => setProfile(prev => prev ? { ...prev, first_name: e.target.value } : null)}
+                  placeholder="Enter your first name"
+                />
               </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
+                  id="lastName"
+                  value={profile?.last_name || ''}
+                  onChange={(e) => setProfile(prev => prev ? { ...prev, last_name: e.target.value } : null)}
+                  placeholder="Enter your last name"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="jobTitle">Job Title</Label>
+                <Input
+                  id="jobTitle"
+                  value={profile?.job_title || ''}
+                  onChange={(e) => setProfile(prev => prev ? { ...prev, job_title: e.target.value } : null)}
+                  placeholder="Enter your job title"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  value={profile?.email || ''}
+                  disabled
+                  className="bg-gray-50"
+                />
+                <p className="text-xs text-gray-500">Email cannot be changed</p>
+              </div>
+            </div>
 
-              <Separator />
+            <Separator />
 
-              {/* Signature Section */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">Email Signature</h3>
-                <Tabs value={signatureMode} onValueChange={(value) => setSignatureMode(value as 'typed' | 'upload')}>
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="typed">Text Signature</TabsTrigger>
-                    <TabsTrigger value="upload">Image Signature</TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="typed" className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="signatureText">Signature Text</Label>
-                      <Input
-                        id="signatureText"
-                        value={profile?.signature_text || ''}
-                        onChange={(e) => {
-                          setProfile(prev => prev ? { ...prev, signature_text: e.target.value } : null);
-                          setSignaturePreview(e.target.value);
-                        }}
-                        placeholder="Enter your signature"
-                        className="font-[cursive] text-xl"
-                      />
-                    </div>
-                    {signaturePreview && (
-                      <div className="p-4 bg-gray-50 rounded-lg">
-                        <Label className="text-sm text-gray-600">Preview:</Label>
-                        <div className="font-[cursive] text-xl text-gray-900 mt-1">
-                          {signaturePreview}
-                        </div>
+            {/* Signature Settings */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Digital Signature</h3>
+              <p className="text-sm text-gray-600">
+                Your signature will be automatically included in emails and replies
+              </p>
+              
+              <Tabs value={signatureMode} onValueChange={(value) => setSignatureMode(value as 'typed' | 'upload')}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="typed">Text Signature</TabsTrigger>
+                  <TabsTrigger value="upload">Image Signature</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="typed" className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signatureText">Signature Text</Label>
+                    <Input
+                      id="signatureText"
+                      value={profile?.signature_text || ''}
+                      onChange={(e) => {
+                        setProfile(prev => prev ? { ...prev, signature_text: e.target.value } : null);
+                        setSignaturePreview(e.target.value);
+                      }}
+                      placeholder="Enter your signature"
+                      className="signature-font"
+                    />
+                  </div>
+                  {signaturePreview && (
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <Label className="text-sm text-gray-600">Preview:</Label>
+                      <div className="signature-preview mt-1">
+                        {signaturePreview}
                       </div>
-                    )}
-                  </TabsContent>
-                  
-                  <TabsContent value="upload" className="space-y-4">
-                    <div
-                      className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                        dragOver ? 'border-[#6A00F5] bg-purple-50' : 'border-gray-300 hover:border-gray-400'
-                      }`}
-                      onDragOver={handleDragOver}
-                      onDragLeave={handleDragLeave}
-                      onDrop={handleDrop}
-                    >
-                      {uploading ? (
-                        <div className="space-y-4">
-                          <Loader2 className="mx-auto h-8 w-8 animate-spin text-[#6A00F5]" />
-                          <p className="text-sm text-gray-600">Uploading signature...</p>
-                        </div>
-                      ) : (
-                        <>
-                          <Image className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                          <p className="text-lg font-medium text-gray-900 mb-2">
-                            Upload your signature image
-                          </p>
-                          <p className="text-sm text-gray-600 mb-4">
-                            Drag and drop an image here, or{' '}
-                            <button
-                              type="button"
-                              onClick={() => document.getElementById('signatureUpload')?.click()}
-                              className="font-medium text-[#6A00F5] hover:text-[#5A00E5] underline"
-                            >
-                              browse files
-                            </button>
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Supports JPG, PNG, GIF • Max 5MB • Recommended: transparent background
-                          </p>
-                          <input
-                            id="signatureUpload"
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleSignatureUpload(file);
-                            }}
-                            className="hidden"
-                          />
-                        </>
-                      )}
                     </div>
-                    
-                    {signaturePreview && profile?.signature_url && (
-                      <div className="space-y-3">
-                        <Label className="text-sm font-medium text-gray-700">Current Signature:</Label>
-                        <div className="relative inline-block p-4 bg-gray-50 rounded-lg">
-                          <img
-                            src={profile.signature_url}
-                            alt="Signature preview"
-                            className="max-h-24 max-w-full rounded"
-                          />
-                          <button
-                            onClick={removeSignature}
-                            className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
-                            title="Remove signature"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        </div>
-                        <p className="text-xs text-gray-500">
-                          Your signature image will be automatically included in emails
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="upload" className="space-y-4">
+                  <div
+                    className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                      dragOver ? 'border-[#6A00F5] bg-purple-50' : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
+                    {uploading ? (
+                      <div className="space-y-4">
+                        <Loader2 className="mx-auto h-8 w-8 animate-spin text-[#6A00F5]" />
+                        <p className="text-sm text-gray-600">Uploading signature...</p>
+                      </div>
+                    ) : (
+                      <>
+                        <Image className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                        <p className="text-lg font-medium text-gray-900 mb-2">
+                          Upload your signature image
                         </p>
-                      </div>
+                        <p className="text-sm text-gray-600 mb-4">
+                          Drag and drop an image here, or{' '}
+                          <button
+                            type="button"
+                            onClick={() => document.getElementById('signatureUpload')?.click()}
+                            className="font-medium text-[#6A00F5] hover:text-[#5A00E5] underline"
+                          >
+                            browse files
+                          </button>
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Supports JPG, PNG, GIF • Max 5MB • Recommended: transparent background
+                        </p>
+                        <input
+                          id="signatureUpload"
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleSignatureUpload(file);
+                          }}
+                          className="hidden"
+                        />
+                      </>
                     )}
-                  </TabsContent>
-                </Tabs>
-              </div>
+                  </div>
+                  
+                  {signaturePreview && profile?.signature_url && (
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium text-gray-700">Current Signature:</Label>
+                      <div className="relative inline-block p-4 bg-gray-50 rounded-lg">
+                        <img
+                          src={profile.signature_url}
+                          alt="Signature preview"
+                          className="max-h-24 max-w-full rounded"
+                        />
+                        <button
+                          onClick={removeSignature}
+                          className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                          title="Remove signature"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Your signature image will be automatically included in emails
+                      </p>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </div>
 
-              <Separator />
+            <Separator />
 
-              {/* Email Signature Template */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">Email Signature Template</h3>
-                <div className="space-y-2">
-                  <Label htmlFor="emailSignature" className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Email Signature Template
-                  </Label>
-                  <Textarea
-                    id="emailSignature"
-                    value={profile?.email_signature || ''}
-                    onChange={(e) => setProfile(prev => prev ? { ...prev, email_signature: e.target.value } : null)}
-                    placeholder={`Best regards,
+            {/* Email Signature Template */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Email Signature Template</h3>
+              <div className="space-y-2">
+                <Label htmlFor="emailSignature" className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Email Signature Template
+                </Label>
+                <Textarea
+                  id="emailSignature"
+                  value={profile?.email_signature || ''}
+                  onChange={(e) => setProfile(prev => prev ? { ...prev, email_signature: e.target.value } : null)}
+                  placeholder={`Best regards,
 
 ${profile?.first_name || '[Your Name]'} ${profile?.last_name || ''}
 ${profile?.job_title || '[Your Job Title]'}
 [Company Name]
 [Phone Number]
 [Website]`}
-                    rows={8}
-                    className="font-mono text-sm"
-                  />
-                  <div className="text-xs text-gray-500 space-y-1">
-                    <p>You can use basic HTML tags for formatting:</p>
-                    <p>• <code>&lt;b&gt;bold&lt;/b&gt;</code> • <code>&lt;i&gt;italic&lt;/i&gt;</code> • <code>&lt;a href="..."&gt;link&lt;/a&gt;</code></p>
-                    <p>• Your signature image will be automatically included if uploaded</p>
-                  </div>
+                  rows={8}
+                  className="font-mono text-sm"
+                />
+                <div className="text-xs text-gray-500 space-y-1">
+                  <p>You can use basic HTML tags for formatting:</p>
+                  <p>• <code>&lt;b&gt;bold&lt;/b&gt;</code> • <code>&lt;i&gt;italic&lt;/i&gt;</code> • <code>&lt;a href="..."&gt;link&lt;/a&gt;</code></p>
+                  <p>• Your signature image will be automatically included if uploaded</p>
                 </div>
               </div>
+            </div>
 
-              {/* Save Button */}
-              <div className="flex justify-end pt-6">
-                <Button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2] hover:from-[#5A00E5] hover:to-[#7A2BD2] text-white px-8 py-3 rounded-lg font-medium"
-                >
-                  {saving ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Save Changes
-                    </>
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            {/* Save Button */}
+            <div className="flex justify-end pt-6">
+              <Button
+                onClick={handleSave}
+                disabled={saving}
+                className="bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2] hover:from-[#5A00E5] hover:to-[#7A2BD2] text-white px-8 py-3 rounded-lg font-medium"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </LayoutWithSidebar>
+    </div>
   );
 }
