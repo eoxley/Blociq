@@ -30,6 +30,16 @@ interface FullMessage {
   webLink: string
 }
 
+interface UserSignature {
+  signature: string
+  signatureText: string
+  signatureImage: string | null
+  emailSignature: string
+  fullName: string
+  jobTitle: string
+  email: string
+}
+
 export default function ReplyModal({ isOpen, onClose, message, replyType }: ReplyModalProps) {
   const { loading, result, error, generate, reset } = useTriageDraft()
   const [htmlBody, setHtmlBody] = useState('')
@@ -47,9 +57,29 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
   const [attachments, setAttachments] = useState<File[]>([])
   const [suggestedAttachments, setSuggestedAttachments] = useState<any[]>([])
   const [attachIds, setAttachIds] = useState<string[]>([])
+  const [userSignature, setUserSignature] = useState<UserSignature | null>(null)
   
   const editorRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Load user signature when modal opens
+  useEffect(() => {
+    const loadSignature = async () => {
+      try {
+        const response = await fetch('/api/get-signature')
+        if (response.ok) {
+          const data = await response.json()
+          setUserSignature(data)
+        }
+      } catch (error) {
+        console.error('Error loading signature:', error)
+      }
+    }
+
+    if (isOpen) {
+      loadSignature()
+    }
+  }, [isOpen])
 
   // Prepare email data for triage
   const emailData = useMemo(() => {
@@ -94,13 +124,48 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
         setBccRecipients([])
       }
       
-      // Initialize reply body with proper cursor positioning
-      setHtmlBody('<p><br></p>')
+      // Initialize reply body with proper cursor positioning and signature
+      let initialBody = '<p><br></p>'
+      
+      // Add signature if available
+      if (userSignature) {
+        let signatureHtml = ''
+        
+        // Add signature image if available
+        if (userSignature.signatureImage) {
+          signatureHtml += `<br><br><img src="${userSignature.signatureImage}" alt="Signature" style="max-height: 60px; max-width: 200px;" />`
+        }
+        
+        // Add text signature and email signature template
+        if (userSignature.signatureText || userSignature.emailSignature) {
+          signatureHtml += '<br><br>'
+          
+          if (userSignature.signatureText) {
+            signatureHtml += `<div class="signature-font">${userSignature.signatureText}</div>`
+          }
+          
+          if (userSignature.emailSignature) {
+            signatureHtml += `<div style="font-family: Arial, sans-serif; font-size: 12px; color: #666; margin-top: 8px;">${userSignature.emailSignature}</div>`
+          }
+        }
+        
+        // If no custom signature, add default
+        if (!signatureHtml) {
+          signatureHtml = `<br><br><div style="font-family: Arial, sans-serif; font-size: 12px; color: #666;">
+            Best regards,<br>
+            <strong>${userSignature.fullName}</strong>${userSignature.jobTitle ? `<br>${userSignature.jobTitle}` : ''}
+          </div>`
+        }
+        
+        initialBody += signatureHtml
+      }
+      
+      setHtmlBody(initialBody)
       
       // Load email thread
       loadEmailThread()
     }
-  }, [isOpen, message, replyType])
+  }, [isOpen, message, replyType, userSignature])
 
   // Load email thread for context
   const loadEmailThread = async () => {

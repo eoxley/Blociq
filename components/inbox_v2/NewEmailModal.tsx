@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useState, useRef } from 'react'
-import { X, Send, Brain, Loader2, Paperclip, Bold, Italic, List, Link, Quote, Trash2, Plus, MessageSquare } from 'lucide-react'
+import { Reply, ReplyAll, Paperclip, Clock, User, MessageSquare, Calendar, Download, Brain, Sparkles, Loader2, X, Send } from 'lucide-react'
+import { formatDistanceToNow, format } from 'date-fns'
 
 interface NewEmailModalProps {
   isOpen: boolean
@@ -13,6 +14,16 @@ interface Attachment {
   name: string
   size: number
   type: string
+}
+
+interface UserSignature {
+  signature: string
+  signatureText: string
+  signatureImage: string | null
+  emailSignature: string
+  fullName: string
+  jobTitle: string
+  email: string
 }
 
 export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
@@ -28,14 +39,70 @@ export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const [showBcc, setShowBcc] = useState(false)
   const [isDraft, setIsDraft] = useState(false)
+  const [userSignature, setUserSignature] = useState<UserSignature | null>(null)
   
   const editorRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Load user signature when modal opens
+  useEffect(() => {
+    const loadSignature = async () => {
+      try {
+        const response = await fetch('/api/get-signature')
+        if (response.ok) {
+          const data = await response.json()
+          setUserSignature(data)
+        }
+      } catch (error) {
+        console.error('Error loading signature:', error)
+      }
+    }
+
+    if (isOpen) {
+      loadSignature()
+    }
+  }, [isOpen])
+
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
-      setHtmlBody('<p><br></p>')
+      // Initialize body with signature if available
+      let initialBody = '<p><br></p>'
+      
+      // Add signature if available
+      if (userSignature) {
+        let signatureHtml = ''
+        
+        // Add signature image if available
+        if (userSignature.signatureImage) {
+          signatureHtml += `<br><br><img src="${userSignature.signatureImage}" alt="Signature" style="max-height: 60px; max-width: 200px;" />`
+        }
+        
+        // Add text signature and email signature template
+        if (userSignature.signatureText || userSignature.emailSignature) {
+          signatureHtml += '<br><br>'
+          
+          if (userSignature.signatureText) {
+            signatureHtml += `<div class="signature-font">${userSignature.signatureText}</div>`
+          }
+          
+          if (userSignature.emailSignature) {
+            signatureHtml += `<div style="font-family: Arial, sans-serif; font-size: 12px; color: #666; margin-top: 8px;">${userSignature.emailSignature}</div>`
+          }
+        }
+        
+        // If no custom signature, add default
+        if (!signatureHtml) {
+          signatureHtml = `<br><br><div style="font-family: Arial, sans-serif; font-size: 12px; color: #666;">
+            Best regards,<br>
+            <strong>${userSignature.fullName}</strong>${userSignature.jobTitle ? `<br>${userSignature.jobTitle}` : ''}
+          </div>`
+        }
+        
+        initialBody += signatureHtml
+      }
+      
+      setHtmlBody(initialBody)
       setSubject('')
       setToRecipients([])
       setCcRecipients([])
@@ -44,17 +111,13 @@ export default function NewEmailModal({ isOpen, onClose }: NewEmailModalProps) {
       setShowBcc(false)
       setIsDraft(false)
     }
-  }, [isOpen])
+  }, [isOpen, userSignature])
 
   // Handle body scroll
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'
     } else {
-      document.body.style.overflow = 'unset'
-    }
-
-    return () => {
       document.body.style.overflow = 'unset'
     }
   }, [isOpen])
