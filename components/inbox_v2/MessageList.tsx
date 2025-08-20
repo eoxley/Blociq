@@ -111,6 +111,18 @@ export default function MessageList({
     }
   }, [filteredMessages, selectedMessageId, onMessageSelect])
 
+  // Auto-mark message as read when selected (removes blue dot)
+  useEffect(() => {
+    if (selectedMessageId) {
+      const selectedMessage = messages.find((msg: any) => msg.id === selectedMessageId)
+      
+      // If the selected message is unread, mark it as read
+      if (selectedMessage && !selectedMessage.isRead) {
+        handleMarkAsRead(selectedMessageId, true)
+      }
+    }
+  }, [selectedMessageId, messages])
+
   // Filter and sort messages
   useEffect(() => {
     let filtered = messages
