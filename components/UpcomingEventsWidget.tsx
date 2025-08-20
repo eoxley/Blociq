@@ -114,11 +114,27 @@ export default function UpcomingEventsWidget() {
   const syncCalendar = async () => {
     setSyncing(true);
     try {
-      // Simulate sync delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Call the actual Outlook sync API
+      const response = await fetch('/api/sync-calendar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to sync calendar');
+      }
+
+      const result = await response.json();
+      console.log('Calendar sync result:', result);
+      
+      // Reload the data to show new events
       await loadData();
     } catch (error) {
       console.error("Error syncing calendar:", error);
+      // You might want to add toast notifications here
     } finally {
       setSyncing(false);
     }
