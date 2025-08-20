@@ -7,7 +7,6 @@ import MessageList from '@/components/inbox_v2/MessageList'
 import MessagePreview from '@/components/inbox_v2/MessagePreview'
 import ReplyModal from '@/components/inbox_v2/ReplyModal'
 import NewEmailModal from '@/components/inbox_v2/NewEmailModal'
-import DragDropFrame from '@/components/inbox_v2/DragDropFrame'
 import TriageButton from '@/components/inbox_v2/TriageButton'
 import AskBlocIQButton from '@/components/inbox_v2/AskBlocIQButton'
 import { useMessages, useFolders } from '@/hooks/inbox_v2'
@@ -44,6 +43,7 @@ export default function InboxV2() {
   const [triageSuccess, setTriageSuccess] = useState<{ message: string; timestamp: number } | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [showUnreadOnly, setShowUnreadOnly] = useState(false)
+  const [draggedMessage, setDraggedMessage] = useState<{ messageId: string; sourceFolderId: string } | null>(null)
 
   // Get folders and messages
   const { folders, isLoading: foldersLoading } = useFolders()
@@ -358,162 +358,192 @@ export default function InboxV2() {
     }
   }, [refreshMessages])
 
+  // Simple drag and drop handlers
+  const handleDragStart = useCallback((e: React.DragEvent, messageId: string, sourceFolderId: string) => {
+    setDraggedMessage({ messageId, sourceFolderId })
+    e.dataTransfer.effectAllowed = 'move'
+  }, [])
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }, [])
+
+  const handleDrop = useCallback(async (e: React.DragEvent, destinationFolderId: string) => {
+    e.preventDefault()
+    
+    if (!draggedMessage) return
+    
+    const { messageId, sourceFolderId } = draggedMessage
+    
+    // Don't move to the same folder
+    if (destinationFolderId === sourceFolderId) {
+      setDraggedMessage(null)
+      return
+    }
+
+    // Move the message
+    await moveMessage(messageId, destinationFolderId)
+    setDraggedMessage(null)
+  }, [draggedMessage, moveMessage])
+
   // Calculate unread count
   const unreadCount = messages.filter((message: any) => !message.isRead).length
   const selectedFolder = folders.find(f => f.id === selectedFolderId)
 
   return (
     <InboxContext.Provider value={contextValue}>
-      <DragDropFrame onMoveSuccess={handleMoveSuccess} onMoveError={handleMoveError}>
-        {/* Modern Email Client Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-lg flex items-center justify-center">
-                <MessageSquare className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Inbox</h1>
-                <p className="text-sm text-gray-600">
-                  {selectedFolder ? selectedFolder.displayName : 'Loading...'} • {messages.length} messages
-                  {unreadCount > 0 && (
-                    <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {unreadCount} unread
-                    </span>
-                  )}
-                </p>
-              </div>
+      {/* Modern Email Client Header */}
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-lg flex items-center justify-center">
+              <MessageSquare className="h-5 w-5 text-white" />
             </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Inbox</h1>
+              <p className="text-sm text-gray-600">
+                {selectedFolder ? selectedFolder.displayName : 'Loading...'} • {messages.length} messages
+                {unreadCount > 0 && (
+                  <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    {unreadCount} unread
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setNewEmailModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white rounded-lg hover:brightness-110 transition-all duration-200 shadow-sm font-medium"
+            >
+              <Plus className="h-4 w-4" />
+              New Email
+            </button>
             
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setNewEmailModalOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white rounded-lg hover:brightness-110 transition-all duration-200 shadow-sm font-medium"
-              >
-                <Plus className="h-4 w-4" />
-                New Email
-              </button>
-              
-              <TriageButton 
-                selectedMessageId={selectedId}
-                onTriage={triageMessage}
-                onBulkTriage={async () => {}}
-                isTriaging={isTriaging}
-                triageResult={triage}
-                triageError={triageError}
-                onTriageSuccess={(result) => {
-                  let message = ''
-                  if (result.summary && result.summary.includes('Processed')) {
-                    // Bulk triage result
-                    message = `✅ ${result.summary} Please review your draft replies in Outlook.`
-                  } else {
-                    // Single triage result
-                    message = `✅ AI Triage completed! Email categorized as "${result.category}". Check your Outlook for draft replies and categories.`
-                  }
-                  
-                  setTriageSuccess({ 
-                    message,
-                    timestamp: Date.now() 
-                  })
-                  // Clear success message after 5 seconds
-                  setTimeout(() => setTriageSuccess(null), 5000)
-                }}
-              />
-              
-              <button
-                onClick={() => refreshMessages()}
-                disabled={foldersLoading}
-                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-200"
-                title="Refresh"
-              >
-                <RefreshCw className={`h-5 w-5 ${foldersLoading ? 'animate-spin' : ''}`} />
-              </button>
-              
-              <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-200" title="Settings">
-                <Settings className="h-5 w-5" />
-              </button>
-            </div>
+            <TriageButton 
+              selectedMessageId={selectedId}
+              onTriage={triageMessage}
+              onBulkTriage={async () => {}}
+              isTriaging={isTriaging}
+              triageResult={triage}
+              triageError={triageError}
+              onTriageSuccess={(result) => {
+                let message = ''
+                if (result.summary && result.summary.includes('Processed')) {
+                  // Bulk triage result
+                  message = `✅ ${result.summary} Please review your draft replies in Outlook.`
+                } else {
+                  // Single triage result
+                  message = `✅ AI Triage completed! Email categorized as "${result.category}". Check your Outlook for draft replies and categories.`
+                }
+                
+                setTriageSuccess({ 
+                  message,
+                  timestamp: Date.now() 
+                })
+                // Clear success message after 5 seconds
+                setTimeout(() => setTriageSuccess(null), 5000)
+              }}
+            />
+            
+            <button
+              onClick={() => refreshMessages()}
+              disabled={foldersLoading}
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-200"
+              title="Refresh"
+            >
+              <RefreshCw className={`h-5 w-5 ${foldersLoading ? 'animate-spin' : ''}`} />
+            </button>
+            
+            <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-200" title="Settings">
+              <Settings className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Email Client Layout */}
+      <div className="flex h-[calc(100vh-120px)] bg-gray-50">
+        {/* Left Column: Folder Sidebar */}
+        <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+          <div className="p-4 border-b border-gray-200">
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-3">Folders</h3>
+            <FolderSidebar 
+              selectedFolderId={selectedFolderId}
+              onFolderSelect={(folderId) => {
+                setSelectedFolderId(folderId)
+                setSelectedMessage(null) // Clear selected message when changing folders
+                setSelectedId(null)
+              }}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+            />
           </div>
         </div>
 
-        {/* Main Email Client Layout */}
-        <div className="flex h-[calc(100vh-120px)] bg-gray-50">
-          {/* Left Column: Folder Sidebar */}
-          <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
-            <div className="p-4 border-b border-gray-200">
-              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-3">Folders</h3>
-              <FolderSidebar 
-                selectedFolderId={selectedFolderId}
-                onFolderSelect={(folderId) => {
-                  setSelectedFolderId(folderId)
-                  setSelectedMessage(null) // Clear selected message when changing folders
-                  setSelectedId(null)
-                }}
-              />
+        {/* Middle Column: Message List */}
+        <div className="w-96 bg-white border-r border-gray-200 flex flex-col">
+          <div className="p-4 border-b border-gray-200">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search messages..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
+                />
+              </div>
+              <button
+                onClick={() => setShowUnreadOnly(!showUnreadOnly)}
+                className={`p-2 rounded-lg transition-all duration-200 ${
+                  showUnreadOnly 
+                    ? 'bg-blue-100 text-blue-700' 
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                }`}
+                title="Show unread only"
+              >
+                <Filter className="h-4 w-4" />
+              </button>
             </div>
           </div>
-
-          {/* Middle Column: Message List */}
-          <div className="w-96 bg-white border-r border-gray-200 flex flex-col">
-            <div className="p-4 border-b border-gray-200">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search messages..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
-                  />
-                </div>
-                <button
-                  onClick={() => setShowUnreadOnly(!showUnreadOnly)}
-                  className={`p-2 rounded-lg transition-all duration-200 ${
-                    showUnreadOnly 
-                      ? 'bg-blue-100 text-blue-700' 
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                  }`}
-                  title="Show unread only"
-                >
-                  <Filter className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-            
-            <div className="flex-1 overflow-hidden">
-              <MessageList 
-                selectedFolderId={selectedFolderId}
-                selectedMessageId={selectedId}
-                onMessageSelect={handleMessageSelect}
-                searchQuery={searchQuery}
-                showUnreadOnly={showUnreadOnly}
-              />
-            </div>
-          </div>
-
-          {/* Right Column: Message Preview */}
-          <div className="flex-1 bg-white flex flex-col">
-            {selectedMessage ? (
-              <MessagePreview 
-                selectedMessage={selectedMessage}
-                onReply={() => handleReply('reply')}
-                onReplyAll={() => handleReply('replyAll')}
-                onMessageUpdate={refreshMessages}
-                triageResult={triage}
-              />
-            ) : (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center">
-                  <MessageSquare className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No message selected</h3>
-                  <p className="text-gray-500">Select a message from the list to preview it here</p>
-                </div>
-              </div>
-            )}
+          
+          <div className="flex-1 overflow-hidden">
+            <MessageList 
+              selectedFolderId={selectedFolderId}
+              selectedMessageId={selectedId}
+              onMessageSelect={handleMessageSelect}
+              searchQuery={searchQuery}
+              showUnreadOnly={showUnreadOnly}
+              onDragStart={handleDragStart}
+            />
           </div>
         </div>
-      </DragDropFrame>
+
+        {/* Right Column: Message Preview */}
+        <div className="flex-1 bg-white flex flex-col">
+          {selectedMessage ? (
+            <MessagePreview 
+              selectedMessage={selectedMessage}
+              onReply={() => handleReply('reply')}
+              onReplyAll={() => handleReply('replyAll')}
+              onMessageUpdate={refreshMessages}
+              triageResult={triage}
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <MessageSquare className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No message selected</h3>
+                <p className="text-gray-500">Select a message from the list to preview it here</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Success Message Display */}
       {moveSuccess && (

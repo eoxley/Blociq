@@ -12,6 +12,7 @@ interface MessageListProps {
   onMessageSelect: (messageId: string | null) => void
   searchQuery?: string
   showUnreadOnly?: boolean
+  onDragStart?: (e: React.DragEvent, messageId: string, sourceFolderId: string) => void
 }
 
 export default function MessageList({ 
@@ -19,7 +20,8 @@ export default function MessageList({
   selectedMessageId, 
   onMessageSelect,
   searchQuery = '',
-  showUnreadOnly = false
+  showUnreadOnly = false,
+  onDragStart
 }: MessageListProps) {
   const { messages, isLoading, refresh } = useMessages(selectedFolderId)
   const [focusedMessageIndex, setFocusedMessageIndex] = useState<number>(-1)
@@ -218,14 +220,16 @@ export default function MessageList({
       {/* Message List */}
       <div className="flex-1 overflow-y-auto">
         {filteredMessages.map((message, index) => (
-          <div
+          <DraggableEmailRow
             key={message.id}
+            messageId={message.id}
+            sourceFolderId={selectedFolderId || ''}
+            onDragStart={onDragStart || (() => {})}
             className={`border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150 cursor-pointer ${
               selectedMessageId === message.id ? 'bg-blue-50 border-l-4 border-l-[#4f46e5]' : ''
             }`}
-            onClick={() => onMessageSelect(message.id)}
           >
-            <div className="px-4 py-3">
+            <div className="px-4 py-3" onClick={() => onMessageSelect(message.id)}>
               {/* Message Header */}
               <div className="flex items-start gap-3 mb-2">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -265,7 +269,7 @@ export default function MessageList({
               {/* Message Actions */}
               <div className="flex items-center gap-2 text-gray-400">
                 {message.hasAttachments && (
-                  <Paperclip className="h-4 w-4" title="Has attachments" />
+                  <Paperclip className="h-4 w-4" />
                 )}
                 
                 <button
@@ -302,7 +306,7 @@ export default function MessageList({
                 </button>
               </div>
             </div>
-          </div>
+          </DraggableEmailRow>
         ))}
       </div>
     </div>

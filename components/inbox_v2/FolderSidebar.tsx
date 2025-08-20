@@ -8,6 +8,8 @@ import { DroppableFolderItem } from './DroppableFolderItem'
 interface FolderSidebarProps {
   selectedFolderId: string | null
   onFolderSelect: (folderId: string) => void
+  onDrop: (e: React.DragEvent, destinationFolderId: string) => void
+  onDragOver: (e: React.DragEvent) => void
 }
 
 // Icon mapping for well-known folders
@@ -30,7 +32,7 @@ const getFolderIcon = (wellKnownName: string | null) => {
   }
 }
 
-export default function FolderSidebar({ selectedFolderId, onFolderSelect }: FolderSidebarProps) {
+export default function FolderSidebar({ selectedFolderId, onFolderSelect, onDrop, onDragOver }: FolderSidebarProps) {
   const { folders, isFallback, isLoading, refresh, addManualFolder } = useFolders()
   const [isAddingFolder, setIsAddingFolder] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
@@ -100,6 +102,8 @@ export default function FolderSidebar({ selectedFolderId, onFolderSelect }: Fold
             isSelected={selectedFolderId === folder.id}
             onSelect={onFolderSelect}
             icon={getFolderIcon(folder.wellKnownName)}
+            onDrop={onDrop}
+            onDragOver={onDragOver}
           />
         ))}
       </div>
