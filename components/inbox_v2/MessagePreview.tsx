@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Reply, ReplyAll, Paperclip, Clock, User, MessageSquare, Calendar, Download, Eye, EyeOff } from 'lucide-react'
+import { Reply, ReplyAll, Forward, Paperclip, Clock, User, MessageSquare, Calendar, Download, Eye, EyeOff, Star, Flag, MoreVertical, Trash2 } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
 
 interface MessagePreviewProps {
@@ -101,324 +101,237 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll, o
     }
   }
 
+  const handleDelete = async () => {
+    if (!selectedMessage?.id || !confirm('Are you sure you want to delete this message?')) return
+    
+    try {
+      const response = await fetch(`/api/outlook/v2/messages/${selectedMessage.id}`, {
+        method: 'DELETE'
+      })
+      
+      if (response.ok) {
+        // Notify parent component to refresh
+        if (onMessageUpdate) {
+          onMessageUpdate()
+        }
+      } else {
+        console.error('Failed to delete message')
+      }
+    } catch (error) {
+      console.error('Error deleting message:', error)
+    }
+  }
+
   if (!selectedMessage) {
-    return (
-      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center shadow-sm">
-        <div className="w-16 h-16 bg-gradient-to-r from-gray-100 to-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <MessageSquare className="h-8 w-8 text-[#4f46e5]" />
-        </div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Select a message to preview</h3>
-        <p className="text-gray-500">Choose an email from the list to view its content</p>
-      </div>
-    )
+    return null
   }
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center shadow-sm">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4f46e5] mx-auto"></div>
-        <p className="text-gray-500 mt-2">Loading message...</p>
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4f46e5] mx-auto mb-2"></div>
+          <p className="text-sm text-gray-500">Loading message...</p>
+        </div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center shadow-sm">
-        <p className="text-red-500 mb-2">{error}</p>
-        <button 
-          onClick={() => window.location.reload()}
-          className="text-sm text-[#4f46e5] hover:text-[#a855f7] underline"
-        >
-          Try again
-        </button>
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <MessageSquare className="h-16 w-16 text-red-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Error loading message</h3>
+          <p className="text-gray-500">{error}</p>
+        </div>
       </div>
     )
   }
 
-  const receivedDate = new Date(selectedMessage.receivedDateTime)
   const message = fullMessage || selectedMessage
-
-  const sanitizeHtml = (html: string) => {
-    if (!html) return ''
-    
-    // Remove potentially dangerous elements and attributes
-    let sanitized = html
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
-      .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
-      .replace(/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, '')
-      .replace(/javascript:/gi, '')
-      .replace(/on\w+\s*=/gi, '')
-      .replace(/vbscript:/gi, '')
-      .replace(/data:/gi, '')
-    
-    // Clean up common email HTML issues
-    sanitized = sanitized
-      .replace(/<o:p[^>]*>/gi, '') // Remove Outlook paragraph tags
-      .replace(/<\/o:p>/gi, '')
-      .replace(/<w:[^>]*>/gi, '') // Remove Word tags
-      .replace(/<\/w:[^>]*>/gi, '')
-      .replace(/<m:[^>]*>/gi, '') // Remove Math tags
-      .replace(/<\/m:[^>]*>/gi, '')
-      .replace(/<v:[^>]*>/gi, '') // Remove Vector tags
-      .replace(/<\/v:[^>]*>/gi, '')
-    
-    // Allow images but ensure they're safe
-    sanitized = sanitized
-      .replace(/<img([^>]*?)>/gi, (match, attributes) => {
-        // Only allow safe image attributes
-        const safeAttributes = attributes
-          .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '') // Remove event handlers
-          .replace(/javascript:/gi, '') // Remove javascript: URLs
-          .replace(/data:/gi, '') // Remove data: URLs
-          .replace(/<[^>]*>/gi, '') // Remove any nested tags
-        return `<img${safeAttributes}>`
-      })
-    
-    // Ensure proper paragraph spacing
-    sanitized = sanitized
-      .replace(/<p[^>]*>/gi, '<p class="mb-3">')
-      .replace(/<br\s*\/?>/gi, '<br>')
-    
-    return sanitized
-  }
-
-  const formatEmailList = (recipients: any[]) => {
-    if (!recipients || recipients.length === 0) return 'None'
-    return recipients
-      .map((r: any) => r.emailAddress?.address || r.emailAddress || r)
-      .filter(Boolean)
-      .join(', ')
-  }
-
-  const renderEmailBody = () => {
-    if (!message.body?.content) {
-      return (
-        <div className="text-gray-500 italic">
-          No message content available
-        </div>
-      )
-    }
-
-    if (message.body.contentType === 'HTML') {
-      const sanitizedHtml = sanitizeHtml(message.body.content)
-      return (
-        <div 
-          className="prose prose-sm max-w-none text-gray-800 leading-relaxed"
-          dangerouslySetInnerHTML={{ 
-            __html: sanitizedHtml
-          }}
-        />
-      )
-    } else {
-      // Plain text - convert line breaks to HTML
-      const formattedText = message.body.content
-        .replace(/\n/g, '<br>')
-        .replace(/\r\n/g, '<br>')
-        .replace(/\r/g, '<br>')
-      
-      return (
-        <div 
-          className="whitespace-pre-wrap text-gray-800 leading-relaxed font-mono text-sm"
-          dangerouslySetInnerHTML={{ __html: formattedText }}
-        />
-      )
-    }
-  }
+  const receivedDate = new Date(message.receivedDateTime || message.createdDateTime || Date.now())
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 flex flex-col h-full shadow-sm">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-200 flex-shrink-0 bg-gradient-to-r from-gray-50 to-blue-50">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold text-gray-900 line-clamp-2 flex items-center gap-2">
-            <span className="w-2 h-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full"></span>
-            {message.subject || '(No subject)'}
-            {/* Unread indicator */}
-            {message.isRead === false && (
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
-                <EyeOff className="h-3 w-3 mr-1" />
-                Unread
-              </span>
-            )}
-          </h3>
-          <div className="flex gap-3">
-            {/* Mark as Read/Unread button */}
+    <div className="flex flex-col h-full">
+      {/* Message Header */}
+      <div className="border-b border-gray-200 p-6">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex-1">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              {message.subject || '(No subject)'}
+            </h2>
+            
+            <div className="flex items-center gap-4 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                <span className="font-medium">
+                  {message.from?.emailAddress?.name || message.from?.emailAddress?.address || 'Unknown'}
+                </span>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                <span>{format(receivedDate, 'MMM d, yyyy')} at {format(receivedDate, 'h:mm a')}</span>
+                <span className="text-gray-400">•</span>
+                <span>{formatDistanceToNow(receivedDate, { addSuffix: true })}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
             <button
               onClick={() => markMessageAsRead(!message.isRead)}
               disabled={isMarkingRead}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md font-medium text-sm transform hover:scale-105 active:scale-95 ${
-                message.isRead 
-                  ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
-                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-              }`}
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               title={message.isRead ? 'Mark as unread' : 'Mark as read'}
             >
-              {isMarkingRead ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
-              ) : message.isRead ? (
-                <EyeOff className="h-4 w-4" />
-              ) : (
-                <Eye className="h-4 w-4" />
-              )}
-              {message.isRead ? 'Mark Unread' : 'Mark Read'}
+              {message.isRead ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
             
-            <button
-              onClick={onReply}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white rounded-lg hover:brightness-110 transition-all duration-200 shadow-sm hover:shadow-md font-medium text-sm transform hover:scale-105 active:scale-95"
-              title="Reply to this message"
-            >
-              <Reply className="h-4 w-4" />
-              Reply
+            <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" title="Flag message">
+              <Flag className="h-4 w-4" />
             </button>
-            <button
-              onClick={onReplyAll}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a855f7] to-[#4f46e5] text-white rounded-lg hover:brightness-110 transition-all duration-200 shadow-sm hover:shadow-md font-medium text-sm transform hover:scale-105 active:scale-95"
-              title="Reply to all recipients"
-            >
-              <ReplyAll className="h-4 w-4" />
-              Reply All
+            
+            <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" title="Star message">
+              <Star className="h-4 w-4" />
+            </button>
+            
+            <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" title="More options">
+              <MoreVertical className="h-4 w-4" />
             </button>
           </div>
         </div>
-        
-        {/* Message Details */}
-        <div className="space-y-2 text-sm">
-          <div className="flex items-start gap-2">
-            <User className="h-4 w-4 text-[#4f46e5] mt-0.5 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <span className="text-gray-600 font-medium">From:</span>
-              <span className="text-gray-800 ml-2 break-all">
-                {message.from?.emailAddress?.address || message.from?.emailAddress || 'Unknown sender'}
-              </span>
+
+        {/* Recipients */}
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <span className="font-medium text-gray-700">To:</span>
+            <div className="mt-1">
+              {message.toRecipients?.map((recipient: any, index: number) => (
+                <div key={index} className="text-gray-600">
+                  {recipient.emailAddress?.name || recipient.emailAddress?.address}
+                </div>
+              )) || 'No recipients'}
             </div>
           </div>
           
-          <div className="flex items-start gap-2">
-            <MessageSquare className="h-4 w-4 text-[#a855f7] mt-0.5 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <span className="text-gray-600 font-medium">To:</span>
-              <span className="text-gray-800 ml-2 break-all">
-                {formatEmailList(message.toRecipients || [])}
-              </span>
-            </div>
-          </div>
-          
-          {(message.ccRecipients || []).length > 0 && (
-            <div className="flex items-start gap-2">
-              <MessageSquare className="h-4 w-4 text-[#a855f7] mt-0.5 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <span className="text-gray-600 font-medium">CC:</span>
-                <span className="text-gray-800 ml-2 break-all">
-                  {formatEmailList(message.ccRecipients)}
-                </span>
+          {message.ccRecipients && message.ccRecipients.length > 0 && (
+            <div>
+              <span className="font-medium text-gray-700">CC:</span>
+              <div className="mt-1">
+                {message.ccRecipients.map((recipient: any, index: number) => (
+                  <div key={index} className="text-gray-600">
+                    {recipient.emailAddress?.name || recipient.emailAddress?.address}
+                  </div>
+                ))}
               </div>
-            </div>
-          )}
-          
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-[#4f46e5]" />
-            <span className="text-gray-600 font-medium">Received:</span>
-            <span className="text-gray-800 ml-2">
-              {format(receivedDate, 'PPP p')} ({formatDistanceToNow(receivedDate, { addSuffix: true })})
-            </span>
-          </div>
-          
-          {message.hasAttachments && (
-            <div className="flex items-center gap-2">
-              <Paperclip className="h-4 w-4 text-[#a855f7]" />
-              <span className="text-gray-600 font-medium">Attachments:</span>
-              <span className="text-gray-800 ml-2">
-                {message.attachments?.length || 0} file(s)
-              </span>
             </div>
           )}
         </div>
-        
-        {/* Triage Result Display */}
-        {triageResult && (
-          <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <MessageSquare className="h-4 w-4 text-blue-600" />
-              </div>
-              <h4 className="font-semibold text-blue-800">AI Triage Result</h4>
-            </div>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <span className="text-blue-600 font-medium">Category:</span>
-                <span className="ml-2 text-blue-800">{triageResult.category}</span>
-              </div>
-              <div>
-                <span className="text-blue-600 font-medium">Urgency:</span>
-                <span className="ml-2 text-blue-800 capitalize">{triageResult.urgency}</span>
-              </div>
-              {triageResult.dueDate && (
-                <div className="col-span-2">
-                  <span className="text-blue-600 font-medium">Due Date:</span>
-                  <span className="ml-2 text-blue-800">{triageResult.dueDate}</span>
+      </div>
+
+      {/* Message Actions */}
+      <div className="border-b border-gray-200 p-4">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onReply}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#4f46e5] text-white rounded-lg hover:bg-[#4338ca] transition-colors font-medium"
+          >
+            <Reply className="h-4 w-4" />
+            Reply
+          </button>
+          
+          <button
+            onClick={onReplyAll}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+          >
+            <ReplyAll className="h-4 w-4" />
+            Reply All
+          </button>
+          
+          <button className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium">
+            <Forward className="h-4 w-4" />
+            Forward
+          </button>
+          
+          <button
+            onClick={handleDelete}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors font-medium"
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete
+          </button>
+        </div>
+      </div>
+
+      {/* Message Content */}
+      <div className="flex-1 overflow-y-auto p-6">
+        {/* Attachments */}
+        {message.hasAttachments && message.attachments && message.attachments.length > 0 && (
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+              <Paperclip className="h-4 w-4" />
+              Attachments ({message.attachments.length})
+            </h4>
+            <div className="space-y-2">
+              {message.attachments.map((attachment: any, index: number) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-white rounded border border-gray-200">
+                  <div className="flex items-center gap-3">
+                    <Paperclip className="h-4 w-4 text-gray-400" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{attachment.name}</p>
+                      <p className="text-xs text-gray-500">
+                        {attachment.size ? `${(attachment.size / 1024).toFixed(1)} KB` : 'Unknown size'}
+                      </p>
+                    </div>
+                  </div>
+                  <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors">
+                    <Download className="h-4 w-4" />
+                  </button>
                 </div>
-              )}
-              <div className="col-span-2">
-                <span className="text-blue-600 font-medium">Summary:</span>
-                <span className="ml-2 text-blue-800">{triageResult.summary}</span>
-              </div>
-              {triageResult.suggestedActions && triageResult.suggestedActions.length > 0 && (
-                <div className="col-span-2">
-                  <span className="text-blue-600 font-medium">Suggested Actions:</span>
-                  <ul className="ml-2 mt-1 space-y-1">
-                    {triageResult.suggestedActions.map((action: string, index: number) => (
-                      <li key={index} className="text-blue-800 text-xs flex items-center gap-1">
-                        <span className="w-1 h-1 bg-blue-400 rounded-full"></span>
-                        {action}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              {/* Actions Performed */}
-              {triageResult.actionsPerformed && triageResult.actionsPerformed.length > 0 && (
-                <div className="col-span-2 mt-3 pt-3 border-t border-blue-200">
-                  <span className="text-blue-600 font-medium">Actions Performed:</span>
-                  <ul className="ml-2 mt-1 space-y-1">
-                    {triageResult.actionsPerformed.map((action: string, index: number) => (
-                      <li key={index} className="text-blue-800 text-xs flex items-center gap-1">
-                        <span className="w-1 h-1 bg-green-500 rounded-full"></span>
-                        {action}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              ))}
             </div>
           </div>
         )}
-      </div>
-      
-      {/* Message Body - Scrollable */}
-      <div className="flex-1 overflow-y-auto p-4 min-h-0">
-        <div className="max-w-none">
-          {renderEmailBody()}
+
+        {/* Message Body */}
+        <div className="prose prose-sm max-w-none">
+          {message.body?.content ? (
+            <div 
+              dangerouslySetInnerHTML={{ 
+                __html: message.body.content 
+              }} 
+              className="text-gray-900 leading-relaxed"
+            />
+          ) : (
+            <p className="text-gray-500 italic">No message content available</p>
+          )}
         </div>
-        
-        {/* Email Chain Indicator */}
-        {message.conversationId && (
-          <div className="mt-6 pt-4 border-t border-gray-200">
-            <div className="text-xs text-gray-500 mb-2">
-              This message is part of a conversation
-            </div>
-            <a
-              href={message.webLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm text-[#4f46e5] hover:text-[#a855f7] underline"
-            >
+
+        {/* AI Triage Result */}
+        {triageResult && (
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <h4 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />
-              View in Outlook
-            </a>
+              AI Triage Result
+            </h4>
+            <div className="text-sm text-blue-800">
+              <p><strong>Category:</strong> {triageResult.category}</p>
+              {triageResult.summary && (
+                <p className="mt-2"><strong>Summary:</strong> {triageResult.summary}</p>
+              )}
+              {triageResult.suggestedActions && triageResult.suggestedActions.length > 0 && (
+                <div className="mt-2">
+                  <strong>Suggested Actions:</strong>
+                  <ul className="list-disc list-inside mt-1 ml-2">
+                    {triageResult.suggestedActions.map((action: string, index: number) => (
+                      <li key={index}>{action}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

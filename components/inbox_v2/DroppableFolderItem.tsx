@@ -2,7 +2,7 @@
 import { useDroppable } from '@dnd-kit/core'
 import { cn } from '@/lib/utils'
 import { FolderIcon, ArrowRight, CheckCircle } from 'lucide-react'
-import { memo, useState, useEffect } from 'react'
+import { memo, useState, useEffect, ReactNode } from 'react'
 
 interface DroppableFolderItemProps {
   id: string
@@ -11,6 +11,7 @@ interface DroppableFolderItemProps {
   isSelected?: boolean
   onSelect?: (folderId: string) => void
   className?: string
+  icon?: ReactNode
 }
 
 export const DroppableFolderItem = memo(function DroppableFolderItem({ 
@@ -19,7 +20,8 @@ export const DroppableFolderItem = memo(function DroppableFolderItem({
   messageCount, 
   isSelected, 
   onSelect,
-  className 
+  className,
+  icon
 }: DroppableFolderItemProps) {
   const { setNodeRef, isOver } = useDroppable({ id: `folder:${id}` })
   const [isAnimating, setIsAnimating] = useState(false)
@@ -46,13 +48,13 @@ export const DroppableFolderItem = memo(function DroppableFolderItem({
       data-over={isOver ? "true" : "false"}
       className={cn(
         'relative px-3 py-2 rounded-md cursor-pointer transition-all duration-200 flex items-center justify-between group',
-        'hover:bg-zinc-50 border border-transparent',
+        'hover:bg-gray-100 border border-transparent',
         'focus:outline-none focus:ring-0 focus:border-transparent',
         'focus-visible:outline-none focus-visible:ring-0 focus-visible:border-transparent',
         isOver 
-          ? 'bg-zinc-100 border-2 border-zinc-300 shadow-md scale-[1.02] transform z-10' 
+          ? 'bg-gray-200 border-2 border-gray-300 shadow-md scale-[1.02] transform z-10' 
           : '',
-        isSelected && !isOver ? 'bg-zinc-50 border border-zinc-300 font-medium' : '',
+        isSelected && !isOver ? 'bg-[#4f46e5] text-white font-medium' : '',
         isAnimating ? 'animate-pulse' : '',
         className
       )}
@@ -66,21 +68,16 @@ export const DroppableFolderItem = memo(function DroppableFolderItem({
         }
       }}
     >
-      <div className="flex items-center gap-2 flex-1 min-w-0">
+      <div className="flex items-center gap-3 flex-1 min-w-0">
         <div className="relative">
-          <FolderIcon className={cn(
-            'h-4 w-4 flex-shrink-0 transition-all duration-200',
-            isOver 
-              ? 'text-zinc-600 scale-125' 
-              : 'text-zinc-500 group-hover:text-zinc-700'
-          )} />
+          {icon || <FolderIcon className="h-4 w-4 flex-shrink-0" />}
           {isOver && (
-            <div className="absolute inset-0 bg-zinc-400 rounded-full animate-ping opacity-75" />
+            <div className="absolute inset-0 bg-gray-400 rounded-full animate-ping opacity-75" />
           )}
         </div>
         <span className={cn(
           'truncate text-sm font-medium transition-all duration-200',
-          isOver ? 'text-zinc-800 font-semibold' : 'text-zinc-700'
+          isOver ? 'text-gray-800 font-semibold' : isSelected ? 'text-white' : 'text-gray-700'
         )}>
           {displayName}
         </span>
@@ -90,8 +87,8 @@ export const DroppableFolderItem = memo(function DroppableFolderItem({
         <span className={cn(
           'text-xs px-2 py-1 rounded-full transition-all duration-200',
           isOver 
-            ? 'bg-zinc-200 text-zinc-800 scale-110 font-semibold' 
-            : 'bg-zinc-200 text-zinc-600'
+            ? 'bg-gray-200 text-gray-800 scale-110 font-semibold' 
+            : isSelected ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-600'
         )}>
           {messageCount}
         </span>
@@ -99,31 +96,31 @@ export const DroppableFolderItem = memo(function DroppableFolderItem({
       
       {/* Drop indicator - neutral colors only */}
       {isOver && (
-        <div className="absolute inset-0 bg-zinc-200/30 border-2 border-zinc-400 rounded-md pointer-events-none" />
+        <div className="absolute inset-0 bg-gray-200/30 border-2 border-gray-400 rounded-md pointer-events-none" />
       )}
       
       {/* Drop arrow indicator - neutral colors only */}
       {isOver && (
         <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
-          <ArrowRight className="h-4 w-4 text-zinc-600 animate-bounce" />
+          <ArrowRight className="h-4 w-4 text-gray-600 animate-bounce" />
         </div>
       )}
       
       {/* Success indicator - neutral colors only */}
       {isOver && (
         <div className="absolute left-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
-          <CheckCircle className="h-4 w-4 text-zinc-500 animate-pulse" />
+          <CheckCircle className="h-4 w-4 text-gray-500 animate-pulse" />
         </div>
       )}
       
       {/* Glow effect when dragging over - neutral colors only */}
       {isOver && (
-        <div className="absolute inset-0 bg-zinc-400/10 rounded-md pointer-events-none animate-ping" />
+        <div className="absolute inset-0 bg-gray-400/10 rounded-md pointer-events-none animate-ping" />
       )}
       
       {/* Drop zone highlight - neutral colors only */}
       {isOver && (
-        <div className="absolute inset-0 bg-zinc-500/5 rounded-md pointer-events-none border-2 border-dashed border-zinc-400" />
+        <div className="absolute inset-0 bg-gray-500/5 rounded-md pointer-events-none border-2 border-dashed border-gray-400" />
       )}
     </div>
   )

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, createContext, useContext, useEffect, useCallback } from 'react'
-import { MessageSquare } from 'lucide-react'
+import { MessageSquare, Plus, Search, Filter, RefreshCw, Settings, MoreVertical } from 'lucide-react'
 import FolderSidebar from '@/components/inbox_v2/FolderSidebar'
 import MessageList from '@/components/inbox_v2/MessageList'
 import MessagePreview from '@/components/inbox_v2/MessagePreview'
@@ -9,6 +9,7 @@ import ReplyModal from '@/components/inbox_v2/ReplyModal'
 import NewEmailModal from '@/components/inbox_v2/NewEmailModal'
 import DragDropFrame from '@/components/inbox_v2/DragDropFrame'
 import TriageButton from '@/components/inbox_v2/TriageButton'
+import AskBlocIQButton from '@/components/inbox_v2/AskBlocIQButton'
 import { useMessages, useFolders } from '@/hooks/inbox_v2'
 import { mutate } from 'swr'
 
@@ -41,6 +42,8 @@ export default function InboxV2() {
   const [newEmailModalOpen, setNewEmailModalOpen] = useState(false)
   const [moveSuccess, setMoveSuccess] = useState<{ message: string; timestamp: number } | null>(null)
   const [triageSuccess, setTriageSuccess] = useState<{ message: string; timestamp: number } | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [showUnreadOnly, setShowUnreadOnly] = useState(false)
 
   // Get folders and messages
   const { folders, isLoading: foldersLoading } = useFolders()
@@ -355,49 +358,46 @@ export default function InboxV2() {
     }
   }, [refreshMessages])
 
+  // Calculate unread count
+  const unreadCount = messages.filter((message: any) => !message.isRead).length
+  const selectedFolder = folders.find(f => f.id === selectedFolderId)
+
   return (
     <InboxContext.Provider value={contextValue}>
-      {/* Hero Banner - Matching Home Page and Buildings Page Style */}
-      <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16 mb-8">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center">
-            <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
-              <MessageSquare className="h-10 w-10 text-white" />
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              Email Inbox
-            </h1>
-            <p className="text-xl text-white/90 max-w-3xl mx-auto leading-relaxed">
-              Manage your communications, organize emails into folders, and stay on top of important messages.
-            </p>
-          </div>
-        </div>
-        
-        {/* Decorative Elements */}
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-          <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-10 right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-          <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-white/5 rounded-full blur-2xl"></div>
-        </div>
-      </section>
-
       <DragDropFrame onMoveSuccess={handleMoveSuccess} onMoveError={handleMoveError}>
-        <div className="grid grid-cols-[260px_380px_1fr] gap-4 h-[calc(100vh-400px)]">
-          <div className="flex flex-col">
-            {/* New Email and Triage Buttons */}
-            <div className="mb-4 flex gap-3">
+        {/* Modern Email Client Header */}
+        <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-lg flex items-center justify-center">
+                <MessageSquare className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Inbox</h1>
+                <p className="text-sm text-gray-600">
+                  {selectedFolder ? selectedFolder.displayName : 'Loading...'} • {messages.length} messages
+                  {unreadCount > 0 && (
+                    <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {unreadCount} unread
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
               <button
                 onClick={() => setNewEmailModalOpen(true)}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white rounded-lg hover:brightness-110 transition-all duration-200 shadow-sm font-medium"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white rounded-lg hover:brightness-110 transition-all duration-200 shadow-sm font-medium"
               >
-                <MessageSquare className="h-4 w-4" />
+                <Plus className="h-4 w-4" />
                 New Email
               </button>
               
               <TriageButton 
                 selectedMessageId={selectedId}
                 onTriage={triageMessage}
-                onBulkTriage={async () => {}} // This was causing a linter error, removing it
+                onBulkTriage={async () => {}}
                 isTriaging={isTriaging}
                 triageResult={triage}
                 triageError={triageError}
@@ -419,31 +419,99 @@ export default function InboxV2() {
                   setTimeout(() => setTriageSuccess(null), 5000)
                 }}
               />
+              
+              <button
+                onClick={() => refreshMessages()}
+                disabled={foldersLoading}
+                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-200"
+                title="Refresh"
+              >
+                <RefreshCw className={`h-5 w-5 ${foldersLoading ? 'animate-spin' : ''}`} />
+              </button>
+              
+              <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-200" title="Settings">
+                <Settings className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Email Client Layout */}
+        <div className="flex h-[calc(100vh-120px)] bg-gray-50">
+          {/* Left Column: Folder Sidebar */}
+          <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+            <div className="p-4 border-b border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-3">Folders</h3>
+              <FolderSidebar 
+                selectedFolderId={selectedFolderId}
+                onFolderSelect={(folderId) => {
+                  setSelectedFolderId(folderId)
+                  setSelectedMessage(null) // Clear selected message when changing folders
+                  setSelectedId(null)
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Middle Column: Message List */}
+          <div className="w-96 bg-white border-r border-gray-200 flex flex-col">
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search messages..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
+                  />
+                </div>
+                <button
+                  onClick={() => setShowUnreadOnly(!showUnreadOnly)}
+                  className={`p-2 rounded-lg transition-all duration-200 ${
+                    showUnreadOnly 
+                      ? 'bg-blue-100 text-blue-700' 
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                  }`}
+                  title="Show unread only"
+                >
+                  <Filter className="h-4 w-4" />
+                </button>
+              </div>
             </div>
             
-            <FolderSidebar 
-              selectedFolderId={selectedFolderId}
-              onFolderSelect={(folderId) => {
-                setSelectedFolderId(folderId)
-                setSelectedMessage(null) // Clear selected message when changing folders
-                setSelectedId(null)
-              }}
-            />
+            <div className="flex-1 overflow-hidden">
+              <MessageList 
+                selectedFolderId={selectedFolderId}
+                selectedMessageId={selectedId}
+                onMessageSelect={handleMessageSelect}
+                searchQuery={searchQuery}
+                showUnreadOnly={showUnreadOnly}
+              />
+            </div>
           </div>
-          
-          <MessageList 
-            selectedFolderId={selectedFolderId}
-            selectedMessageId={selectedId}
-            onMessageSelect={handleMessageSelect}
-          />
-          
-          <MessagePreview 
-            selectedMessage={selectedMessage}
-            onReply={() => handleReply('reply')}
-            onReplyAll={() => handleReply('replyAll')}
-            onMessageUpdate={refreshMessages}
-            triageResult={triage}
-          />
+
+          {/* Right Column: Message Preview */}
+          <div className="flex-1 bg-white flex flex-col">
+            {selectedMessage ? (
+              <MessagePreview 
+                selectedMessage={selectedMessage}
+                onReply={() => handleReply('reply')}
+                onReplyAll={() => handleReply('replyAll')}
+                onMessageUpdate={refreshMessages}
+                triageResult={triage}
+              />
+            ) : (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center">
+                  <MessageSquare className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No message selected</h3>
+                  <p className="text-gray-500">Select a message from the list to preview it here</p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </DragDropFrame>
 
@@ -471,6 +539,9 @@ export default function InboxV2() {
         isOpen={newEmailModalOpen}
         onClose={() => setNewEmailModalOpen(false)}
       />
+
+      {/* Ask BlocIQ AI Assistant */}
+      <AskBlocIQButton selectedMessage={selectedMessage} />
     </InboxContext.Provider>
   )
 }
