@@ -12,6 +12,10 @@ export function formatEventTimeUK(isoLike: string, opts?: Intl.DateTimeFormatOpt
   const { iso, allDay } = normalizeISO(isoLike);
   if (allDay) return 'All day';
   const d = new Date(iso);
+  
+  // Add 1 hour for GMT+1 display as requested
+  d.setHours(d.getHours() + 1);
+  
   const options: Intl.DateTimeFormatOptions = {
     hour: '2-digit',
     minute: '2-digit',
@@ -48,6 +52,10 @@ export function formatToUKTime(dateString: string): string {
   }
   
   const d = new Date(iso);
+  
+  // Add 1 hour for GMT+1 display as requested
+  d.setHours(d.getHours() + 1);
+  
   return d.toLocaleDateString('en-GB', {
     weekday: 'short',
     day: 'numeric',
@@ -111,12 +119,17 @@ export function formatEventDateUK(dateString: string) {
       month: 'short',
       timeZone: UK_TZ
     }),
-    time: d.toLocaleTimeString('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-      timeZone: UK_TZ
-    }),
+    time: (() => {
+      // Add 1 hour for GMT+1 display as requested
+      const timeDate = new Date(d);
+      timeDate.setHours(timeDate.getHours() + 1);
+      return timeDate.toLocaleTimeString('en-GB', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: UK_TZ
+      });
+    })(),
     fullDate: d.toLocaleDateString('en-GB', {
       weekday: 'long',
       day: 'numeric',
@@ -157,6 +170,9 @@ export function formatDateTimeUK(dateString: string): string {
   const d = new Date(iso);
   
   if (isNaN(d.getTime())) return 'Invalid Date';
+  
+  // Add 1 hour for GMT+1 display as requested
+  d.setHours(d.getHours() + 1);
   
   return d.toLocaleString('en-GB', {
     timeZone: UK_TZ
