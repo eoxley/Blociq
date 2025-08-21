@@ -345,7 +345,7 @@ ${communicationsContext}
     // This ensures we can find leaseholder information from queries like "who is the leaseholder of 5 ashwood house"
     try {
       console.log('🔍 Performing building and unit search for query:', prompt);
-      const searchResults = await searchBuildingAndUnits(prompt);
+      const searchResults = await searchBuildingAndUnits(prompt, supabase);
       if (searchResults) {
         let searchContext = 'Building & Unit Search Results:\n';
         
