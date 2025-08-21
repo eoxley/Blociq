@@ -1637,33 +1637,80 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Date & Time</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Building</label>
+                            <select
+                              name="building"
+                              required
+                              className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
+                            >
+                              <option value="">Select building</option>
+                              {buildings.map((building) => (
+                                <option key={building.id} value={building.id}>
+                                  {building.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Start Date & Time</label>
                             <input
                               type="datetime-local"
-                              name="date"
+                              name="start_time"
                               required
-                              min={new Date().toISOString().slice(0, 16)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">End Date & Time</label>
+                            <input
+                              type="datetime-local"
+                              name="end_time"
+                              required
                               className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
                             />
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                          <input
+                            type="text"
+                            name="location"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
+                            placeholder="Enter event location"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                          <textarea
+                            name="description"
+                            rows={3}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
+                            placeholder="Enter event description"
+                          />
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
                           <button
                             type="submit"
                             disabled={isAddingEvent}
-                            className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-4 py-2 rounded-lg font-medium shadow-lg transition-all duration-200 disabled:opacity-50"
+                            className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-6 py-2 rounded-xl font-medium shadow-lg transition-all duration-200 disabled:opacity-50"
                           >
                             {isAddingEvent ? (
                               <Loader2 className="h-4 w-4 animate-spin mr-2" />
                             ) : (
                               <Plus className="h-4 w-4 mr-2" />
                             )}
-                            Add Event
+                            {isAddingEvent ? 'Adding...' : 'Add Event'}
                           </button>
                           <button
                             type="button"
                             onClick={() => setShowAddEventForm(false)}
-                            className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                            className="px-6 py-2 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-all duration-200"
                           >
                             Cancel
                           </button>
@@ -1673,197 +1720,190 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                   )}
 
                   {/* Events List */}
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900">Upcoming Events</h3>
-                      <span className="text-sm text-gray-500">{upcomingEvents.length} event{upcomingEvents.length !== 1 ? 's' : ''}</span>
-                    </div>
-
-                    {upcomingEvents.length > 0 ? (
-                      <div className="space-y-3">
-                        {upcomingEvents.map((event, index) => {
-                          const eventDate = new Date(event.date)
-                          const now = new Date()
-                          const tomorrow = new Date(now)
-                          tomorrow.setDate(tomorrow.getDate() + 1)
-                          
-                          const isToday = eventDate.toDateString() === now.toDateString()
-                          const isTomorrow = eventDate.toDateString() === tomorrow.toDateString()
-                          
-                          const date = formatEventDate(event.date)
-                          
-                          // Use new timezone-aware time formatting
-                          let timeDisplay: string
-                          if (event.isAllDay) {
-                            timeDisplay = 'All day'
-                          } else if (event.startUtc) {
-                            // Always use UK time for display
-                            timeDisplay = formatInZone(event.startUtc, 'Europe/London', 'HH:mm')
-                          } else if (event.date) {
-                            // Fallback: parse the date and ensure UK timezone
-                            try {
-                              // If the date string doesn't have timezone info, assume it's in UTC
-                              let dateString = event.date
-                              if (!/[zZ]|[+\-]\d{2}:\d{2}$/.test(dateString)) {
-                                // Add 'Z' to indicate UTC if no timezone info
-                                dateString = dateString.replace(/\.\d{3}$/, '') + 'Z'
-                              }
-                              const eventDate = new Date(dateString)
-                              timeDisplay = eventDate.toLocaleTimeString('en-GB', { 
-                                hour: '2-digit', 
-                                minute: '2-digit',
-                                timeZone: 'Europe/London'
-                              })
-                            } catch (e) {
-                              timeDisplay = 'Time unavailable'
+                  {upcomingEvents.length > 0 ? (
+                    <div className="space-y-3">
+                      {upcomingEvents.map((event, index) => {
+                        const eventDate = new Date(event.date)
+                        const now = new Date()
+                        const tomorrow = new Date(now)
+                        tomorrow.setDate(tomorrow.getDate() + 1)
+                        
+                        const isToday = eventDate.toDateString() === now.toDateString()
+                        const isTomorrow = eventDate.toDateString() === tomorrow.toDateString()
+                        
+                        const date = formatEventDate(event.date)
+                        
+                        // Use new timezone-aware time formatting
+                        let timeDisplay: string
+                        if (event.isAllDay) {
+                          timeDisplay = 'All day'
+                        } else if (event.startUtc) {
+                          // Always use UK time for display
+                          timeDisplay = formatInZone(event.startUtc, 'Europe/London', 'HH:mm')
+                        } else if (event.date) {
+                          // Fallback: parse the date and ensure UK timezone
+                          try {
+                            // If the date string doesn't have timezone info, assume it's in UTC
+                            let dateString = event.date
+                            if (!/[zZ]|[+\-]\d{2}:\d{2}$/.test(dateString)) {
+                              // Add 'Z' to indicate UTC if no timezone info
+                              dateString = dateString.replace(/\.\d{3}$/, '') + 'Z'
                             }
-                          } else {
+                            const eventDate = new Date(dateString)
+                            timeDisplay = eventDate.toLocaleTimeString('en-GB', { 
+                              hour: '2-digit', 
+                              minute: '2-digit',
+                              timeZone: 'Europe/London'
+                            })
+                          } catch (e) {
                             timeDisplay = 'Time unavailable'
                           }
+                        } else {
+                          timeDisplay = 'Time unavailable'
+                        }
 
-                          return (
-                            <div key={index} className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-lg transition-all duration-200 hover:scale-[1.02]">
-                              <div className="flex items-start gap-4">
-                                {/* Event Icon */}
-                                <div className="w-10 h-10 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-xl flex items-center justify-center text-white flex-shrink-0">
-                                  <Calendar className="h-5 w-5" />
+                        return (
+                          <div key={index} className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-lg transition-all duration-200 hover:scale-[1.02]">
+                            <div className="flex items-start gap-4">
+                              {/* Event Icon */}
+                              <div className="w-10 h-10 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-xl flex items-center justify-center text-white flex-shrink-0">
+                                <Calendar className="h-5 w-5" />
+                              </div>
+                              
+                              {/* Event Content */}
+                              <div className="flex-1 min-w-0">
+                                {/* Event Header */}
+                                <div className="flex items-start justify-between mb-3">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-3 mb-2">
+                                      <h4 className="text-lg font-semibold text-gray-900 truncate">{event.title}</h4>
+                                      {(isToday || isTomorrow) && (
+                                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
+                                          isToday 
+                                            ? 'bg-red-100 text-red-700' 
+                                            : 'bg-amber-100 text-amber-700'
+                                        }`}>
+                                          {isToday ? 'Today' : 'Tomorrow'}
+                                        </span>
+                                      )}
+                                    </div>
+                                    
+                                    {/* Source Badges */}
+                                    <div className="flex items-center gap-2 mb-3">
+                                      {event.category && (
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                          {event.category}
+                                        </span>
+                                      )}
+                                      {event.source === 'outlook' && (
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                          Outlook Event
+                                        </span>
+                                      )}
+                                      {event.source === 'property' && (
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                          Property Event
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
                                 
-                                {/* Event Content */}
-                                <div className="flex-1 min-w-0">
-                                  {/* Event Header */}
-                                  <div className="flex items-start justify-between mb-3">
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-3 mb-2">
-                                        <h4 className="text-lg font-semibold text-gray-900 truncate">{event.title}</h4>
-                                        {(isToday || isTomorrow) && (
-                                          <span className={`px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
-                                            isToday 
-                                              ? 'bg-red-100 text-red-700' 
-                                              : 'bg-amber-100 text-amber-700'
-                                          }`}>
-                                            {isToday ? 'Today' : 'Tomorrow'}
-                                          </span>
-                                        )}
-                                      </div>
-                                      
-                                      {/* Source Badges */}
-                                      <div className="flex items-center gap-2 mb-3">
-                                        {event.category && (
-                                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                            {event.category}
-                                          </span>
-                                        )}
-                                        {event.source === 'outlook' && (
-                                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                                            Outlook Event
-                                          </span>
-                                        )}
-                                        {event.source === 'property' && (
-                                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                            Property Event
-                                          </span>
-                                        )}
-                                      </div>
+                                {/* Event Details Grid */}
+                                <div className="grid grid-cols-1 gap-3">
+                                  {/* Date & Time */}
+                                  <div className="flex items-start gap-3">
+                                    <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                                      <Clock className="h-3 w-3 text-blue-600" />
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-medium text-gray-700 mb-1">Date & Time</p>
+                                      <p className="text-gray-900 font-semibold">
+                                        {date} at {timeDisplay}
+                                      </p>
+                                      <p className="text-xs text-gray-500 mt-1">All times shown in GMT+1</p>
                                     </div>
                                   </div>
-                                  
-                                  {/* Event Details Grid */}
-                                  <div className="grid grid-cols-1 gap-3">
-                                    {/* Date & Time */}
-                                    <div className="flex items-start gap-3">
-                                      <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                                        <Clock className="h-3 w-3 text-blue-600" />
-                                      </div>
-                                      <div>
-                                        <p className="text-sm font-medium text-gray-700 mb-1">Date & Time</p>
-                                        <p className="text-gray-900 font-semibold">
-                                          {date} at {timeDisplay}
-                                        </p>
-                                        <p className="text-xs text-gray-500 mt-1">All times shown in GMT+1</p>
-                                      </div>
+
+                                  {/* Building */}
+                                  <div className="flex items-start gap-3">
+                                    <div className="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                                      <Building className="h-3 w-3 text-green-600" />
                                     </div>
-
-                                    {/* Building */}
-                                    <div className="flex items-start gap-3">
-                                      <div className="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                                        <Building className="h-3 w-3 text-green-600" />
-                                      </div>
-                                      <div>
-                                        <p className="text-sm font-medium text-gray-700 mb-1">Building</p>
-                                        <p className="text-gray-900 font-semibold">{event.building || 'General'}</p>
-                                      </div>
+                                    <div>
+                                      <p className="text-sm font-medium text-gray-700 mb-1">Building</p>
+                                      <p className="text-gray-900 font-semibold">{event.building || 'General'}</p>
                                     </div>
-
-                                    {/* Location */}
-                                    {event.location && (
-                                      <div className="flex items-start gap-3">
-                                        <div className="w-6 h-6 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                                          <MapPin className="h-3 w-3 text-purple-600" />
-                                        </div>
-                                        <div>
-                                          <p className="text-sm font-medium text-gray-700 mb-1">Location</p>
-                                          <p className="text-gray-900 font-semibold">{event.location}</p>
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {/* Organizer */}
-                                    {event.organiser_name && (
-                                      <div className="flex items-start gap-3">
-                                        <div className="w-6 h-6 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                                          <User className="h-3 w-3 text-orange-600" />
-                                        </div>
-                                        <div>
-                                          <p className="text-sm font-medium text-gray-700 mb-1">Organizer</p>
-                                          <p className="text-gray-900 font-semibold">{event.organiser_name}</p>
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {/* Online Meeting */}
-                                    {event.online_meeting && (
-                                      <div className="flex items-start gap-3">
-                                        <div className="w-6 h-6 bg-[#4f46e5] rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                                          <MessageCircle className="h-3 w-3 text-white" />
-                                        </div>
-                                        <div>
-                                          <p className="text-sm font-medium text-gray-700 mb-1">Meeting Type</p>
-                                          <p className="text-[#4f46e5] font-semibold">🎥 Online meeting available</p>
-                                        </div>
-                                      </div>
-                                    )}
                                   </div>
+
+                                  {/* Location */}
+                                  {event.location && (
+                                    <div className="flex items-start gap-3">
+                                      <div className="w-6 h-6 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                                        <MapPin className="h-3 w-3 text-purple-600" />
+                                      </div>
+                                      <div>
+                                        <p className="text-sm font-medium text-gray-700 mb-1">Location</p>
+                                        <p className="text-gray-900 font-semibold">{event.location}</p>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Organizer */}
+                                  {event.organiser_name && (
+                                    <div className="flex items-start gap-3">
+                                      <div className="w-6 h-6 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                                        <User className="h-3 w-3 text-orange-600" />
+                                      </div>
+                                      <div>
+                                        <p className="text-sm font-medium text-gray-700 mb-1">Organizer</p>
+                                        <p className="text-gray-900 font-semibold">{event.organiser_name}</p>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Online Meeting */}
+                                  {event.online_meeting && (
+                                    <div className="flex items-start gap-3">
+                                      <div className="w-6 h-6 bg-[#4f46e5] rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                                        <MessageCircle className="h-3 w-3 text-white" />
+                                      </div>
+                                      <div>
+                                        <p className="text-sm font-medium text-gray-700 mb-1">Meeting Type</p>
+                                        <p className="text-[#4f46e5] font-semibold">🎥 Online meeting available</p>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </div>
-                          )
-                        })}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="w-20 h-20 bg-gradient-to-r from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <Calendar className="h-10 w-10 text-gray-400" />
                       </div>
-                    ) : (
-                      <div className="text-center py-12">
-                        <div className="w-20 h-20 bg-gradient-to-r from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                          <Calendar className="h-10 w-10 text-gray-400" />
-                        </div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No events yet</h3>
-                        <p className="text-gray-500 mb-4 max-w-sm mx-auto">
-                          {outlookConnected 
-                            ? 'Add property events or sync your Outlook calendar to get started.'
-                            : 'Add property events or connect your Outlook calendar to get started.'
-                          }
-                        </p>
-                        {!outlookConnected && (
-                          <button
-                            onClick={handleConnectOutlook}
-                            className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-4 py-2 rounded-xl font-medium shadow-lg transition-all duration-200"
-                          >
-                            <ExternalLink className="h-3 w-3 mr-2" />
-                            Connect Outlook Calendar
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">No events yet</h3>
+                      <p className="text-gray-500 mb-4 max-w-sm mx-auto">
+                        {outlookConnected 
+                          ? 'Add property events or sync your Outlook calendar to get started.'
+                          : 'Add property events or connect your Outlook calendar to get started.'
+                        }
+                      </p>
+                      {!outlookConnected && (
+                        <button
+                          onClick={handleConnectOutlook}
+                          className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-4 py-2 rounded-xl font-medium shadow-lg transition-all duration-200"
+                        >
+                          <ExternalLink className="h-3 w-3 mr-2" />
+                          Connect Outlook Calendar
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1886,6 +1926,11 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 />
               )}
             </div>
+          </div>
+
+          {/* Upcoming Events Widget - Added below the main grid */}
+          <div className="mt-8">
+            <UpcomingEventsWidget />
           </div>
         </div>
       </div>
