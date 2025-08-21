@@ -1,121 +1,172 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Building, FileText, Sparkles, Download, Copy, Check } from 'lucide-react';
-import { useBuildings } from '@/hooks/buildings';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, FileText, Download, Eye, Sparkles, Building2, User } from 'lucide-react';
+import { toast } from 'sonner';
+
+interface Building {
+  id: string;
+  name: string;
+  address: string;
+}
 
 interface GeneratedDocument {
   id: string;
-  name: string;
   content: string;
+  template: string;
   fields: Record<string, any>;
-  template: any;
-  generated_at: string;
+  downloadUrl: string | null;
+  createdAt: string;
+}
+
+interface DocumentIntent {
+  documentType: string;
+  purpose: string;
+  keyDetails: string[];
+  tone: string;
+  recipient: string;
+  buildingSpecific: boolean;
+  requiresBudget: boolean;
+  requiresDates: boolean;
 }
 
 export default function AIDocumentCreator() {
   const [prompt, setPrompt] = useState('');
   const [buildingId, setBuildingId] = useState('');
   const [documentType, setDocumentType] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [buildings, setBuildings] = useState<Building[]>([]);
+  const [loading, setLoading] = useState(false);
   const [generatedDocument, setGeneratedDocument] = useState<GeneratedDocument | null>(null);
-  const [copied, setCopied] = useState(false);
-  
-  const { buildings, isLoading: buildingsLoading } = useBuildings();
+  const [intent, setIntent] = useState<DocumentIntent | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
-  const documentTypes = [
-    { value: '', label: 'Auto-detect' },
-    { value: 'letter', label: 'Letter' },
-    { value: 'notice', label: 'Notice' },
-    { value: 'form', label: 'Form' },
-    { value: 'invoice', label: 'Invoice' },
-    { value: 'legal_notice', label: 'Legal Notice' },
-    { value: 'section_20', label: 'Section 20 Notice' }
-  ];
+  useEffect(() => {
+    fetchBuildings();
+  }, []);
 
-  const examplePrompts = [
-    "Create a Section 20 notice for Ashwood House with budget £50,000",
-    "Generate a welcome letter for new leaseholders",
-    "Draft a service charge reminder notice",
-    "Create a maintenance schedule announcement"
-  ];
+  const fetchBuildings = async () => {
+    try {
+      const response = await fetch('/api/buildings');
+      if (response.ok) {
+        const data = await response.json();
+        setBuildings(data.buildings || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch buildings:', error);
+    }
+  };
 
   const handleCreateDocument = async () => {
-    if (!prompt.trim()) return;
+    if (!prompt.trim()) {
+      toast.error('Please describe the document you need');
+      return;
+    }
 
-    setIsGenerating(true);
+    setLoading(true);
     try {
       const response = await fetch('/api/documents/create', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
-          prompt,
+          prompt: prompt.trim(),
           buildingId: buildingId || undefined,
-          documentType: documentType || undefined
-        })
+          documentType: documentType || undefined,
+        }),
       });
 
       if (!response.ok) {
         throw new Error('Failed to create document');
       }
 
-      const result = await response.json();
-      setGeneratedDocument(result.document);
-    } catch (error) {
+      const data = await response.json();
+      setGeneratedDocument(data.document);
+      setIntent(data.intent);
+      
+      toast.success('Document created successfully! 🎉');
+    } catch (error: any) {
       console.error('Error creating document:', error);
-      alert('Failed to create document. Please try again.');
+      toast.error('Failed to create document: ' + error.message);
     } finally {
-      setIsGenerating(false);
+      setLoading(false);
     }
   };
 
-  const handleCopyContent = async () => {
-    if (generatedDocument) {
-      await navigator.clipboard.writeText(generatedDocument.content);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+  const handleDownload = async () => {
+    if (!generatedDocument) return;
+    
+    // For now, create a text file download
+    // In production, this would use the existing /api/generate-doc endpoint
+    const blob = new Blob([generatedDocument.content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${generatedDocument.template}_${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast.success('Document downloaded! 📄');
+  };
+
+  const getDocumentTypeIcon = (type: string) => {
+    switch (type.toLowerCase()) {
+      case 'section_20':
+        return '📋';
+      case 'welcome_letter':
+        return '✉️';
+      case 'notice':
+        return '📢';
+      case 'form':
+        return '📝';
+      case 'invoice':
+        return '💰';
+      case 'legal_notice':
+        return '⚖️';
+      default:
+        return '📄';
     }
   };
 
-  const handleDownload = () => {
-    if (generatedDocument) {
-      const blob = new Blob([generatedDocument.content], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${generatedDocument.name}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+  const getToneColor = (tone: string) => {
+    switch (tone.toLowerCase()) {
+      case 'formal':
+        return 'bg-blue-100 text-blue-800';
+      case 'professional':
+        return 'bg-green-100 text-green-800';
+      case 'friendly':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'urgent':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
-  };
-
-  const handleExamplePrompt = (example: string) => {
-    setPrompt(example);
   };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold text-gray-900 flex items-center justify-center gap-2">
+        <h1 className="text-3xl font-bold text-gray-900 flex items-center justify-center gap-3">
           <Sparkles className="h-8 w-8 text-blue-600" />
           AI Document Creator
         </h1>
-        <p className="text-gray-600">
-          Describe the document you need and let AI generate it with building data automatically populated
+        <p className="text-gray-600 text-lg">
+          Describe the document you need, and AI will create it with building data automatically populated
         </p>
       </div>
 
-      {/* Main Form */}
-      <Card>
+      {/* Main Creation Interface */}
+      <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
@@ -125,167 +176,211 @@ export default function AIDocumentCreator() {
         <CardContent className="space-y-6">
           {/* Document Description */}
           <div className="space-y-2">
-            <Label htmlFor="prompt">Describe the document you need:</Label>
+            <Label htmlFor="prompt" className="text-base font-medium">
+              Describe the document you need:
+            </Label>
             <Textarea
               id="prompt"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="e.g., Create a Section 20 notice for Ashwood House with budget £50,000"
-              className="min-h-[120px] resize-none"
+              placeholder="e.g., Create a Section 20 notice for Ashwood House with budget £50,000 for roof repairs"
+              className="min-h-32 text-base"
+              disabled={loading}
             />
+            <p className="text-sm text-gray-500">
+              Be specific about the document type, building, purpose, and any key details
+            </p>
           </div>
 
-          {/* Example Prompts */}
-          <div className="space-y-2">
-            <Label className="text-sm text-gray-600">Quick examples:</Label>
-            <div className="flex flex-wrap gap-2">
-              {examplePrompts.map((example, index) => (
-                <Button
-                  key={index}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleExamplePrompt(example)}
-                  className="text-xs"
-                >
-                  {example}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          {/* Options */}
+          {/* Building Selection */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Building Selection */}
             <div className="space-y-2">
-              <Label htmlFor="building">Building (optional):</Label>
-              <Select value={buildingId} onValueChange={setBuildingId}>
+              <Label htmlFor="building" className="text-base font-medium">
+                Building (Optional)
+              </Label>
+              <Select value={buildingId} onValueChange={setBuildingId} disabled={loading}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a building" />
+                  <SelectValue placeholder="Select a building for auto-population" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">No specific building</SelectItem>
-                  {buildings?.map((building) => (
+                  {buildings.map((building) => (
                     <SelectItem key={building.id} value={building.id}>
                       <div className="flex items-center gap-2">
-                        <Building className="h-4 w-4" />
+                        <Building2 className="h-4 w-4" />
                         {building.name}
                       </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-sm text-gray-500">
+                Selecting a building will auto-populate building-specific fields
+              </p>
             </div>
 
-            {/* Document Type */}
             <div className="space-y-2">
-              <Label htmlFor="documentType">Document Type (optional):</Label>
-              <Select value={documentType} onValueChange={setDocumentType}>
+              <Label htmlFor="documentType" className="text-base font-medium">
+                Document Type (Optional)
+              </Label>
+              <Select value={documentType} onValueChange={setDocumentType} disabled={loading}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Auto-detect from description" />
+                  <SelectValue placeholder="AI will detect automatically" />
                 </SelectTrigger>
                 <SelectContent>
-                  {documentTypes.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="">Auto-detect</SelectItem>
+                  <SelectItem value="section_20">Section 20 Notice</SelectItem>
+                  <SelectItem value="welcome_letter">Welcome Letter</SelectItem>
+                  <SelectItem value="notice">General Notice</SelectItem>
+                  <SelectItem value="form">Form</SelectItem>
+                  <SelectItem value="invoice">Invoice</SelectItem>
+                  <SelectItem value="legal_notice">Legal Notice</SelectItem>
+                  <SelectItem value="letter">General Letter</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-sm text-gray-500">
+                AI will automatically detect the best type if not specified
+              </p>
             </div>
           </div>
 
-          {/* Generate Button */}
-          <Button
-            onClick={handleCreateDocument}
-            disabled={!prompt.trim() || isGenerating}
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
-            size="lg"
-          >
-            {isGenerating ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                Generating Document...
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4 mr-2" />
-                🚀 Create Document with AI
-              </>
-            )}
-          </Button>
+          {/* Create Button */}
+          <div className="flex justify-center">
+            <Button
+              onClick={handleCreateDocument}
+              disabled={loading || !prompt.trim()}
+              size="lg"
+              className="px-8 py-3 text-lg font-medium bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                  Creating Document...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-5 w-5 mr-2" />
+                  🚀 Create Document with AI
+                </>
+              )}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Generated Document */}
+      {/* Generated Document Display */}
       {generatedDocument && (
-        <Card>
+        <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span className="flex items-center gap-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5 text-green-600" />
                 Generated Document
-              </span>
-              <div className="flex gap-2">
+              </CardTitle>
+              <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
+                  onClick={() => setShowPreview(!showPreview)}
                   size="sm"
-                  onClick={handleCopyContent}
-                  className="flex items-center gap-2"
                 >
-                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                  {copied ? 'Copied!' : 'Copy'}
+                  <Eye className="h-4 w-4 mr-2" />
+                  {showPreview ? 'Hide' : 'Preview'}
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDownload}
-                  className="flex items-center gap-2"
-                >
-                  <Download className="h-4 w-4" />
+                <Button onClick={handleDownload} size="sm">
+                  <Download className="h-4 w-4 mr-2" />
                   Download
                 </Button>
               </div>
-            </CardTitle>
+            </div>
           </CardHeader>
-          <CardContent>
-            {/* Document Info */}
-            <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div>
-                  <span className="font-medium text-gray-600">Name:</span>
-                  <p className="text-gray-900">{generatedDocument.name}</p>
-                </div>
-                <div>
-                  <span className="font-medium text-gray-600">Template:</span>
-                  <p className="text-gray-900">{generatedDocument.template.name}</p>
-                </div>
-                <div>
-                  <span className="font-medium text-gray-600">Generated:</span>
-                  <p className="text-gray-900">{new Date(generatedDocument.generated_at).toLocaleString()}</p>
-                </div>
-                <div>
-                  <span className="font-medium text-gray-600">Fields:</span>
-                  <p className="text-gray-900">{Object.keys(generatedDocument.fields).length}</p>
-                </div>
+          <CardContent className="space-y-4">
+            {/* Document Metadata */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-1">
+                <Label className="text-sm font-medium text-gray-500">Template</Label>
+                <p className="font-medium">{generatedDocument.template}</p>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-sm font-medium text-gray-500">Created</Label>
+                <p className="font-medium">
+                  {new Date(generatedDocument.createdAt).toLocaleDateString('en-GB')}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-sm font-medium text-gray-500">Fields Populated</Label>
+                <p className="font-medium">{Object.keys(generatedDocument.fields).length}</p>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-sm font-medium text-gray-500">Status</Label>
+                <Badge className="bg-green-100 text-green-800">Ready</Badge>
               </div>
             </div>
 
-            {/* Document Content */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-700">Document Content:</Label>
-              <div className="p-4 bg-white border rounded-lg font-mono text-sm whitespace-pre-wrap max-h-96 overflow-y-auto">
-                {generatedDocument.content}
+            {/* Intent Analysis */}
+            {intent && (
+              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                <h4 className="font-medium text-gray-900">AI Analysis</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="text-center">
+                    <div className="text-2xl mb-1">
+                      {getDocumentTypeIcon(intent.documentType)}
+                    </div>
+                    <p className="text-sm font-medium">{intent.documentType.replace('_', ' ')}</p>
+                  </div>
+                  <div className="text-center">
+                    <Badge className={getToneColor(intent.tone)}>
+                      {intent.tone}
+                    </Badge>
+                    <p className="text-xs text-gray-500 mt-1">Tone</p>
+                  </div>
+                  <div className="text-center">
+                    <Badge variant={intent.buildingSpecific ? "default" : "secondary"}>
+                      {intent.buildingSpecific ? "Building Specific" : "General"}
+                    </Badge>
+                    <p className="text-xs text-gray-500 mt-1">Scope</p>
+                  </div>
+                  <div className="text-center">
+                    <Badge variant={intent.requiresBudget ? "default" : "secondary"}>
+                      {intent.requiresBudget ? "Budget Required" : "No Budget"}
+                    </Badge>
+                    <p className="text-xs text-gray-500 mt-1">Budget</p>
+                  </div>
+                </div>
+                <div className="text-sm text-gray-600">
+                  <strong>Purpose:</strong> {intent.purpose}
+                </div>
+                {intent.keyDetails.length > 0 && (
+                  <div className="text-sm text-gray-600">
+                    <strong>Key Details:</strong> {intent.keyDetails.join(', ')}
+                  </div>
+                )}
               </div>
-            </div>
+            )}
+
+            {/* Document Preview */}
+            {showPreview && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-gray-500">Document Preview</Label>
+                <div className="bg-white border rounded-lg p-4 max-h-96 overflow-y-auto">
+                  <pre className="whitespace-pre-wrap text-sm text-gray-800 font-mono">
+                    {generatedDocument.content}
+                  </pre>
+                </div>
+              </div>
+            )}
 
             {/* Populated Fields */}
-            <div className="mt-6 space-y-2">
-              <Label className="text-sm font-medium text-gray-700">Populated Fields:</Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-500">Populated Fields</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {Object.entries(generatedDocument.fields).map(([key, value]) => (
-                  <div key={key} className="p-3 bg-gray-50 rounded-lg">
-                    <span className="text-xs font-medium text-gray-600">{key}:</span>
-                    <p className="text-sm text-gray-900 mt-1">{String(value)}</p>
+                  <div key={key} className="bg-gray-50 rounded-lg p-3">
+                    <div className="text-xs font-medium text-gray-500 mb-1">
+                      {key.replace(/[{}]/g, '')}
+                    </div>
+                    <div className="text-sm font-medium text-gray-900">
+                      {String(value)}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -293,6 +388,45 @@ export default function AIDocumentCreator() {
           </CardContent>
         </Card>
       )}
+
+      {/* Example Prompts */}
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-lg">💡 Example Prompts</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <h4 className="font-medium text-gray-900">Section 20 Notices</h4>
+              <div className="space-y-1 text-sm text-gray-600">
+                <p>• "Create a Section 20 notice for Ashwood House with budget £50,000 for roof repairs"</p>
+                <p>• "Generate Section 20 notice for lift replacement at £25,000"</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium text-gray-900">Welcome Letters</h4>
+              <div className="space-y-1 text-sm text-gray-600">
+                <p>• "Create a welcome letter for new residents at Ashwood House"</p>
+                <p>• "Generate welcome letter with fire safety information"</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium text-gray-900">General Notices</h4>
+              <div className="space-y-1 text-sm text-gray-600">
+                <p>• "Create a notice about upcoming building maintenance"</p>
+                <p>• "Generate notice for parking restrictions during works"</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium text-gray-900">Custom Documents</h4>
+              <div className="space-y-1 text-sm text-gray-600">
+                <p>• "Create a service charge explanation letter"</p>
+                <p>• "Generate building rules and regulations document"</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
