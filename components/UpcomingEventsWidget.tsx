@@ -6,7 +6,7 @@ import { Calendar, MapPin, Clock, Building, Loader2, RefreshCw, Plus, AlertCircl
 import { BlocIQButton } from "@/components/ui/blociq-button";
 import { BlocIQBadge } from "@/components/ui/blociq-badge";
 import ManualDiaryInput from "./ManualDiaryInput";
-import { formatEventRangeUK, formatEventTimeUK } from "@/utils/date";
+import { formatEventRangeUK, formatEventTimeUK, formatEventDateUK } from "@/utils/date";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -101,7 +101,7 @@ export default function UpcomingEventsWidget() {
         }
       }
     } catch (error) {
-      console.error("Error loading events widget data:", error?.message || JSON.stringify(error));
+      console.error("Error loading events widget data:", error instanceof Error ? error.message : JSON.stringify(error));
     } finally {
       setLoading(false);
     }
@@ -188,6 +188,9 @@ export default function UpcomingEventsWidget() {
   const formatEventDate = (dateString: string) => {
     if (!dateString) return "Unknown Date";
     
+    const result = formatEventDateUK(dateString);
+    
+    // Check if it's today or tomorrow for friendly display
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return "Invalid Date";
     
@@ -202,12 +205,7 @@ export default function UpcomingEventsWidget() {
     } else if (gmtPlus1Date.toDateString() === tomorrow.toDateString()) {
       return "Tomorrow";
     } else {
-      return date.toLocaleDateString('en-GB', { 
-        weekday: 'short', 
-        day: 'numeric', 
-        month: 'short',
-        timeZone: 'Europe/London'
-      });
+      return result.date;
     }
   };
 
