@@ -14,7 +14,9 @@ import {
   Plus,
   X,
   Trash2,
-  Edit3
+  Edit3,
+  Shield,
+  FileText
 } from 'lucide-react'
 import { BlocIQCard, BlocIQCardContent } from '@/components/ui/blociq-card'
 import { BlocIQBadge } from '@/components/ui/blociq-badge'
@@ -38,6 +40,23 @@ type Todo = {
   }
 }
 
+type ComplianceItem = {
+  id: string
+  building_id: string
+  compliance_asset_id: string
+  status: 'pending' | 'compliant' | 'overdue' | 'due_soon'
+  next_due_date?: string
+  notes?: string
+  building?: {
+    name: string
+  }
+  compliance_assets: {
+    name: string
+    category: string
+    description?: string
+  }
+}
+
 type Building = {
   id: number
   name: string
@@ -48,21 +67,25 @@ interface BuildingTodoListProps {
   maxItems?: number
   showBuildingName?: boolean
   onEmptyState?: (isEmpty: boolean) => void
+  includeCompliance?: boolean
 }
 
 export default function BuildingTodoList({ 
   className = "", 
   maxItems = 5,
   showBuildingName = true,
-  onEmptyState
+  onEmptyState,
+  includeCompliance = true
 }: BuildingTodoListProps) {
   const [todos, setTodos] = useState<Todo[]>([])
+  const [complianceItems, setComplianceItems] = useState<ComplianceItem[]>([])
   const [buildings, setBuildings] = useState<Building[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showAddTaskForm, setShowAddTaskForm] = useState(false)
   const [isAddingTask, setIsAddingTask] = useState(false)
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null)
+  const [activeTab, setActiveTab] = useState<'todos' | 'compliance'>('todos')
 
   // New task form state
   const [newTask, setNewTask] = useState({
@@ -92,7 +115,6 @@ export default function BuildingTodoList({
   // Fetch todos
   const fetchTodos = async () => {
     try {
-      setLoading(true)
       const { data, error } = await supabase
         .from('building_todos')
         .select(`
@@ -113,34 +135,60 @@ export default function BuildingTodoList({
     } catch (error) {
       console.error('Error fetching todos:', error)
       setError('Failed to load tasks')
-    } finally {
-      setLoading(false)
+    }
+  }
+
+  // Fetch upcoming compliance items
+  const fetchComplianceItems = async () => {
+    if (!includeCompliance) return
+
+    try {
+      const thirtyDaysFromNow = new Date()
+      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30)
+
+      const { data, error } = await supabase
+        .from('building_compliance_assets')
+        .select(`
+          *,
+          building:buildings(name),
+          compliance_assets(name, category, description)
+        `)
+        .not('next_due_date', 'is', null)
+        .lte('next_due_date', thirtyDaysFromNow.toISOString().split('T')[0])
+        .order('next_due_date', { ascending: true })
+        .limit(maxItems)
+      
+      if (error) throw error
+      
+      setComplianceItems(data || [])
+    } catch (error) {
+      console.error('Error fetching compliance items:', error)
     }
   }
 
   // Toggle todo completion
   const toggleTodo = async (todo: Todo) => {
     try {
-      const newStatus = todo.status === 'completed' ? 'pending' : 'completed'
+      const newStatus = todo.is_complete ? 'pending' : 'completed'
       const { error } = await supabase
         .from('building_todos')
         .update({ 
+          is_complete: !todo.is_complete,
           status: newStatus,
-          is_complete: newStatus === 'completed',
           updated_at: new Date().toISOString()
         })
         .eq('id', todo.id)
-      
+
       if (error) throw error
-      
+
       // Update local state
       setTodos(prev => prev.map(t => 
         t.id === todo.id 
-          ? { ...t, status: newStatus, is_complete: newStatus === 'completed' }
+          ? { ...t, is_complete: !t.is_complete, status: newStatus }
           : t
       ))
-      
-      toast.success(newStatus === 'completed' ? 'Task completed!' : 'Task marked as pending')
+
+      toast.success(`Task ${todo.is_complete ? 'reopened' : 'completed'}`)
     } catch (error) {
       console.error('Error toggling todo:', error)
       toast.error('Failed to update task')
@@ -148,36 +196,33 @@ export default function BuildingTodoList({
   }
 
   // Add new task
-  const handleAddTask = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!newTask.title.trim()) {
-      toast.error('Task title is required')
+  const addNewTask = async () => {
+    if (!newTask.title.trim() || !newTask.building_id) {
+      toast.error('Please fill in all required fields')
       return
     }
-    
+
+    setIsAddingTask(true)
     try {
-      setIsAddingTask(true)
-      
       const { data, error } = await supabase
         .from('building_todos')
         .insert({
-          title: newTask.title.trim(),
-          description: newTask.description.trim() || null,
-          building_id: newTask.building_id ? parseInt(newTask.building_id) : null,
+          title: newTask.title,
+          description: newTask.description,
+          building_id: parseInt(newTask.building_id),
           due_date: newTask.due_date || null,
           priority: newTask.priority,
-          assigned_to: newTask.assigned_to.trim() || null,
+          assigned_to: newTask.assigned_to || null,
           status: 'pending',
           is_complete: false,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
         .select()
-      
+
       if (error) throw error
-      
-      // Reset form
+
+      // Reset form and refresh todos
       setNewTask({
         title: '',
         description: '',
@@ -186,12 +231,9 @@ export default function BuildingTodoList({
         priority: 'Medium',
         assigned_to: ''
       })
-      
       setShowAddTaskForm(false)
-      toast.success('Task added successfully!')
-      
-      // Refresh todos
       fetchTodos()
+      toast.success('Task added successfully')
     } catch (error) {
       console.error('Error adding task:', error)
       toast.error('Failed to add task')
@@ -203,18 +245,17 @@ export default function BuildingTodoList({
   // Delete task
   const handleDeleteTask = async (todoId: string) => {
     if (!confirm('Are you sure you want to delete this task?')) return
-    
+
     try {
       const { error } = await supabase
         .from('building_todos')
         .delete()
         .eq('id', todoId)
-      
+
       if (error) throw error
-      
-      // Update local state
+
       setTodos(prev => prev.filter(t => t.id !== todoId))
-      toast.success('Task deleted successfully!')
+      toast.success('Task deleted successfully')
     } catch (error) {
       console.error('Error deleting task:', error)
       toast.error('Failed to delete task')
@@ -254,333 +295,367 @@ export default function BuildingTodoList({
     }
   }
 
+  const getComplianceStatusColor = (status: string) => {
+    switch (status) {
+      case 'overdue': return 'bg-red-100 text-red-800'
+      case 'due_soon': return 'bg-yellow-100 text-yellow-800'
+      case 'pending': return 'bg-gray-100 text-gray-800'
+      default: return 'bg-green-100 text-green-800'
+    }
+  }
+
+  const getDaysUntilDue = (dueDate: string) => {
+    const today = new Date()
+    const due = new Date(dueDate)
+    const diffTime = due.getTime() - today.getTime()
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  }
+
   // Load data on mount
   useEffect(() => {
     fetchBuildings()
     fetchTodos()
-  }, [maxItems])
+    fetchComplianceItems()
+  }, [maxItems, includeCompliance])
 
   if (loading) {
     return (
       <div className={`h-full ${className}`}>
-        <div className="bg-white rounded-2xl shadow-lg border-0 overflow-hidden h-full flex flex-col">
-          <div className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] p-6 text-white">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                  <Flag className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold">Building To-Do</h2>
-                  <p className="text-sm text-white/80">Tasks and deadlines</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="p-6 flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto mb-2" />
-              <p className="text-gray-500">Loading tasks...</p>
-            </div>
+        <div className="bg-white rounded-2xl shadow-lg border-0 p-6 h-full">
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="h-8 w-8 animate-spin text-[#0F5D5D]" />
           </div>
         </div>
       </div>
     )
   }
 
-  if (error) {
-    return (
-      <div className={`h-full ${className}`}>
-        <div className="bg-white rounded-2xl shadow-lg border-0 overflow-hidden h-full flex flex-col">
-          <div className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] p-6 text-white">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                  <Flag className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold">Building To-Do</h2>
-                  <p className="text-sm text-white/80">Tasks and deadlines</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="p-6 flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <AlertTriangle className="h-8 w-8 text-red-400 mx-auto mb-2" />
-              <p className="text-red-500">{error}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  const totalItems = todos.length + complianceItems.length
+  const hasItems = totalItems > 0
 
   return (
     <div className={`h-full ${className}`}>
       <div className="bg-white rounded-2xl shadow-lg border-0 overflow-hidden h-full flex flex-col">
-        {/* Hero Banner Header */}
+        {/* Header */}
         <div className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] p-6 text-white">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                <Flag className="h-6 w-6 text-white" />
+              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                <Building className="h-6 w-6 text-white" />
               </div>
               <div>
                 <h2 className="text-xl font-bold">Building To-Do</h2>
-                <p className="text-sm text-white/80">Tasks and deadlines</p>
+                <p className="text-white/80 text-sm">Tasks & Compliance</p>
               </div>
             </div>
-            
-            {/* Add Task Button */}
             <button
-              onClick={() => setShowAddTaskForm(true)}
-              className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-2"
+              onClick={() => setShowAddTaskForm(!showAddTaskForm)}
+              className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
             >
-              <Plus className="h-4 w-4" />
-              Add Task
+              <Plus className="h-5 w-5" />
             </button>
           </div>
+
+          {/* Tab Navigation */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setActiveTab('todos')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'todos' 
+                  ? 'bg-white text-[#4f46e5]' 
+                  : 'bg-white/20 hover:bg-white/30'
+              }`}
+            >
+              Tasks ({todos.length})
+            </button>
+            {includeCompliance && (
+              <button
+                onClick={() => setActiveTab('compliance')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === 'compliance' 
+                    ? 'bg-white text-[#4f46e5]' 
+                    : 'bg-white/20 hover:bg-white/30'
+                }`}
+              >
+                Compliance ({complianceItems.length})
+              </button>
+            )}
+          </div>
         </div>
-        
+
+        {/* Content */}
         <div className="p-6 flex-1 overflow-y-auto">
           {/* Add Task Form */}
           {showAddTaskForm && (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200 mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-gray-900">Add New Task</h3>
-                <button
-                  type="button"
-                  onClick={() => setShowAddTaskForm(false)}
-                  className="text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <form onSubmit={handleAddTask} className="space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Task Title *</label>
-                    <input
-                      type="text"
-                      value={newTask.title}
-                      onChange={(e) => setNewTask({...newTask, title: e.target.value})}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
-                      placeholder="Enter task title"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Building</label>
-                    <select
-                      value={newTask.building_id}
-                      onChange={(e) => setNewTask({...newTask, building_id: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
-                    >
-                      <option value="">General</option>
-                      {buildings.map((building) => (
-                        <option key={building.id} value={building.id}>
-                          {building.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
-                    <input
-                      type="datetime-local"
-                      value={newTask.due_date}
-                      onChange={(e) => setNewTask({...newTask, due_date: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                    <select
-                      value={newTask.priority}
-                      onChange={(e) => setNewTask({...newTask, priority: e.target.value as 'Low' | 'Medium' | 'High'})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
-                    >
-                      <option value="Low">Low</option>
-                      <option value="Medium">Medium</option>
-                      <option value="High">High</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
-                    <input
-                      type="text"
-                      value={newTask.assigned_to}
-                      onChange={(e) => setNewTask({...newTask, assigned_to: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
-                      placeholder="Optional"
-                    />
-                  </div>
-                </div>
-                
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                  <textarea
-                    value={newTask.description}
-                    onChange={(e) => setNewTask({...newTask, description: e.target.value})}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent resize-none"
-                    placeholder="Optional task description..."
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Task Title *</label>
+                  <input
+                    type="text"
+                    value={newTask.title}
+                    onChange={(e) => setNewTask(prev => ({ ...prev, title: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0F5D5D] focus:border-transparent"
+                    placeholder="Enter task title"
                   />
                 </div>
-                
-                <div className="flex items-center gap-2">
-                  <button
-                    type="submit"
-                    disabled={isAddingTask}
-                    className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-4 py-2 rounded-lg font-medium shadow-lg transition-all duration-200 disabled:opacity-50 flex items-center gap-2"
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Building *</label>
+                  <select
+                    value={newTask.building_id}
+                    onChange={(e) => setNewTask(prev => ({ ...prev, building_id: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0F5D5D] focus:border-transparent"
                   >
-                    {isAddingTask ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Plus className="h-4 w-4" />
-                    )}
-                    Add Task
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowAddTaskForm(false)}
-                    className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-                  >
-                    Cancel
-                  </button>
+                    <option value="">Select building</option>
+                    {buildings.map(building => (
+                      <option key={building.id} value={building.id}>
+                        {building.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              </form>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                  <input
+                    type="date"
+                    value={newTask.due_date}
+                    onChange={(e) => setNewTask(prev => ({ ...prev, due_date: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0F5D5D] focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                  <select
+                    value={newTask.priority}
+                    onChange={(e) => setNewTask(prev => ({ ...prev, priority: e.target.value as 'Low' | 'Medium' | 'High' }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0F5D5D] focus:border-transparent"
+                  >
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                  </select>
+                </div>
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  value={newTask.description}
+                  onChange={(e) => setNewTask(prev => ({ ...prev, description: e.target.value }))}
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0F5D5D] focus:border-transparent"
+                  placeholder="Enter task description"
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={addNewTask}
+                  disabled={isAddingTask}
+                  className="px-4 py-2 bg-[#0F5D5D] text-white rounded-lg hover:bg-[#0A4A4A] transition-colors disabled:opacity-50"
+                >
+                  {isAddingTask ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Adding...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Task
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowAddTaskForm(false)}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           )}
 
-          {/* Tasks List */}
-          {todos.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Active Tasks</h3>
-                <span className="text-sm text-gray-500">{todos.length} task{todos.length !== 1 ? 's' : ''}</span>
-              </div>
-              <div className="space-y-3">
-                {todos.map((todo) => (
-                  <div 
-                    key={todo.id} 
-                    className={`bg-gradient-to-r rounded-xl p-4 border transition-all duration-200 hover:shadow-md ${
-                      todo.status === 'completed' 
-                        ? 'from-gray-50 to-gray-100 border-gray-200' 
-                        : isOverdue(todo)
-                        ? 'from-red-50 to-pink-50 border-red-200'
-                        : 'from-green-50 to-emerald-50 border-green-200'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3 flex-1">
+          {/* Tasks Tab */}
+          {activeTab === 'todos' && (
+            <div>
+              {todos.length > 0 ? (
+                <div className="space-y-3">
+                  {todos.map(todo => (
+                    <div
+                      key={todo.id}
+                      className={`p-4 rounded-lg border transition-all ${
+                        todo.is_complete 
+                          ? 'bg-gray-50 border-gray-200' 
+                          : isOverdue(todo)
+                          ? 'bg-red-50 border-red-200'
+                          : 'bg-white border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
                         <button
                           onClick={() => toggleTodo(todo)}
-                          className={`mt-1 flex-shrink-0 ${
-                            todo.status === 'completed' 
-                              ? 'text-green-600' 
-                              : 'text-gray-400 hover:text-gray-600'
-                          }`}
+                          className="mt-1 flex-shrink-0"
                         >
-                          {todo.status === 'completed' ? (
-                            <CheckCircle className="h-5 w-5" />
+                          {todo.is_complete ? (
+                            <CheckCircle className="h-5 w-5 text-green-600" />
                           ) : (
-                            <Circle className="h-5 w-5" />
+                            <Circle className="h-5 w-5 text-gray-400 hover:text-[#0F5D5D]" />
                           )}
                         </button>
-
+                        
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-2">
-                            <h4 className={`font-semibold text-sm ${
-                              todo.status === 'completed' 
-                                ? 'text-gray-500 line-through' 
-                                : 'text-gray-900'
+                            <h3 className={`font-medium ${
+                              todo.is_complete ? 'text-gray-500 line-through' : 'text-gray-900'
                             }`}>
                               {todo.title}
-                            </h4>
+                            </h3>
+                            {todo.priority && (
+                              <BlocIQBadge className={`text-xs ${getPriorityColor(todo.priority)}`}>
+                                {todo.priority}
+                              </BlocIQBadge>
+                            )}
                             {isOverdue(todo) && (
-                              <span className="px-2 py-1 rounded-full text-xs bg-red-100 text-red-700 flex-shrink-0">
+                              <BlocIQBadge className="bg-red-100 text-red-800 text-xs">
                                 Overdue
-                              </span>
+                              </BlocIQBadge>
                             )}
                           </div>
                           
                           {todo.description && (
-                            <p className={`text-xs mb-2 ${
-                              todo.status === 'completed' 
-                                ? 'text-gray-400' 
-                                : 'text-gray-600'
+                            <p className={`text-sm mb-2 ${
+                              todo.is_complete ? 'text-gray-400' : 'text-gray-600'
                             }`}>
                               {todo.description}
                             </p>
                           )}
-
-                          <div className="space-y-1 text-sm text-gray-600">
-                            {showBuildingName && todo.building?.name && (
-                              <div className="flex items-center gap-1">
+                          
+                          <div className="flex items-center gap-4 text-xs text-gray-500">
+                            {showBuildingName && todo.building && (
+                              <span className="flex items-center gap-1">
                                 <Building className="h-3 w-3" />
-                                <span>{todo.building.name}</span>
-                              </div>
+                                {todo.building.name}
+                              </span>
                             )}
-                            
                             {todo.due_date && (
-                              <div className={`flex items-center gap-1 ${
-                                isOverdue(todo) 
-                                  ? 'text-red-600' 
-                                  : 'text-gray-500'
+                              <span className={`flex items-center gap-1 ${
+                                isOverdue(todo) ? 'text-red-600' : 'text-gray-500'
                               }`}>
                                 <Calendar className="h-3 w-3" />
-                                <span>{formatDueDate(todo.due_date)}</span>
-                                {isOverdue(todo) && (
-                                  <AlertTriangle className="h-3 w-3" />
-                                )}
-                              </div>
+                                {formatDueDate(todo.due_date)}
+                              </span>
                             )}
                           </div>
                         </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                        {todo.priority && (
-                          <BlocIQBadge 
-                            className={`text-xs ${getPriorityColor(todo.priority)}`}
-                          >
-                            {todo.priority}
-                          </BlocIQBadge>
-                        )}
                         
                         <button
                           onClick={() => handleDeleteTask(todo.id)}
-                          className="text-red-400 hover:text-red-600 transition-colors p-1"
-                          title="Delete task"
+                          className="p-1 text-gray-400 hover:text-red-600 transition-colors"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-              
-              {todos.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <div className="flex items-center justify-between text-sm text-gray-500">
-                    <span>{todos.length} task{todos.length !== 1 ? 's' : ''} shown</span>
-                    <a 
-                      href="/buildings" 
-                      className="text-[#4f46e5] hover:text-[#a855f7] transition-colors"
-                    >
-                      View all →
-                    </a>
-                  </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Circle className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                  <p className="text-sm text-gray-500">No tasks found</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Compliance Tab */}
+          {activeTab === 'compliance' && includeCompliance && (
+            <div>
+              {complianceItems.length > 0 ? (
+                <div className="space-y-3">
+                  {complianceItems.map(item => {
+                    const daysUntilDue = getDaysUntilDue(item.next_due_date!)
+                    const isOverdue = daysUntilDue < 0
+                    const isDueSoon = daysUntilDue <= 30 && daysUntilDue >= 0
+                    
+                    return (
+                      <div
+                        key={item.id}
+                        className={`p-4 rounded-lg border transition-all ${
+                          isOverdue
+                            ? 'bg-red-50 border-red-200'
+                            : isDueSoon
+                            ? 'bg-yellow-50 border-yellow-200'
+                            : 'bg-white border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="mt-1 flex-shrink-0">
+                            <Shield className={`h-5 w-5 ${
+                              isOverdue ? 'text-red-600' : isDueSoon ? 'text-yellow-600' : 'text-gray-400'
+                            }`} />
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h3 className="font-medium text-gray-900">
+                                {item.compliance_assets.name}
+                              </h3>
+                              <BlocIQBadge className={`text-xs ${getComplianceStatusColor(item.status)}`}>
+                                {item.status.replace('_', ' ')}
+                              </BlocIQBadge>
+                              {isOverdue && (
+                                <BlocIQBadge className="bg-red-100 text-red-800 text-xs">
+                                  Overdue
+                                </BlocIQBadge>
+                              )}
+                            </div>
+                            
+                            <p className="text-sm text-gray-600 mb-2">
+                              {item.compliance_assets.description || 'No description available'}
+                            </p>
+                            
+                            <div className="flex items-center gap-4 text-xs text-gray-500">
+                              {showBuildingName && item.building && (
+                                <span className="flex items-center gap-1">
+                                  <Building className="h-3 w-3" />
+                                  {item.building.name}
+                                </span>
+                              )}
+                              <span className="flex items-center gap-1">
+                                <FileText className="h-3 w-3" />
+                                {item.compliance_assets.category}
+                              </span>
+                              {item.next_due_date && (
+                                <span className={`flex items-center gap-1 ${
+                                  isOverdue ? 'text-red-600' : isDueSoon ? 'text-yellow-600' : 'text-gray-500'
+                                }`}>
+                                  <Calendar className="h-3 w-3" />
+                                  {isOverdue ? `${Math.abs(daysUntilDue)} days overdue` :
+                                   daysUntilDue === 0 ? 'Due today' :
+                                   daysUntilDue === 1 ? 'Due tomorrow' :
+                                   `Due in ${daysUntilDue} days`}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Shield className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                  <p className="text-sm text-gray-500">No upcoming compliance items</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!hasItems && (
+            <div className="text-center py-8">
+              <Building className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+              <p className="text-sm text-gray-500">No items to display</p>
             </div>
           )}
         </div>
