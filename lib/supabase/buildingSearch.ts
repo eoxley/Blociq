@@ -1,9 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// This file is imported by API routes, so we'll create the client when needed
+// The actual client will be passed from the calling API route
 
 interface Building {
   id: string;
@@ -46,7 +42,7 @@ interface SearchResults {
   leaseholders: Leaseholder[];
 }
 
-export async function searchBuildingAndUnits(query: string): Promise<SearchResults | null> {
+export async function searchBuildingAndUnits(query: string, supabaseClient: any): Promise<SearchResults | null> {
   try {
     const normalizedQuery = query.toLowerCase().trim();
     console.log('🔍 Starting building search for query:', normalizedQuery);
@@ -63,7 +59,7 @@ export async function searchBuildingAndUnits(query: string): Promise<SearchResul
     }
     
     // Search for building
-    const building = await searchBuilding(buildingMatch);
+    const building = await searchBuilding(buildingMatch, supabaseClient);
     if (!building) {
       console.log('❌ Building not found:', buildingMatch);
       return null; // Building not found
@@ -80,7 +76,7 @@ export async function searchBuildingAndUnits(query: string): Promise<SearchResul
     // If unit number is mentioned, search for specific unit
     if (unitMatch) {
       console.log('🔍 Searching for specific unit:', unitMatch);
-      const unit = await searchUnit(building.id, unitMatch);
+      const unit = await searchUnit(building.id, unitMatch, supabaseClient);
       if (unit) {
         console.log('✅ Unit found:', unit.unit_number);
         results.units.push(unit);
@@ -88,7 +84,7 @@ export async function searchBuildingAndUnits(query: string): Promise<SearchResul
         // Get leaseholder for this unit
         if (unit.leaseholder) {
           console.log('✅ Leaseholder found for unit:', unit.leaseholder.name);
-          const leaseholder = await getLeaseholderWithUnits(unit.leaseholder.id);
+          const leaseholder = await getLeaseholderWithUnits(unit.leaseholder.id, supabaseClient);
           if (leaseholder) {
             results.leaseholders.push(leaseholder);
           }
@@ -99,7 +95,7 @@ export async function searchBuildingAndUnits(query: string): Promise<SearchResul
     } else {
       console.log('🔍 No specific unit mentioned, getting all units');
       // No specific unit mentioned, get all units for the building
-      const units = await getAllUnitsForBuilding(building.id);
+      const units = await getAllUnitsForBuilding(building.id, supabaseClient);
       results.units = units;
       
       // Get unique leaseholders
@@ -112,7 +108,7 @@ export async function searchBuildingAndUnits(query: string): Promise<SearchResul
       
       // Fetch leaseholder details
       for (const leaseholderId of leaseholderIds) {
-        const leaseholder = await getLeaseholderWithUnits(leaseholderId);
+        const leaseholder = await getLeaseholderWithUnits(leaseholderId, supabaseClient);
         if (leaseholder) {
           results.leaseholders.push(leaseholder);
         }
@@ -173,7 +169,7 @@ function extractUnitNumber(query: string): string | null {
   return null;
 }
 
-async function searchBuilding(buildingName: string): Promise<Building | null> {
+async function searchBuilding(buildingName: string, supabaseClient: any): Promise<Building | null> {
   try {
     // Clean building name
     const cleanName = buildingName
@@ -183,7 +179,7 @@ async function searchBuilding(buildingName: string): Promise<Building | null> {
     console.log('🔍 Searching for building:', { original: buildingName, clean: cleanName });
     
     // Try exact match first
-    let { data, error } = await supabase
+    let { data, error } = await supabaseClient
       .from('buildings')
       .select(`
         id,
@@ -202,7 +198,7 @@ async function searchBuilding(buildingName: string): Promise<Building | null> {
     }
     
     // Try partial match with the clean name
-    const { data: partialData, error: partialError } = await supabase
+    const { data: partialData, error: partialError } = await supabaseClient
       .from('buildings')
       .select(`
         id,
@@ -223,7 +219,7 @@ async function searchBuilding(buildingName: string): Promise<Building | null> {
     
     // Try searching for "ashwood" specifically
     if (buildingName.toLowerCase().includes('ashwood')) {
-      const { data: ashwoodData, error: ashwoodError } = await supabase
+      const { data: ashwoodData, error: ashwoodError } = await supabaseClient
         .from('buildings')
         .select(`
           id,
@@ -252,7 +248,7 @@ async function searchBuilding(buildingName: string): Promise<Building | null> {
   }
 }
 
-async function searchUnit(buildingId: string, unitNumber: string): Promise<Unit | null> {
+async function searchUnit(buildingId: string, unitNumber: string, supabaseClient: any): Promise<Unit | null> {
   try {
     // Clean unit number
     const cleanUnitNumber = unitNumber.replace(/^0+/, ''); // Remove leading zeros
@@ -272,23 +268,23 @@ async function searchUnit(buildingId: string, unitNumber: string): Promise<Unit 
       console.log(`🔍 Trying unit variant: "${variant}"`);
       
       // Try exact match
-      const { data, error } = await supabase
-        .from('units')
-        .select(`
-          id,
-          unit_number,
-          floor,
-          type,
-          leaseholder_id
-        `)
-        .eq('building_id', buildingId)
-        .eq('unit_number', variant)
-        .single();
+          const { data, error } = await supabaseClient
+      .from('units')
+      .select(`
+        id,
+        unit_number,
+        floor,
+        type,
+        leaseholder_id
+      `)
+      .eq('building_id', buildingId)
+      .eq('unit_number', variant)
+      .single();
       
       if (!error && data) {
         console.log('✅ Exact unit match found:', data.unit_number);
         // Get leaseholder information
-        const leaseholder = await getLeaseholderBasic(data.leaseholder_id);
+        const leaseholder = await getLeaseholderBasic(data.leaseholder_id, supabaseClient);
         return {
           ...data,
           leaseholder
@@ -296,7 +292,7 @@ async function searchUnit(buildingId: string, unitNumber: string): Promise<Unit 
       }
       
       // Try case-insensitive partial match
-      const { data: partialData, error: partialError } = await supabase
+      const { data: partialData, error: partialError } = await supabaseClient
         .from('units')
         .select(`
           id,
@@ -313,7 +309,7 @@ async function searchUnit(buildingId: string, unitNumber: string): Promise<Unit 
       if (!partialError && partialData) {
         console.log('✅ Partial unit match found:', partialData.unit_number);
         // Get leaseholder information
-        const leaseholder = await getLeaseholderBasic(partialData.leaseholder_id);
+        const leaseholder = await getLeaseholderBasic(partialData.leaseholder_id, supabaseClient);
         return {
           ...partialData,
           leaseholder
@@ -330,9 +326,9 @@ async function searchUnit(buildingId: string, unitNumber: string): Promise<Unit 
   }
 }
 
-async function getAllUnitsForBuilding(buildingId: string): Promise<Unit[]> {
+async function getAllUnitsForBuilding(buildingId: string, supabaseClient: any): Promise<Unit[]> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('units')
       .select(`
         id,
@@ -350,8 +346,8 @@ async function getAllUnitsForBuilding(buildingId: string): Promise<Unit[]> {
     
     // Get leaseholder information for each unit
     const unitsWithLeaseholders = await Promise.all(
-      data.map(async (unit) => {
-        const leaseholder = await getLeaseholderBasic(unit.leaseholder_id);
+      data.map(async (unit: any) => {
+        const leaseholder = await getLeaseholderBasic(unit.leaseholder_id, supabaseClient);
         return {
           ...unit,
           leaseholder
@@ -367,7 +363,7 @@ async function getAllUnitsForBuilding(buildingId: string): Promise<Unit[]> {
   }
 }
 
-async function getLeaseholderBasic(leaseholderId: string | null): Promise<{
+async function getLeaseholderBasic(leaseholderId: string | null, supabaseClient: any): Promise<{
   id: string;
   name: string;
   email: string | null;
@@ -376,7 +372,7 @@ async function getLeaseholderBasic(leaseholderId: string | null): Promise<{
   if (!leaseholderId) return null;
   
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('leaseholders')
       .select('id, name, email, phone')
       .eq('id', leaseholderId)
@@ -394,9 +390,9 @@ async function getLeaseholderBasic(leaseholderId: string | null): Promise<{
   }
 }
 
-async function getLeaseholderWithUnits(leaseholderId: string): Promise<Leaseholder | null> {
+async function getLeaseholderWithUnits(leaseholderId: string, supabaseClient: any): Promise<Leaseholder | null> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('leaseholders')
       .select(`
         id,
