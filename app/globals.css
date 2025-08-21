@@ -89,6 +89,30 @@
   z-index: 10000 !important;
 }
 
+/* Communications modals layering fixes */
+.communications-modal {
+  position: fixed !important;
+  z-index: 9999 !important;
+  isolation: isolate;
+}
+
+.communications-modal-content {
+  position: relative !important;
+  z-index: 10000 !important;
+  isolation: isolate;
+}
+
+/* Ensure communications modals are always on top */
+.communications-modal,
+.communications-modal * {
+  z-index: 9999 !important;
+}
+
+.communications-modal-content,
+.communications-modal-content * {
+  z-index: 10000 !important;
+}
+
 .signature-preview {
   font-family: 'Bradley Hand ITC', 'Bradley Hand', 'Brush Script MT', cursive, serif;
   font-size: 20px;
