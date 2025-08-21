@@ -473,6 +473,7 @@ export default function SetupComplianceModalV2({
             </div>
           </div>
         </div>
+        </div>
       </div>
     </div>
   );

@@ -5,7 +5,7 @@ import { Shield, AlertTriangle, CheckCircle, Clock, Calendar, FileText, Upload, 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import SetupComplianceModal from '@/components/compliance/SetupComplianceModal'
+import SetupComplianceModalV2 from '@/components/compliance/SetupComplianceModalV2'
 
 // Type definitions
 interface Building {
@@ -251,14 +251,12 @@ export default function BuildingComplianceClient({
       </div>
 
       {/* Setup Compliance Modal */}
-      {showSetupModal && (
-        <SetupComplianceModal
-          open={showSetupModal}
-          buildingId={building.id}
-          onClose={() => setShowSetupModal(false)}
-          onSaved={handleSetupModalSuccess}
-        />
-      )}
+      <SetupComplianceModalV2
+        open={showSetupModal}
+        buildingId={building.id}
+        onClose={() => setShowSetupModal(false)}
+        onSaved={handleSetupModalSuccess}
+      />
     </div>
   );
 } 
