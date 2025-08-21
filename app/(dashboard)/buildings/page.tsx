@@ -321,16 +321,20 @@ function BuildingsList() {
                   
                   {/* Action Buttons */}
                   <div className="space-y-3">
-                    <button
-                      className="w-full bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:from-[#4f46e5]/90 hover:to-[#a855f7]/90 text-white border-0 transition-all duration-300 rounded-2xl font-bold text-base shadow-xl hover:shadow-2xl hover:shadow-blue-500/40 py-3 transform hover:-translate-y-1 hover:scale-[1.02]"
+                    <Link
+                      href={`/buildings/${building.id}`}
+                      className="w-full bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:from-[#4f46e5]/90 hover:to-[#a855f7]/90 text-white border-0 transition-all duration-300 rounded-2xl font-bold text-base shadow-xl hover:shadow-2xl hover:shadow-blue-500/40 py-3 transform hover:-translate-y-1 hover:scale-[1.02] flex items-center justify-center gap-2"
                     >
+                      <Eye className="h-4 w-4" />
                       View Details
-                    </button>
-                    <button
-                      className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white border-0 transition-all duration-300 rounded-2xl font-bold text-base shadow-xl hover:shadow-2xl hover:shadow-emerald-500/40 py-3 transform hover:-translate-y-1 hover:scale-[1.02]"
+                    </Link>
+                    <Link
+                      href={`/buildings/${building.id}/compliance`}
+                      className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white border-0 transition-all duration-300 rounded-2xl font-bold text-base shadow-xl hover:shadow-2xl hover:shadow-emerald-500/40 py-3 transform hover:-translate-y-1 hover:scale-[1.02] flex items-center justify-center gap-2"
                     >
+                      <Shield className="h-4 w-4" />
                       View Compliance
-                    </button>
+                    </Link>
                   </div>
                 </div>
               </div>
