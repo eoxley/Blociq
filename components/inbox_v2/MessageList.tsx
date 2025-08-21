@@ -144,29 +144,28 @@ export default function MessageList({
     }
   }, [selectedMessageId, messages, refresh])
 
-  // Filter and sort messages
+  // Optimize message filtering and selection
   useEffect(() => {
     let filtered = messages
-
+    
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter((message: any) => {
         const subject = message.subject?.toLowerCase() || ''
-        const from = message.from?.emailAddress?.address?.toLowerCase() || ''
-        const bodyPreview = message.bodyPreview?.toLowerCase() || ''
+        const sender = message.from?.emailAddress?.name?.toLowerCase() || 
+                      message.from?.emailAddress?.address?.toLowerCase() || ''
+        const body = message.bodyPreview?.toLowerCase() || ''
         
-        return subject.includes(query) || 
-               from.includes(query) || 
-               bodyPreview.includes(query)
+        return subject.includes(query) || sender.includes(query) || body.includes(query)
       })
     }
-
+    
     // Apply unread filter
     if (showUnreadOnly) {
       filtered = filtered.filter((message: any) => !message.isRead)
     }
-
+    
     // Sort messages: unread first, then by date (newest first)
     filtered.sort((a: any, b: any) => {
       // Unread messages first
@@ -179,9 +178,21 @@ export default function MessageList({
       const dateB = new Date(b.receivedDateTime || b.createdDateTime || 0)
       return dateB.getTime() - dateA.getTime()
     })
-
+    
     setFilteredMessages(filtered)
-  }, [messages, searchQuery, showUnreadOnly])
+    
+    // Reset focused index when filters change
+    setFocusedMessageIndex(-1)
+    
+    // Clear selection when filters change significantly
+    if (selectedMessages.size > 0) {
+      const visibleMessageIds = new Set(filtered.map((msg: any) => msg.id))
+      const stillVisible = Array.from(selectedMessages).filter(id => visibleMessageIds.has(id))
+      if (stillVisible.length !== selectedMessages.size) {
+        setSelectedMessages(new Set(stillVisible))
+      }
+    }
+  }, [messages, searchQuery, showUnreadOnly, selectedMessages])
 
   const handleDelete = async (messageId: string) => {
     if (!confirm('Are you sure you want to delete this message?')) return

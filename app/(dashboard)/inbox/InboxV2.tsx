@@ -11,6 +11,7 @@ import TriageButton from '@/components/inbox_v2/TriageButton'
 import AskBlocIQButton from '@/components/inbox_v2/AskBlocIQButton'
 import { useMessages, useFolders } from '@/hooks/inbox_v2'
 import { mutate } from 'swr'
+import { cn } from '@/lib/utils'
 
 // Context for inbox state
 interface InboxContextType {
@@ -18,7 +19,7 @@ interface InboxContextType {
   selectedMessage: any | null
   setSelectedFolderId: (folderId: string) => void
   setSelectedMessage: (message: any) => void
-  moveMessage: (messageId: string, destinationFolderId: string) => Promise<void>
+  moveMessage: (messageId: string, destinationFolderId: string) => Promise<boolean>
 }
 
 const InboxContext = createContext<InboxContextType | undefined>(undefined)
@@ -44,6 +45,7 @@ export default function InboxV2() {
   const [searchQuery, setSearchQuery] = useState('')
   const [showUnreadOnly, setShowUnreadOnly] = useState(false)
   const [draggedMessage, setDraggedMessage] = useState<{ messageId: string; sourceFolderId: string } | null>(null)
+  const [isMovingMessage, setIsMovingMessage] = useState(false)
 
   // Get folders and messages
   const { folders, isLoading: foldersLoading } = useFolders()
@@ -113,13 +115,20 @@ export default function InboxV2() {
     }
   }, [selectedId, selectedMessage, messages])
 
-  // Clear success message after 3 seconds
+  // Clear success message after appropriate time
   useEffect(() => {
     if (moveSuccess) {
-      const timer = setTimeout(() => {
-        setMoveSuccess(null)
-      }, 3000)
-      return () => clearTimeout(timer)
+      const isError = moveSuccess.message.includes('❌')
+      const isLoading = moveSuccess.message.includes('⏳')
+      
+      // Don't auto-clear loading messages
+      if (!isLoading) {
+        const timer = setTimeout(() => {
+          setMoveSuccess(null)
+        }, isError ? 5000 : 3000) // Error messages stay longer
+        
+        return () => clearTimeout(timer)
+      }
     }
   }, [moveSuccess])
 
@@ -177,6 +186,7 @@ export default function InboxV2() {
   }
 
   const moveMessage = async (messageId: string, destinationFolderId: string) => {
+    setIsMovingMessage(true)
     try {
       if (process.env.NODE_ENV === 'development') {
         console.debug(`[Inbox] Moving message ${messageId} to folder ${destinationFolderId}`)
@@ -206,76 +216,52 @@ export default function InboxV2() {
           // Show success message
           const message = messages.find((msg: any) => msg.id === messageId)
           const subject = message?.subject || 'Message'
-          const successMessage = `✅ Successfully moved "${subject}" to folder ${destinationFolderId}`
-          if (process.env.NODE_ENV === 'development') {
-            console.debug('[Inbox]', successMessage)
-          }
-          
-          // Set success state for UI feedback
-          setMoveSuccess({ message: successMessage, timestamp: Date.now() })
-          
-          // Clear success message after 3 seconds
-          setTimeout(() => setMoveSuccess(null), 3000)
-          
-          // Immediately invalidate all message caches to ensure consistency across folders
-          // This will update both the source and destination folders
-          if (process.env.NODE_ENV === 'development') {
-            console.debug('[Inbox] Invalidating all message caches...')
-          }
-          
-          // Invalidate all message list caches with more specific pattern matching
-          const cacheKeys = await mutate((key: string) => {
-            const isMessageList = key.includes('/api/outlook/v2/messages/list')
-            if (process.env.NODE_ENV === 'development') {
-              console.debug('[Inbox] Checking cache key:', key, 'isMessageList:', isMessageList)
-            }
-            return isMessageList
-          })
+          const destinationFolder = folders.find(f => f.id === destinationFolderId)
+          const folderName = destinationFolder?.displayName || destinationFolderId
           
           if (process.env.NODE_ENV === 'development') {
-            console.debug('[Inbox] Cache invalidation result:', cacheKeys)
+            console.debug(`[Inbox] Successfully moved "${subject}" to folder ${folderName}`)
           }
           
-          // Also try to manually clear specific caches for better reliability
+          // Immediately invalidate relevant caches for better reliability
           try {
-            // Clear the current folder's cache specifically
-            const currentFolderKey = `/api/outlook/v2/messages/list?folderId=${selectedFolderId}`
-            if (process.env.NODE_ENV === 'development') {
-              console.debug('[Inbox] Manually clearing current folder cache:', currentFolderKey)
+            // Clear the current folder's cache
+            if (selectedFolderId) {
+              const currentFolderKey = `/api/outlook/v2/messages/list?folderId=${selectedFolderId}`
+              await mutate(currentFolderKey, undefined, false)
             }
-            await mutate(currentFolderKey, undefined, false)
             
             // Clear the destination folder's cache if it's different
             if (destinationFolderId !== selectedFolderId) {
               const destFolderKey = `/api/outlook/v2/messages/list?folderId=${destinationFolderId}`
-              if (process.env.NODE_ENV === 'development') {
-                console.debug('[Inbox] Manually clearing destination folder cache:', destFolderKey)
-              }
               await mutate(destFolderKey, undefined, false)
             }
+            
+            // Refresh the current folder to show updated state
+            await refreshMessages()
+            
           } catch (cacheError) {
             if (process.env.NODE_ENV === 'development') {
               console.warn('[Inbox] Cache clearing warning:', cacheError)
             }
           }
           
-          // Force refresh the current folder to show the updated message list
-          if (process.env.NODE_ENV === 'development') {
-            console.debug('[Inbox] Refreshing current folder messages...')
-          }
-          await refreshMessages()
-          
           if (process.env.NODE_ENV === 'development') {
             console.debug('[Inbox] Message move completed successfully')
           }
+          
+          return true
         } else {
-          console.error('Failed to move message:', data.error)
+          throw new Error(data.error || 'Failed to move message')
         }
       } else {
-        console.error('Failed to move message')
+        throw new Error('Failed to move message')
       }
     } catch (error) {
       console.error('Error moving message:', error)
+      throw error
+    } finally {
+      setIsMovingMessage(false)
     }
   }
 
@@ -306,12 +292,9 @@ export default function InboxV2() {
         setSelectedMessage(message)
         setSelectedId(messageId)
       } else {
-        // If message not found, only clear selection if we don't have a current selection
-        // This prevents the preview from disappearing when messages are filtered
-        if (!selectedMessage || selectedMessage.id !== messageId) {
-          setSelectedMessage(null)
-          setSelectedId(null)
-        }
+        // If message not found, clear selection
+        setSelectedMessage(null)
+        setSelectedId(null)
       }
     }
   }
@@ -358,10 +341,24 @@ export default function InboxV2() {
     }
   }, [refreshMessages])
 
-  // Simple drag and drop handlers
+  // Enhanced drag and drop handlers
   const handleDragStart = useCallback((e: React.DragEvent, messageId: string, sourceFolderId: string) => {
     setDraggedMessage({ messageId, sourceFolderId })
     e.dataTransfer.effectAllowed = 'move'
+    
+    // Add visual feedback
+    if (e.dataTransfer.setDragImage) {
+      const dragImage = document.createElement('div')
+      dragImage.textContent = 'Moving email...'
+      dragImage.style.position = 'absolute'
+      dragImage.style.top = '-1000px'
+      dragImage.style.left = '-1000px'
+      document.body.appendChild(dragImage)
+      e.dataTransfer.setDragImage(dragImage, 0, 0)
+      
+      // Clean up after drag starts
+      setTimeout(() => document.body.removeChild(dragImage), 0)
+    }
   }, [])
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -382,9 +379,27 @@ export default function InboxV2() {
       return
     }
 
-    // Move the message
-    await moveMessage(messageId, destinationFolderId)
-    setDraggedMessage(null)
+    try {
+      // Show loading state
+      setMoveSuccess({ message: '⏳ Moving email...', timestamp: Date.now() })
+      
+      // Move the message
+      const success = await moveMessage(messageId, destinationFolderId)
+      
+      if (success) {
+        // Show success message
+        setMoveSuccess({ message: '✅ Email moved successfully!', timestamp: Date.now() })
+      } else {
+        // Show error message
+        setMoveSuccess({ message: '❌ Failed to move email', timestamp: Date.now() })
+      }
+    } catch (error) {
+      // Show error message
+      setMoveSuccess({ message: '❌ Failed to move email', timestamp: Date.now() })
+      console.error('Error moving message:', error)
+    } finally {
+      setDraggedMessage(null)
+    }
   }, [draggedMessage, moveMessage])
 
   // Calculate unread count
@@ -407,6 +422,12 @@ export default function InboxV2() {
                 {unreadCount > 0 && (
                   <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                     {unreadCount} unread
+                  </span>
+                )}
+                {isMovingMessage && (
+                  <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                    <RefreshCw className="h-3 w-3 animate-spin mr-1" />
+                    Moving...
                   </span>
                 )}
               </p>
@@ -545,10 +566,20 @@ export default function InboxV2() {
         </div>
       </div>
 
-      {/* Success Message Display */}
+      {/* Enhanced Success/Error Message Display */}
       {moveSuccess && (
-        <div className="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-in slide-in-from-bottom-2">
-          {moveSuccess.message}
+        <div className={cn(
+          "fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-bottom-2 transition-all duration-300",
+          moveSuccess.message.includes('✅') ? 'bg-green-500 text-white' : 
+          moveSuccess.message.includes('❌') ? 'bg-red-500 text-white' : 
+          'bg-blue-500 text-white'
+        )}>
+          <div className="flex items-center gap-2">
+            {moveSuccess.message.includes('✅') && <span>✅</span>}
+            {moveSuccess.message.includes('❌') && <span>❌</span>}
+            {!moveSuccess.message.includes('✅') && !moveSuccess.message.includes('❌') && <span>⏳</span>}
+            <span className="font-medium">{moveSuccess.message}</span>
+          </div>
         </div>
       )}
 
