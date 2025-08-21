@@ -123,24 +123,45 @@ async function parseDocumentIntent(prompt: string) {
 }
 
 async function findOrCreateTemplate(intent: any, documentType: string | undefined, supabase: any) {
-  // First, try to find an existing template
-  let templateQuery = supabase
+  // First, try to find user-uploaded templates (prioritize these)
+  let userTemplateQuery = supabase
     .from('templates')
     .select('*')
-    .eq('type', intent.documentType || documentType || 'letter');
+    .eq('type', intent.documentType || documentType || 'letter')
+    .eq('is_ai_generated', false) // User-uploaded templates
+    .order('created_at', { ascending: false });
 
   if (intent.buildingSpecific) {
-    templateQuery = templateQuery.eq('is_building_specific', true);
+    userTemplateQuery = userTemplateQuery.eq('is_building_specific', true);
   }
 
-  const { data: existingTemplates, error } = await templateQuery.limit(5);
+  const { data: userTemplates, error: userError } = await userTemplateQuery.limit(3);
 
-  if (existingTemplates && existingTemplates.length > 0) {
-    // Return the most recent template
-    return existingTemplates[0];
+  if (userTemplates && userTemplates.length > 0) {
+    console.log("📋 Found user-uploaded template:", userTemplates[0].name);
+    return userTemplates[0];
   }
 
-  // If no template exists, create a basic one using AI
+  // If no user templates, look for AI-generated templates
+  let aiTemplateQuery = supabase
+    .from('templates')
+    .select('*')
+    .eq('type', intent.documentType || documentType || 'letter')
+    .eq('is_ai_generated', true) // AI-generated templates
+    .order('created_at', { ascending: false });
+
+  if (intent.buildingSpecific) {
+    aiTemplateQuery = aiTemplateQuery.eq('is_building_specific', true);
+  }
+
+  const { data: aiTemplates, error: aiError } = await aiTemplateQuery.limit(3);
+
+  if (aiTemplates && aiTemplates.length > 0) {
+    console.log("📋 Found AI-generated template:", aiTemplates[0].name);
+    return aiTemplates[0];
+  }
+
+  // If no templates exist at all, create a basic one using AI
   console.log("🔧 Creating new template for:", intent.documentType);
   
   const newTemplate = await createBasicTemplate(intent, supabase);

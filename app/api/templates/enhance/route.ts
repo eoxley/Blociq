@@ -7,19 +7,18 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-interface TemplateEnhancementRequest {
+interface EnhanceTemplateRequest {
   templateId: string;
   enhancementPrompt: string;
   buildingId?: string;
-  action: 'enhance_content' | 'add_placeholders' | 'optimize_structure' | 'rewrite';
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { templateId, enhancementPrompt, buildingId, action }: TemplateEnhancementRequest = await req.json();
+    const { templateId, enhancementPrompt, buildingId }: EnhanceTemplateRequest = await req.json();
     
-    if (!templateId || !enhancementPrompt || !action) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    if (!templateId || !enhancementPrompt) {
+      return NextResponse.json({ error: 'Template ID and enhancement prompt are required' }, { status: 400 });
     }
 
     const supabase = createRouteHandlerClient({ cookies });
@@ -30,9 +29,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log("🔧 Template Enhancement Request:", { templateId, action, enhancementPrompt });
+    console.log("🔧 Template Enhancement Request:", { templateId, enhancementPrompt });
 
-    // 1. Get current template
+    // Step 1: Get current template
     const { data: currentTemplate, error: templateError } = await supabase
       .from('templates')
       .select('*')
@@ -43,12 +42,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Template not found' }, { status: 404 });
     }
 
-    // 2. Get building context if provided
+    console.log("📋 Current Template:", currentTemplate.name);
+
+    // Step 2: Get building context if provided
     let buildingContext = '';
     if (buildingId) {
       const { data: building } = await supabase
         .from('buildings')
-        .select('name, address, postcode, city')
+        .select('name, address, city, postcode')
         .eq('id', buildingId)
         .single();
       
@@ -57,52 +58,55 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 3. Enhance template using AI
+    // Step 3: Use AI to enhance the template
     const enhancedTemplate = await enhanceTemplateWithAI(
-      currentTemplate, 
-      enhancementPrompt, 
-      action, 
+      currentTemplate,
+      enhancementPrompt,
       buildingContext
     );
 
-    // 4. Create new version
-    const { data: newVersion, error: versionError } = await supabase
+    console.log("🤖 Template Enhanced by AI");
+
+    // Step 4: Create new version
+    const newVersion = await createTemplateVersion(templateId, enhancedTemplate, supabase);
+
+    console.log("📝 New Version Created:", newVersion.version);
+
+    // Step 5: Update the main template
+    const { data: updatedTemplate, error: updateError } = await supabase
       .from('templates')
-      .insert({
-        name: `${currentTemplate.name} (Enhanced)`,
-        type: currentTemplate.type,
-        description: `${currentTemplate.description}\n\nEnhanced: ${enhancementPrompt}`,
-        storage_path: currentTemplate.storage_path,
+      .update({
         content_text: enhancedTemplate.content,
         placeholders: enhancedTemplate.placeholders,
-        parent_template_id: templateId,
-        is_ai_generated: true,
-        ai_prompt: enhancementPrompt,
-        version: (currentTemplate.version || 1) + 1
+        updated_at: new Date().toISOString(),
+        version: newVersion.version,
+        last_ai_updated: new Date().toISOString()
       })
+      .eq('id', templateId)
       .select()
       .single();
 
-    if (versionError) {
-      console.error('Failed to create template version:', versionError);
-      return NextResponse.json({ error: 'Failed to create enhanced template' }, { status: 500 });
+    if (updateError) {
+      console.error('Failed to update template:', updateError);
+      throw new Error('Failed to update template');
     }
 
-    console.log("✅ Template enhanced successfully");
+    console.log("✅ Template Updated Successfully");
 
     return NextResponse.json({
       success: true,
-      originalTemplate: currentTemplate,
-      enhancedTemplate: newVersion,
+      template: updatedTemplate,
+      version: newVersion,
       changes: {
-        content: enhancedTemplate.content !== currentTemplate.content_text,
-        placeholders: enhancedTemplate.placeholders.length !== currentTemplate.placeholders.length,
-        action: action
+        originalContent: currentTemplate.content_text,
+        enhancedContent: enhancedTemplate.content,
+        originalPlaceholders: currentTemplate.placeholders,
+        enhancedPlaceholders: enhancedTemplate.placeholders
       }
     });
 
   } catch (error: any) {
-    console.error('❌ Error in template enhancement:', error);
+    console.error('❌ Error in Template Enhancement:', error);
     return NextResponse.json(
       { error: 'Failed to enhance template', details: error.message },
       { status: 500 }
@@ -111,106 +115,58 @@ export async function POST(req: NextRequest) {
 }
 
 async function enhanceTemplateWithAI(
-  template: any, 
-  prompt: string, 
-  action: string, 
+  template: any,
+  enhancementPrompt: string,
   buildingContext: string
 ) {
-  let systemPrompt = '';
-  let userPrompt = '';
-
-  switch (action) {
-    case 'enhance_content':
-      systemPrompt = `You are a professional document template enhancer for UK property management. 
-      Enhance the existing template content while maintaining its structure and professional tone.`;
-      userPrompt = `Enhance this template content: "${template.content_text}"
-      
-      Enhancement request: "${prompt}"
-      ${buildingContext ? `Building context: ${buildingContext}` : ''}
-      
-      Please enhance the content while:
-      1. Maintaining the professional UK business tone
-      2. Keeping the same structure and placeholders
-      3. Improving clarity and professionalism
-      4. Adding relevant details where appropriate`;
-      break;
-
-    case 'add_placeholders':
-      systemPrompt = `You are a template optimization expert. Add relevant placeholders to make the template more dynamic and reusable.`;
-      userPrompt = `Add relevant placeholders to this template: "${template.content_text}"
-      
-      Enhancement request: "${prompt}"
-      ${buildingContext ? `Building context: ${buildingContext}` : ''}
-      
-      Current placeholders: ${template.placeholders.join(', ')}
-      
-      Please add new placeholders for:
-      1. Building-specific information
-      2. Leaseholder details
-      3. Financial amounts
-      4. Dates and deadlines
-      5. Contact information
-      
-      Return the enhanced content with new placeholders in {{placeholder}} format.`;
-      break;
-
-    case 'optimize_structure':
-      systemPrompt = `You are a document structure expert. Optimize the template structure for better readability and professional appearance.`;
-      userPrompt = `Optimize the structure of this template: "${template.content_text}"
-      
-      Enhancement request: "${prompt}"
-      ${buildingContext ? `Building context: ${buildingContext}` : ''}
-      
-      Please optimize the structure for:
-      1. Better readability
-      2. Professional formatting
-      3. Logical flow
-      4. UK business standards
-      
-      Maintain all existing placeholders while improving the overall structure.`;
-      break;
-
-    case 'rewrite':
-      systemPrompt = `You are a professional document writer. Rewrite this template according to the user's specific requirements.`;
-      userPrompt = `Rewrite this template: "${template.content_text}"
-      
-      Rewrite request: "${prompt}"
-      ${buildingContext ? `Building context: ${buildingContext}` : ''}
-      
-      Current placeholders: ${template.placeholders.join(', ')}
-      
-      Please rewrite the template:
-      1. According to the user's specific requirements
-      2. Maintaining professional UK business tone
-      3. Keeping relevant placeholders
-      4. Improving clarity and effectiveness`;
-      break;
-
-    default:
-      throw new Error(`Unknown action: ${action}`);
-  }
+  const systemPrompt = `You are a professional document template enhancer for UK property management. 
+  
+  Your task is to enhance an existing template based on the user's request while maintaining its professional structure and legal compliance.
+  
+  Current Template:
+  - Name: ${template.name}
+  - Type: ${template.type}
+  - Current Content: ${template.content_text}
+  - Current Placeholders: ${template.placeholders?.join(', ') || 'None'}
+  
+  Building Context: ${buildingContext || 'Not specified'}
+  
+  Enhancement Request: ${enhancementPrompt}
+  
+  Guidelines:
+  1. Maintain the professional tone and structure
+  2. Keep all existing placeholders that are still relevant
+  3. Add new placeholders if needed for the enhancement
+  4. Ensure UK property management compliance
+  5. Make the content more specific and actionable
+  6. Preserve any legal requirements or formalities
+  
+  Return the enhanced template content with updated placeholders.`;
 
   const completion = await openai.chat.completions.create({
-    model: "gpt-4",
+    model: "gpt-4o-mini",
     messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt }
+      {
+        role: "system",
+        content: systemPrompt
+      },
+      {
+        role: "user",
+        content: `Please enhance this template according to the request: ${enhancementPrompt}`
+      }
     ],
-    temperature: 0.7,
-    max_tokens: 2000,
+    temperature: 0.3,
+    max_tokens: 1500
   });
 
   const enhancedContent = completion.choices[0]?.message?.content || template.content_text;
-
-  // Extract new placeholders
-  const newPlaceholders = extractPlaceholders(enhancedContent);
   
-  // Merge with existing placeholders
-  const allPlaceholders = [...new Set([...template.placeholders, ...newPlaceholders])];
-
+  // Extract new placeholders
+  const enhancedPlaceholders = extractPlaceholders(enhancedContent);
+  
   return {
     content: enhancedContent,
-    placeholders: allPlaceholders
+    placeholders: enhancedPlaceholders
   };
 }
 
@@ -218,10 +174,48 @@ function extractPlaceholders(content: string): string[] {
   const placeholderRegex = /\{\{([^}]+)\}\}/g;
   const placeholders = new Set<string>();
   let match;
-
+  
   while ((match = placeholderRegex.exec(content)) !== null) {
     placeholders.add(match[1]);
   }
-
+  
   return Array.from(placeholders);
+}
+
+async function createTemplateVersion(
+  templateId: string,
+  enhancedTemplate: any,
+  supabase: any
+) {
+  // Get current version number
+  const { data: currentVersions } = await supabase
+    .from('template_versions')
+    .select('version')
+    .eq('template_id', templateId)
+    .order('version', { ascending: false })
+    .limit(1);
+
+  const nextVersion = currentVersions && currentVersions.length > 0 
+    ? currentVersions[0].version + 1 
+    : 1;
+
+  // Create new version record
+  const { data: newVersion, error } = await supabase
+    .from('template_versions')
+    .insert({
+      template_id: templateId,
+      version: nextVersion,
+      content_text: enhancedTemplate.content,
+      placeholders: enhancedTemplate.placeholders,
+      created_at: new Date().toISOString()
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to create template version:', error);
+    throw new Error('Failed to create template version');
+  }
+
+  return newVersion;
 }
