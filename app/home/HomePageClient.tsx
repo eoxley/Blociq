@@ -611,49 +611,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       const aiMessage = { sender: 'ai' as const, text: aiResponse, timestamp: new Date() }
       setMessages(prev => [...prev, aiMessage])
 
-      // Add context summary if available
-      if (data.context) {
-        const contextSummary = []
-        if (data.context.buildingName) contextSummary.push(`📌 Building: ${data.context.buildingName}`)
-        if (data.unit_number) contextSummary.push(`🏠 Unit: ${data.unit_number}`)
-        if (data.leaseholder_name) contextSummary.push(`👤 Leaseholder: ${data.leaseholder_name}`)
-        if (data.context.todoCount) contextSummary.push(`📋 Open Tasks: ${data.context.todoCount} items`)
-        if (data.context.complianceCount) contextSummary.push(`⚠️ Compliance: ${data.context.complianceCount} issues`)
-        if (data.context.documentCount) contextSummary.push(`📄 Documents: ${data.context.documentCount} files`)
-        if (data.files_uploaded > 0) contextSummary.push(`📎 Attached: ${data.files_uploaded} file(s)`)
-        
-        if (contextSummary.length > 0) {
-          const contextMessage = { 
-            sender: 'ai' as const, 
-            text: `**Used Context:**\n${contextSummary.join('\n')}\n\n⚖️ *This assistant provides guidance, not legal advice.*`, 
-            timestamp: new Date() 
-          }
-          setMessages(prev => [...prev, contextMessage])
-        }
-      }
-
-      // Add follow-up action buttons
-      const followUpActions = []
-      if (data.context?.buildingName) {
-        followUpActions.push('✍️ Draft update')
-        followUpActions.push('🗓️ Add event')
-        followUpActions.push('📩 Email directors')
-      }
-      if (data.context?.complianceCount > 0) {
-        followUpActions.push('📋 Log compliance issue')
-      }
-      if (data.context?.todoCount > 0) {
-        followUpActions.push('✅ Mark task complete')
-      }
-      
-      if (followUpActions.length > 0) {
-        const actionsMessage = { 
-          sender: 'ai' as const, 
-          text: `**Quick Actions:**\n${followUpActions.join('       ')}`, 
-          timestamp: new Date() 
-        }
-        setMessages(prev => [...prev, actionsMessage])
-      }
+      // Context and actions removed - AI responses are now clean and direct
       
       // Show chat interface
       setShowChat(true)
