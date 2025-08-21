@@ -13,6 +13,9 @@ interface MessageListProps {
   searchQuery?: string
   showUnreadOnly?: boolean
   onDragStart?: (e: React.DragEvent, messageId: string, sourceFolderId: string) => void
+  selectedMessages?: Set<string>
+  setSelectedMessages?: React.Dispatch<React.SetStateAction<Set<string>>>
+  onDelete?: (messageIds: string[]) => void
 }
 
 export default function MessageList({ 
@@ -21,12 +24,19 @@ export default function MessageList({
   onMessageSelect,
   searchQuery = '',
   showUnreadOnly = false,
-  onDragStart
+  onDragStart,
+  selectedMessages: externalSelectedMessages,
+  setSelectedMessages: externalSetSelectedMessages,
+  onDelete: externalOnDelete
 }: MessageListProps) {
   const { messages, isLoading, refresh } = useMessages(selectedFolderId)
   const [focusedMessageIndex, setFocusedMessageIndex] = useState<number>(-1)
   const [filteredMessages, setFilteredMessages] = useState<any[]>([])
-  const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set())
+  
+  // Use external selectedMessages if provided, otherwise use local state
+  const [localSelectedMessages, setLocalSelectedMessages] = useState<Set<string>>(new Set())
+  const selectedMessages = externalSelectedMessages || localSelectedMessages
+  const setSelectedMessages = externalSetSelectedMessages || setLocalSelectedMessages
 
   // Calculate unread count
   const unreadCount = messages.filter((message: any) => !message.isRead).length
@@ -61,12 +71,17 @@ export default function MessageList({
       case 'Delete':
         e.preventDefault()
         if (selectedMessages.size > 0) {
-          // Delete all selected messages
-          handleDeleteMultiple(Array.from(selectedMessages))
+          // Delete all selected messages using the callback
+          const messageIds = Array.from(selectedMessages)
+          if (externalOnDelete) {
+            externalOnDelete(messageIds)
+          }
         } else if (focusedMessageIndex >= 0 && focusedMessageIndex < filteredMessages.length) {
           // Delete single focused message
           const message = filteredMessages[focusedMessageIndex]
-          handleDelete(message.id)
+          if (externalOnDelete) {
+            externalOnDelete([message.id])
+          }
         }
         break
       
@@ -90,7 +105,7 @@ export default function MessageList({
     if (e.key === 'Escape') {
       setSelectedMessages(new Set())
     }
-  }, [filteredMessages, focusedMessageIndex, onMessageSelect, selectedMessages])
+  }, [filteredMessages, focusedMessageIndex, onMessageSelect, selectedMessages, setSelectedMessages, externalOnDelete])
 
   // Set up keyboard event listener
   useEffect(() => {
