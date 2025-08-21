@@ -77,6 +77,7 @@ export async function POST(req: NextRequest) {
     const { insertAiLog } = await import('../../../lib/supabase/ai_logs');
     const { MAX_CHARS_PER_DOC, MAX_TOTAL_DOC_CHARS, truncate, isSummariseLike } = await import("../../../lib/ask/text");
     const { searchBuildingAndUnits } = await import('../../../lib/supabase/buildingSearch');
+    const { searchEntireDatabase, formatSearchResultsForAI, extractRelevantContext } = await import('../../../lib/supabase/comprehensiveDataSearch');
 
     const supabase = createRouteHandlerClient({ cookies });
     
@@ -285,7 +286,11 @@ Notes & Instructions: ${building.notes || 'No notes added yet'}
 
               const complianceContext = complianceAssets.map(asset => {
                 const status = calculateStatus(asset.next_due_date);
-                return `- ${asset.compliance_assets?.name || 'Unknown'}: ${status} (due: ${asset.next_due_date ? new Date(asset.next_due_date).toLocaleDateString() : 'Not set'})`;
+                const complianceAsset = asset.compliance_assets as any;
+                const assetName = Array.isArray(complianceAsset) 
+                  ? complianceAsset[0]?.name || 'Unknown'
+                  : complianceAsset?.name || 'Unknown';
+                return `- ${assetName}: ${status} (due: ${asset.next_due_date ? new Date(asset.next_due_date).toLocaleDateString() : 'Not set'})`;
               }).join('\n');
 
               buildingContext += `Compliance Requirements:
@@ -386,6 +391,47 @@ ${communicationsContext}
       } catch (searchError) {
         console.warn('Could not perform building search:', searchError);
       }
+    }
+
+    // 🔍 COMPREHENSIVE DATABASE SEARCH
+    // Search entire Supabase system for additional contextual data
+    console.log('🔍 Performing comprehensive database search...');
+    let comprehensiveContext = "";
+    let comprehensiveMetadata: any = {};
+    
+    try {
+      const comprehensiveResults = await searchEntireDatabase(prompt, user?.id);
+      
+      // Use smart context extraction to get most relevant data
+      comprehensiveContext = extractRelevantContext(comprehensiveResults, prompt);
+      
+      // Update metadata with comprehensive search results
+      comprehensiveMetadata = {
+        buildingsFound: comprehensiveResults.buildings.length,
+        unitsFound: comprehensiveResults.units.length,
+        leaseholdersFound: comprehensiveResults.leaseholders.length,
+        documentsFound: comprehensiveResults.documents.length,
+        complianceFound: comprehensiveResults.compliance.length,
+        communicationsFound: comprehensiveResults.communications.length,
+        todosFound: comprehensiveResults.todos.length,
+        majorWorksFound: comprehensiveResults.majorWorks.length,
+        financialsFound: comprehensiveResults.financials.length,
+        eventsFound: comprehensiveResults.events.length,
+        assetsFound: comprehensiveResults.assets.length,
+        maintenanceFound: comprehensiveResults.maintenance.length
+      };
+      
+      // Add comprehensive search results to building context
+      if (comprehensiveContext) {
+        buildingContext += `\n${comprehensiveContext}`;
+        console.log('✅ Enhanced context with comprehensive search results');
+      }
+      
+      // Update context metadata
+      Object.assign(contextMetadata, comprehensiveMetadata);
+      
+    } catch (comprehensiveError) {
+      console.warn('Comprehensive database search failed:', comprehensiveError);
     }
 
     // 📋 Building Todos
@@ -575,6 +621,22 @@ ${communicationsContext}
 
     console.log('🤖 Building unified prompt for BlocIQ assistant');
 
+    // Enhance system prompt with comprehensive search instructions
+    if (comprehensiveContext) {
+      systemPrompt += `\n\nCOMPREHENSIVE DATABASE CONTEXT:
+The following information has been gathered from the entire property management database based on your query. Use this comprehensive context to provide detailed, accurate, and contextual responses:
+
+${comprehensiveContext}
+
+INSTRUCTIONS:
+- Use this comprehensive data to provide complete and accurate answers
+- Reference specific information from multiple data sources when relevant
+- Cross-reference data between buildings, units, leaseholders, compliance, and other records
+- Provide actionable insights based on the full context available
+- When mentioning data, be specific about what you found (e.g., "Based on the compliance records..." or "According to the maintenance logs...")
+`;
+    }
+
     // Build unified prompt with all context
     const finalPrompt = fullPrompt;
 
@@ -646,12 +708,12 @@ ${communicationsContext}
         await logBuildingQuery({
           buildingId: building_id,
           unitId: undefined, // Could be extracted from query if needed
-          leaseholderId: leaseholder_id,
+          leaseholderId: leaseholder_id || undefined,
           query: prompt,
           response: displayContent,
           contextType: detectQueryContextType(prompt),
           userId: user?.id,
-          sessionId: null, // Could be extracted from session if needed
+          sessionId: undefined, // Could be extracted from session if needed
           metadata: {
             contextType,
             hasBuildingContext: !!buildingContext,
@@ -676,7 +738,11 @@ ${communicationsContext}
       document_count: usedDocs.length,
       has_email_thread: !!emailThreadId,
       has_leaseholder: !!leaseholder_id,
-      context: contextMetadata,
+      context: {
+        ...contextMetadata,
+        comprehensiveSearchUsed: !!comprehensiveContext,
+        searchMetadata: comprehensiveMetadata
+      },
       metadata: AIContextHandler.getResponseMetadata(processedResponse)
     });
 
