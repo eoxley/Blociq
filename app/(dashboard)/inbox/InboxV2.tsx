@@ -46,6 +46,7 @@ export default function InboxV2() {
   const [showUnreadOnly, setShowUnreadOnly] = useState(false)
   const [draggedMessage, setDraggedMessage] = useState<{ messageId: string; sourceFolderId: string } | null>(null)
   const [isMovingMessage, setIsMovingMessage] = useState(false)
+  const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set())
 
   // Get folders and messages
   const { folders, isLoading: foldersLoading } = useFolders()
@@ -132,37 +133,6 @@ export default function InboxV2() {
     }
   }, [moveSuccess])
 
-  // Global keyboard shortcuts for inbox
-  useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      // Only handle shortcuts when not in input fields
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLDivElement && e.target.contentEditable === 'true') {
-        return
-      }
-
-      switch (e.key) {
-        case 'Delete':
-          if (selectedMessage) {
-            e.preventDefault()
-            handleDeleteMessage(selectedMessage.id)
-          }
-          break
-        case 'Escape':
-          if (replyModal.isOpen) {
-            e.preventDefault()
-            handleCloseReplyModal()
-          } else if (newEmailModalOpen) {
-            e.preventDefault()
-            setNewEmailModalOpen(false)
-          }
-          break
-      }
-    }
-
-    document.addEventListener('keydown', handleGlobalKeyDown)
-    return () => document.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [selectedMessage, replyModal.isOpen, newEmailModalOpen])
-
   const handleDeleteMessage = async (messageId: string) => {
     if (!confirm('Are you sure you want to delete this message?')) return
     
@@ -184,6 +154,71 @@ export default function InboxV2() {
       console.error('Error deleting message:', error)
     }
   }
+
+  const handleDeleteMultiple = async (messageIds: string[]) => {
+    if (!confirm(`Are you sure you want to delete ${messageIds.length} message${messageIds.length !== 1 ? 's' : ''}?`)) return
+    
+    try {
+      // Delete messages in parallel
+      const deletePromises = messageIds.map(messageId => 
+        fetch(`/api/outlook/v2/messages/${messageId}`, { method: 'DELETE' })
+      )
+      
+      const responses = await Promise.all(deletePromises)
+      const allSuccessful = responses.every(response => response.ok)
+      
+      if (allSuccessful) {
+        // Clear selected messages and refresh
+        setSelectedMessages(new Set())
+        if (selectedMessage && messageIds.includes(selectedMessage.id)) {
+          setSelectedMessage(null)
+          setSelectedId(null)
+        }
+        refreshMessages()
+      } else {
+        console.error('Some messages failed to delete')
+      }
+    } catch (error) {
+      console.error('Error deleting messages:', error)
+    }
+  }
+
+  // Global keyboard shortcuts for inbox
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Only handle shortcuts when not in input fields
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLDivElement && e.target.contentEditable === 'true') {
+        return
+      }
+
+      switch (e.key) {
+        case 'Delete':
+          // Check if we have selected messages in the message list first
+          if (selectedMessages && selectedMessages.size > 0) {
+            e.preventDefault()
+            // Delete all selected messages
+            handleDeleteMultiple(Array.from(selectedMessages))
+          } else if (selectedMessage) {
+            // Fallback to deleting the selected message preview
+            e.preventDefault()
+            handleDeleteMessage(selectedMessage.id)
+          }
+          break
+        case 'Escape':
+          if (replyModal.isOpen) {
+            e.preventDefault()
+            handleCloseReplyModal()
+          } else if (newEmailModalOpen) {
+            e.preventDefault()
+            setNewEmailModalOpen(false)
+          }
+          break
+      }
+    }
+
+    document.addEventListener('keydown', handleGlobalKeyDown)
+    return () => document.removeEventListener('keydown', handleGlobalKeyDown)
+  }, [selectedMessage, selectedMessages, replyModal.isOpen, newEmailModalOpen, handleDeleteMultiple, handleDeleteMessage])
 
   const moveMessage = async (messageId: string, destinationFolderId: string) => {
     setIsMovingMessage(true)
@@ -540,6 +575,9 @@ export default function InboxV2() {
               searchQuery={searchQuery}
               showUnreadOnly={showUnreadOnly}
               onDragStart={handleDragStart}
+              selectedMessages={selectedMessages}
+              setSelectedMessages={setSelectedMessages}
+              onDelete={handleDeleteMultiple}
             />
           </div>
         </div>
