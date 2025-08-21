@@ -136,8 +136,9 @@ export async function searchBuildingAndUnits(query: string): Promise<SearchResul
 function extractBuildingName(query: string): string | null {
   // Common patterns for building names
   const patterns = [
-    // Specific patterns for "5 ashwood house" type queries
-    /(\d+)\s+([^,\s]+(?:\s+(?:house|apartments|court|gardens|heights|point|view|mews|square|place|road|street|lane|close|way|drive|avenue|terrace|walk|rise|hill|park|manor|hall|tower|building|block|estate|development))?)/i,
+    // Specific patterns for "5 ashwood house" type queries - extract "ashwood house"
+    /\d+\s+([^,\s]+(?:\s+(?:house|apartments|court|gardens|heights|point|view|mews|square|place|road|street|lane|close|way|drive|avenue|terrace|walk|rise|hill|park|manor|hall|tower|building|block|estate|development))?)/i,
+    // Standard patterns
     /(?:in|at|of|for)\s+([^,\s]+(?:\s+(?:house|apartments|court|gardens|heights|point|view|mews|square|place|road|street|lane|close|way|drive|avenue|terrace|walk|rise|hill|park|manor|hall|tower|building|block|estate|development))?)/i,
     /([^,\s]+(?:\s+(?:house|apartments|court|gardens|heights|point|view|mews|square|place|road|street|lane|close|way|drive|avenue|terrace|walk|rise|hill|park|manor|hall|tower|building|block|estate|development))?)/i
   ];
@@ -145,10 +146,6 @@ function extractBuildingName(query: string): string | null {
   for (const pattern of patterns) {
     const match = query.match(pattern);
     if (match && match[1]) {
-      // For the first pattern, combine the number and building name
-      if (pattern === patterns[0] && match[2]) {
-        return `${match[2]} ${match[1]}`.trim();
-      }
       return match[1].trim();
     }
   }
@@ -262,58 +259,20 @@ async function searchUnit(buildingId: string, unitNumber: string): Promise<Unit 
     
     console.log('🔍 Searching for unit:', { original: unitNumber, clean: cleanUnitNumber, buildingId });
     
-    // Try exact match first
-    let { data, error } = await supabase
-      .from('units')
-      .select(`
-        id,
-        unit_number,
-        floor,
-        type,
-        leaseholder_id
-      `)
-      .eq('building_id', buildingId)
-      .eq('unit_number', cleanUnitNumber)
-      .single();
+    // Try various unit number formats
+    const searchVariants = [
+      cleanUnitNumber,
+      `Flat ${cleanUnitNumber}`,
+      `Unit ${cleanUnitNumber}`,
+      `Apartment ${cleanUnitNumber}`,
+      `${cleanUnitNumber}`
+    ];
     
-    if (!error && data) {
-      console.log('✅ Exact unit match found:', data.unit_number);
-      // Get leaseholder information
-      const leaseholder = await getLeaseholderBasic(data.leaseholder_id);
-      return {
-        ...data,
-        leaseholder
-      };
-    }
-    
-    // Try partial match
-    const { data: partialData, error: partialError } = await supabase
-      .from('units')
-      .select(`
-        id,
-        unit_number,
-        floor,
-        type,
-        leaseholder_id
-      `)
-      .eq('building_id', buildingId)
-      .ilike('unit_number', `%${cleanUnitNumber}%`)
-      .limit(1)
-      .single();
-    
-    if (!partialError && partialData) {
-      console.log('✅ Partial unit match found:', partialData.unit_number);
-      // Get leaseholder information
-      const leaseholder = await getLeaseholderBasic(partialData.leaseholder_id);
-      return {
-        ...partialData,
-        leaseholder
-      };
-    }
-    
-    // Try searching for "5" specifically if the unit number is "5"
-    if (cleanUnitNumber === '5') {
-      const { data: fiveData, error: fiveError } = await supabase
+    for (const variant of searchVariants) {
+      console.log(`🔍 Trying unit variant: "${variant}"`);
+      
+      // Try exact match
+      const { data, error } = await supabase
         .from('units')
         .select(`
           id,
@@ -323,21 +282,46 @@ async function searchUnit(buildingId: string, unitNumber: string): Promise<Unit 
           leaseholder_id
         `)
         .eq('building_id', buildingId)
-        .eq('unit_number', '5')
+        .eq('unit_number', variant)
         .single();
       
-      if (!fiveError && fiveData) {
-        console.log('✅ Unit 5 found:', fiveData.unit_number);
+      if (!error && data) {
+        console.log('✅ Exact unit match found:', data.unit_number);
         // Get leaseholder information
-        const leaseholder = await getLeaseholderBasic(fiveData.leaseholder_id);
+        const leaseholder = await getLeaseholderBasic(data.leaseholder_id);
         return {
-          ...fiveData,
+          ...data,
+          leaseholder
+        };
+      }
+      
+      // Try case-insensitive partial match
+      const { data: partialData, error: partialError } = await supabase
+        .from('units')
+        .select(`
+          id,
+          unit_number,
+          floor,
+          type,
+          leaseholder_id
+        `)
+        .eq('building_id', buildingId)
+        .ilike('unit_number', `%${variant}%`)
+        .limit(1)
+        .single();
+      
+      if (!partialError && partialData) {
+        console.log('✅ Partial unit match found:', partialData.unit_number);
+        // Get leaseholder information
+        const leaseholder = await getLeaseholderBasic(partialData.leaseholder_id);
+        return {
+          ...partialData,
           leaseholder
         };
       }
     }
     
-    console.log('❌ No unit match found');
+    console.log('❌ No unit match found for any variant');
     return null;
     
   } catch (error) {

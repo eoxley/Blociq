@@ -107,7 +107,7 @@ export default function UnifiedUnitsList({ buildingId, units }: UnifiedUnitsList
 
       {/* Units List */}
       {!loading && !error && filteredUnits.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
           {filteredUnits.map((unit) => (
             <div 
               key={unit.id} 

@@ -97,7 +97,7 @@ export default function UnitsList({ units, buildingId }: UnitsListProps) {
       )}
 
       {/* Units List */}
-      <div className="space-y-4">
+      <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
         {filteredUnits.length > 0 ? (
           filteredUnits.map((unit) => {
             const leaseholder = unit.leaseholders && unit.leaseholders.length > 0 ? unit.leaseholders[0] : null

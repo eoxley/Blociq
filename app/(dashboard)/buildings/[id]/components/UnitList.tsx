@@ -80,7 +80,7 @@ export default function UnitList({ units, leaseholders, buildingId }: UnitListPr
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
           {filteredUnits.map((unit) => {
             const leaseholder = getLeaseholder(unit)
             

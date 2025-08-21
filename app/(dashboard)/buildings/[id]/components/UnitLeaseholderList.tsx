@@ -56,7 +56,7 @@ export default function UnitLeaseholderList({ units, buildingId, incomingEmails,
             <p className="text-gray-600">No units have been added to this building yet.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-96 overflow-y-auto">
             <Table>
               <TableHeader>
                 <TableRow>
