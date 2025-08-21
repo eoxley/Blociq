@@ -9,7 +9,6 @@ import { supabase } from '@/lib/supabaseClient'
 
 
 import BuildingTodoList from '@/components/BuildingTodoList'
-import UpcomingEventsWidget from '@/components/UpcomingEventsWidget'
 
 import BreadcrumbNavigation from '@/components/BreadcrumbNavigation'
 import { BlocIQButton } from '@/components/ui/blociq-button'
@@ -1918,10 +1917,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             </div>
           </div>
 
-          {/* Upcoming Events Widget - Added below the main grid with proper spacing */}
-          <div className="relative z-10 mt-12 pt-8 border-t border-gray-100">
-            <UpcomingEventsWidget />
-          </div>
+
         </div>
       </div>
 
