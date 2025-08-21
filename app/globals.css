@@ -78,6 +78,17 @@
   isolation: isolate;
 }
 
+/* Ensure modal is always on top */
+.major-works-modal,
+.major-works-modal * {
+  z-index: 9999 !important;
+}
+
+.major-works-modal-content,
+.major-works-modal-content * {
+  z-index: 10000 !important;
+}
+
 .signature-preview {
   font-family: 'Bradley Hand ITC', 'Bradley Hand', 'Brush Script MT', cursive, serif;
   font-size: 20px;
