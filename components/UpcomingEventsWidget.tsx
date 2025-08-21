@@ -253,7 +253,7 @@ export default function UpcomingEventsWidget() {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
+      <div className="bg-white rounded-2xl shadow-2xl border-2 border-gray-200 p-6 relative z-10">
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <div className="w-16 h-16 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -268,7 +268,7 @@ export default function UpcomingEventsWidget() {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+    <div className="bg-white rounded-2xl shadow-2xl border-2 border-gray-200 overflow-hidden relative z-10">
       {/* Header */}
       <div className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] px-6 py-6 text-white">
         <div className="flex items-center justify-between">
