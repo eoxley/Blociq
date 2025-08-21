@@ -339,58 +339,72 @@ ${communicationsContext}
       } catch (error) {
         console.warn('Could not fetch building data:', error);
       }
-    } else {
-      // No specific building ID provided, try to search for buildings mentioned in the prompt
-      try {
-        const searchResults = await searchBuildingAndUnits(prompt);
-        if (searchResults) {
-          let searchContext = 'Building & Unit Search Results:\n';
+    }
+
+    // 🔍 ALWAYS perform building search regardless of building_id
+    // This ensures we can find leaseholder information from queries like "who is the leaseholder of 5 ashwood house"
+    try {
+      console.log('🔍 Performing building and unit search for query:', prompt);
+      const searchResults = await searchBuildingAndUnits(prompt);
+      if (searchResults) {
+        let searchContext = 'Building & Unit Search Results:\n';
+        
+        if (searchResults.building) {
+          searchContext += `🏢 Building: ${searchResults.building.name} (${searchResults.building.address})\n`;
+          searchContext += `   Manager: ${searchResults.building.building_manager_name || 'Not specified'}\n`;
+          searchContext += `   Units: ${searchResults.building.unit_count || 'Unknown'}\n`;
           
-          if (searchResults.building) {
-            searchContext += `🏢 Building: ${searchResults.building.name} (${searchResults.building.address})\n`;
-            searchContext += `   Manager: ${searchResults.building.building_manager_name || 'Not specified'}\n`;
-            searchContext += `   Units: ${searchResults.building.unit_count || 'Unknown'}\n`;
-          }
-          
-          if (searchResults.units && searchResults.units.length > 0) {
-            searchContext += `\n🏠 Units Found:\n`;
-            searchResults.units.forEach((unit: any) => {
-              searchContext += `   • Unit ${unit.unit_number}`;
-              if (unit.floor) searchContext += ` (Floor ${unit.floor})`;
-              if (unit.type) searchContext += ` - ${unit.type}`;
-              if (unit.leaseholder) {
-                searchContext += `\n     👤 Leaseholder: ${unit.leaseholder.name}`;
-                if (unit.leaseholder.email) searchContext += `\n     📧 Email: ${unit.leaseholder.email}`;
-                if (unit.leaseholder.phone) searchContext += `\n     📞 Phone: ${unit.leaseholder.phone}`;
-              }
-              searchContext += '\n';
-            });
-          }
-          
-          if (searchResults.leaseholders && searchResults.leaseholders.length > 0) {
-            searchContext += `\n👥 Leaseholder Details:\n`;
-            searchResults.leaseholders.forEach((lh: any) => {
-              searchContext += `   • ${lh.name}\n`;
-              if (lh.email) searchContext += `     📧 Email: ${lh.email}\n`;
-              if (lh.phone) searchContext += `     📞 Phone: ${lh.phone}\n`;
-              if (lh.units && lh.units.length > 0) {
-                searchContext += `     🏠 Units: ${lh.units.map((u: any) => u.unit_number).join(', ')}\n`;
-              }
-              searchContext += '\n';
-            });
-          }
-          
-          buildingContext += searchContext;
-          
-          // Update context metadata
-          if (searchResults.building) {
-            contextMetadata.buildingName = searchResults.building.name;
-            contextMetadata.unitCount = searchResults.units?.length || 0;
+          // Set building_id if not already set
+          if (!building_id) {
+            building_id = searchResults.building.id;
+            console.log('✅ Auto-detected building ID from search:', building_id);
           }
         }
-      } catch (searchError) {
-        console.warn('Could not perform building search:', searchError);
+        
+        if (searchResults.units && searchResults.units.length > 0) {
+          searchContext += `\n🏠 Units Found:\n`;
+          searchResults.units.forEach((unit: any) => {
+            searchContext += `   • Unit ${unit.unit_number}`;
+            if (unit.floor) searchContext += ` (Floor ${unit.floor})`;
+            if (unit.type) searchContext += ` - ${unit.type}`;
+            if (unit.leaseholder) {
+              searchContext += `\n     👤 Leaseholder: ${unit.leaseholder.name}`;
+              if (unit.leaseholder.email) searchContext += `\n     📧 Email: ${unit.leaseholder.email}`;
+              if (unit.leaseholder.phone) searchContext += `\n     📞 Phone: ${unit.leaseholder.phone}`;
+            } else {
+              searchContext += `\n     👤 Leaseholder: Not assigned`;
+            }
+            searchContext += '\n';
+          });
+        }
+        
+        if (searchResults.leaseholders && searchResults.leaseholders.length > 0) {
+          searchContext += `\n👥 Leaseholder Details:\n`;
+          searchResults.leaseholders.forEach((lh: any) => {
+            searchContext += `   • ${lh.name}\n`;
+            if (lh.email) searchContext += `     📧 Email: ${lh.email}\n`;
+            if (lh.phone) searchContext += `     📞 Phone: ${lh.phone}\n`;
+            if (lh.units && lh.units.length > 0) {
+              searchContext += `     🏠 Units: ${lh.units.map((u: any) => u.unit_number).join(', ')}\n`;
+            }
+            searchContext += '\n';
+          });
+        }
+        
+        buildingContext += searchContext;
+        console.log('✅ Added search context to building context');
+        
+        // Update context metadata
+        if (searchResults.building) {
+          contextMetadata.buildingName = searchResults.building.name;
+          contextMetadata.unitCount = searchResults.units?.length || 0;
+          contextMetadata.searchResultsFound = true;
+        }
+      } else {
+        console.log('❌ No search results found for query');
       }
+    } catch (searchError) {
+      console.warn('Could not perform building search:', searchError);
     }
 
     // 🔍 COMPREHENSIVE DATABASE SEARCH
