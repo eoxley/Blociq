@@ -19,6 +19,7 @@ import { toast } from 'sonner'
 import { checkOutlookConnection, fetchOutlookEvents, getOutlookAuthUrl } from '@/lib/outlookUtils'
 import { normalizeEventTimes, formatInZone, getClientZone } from '@/lib/time'
 import { getTimeBasedGreeting } from '@/utils/greeting'
+import { formatEventTimeUK } from '@/utils/date'
 import CommunicationModal from '@/components/CommunicationModal'
 import { getRandomWelcomeMessage } from '@/utils/messages'
 
@@ -1722,31 +1723,16 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                         
                         const date = formatEventDate(event.date)
                         
-                        // Use new timezone-aware time formatting
+                        // Use formatEventTimeUK which properly applies GMT+1 adjustment
                         let timeDisplay: string
                         if (event.isAllDay) {
                           timeDisplay = 'All day'
                         } else if (event.startUtc) {
-                          // Always use UK time for display
-                          timeDisplay = formatInZone(event.startUtc, 'Europe/London', 'HH:mm')
+                          // Use formatEventTimeUK for proper GMT+1 adjustment
+                          timeDisplay = formatEventTimeUK(event.startUtc)
                         } else if (event.date) {
-                          // Fallback: parse the date and ensure UK timezone
-                          try {
-                            // If the date string doesn't have timezone info, assume it's in UTC
-                            let dateString = event.date
-                            if (!/[zZ]|[+\-]\d{2}:\d{2}$/.test(dateString)) {
-                              // Add 'Z' to indicate UTC if no timezone info
-                              dateString = dateString.replace(/\.\d{3}$/, '') + 'Z'
-                            }
-                            const eventDate = new Date(dateString)
-                            timeDisplay = eventDate.toLocaleTimeString('en-GB', { 
-                              hour: '2-digit', 
-                              minute: '2-digit',
-                              timeZone: 'Europe/London'
-                            })
-                          } catch (e) {
-                            timeDisplay = 'Time unavailable'
-                          }
+                          // Use formatEventTimeUK for proper GMT+1 adjustment
+                          timeDisplay = formatEventTimeUK(event.date)
                         } else {
                           timeDisplay = 'Time unavailable'
                         }
@@ -1810,7 +1796,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                                       <p className="text-gray-900 font-semibold">
                                         {date} at {timeDisplay}
                                       </p>
-                                      <p className="text-xs text-gray-500 mt-1">All times shown in GMT+1</p>
                                     </div>
                                   </div>
 
