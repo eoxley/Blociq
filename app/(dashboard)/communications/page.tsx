@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { 
   Mail, 
   FileText, 
@@ -792,6 +793,108 @@ export default function CommunicationsPage() {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Templates Section */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-6">
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <FileText className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800">Document Templates</h2>
+                <p className="text-sm text-gray-600">Create professional documents with AI assistance</p>
+              </div>
+            </div>
+            <Link
+              href="/communications/templates"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+            >
+              <Plus className="h-4 w-4" />
+              Manage Templates
+            </Link>
+          </div>
+        </div>
+        
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                  <Mail className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-gray-900">Welcome Letters</h3>
+                  <p className="text-sm text-gray-600">New leaseholder welcome packages</p>
+                </div>
+              </div>
+              <Link
+                href="/communications/templates?type=welcome_letter"
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+              >
+                View Templates →
+              </Link>
+            </div>
+            
+            <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                  <AlertTriangle className="h-5 w-5 text-orange-600" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-gray-900">Notices</h3>
+                  <p className="text-sm text-gray-600">Important building announcements</p>
+                </div>
+              </div>
+              <Link
+                href="/communications/templates?type=notice"
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+              >
+                View Templates →
+              </Link>
+            </div>
+            
+            <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <CheckCircle className="h-5 w-5 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-gray-900">Forms</h3>
+                  <p className="text-sm text-gray-600">Standard property forms</p>
+                </div>
+              </div>
+              <Link
+                href="/communications/templates?type=form"
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+              >
+                View Templates →
+              </Link>
+            </div>
+          </div>
+          
+          <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                <Brain className="h-5 w-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-medium text-gray-900">AI-Powered Document Generation</h3>
+                <p className="text-sm text-gray-600">
+                  Use our AI to automatically fill templates with building data, generate professional documents, and send them to recipients.
+                </p>
+              </div>
+              <Link
+                href="/communications/templates"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+              >
+                Try AI Generation
+              </Link>
             </div>
           </div>
         </div>
