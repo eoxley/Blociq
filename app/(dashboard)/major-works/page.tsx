@@ -375,7 +375,7 @@ export default function MajorWorksPage() {
       </div>
 
       {openNew && (
-        <div className="fixed inset-0 z-50">
+        <div className="fixed inset-0 z-[9999]">
           <NewProjectModal 
             onClose={() => setOpenNew(false)} 
             onCreate={() => { setOpenNew(false); load(); }}
@@ -516,11 +516,18 @@ function NewProjectModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
+    <div className="fixed inset-0 z-[9999] overflow-y-auto" style={{ position: 'fixed', zIndex: 9999 }}>
+      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0" style={{ position: 'relative', zIndex: 10000 }}>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity z-[9999]" onClick={onClose}></div>
         
-        <div className="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+        <div 
+          className="relative z-[10000] inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full max-h-[90vh] overflow-y-auto"
+          style={{ 
+            position: 'relative', 
+            zIndex: 10000,
+            isolation: 'isolate'
+          }}
+        >
           
           {/* Hero Banner Header */}
           <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
