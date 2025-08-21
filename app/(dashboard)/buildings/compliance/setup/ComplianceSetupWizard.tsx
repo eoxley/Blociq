@@ -522,7 +522,7 @@ export default function ComplianceSetupWizard() {
                             <div key={asset.id} className="bg-[#FAFAFA] p-3 rounded-lg border border-[#E2E8F0]">
                               <div className="flex items-start justify-between">
                                 <div className="flex-1">
-                                  <h4 className="font-medium text-[#333333] mb-1">{asset.name}</h4>
+                                  <h4 className="font-medium text-[#333333] mb-1">{asset.title}</h4>
                                   {asset.description && (
                                     <p className="text-sm text-[#64748B] mb-2">{asset.description}</p>
                                   )}
@@ -703,7 +703,7 @@ export default function ComplianceSetupWizard() {
                             <div key={assetId} className="bg-white p-3 rounded-lg border border-[#E2E8F0]">
                               <div className="flex items-start justify-between">
                                 <div className="flex-1">
-                                  <h4 className="font-medium text-[#333333] mb-1">{asset.name}</h4>
+                                  <h4 className="font-medium text-[#333333] mb-1">{asset.title}</h4>
                                   <div className="flex items-center gap-4 text-sm text-[#64748B]">
                                     <div className="flex items-center gap-1">
                                       <Clock className="h-3 w-3" />

@@ -29,7 +29,7 @@ import { canonicaliseCategory, canonicaliseTitle, deriveFrequencyLabel } from "@
 
 type Asset = { 
   id: string; 
-  name: string; 
+  title: string; 
   category: string; 
   description?: string | null; 
   frequency_months?: number | null; 
@@ -117,7 +117,7 @@ export default function SetupComplianceModalV2({
 
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
-    return master.filter(a => !t || a.name.toLowerCase().includes(t) || a.category.toLowerCase().includes(t));
+    return master.filter(a => !t || a.title.toLowerCase().includes(t) || a.category.toLowerCase().includes(t));
   }, [master, q]);
 
   const grouped = useMemo(() => {
@@ -154,7 +154,7 @@ export default function SetupComplianceModalV2({
     
     selectedAssets.forEach(asset => {
       const normCategory = canonicaliseCategory(asset.category).toLowerCase();
-      const normTitle = canonicaliseTitle(asset.name).toLowerCase();
+      const normTitle = canonicaliseTitle(asset.title).toLowerCase();
       const key = `${normCategory}|${normTitle}`;
       
       if (!normalisedGroups[key]) {
@@ -168,7 +168,7 @@ export default function SetupComplianceModalV2({
       if (assets.length > 1) {
         const [category, title] = key.split('|');
         const canonicalCategory = canonicaliseCategory(assets[0].category);
-        const canonicalTitle = canonicaliseTitle(assets[0].name);
+        const canonicalTitle = canonicaliseTitle(assets[0].title);
         
         assets.forEach(asset => {
           warnings[asset.id] = `This asset will be merged with similar items in "${canonicalCategory}" (e.g., "${canonicalTitle}")`;
@@ -352,7 +352,7 @@ export default function SetupComplianceModalV2({
                             />
                             <div className="flex-1">
                               <div className="flex items-center gap-3 mb-2">
-                                <h4 className="text-sm font-medium text-gray-900">{a.name}</h4>
+                                <h4 className="text-sm font-medium text-gray-900">{a.title}</h4>
                                 {a.frequency_months && (
                                   <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
                                     <Clock className="h-3 w-3" />

@@ -151,7 +151,7 @@ export default function BuildingTodoList({
         .select(`
           *,
           building:buildings(name),
-          compliance_assets(name, category, description)
+          compliance_assets(title, category, description)
         `)
         .not('next_due_date', 'is', null)
         .lte('next_due_date', thirtyDaysFromNow.toISOString().split('T')[0])
@@ -597,7 +597,7 @@ export default function BuildingTodoList({
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2">
                               <h3 className="font-medium text-gray-900">
-                                {item.compliance_assets.name}
+                                {item.compliance_assets.title}
                               </h3>
                               <BlocIQBadge className={`text-xs ${getComplianceStatusColor(item.status)}`}>
                                 {item.status.replace('_', ' ')}

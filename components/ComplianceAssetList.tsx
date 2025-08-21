@@ -35,7 +35,7 @@ export default function ComplianceAssetList({ buildingId, existingAssets }: Comp
         ? asset.compliance_assets[0] 
         : asset.compliance_assets
       if (complianceAsset) {
-        assetMap.set(complianceAsset.name, asset)
+        assetMap.set(complianceAsset.title, asset)
       }
     })
     setSelectedAssets(assetMap)

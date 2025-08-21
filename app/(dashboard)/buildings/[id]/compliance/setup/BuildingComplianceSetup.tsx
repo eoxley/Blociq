@@ -285,7 +285,7 @@ export default function BuildingComplianceSetup({ buildingId, buildingName }: Bu
                     >
                       <div className="flex items-start justify-between mb-3">
                         <h3 className="font-serif font-semibold text-[#333333] leading-tight">
-                          {asset.name}
+                          {asset.title}
                         </h3>
                         {selected.includes(asset.id) && (
                           <CheckCircle className="h-5 w-5 text-[#008C8F] flex-shrink-0" />
