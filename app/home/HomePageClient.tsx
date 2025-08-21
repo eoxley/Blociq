@@ -1548,7 +1548,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             <p className="text-gray-600">Manage your property events and building tasks</p>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[600px]">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[600px] mb-8">
             {/* Property Events Widget */}
             <div className="h-full">
               <div className="bg-white rounded-2xl shadow-lg border-0 overflow-hidden h-full flex flex-col">
@@ -1643,9 +1643,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                               required
                               className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
                             >
-                              <option value="">Select building</option>
+                              <option value="">Select a building</option>
                               {buildings.map((building) => (
-                                <option key={building.id} value={building.id}>
+                                <option key={building.id} value={building.name}>
                                   {building.name}
                                 </option>
                               ))}
@@ -1655,33 +1655,23 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Start Date & Time</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
                             <input
-                              type="datetime-local"
-                              name="start_time"
+                              type="date"
+                              name="date"
                               required
                               className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">End Date & Time</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
                             <input
-                              type="datetime-local"
-                              name="end_time"
+                              type="time"
+                              name="time"
                               required
                               className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
                             />
                           </div>
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                          <input
-                            type="text"
-                            name="location"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
-                            placeholder="Enter event location"
-                          />
                         </div>
                         
                         <div>
@@ -1710,7 +1700,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                           <button
                             type="button"
                             onClick={() => setShowAddEventForm(false)}
-                            className="px-6 py-2 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-all duration-200"
+                            className="px-6 py-2 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
                           >
                             Cancel
                           </button>
@@ -1928,8 +1918,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             </div>
           </div>
 
-          {/* Upcoming Events Widget - Added below the main grid */}
-          <div className="mt-8">
+          {/* Upcoming Events Widget - Added below the main grid with proper spacing */}
+          <div className="relative z-10 mt-12 pt-8 border-t border-gray-100">
             <UpcomingEventsWidget />
           </div>
         </div>
