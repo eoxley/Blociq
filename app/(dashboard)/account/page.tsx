@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import { generateEmailSignature, saveUserSignature } from '@/lib/signature';
 
 interface UserProfile {
   id: string;
@@ -18,6 +19,8 @@ interface UserProfile {
   first_name: string | null;
   last_name: string | null;
   job_title: string | null;
+  company_name: string | null;
+  phone_number: string | null;
   signature_text: string | null;
   signature_url: string | null;
   email_signature: string | null;
@@ -66,6 +69,8 @@ export default function AccountPage() {
             first_name: null,
             last_name: null,
             job_title: null,
+            company_name: null,
+            phone_number: null,
             signature_text: null,
             signature_url: null,
             email_signature: null
@@ -75,13 +80,20 @@ export default function AccountPage() {
 
         if (createError) throw createError;
         setProfile(newProfile);
+        
+        // Save signature data to localStorage for use in emails
+        saveUserSignature(newProfile);
       } else {
         setProfile(profileData);
+        
+        // Save signature data to localStorage for use in emails
+        saveUserSignature(profileData);
       }
 
       // Set signature preview if exists
-      if (profileData?.signature_text) {
-        setSignaturePreview(profileData.signature_text);
+      if (profileData) {
+        const completeSignature = generateEmailSignature(profileData);
+        setSignaturePreview(completeSignature);
       }
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -103,6 +115,8 @@ export default function AccountPage() {
           first_name: profile.first_name,
           last_name: profile.last_name,
           job_title: profile.job_title,
+          company_name: profile.company_name,
+          phone_number: profile.phone_number,
           signature_text: profile.signature_text,
           signature_url: profile.signature_url,
           email_signature: profile.email_signature
@@ -110,6 +124,14 @@ export default function AccountPage() {
         .eq('id', profile.id);
 
       if (error) throw error;
+      
+      // Save signature data to localStorage for use in emails
+      saveUserSignature(profile);
+      
+      // Update signature preview
+      const completeSignature = generateEmailSignature(profile);
+      setSignaturePreview(completeSignature);
+      
       toast.success('Profile updated successfully!');
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -190,6 +212,14 @@ export default function AccountPage() {
     toast.success('Signature removed');
   };
 
+  // Update signature preview when profile changes
+  useEffect(() => {
+    if (profile) {
+      const completeSignature = generateEmailSignature(profile);
+      setSignaturePreview(completeSignature);
+    }
+  }, [profile]);
+
   if (loading) {
     return (
       <div className="p-8">
@@ -260,6 +290,26 @@ export default function AccountPage() {
               </div>
               
               <div className="space-y-2">
+                <Label htmlFor="companyName">Company Name</Label>
+                <Input
+                  id="companyName"
+                  value={profile?.company_name || ''}
+                  onChange={(e) => setProfile(prev => prev ? { ...prev, company_name: e.target.value } : null)}
+                  placeholder="Enter your company name"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="phoneNumber">Phone Number</Label>
+                <Input
+                  id="phoneNumber"
+                  value={profile?.phone_number || ''}
+                  onChange={(e) => setProfile(prev => prev ? { ...prev, phone_number: e.target.value } : null)}
+                  placeholder="Enter your phone number"
+                />
+              </div>
+              
+              <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
@@ -294,16 +344,18 @@ export default function AccountPage() {
                       value={profile?.signature_text || ''}
                       onChange={(e) => {
                         setProfile(prev => prev ? { ...prev, signature_text: e.target.value } : null);
-                        setSignaturePreview(e.target.value);
                       }}
-                      placeholder="Enter your signature"
+                      placeholder="Enter your signature text (optional)"
                       className="signature-font"
                     />
+                    <p className="text-xs text-gray-500">
+                      This text will appear above your contact information in emails
+                    </p>
                   </div>
                   {signaturePreview && (
                     <div className="p-4 bg-gray-50 rounded-lg">
-                      <Label className="text-sm text-gray-600">Preview:</Label>
-                      <div className="signature-preview mt-1">
+                      <Label className="text-sm text-gray-600">Complete Signature Preview:</Label>
+                      <div className="signature-preview mt-2 p-3 bg-white rounded border font-mono text-sm whitespace-pre-line">
                         {signaturePreview}
                       </div>
                     </div>
@@ -401,8 +453,9 @@ export default function AccountPage() {
 
 ${profile?.first_name || '[Your Name]'} ${profile?.last_name || ''}
 ${profile?.job_title || '[Your Job Title]'}
-[Company Name]
-[Phone Number]
+${profile?.company_name || '[Company Name]'}
+${profile?.phone_number ? `Phone: ${profile.phone_number}` : '[Phone Number]'}
+${profile?.email || '[Email]'}
 [Website]`}
                   rows={8}
                   className="font-mono text-sm"
@@ -411,6 +464,7 @@ ${profile?.job_title || '[Your Job Title]'}
                   <p>You can use basic HTML tags for formatting:</p>
                   <p>• <code>&lt;b&gt;bold&lt;/b&gt;</code> • <code>&lt;i&gt;italic&lt;/i&gt;</code> • <code>&lt;a href="..."&gt;link&lt;/a&gt;</code></p>
                   <p>• Your signature image will be automatically included if uploaded</p>
+                  <p>• This template will be used for custom email signatures</p>
                 </div>
               </div>
             </div>
