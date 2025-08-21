@@ -19,6 +19,17 @@ export const DraggableEmailRow = memo(function DraggableEmailRow({
 }: DraggableEmailRowProps) {
   
   const handleDragStart = (e: React.DragEvent) => {
+    // Set proper data transfer for drag-and-drop to work
+    e.dataTransfer.setData('text/plain', messageId)
+    e.dataTransfer.setData('application/json', JSON.stringify({
+      messageId,
+      sourceFolderId
+    }))
+    
+    // Set drag image and effect
+    e.dataTransfer.effectAllowed = 'move'
+    
+    // Call the parent handler
     onDragStart(e, messageId, sourceFolderId)
   }
 
@@ -27,7 +38,8 @@ export const DraggableEmailRow = memo(function DraggableEmailRow({
       draggable
       onDragStart={handleDragStart}
       className={cn(
-        'cursor-grab active:cursor-grabbing',
+        'cursor-grab active:cursor-grabbing transition-all duration-200',
+        'hover:bg-gray-50',
         className
       )}
     >
