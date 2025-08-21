@@ -65,6 +65,19 @@
   line-height: 1.4;
 }
 
+/* Modal layering fixes */
+.major-works-modal {
+  position: fixed !important;
+  z-index: 9999 !important;
+  isolation: isolate;
+}
+
+.major-works-modal-content {
+  position: relative !important;
+  z-index: 10000 !important;
+  isolation: isolate;
+}
+
 .signature-preview {
   font-family: 'Bradley Hand ITC', 'Bradley Hand', 'Brush Script MT', cursive, serif;
   font-size: 20px;
