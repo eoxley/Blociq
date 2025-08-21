@@ -144,7 +144,7 @@ export default function ComplianceClient({ complianceAssets: initialAssets = [] 
 
   const filteredAssets = useMemo(() => {
     return assets.filter(asset => 
-      (asset.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+              (asset.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
       (asset.description?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
       (asset.category?.toLowerCase() || '').includes(searchTerm.toLowerCase())
     )
@@ -290,7 +290,7 @@ export default function ComplianceClient({ complianceAssets: initialAssets = [] 
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-3">
                             {getPriorityIndicator(asset)}
-                            <h3 className="text-lg font-semibold text-gray-900">{asset.name}</h3>
+                            <h3 className="text-lg font-semibold text-gray-900">{asset.title}</h3>
                             {getRequirementBadge(asset.required_if)}
                             {getStatusBadge(status)}
                           </div>
@@ -369,7 +369,7 @@ export default function ComplianceClient({ complianceAssets: initialAssets = [] 
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
-                            <h3 className="font-semibold text-gray-900">{asset.name}</h3>
+                            <h3 className="font-semibold text-gray-900">{asset.title}</h3>
                             {getRequirementBadge(asset.required_if)}
                             {getStatusBadge(status)}
                           </div>

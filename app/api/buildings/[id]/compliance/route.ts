@@ -26,7 +26,7 @@ export async function GET(
       .from("building_compliance_assets")
       .select(`
         id as bca_id,
-        compliance_asset_id as asset_id,
+        compliance_asset_id,
         next_due_date,
         status,
         notes,
@@ -46,7 +46,7 @@ export async function GET(
     }
 
     // Get the compliance assets details
-    const assetIds = bcaData.map(row => row.asset_id);
+    const assetIds = bcaData.map(row => row.compliance_asset_id);
     const { data: assetData, error: assetError } = await supabase
       .from("compliance_assets")
       .select(`
@@ -54,7 +54,7 @@ export async function GET(
         title,
         category,
         description,
-        frequency
+        frequency_months
       `)
       .in("id", assetIds)
       .order("category", { ascending: true })
@@ -70,14 +70,13 @@ export async function GET(
 
     // Transform the data to combine both datasets
     const transformedData = bcaData.map(row => {
-      const asset = assetMap.get(row.asset_id);
+      const asset = assetMap.get(row.compliance_asset_id);
       return {
         bca_id: row.bca_id,
-        asset_id: row.asset_id,
+        asset_id: row.compliance_asset_id,
         asset_name: asset?.title || "Unknown",
         category: asset?.category || "Unknown",
-        frequency: asset?.frequency || null,
-        frequency_months: row.frequency_months,
+        frequency_months: asset?.frequency_months || row.frequency_months,
         last_renewed_date: row.last_renewed_date,
         next_due_date: row.next_due_date,
         status: row.status || "pending",

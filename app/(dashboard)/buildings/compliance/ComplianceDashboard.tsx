@@ -144,7 +144,7 @@ export default function ComplianceDashboard({ assets }: ComplianceDashboardProps
                 return (
                   <div key={asset.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
-                      <p className="font-medium text-sm">{asset.name}</p>
+                      <p className="font-medium text-sm">{asset.title}</p>
                       <p className="text-xs text-gray-500">
                         {isOverdue ? 'Overdue' : `Due in ${daysUntilDue} days`}
                       </p>

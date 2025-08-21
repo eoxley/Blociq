@@ -271,7 +271,7 @@ export default function BuildingComplianceView({ buildingId, buildingName }: Bui
 
   const filteredAssets = assets.filter(asset => {
     const matchesStatus = filterStatus === 'all' || asset.status === filterStatus
-    const matchesSearch = (asset.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+            const matchesSearch = (asset.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                          (asset.description?.toLowerCase() || '').includes(searchTerm.toLowerCase())
     return matchesSearch && matchesStatus
   })
@@ -470,7 +470,7 @@ export default function BuildingComplianceView({ buildingId, buildingName }: Bui
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           {getStatusIcon(asset.status)}
-                          <h3 className="text-lg font-medium text-gray-900">{asset.name}</h3>
+                          <h3 className="text-lg font-medium text-gray-900">{asset.title}</h3>
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(asset.status)}`}>
                             {asset.status.replace('_', ' ')}
                           </span>

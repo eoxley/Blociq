@@ -75,7 +75,7 @@ export default function ComplianceTrackerClient({ building, complianceAssets }: 
   const filteredAssets = complianceAssets.filter(asset => {
     const matchesCategory = selectedCategory === 'all' || asset.compliance_assets.category === selectedCategory
     const matchesSearch = !searchTerm || 
-      asset.compliance_assets.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              asset.compliance_assets.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       asset.compliance_assets.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       asset.notes?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === 'all' || asset.status === statusFilter
@@ -448,7 +448,7 @@ export default function ComplianceTrackerClient({ building, complianceAssets }: 
                     <div className="flex items-center gap-3">
                       <div className="w-3 h-3 rounded-full bg-gray-300"></div>
                       <h3 className="text-lg font-semibold text-gray-900">
-                        {asset.compliance_assets.name}
+                        {asset.compliance_assets.title}
                       </h3>
                       <BlocIQBadge className={getStatusColor(asset.status)}>
                         {asset.status.replace('_', ' ')}

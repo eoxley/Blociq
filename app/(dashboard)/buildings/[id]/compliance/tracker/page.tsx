@@ -298,7 +298,7 @@ export default async function ComplianceTrackerPage({ params }: { params: Promis
                     <Card key={asset.id} className="border-0 shadow-soft hover:shadow-md transition-shadow">
                       <CardHeader className="pb-3">
                         <div className="flex items-start justify-between">
-                          <CardTitle className="text-base text-dark">{complianceAsset.name}</CardTitle>
+                          <CardTitle className="text-base text-dark">{complianceAsset.title}</CardTitle>
                           <Badge variant={getStatusBadgeVariant(asset.status)}>
                             {asset.status || 'Not Started'}
                           </Badge>

@@ -257,7 +257,7 @@ export default function ComplianceSetupClient({
   const filteredGroupedAssets = Object.entries(groupedAssets).reduce((acc, [category, assets]) => {
     const filteredAssets = assets.filter(asset => {
       const matchesSearch = !searchTerm || 
-        asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        asset.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         asset.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         asset.category.toLowerCase().includes(searchTerm.toLowerCase())
       
@@ -474,13 +474,13 @@ export default function ComplianceSetupClient({
                           
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
-                              <h4 className="font-semibold text-gray-900">{asset.name}</h4>
+                              <h4 className="font-semibold text-gray-900">{asset.title}</h4>
                               {asset.is_required && (
                                 <BlocIQBadge variant="destructive" className="text-xs">
                                   Required
                                 </BlocIQBadge>
                               )}
-                              {isAIAsset(asset.name) && (
+                              {isAIAsset(asset.title) && (
                                 <BlocIQBadge variant="secondary" className="text-xs">
                                   <Brain className="h-3 w-3 mr-1" />
                                   AI Enhanced

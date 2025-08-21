@@ -126,7 +126,7 @@ export default function BuildingComplianceClient({ complianceData }: BuildingCom
 
   // Filter assets based on search and filter
   const filteredAssets = complianceData.assets.filter(asset => {
-    const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            const matchesSearch = asset.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (asset.description && asset.description.toLowerCase().includes(searchTerm.toLowerCase()))
     
     const status = complianceData.statusMap[asset.id] || 'Missing'
@@ -381,7 +381,7 @@ export default function BuildingComplianceClient({ complianceData }: BuildingCom
                           <div className="flex items-start justify-between mb-4">
                             <div className="flex-1">
                               <div className="flex items-center gap-3 mb-2">
-                                <h3 className="text-lg font-semibold text-[#333333]">{asset.name}</h3>
+                                <h3 className="text-lg font-semibold text-[#333333]">{asset.title}</h3>
                                 {getStatusBadge(status)}
                               </div>
                               
