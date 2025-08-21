@@ -255,8 +255,8 @@ export default function UnitsTable({ buildingId }: { buildingId: string }) {
         />
       </div>
 
-      {/* Units Table with Reduced Height and Scroll */}
-      <div className="overflow-auto rounded-xl border border-neutral-200 max-h-64">
+      {/* Units Table with Scrollable Height */}
+      <div className="overflow-y-auto rounded-xl border border-neutral-200 max-h-96 custom-scrollbar">
         <table className="min-w-full text-sm">
           <thead className="bg-neutral-50 text-neutral-600 sticky top-0">
             <tr>
