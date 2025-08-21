@@ -62,6 +62,66 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
   const editorRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Handle keyboard events within the modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent keyboard events from bubbling up to the main page
+      e.stopPropagation()
+      
+      // Handle modal-specific keyboard shortcuts
+      switch (e.key) {
+        case 'Escape':
+          e.preventDefault()
+          onClose()
+          break
+        case 'Tab':
+          // Allow tab navigation within the modal
+          break
+        case 'Enter':
+        case 'Backspace':
+        case 'Delete':
+        case 'ArrowUp':
+        case 'ArrowDown':
+        case 'ArrowLeft':
+        case 'ArrowRight':
+        case 'Home':
+        case 'End':
+        case 'PageUp':
+        case 'PageDown':
+          // Allow these navigation and editing keys
+          break
+        default:
+          // For other keys, only prevent if they're not typing keys
+          if (e.ctrlKey || e.altKey || e.metaKey) {
+            // Allow keyboard shortcuts
+            break
+          }
+          // Allow typing keys (letters, numbers, symbols, space)
+          if (e.key.length === 1 || e.key === ' ') {
+            break
+          }
+          // Prevent other keys from reaching the main page
+          e.preventDefault()
+          break
+      }
+    }
+
+    // Only add the event listener when the modal is open
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown, true) // Use capture phase
+      
+      // Focus the first input when modal opens
+      const firstInput = document.querySelector('[data-modal-input]') as HTMLElement
+      if (firstInput) {
+        firstInput.focus()
+      }
+      
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown, true)
+      }
+    }
+  }, [isOpen, onClose])
+
   // Load user signature when modal opens
   useEffect(() => {
     const loadSignature = async () => {
@@ -814,10 +874,14 @@ export default function ReplyModal({ isOpen, onClose, message, replyType }: Repl
             <div
               ref={editorRef}
               contentEditable
+              data-modal-input
               className="p-4 min-h-[250px] focus:outline-none prose prose-sm max-w-none text-gray-900 leading-relaxed"
               dangerouslySetInnerHTML={{ __html: htmlBody }}
               onInput={(e) => setHtmlBody(e.currentTarget.innerHTML)}
               onKeyDown={(e) => {
+                // Prevent keyboard events from bubbling up to the main page
+                e.stopPropagation()
+                
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
                   document.execCommand('insertParagraph', false, undefined)

@@ -183,11 +183,30 @@ export default function InboxV2() {
     }
   }
 
+  const handleReply = (type: 'reply' | 'replyAll') => {
+    setReplyModal({ isOpen: true, type })
+  }
+
+  const handleCloseReplyModal = () => {
+    setReplyModal({ isOpen: false, type: 'reply' })
+  }
+
   // Global keyboard shortcuts for inbox
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       // Only handle shortcuts when not in input fields
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLDivElement && e.target.contentEditable === 'true') {
+        return
+      }
+
+      // If reply modal is open, only handle Escape key, disable all other shortcuts
+      if (replyModal.isOpen) {
+        if (e.key === 'Escape') {
+          e.preventDefault()
+          handleCloseReplyModal()
+        }
+        // Prevent all other keyboard shortcuts when modal is open
+        e.preventDefault()
         return
       }
 
@@ -205,10 +224,7 @@ export default function InboxV2() {
           }
           break
         case 'Escape':
-          if (replyModal.isOpen) {
-            e.preventDefault()
-            handleCloseReplyModal()
-          } else if (newEmailModalOpen) {
+          if (newEmailModalOpen) {
             e.preventDefault()
             setNewEmailModalOpen(false)
           }
@@ -218,7 +234,7 @@ export default function InboxV2() {
 
     document.addEventListener('keydown', handleGlobalKeyDown)
     return () => document.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [selectedMessage, selectedMessages, replyModal.isOpen, newEmailModalOpen, handleDeleteMultiple, handleDeleteMessage])
+  }, [selectedMessage, selectedMessages, replyModal.isOpen, newEmailModalOpen, handleDeleteMultiple, handleDeleteMessage, handleCloseReplyModal])
 
   const moveMessage = async (messageId: string, destinationFolderId: string) => {
     setIsMovingMessage(true)
@@ -306,14 +322,6 @@ export default function InboxV2() {
     setSelectedFolderId,
     setSelectedMessage,
     moveMessage
-  }
-
-  const handleReply = (type: 'reply' | 'replyAll') => {
-    setReplyModal({ isOpen: true, type })
-  }
-
-  const handleCloseReplyModal = () => {
-    setReplyModal({ isOpen: false, type: 'reply' })
   }
 
   const handleMessageSelect = (messageId: string | null) => {
