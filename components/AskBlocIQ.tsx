@@ -159,18 +159,46 @@ export default function AskBlocIQ({
     inputRef.current?.focus();
   }, []);
 
-  // Auto-resize textarea
+  // Auto-resize textarea with improved functionality
   useEffect(() => {
     const textarea = inputRef.current;
     if (textarea) {
+      // Reset height to auto to get the correct scrollHeight
       textarea.style.height = 'auto';
+      
+      // Calculate new height with better constraints
       const scrollHeight = textarea.scrollHeight;
-      const minHeight = 40;
-      const maxHeight = 150;
+      const minHeight = 56; // Increased from 40px for better visual balance
+      const maxHeight = 200; // Increased from 150px for more typing space
+      
+      // Smooth height transition
       const newHeight = Math.min(Math.max(scrollHeight, minHeight), maxHeight);
+      
+      // Apply height with smooth transition
       textarea.style.height = `${newHeight}px`;
+      
+      // Show scrollbar only when needed
+      if (scrollHeight > maxHeight) {
+        textarea.style.overflowY = 'auto';
+      } else {
+        textarea.style.overflowY = 'hidden';
+      }
     }
   }, [question]);
+
+  // Enhanced auto-resize on input change
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setQuestion(e.target.value);
+    
+    // Immediate resize for better responsiveness
+    const textarea = e.target;
+    textarea.style.height = 'auto';
+    const scrollHeight = textarea.scrollHeight;
+    const minHeight = 56;
+    const maxHeight = 200;
+    const newHeight = Math.min(Math.max(scrollHeight, minHeight), maxHeight);
+    textarea.style.height = `${newHeight}px`;
+  };
 
   // Scroll to bottom when new messages are added
   useEffect(() => {
@@ -274,7 +302,7 @@ export default function AskBlocIQ({
     )?.content || ''
     
     const buildingMatch = contextMessage.match(/📌 Building: (.+)/)
-    const buildingName = buildingMatch ? buildingMatch[1] : buildingName || 'General'
+    const extractedBuildingName = buildingMatch ? buildingMatch[1] : buildingName || 'General'
     
     const leaseholderMatch = contextMessage.match(/👤 Leaseholder: (.+)/)
     const leaseholderName = leaseholderMatch ? leaseholderMatch[1] : null
@@ -285,7 +313,7 @@ export default function AskBlocIQ({
     setCommunicationModalData({
       aiContent,
       templateType: 'letter',
-      buildingName,
+      buildingName: extractedBuildingName,
       leaseholderName,
       unitNumber
     })
@@ -299,7 +327,7 @@ export default function AskBlocIQ({
     )?.content || ''
     
     const buildingMatch = contextMessage.match(/📌 Building: (.+)/)
-    const buildingName = buildingMatch ? buildingMatch[1] : buildingName || 'General'
+    const extractedBuildingName = buildingMatch ? buildingMatch[1] : buildingName || 'General'
     
     const leaseholderMatch = contextMessage.match(/👤 Leaseholder: (.+)/)
     const leaseholderName = leaseholderMatch ? leaseholderMatch[1] : null
@@ -310,7 +338,7 @@ export default function AskBlocIQ({
     setCommunicationModalData({
       aiContent,
       templateType: 'email',
-      buildingName,
+      buildingName: extractedBuildingName,
       leaseholderName,
       unitNumber
     })
@@ -324,7 +352,7 @@ export default function AskBlocIQ({
     )?.content || ''
     
     const buildingMatch = contextMessage.match(/📌 Building: (.+)/)
-    const buildingName = buildingMatch ? buildingMatch[1] : buildingName || 'General'
+    const extractedBuildingName = buildingMatch ? buildingMatch[1] : buildingName || 'General'
     
     const leaseholderMatch = contextMessage.match(/👤 Leaseholder: (.+)/)
     const leaseholderName = leaseholderMatch ? leaseholderMatch[1] : null
@@ -335,7 +363,7 @@ export default function AskBlocIQ({
     setCommunicationModalData({
       aiContent,
       templateType: 'notice',
-      buildingName,
+      buildingName: extractedBuildingName,
       leaseholderName,
       unitNumber
     })
@@ -677,63 +705,67 @@ export default function AskBlocIQ({
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-gray-200 p-4 bg-gray-50">
+      <div className="border-t border-gray-200 bg-gradient-to-b from-gray-50 to-white">
+        <div className="p-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Main Input */}
+            <div className="relative group">
+              <textarea
+                ref={inputRef}
+                value={question}
+                onChange={handleInputChange}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmit(e as any);
+                  }
+                }}
+                placeholder={placeholder || "Ask BlocIQ anything about your building, compliance, or upload documents..."}
+                className="w-full px-5 py-4 pr-24 bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-3 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 text-gray-900 placeholder-gray-400 resize-none overflow-hidden shadow-sm hover:border-gray-300 group-hover:shadow-md"
+                rows={1}
+                disabled={loading}
+                style={{ minHeight: '56px', maxHeight: '200px' }}
+              />
+              
+              {/* Send Button */}
+              <button
+                type="submit"
+                disabled={loading || (!question.trim() && uploadedFiles.length === 0)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 p-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 text-white rounded-xl transition-all duration-200 disabled:cursor-not-allowed shadow-sm hover:shadow-md active:scale-95"
+                title="Send with BlocIQ"
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </button>
+            </div>
 
-
-        <form onSubmit={handleSubmit} className="space-y-3">
-
-
-          {/* Main Input */}
-          <div className="relative">
-            <textarea
-              ref={inputRef}
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmit(e as any);
-                }
-              }}
-              placeholder={placeholder}
-              className="w-full px-4 py-3 pr-20 bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-500 resize-none overflow-y-auto"
-              rows={1}
-              disabled={loading}
-              style={{ minHeight: '40px', maxHeight: '150px' }}
-            />
-            
-            {/* Send Button */}
-            <button
-              type="submit"
-              disabled={loading || (!question.trim() && uploadedFiles.length === 0)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 p-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 text-white rounded-xl transition-all duration-200 disabled:cursor-not-allowed shadow-sm"
-              title="Send with BlocIQ"
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </button>
-          </div>
-
-          {/* Simple Upload Icon */}
-          <div className="mt-4 flex justify-center">
-            <Upload 
-              className="text-white w-6 h-6 cursor-pointer hover:opacity-80 transition-opacity" 
-              title="Upload document to Ask BlocIQ"
-              onClick={() => fileInputRef.current?.click()}
-            />
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept=".pdf,.docx,.txt"
-              onChange={(e) => handleFileSelect(e.target.files)}
-              className="hidden"
-            />
-          </div>
-        </form>
+            {/* Enhanced Upload Area */}
+            <div className="flex items-center justify-center">
+              <div className="relative group">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-blue-600 transition-all duration-200 rounded-xl hover:bg-blue-50 border border-gray-200 hover:border-blue-200"
+                  title="Upload document to Ask BlocIQ"
+                >
+                  <Upload className="w-5 h-5" />
+                  <span className="text-sm font-medium">Upload Document</span>
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept=".pdf,.docx,.txt"
+                  onChange={(e) => handleFileSelect(e.target.files)}
+                  className="hidden"
+                />
+              </div>
+            </div>
+          </form>
+        </div>
       </div>
 
       {/* Document Search Results */}
