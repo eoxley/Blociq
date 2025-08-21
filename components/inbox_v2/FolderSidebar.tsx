@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useFolders } from '@/hooks/inbox_v2'
+import { useDrafts } from '@/hooks/useDrafts'
 import { RefreshCw, Plus, X, Inbox, Send, FileText, Archive, Trash2, Folder } from 'lucide-react'
 import { DroppableFolderItem } from './DroppableFolderItem'
 
@@ -34,8 +35,12 @@ const getFolderIcon = (wellKnownName: string | null) => {
 
 export default function FolderSidebar({ selectedFolderId, onFolderSelect, onDrop, onDragOver }: FolderSidebarProps) {
   const { folders, isFallback, isLoading, refresh, addManualFolder } = useFolders()
+  const { drafts } = useDrafts()
   const [isAddingFolder, setIsAddingFolder] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
+
+  // Get drafts count for display
+  const draftsCount = drafts.length
 
   // Debug logging
   useEffect(() => {
@@ -94,18 +99,24 @@ export default function FolderSidebar({ selectedFolderId, onFolderSelect, onDrop
       
       {/* Folder List */}
       <div className="space-y-1">
-        {folders.map((folder) => (
-          <DroppableFolderItem
-            key={folder.id}
-            id={folder.id}
-            displayName={folder.displayName}
-            isSelected={selectedFolderId === folder.id}
-            onSelect={onFolderSelect}
-            icon={getFolderIcon(folder.wellKnownName)}
-            onDrop={onDrop}
-            onDragOver={onDragOver}
-          />
-        ))}
+        {folders.map((folder) => {
+          // Check if this is the drafts folder to show count
+          const isDraftsFolder = folder.wellKnownName === 'drafts' || folder.displayName.toLowerCase() === 'drafts'
+          
+          return (
+            <DroppableFolderItem
+              key={folder.id}
+              id={folder.id}
+              displayName={folder.displayName}
+              isSelected={selectedFolderId === folder.id}
+              onSelect={onFolderSelect}
+              icon={getFolderIcon(folder.wellKnownName)}
+              onDrop={onDrop}
+              onDragOver={onDragOver}
+              messageCount={isDraftsFolder ? draftsCount : undefined}
+            />
+          )
+        })}
       </div>
 
       {/* Add Folder Button */}

@@ -220,16 +220,38 @@ Please create a resolution email that:
 
     const draft = completion.choices[0].message.content;
 
-    // Save the draft to database
+    // Save the draft to database using our drafts API
     try {
-      await supabase
-        .from('email_drafts')
-        .insert({
-          email_id: emailId,
-          draft_text: draft,
+      const draftData = {
+        type: 'email',
+        subject: `${draftType} - ${originalEmail.subject}`,
+        recipient: originalEmail.from_email,
+        building_id: null, // Will be extracted from context if available
+        content: draft,
+        context: JSON.stringify({
+          original_email_id: emailId,
+          original_subject: originalEmail.subject,
+          original_from: originalEmail.from_email,
           draft_type: draftType,
-          created_at: new Date().toISOString()
-        });
+          ai_generated: true,
+          timestamp: new Date().toISOString()
+        })
+      };
+
+      // Save to our drafts API
+      const saveResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/drafts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(draftData),
+      });
+
+      if (!saveResponse.ok) {
+        console.error('Failed to save draft to drafts API:', saveResponse.status);
+      } else {
+        console.log('Successfully saved draft to drafts API');
+      }
     } catch (draftError) {
       console.error('Failed to save draft:', draftError);
     }

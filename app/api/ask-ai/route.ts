@@ -76,6 +76,7 @@ export async function POST(req: NextRequest) {
     const { default: OpenAI } = await import('openai');
     const { insertAiLog } = await import('../../../lib/supabase/ai_logs');
     const { MAX_CHARS_PER_DOC, MAX_TOTAL_DOC_CHARS, truncate, isSummariseLike } = await import("../../../lib/ask/text");
+    const { searchBuildingAndUnits } = await import('../../../lib/supabase/buildingSearch');
 
     const supabase = createRouteHandlerClient({ cookies });
     
@@ -259,14 +260,14 @@ Notes & Instructions: ${building.notes || 'No notes added yet'}
                 next_due_date,
                 last_renewed_date,
                 notes,
-                compliance_assets (
+                compliance_assets!inner (
                   name,
                   category,
                   description,
                   frequency_months
                 )
               `)
-              .eq('building_id', buildingId)
+              .eq('building_id', building_id)
               .order('next_due_date', { ascending: true });
 
             if (complianceAssets && complianceAssets.length > 0) {
@@ -309,7 +310,7 @@ ${complianceContext}
                  leaseholder_name,
                  unit_number
                `)
-               .eq('building_id', buildingId)
+               .eq('building_id', building_id)
                .order('sent_at', { ascending: false })
                .limit(10);
 
@@ -333,66 +334,118 @@ ${communicationsContext}
       } catch (error) {
         console.warn('Could not fetch building data:', error);
       }
-
-      // 📋 Building Todos
+    } else {
+      // No specific building ID provided, try to search for buildings mentioned in the prompt
       try {
-        const { data: todos } = await supabase
-          .from('building_todos')
-          .select('title, description, status, priority, due_date')
-          .eq('building_id', building_id)
-          .order('due_date', { ascending: true })
-          .limit(10);
-
-        if (todos && todos.length > 0) {
-          const todoContext = todos.map(todo =>
-            `- ${todo.title} (${todo.status}, ${todo.priority} priority, due: ${todo.due_date})`
-          ).join('\n');
-          buildingContext += `Open Tasks:\n${todoContext}\n\n`;
-          contextMetadata.todoCount = todos.length;
+        const searchResults = await searchBuildingAndUnits(prompt);
+        if (searchResults) {
+          let searchContext = 'Building & Unit Search Results:\n';
+          
+          if (searchResults.building) {
+            searchContext += `🏢 Building: ${searchResults.building.name} (${searchResults.building.address})\n`;
+            searchContext += `   Manager: ${searchResults.building.building_manager_name || 'Not specified'}\n`;
+            searchContext += `   Units: ${searchResults.building.unit_count || 'Unknown'}\n`;
+          }
+          
+          if (searchResults.units && searchResults.units.length > 0) {
+            searchContext += `\n🏠 Units Found:\n`;
+            searchResults.units.forEach((unit: any) => {
+              searchContext += `   • Unit ${unit.unit_number}`;
+              if (unit.floor) searchContext += ` (Floor ${unit.floor})`;
+              if (unit.type) searchContext += ` - ${unit.type}`;
+              if (unit.leaseholder) {
+                searchContext += `\n     👤 Leaseholder: ${unit.leaseholder.name}`;
+                if (unit.leaseholder.email) searchContext += `\n     📧 Email: ${unit.leaseholder.email}`;
+                if (unit.leaseholder.phone) searchContext += `\n     📞 Phone: ${unit.leaseholder.phone}`;
+              }
+              searchContext += '\n';
+            });
+          }
+          
+          if (searchResults.leaseholders && searchResults.leaseholders.length > 0) {
+            searchContext += `\n👥 Leaseholder Details:\n`;
+            searchResults.leaseholders.forEach((lh: any) => {
+              searchContext += `   • ${lh.name}\n`;
+              if (lh.email) searchContext += `     📧 Email: ${lh.email}\n`;
+              if (lh.phone) searchContext += `     📞 Phone: ${lh.phone}\n`;
+              if (lh.units && lh.units.length > 0) {
+                searchContext += `     🏠 Units: ${lh.units.map((u: any) => u.unit_number).join(', ')}\n`;
+              }
+              searchContext += '\n';
+            });
+          }
+          
+          buildingContext += searchContext;
+          
+          // Update context metadata
+          if (searchResults.building) {
+            contextMetadata.buildingName = searchResults.building.name;
+            contextMetadata.unitCount = searchResults.units?.length || 0;
+          }
         }
-      } catch (error) {
-        console.warn('Could not fetch building todos:', error);
+      } catch (searchError) {
+        console.warn('Could not perform building search:', searchError);
       }
+    }
 
-      // ⚠️ Compliance Issues
-      try {
-        const { data: compliance } = await supabase
-          .from('compliance_items')
-          .select('item_name, status, due_date, priority')
-          .eq('building_id', building_id)
-          .in('status', ['overdue', 'pending'])
-          .order('due_date', { ascending: true })
-          .limit(10);
+    // 📋 Building Todos
+    try {
+      const { data: todos } = await supabase
+        .from('building_todos')
+        .select('title, description, status, priority, due_date')
+        .eq('building_id', building_id)
+        .order('due_date', { ascending: true })
+        .limit(10);
 
-        if (compliance && compliance.length > 0) {
-          const complianceContext = compliance.map(item =>
-            `- ${item.item_name} (${item.status}, ${item.priority} priority, due: ${item.due_date})`
-          ).join('\n');
-          buildingContext += `Compliance Items:\n${complianceContext}\n\n`;
-          contextMetadata.complianceCount = compliance.length;
-        }
-      } catch (error) {
-        console.warn('Could not fetch compliance data:', error);
+      if (todos && todos.length > 0) {
+        const todoContext = todos.map(todo =>
+          `- ${todo.title} (${todo.status}, ${todo.priority} priority, due: ${todo.due_date})`
+        ).join('\n');
+        buildingContext += `Open Tasks:\n${todoContext}\n\n`;
+        contextMetadata.todoCount = todos.length;
       }
+    } catch (error) {
+      console.warn('Could not fetch building todos:', error);
+    }
 
-      // 👥 Leaseholders
-      try {
-        const { data: leaseholders } = await supabase
-          .from('leaseholders')
-          .select('id, name, email, unit_number')
-          .eq('building_id', building_id)
-          .limit(10);
+    // ⚠️ Compliance Issues
+    try {
+      const { data: compliance } = await supabase
+        .from('compliance_items')
+        .select('item_name, status, due_date, priority')
+        .eq('building_id', building_id)
+        .in('status', ['overdue', 'pending'])
+        .order('due_date', { ascending: true })
+        .limit(10);
 
-        if (leaseholders && leaseholders.length > 0) {
-          const leaseholderContext = leaseholders.map(leaseholder =>
-            `- ${leaseholder.name} (Unit ${leaseholder.unit_number}, ${leaseholder.email})`
-          ).join('\n');
-          buildingContext += `Leaseholders:\n${leaseholderContext}\n\n`;
-          contextMetadata.leaseholderCount = leaseholders.length;
-        }
-      } catch (error) {
-        console.warn('Could not fetch leaseholder data:', error);
+      if (compliance && compliance.length > 0) {
+        const complianceContext = compliance.map(item =>
+          `- ${item.item_name} (${item.status}, ${item.priority} priority, due: ${item.due_date})`
+        ).join('\n');
+        buildingContext += `Compliance Items:\n${complianceContext}\n\n`;
+        contextMetadata.complianceCount = compliance.length;
       }
+    } catch (error) {
+      console.warn('Could not fetch compliance data:', error);
+    }
+
+    // 👥 Leaseholders
+    try {
+      const { data: leaseholders } = await supabase
+        .from('leaseholders')
+        .select('id, name, email, unit_number')
+        .eq('building_id', building_id)
+        .limit(10);
+
+      if (leaseholders && leaseholders.length > 0) {
+        const leaseholderContext = leaseholders.map(leaseholder =>
+          `- ${leaseholder.name} (Unit ${leaseholder.unit_number}, ${leaseholder.email})`
+        ).join('\n');
+        buildingContext += `Leaseholders:\n${leaseholderContext}\n\n`;
+        contextMetadata.leaseholderCount = leaseholders.length;
+      }
+    } catch (error) {
+      console.warn('Could not fetch leaseholder data:', error);
     }
 
     // 📄 Document Context

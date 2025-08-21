@@ -140,6 +140,47 @@ Return only the reply content, no additional formatting or explanations.`;
       return NextResponse.json({ error: 'Failed to generate draft' }, { status: 500 });
     }
 
+    // Save the draft to our drafts database
+    try {
+      const draftData = {
+        type: 'email',
+        subject: `Re: ${subject}`,
+        recipient: senderName,
+        building_id: null, // Will be extracted from context if available
+        content: generatedDraft,
+        context: JSON.stringify({
+          original_subject: subject,
+          original_from: senderName,
+          building_name: buildingName,
+          building_address: buildingAddress,
+          email_tags: emailTags,
+          conversation_history: conversationHistory,
+          user_request: userRequest,
+          mode: mode || 'reply',
+          ai_generated: true,
+          timestamp: new Date().toISOString()
+        })
+      };
+
+      // Save to our drafts API
+      const saveResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/drafts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(draftData),
+      });
+
+      if (!saveResponse.ok) {
+        console.error('Failed to save draft to drafts API:', saveResponse.status);
+      } else {
+        console.log('Successfully saved draft to drafts API');
+      }
+    } catch (draftError) {
+      console.error('Failed to save draft:', draftError);
+      // Don't fail the entire operation if draft saving fails
+    }
+
     return NextResponse.json({
       success: true,
       draft: generatedDraft,
