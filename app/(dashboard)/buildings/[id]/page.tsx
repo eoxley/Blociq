@@ -32,6 +32,13 @@ interface BuildingSetup {
   client_name: string | null
   client_contact: string | null
   client_email: string | null
+  keys_location: string | null
+  emergency_access: string | null
+  site_staff: string | null
+  site_staff_updated_at: string | null
+  insurance_contact: string | null
+  cleaners: string | null
+  contractors: string | null
 }
 
 interface Unit {
@@ -92,7 +99,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
     // Fetch building setup
     const { data: buildingSetup, error: setupError } = await supabase
       .from('building_setup')
-      .select('*')
+      .select('id, building_id, structure_type, operational_notes, client_type, client_name, client_contact, client_email, keys_location, emergency_access, site_staff, site_staff_updated_at, insurance_contact, cleaners, contractors')
       .eq('building_id', params.id)
       .maybeSingle()
 

@@ -223,7 +223,7 @@ function BuildingsList() {
                 placeholder="Search buildings by name or address..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-2xl focus:ring-3 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 bg-white shadow-lg hover:shadow-xl hover:shadow-blue-500/10"
+                className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-3 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 bg-white shadow-lg hover:shadow-xl hover:shadow-blue-500/10 focus:shadow-2xl focus:shadow-blue-500/20"
               />
             </div>
           </div>
@@ -237,14 +237,14 @@ function BuildingsList() {
                 alert('Building creation feature coming soon!');
               }}
               size="lg"
-              className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white border-0 shadow-xl hover:shadow-2xl hover:shadow-blue-500/30 transition-all duration-300 rounded-2xl transform hover:-translate-y-1"
+              className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white border-0 shadow-2xl hover:shadow-3xl hover:shadow-blue-500/40 transition-all duration-300 rounded-2xl transform hover:-translate-y-1 hover:scale-[1.02] font-bold"
             >
               <Plus className="h-6 w-6 mr-2" />
               Create New Building
               <ArrowRight className="h-5 w-5 ml-2" />
             </BlocIQButton>
             {/* Coming Soon Badge */}
-            <div className="absolute -top-2 -right-2 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg border-2 border-white">
+            <div className="absolute -top-2 -right-2 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-xl border-2 border-white">
               COMING SOON
             </div>
           </div>
@@ -252,10 +252,10 @@ function BuildingsList() {
 
         {/* Search Results Count */}
         {searchTerm && (
-          <div className="mb-8 text-sm text-gray-600 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl px-6 py-3 inline-block border border-blue-100 shadow-sm">
+          <div className="mb-8 text-sm text-gray-600 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl px-6 py-3 inline-block border-2 border-blue-200 shadow-lg">
             <div className="flex items-center gap-2">
-              <Search className="h-4 w-4 text-blue-500" />
-              <span className="font-medium">
+              <Search className="h-4 w-4 text-blue-600" />
+              <span className="font-bold text-blue-800">
                 Showing {filteredBuildings.length} of {combinedBuildings.length} buildings
               </span>
             </div>
@@ -270,12 +270,12 @@ function BuildingsList() {
             {filteredBuildings.map((building) => (
               <div 
                 key={building.id}
-                className="relative bg-white rounded-3xl shadow-xl border border-gray-100 hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-500 transform hover:scale-[1.02] text-center group overflow-hidden"
+                className="relative bg-white rounded-3xl shadow-xl border border-gray-100 hover:shadow-2xl hover:shadow-blue-500/30 transition-all duration-500 transform hover:scale-[1.02] text-center group overflow-hidden"
               >
                 {/* HRB Badge */}
                 {building.is_hrb && (
                   <div 
-                    className="absolute top-4 right-4 bg-gradient-to-br from-red-500 to-orange-500 text-xs font-bold text-white px-3 py-2 rounded-full shadow-xl hover:scale-110 transition-transform duration-200 z-10 border-2 border-white"
+                    className="absolute top-4 right-4 bg-gradient-to-br from-red-600 to-orange-500 text-white text-xs font-bold px-3 py-2 rounded-full shadow-2xl hover:scale-110 transition-transform duration-200 z-10 border-2 border-white"
                     title="High-Risk Building (HRB)"
                   >
                     🛡️ HRB
@@ -285,11 +285,11 @@ function BuildingsList() {
                 {/* Building Status Badge */}
                 <div className="absolute top-4 left-4 z-10">
                   {building.isDummy ? (
-                    <span className="bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 text-xs px-3 py-2 rounded-full font-semibold border border-indigo-200 shadow-lg backdrop-blur-sm">
+                    <span className="bg-gradient-to-r from-indigo-200 to-purple-200 text-indigo-800 text-xs px-3 py-2 rounded-full font-bold border-2 border-indigo-300 shadow-lg backdrop-blur-sm">
                       ✨ Demo
                     </span>
                   ) : (
-                    <span className="bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 text-xs px-3 py-2 rounded-full font-semibold border border-emerald-200 shadow-lg backdrop-blur-sm">
+                    <span className="bg-gradient-to-r from-emerald-200 to-green-200 text-emerald-800 text-xs px-3 py-2 rounded-full font-bold border-2 border-emerald-300 shadow-lg backdrop-blur-sm">
                       🏢 Real
                     </span>
                   )}
@@ -297,13 +297,13 @@ function BuildingsList() {
 
                 <div className="p-8">
                   {/* Building Icon */}
-                  <div className="w-24 h-24 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 rounded-3xl flex items-center justify-center mb-8 shadow-2xl mx-auto group-hover:scale-110 transition-transform duration-500 group-hover:shadow-blue-500/30">
+                  <div className="w-24 h-24 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 rounded-3xl flex items-center justify-center mb-8 shadow-2xl mx-auto group-hover:scale-110 transition-transform duration-500 group-hover:shadow-blue-500/40">
                     <Building2 className="h-12 w-12 text-white" />
                   </div>
 
                   {/* Building Name */}
                   <div className="mb-6">
-                    <h3 className="text-2xl font-bold text-gray-900 group-hover:text-gray-800 transition-colors duration-200">
+                    <h3 className="text-2xl font-bold text-gray-900 group-hover:text-gray-800 transition-colors duration-200 leading-tight">
                       {building.name}
                     </h3>
                   </div>
@@ -311,7 +311,7 @@ function BuildingsList() {
                   {/* Address */}
                   <div className="flex items-start gap-3 mb-6 justify-center">
                     <MapPin className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
-                    <p className="text-gray-600 leading-relaxed text-sm">
+                    <p className="text-gray-600 leading-relaxed text-sm font-medium">
                       {building.address}
                     </p>
                   </div>
@@ -319,7 +319,7 @@ function BuildingsList() {
                   {/* Unit Count */}
                   <div className="flex items-center gap-3 mb-8 justify-center">
                     <Users className="h-5 w-5 text-purple-500" />
-                    <p className="text-sm text-gray-600 font-medium">
+                    <p className="text-sm text-gray-700 font-semibold">
                       {(() => {
                         // Use dynamically calculated unit count from units table
                         const unitCount = building.units || building.unit_count || 0
@@ -328,13 +328,13 @@ function BuildingsList() {
                     </p>
                   </div>
 
-                  {/* Action Buttons - Enhanced with Modern Design */}
+                  {/* Action Buttons - Enhanced with Better Visual Hierarchy */}
                   <div className="space-y-4">
                     {building.isDummy ? (
-                      // Dummy buildings - enhanced styling
+                      // Dummy buildings - enhanced styling with better visibility
                       <div className="space-y-3">
                         <button 
-                          className="w-full bg-gradient-to-r from-gray-100 to-gray-200 text-gray-500 px-6 py-4 rounded-2xl font-semibold text-base cursor-not-allowed opacity-80 border border-gray-200 shadow-sm"
+                          className="w-full bg-gradient-to-r from-gray-100 to-gray-200 text-gray-600 px-6 py-4 rounded-2xl font-bold text-base cursor-not-allowed opacity-90 border-2 border-gray-300 shadow-md hover:shadow-lg transition-all duration-200"
                           disabled
                         >
                           <div className="flex items-center justify-center gap-2">
@@ -343,7 +343,7 @@ function BuildingsList() {
                           </div>
                         </button>
                         <button 
-                          className="w-full bg-gradient-to-r from-gray-100 to-gray-200 text-gray-500 px-6 py-4 rounded-2xl font-semibold text-base cursor-not-allowed opacity-80 border border-gray-200 shadow-sm"
+                          className="w-full bg-gradient-to-r from-gray-100 to-gray-200 text-gray-600 px-6 py-4 rounded-2xl font-bold text-base cursor-not-allowed opacity-90 border-2 border-gray-300 shadow-md hover:shadow-lg transition-all duration-200"
                           disabled
                         >
                           <div className="flex items-center justify-center gap-2">
@@ -353,12 +353,12 @@ function BuildingsList() {
                         </button>
                       </div>
                     ) : (
-                      // Real buildings - enhanced clickable buttons
+                      // Real buildings - enhanced clickable buttons with better visual hierarchy
                       <>
                         <BlocIQButton 
                           asChild
                           size="sm"
-                          className="w-full bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white border-0 transition-all duration-300 rounded-2xl font-semibold text-base shadow-lg hover:shadow-xl hover:shadow-blue-500/30 transform hover:-translate-y-1"
+                          className="w-full bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white border-0 transition-all duration-300 rounded-2xl font-bold text-base shadow-xl hover:shadow-2xl hover:shadow-blue-500/40 transform hover:-translate-y-1 hover:scale-[1.02]"
                         >
                           <Link href={`/buildings/${building.id}`}>
                             <div className="flex items-center justify-center gap-2">
@@ -370,7 +370,7 @@ function BuildingsList() {
                         <BlocIQButton 
                           asChild
                           size="sm"
-                          className="w-full bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-700 hover:via-teal-700 hover:to-cyan-700 text-white border-0 transition-all duration-300 rounded-2xl font-semibold text-base shadow-lg hover:shadow-xl hover:shadow-emerald-500/30 transform hover:-translate-y-1"
+                          className="w-full bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-700 hover:via-teal-700 hover:to-cyan-700 text-white border-0 transition-all duration-300 rounded-2xl font-bold text-base shadow-xl hover:shadow-2xl hover:shadow-emerald-500/40 transform hover:-translate-y-1 hover:scale-[1.02]"
                         >
                           <Link href={`/buildings/${building.id}/compliance`}>
                             <div className="flex items-center justify-center gap-2">
@@ -384,8 +384,11 @@ function BuildingsList() {
                   </div>
                 </div>
 
-                {/* Hover Effect Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl pointer-events-none"></div>
+                {/* Enhanced Hover Effect Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/8 via-purple-500/8 to-pink-500/8 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl pointer-events-none"></div>
+                
+                {/* Subtle Border Glow on Hover */}
+                <div className="absolute inset-0 border-2 border-transparent group-hover:border-blue-500/20 rounded-3xl transition-all duration-500 pointer-events-none"></div>
               </div>
             ))}
           </div>
@@ -394,8 +397,8 @@ function BuildingsList() {
         /* No Search Results - Enhanced */
         <div className="max-w-4xl mx-auto px-6 py-20">
           <div className="text-center">
-            <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl border border-blue-200">
-              <Search className="h-12 w-12 text-blue-500" />
+            <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl border-2 border-blue-200">
+              <Search className="h-12 w-12 text-blue-600" />
             </div>
             <h2 className="text-3xl font-bold text-gray-900 mb-6">
               No buildings found
@@ -406,7 +409,7 @@ function BuildingsList() {
             <BlocIQButton
               onClick={() => setSearchTerm('')}
               size="lg"
-              className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white border-0 shadow-xl hover:shadow-2xl hover:shadow-blue-500/30 transition-all duration-300 rounded-2xl transform hover:-translate-y-1"
+              className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white border-0 shadow-2xl hover:shadow-3xl hover:shadow-blue-500/40 transition-all duration-300 rounded-2xl transform hover:-translate-y-1 hover:scale-[1.02] font-bold"
             >
               <Search className="h-5 w-5 mr-2" />
               Clear Search
@@ -428,7 +431,7 @@ export default function BuildingsPage() {
       {/* Enhanced CTA Section - Matching Landing Page Style */}
       <section className="py-20 bg-gradient-to-br from-gray-50 to-gray-100">
         <div className="max-w-4xl mx-auto px-6">
-          <div className="bg-white rounded-3xl p-12 shadow-2xl border border-gray-100 text-center">
+          <div className="bg-white rounded-3xl p-12 shadow-2xl border-2 border-gray-100 text-center">
             <div className="w-20 h-20 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
               <Plus className="h-10 w-10 text-white" />
             </div>
@@ -444,14 +447,14 @@ export default function BuildingsPage() {
                   e.preventDefault();
                   alert('Building creation feature coming soon!');
                 }}
-                className="inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white px-8 py-4 rounded-2xl cursor-not-allowed opacity-75 hover:opacity-75 transition-all duration-300 font-semibold text-lg shadow-xl transform"
+                className="inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white px-8 py-4 rounded-2xl cursor-not-allowed opacity-75 hover:opacity-75 transition-all duration-300 font-bold text-lg shadow-2xl transform"
               >
                 <Plus className="h-6 w-6" />
                 Add New Building
                 <ArrowRight className="h-5 w-5" />
               </button>
               {/* Coming Soon Badge */}
-              <div className="absolute -top-2 -right-2 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg border-2 border-white">
+              <div className="absolute -top-2 -right-2 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-xl border-2 border-white">
                 COMING SOON
               </div>
             </div>

@@ -52,6 +52,13 @@ interface BuildingSetup {
   client_name: string | null
   client_contact: string | null
   client_email: string | null
+  keys_location: string | null
+  emergency_access: string | null
+  site_staff: string | null
+  site_staff_updated_at: string | null
+  insurance_contact: string | null
+  cleaners: string | null
+  contractors: string | null
 }
 
 interface Unit {
@@ -96,6 +103,7 @@ export default function BuildingDetailClient({
   const [editingField, setEditingField] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
   const [leaseholders, setLeaseholders] = useState<Record<string, Leaseholder>>({})
 
   // Fetch leaseholder data for units
@@ -125,6 +133,11 @@ export default function BuildingDetailClient({
     fetchLeaseholders()
   }, [units])
 
+  const showSuccessMessage = () => {
+    setShowSuccess(true)
+    setTimeout(() => setShowSuccess(false), 3000)
+  }
+
   const updateBuilding = async (updates: Partial<Building>) => {
     setIsSaving(true)
     try {
@@ -141,6 +154,7 @@ export default function BuildingDetailClient({
       // Update local state
       Object.assign(building, updates)
       setEditingField(null)
+      showSuccessMessage()
     } catch (error) {
       console.error('Failed to update building:', error)
     } finally {
@@ -151,27 +165,50 @@ export default function BuildingDetailClient({
   const updateBuildingSetup = async (updates: Partial<BuildingSetup>) => {
     setIsSaving(true)
     try {
+      // Add timestamp for relevant fields
+      const timestampedUpdates = { ...updates }
+      if (updates.site_staff !== undefined) {
+        timestampedUpdates.site_staff_updated_at = new Date().toISOString()
+      }
+      
       if (buildingSetup?.id) {
         // Update existing setup
         const { error } = await supabase
           .from('building_setup')
-          .update(updates)
+          .update(timestampedUpdates)
           .eq('id', buildingSetup.id)
         
         if (error) throw error
+        
+        // Update local state
+        if (buildingSetup) {
+          Object.assign(buildingSetup, timestampedUpdates)
+        }
       } else {
         // Create new setup
         const { error } = await supabase
           .from('building_setup')
           .insert({
             building_id: buildingId,
-            ...updates
+            ...timestampedUpdates
           })
         
         if (error) throw error
+        
+        // Refresh building setup data
+        const { data: newSetup } = await supabase
+          .from('building_setup')
+          .select('*')
+          .eq('building_id', buildingId)
+          .single()
+        
+        if (newSetup && buildingSetup) {
+          Object.assign(buildingSetup, newSetup)
+        }
       }
       
       setEditingField(null)
+      showSuccessMessage()
     } catch (error) {
       console.error('Failed to update building setup:', error)
     } finally {
@@ -194,6 +231,10 @@ export default function BuildingDetailClient({
       const setupField = editingField.replace('setup_', '')
       await updateBuildingSetup({ [setupField]: editValue })
     } else {
+      // Add timestamp for notes updates
+      if (editingField === 'notes') {
+        updates.updated_at = new Date().toISOString()
+      }
       await updateBuilding(updates)
     }
   }
@@ -203,8 +244,9 @@ export default function BuildingDetailClient({
     setEditValue('')
   }
 
-  const renderEditableField = (field: string, value: string, label: string, placeholder?: string) => {
+  const renderEditableField = (field: string, value: string | null, label: string, placeholder?: string) => {
     const isEditing = editingField === field
+    const displayValue = value || ''
     
     return (
       <InfoRow
@@ -215,19 +257,22 @@ export default function BuildingDetailClient({
               <input
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
-                className="border px-2 py-1 rounded text-sm w-48"
+                className="border-2 border-gray-300 px-3 py-2 rounded-lg text-sm w-48 focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent transition-all duration-200"
                 placeholder={placeholder}
+                autoFocus
               />
               <button
                 onClick={saveEdit}
                 disabled={isSaving}
-                className="text-green-600 hover:text-green-800"
+                className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 transition-colors disabled:opacity-50"
+                title="Save changes"
               >
                 <Save className="h-4 w-4" />
               </button>
               <button
                 onClick={cancelEdit}
-                className="text-gray-600 hover:text-gray-800"
+                className="text-gray-600 hover:text-gray-800 p-1 rounded hover:bg-gray-50 transition-colors"
+                title="Cancel editing"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -235,9 +280,9 @@ export default function BuildingDetailClient({
           ) : (
             <div className="flex items-center gap-2">
               <span className="font-medium">
-                {value || <EmptyValue label="Add" onClick={() => startEditing(field, value)} />}
+                {displayValue || <EmptyValue label="Add" onClick={() => startEditing(field, displayValue)} />}
               </span>
-              <EditIconButton onClick={() => startEditing(field, value)} />
+              <EditIconButton onClick={() => startEditing(field, displayValue)} />
             </div>
           )
         }
@@ -247,6 +292,14 @@ export default function BuildingDetailClient({
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-8">
+      {/* Success Notification */}
+      {showSuccess && (
+        <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2">
+          <CheckCircle className="h-5 w-5" />
+          <span>Changes saved successfully!</span>
+        </div>
+      )}
+
       {/* Hero Banner - UNTOUCHED */}
       <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16 mb-8 rounded-2xl shadow-xl">
         <div className="max-w-7xl mx-auto px-6">
@@ -334,34 +387,10 @@ export default function BuildingDetailClient({
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <InfoRow
-            label="Gate Code:"
-            value={
-              buildingSetup?.operational_notes ? (
-                <Revealable text={buildingSetup.operational_notes} />
-              ) : (
-                <EmptyValue label="Add code" onClick={() => startEditing('setup_operational_notes', buildingSetup?.operational_notes || '')} />
-              )
-            }
-          />
-          <InfoRow
-            label="Fire Panel Code:"
-            value={
-              building.notes ? (
-                <Revealable text={building.notes} />
-              ) : (
-                <EmptyValue label="Add code" onClick={() => startEditing('notes', building.notes || '')} />
-              )
-            }
-          />
-          <InfoRow
-            label="Keys Location:"
-            value={<EmptyValue label="Add location" />}
-          />
-          <InfoRow
-            label="Emergency Access:"
-            value={<EmptyValue label="Add access" />}
-          />
+          {renderEditableField('setup_operational_notes', buildingSetup?.operational_notes || '', 'Gate Code', 'Enter gate code')}
+          {renderEditableField('notes', building.notes || '', 'Fire Panel Code', 'Enter fire panel code')}
+          {renderEditableField('setup_keys_location', buildingSetup?.keys_location || '', 'Keys Location', 'Enter keys location')}
+          {renderEditableField('setup_emergency_access', buildingSetup?.emergency_access || '', 'Emergency Access', 'Enter emergency access details')}
         </div>
       </SectionCard>
 
@@ -378,20 +407,11 @@ export default function BuildingDetailClient({
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {renderEditableField('setup_client_contact', buildingSetup?.client_contact || '', 'Managing Agent')}
-          {renderEditableField('setup_client_email', buildingSetup?.client_email || '', 'Managing Agent Email')}
-          <InfoRow
-            label="Insurance Contact:"
-            value={<EmptyValue label="Add contact" />}
-          />
-          <InfoRow
-            label="Cleaners:"
-            value={<EmptyValue label="Add cleaners" />}
-          />
-          <InfoRow
-            label="Contractors:"
-            value={<EmptyValue label="Add contractors" />}
-          />
+          {renderEditableField('setup_client_contact', buildingSetup?.client_contact || '', 'Managing Agent', 'Enter managing agent name')}
+          {renderEditableField('setup_client_email', buildingSetup?.client_email || '', 'Managing Agent Email', 'Enter managing agent email')}
+          {renderEditableField('setup_insurance_contact', buildingSetup?.insurance_contact || '', 'Insurance Contact', 'Enter insurance contact details')}
+          {renderEditableField('setup_cleaners', buildingSetup?.cleaners || '', 'Cleaners', 'Enter cleaners contact details')}
+          {renderEditableField('setup_contractors', buildingSetup?.contractors || '', 'Contractors', 'Enter contractors contact details')}
         </div>
       </SectionCard>
 
@@ -408,13 +428,53 @@ export default function BuildingDetailClient({
         </div>
         
         <div className="space-y-3">
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <div>
-              <div className="font-medium">No site staff assigned</div>
-              <div className="text-sm text-gray-600">Add site staff information</div>
+          {editingField === 'site_staff' ? (
+            <div className="space-y-3 p-4">
+              <textarea
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                className="w-full p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent transition-all duration-200 resize-none"
+                rows={4}
+                placeholder="Enter site staff information including names, roles, and contact details..."
+                autoFocus
+              />
+              <div className="flex space-x-2">
+                <button
+                  onClick={saveEdit}
+                  disabled={isSaving}
+                  className="bg-[#4f46e5] text-white px-4 py-2 rounded-lg hover:bg-[#4338ca] transition-colors disabled:opacity-50 font-medium"
+                >
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </button>
+                <button
+                  onClick={cancelEdit}
+                  className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
-            <EditIconButton />
-          </div>
+          ) : (
+            <div className="flex items-start justify-between p-4">
+              <div className="flex-1">
+                <p className="text-gray-600">
+                  {buildingSetup?.site_staff || 'No site staff assigned yet. Click edit to add site staff information.'}
+                </p>
+                {buildingSetup?.site_staff_updated_at && (
+                  <p className="text-xs text-gray-400 mt-2">
+                    Last updated: {new Date(buildingSetup.site_staff_updated_at).toLocaleDateString('en-GB', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                )}
+              </div>
+              <EditIconButton onClick={() => startEditing('site_staff', buildingSetup?.site_staff || '')} />
+            </div>
+          )}
         </div>
       </SectionCard>
 
@@ -436,21 +496,22 @@ export default function BuildingDetailClient({
               <textarea
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
+                className="w-full p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent transition-all duration-200 resize-none"
                 rows={4}
                 placeholder="Add building notes and instructions..."
+                autoFocus
               />
               <div className="flex space-x-2">
                 <button
                   onClick={saveEdit}
                   disabled={isSaving}
-                  className="bg-[#4f46e5] text-white px-4 py-2 rounded-lg hover:bg-[#4338ca] transition-colors disabled:opacity-50"
+                  className="bg-[#4f46e5] text-white px-4 py-2 rounded-lg hover:bg-[#4338ca] transition-colors disabled:opacity-50 font-medium"
                 >
-                  {isSaving ? 'Saving...' : 'Save'}
+                  {isSaving ? 'Saving...' : 'Save Changes'}
                 </button>
                 <button
                   onClick={cancelEdit}
-                  className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
+                  className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors font-medium"
                 >
                   Cancel
                 </button>
@@ -458,9 +519,22 @@ export default function BuildingDetailClient({
             </div>
           ) : (
             <div className="flex items-start justify-between p-4">
-              <p className="text-gray-600 flex-1">
-                {building.notes || 'No notes added yet. Click edit to add building information and instructions.'}
-              </p>
+              <div className="flex-1">
+                <p className="text-gray-600">
+                  {building.notes || 'No notes added yet. Click edit to add building information and instructions.'}
+                </p>
+                {building.updated_at && (
+                  <p className="text-xs text-gray-400 mt-2">
+                    Last updated: {new Date(building.updated_at).toLocaleDateString('en-GB', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                )}
+              </div>
               <EditIconButton onClick={() => startEditing('notes', building.notes || '')} />
             </div>
           )}
