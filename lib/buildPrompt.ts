@@ -5,6 +5,7 @@ import { getEmailThreadContext } from '@/lib/supabase/emails';
 import { getFounderGuidance } from '@/lib/ai/founder';
 import { getComplianceContext } from '@/lib/supabase/compliance';
 import { getMajorWorksContext, getMajorWorksProjectContext } from '@/lib/supabase/majorWorks';
+import { searchBuildingAndUnits } from '@/lib/supabase/buildingSearch';
 import { createClient } from '@supabase/supabase-js';
 
 // ADD: tiny detector (non-breaking)
@@ -76,6 +77,50 @@ export async function buildPrompt({
   if (buildingId) {
     const building = await getBuildingData(buildingId);
     if (building) contextSections.push(`Building Info:\n${JSON.stringify(building, null, 2)}`);
+  }
+
+  // 🔍 Enhanced Building & Unit Search (for natural language queries)
+  if (!buildingId && question) {
+    const searchResults = await searchBuildingAndUnits(question);
+    if (searchResults) {
+      let searchContext = 'Building & Unit Search Results:\n';
+      
+      if (searchResults.building) {
+        searchContext += `🏢 Building: ${searchResults.building.name} (${searchResults.building.address})\n`;
+        searchContext += `   Manager: ${searchResults.building.building_manager_name || 'Not specified'}\n`;
+        searchContext += `   Units: ${searchResults.building.unit_count || 'Unknown'}\n`;
+      }
+      
+      if (searchResults.units && searchResults.units.length > 0) {
+        searchContext += `\n🏠 Units Found:\n`;
+        searchResults.units.forEach((unit: any) => {
+          searchContext += `   • Unit ${unit.unit_number}`;
+          if (unit.floor) searchContext += ` (Floor ${unit.floor})`;
+          if (unit.type) searchContext += ` - ${unit.type}`;
+          if (unit.leaseholder) {
+            searchContext += `\n     👤 Leaseholder: ${unit.leaseholder.name}`;
+            if (unit.leaseholder.email) searchContext += `\n     📧 Email: ${unit.leaseholder.email}`;
+            if (unit.leaseholder.phone) searchContext += `\n     📞 Phone: ${unit.leaseholder.phone}`;
+          }
+          searchContext += '\n';
+        });
+      }
+      
+      if (searchResults.leaseholders && searchResults.leaseholders.length > 0) {
+        searchContext += `\n👥 Leaseholder Details:\n`;
+        searchResults.leaseholders.forEach((lh: any) => {
+          searchContext += `   • ${lh.name}\n`;
+          if (lh.email) searchContext += `     📧 Email: ${lh.email}\n`;
+          if (lh.phone) searchContext += `     📞 Phone: ${lh.phone}\n`;
+          if (lh.units && lh.units.length > 0) {
+            searchContext += `     🏠 Units: ${lh.units.map((u: any) => u.unit_number).join(', ')}\n`;
+          }
+          searchContext += '\n';
+        });
+      }
+      
+      contextSections.push(searchContext);
+    }
   }
 
   // 📄 Documents

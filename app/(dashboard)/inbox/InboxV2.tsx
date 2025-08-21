@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, createContext, useContext, useEffect, useCallback } from 'react'
-import { MessageSquare, Plus, Search, Filter, RefreshCw, Settings, MoreVertical } from 'lucide-react'
+import { MessageSquare, Plus, Search, Filter, RefreshCw, Settings, MoreVertical, FileText } from 'lucide-react'
 import FolderSidebar from '@/components/inbox_v2/FolderSidebar'
 import MessageList from '@/components/inbox_v2/MessageList'
 import MessagePreview from '@/components/inbox_v2/MessagePreview'
@@ -9,6 +9,7 @@ import ReplyModal from '@/components/inbox_v2/ReplyModal'
 import NewEmailModal from '@/components/inbox_v2/NewEmailModal'
 import TriageButton from '@/components/inbox_v2/TriageButton'
 import AskBlocIQButton from '@/components/inbox_v2/AskBlocIQButton'
+import DraftsPanel from '@/components/inbox_v2/DraftsPanel'
 import { useMessages, useFolders } from '@/hooks/inbox_v2'
 import { mutate } from 'swr'
 import { cn } from '@/lib/utils'
@@ -47,6 +48,7 @@ export default function InboxV2() {
   const [draggedMessage, setDraggedMessage] = useState<{ messageId: string; sourceFolderId: string } | null>(null)
   const [isMovingMessage, setIsMovingMessage] = useState(false)
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set())
+  const [draftsPanelOpen, setDraftsPanelOpen] = useState(false)
 
   // Get folders and messages
   const { folders, isLoading: foldersLoading } = useFolders()
@@ -486,6 +488,14 @@ export default function InboxV2() {
               New Email
             </button>
             
+            <button
+              onClick={() => setDraftsPanelOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-lg hover:brightness-110 transition-all duration-200 shadow-sm font-medium"
+            >
+              <FileText className="h-4 w-4" />
+              AI Drafts
+            </button>
+            
             <TriageButton 
               selectedMessageId={selectedId}
               onTriage={triageMessage}
@@ -649,6 +659,22 @@ export default function InboxV2() {
 
       {/* Ask BlocIQ AI Assistant */}
       <AskBlocIQButton selectedMessage={selectedMessage} />
+
+      {/* AI Drafts Panel */}
+      <DraftsPanel
+        isOpen={draftsPanelOpen}
+        onClose={() => setDraftsPanelOpen(false)}
+        onEditDraft={(draft) => {
+          // TODO: Implement draft editing functionality
+          console.log('Edit draft:', draft)
+          setDraftsPanelOpen(false)
+        }}
+        onSendDraft={(draft) => {
+          // TODO: Implement draft sending functionality
+          console.log('Send draft:', draft)
+          setDraftsPanelOpen(false)
+        }}
+      />
     </InboxContext.Provider>
   )
 }

@@ -278,9 +278,65 @@ async function createIntelligentDraftReply(messageId: string, replyData: any, or
       throw new Error(`Failed to update draft content: ${updateResponse.status}`);
     }
 
+    // Save draft to local database for the drafts panel
+    try {
+      await saveDraftToDatabase(messageId, replyData, intelligentReply, originalMessage);
+    } catch (dbError) {
+      console.warn("Failed to save draft to local database:", dbError);
+      // Don't fail the entire operation if local save fails
+    }
+
     return draftId;
   } catch (error) {
     console.error("Error creating intelligent draft reply:", error);
+    throw error;
+  }
+}
+
+async function saveDraftToDatabase(messageId: string, replyData: any, content: string, originalMessage: any) {
+  try {
+    // Extract building info for context
+    const buildingInfo = await extractBuildingInfo(originalMessage);
+    
+    // Get the current user from the request context
+    // Since this is called from the triage API, we need to get the user from the request
+    const userResponse = await makeGraphRequest('/me');
+    if (!userResponse.ok) {
+      throw new Error('Failed to get user info');
+    }
+    const user = await userResponse.json();
+    
+    // Create draft data
+    const draftData = {
+      type: 'reply',
+      email_id: messageId,
+      building_id: buildingInfo?.id || null,
+      content: content,
+      context: JSON.stringify({
+        original_subject: originalMessage.subject,
+        original_from: originalMessage.from?.emailAddress?.address,
+        building_context: buildingInfo,
+        triage_category: replyData.category || 'follow_up',
+        triage_priority: replyData.priority || 'P2'
+      })
+    };
+
+    // Save to local database via our drafts API
+    const saveResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/drafts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(draftData),
+    });
+
+    if (!saveResponse.ok) {
+      throw new Error(`Failed to save draft to database: ${saveResponse.status}`);
+    }
+
+    console.log('Successfully saved draft to local database');
+  } catch (error) {
+    console.error('Error saving draft to database:', error);
     throw error;
   }
 }
