@@ -161,12 +161,54 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // 👤 Fetch User Profile for Personalization
+    let userProfile = null;
+    let userFirstName = "";
+    try {
+      const { data: profile } = await supabase
+        .from('users')
+        .select('first_name, last_name, job_title, company_name')
+        .eq('email', user.email)
+        .single();
+      
+      if (profile) {
+        userProfile = profile;
+        userFirstName = profile.first_name || "";
+        console.log('👤 User profile loaded for personalization:', userFirstName);
+      }
+    } catch (profileError) {
+      console.warn('Could not fetch user profile for personalization:', profileError);
+    }
+
     let buildingContext = "";
     let contextMetadata: any = {};
     
     // Determine context and build appropriate prompt
     const context = AIContextHandler.determineContext(prompt);
             let systemPrompt = await AIContextHandler.buildPrompt(context, prompt, buildingContext);
+
+    // 🎭 Add Personalization Instructions
+    if (userFirstName) {
+      systemPrompt += `\n\nPERSONALIZATION INSTRUCTIONS:
+- The user's name is "${userFirstName}". Use their name occasionally (about every 3-4 responses) to make interactions more personal and friendly.
+- Adopt a warm, upbeat, and professional tone throughout all responses.
+- Use phrases like "Great question, ${userFirstName}!" or "I'm happy to help with that, ${userFirstName}" when appropriate.
+- Be encouraging and positive while maintaining professionalism.
+- Show enthusiasm when providing helpful information or solutions.
+- Use friendly transitions like "Absolutely!" "That's a great point!" or "I'd be delighted to help!"
+- Keep responses conversational but informative.
+- When addressing complex property management topics, explain things in a friendly, approachable way.
+`;
+    } else {
+      systemPrompt += `\n\nTONE INSTRUCTIONS:
+- Adopt a warm, upbeat, and professional tone throughout all responses.
+- Be encouraging and positive while maintaining professionalism.
+- Show enthusiasm when providing helpful information or solutions.
+- Use friendly transitions like "Absolutely!" "That's a great point!" or "I'd be delighted to help!"
+- Keep responses conversational but informative.
+- When addressing complex property management topics, explain things in a friendly, approachable way.
+`;
+    }
 
     // 🏢 Smart Building Detection from Prompt
     if (!building_id) {
