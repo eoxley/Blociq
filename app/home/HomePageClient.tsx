@@ -1855,6 +1855,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                   showBuildingName={true} 
                   className="h-full" 
                   onEmptyState={setTodosEmpty}
+                  includeCompliance={true}
                 />
               )}
             </div>

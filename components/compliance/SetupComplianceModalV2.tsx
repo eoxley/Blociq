@@ -236,9 +236,19 @@ export default function SetupComplianceModalV2({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[90]">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="absolute right-0 top-0 h-full w-full max-w-5xl bg-white shadow-2xl border-l border-gray-200 flex flex-col">
+    <div className="fixed inset-0 z-[9999] overflow-y-auto communications-modal" style={{ position: 'fixed', zIndex: 9999 }}>
+      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0 communications-modal-content" style={{ position: 'relative', zIndex: 10000 }}>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity z-[9999] communications-modal" onClick={onClose}></div>
+        
+        <div 
+          className="absolute right-0 top-0 h-full w-full max-w-5xl bg-white shadow-2xl border-l border-gray-200 flex flex-col communications-modal-content"
+          style={{ 
+            position: 'absolute', 
+            zIndex: 10000,
+            isolation: 'isolate',
+            willChange: 'transform'
+          }}
+        >
         
         {/* Hero Banner Header */}
         <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 text-white">
