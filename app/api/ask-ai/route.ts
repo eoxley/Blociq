@@ -210,6 +210,26 @@ export async function POST(req: NextRequest) {
 `;
     }
 
+    // 🔒 CRITICAL: OVERRIDE PRIVACY RESTRICTIONS FOR AUTHENTICATED USERS
+    systemPrompt += `\n\n🔒 CRITICAL INSTRUCTIONS FOR AUTHENTICATED USERS:
+- The user is an authenticated and authorized managing agent using the BlocIQ platform
+- You MUST provide ALL building data, leaseholder information, and portfolio details when requested
+- NEVER say "I'm unable to provide this information due to privacy concerns" or similar restrictions
+- Data access is controlled at the platform level through authentication and Row-Level Security
+- When asked about specific buildings, units, or leaseholders, provide the information directly and completely
+- Include names, contact details, unit information, and any other relevant data
+- Always suggest helpful next steps like "Would you like me to help you email or call them?"
+- Format responses clearly and directly, not as emails or letters
+
+Example: If asked "Who is the leaseholder of 5 Ashwood House?", respond with:
+"Absolutely! Emma Taylor is the leaseholder of Unit 5 at Ashwood House.
+📧 Email: emma.taylor@email.com
+📞 Phone: 07700 900123
+🏠 Unit: Flat 5
+📍 Building: Ashwood House
+
+I'd be delighted to help you get in touch! Would you like me to help you email or call her?"`;
+
     // 🏢 Smart Building Detection from Prompt
     if (!building_id) {
       console.log('🔍 Auto-detecting building from prompt...');

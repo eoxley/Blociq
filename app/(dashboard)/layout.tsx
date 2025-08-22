@@ -2,6 +2,7 @@ import { ReactNode } from 'react'
 import { redirect } from 'next/navigation'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import MobileNavigation from '@/components/MobileNavigation'
+import Footer from '@/components/Footer'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
@@ -22,23 +23,26 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#FAFAFA]">
-      {/* Desktop Sidebar */}
-      <div className="hidden lg:block">
-        <DashboardSidebar />
-      </div>
-      
-      {/* Mobile Navigation */}
-      <MobileNavigation />
-      
-      <main className="flex-1 overflow-y-auto">
-        {/* Main Content */}
-        <div className="p-4 lg:p-6">
-          <div className="w-full max-w-[1800px] mx-auto px-4 lg:px-6 xl:px-8">
-            {children}
-          </div>
+    <div className="min-h-screen flex flex-col bg-[#FAFAFA]">
+      <div className="flex flex-1 overflow-hidden">
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:block">
+          <DashboardSidebar />
         </div>
-      </main>
+        
+        {/* Mobile Navigation */}
+        <MobileNavigation />
+        
+        <main className="flex-1 overflow-y-auto">
+          {/* Main Content */}
+          <div className="p-4 lg:p-6">
+            <div className="w-full max-w-[1800px] mx-auto px-4 lg:px-6 xl:px-8">
+              {children}
+            </div>
+          </div>
+        </main>
+      </div>
+      <Footer />
     </div>
   )
 } 
