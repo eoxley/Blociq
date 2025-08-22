@@ -23,7 +23,8 @@ import {
   Save,
   Settings,
   BarChart3,
-  Info
+  Info,
+  Plus
 } from "lucide-react";
 import { canonicaliseCategory, canonicaliseTitle, deriveFrequencyLabel } from "@/lib/compliance/normalise";
 
@@ -128,19 +129,44 @@ export default function SetupComplianceModalV2({
 
   const isChecked = (id: string) => !!selected[id];
   const isLocked = (id: string) => locked.has(id);
-  const toggle = (id: string) => { if (isLocked(id)) return; setSelected(s => ({ ...s, [id]: !s[id] })); };
+  const toggle = (id: string) => { 
+    if (isLocked(id)) return; 
+    setSelected(s => ({ ...s, [id]: !s[id] })); 
+  };
 
   function selectAll(cat: string, on: boolean) {
     const next = { ...selected };
     for (const a of grouped[cat] || []) {
-      if (isLocked(a.id)) { next[a.id] = true; continue; }
-      next[a.id] = on || existing.has(a.id);
+      if (isLocked(a.id)) { 
+        next[a.id] = true; 
+        continue; 
+      }
+      // Allow unchecking existing assets when clearing
+      if (!on && existing.has(a.id)) {
+        next[a.id] = false;
+      } else {
+        next[a.id] = on || existing.has(a.id);
+      }
+    }
+    setSelected(next);
+  }
+
+  // Clear all assets (both existing and newly selected)
+  function clearAll() {
+    const next = { ...selected };
+    for (const a of master) {
+      if (isLocked(a.id)) {
+        next[a.id] = true; // Keep HRB assets locked
+      } else {
+        next[a.id] = false; // Clear everything else
+      }
     }
     setSelected(next);
   }
 
   const newlyChosen = Object.keys(selected).filter(id => selected[id] && !existing.has(id));
-  const canSave = newlyChosen.length > 0 && !busy;
+  const newlyUnchecked = Object.keys(selected).filter(id => !selected[id] && existing.has(id));
+  const canSave = (newlyChosen.length > 0 || newlyUnchecked.length > 0) && !busy;
 
   // Check for potential duplicates when selecting assets
   useEffect(() => {
@@ -186,41 +212,56 @@ export default function SetupComplianceModalV2({
     setErr(null);
     
     try {
-      console.log("Saving compliance assets:", { buildingId, newlyChosen });
+      console.log("Saving compliance assets:", { buildingId, newlyChosen, newlyUnchecked });
       
-      // 1) Add building assets
-      const addResponse = await fetch(`/api/buildings/${buildingId}/compliance/bulk-add`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ asset_ids: newlyChosen })
-      });
-      
-      const add = await addResponse.json();
-      console.log("Bulk add response:", add);
-      if (add.error) throw new Error(add.error);
-
-      // 2) Map compliance_asset_id -> bca_id
-      const j = await fetch(`/api/buildings/${buildingId}/compliance`, { cache: "no-store" }).then(r => r.json());
-      if (j.error) throw new Error(j.error);
-      
-      const bcaByAsset: Record<string, string> = {};
-      for (const row of (j.data || [])) bcaByAsset[row.asset_id] = row.bca_id;
-
-      // 3) Upload files (only for those with a file)
-      for (const assetId of newlyChosen) {
-        const f = files[assetId];
-        if (!f) continue;
-        const bca_id = bcaByAsset[assetId];
-        if (!bca_id) continue;
+      // 1) Remove unchecked existing assets first
+      if (newlyUnchecked.length > 0) {
+        const removeResponse = await fetch(`/api/buildings/${buildingId}/compliance/bulk-remove`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ asset_ids: newlyUnchecked })
+        });
         
-        const form = new FormData();
-        form.append("file", f);
-        form.append("bca_id", bca_id);
-        form.append("building_id", buildingId);
+        const remove = await removeResponse.json();
+        console.log("Bulk remove response:", remove);
+        if (remove.error) throw new Error(remove.error);
+      }
+      
+      // 2) Add newly selected assets
+      if (newlyChosen.length > 0) {
+        const addResponse = await fetch(`/api/buildings/${buildingId}/compliance/bulk-add`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ asset_ids: newlyChosen })
+        });
         
-        const uploadResponse = await fetch("/api/compliance/upload", { method: "POST", body: form });
-        if (!uploadResponse.ok) {
-          console.warn(`Failed to upload file for asset ${assetId}`);
+        const add = await addResponse.json();
+        console.log("Bulk add response:", add);
+        if (add.error) throw new Error(add.error);
+
+        // 3) Map compliance_asset_id -> bca_id for file uploads
+        const j = await fetch(`/api/buildings/${buildingId}/compliance`, { cache: "no-store" }).then(r => r.json());
+        if (j.error) throw new Error(j.error);
+        
+        const bcaByAsset: Record<string, string> = {};
+        for (const row of (j.data || [])) bcaByAsset[row.asset_id] = row.bca_id;
+
+        // 4) Upload files (only for those with a file)
+        for (const assetId of newlyChosen) {
+          const f = files[assetId];
+          if (!f) continue;
+          const bca_id = bcaByAsset[assetId];
+          if (!bca_id) continue;
+          
+          const form = new FormData();
+          form.append("file", f);
+          form.append("bca_id", bca_id);
+          form.append("building_id", buildingId);
+          
+          const uploadResponse = await fetch("/api/compliance/upload", { method: "POST", body: form });
+          if (!uploadResponse.ok) {
+            console.warn(`Failed to upload file for asset ${assetId}`);
+          }
         }
       }
 
@@ -284,6 +325,12 @@ export default function SetupComplianceModalV2({
                 <span className="font-medium">Mark as <strong>HRB</strong> (apply BSA items)</span>
               </label>
               <div className="flex-1" />
+              <button
+                onClick={clearAll}
+                className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-100 rounded-lg text-sm transition-colors border border-red-300/30"
+              >
+                Clear All Assets
+              </button>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
@@ -298,14 +345,14 @@ export default function SetupComplianceModalV2({
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
           {loading ? (
             <div className="p-8 text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
               <p className="text-gray-600">Loading compliance assets...</p>
             </div>
           ) : (
-            <div className="p-6 grid gap-6 md:grid-cols-2">
+            <div className="p-6 grid gap-6 md:grid-cols-2 max-h-full">
               {Object.entries(grouped).map(([cat, items]) => {
                 const IconComponent = categoryIcons[cat] || FileText;
                 return (
@@ -339,7 +386,7 @@ export default function SetupComplianceModalV2({
                       </div>
                     </div>
                     
-                    <div className="divide-y divide-gray-100">
+                    <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto custom-scrollbar">
                       {items.map(a => (
                         <div key={a.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                           <div className="flex items-start gap-4">
@@ -347,7 +394,7 @@ export default function SetupComplianceModalV2({
                               type="checkbox"
                               className="h-5 w-5 mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                               checked={isChecked(a.id)}
-                              disabled={existing.has(a.id) || isLocked(a.id)}
+                              disabled={isLocked(a.id)}
                               onChange={() => toggle(a.id)}
                             />
                             <div className="flex-1">
@@ -371,10 +418,22 @@ export default function SetupComplianceModalV2({
                                     HRB Mandated
                                   </span>
                                 )}
-                                {existing.has(a.id) && (
+                                {existing.has(a.id) && selected[a.id] && (
                                   <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
                                     <CheckCircle className="h-3 w-3" />
                                     Already Tracking
+                                  </span>
+                                )}
+                                {existing.has(a.id) && !selected[a.id] && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs">
+                                    <X className="h-3 w-3" />
+                                    Will Remove
+                                  </span>
+                                )}
+                                {!existing.has(a.id) && selected[a.id] && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
+                                    <Plus className="h-3 w-3" />
+                                    Will Add
                                   </span>
                                 )}
                               </div>
@@ -441,8 +500,13 @@ export default function SetupComplianceModalV2({
               )}
               <div className="text-sm text-gray-600">
                 {newlyChosen.length > 0 && (
-                  <span className="font-medium text-blue-600">{newlyChosen.length}</span>
-                )} asset{newlyChosen.length !== 1 ? 's' : ''} selected
+                  <span className="font-medium text-blue-600">+{newlyChosen.length}</span>
+                )} asset{newlyChosen.length !== 1 ? 's' : ''} to add
+                {newlyUnchecked.length > 0 && (
+                  <span className="ml-2">
+                    , <span className="font-medium text-red-600">-{newlyUnchecked.length}</span> to remove
+                  </span>
+                )}
               </div>
             </div>
             

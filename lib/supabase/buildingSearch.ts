@@ -129,6 +129,89 @@ export async function searchBuildingAndUnits(query: string, supabaseClient: any)
   }
 }
 
+// Add new function for direct leaseholder searches
+export async function searchLeaseholderDirect(query: string, supabaseClient: any): Promise<SearchResults | null> {
+  try {
+    const normalizedQuery = query.toLowerCase().trim();
+    console.log('🔍 Starting direct leaseholder search for query:', normalizedQuery);
+    
+    // Extract building name and unit number from query
+    const buildingMatch = extractBuildingName(normalizedQuery);
+    const unitMatch = extractUnitNumber(normalizedQuery);
+    
+    if (!buildingMatch || !unitMatch) {
+      console.log('❌ Need both building and unit for leaseholder search');
+      return null;
+    }
+    
+    // Search for building first
+    const building = await searchBuilding(buildingMatch, supabaseClient);
+    if (!building) {
+      console.log('❌ Building not found:', buildingMatch);
+      return null;
+    }
+    
+    console.log('✅ Building found:', building.name);
+    
+    // Search for unit and leaseholder directly using the view
+    const { data, error } = await supabaseClient
+      .from('vw_units_leaseholders')
+      .select(`
+        unit_id,
+        unit_number,
+        building_id,
+        leaseholder_id,
+        leaseholder_name,
+        leaseholder_email,
+        leaseholder_phone
+      `)
+      .eq('building_id', building.id)
+      .eq('unit_number', unitMatch)
+      .single();
+    
+    if (error || !data) {
+      console.log('❌ Unit not found:', unitMatch);
+      return null;
+    }
+    
+    console.log('✅ Unit and leaseholder found:', data.unit_number, data.leaseholder_name);
+    
+    const results: SearchResults = {
+      building,
+      units: [{
+        id: data.unit_id,
+        unit_number: data.unit_number,
+        floor: null,
+        type: null,
+        leaseholder: data.leaseholder_id ? {
+          id: data.leaseholder_id,
+          name: data.leaseholder_name,
+          email: data.leaseholder_email,
+          phone: data.leaseholder_phone
+        } : null
+      }],
+      leaseholders: data.leaseholder_id ? [{
+        id: data.leaseholder_id,
+        name: data.leaseholder_name,
+        email: data.leaseholder_email,
+        phone: data.leaseholder_phone,
+        units: [{
+          id: data.unit_id,
+          unit_number: data.unit_number,
+          floor: null,
+          type: null
+        }]
+      }] : []
+    };
+    
+    return results;
+    
+  } catch (error) {
+    console.error('Error in searchLeaseholderDirect:', error);
+    return null;
+  }
+}
+
 function extractBuildingName(query: string): string | null {
   // Common patterns for building names
   const patterns = [
@@ -267,39 +350,49 @@ async function searchUnit(buildingId: string, unitNumber: string, supabaseClient
     for (const variant of searchVariants) {
       console.log(`🔍 Trying unit variant: "${variant}"`);
       
-      // Try exact match
-          const { data, error } = await supabaseClient
-      .from('units')
-      .select(`
-        id,
-        unit_number,
-        floor,
-        type,
-        leaseholder_id
-      `)
-      .eq('building_id', buildingId)
-      .eq('unit_number', variant)
-      .single();
+      // Use the view instead of manual joins
+      const { data, error } = await supabaseClient
+        .from('vw_units_leaseholders')
+        .select(`
+          unit_id,
+          unit_number,
+          building_id,
+          leaseholder_id,
+          leaseholder_name,
+          leaseholder_email,
+          leaseholder_phone
+        `)
+        .eq('building_id', buildingId)
+        .eq('unit_number', variant)
+        .single();
       
       if (!error && data) {
-        console.log('✅ Exact unit match found:', data.unit_number);
-        // Get leaseholder information
-        const leaseholder = await getLeaseholderBasic(data.leaseholder_id, supabaseClient);
+        console.log('✅ Unit found via view:', data.unit_number);
         return {
-          ...data,
-          leaseholder
+          id: data.unit_id,
+          unit_number: data.unit_number,
+          floor: null, // Not in view
+          type: null,   // Not in view
+          leaseholder: data.leaseholder_id ? {
+            id: data.leaseholder_id,
+            name: data.leaseholder_name,
+            email: data.leaseholder_email,
+            phone: data.leaseholder_phone
+          } : null
         };
       }
       
       // Try case-insensitive partial match
       const { data: partialData, error: partialError } = await supabaseClient
-        .from('units')
+        .from('vw_units_leaseholders')
         .select(`
-          id,
+          unit_id,
           unit_number,
-          floor,
-          type,
-          leaseholder_id
+          building_id,
+          leaseholder_id,
+          leaseholder_name,
+          leaseholder_email,
+          leaseholder_phone
         `)
         .eq('building_id', buildingId)
         .ilike('unit_number', `%${variant}%`)
@@ -307,12 +400,18 @@ async function searchUnit(buildingId: string, unitNumber: string, supabaseClient
         .single();
       
       if (!partialError && partialData) {
-        console.log('✅ Partial unit match found:', partialData.unit_number);
-        // Get leaseholder information
-        const leaseholder = await getLeaseholderBasic(partialData.leaseholder_id, supabaseClient);
+        console.log('✅ Partial unit match found via view:', partialData.unit_number);
         return {
-          ...partialData,
-          leaseholder
+          id: partialData.unit_id,
+          unit_number: partialData.unit_number,
+          floor: null, // Not in view
+          type: null,   // Not in view
+          leaseholder: partialData.leaseholder_id ? {
+            id: partialData.leaseholder_id,
+            name: partialData.leaseholder_name,
+            email: partialData.leaseholder_email,
+            phone: partialData.leaseholder_phone
+          } : null
         };
       }
     }
@@ -328,14 +427,17 @@ async function searchUnit(buildingId: string, unitNumber: string, supabaseClient
 
 async function getAllUnitsForBuilding(buildingId: string, supabaseClient: any): Promise<Unit[]> {
   try {
+    // Use the view instead of manual joins
     const { data, error } = await supabaseClient
-      .from('units')
+      .from('vw_units_leaseholders')
       .select(`
-        id,
+        unit_id,
         unit_number,
-        floor,
-        type,
-        leaseholder_id
+        building_id,
+        leaseholder_id,
+        leaseholder_name,
+        leaseholder_email,
+        leaseholder_phone
       `)
       .eq('building_id', buildingId)
       .order('unit_number', { ascending: true });
@@ -344,16 +446,19 @@ async function getAllUnitsForBuilding(buildingId: string, supabaseClient: any): 
       return [];
     }
     
-    // Get leaseholder information for each unit
-    const unitsWithLeaseholders = await Promise.all(
-      data.map(async (unit: any) => {
-        const leaseholder = await getLeaseholderBasic(unit.leaseholder_id, supabaseClient);
-        return {
-          ...unit,
-          leaseholder
-        };
-      })
-    );
+    // Transform view data to Unit format
+    const unitsWithLeaseholders = data.map((item: any) => ({
+      id: item.unit_id,
+      unit_number: item.unit_number,
+      floor: null, // Not in view
+      type: null,   // Not in view
+      leaseholder: item.leaseholder_id ? {
+        id: item.leaseholder_id,
+        name: item.leaseholder_name,
+        email: item.leaseholder_email,
+        phone: item.leaseholder_phone
+      } : null
+    }));
     
     return unitsWithLeaseholders;
     
