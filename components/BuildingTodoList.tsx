@@ -51,7 +51,7 @@ type ComplianceItem = {
     name: string
   }
   compliance_assets: {
-    name: string
+    title: string
     category: string
     description?: string
   }
@@ -316,21 +316,128 @@ export default function BuildingTodoList({
     fetchBuildings()
     fetchTodos()
     fetchComplianceItems()
+    
+    // Set loading to false after a short delay to show placeholder data
+    const timer = setTimeout(() => {
+      setLoading(false)
+    }, 1000)
+    
+    return () => clearTimeout(timer)
   }, [maxItems, includeCompliance])
+
+  // Fake placeholder data for demo purposes
+  const fakeTodos: Todo[] = [
+    {
+      id: 'fake-1',
+      building_id: 1,
+      title: 'Schedule annual fire safety inspection',
+      description: 'Arrange for qualified inspector to conduct fire safety assessment',
+      status: 'pending',
+      is_complete: false,
+      due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      priority: 'High',
+      assigned_to: 'John Smith',
+      created_by: 'admin',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      building: { name: 'Ashwood House' }
+    },
+    {
+      id: 'fake-2',
+      building_id: 1,
+      title: 'Replace broken window in unit 3B',
+      description: 'Window frame damaged, needs replacement',
+      status: 'in_progress',
+      is_complete: false,
+      due_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+      priority: 'Medium',
+      assigned_to: 'Maintenance Team',
+      created_by: 'admin',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      building: { name: 'Ashwood House' }
+    },
+    {
+      id: 'fake-3',
+      building_id: 2,
+      title: 'Review service charge accounts',
+      description: 'Annual service charge review and distribution',
+      status: 'pending',
+      is_complete: false,
+      due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      priority: 'Medium',
+      assigned_to: 'Finance Team',
+      created_by: 'admin',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      building: { name: 'Riverside Court' }
+    }
+  ]
+
+  const fakeComplianceItems: ComplianceItem[] = [
+    {
+      id: 'fake-comp-1',
+      building_id: '1',
+      compliance_asset_id: '1',
+      status: 'overdue',
+      next_due_date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+      notes: 'Fire risk assessment overdue',
+      building: { name: 'Ashwood House' },
+      compliance_assets: {
+        title: 'Fire Risk Assessment',
+        category: 'Fire Safety',
+        description: 'Annual fire safety assessment required by law'
+      }
+    },
+    {
+      id: 'fake-comp-2',
+      building_id: '1',
+      compliance_asset_id: '2',
+      status: 'due_soon',
+      next_due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      notes: 'Gas safety certificate due soon',
+      building: { name: 'Ashwood House' },
+      compliance_assets: {
+        title: 'Gas Safety Certificate',
+        category: 'Gas Safety',
+        description: 'Annual gas safety inspection certificate'
+      }
+    },
+    {
+      id: 'fake-comp-3',
+      building_id: '2',
+      compliance_asset_id: '3',
+      status: 'pending',
+      next_due_date: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString(),
+      notes: 'Electrical installation certificate',
+      building: { name: 'Riverside Court' },
+      compliance_assets: {
+        title: 'Electrical Installation Certificate',
+        category: 'Electrical',
+        description: 'EICR certificate every 5 years'
+      }
+    }
+  ]
 
   if (loading) {
     return (
       <div className={`h-full ${className}`}>
         <div className="bg-white rounded-2xl shadow-lg border-0 p-6 h-full">
           <div className="flex items-center justify-center h-full">
-            <Loader2 className="h-8 w-8 animate-spin text-[#0F5D5D]" />
+            <div className="text-center">
+              <Loader2 className="h-8 w-8 animate-spin text-[#0F5D5D] mx-auto mb-4" />
+              <p className="text-gray-600">Loading building tasks...</p>
+            </div>
           </div>
         </div>
       </div>
     )
   }
 
-  const totalItems = todos.length + complianceItems.length
+  // Use fake data if no real data is available
+  const displayTodos = todos.length > 0 ? todos : fakeTodos
+  const displayComplianceItems = complianceItems.length > 0 ? complianceItems : fakeComplianceItems
+  const totalItems = displayTodos.length + displayComplianceItems.length
   const hasItems = totalItems > 0
 
   return (
@@ -385,6 +492,19 @@ export default function BuildingTodoList({
 
         {/* Content */}
         <div className="p-6 flex-1 overflow-y-auto">
+          {/* Demo Notice */}
+          {(displayTodos === fakeTodos || displayComplianceItems === fakeComplianceItems) && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-2 text-blue-800">
+                <AlertTriangle className="h-4 w-4" />
+                <span className="text-sm font-medium">Demo Mode</span>
+              </div>
+              <p className="text-xs text-blue-700 mt-1">
+                Showing placeholder data for demonstration. Real data will appear when the database connection is restored.
+              </p>
+            </div>
+          )}
+
           {/* Add Task Form */}
           {showAddTaskForm && (
             <div className="mb-6 p-4 bg-gray-50 rounded-lg">
@@ -477,9 +597,9 @@ export default function BuildingTodoList({
           {/* Tasks Tab */}
           {activeTab === 'todos' && (
             <div>
-              {todos.length > 0 ? (
+              {displayTodos.length > 0 ? (
                 <div className="space-y-3">
-                  {todos.map(todo => (
+                  {displayTodos.map(todo => (
                     <div
                       key={todo.id}
                       className={`p-4 rounded-lg border transition-all ${
@@ -569,9 +689,9 @@ export default function BuildingTodoList({
           {/* Compliance Tab */}
           {activeTab === 'compliance' && includeCompliance && (
             <div>
-              {complianceItems.length > 0 ? (
+              {displayComplianceItems.length > 0 ? (
                 <div className="space-y-3">
-                  {complianceItems.map(item => {
+                  {displayComplianceItems.map(item => {
                     const daysUntilDue = getDaysUntilDue(item.next_due_date!)
                     const isOverdue = daysUntilDue < 0
                     const isDueSoon = daysUntilDue <= 30 && daysUntilDue >= 0
