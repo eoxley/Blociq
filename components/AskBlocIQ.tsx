@@ -15,6 +15,7 @@ type Message = {
   content: string;
   timestamp: Date;
   files?: UploadedFile[];
+  documentAnalysis?: any[]; // Added for document analysis results
 };
 
 type UploadedFile = {
@@ -23,6 +24,7 @@ type UploadedFile = {
   name: string;
   size: number;
   type: string;
+  extractionMethod?: 'ocr' | 'enhanced' | 'standard'; // Added for extraction method
 };
 
 type SuggestedAction = {
@@ -239,7 +241,10 @@ export default function AskBlocIQ({
         };
         
         setUploadedFiles(prev => [...prev, uploadedFile]);
-        toast.success(`✅ ${file.name} uploaded. You can now ask questions about it.`);
+        toast.success(`✅ ${file.name} uploaded successfully!`, {
+          description: "You can now ask questions about this document.",
+          duration: 4000,
+        });
       }
     });
   };
@@ -415,7 +420,7 @@ export default function AskBlocIQ({
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: question.trim(),
+      content: question.trim() || `Uploaded ${uploadedFiles.length} file(s) for analysis`,
       timestamp: new Date(),
       files: uploadedFiles.length > 0 ? [...uploadedFiles] : undefined
     };
@@ -427,36 +432,64 @@ export default function AskBlocIQ({
     setIsDocumentSearch(false);
     
     try {
-      // Create FormData if files are uploaded
-      let requestBody: FormData | string;
-      let headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
+      let finalPrompt = question.trim();
+      let uploadedFileResults: any[] = [];
 
+      // Handle file uploads first if any files are present
       if (uploadedFiles.length > 0) {
-        const formData = new FormData();
-        formData.append('prompt', question.trim());
-        formData.append('building_id', buildingId || 'null');
-        
-        uploadedFiles.forEach((uploadedFile) => {
-          formData.append(`file`, uploadedFile.file);
-          formData.append(`fileName`, uploadedFile.name);
-        });
-        
-        requestBody = formData;
-        delete headers['Content-Type'];
-      } else {
-        requestBody = JSON.stringify({
-          prompt: question.trim(),
-          building_id: buildingId,
-          contextType: isMajorWorksContext ? 'major_works' : 'general',
-          projectId: isMajorWorksContext ? projectId : undefined,
-        });
+        // Upload each file and get analysis
+        for (const uploadedFile of uploadedFiles) {
+          try {
+            const formData = new FormData();
+            formData.append('file', uploadedFile.file);
+            formData.append('buildingId', buildingId || 'null');
+            
+            const uploadResponse = await fetch('/api/ask-ai/upload', {
+              method: 'POST',
+              body: formData,
+            });
+
+            if (!uploadResponse.ok) {
+              throw new Error(`Failed to upload ${uploadedFile.name}`);
+            }
+
+            const uploadResult = await uploadResponse.json();
+            
+            if (uploadResult.success) {
+              uploadedFileResults.push({
+                filename: uploadResult.filename,
+                summary: uploadResult.summary,
+                suggestedActions: uploadResult.suggestedActions || [],
+                extractionMethod: uploadResult.extractionMethod || 'standard' // Capture extraction method
+              });
+
+              // Add file analysis to the prompt
+              if (!finalPrompt) {
+                finalPrompt = `Please analyze the uploaded document: ${uploadedFile.name}`;
+              }
+              finalPrompt += `\n\nDocument: ${uploadedFile.name}\nSummary: ${uploadResult.summary}\n\nPlease provide insights and answer any specific questions about this document.`;
+            }
+          } catch (uploadError) {
+            console.error(`Error uploading ${uploadedFile.name}:`, uploadError);
+            toast.error(`Failed to upload ${uploadedFile.name}`);
+          }
+        }
       }
+
+      // Now send the enhanced prompt to the main ask-ai endpoint
+      const requestBody = JSON.stringify({
+        prompt: finalPrompt,
+        building_id: buildingId,
+        contextType: isMajorWorksContext ? 'major_works' : 'general',
+        projectId: isMajorWorksContext ? projectId : undefined,
+        uploadedFiles: uploadedFileResults // Include file analysis results
+      });
 
       const response = await fetch('/api/ask-ai', {
         method: 'POST',
-        headers,
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: requestBody,
       });
 
@@ -475,7 +508,8 @@ export default function AskBlocIQ({
           id: (Date.now() + 1).toString(),
           role: 'assistant',
           content: data.response,
-          timestamp: new Date()
+          timestamp: new Date(),
+          documentAnalysis: uploadedFileResults.length > 0 ? uploadedFileResults : undefined
         };
 
         setMessages(prev => [...prev, assistantMessage]);
@@ -498,12 +532,13 @@ export default function AskBlocIQ({
             .from('ai_logs')
             .insert({
               user_id: userId,
-              question: question.trim(),
+              question: finalPrompt,
               response: data.response,
               timestamp: new Date().toISOString(),
               building_id: buildingId,
               document_search: data.documentSearch || false,
-              documents_found: data.documents?.length || 0
+              documents_found: data.documents?.length || 0,
+              files_uploaded: uploadedFiles.length
             });
         } catch (logError) {
           console.error('Failed to log AI interaction:', logError);
@@ -512,6 +547,7 @@ export default function AskBlocIQ({
         toast.error('Error: No response from AI service');
       }
     } catch (error) {
+      console.error('Error in handleSubmit:', error);
       toast.error('Error: Failed to connect to AI service. Please check your internet connection and try again.');
     } finally {
       setLoading(false);
@@ -621,6 +657,14 @@ export default function AskBlocIQ({
                     {prompt}
                   </button>
                 ))}
+                {uploadedFiles.length > 0 && (
+                  <button
+                    onClick={() => setQuestion("What are the key points in the uploaded documents?")}
+                    className="px-3 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm border border-green-200"
+                  >
+                    📄 Analyze Documents
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -653,10 +697,11 @@ export default function AskBlocIQ({
                   {/* Files */}
                   {message.files && message.files.length > 0 && (
                     <div className="mt-3 space-y-2">
+                      <p className="text-xs text-gray-500 font-medium">📎 Analyzed Documents:</p>
                       {message.files.map((file) => (
-                        <div key={file.id} className="flex items-center gap-2 text-sm">
+                        <div key={file.id} className="flex items-center gap-2 text-sm bg-blue-50 p-2 rounded-lg">
                           <span>{getFileIcon(file.type)}</span>
-                          <span className="truncate">{file.name}</span>
+                          <span className="truncate font-medium">{file.name}</span>
                           <span className="text-xs opacity-70">({formatFileSize(file.size)})</span>
                         </div>
                       ))}
@@ -686,6 +731,37 @@ export default function AskBlocIQ({
                       </button>
                     </div>
                   )}
+
+                  {/* Document Analysis Results */}
+                  {message.role === 'assistant' && message.documentAnalysis && (
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <p className="text-xs text-gray-500 font-medium mb-2">📊 Document Analysis:</p>
+                      <div className="space-y-2">
+                        {message.documentAnalysis.map((analysis: any, index: number) => (
+                          <div key={index} className="bg-gray-50 p-3 rounded-lg">
+                            <p className="text-sm font-medium text-gray-900 mb-1">
+                              📄 {analysis.filename}
+                            </p>
+                            <p className="text-xs text-gray-600 mb-2">
+                              {analysis.summary}
+                            </p>
+                            {analysis.suggestedActions && analysis.suggestedActions.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {analysis.suggestedActions.map((action: string, actionIndex: number) => (
+                                  <span 
+                                    key={actionIndex}
+                                    className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
+                                  >
+                                    {action}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -701,9 +777,23 @@ export default function AskBlocIQ({
                   <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                     <Sparkles className="h-3 w-3 text-white" />
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-                    <span className="text-sm text-gray-600">BlocIQ is thinking...</span>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-1 mb-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                      <span className="text-sm text-gray-600">
+                        {uploadedFiles.length > 0 
+                          ? `Processing ${uploadedFiles.length} file(s) and analyzing with BlocIQ...`
+                          : 'BlocIQ is thinking...'
+                        }
+                      </span>
+                    </div>
+                    
+                    {/* Progress Bar for File Processing */}
+                    {uploadedFiles.length > 0 && (
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300 animate-pulse"></div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -753,26 +843,105 @@ export default function AskBlocIQ({
             </div>
 
             {/* Enhanced Upload Area */}
-            <div className="flex items-center justify-center">
-              <div className="relative group">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-blue-600 transition-all duration-200 rounded-xl hover:bg-blue-50 border border-gray-200 hover:border-blue-200"
-                  title="Upload document to Ask BlocIQ"
-                >
-                  <Upload className="w-5 h-5" />
-                  <span className="text-sm font-medium">Upload Document</span>
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  accept=".pdf,.docx,.txt"
-                  onChange={(e) => handleFileSelect(e.target.files)}
-                  className="hidden"
-                />
+            <div className="space-y-3">
+              {/* Upload Guidance */}
+              <div className="text-center">
+                <p className="text-sm text-gray-600 mb-2">
+                  📄 Upload documents to get AI-powered analysis and insights
+                </p>
+                <p className="text-xs text-gray-500">
+                  BlocIQ will read, summarize, and answer questions about your documents
+                </p>
               </div>
+
+              {/* Upload Button */}
+              <div className="flex items-center justify-center">
+                <div className="relative group">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-blue-600 transition-all duration-200 rounded-xl hover:bg-blue-50 border border-gray-200 hover:border-blue-200"
+                    title="Upload document to Ask BlocIQ"
+                  >
+                    <Upload className="w-5 h-5" />
+                    <span className="text-sm font-medium">Upload Document</span>
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept=".pdf,.docx,.txt,.doc"
+                    onChange={(e) => handleFileSelect(e.target.files)}
+                    className="hidden"
+                  />
+                </div>
+              </div>
+
+              {/* Drag and Drop Area */}
+              <div
+                className={`border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 ${
+                  isDragOver 
+                    ? 'border-blue-400 bg-blue-50' 
+                    : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                }`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                <Upload className={`h-8 w-8 mx-auto mb-2 ${
+                  isDragOver ? 'text-blue-500' : 'text-gray-400'
+                }`} />
+                <p className={`text-sm font-medium ${
+                  isDragOver ? 'text-blue-600' : 'text-gray-600'
+                }`}>
+                  {isDragOver ? 'Drop files here' : 'Drag and drop files here'}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Supports PDF, DOCX, DOC, TXT (max 10MB each)
+                </p>
+              </div>
+
+              {/* Uploaded Files Display */}
+              {uploadedFiles.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-gray-700">Uploaded Files:</p>
+                  {uploadedFiles.map((file) => (
+                    <div key={file.id} className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                          {getFileIconComponent(file.type)}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{file.name}</p>
+                          <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                          <p className="text-xs text-blue-600 font-medium">Ready for analysis</p>
+                          {file.extractionMethod && (
+                            <p className={`text-xs ${
+                              file.extractionMethod === 'ocr' ? 'text-orange-600' : 
+                              file.extractionMethod === 'enhanced' ? 'text-purple-600' : 
+                              'text-blue-600'
+                            } font-medium`}>
+                              {file.extractionMethod === 'ocr' ? '🔍 OCR Processing' :
+                               file.extractionMethod === 'enhanced' ? '⚡ Enhanced Extraction' :
+                               '📄 Standard Extraction'}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => removeFile(file.id)}
+                        className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                        title="Remove file"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                  <p className="text-xs text-gray-500 text-center">
+                    Files will be analyzed when you send your message
+                  </p>
+                </div>
+              )}
             </div>
           </form>
         </div>
