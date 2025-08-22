@@ -230,7 +230,7 @@ Example: If asked "Who is the leaseholder of 5 Ashwood House?", respond with:
 
 I'd be delighted to help you get in touch! Would you like me to help you email or call her?"`;
 
-    // 🏢 Smart Building Detection from Prompt
+    // 🔍 Smart Building Detection from Prompt
     if (!building_id) {
       console.log('🔍 Auto-detecting building from prompt...');
       
@@ -256,6 +256,37 @@ I'd be delighted to help you get in touch! Would you like me to help you email o
             break;
           }
         }
+      }
+    }
+
+    // 🔍 Enhanced Leaseholder Search for Specific Queries
+    if (prompt.toLowerCase().includes('leaseholder') || prompt.toLowerCase().includes('who is') || prompt.toLowerCase().includes('flat') || prompt.toLowerCase().includes('unit')) {
+      console.log('🔍 Detected leaseholder-specific query, attempting direct search...');
+      
+      try {
+        const searchResults = await searchLeaseholderDirect(prompt, supabase);
+        console.log('🔍 Direct leaseholder search results:', searchResults);
+        
+        if (searchResults && searchResults.leaseholders.length > 0) {
+          console.log('✅ Found leaseholder data via direct search');
+          buildingContext += `\n\nLEASEHOLDER SEARCH RESULTS:
+Building: ${searchResults.building?.name}
+Unit: ${searchResults.units[0]?.unit_number}
+Leaseholder: ${searchResults.leaseholders[0]?.name}
+Email: ${searchResults.leaseholders[0]?.email || 'Not provided'}
+Phone: ${searchResults.leaseholders[0]?.phone || 'Not provided'}`;
+          
+          // Update context metadata
+          if (searchResults.building) {
+            contextMetadata.buildingName = searchResults.building.name;
+            contextMetadata.unitCount = searchResults.units?.length || 0;
+            contextMetadata.searchResultsFound = true;
+          }
+        } else {
+          console.log('❌ No leaseholder data found via direct search');
+        }
+      } catch (searchError) {
+        console.warn('Could not perform direct leaseholder search:', searchError);
       }
     }
 
