@@ -98,6 +98,34 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const prompt = body.message || body.prompt || body.question || '';
     let building_id = body.building_id || body.buildingId || '';
+    
+    // 🔍 NEW: Auto-detect building from request context
+    const referer = req.headers.get('referer') || '';
+    const userAgent = req.headers.get('user-agent') || '';
+    
+    console.log('🔍 Request context analysis:');
+    console.log('  - Referer:', referer);
+    console.log('  - User Agent:', userAgent.substring(0, 100) + '...');
+    
+    // Try to extract building ID from URL if not provided
+    if (!building_id && referer) {
+      const buildingMatch = referer.match(/\/buildings\/([a-f0-9-]+)/i);
+      if (buildingMatch) {
+        building_id = buildingMatch[1];
+        console.log('🔍 Auto-detected building ID from URL:', building_id);
+      }
+    }
+    
+    // Also try to extract building name from URL for context
+    let urlBuildingName = '';
+    if (referer) {
+      const buildingNameMatch = referer.match(/\/buildings\/[^\/]+\/([^\/\?]+)/i);
+      if (buildingNameMatch) {
+        urlBuildingName = decodeURIComponent(buildingNameMatch[1]);
+        console.log('🔍 URL building context:', urlBuildingName);
+      }
+    }
+
     const document_ids = body.document_ids || body.documentIds || [];
     const leaseholder_id = body.leaseholder_id || body.leaseholderId || '';
     const contextType = body.context_type || body.contextType || 'general';
@@ -221,6 +249,12 @@ export async function POST(req: NextRequest) {
 - Always suggest helpful next steps like "Would you like me to help you email or call them?"
 - Format responses clearly and directly, not as emails or letters
 
+🎯 NEW: DIRECT UI DATA ACCESS
+- You now have access to building data directly from the user's current page context
+- If the user is on a building page, you can access real-time building, unit, and leaseholder information
+- Use this direct data instead of complex database searches when available
+- This makes you much more accurate and reliable for building-specific queries
+
 Example: If asked "Who is the leaseholder of 5 Ashwood House?", respond with:
 "Absolutely! Emma Taylor is the leaseholder of Unit 5 at Ashwood House.
 📧 Email: emma.taylor@email.com
@@ -284,6 +318,102 @@ Phone: ${searchResults.leaseholders[0]?.phone || 'Not provided'}`;
           }
         } else {
           console.log('❌ No leaseholder data found via direct search');
+          
+          // 🔍 NEW APPROACH: Try to get building data from current page context
+          console.log('🔄 Attempting to get building data from current page context...');
+          
+          // If we have a building_id, try to get comprehensive data directly
+          if (building_id) {
+            try {
+              console.log('🔍 Fetching comprehensive building data for ID:', building_id);
+              
+              // Get building with all units and leaseholders
+              const { data: buildingData, error: buildingError } = await supabase
+                .from('buildings')
+                .select(`
+                  id,
+                  name,
+                  address,
+                  unit_count,
+                  notes,
+                  units (
+                    id,
+                    unit_number,
+                    type,
+                    floor,
+                    leaseholder_id,
+                    leaseholders (
+                      id,
+                      name,
+                      full_name,
+                      email,
+                      phone
+                    )
+                  )
+                `)
+                .eq('id', building_id)
+                .single();
+              
+              if (buildingData && !buildingError) {
+                console.log('✅ Found building data:', buildingData.name);
+                console.log('📊 Units found:', buildingData.units?.length || 0);
+                
+                // Extract unit number from query
+                const unitMatch = prompt.match(/(\d+)/);
+                const targetUnitNumber = unitMatch ? unitMatch[1] : null;
+                
+                if (targetUnitNumber && buildingData.units) {
+                  const targetUnit = buildingData.units.find(unit => 
+                    unit.unit_number === targetUnitNumber || 
+                    unit.unit_number === `Flat ${targetUnitNumber}` ||
+                    unit.unit_number === `Unit ${targetUnitNumber}`
+                  );
+                  
+                  if (targetUnit) {
+                    console.log('✅ Found target unit:', targetUnit.unit_number);
+                    
+                    if (targetUnit.leaseholders && targetUnit.leaseholders.length > 0) {
+                      const leaseholder = targetUnit.leaseholders[0];
+                      console.log('✅ Found leaseholder:', leaseholder.name || leaseholder.full_name);
+                      
+                      buildingContext += `\n\n🎯 DIRECT BUILDING DATA FOUND:
+Building: ${buildingData.name}
+Unit: ${targetUnit.unit_number}
+Leaseholder: ${leaseholder.name || leaseholder.full_name}
+Email: ${leaseholder.email || 'Not provided'}
+Phone: ${leaseholder.phone || 'Not provided'}`;
+                      
+                      contextMetadata.searchResultsFound = true;
+                      contextMetadata.leaseholderFound = true;
+                    } else {
+                      console.log('❌ Unit found but no leaseholder assigned');
+                      buildingContext += `\n\n🏠 UNIT FOUND BUT NO LEASEHOLDER:
+Building: ${buildingData.name}
+Unit: ${targetUnit.unit_number}
+Status: No leaseholder currently assigned`;
+                    }
+                  } else {
+                    console.log('❌ Target unit not found in building');
+                    buildingContext += `\n\n🏢 BUILDING DATA AVAILABLE:
+Building: ${buildingData.name}
+Total Units: ${buildingData.units?.length || 0}
+Available Units: ${buildingData.units?.map(u => u.unit_number).join(', ')}
+Note: Unit ${targetUnitNumber} not found in this building`;
+                  }
+                } else {
+                  console.log('❌ Could not extract unit number from query');
+                  buildingContext += `\n\n🏢 BUILDING DATA AVAILABLE:
+Building: ${buildingData.name}
+Total Units: ${buildingData.units?.length || 0}
+Available Units: ${buildingData.units?.map(u => u.unit_number).join(', ')}`;
+                }
+              } else {
+                console.log('❌ Failed to fetch building data:', buildingError);
+              }
+            } catch (contextError) {
+              console.warn('Could not fetch building context data:', contextError);
+            }
+          }
         }
       } catch (searchError) {
         console.warn('Could not perform direct leaseholder search:', searchError);

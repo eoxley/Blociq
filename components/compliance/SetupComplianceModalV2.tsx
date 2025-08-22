@@ -287,12 +287,13 @@ export default function SetupComplianceModalV2({
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity z-[9999] communications-modal" onClick={onClose}></div>
         
         <div 
-          className="absolute right-0 top-0 h-full w-full max-w-5xl bg-white shadow-2xl border-l border-gray-200 flex flex-col communications-modal-content"
+          className="relative mx-auto my-8 w-full max-w-5xl bg-white shadow-2xl rounded-lg border border-gray-200 flex flex-col communications-modal-content"
           style={{ 
-            position: 'absolute', 
+            position: 'relative', 
             zIndex: 10000,
             isolation: 'isolate',
-            willChange: 'transform'
+            willChange: 'transform',
+            maxHeight: 'calc(100vh - 4rem)'
           }}
         >
         

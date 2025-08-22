@@ -86,6 +86,49 @@ export class AIContextHandler {
     };
   }
 
+  /**
+   * NEW: Automatically detect building context from current page URL
+   */
+  static detectPageBuildingContext(pathname: string): { buildingId?: string; buildingName?: string; unitId?: string } {
+    try {
+      // Pattern: /buildings/[buildingId]/[section]
+      const buildingMatch = pathname.match(/\/buildings\/([a-f0-9-]+)(?:\/([^\/\?]+))?/i);
+      
+      if (buildingMatch) {
+        const buildingId = buildingMatch[1];
+        const section = buildingMatch[2];
+        
+        console.log('🔍 Page context detected:', { buildingId, section, pathname });
+        
+        return {
+          buildingId,
+          buildingName: section ? decodeURIComponent(section) : undefined,
+          unitId: undefined // Could be enhanced to detect unit context
+        };
+      }
+      
+      // Pattern: /buildings/[buildingId]/units/[unitId]
+      const unitMatch = pathname.match(/\/buildings\/([a-f0-9-]+)\/units\/([a-f0-9-]+)/i);
+      if (unitMatch) {
+        const buildingId = unitMatch[1];
+        const unitId = unitMatch[2];
+        
+        console.log('🔍 Unit page context detected:', { buildingId, unitId, pathname });
+        
+        return {
+          buildingId,
+          unitId,
+          buildingName: undefined
+        };
+      }
+      
+      return {};
+    } catch (error) {
+      console.warn('Error detecting page building context:', error);
+      return {};
+    }
+  }
+
   async getBuildingContext(buildingId: string) {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ask-ai/building-context`, {
