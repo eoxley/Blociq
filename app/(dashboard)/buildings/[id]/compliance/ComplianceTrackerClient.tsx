@@ -284,7 +284,7 @@ export default function ComplianceTrackerClient({ complianceData }: ComplianceTr
                    Upload Document
                  </Button>
                 <Button
-                  onClick={() => router.push(`/buildings/${complianceData.building.id}/compliance/setup`)}
+                  onClick={() => router.push(`/buildings/${complianceData.building.id}/compliance`)}
                   variant="outline"
                   className="border-[#2BBEB4] text-[#2BBEB4] hover:bg-[#2BBEB4] hover:text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-200 flex items-center gap-2"
                 >
@@ -502,7 +502,7 @@ export default function ComplianceTrackerClient({ complianceData }: ComplianceTr
                 )}
                 {!searchTerm && filter === 'all' && (
                   <Button
-                    onClick={() => router.push(`/buildings/${complianceData.building.id}/compliance/setup`)}
+                    onClick={() => router.push(`/buildings/${complianceData.building.id}/compliance`)}
                     className="bg-[#2BBEB4] hover:bg-[#0F5D5D] text-white"
                   >
                     Setup Compliance
