@@ -94,9 +94,9 @@ export default function SetupComplianceModal({ open, buildingId, onClose, onSave
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[90]">
+    <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <div className="absolute right-0 top-0 h-full w-full max-w-3xl bg-white shadow-2xl border-l border-neutral-200 flex flex-col">
+      <div className="relative mx-auto my-8 w-full max-w-3xl bg-white shadow-2xl rounded-lg border border-neutral-200 flex flex-col" style={{ maxHeight: 'calc(100vh - 4rem)' }}>
         <header className="px-5 py-4 border-b border-neutral-100 flex items-center justify-between">
           <div>
             <div className="text-xs text-neutral-500">Compliance setup</div>
