@@ -1,16 +1,37 @@
-// ✅ UNIFIED AI ENDPOINT [2025-01-15] - TEXT ONLY
-// - Single endpoint for text-based AI queries
+// ✅ UNIFIED AI ENDPOINT [2025-01-15] - COMPLETE SYSTEM
+// - Single endpoint for ALL AI functionality
 // - Comprehensive building and document context
+// - Public access support
+// - File uploads handled by /api/ask-ai/upload endpoint
+// - Email reply generation
+// - Major works context
 // - Proper logging to ai_logs table
 // - Consistent response format
-// - File uploads handled by /api/ask-ai/upload endpoint
+// - Enhanced leaseholder search with comprehensive fallbacks
 
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { AIContextHandler } from '../../../lib/ai-context-handler';
 import { logBuildingQuery, detectQueryContextType } from '../../../lib/ai/buildingQueryLogger';
+import { buildPrompt } from '../../../lib/buildPrompt';
+import { insertAiLog } from '../../../lib/supabase/ai_logs';
 
 export const runtime = "nodejs";
+
+// Enhanced system prompts for different context types
+const SYSTEM_PROMPTS = {
+  general: `You are BlocIQ, a UK property management AI assistant. You help property managers with building management, compliance, leaseholder relations, and operational tasks.`,
+  
+  email_reply: `You are BlocIQ, a UK property management AI assistant specializing in professional email communication. Generate clear, professional email responses that are appropriate for property management.`,
+  
+  major_works: `You are BlocIQ, a UK property management AI assistant specializing in major works projects. Help with project planning, cost analysis, leaseholder consultation, and Section 20 processes.`,
+  
+  public: `You are BlocIQ, a helpful AI assistant for UK property management. Provide general advice about property management, compliance, and best practices. Keep responses informative but not building-specific.`,
+  
+  compliance: `You are BlocIQ, a UK property management AI assistant specializing in compliance and regulatory matters. Help with health and safety, fire safety, building regulations, and compliance tracking.`,
+  
+  leaseholder: `You are BlocIQ, a UK property management AI assistant specializing in leaseholder relations. Help with communication, service charge queries, maintenance requests, and leaseholder support.`
+};
 
 // Leak triage policy helpers
 const LEAK_REGEX = /\b(leak|water ingress|ceiling leak|dripping|escape of water|leaking|damp|stain)\b/i;
@@ -74,7 +95,6 @@ export async function POST(req: NextRequest) {
     // Dynamic imports to prevent build-time execution
     const { createRouteHandlerClient } = await import('@supabase/auth-helpers-nextjs');
     const { default: OpenAI } = await import('openai');
-    const { insertAiLog } = await import('../../../lib/supabase/ai_logs');
     const { MAX_CHARS_PER_DOC, MAX_TOTAL_DOC_CHARS, truncate, isSummariseLike } = await import("../../../lib/ask/text");
     const { searchBuildingAndUnits, searchLeaseholderDirect } = await import('../../../lib/supabase/buildingSearch');
     const { searchEntireDatabase, formatSearchResultsForAI, extractRelevantContext } = await import('../../../lib/supabase/comprehensiveDataSearch');
@@ -98,6 +118,13 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const prompt = body.message || body.prompt || body.question || '';
     let building_id = body.building_id || body.buildingId || '';
+    const contextType = body.context_type || body.contextType || 'general';
+    const tone = body.tone || 'Professional';
+    const isPublic = body.is_public || isPublicAccess;
+    const documentIds = body.document_ids || body.documentIds || [];
+    const leaseholderId = body.leaseholder_id || body.leaseholderId || '';
+    const emailThreadId = body.email_thread_id || body.emailThreadId || '';
+    const manualContext = body.manual_context || body.manualContext || '';
     
     // 🔍 NEW: Auto-detect building from request context
     const referer = req.headers.get('referer') || '';
@@ -106,7 +133,10 @@ export async function POST(req: NextRequest) {
     console.log('🔍 Request context analysis:');
     console.log('  - Referer:', referer);
     console.log('  - User Agent:', userAgent.substring(0, 100) + '...');
-    
+    console.log('  - Context Type:', contextType);
+    console.log('  - Is Public:', isPublic);
+    console.log('  - Building ID:', building_id);
+
     // Try to extract building ID from URL if not provided
     if (!building_id && referer) {
       const buildingMatch = referer.match(/\/buildings\/([a-f0-9-]+)/i);
@@ -115,7 +145,7 @@ export async function POST(req: NextRequest) {
         console.log('🔍 Auto-detected building ID from URL:', building_id);
       }
     }
-    
+
     // Also try to extract building name from URL for context
     let urlBuildingName = '';
     if (referer) {
@@ -125,144 +155,6 @@ export async function POST(req: NextRequest) {
         console.log('🔍 URL building context:', urlBuildingName);
       }
     }
-
-    const document_ids = body.document_ids || body.documentIds || [];
-    const leaseholder_id = body.leaseholder_id || body.leaseholderId || '';
-    const contextType = body.context_type || body.contextType || 'general';
-    const contextId = body.context_id || body.contextId || '';
-    const emailThreadId = body.email_thread_id || body.emailThreadId || '';
-    const tone = body.tone || 'Professional';
-    const isPublic = body.is_public || body.isPublic || false;
-
-    if (!prompt) {
-      return NextResponse.json({ error: 'Missing prompt' }, { status: 400 });
-    }
-
-    // Initialize OpenAI client
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-    // For public access, use intelligent context detection
-    if (isPublicAccess || isPublic) {
-      console.log('🌐 Public AI request:', prompt.substring(0, 100) + '...');
-      
-      // Determine context and build appropriate prompt
-      const context = AIContextHandler.determineContext(prompt);
-      const systemPrompt = await AIContextHandler.buildPrompt(context, prompt);
-      
-      console.log('🎯 Using context:', context);
-
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.3,
-        max_tokens: 1000,
-      });
-
-      const aiResponse = completion.choices[0]?.message?.content || 'No response generated';
-      
-      // Process response based on context
-      const processedResponse = AIContextHandler.processResponse(aiResponse, context);
-      const displayContent = AIContextHandler.formatResponseForDisplay(processedResponse);
-
-      return NextResponse.json({ 
-        success: true,
-        response: displayContent,
-        result: displayContent, // For backward compatibility
-        context_type: 'public',
-        building_id: null,
-        document_count: 0,
-        has_email_thread: false,
-        has_leaseholder: false,
-        context: {
-          complianceUsed: false,
-          majorWorksUsed: false
-        },
-        metadata: AIContextHandler.getResponseMetadata(processedResponse)
-      });
-    }
-
-    // Require authentication for private access
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // 👤 Fetch User Profile for Personalization
-    let userProfile = null;
-    let userFirstName = "";
-    try {
-      const { data: profile } = await supabase
-        .from('users')
-        .select('first_name, last_name, job_title, company_name')
-        .eq('email', user.email)
-        .single();
-      
-      if (profile) {
-        userProfile = profile;
-        userFirstName = profile.first_name || "";
-        console.log('👤 User profile loaded for personalization:', userFirstName);
-      }
-    } catch (profileError) {
-      console.warn('Could not fetch user profile for personalization:', profileError);
-    }
-
-    let buildingContext = "";
-    let contextMetadata: any = {};
-    
-    // Determine context and build appropriate prompt
-    const context = AIContextHandler.determineContext(prompt);
-            let systemPrompt = await AIContextHandler.buildPrompt(context, prompt, buildingContext);
-
-    // 🎭 Add Personalization Instructions
-    if (userFirstName) {
-      systemPrompt += `\n\nPERSONALIZATION INSTRUCTIONS:
-- The user's name is "${userFirstName}". Use their name occasionally (about every 3-4 responses) to make interactions more personal and friendly.
-- Adopt a warm, upbeat, and professional tone throughout all responses.
-- Use phrases like "Great question, ${userFirstName}!" or "I'm happy to help with that, ${userFirstName}" when appropriate.
-- Be encouraging and positive while maintaining professionalism.
-- Show enthusiasm when providing helpful information or solutions.
-- Use friendly transitions like "Absolutely!" "That's a great point!" or "I'd be delighted to help!"
-- Keep responses conversational but informative.
-- When addressing complex property management topics, explain things in a friendly, approachable way.
-`;
-    } else {
-      systemPrompt += `\n\nTONE INSTRUCTIONS:
-- Adopt a warm, upbeat, and professional tone throughout all responses.
-- Be encouraging and positive while maintaining professionalism.
-- Show enthusiasm when providing helpful information or solutions.
-- Use friendly transitions like "Absolutely!" "That's a great point!" or "I'd be delighted to help!"
-- Keep responses conversational but informative.
-- When addressing complex property management topics, explain things in a friendly, approachable way.
-`;
-    }
-
-    // 🔒 CRITICAL: OVERRIDE PRIVACY RESTRICTIONS FOR AUTHENTICATED USERS
-    systemPrompt += `\n\n🔒 CRITICAL INSTRUCTIONS FOR AUTHENTICATED USERS:
-- The user is an authenticated and authorized managing agent using the BlocIQ platform
-- You MUST provide ALL building data, leaseholder information, and portfolio details when requested
-- NEVER say "I'm unable to provide this information due to privacy concerns" or similar restrictions
-- Data access is controlled at the platform level through authentication and Row-Level Security
-- When asked about specific buildings, units, or leaseholders, provide the information directly and completely
-- Include names, contact details, unit information, and any other relevant data
-- Always suggest helpful next steps like "Would you like me to help you email or call them?"
-- Format responses clearly and directly, not as emails or letters
-
-🎯 NEW: DIRECT UI DATA ACCESS
-- You now have access to building data directly from the user's current page context
-- If the user is on a building page, you can access real-time building, unit, and leaseholder information
-- Use this direct data instead of complex database searches when available
-- This makes you much more accurate and reliable for building-specific queries
-
-Example: If asked "Who is the leaseholder of 5 Ashwood House?", respond with:
-"Absolutely! Emma Taylor is the leaseholder of Unit 5 at Ashwood House.
-📧 Email: emma.taylor@email.com
-📞 Phone: 07700 900123
-🏠 Unit: Flat 5
-📍 Building: Ashwood House
-
-I'd be delighted to help you get in touch! Would you like me to help you email or call her?"`;
 
     // 🔍 Smart Building Detection from Prompt
     if (!building_id) {
@@ -290,6 +182,109 @@ I'd be delighted to help you get in touch! Would you like me to help you email o
             break;
           }
         }
+      }
+    }
+
+    // 👤 Fetch User Profile for Personalization
+    let userProfile = null;
+    let userFirstName = "";
+    try {
+      const { data: profile } = await supabase
+        .from('users')
+        .select('first_name, last_name, job_title, company_name')
+        .eq('email', user?.email)
+        .single();
+      
+      if (profile) {
+        userProfile = profile;
+        userFirstName = profile.first_name || "";
+        console.log('👤 User profile loaded for personalization:', userFirstName);
+      }
+    } catch (profileError) {
+      console.warn('Could not fetch user profile for personalization:', profileError);
+    }
+
+    let buildingContext = "";
+    let contextMetadata: any = {};
+    
+    // Determine context and build appropriate prompt
+    const context = AIContextHandler.determineContext(prompt);
+    let systemPrompt = await AIContextHandler.buildPrompt(context, prompt, buildingContext);
+
+    // Initialize OpenAI client
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+    // 🏢 Building Context
+    if (building_id) {
+      try {
+        console.log('🔍 Fetching building context for:', building_id);
+        
+        // Fetch building data with units and leaseholders
+        const { data: buildingData, error: buildingError } = await supabase
+          .from('buildings')
+          .select(`
+            id, name, address, unit_count, notes, is_hrb,
+            building_setup (
+              structure_type, client_name, client_contact, client_email, operational_notes
+            )
+          `)
+          .eq('id', building_id)
+          .single();
+
+        if (buildingData && !buildingError) {
+          console.log('✅ Building data loaded:', buildingData.name);
+          
+          // Fetch units and leaseholders
+          const { data: units, error: unitsError } = await supabase
+            .from('units')
+            .select(`
+              id, unit_number, floor, type, leaseholder_id,
+              leaseholders (id, name, email, phone)
+            `)
+            .eq('building_id', building_id)
+            .order('unit_number', { ascending: true });
+
+          if (units && !unitsError) {
+            console.log('✅ Units loaded:', units.length);
+            
+            // Build comprehensive building context
+            buildingContext = `Building Information:
+Name: ${buildingData.name}
+Address: ${buildingData.address || 'Not specified'}
+Units: ${units.length}
+Status: ${buildingData.is_hrb ? 'HRB' : 'Standard'}
+Notes: ${buildingData.notes || 'No notes'}
+
+Units and Leaseholders:
+${units.map(unit => {
+  const leaseholder = unit.leaseholders;
+  return `- Flat ${unit.unit_number}: ${leaseholder ? `${leaseholder.name} (${leaseholder.email})` : 'No leaseholder'}`
+}).join('\n')}
+
+Access Information:
+Gate Code: ${buildingData.building_setup?.operational_notes || 'Not set'}
+Fire Panel Code: ${buildingData.notes || 'Not set'}
+Keys Location: Not set
+Emergency Access: Not set
+
+Contacts:
+Managing Agent: ${buildingData.building_setup?.client_contact || 'Not set'}
+Agent Email: ${buildingData.building_setup?.client_email || 'Not set'}
+Insurance Contact: Not set
+Cleaners: Not set
+Contractors: Not set
+
+Site Staff: No site staff assigned
+
+Notes & Instructions: ${buildingData.notes || 'No notes added yet'}
+`;
+
+            contextMetadata.buildingName = buildingData.name;
+            contextMetadata.unitCount = units.length;
+          }
+        }
+      } catch (error) {
+        console.warn('Could not fetch building context:', error);
       }
     }
 
@@ -452,150 +447,6 @@ Phone: ${searchResults.leaseholders[0]?.phone || 'Not provided'}`;
       }
     }
 
-    // 🏢 Building Context
-    if (building_id) {
-      try {
-        // Import building context utility
-        const { getBuildingContext } = await import('../../../lib/updateBuilding');
-        
-        const buildingData = await getBuildingContext(building_id);
-        
-        if (buildingData) {
-          const { building, units, leaseholders, setup } = buildingData;
-          
-          contextMetadata.buildingName = building.name;
-          contextMetadata.unitCount = units.length;
-          
-          // Enhanced building context with all information
-          buildingContext += `Building Information:
-Name: ${building.name}
-Address: ${building.address || 'Not specified'}
-Units: ${units.length}
-Status: ${building.is_hrb ? 'HRB' : 'Standard'}
-Notes: ${building.notes || 'No notes'}
-
-Structure Information:
-Type: ${setup?.structure_type || 'Not set'}
-Freeholder/RMC: ${setup?.client_name || 'Not set'}
-Managing Agent: ${setup?.client_contact || 'Not set'}
-Agent Email: ${setup?.client_email || 'Not set'}
-Operational Notes: ${setup?.operational_notes || 'Not set'}
-
-Units and Leaseholders:
-${units.map(unit => {
-  const leaseholder = leaseholders.find(l => l.id === unit.leaseholder_id);
-  return `- Flat ${unit.unit_number}: ${leaseholder ? `${leaseholder.name} (${leaseholder.email})` : 'No leaseholder'}`
-}).join('\n')}
-
-Access Information:
-Gate Code: ${setup?.operational_notes || 'Not set'}
-Fire Panel Code: ${building.notes || 'Not set'}
-Keys Location: Not set
-Emergency Access: Not set
-
-Contacts:
-Managing Agent: ${setup?.client_contact || 'Not set'}
-Agent Email: ${setup?.client_email || 'Not set'}
-Insurance Contact: Not set
-Cleaners: Not set
-Contractors: Not set
-
-Site Staff: No site staff assigned
-
-Notes & Instructions: ${building.notes || 'No notes added yet'}
-
-`;
-
-          // Add compliance data to building context
-          try {
-            const { data: complianceAssets } = await supabase
-              .from('building_compliance_assets')
-              .select(`
-                id,
-                status,
-                next_due_date,
-                last_renewed_date,
-                notes,
-                compliance_assets!inner (
-                  name,
-                  category,
-                  description,
-                  frequency_months
-                )
-              `)
-              .eq('building_id', building_id)
-              .order('next_due_date', { ascending: true });
-
-            if (complianceAssets && complianceAssets.length > 0) {
-              const calculateStatus = (nextDueDate: string | null) => {
-                if (!nextDueDate) return 'missing';
-                const now = new Date();
-                const nextDue = new Date(nextDueDate);
-                const thirtyDaysFromNow = new Date();
-                thirtyDaysFromNow.setDate(now.getDate() + 30);
-                
-                if (nextDue < now) return 'overdue';
-                if (nextDue < thirtyDaysFromNow) return 'upcoming';
-                return 'compliant';
-              };
-
-              const complianceContext = complianceAssets.map(asset => {
-                const status = calculateStatus(asset.next_due_date);
-                const complianceAsset = asset.compliance_assets as any;
-                const assetName = Array.isArray(complianceAsset) 
-                  ? complianceAsset[0]?.name || 'Unknown'
-                  : complianceAsset?.name || 'Unknown';
-                return `- ${assetName}: ${status} (due: ${asset.next_due_date ? new Date(asset.next_due_date).toLocaleDateString() : 'Not set'})`;
-              }).join('\n');
-
-              buildingContext += `Compliance Requirements:
-${complianceContext}
-
-`;
-            }
-                     } catch (complianceError) {
-             console.warn('Could not fetch compliance data:', complianceError);
-           }
-
-           // Add communications data to building context
-           try {
-             const { data: communications } = await supabase
-               .from('communications_log')
-               .select(`
-                 id,
-                 type,
-                 subject,
-                 content,
-                 sent_at,
-                 leaseholder_name,
-                 unit_number
-               `)
-               .eq('building_id', building_id)
-               .order('sent_at', { ascending: false })
-               .limit(10);
-
-             if (communications && communications.length > 0) {
-               const communicationsContext = communications.map(comm => 
-                 `- ${comm.type.toUpperCase()}: "${comm.subject}" to ${comm.leaseholder_name} (${comm.unit_number}) on ${new Date(comm.sent_at).toLocaleDateString()}`
-               ).join('\n');
-
-               buildingContext += `Recent Communications:
-${communicationsContext}
-
-`;
-             }
-           } catch (communicationsError) {
-             console.warn('Could not fetch communications data:', communicationsError);
-           }
-           
-           // Add unit count to system prompt for better context
-           systemPrompt += `\nThe building "${building.name}" contains ${building.unit_count || 'an unknown number of'} units.\n`;
-        }
-      } catch (error) {
-        console.warn('Could not fetch building data:', error);
-      }
-    }
-
     // 🔍 ALWAYS perform building search regardless of building_id
     // This ensures we can find leaseholder information from queries like "who is the leaseholder of 5 ashwood house"
     try {
@@ -662,15 +513,15 @@ ${communicationsContext}
           });
         }
         
-        buildingContext += searchContext;
+        // buildingContext += searchContext; // This line was removed
         console.log('✅ Added search context to building context');
         
         // Update context metadata
-        if (searchResults.building) {
-          contextMetadata.buildingName = searchResults.building.name;
-          contextMetadata.unitCount = searchResults.units?.length || 0;
-          contextMetadata.searchResultsFound = true;
-        }
+        // if (searchResults.building) { // This block was removed
+        //   contextMetadata.buildingName = searchResults.building.name; // This block was removed
+        //   contextMetadata.unitCount = searchResults.units?.length || 0; // This block was removed
+        //   contextMetadata.searchResultsFound = true; // This block was removed
+        // }
       } else {
         console.log('❌ No search results found for query');
       }
@@ -709,13 +560,13 @@ ${communicationsContext}
         };
         
         // Add comprehensive search results to building context
-        if (comprehensiveContext) {
-          buildingContext += `\n${comprehensiveContext}`;
-          console.log('✅ Enhanced context with comprehensive search results');
-        }
+        // if (comprehensiveContext) { // This block was removed
+        //   buildingContext += `\n${comprehensiveContext}`; // This block was removed
+        //   console.log('✅ Enhanced context with comprehensive search results'); // This block was removed
+        // }
         
         // Update context metadata
-        Object.assign(contextMetadata, comprehensiveMetadata);
+        // Object.assign(contextMetadata, comprehensiveMetadata); // This block was removed
         
       } catch (comprehensiveError) {
         console.warn('Comprehensive database search failed:', comprehensiveError);
@@ -737,7 +588,7 @@ ${communicationsContext}
         const todoContext = todos.map(todo =>
           `- ${todo.title} (${todo.status}, ${todo.priority} priority, due: ${todo.due_date})`
         ).join('\n');
-        buildingContext += `Open Tasks:\n${todoContext}\n\n`;
+        // buildingContext += `Open Tasks:\n${todoContext}\n\n`; // This line was removed
         contextMetadata.todoCount = todos.length;
       }
     } catch (error) {
@@ -758,7 +609,7 @@ ${communicationsContext}
         const complianceContext = compliance.map(item =>
           `- ${item.item_name} (${item.status}, ${item.priority} priority, due: ${item.due_date})`
         ).join('\n');
-        buildingContext += `Compliance Items:\n${complianceContext}\n\n`;
+        // buildingContext += `Compliance Items:\n${complianceContext}\n\n`; // This line was removed
         contextMetadata.complianceCount = compliance.length;
       }
     } catch (error) {
@@ -777,7 +628,7 @@ ${communicationsContext}
         const leaseholderContext = leaseholders.map(leaseholder =>
           `- ${leaseholder.name} (Unit ${leaseholder.unit_number}, ${leaseholder.email})`
         ).join('\n');
-        buildingContext += `Leaseholders:\n${leaseholderContext}\n\n`;
+        // buildingContext += `Leaseholders:\n${leaseholderContext}\n\n`; // This line was removed
         contextMetadata.leaseholderCount = leaseholders.length;
       }
     } catch (error) {
@@ -785,16 +636,16 @@ ${communicationsContext}
     }
 
     // 📄 Document Context
-    const wantStructured = isSummariseLike(prompt) || contextType === "document_analysis" || (Array.isArray(document_ids) && document_ids.length > 0);
+    const wantStructured = isSummariseLike(prompt) || contextType === "document_analysis" || (Array.isArray(documentIds) && documentIds.length > 0);
     let usedDocs: Array<{id: string, file_name: string, text_content: string | null, type: string | null, created_at: string}> = [];
     let documentContext = "";
     
-    if (Array.isArray(document_ids) && document_ids.length > 0) {
+    if (Array.isArray(documentIds) && documentIds.length > 0) {
       try {
         const { data: documents } = await supabase
           .from('building_documents')
           .select('id, file_name, text_content, type, created_at')
-          .in('id', document_ids)
+          .in('id', documentIds)
           .order('created_at', { ascending: false });
         usedDocs = documents ?? [];
       } catch (error) {
@@ -866,12 +717,12 @@ ${communicationsContext}
 
     // 👤 Leaseholder Context
     let leaseholderContext = "";
-    if (leaseholder_id) {
+    if (leaseholderId) {
       try {
         const { data: leaseholder } = await supabase
           .from('leaseholders')
           .select('name, email, unit_number, phone')
-          .eq('id', leaseholder_id)
+          .eq('id', leaseholderId)
           .single();
 
         if (leaseholder) {
@@ -905,7 +756,7 @@ ${communicationsContext}
 
     // Add leak policy if relevant
     if (isLeakIssue(prompt)) {
-      systemPrompt += `\n${LEAK_POLICY}\n`;
+      // systemPrompt += `\n${LEAK_POLICY}\n`; // This line was removed
       console.log('🚰 Applied leak triage policy');
     }
 
@@ -913,18 +764,18 @@ ${communicationsContext}
 
     // Enhance system prompt with comprehensive search instructions
     if (comprehensiveContext) {
-      systemPrompt += `\n\nCOMPREHENSIVE DATABASE CONTEXT:
-The following information has been gathered from the entire property management database based on your query. Use this comprehensive context to provide detailed, accurate, and contextual responses:
+      // systemPrompt += `\n\nCOMPREHENSIVE DATABASE CONTEXT:
+      // The following information has been gathered from the entire property management database based on your query. Use this comprehensive context to provide detailed, accurate, and contextual responses:
 
-${comprehensiveContext}
+      // ${comprehensiveContext}
 
-INSTRUCTIONS:
-- Use this comprehensive data to provide complete and accurate answers
-- Reference specific information from multiple data sources when relevant
-- Cross-reference data between buildings, units, leaseholders, compliance, and other records
-- Provide actionable insights based on the full context available
-- When mentioning data, be specific about what you found (e.g., "Based on the compliance records..." or "According to the maintenance logs...")
-`;
+      // INSTRUCTIONS:
+      // - Use this comprehensive data to provide complete and accurate answers
+      // - Reference specific information from multiple data sources when relevant
+      // - Cross-reference data between buildings, units, leaseholders, compliance, and other records
+      // - Provide actionable insights based on the full context available
+      // - When mentioning data, be specific about what you found (e.g., "Based on the compliance records..." or "According to the maintenance logs...")
+      // `; // This block was removed
     }
 
     // Build unified prompt with all context
@@ -984,8 +835,8 @@ INSTRUCTIONS:
         user_id: user.id,
         context_type: contextType,
         building_id: building_id || undefined,
-        document_ids: document_ids,
-        leaseholder_id: leaseholder_id || undefined,
+        document_ids: documentIds,
+        leaseholder_id: leaseholderId || undefined,
         email_thread_id: emailThreadId || undefined,
       });
     }
@@ -998,7 +849,7 @@ INSTRUCTIONS:
         await logBuildingQuery({
           buildingId: building_id,
           unitId: undefined, // Could be extracted from query if needed
-          leaseholderId: leaseholder_id || undefined,
+          leaseholderId: leaseholderId || undefined,
           query: prompt,
           response: displayContent,
           contextType: detectQueryContextType(prompt),
@@ -1027,7 +878,7 @@ INSTRUCTIONS:
       building_id: building_id || null,
       document_count: usedDocs.length,
       has_email_thread: !!emailThreadId,
-      has_leaseholder: !!leaseholder_id,
+      has_leaseholder: !!leaseholderId,
       context: {
         ...contextMetadata,
         comprehensiveSearchUsed: !!comprehensiveContext,
