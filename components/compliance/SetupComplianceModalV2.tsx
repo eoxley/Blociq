@@ -27,6 +27,7 @@ import {
   Plus
 } from "lucide-react";
 import { canonicaliseCategory, canonicaliseTitle, deriveFrequencyLabel } from "@/lib/compliance/normalise";
+import { toast } from "sonner";
 
 type Asset = { 
   id: string; 
@@ -67,6 +68,7 @@ export default function SetupComplianceModalV2({
   const [files, setFiles] = useState<Record<string, File | null>>({}); // per asset file
   const [loading, setLoading] = useState(true);
   const [duplicateWarnings, setDuplicateWarnings] = useState<Record<string, string>>({}); // asset id -> warning message
+  const [showAddTaskForm, setShowAddTaskForm] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -239,12 +241,15 @@ export default function SetupComplianceModalV2({
         console.log("Bulk add response:", add);
         if (add.error) throw new Error(add.error);
 
-        // 3) Map compliance_asset_id -> bca_id for file uploads
+        // 3) Map compliance_asset_id -> id for file uploads
         const j = await fetch(`/api/buildings/${buildingId}/compliance`, { cache: "no-store" }).then(r => r.json());
         if (j.error) throw new Error(j.error);
         
         const bcaByAsset: Record<string, string> = {};
-        for (const row of (j.data || [])) bcaByAsset[row.asset_id] = row.bca_id;
+        for (const row of (j.data || [])) {
+          // Map compliance_asset_id to the actual row id
+          bcaByAsset[row.compliance_asset_id] = row.id;
+        }
 
         // 4) Upload files (only for those with a file)
         for (const assetId of newlyChosen) {
@@ -536,6 +541,32 @@ export default function SetupComplianceModalV2({
               </button>
             </div>
           </div>
+        </div>
+        {/* Seed Compliance Assets Button */}
+        <div className="mt-4">
+          <button
+            onClick={async () => {
+              try {
+                const response = await fetch('/api/compliance/assets/seed', { method: 'POST' });
+                const result = await response.json();
+                if (result.success) {
+                  toast.success(`Seeded ${result.count} compliance assets`);
+                  // Refresh the master list
+                  window.location.reload();
+                } else {
+                  toast.error(result.error || 'Failed to seed assets');
+                }
+              } catch (error) {
+                toast.error('Failed to seed compliance assets');
+              }
+            }}
+            className="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-100 rounded-lg text-sm transition-colors border border-green-300/30"
+          >
+            🌱 Seed Master Assets
+          </button>
+          <p className="text-xs text-white/70 mt-2">
+            Click to populate the master list with 46 standard compliance assets
+          </p>
         </div>
         </div>
       </div>
