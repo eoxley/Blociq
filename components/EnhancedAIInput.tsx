@@ -102,6 +102,11 @@ export default function EnhancedAIInput({
           {loading ? 'Thinking...' : 'Ask'}
         </button>
       </form>
+      
+      {/* Disclaimer */}
+      <p className="text-xs text-gray-500 italic text-center">
+        💡 Sometimes BlocIQ can get things muddled - please verify important information
+      </p>
 
       {answer && (
         <div className="space-y-4">

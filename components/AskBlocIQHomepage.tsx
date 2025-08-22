@@ -361,6 +361,14 @@ export default function AskBlocIQHomepage() {
         <div className="absolute inset-0 bg-black/5 backdrop-blur-[2px] rounded-2xl -m-2"></div>
         {/* Main Chat Container */}
         <div className="relative flex flex-col h-[500px] w-[450px] bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-200/50 mx-auto">
+      {/* Title and Description */}
+      <div className="text-center mb-6">
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">Ask BlocIQ</h2>
+        <p className="text-gray-600 mb-2">Your AI-powered property management assistant</p>
+        <p className="text-xs text-gray-500 italic">
+          💡 Sometimes BlocIQ can get things muddled - please verify important information
+        </p>
+      </div>
       {/* Chat Messages */}
       <div 
         ref={chatContainerRef}
