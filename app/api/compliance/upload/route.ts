@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-const BUCKET = "documents"; // adjust if your bucket differs
+const BUCKET = "compliance-documents"; // Use the correct bucket for compliance documents
 
 export async function POST(req: Request) {
   try {
@@ -14,6 +14,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing file/bca_id/building_id" }, { status: 400 });
     }
 
+    console.log('📎 Uploading compliance document:', {
+      fileName: file.name,
+      fileSize: file.size,
+      buildingId: building_id,
+      assetId: building_compliance_asset_id
+    });
+
+    // Upload file to Supabase storage
     const ext = file.name.split(".").pop() || "dat";
     const path = `${building_id}/compliance/${building_compliance_asset_id}/${Date.now()}_${file.name}`;
     const array = new Uint8Array(await file.arrayBuffer());
@@ -22,28 +30,67 @@ export async function POST(req: Request) {
       contentType: file.type || "application/octet-stream",
       upsert: true
     });
-    if (up.error) throw up.error;
+    
+    if (up.error) {
+      console.error('❌ Storage upload failed:', up.error);
+      throw up.error;
+    }
 
-    // create building_documents (minimal columns)
-    const { data: doc, error: e1 } = await supabaseAdmin
-      .from("building_documents")
-      .insert({ building_id, file_name: file.name, storage_path: path, type: "compliance" })
+    console.log('✅ File uploaded to storage:', path);
+
+    // Get the public URL for the uploaded file
+    const { data: { publicUrl } } = supabaseAdmin.storage
+      .from(BUCKET)
+      .getPublicUrl(path);
+
+    // Create compliance document record using the correct table structure
+    const { data: doc, error: docError } = await supabaseAdmin
+      .from("compliance_documents")
+      .insert({ 
+        building_id: building_id,
+        compliance_asset_id: building_compliance_asset_id,
+        document_url: publicUrl,
+        title: file.name,
+        doc_type: 'compliance',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
       .select()
       .single();
-    if (e1) throw e1;
+    
+    if (docError) {
+      console.error('❌ Failed to create compliance document record:', docError);
+      throw docError;
+    }
 
-    // link to building_compliance_assets using the correct column name
-    const { error: e2 } = await supabaseAdmin
-      .from("building_compliance_documents")
-      .insert({ 
-        building_compliance_asset_id: building_compliance_asset_id, 
-        document_id: doc.id 
-      });
-    if (e2) throw e2;
+    console.log('✅ Compliance document record created:', doc.id);
 
-    return NextResponse.json({ ok: true, doc_id: doc.id, path });
-  } catch (e:any) {
-    console.error('Upload error:', e);
-    return NextResponse.json({ error: e.message || "Upload failed" }, { status: 500 });
+    // Update the building_compliance_assets table with the latest document
+    const { error: updateError } = await supabaseAdmin
+      .from("building_compliance_assets")
+      .update({ 
+        latest_document_id: doc.id,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", building_compliance_asset_id);
+    
+    if (updateError) {
+      console.warn('⚠️ Failed to update building_compliance_assets with document reference:', updateError);
+      // Don't throw here as the main upload was successful
+    }
+
+    return NextResponse.json({ 
+      ok: true, 
+      doc_id: doc.id, 
+      path,
+      public_url: publicUrl
+    });
+    
+  } catch (e: any) {
+    console.error('❌ Compliance upload error:', e);
+    return NextResponse.json({ 
+      error: e.message || "Upload failed",
+      details: e.details || e.hint || 'Unknown error'
+    }, { status: 500 });
   }
 }
