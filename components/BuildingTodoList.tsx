@@ -158,11 +158,18 @@ export default function BuildingTodoList({
         .order('next_due_date', { ascending: true })
         .limit(maxItems)
       
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching compliance items:', error)
+        // Don't throw - just set empty array and continue
+        setComplianceItems([])
+        return
+      }
       
       setComplianceItems(data || [])
     } catch (error) {
       console.error('Error fetching compliance items:', error)
+      // Set empty array on error to prevent infinite loading
+      setComplianceItems([])
     }
   }
 
@@ -313,16 +320,28 @@ export default function BuildingTodoList({
 
   // Load data on mount
   useEffect(() => {
-    fetchBuildings()
-    fetchTodos()
-    fetchComplianceItems()
+    const loadData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        
+        // Load all data in parallel
+        await Promise.allSettled([
+          fetchBuildings(),
+          fetchTodos(),
+          fetchComplianceItems()
+        ])
+        
+        // Set loading to false regardless of success/failure
+        setLoading(false)
+      } catch (error) {
+        console.error('Error loading data:', error)
+        setError('Failed to load some data')
+        setLoading(false)
+      }
+    }
     
-    // Set loading to false after a short delay to show placeholder data
-    const timer = setTimeout(() => {
-      setLoading(false)
-    }, 1000)
-    
-    return () => clearTimeout(timer)
+    loadData()
   }, [maxItems, includeCompliance])
 
   // Fake placeholder data for demo purposes

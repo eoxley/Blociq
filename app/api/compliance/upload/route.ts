@@ -7,10 +7,10 @@ export async function POST(req: Request) {
   try {
     const form = await req.formData();
     const file = form.get("file") as File | null;
-    const building_compliance_asset_id = String(form.get("bca_id") || "");
+    const bca_id = String(form.get("bca_id") || "");
     const building_id = String(form.get("building_id") || "");
     
-    if (!file || !building_compliance_asset_id || !building_id) {
+    if (!file || !bca_id || !building_id) {
       return NextResponse.json({ error: "Missing file/bca_id/building_id" }, { status: 400 });
     }
 
@@ -18,12 +18,12 @@ export async function POST(req: Request) {
       fileName: file.name,
       fileSize: file.size,
       buildingId: building_id,
-      assetId: building_compliance_asset_id
+      bcaId: bca_id
     });
 
     // Upload file to Supabase storage
     const ext = file.name.split(".").pop() || "dat";
-    const path = `${building_id}/compliance/${building_compliance_asset_id}/${Date.now()}_${file.name}`;
+    const path = `${building_id}/compliance/${bca_id}/${Date.now()}_${file.name}`;
     const array = new Uint8Array(await file.arrayBuffer());
 
     const up = await (supabaseAdmin as any).storage.from(BUCKET).upload(path, array, {
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
       .from("compliance_documents")
       .insert({ 
         building_id: building_id,
-        compliance_asset_id: building_compliance_asset_id,
+        compliance_asset_id: bca_id,
         document_url: publicUrl,
         title: file.name,
         doc_type: 'compliance',
@@ -72,7 +72,7 @@ export async function POST(req: Request) {
         latest_document_id: doc.id,
         updated_at: new Date().toISOString()
       })
-      .eq("id", building_compliance_asset_id);
+      .eq("id", bca_id);
     
     if (updateError) {
       console.warn('⚠️ Failed to update building_compliance_assets with document reference:', updateError);
@@ -91,6 +91,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ 
       error: e.message || "Upload failed",
       details: e.details || e.hint || 'Unknown error'
-    }, { status: 500 });
+    }, { status: 500 }); 
   }
 }
