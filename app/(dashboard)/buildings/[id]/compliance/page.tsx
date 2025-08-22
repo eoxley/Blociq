@@ -37,6 +37,12 @@ export default function BuildingCompliancePage({ params }: { params: { id: strin
       
       const any = (complianceData.data || []).length > 0;
       console.log("Has rows:", any, "Data length:", complianceData.data?.length);
+      
+      // Debug: Log the actual data structure
+      if (complianceData.data && complianceData.data.length > 0) {
+        console.log("First compliance item:", complianceData.data[0]);
+      }
+      
       setHasRows(any);
       if (any) setMode("tracking");
     } catch (error) {

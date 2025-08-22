@@ -41,8 +41,27 @@ export default function ComplianceTrackingPanel({
       const r = await fetch(`/api/buildings/${buildingId}/compliance`, { cache: "no-store" });
       const j = await r.json(); 
       if (!r.ok) throw new Error(j.error || "Failed to load compliance data");
-      setRows(j.data || []);
+      
+      console.log("Compliance data loaded:", j.data);
+      
+      // Transform the data to match the expected Row type
+      const transformedRows = (j.data || []).map((item: any) => ({
+        bca_id: item.bca_id,
+        asset_id: item.asset_id,
+        asset_name: item.asset_name,
+        category: item.category,
+        frequency_months: item.frequency_months,
+        last_renewed_date: item.last_renewed_date,
+        next_due_date: item.next_due_date,
+        status: item.status,
+        docs_count: item.docs_count || 0,
+        notes: item.notes,
+        contractor: item.contractor
+      }));
+      
+      setRows(transformedRows);
     } catch (error: any) {
+      console.error("Error loading compliance data:", error);
       setErr(error.message);
     }
   }
