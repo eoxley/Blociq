@@ -693,6 +693,40 @@ Phone: ${searchResults.leaseholders[0]?.phone || 'Not provided'}`;
       contextMetadata.totalDocumentChars = totalChars;
     }
 
+    // 🔍 Enhanced Document Intelligence with Chunks
+    if (building_id && (prompt.toLowerCase().includes('document') || prompt.toLowerCase().includes('policy') || prompt.toLowerCase().includes('lease') || prompt.toLowerCase().includes('insurance'))) {
+      console.log('🔍 Detected document-related query, searching chunks...');
+      
+      try {
+        // Search document chunks semantically using the vector search function
+        const { data: chunks } = await supabase
+          .from('document_chunks')
+          .select(`
+            content, chunk_index, metadata,
+            building_documents!inner(file_name, type, building_id)
+          `)
+          .eq('building_documents.building_id', building_id)
+          .not('embedding', 'is', null)
+          .order('chunk_index', { ascending: true })
+          .limit(8);
+        
+        if (chunks && chunks.length > 0) {
+          console.log('✅ Found document chunks:', chunks.length);
+          
+          const documentChunkContext = chunks.map(chunk => 
+            `📄 ${chunk.building_documents.file_name} (Chunk ${chunk.chunk_index + 1}):
+${chunk.content.substring(0, 400)}...`
+          ).join('\n\n');
+          
+          buildingContext += `\n\n📄 RELEVANT DOCUMENT CONTENT:\n${documentChunkContext}`;
+          contextMetadata.documentChunksFound = chunks.length;
+          contextMetadata.semanticSearchUsed = true;
+        }
+      } catch (error) {
+        console.warn('Could not fetch document chunks:', error);
+      }
+    }
+
     // 📧 Email Thread Context
     let emailContext = "";
     if (emailThreadId) {
