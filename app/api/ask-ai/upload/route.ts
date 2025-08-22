@@ -6,13 +6,42 @@ let summarizeAndSuggest: (text: string, name?: string) => Promise<{ summary: str
 
 async function lazyDeps() {
   if (!extractText) {
-    // Fallback extractor that just base64s if your real extractor isn't wired yet
+    // Enhanced fallback with OCR capabilities
     try {
       const mod = await import('@/lib/extract-text')
       extractText = mod.extractText
     } catch {
-      extractText = async (buf: Uint8Array, name?: string) =>
-        `[[Fallback extractor]] ${name || 'file'} (${buf.byteLength} bytes).`
+      // Try alternative extraction methods
+      try {
+        const { extractTextFromPDF } = await import('@/lib/extractTextFromPdf')
+        extractText = async (file: File) => {
+          const buffer = Buffer.from(await file.arrayBuffer())
+          const result = await extractTextFromPDF(buffer, file.name)
+          return {
+            text: result.text,
+            meta: { name: file.name, type: file.type, bytes: file.size }
+          }
+        }
+      } catch {
+        // Final fallback with OCR
+        try {
+          const { ocrWithFallbacks } = await import('@/lib/ocr')
+          extractText = async (file: File) => {
+            const buffer = Buffer.from(await file.arrayBuffer())
+            const ocrResult = await ocrWithFallbacks(buffer)
+            return {
+              text: ocrResult.text || `[[OCR Fallback]] ${file.name} (${file.size} bytes) - ${ocrResult.method}`,
+              meta: { name: file.name, type: file.type, bytes: file.size }
+            }
+          }
+        } catch {
+          // Ultimate fallback
+          extractText = async (file: File) => ({
+            text: `[[Fallback extractor]] ${file.name} (${file.size} bytes). Unable to extract text - document may be image-based or corrupted.`,
+            meta: { name: file.name, type: file.type, bytes: file.size }
+          })
+        }
+      }
     }
   }
   if (!summarizeAndSuggest) {
@@ -20,15 +49,33 @@ async function lazyDeps() {
       const mod = await import('@/lib/ask/summarize-and-suggest')
       summarizeAndSuggest = mod.summarizeAndSuggest
     } catch {
-      // Super-light fallback; keep the route alive even if AI helper isn't ready
-      summarizeAndSuggest = async (text: string, name?: string) => ({
-        summary: `Summary placeholder for ${name || 'file'}: ${text.slice(0, 300)}${text.length > 300 ? '…' : ''}`,
-        suggestedActions: [
-          'Confirm the document type and relevance.',
-          'Assign to a property or general filing.',
-          'Create any follow-up tasks or reminders.',
-        ],
-      })
+      // Enhanced fallback with document analysis
+      try {
+        const { generateSummary } = await import('@/lib/documentProcessor')
+        summarizeAndSuggest = async (text: string, name?: string) => {
+          const summary = await generateSummary(text, name || 'document')
+          return {
+            summary: summary || `Summary of ${name || 'document'}: ${text.slice(0, 300)}${text.length > 300 ? '…' : ''}`,
+            suggestions: [
+              'Confirm the document type and relevance.',
+              'Assign to a property or general filing.',
+              'Create any follow-up tasks or reminders.',
+              'Review extracted text for accuracy.',
+              'Consider manual verification if OCR was used.'
+            ],
+          }
+        }
+      } catch {
+        // Super-light fallback; keep the route alive even if AI helper isn't ready
+        summarizeAndSuggest = async (text: string, name?: string) => ({
+          summary: `Summary placeholder for ${name || 'file'}: ${text.slice(0, 300)}${text.length > 300 ? '…' : ''}`,
+          suggestions: [
+            'Confirm the document type and relevance.',
+            'Assign to a property or general filing.',
+            'Create any follow-up tasks or reminders.',
+          ],
+        })
+      }
     }
   }
 }
@@ -61,7 +108,7 @@ export async function POST(req: Request) {
     if (ct.includes('multipart/form-data')) {
       const form = await req.formData()
       const file = form.get('file') as File | null
-      const buildingId = (form.get('buildingId') as string) || null // optional
+      const buildingId = (form.get('buildingId') as string) || (form.get('building_id') as string) || null // accept both parameter names
 
       if (!file) return NextResponse.json({ success: false, error: 'No file received' }, { status: 400 })
       if (file.size > MAX_FILE_BYTES) {
@@ -72,14 +119,34 @@ export async function POST(req: Request) {
       }
 
       const ab = await file.arrayBuffer()
-      const text = await extractText(new Uint8Array(ab), file.name)
-      const out = await summarizeAndSuggest(text, file.name)
+      const text = await extractText(file)
+      const out = await summarizeAndSuggest(text.text, file.name)
+      
+      // Determine extraction method for user feedback
+      let extractionMethod = 'standard';
+      let extractionNote = '';
+      
+      if (text.text.includes('[OCR Fallback]')) {
+        extractionMethod = 'ocr';
+        extractionNote = 'Document processed using OCR - text accuracy may vary';
+      } else if (text.text.includes('[Enhanced processor]')) {
+        extractionMethod = 'enhanced';
+        extractionNote = 'Document processed using enhanced extraction methods';
+      } else if (text.text.includes('[Fallback extractor]')) {
+        extractionMethod = 'fallback';
+        extractionNote = 'Document processed using fallback methods';
+      }
+      
       return NextResponse.json({
         success: true,
         filename: file.name,
         buildingId,
         summary: out.summary,
-        suggestedActions: out.suggestedActions ?? [],
+        suggestedActions: out.suggestions ?? [],
+        extractionMethod,
+        extractionNote,
+        textLength: text.text.length,
+        confidence: extractionMethod === 'standard' ? 'high' : 'medium'
       })
     }
 
