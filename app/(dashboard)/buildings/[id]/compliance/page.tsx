@@ -1,13 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Shield, Settings, BarChart3, AlertTriangle, CheckCircle, Clock, Calendar, FileText, Building2 } from "lucide-react";
+import { Shield, Settings, BarChart3, AlertTriangle, CheckCircle, Clock, Calendar, FileText, Building2, Zap, Upload, Bell, TrendingUp, Info } from "lucide-react";
 import SetupComplianceModalV2 from "@/components/compliance/SetupComplianceModalV2";
-import ComplianceTrackingPanel from "@/components/compliance/ComplianceTrackingPanel";
+import ComprehensiveComplianceTracker from "@/components/compliance/ComprehensiveComplianceTracker";
+import { BlocIQBadge } from "@/components/ui/blociq-badge";
 
 interface Building {
   id: string;
   name: string;
-  address: string | null;
+  address?: string;
 }
 
 export default function BuildingCompliancePage({ params }: { params: { id: string } }) {
@@ -17,6 +18,7 @@ export default function BuildingCompliancePage({ params }: { params: { id: strin
   const [mode, setMode] = useState<"setup"|"tracking">("setup");
   const [building, setBuilding] = useState<Building | null>(null);
   const [loading, setLoading] = useState(true);
+  const [complianceData, setComplianceData] = useState<any>({ data: [] });
 
   async function refresh() {
     try {
@@ -34,6 +36,8 @@ export default function BuildingCompliancePage({ params }: { params: { id: strin
       const complianceResponse = await fetch(`/api/buildings/${buildingId}/compliance`, { cache: "no-store" });
       const complianceData = await complianceResponse.json();
       console.log("Compliance data:", complianceData);
+      
+      setComplianceData(complianceData);
       
       const any = (complianceData.data || []).length > 0;
       console.log("Has rows:", any, "Data length:", complianceData.data?.length);
@@ -168,6 +172,315 @@ export default function BuildingCompliancePage({ params }: { params: { id: strin
       {/* Content Area */}
       {mode === "tracking" && hasRows ? (
         <div className="space-y-6">
+          {/* Compliance Overview */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                <TrendingUp className="h-5 w-5 text-emerald-600" />
+                <h2 className="text-lg font-semibold text-gray-800">Compliance Overview</h2>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">Key metrics and insights for {building?.name}</p>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-emerald-600 mb-2">
+                    {complianceData.data?.length || 0}
+                  </div>
+                  <p className="text-sm text-gray-600">Total Assets</p>
+                  <p className="text-xs text-gray-500">Being tracked</p>
+                </div>
+                
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-green-600 mb-2">
+                    {complianceData.data?.filter((a: any) => a.status === 'compliant').length || 0}
+                  </div>
+                  <p className="text-sm text-gray-600">Compliant</p>
+                  <p className="text-xs text-gray-500">Up to date</p>
+                </div>
+                
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-yellow-600 mb-2">
+                    {complianceData.data?.filter((a: any) => a.status === 'due_soon').length || 0}
+                  </div>
+                  <p className="text-sm text-gray-600">Due Soon</p>
+                  <p className="text-xs text-gray-500">Next 30 days</p>
+                </div>
+                
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-red-600 mb-2">
+                    {complianceData.data?.filter((a: any) => a.status === 'overdue').length || 0}
+                  </div>
+                  <p className="text-sm text-gray-600">Overdue</p>
+                  <p className="text-xs text-gray-500">Action required</p>
+                </div>
+              </div>
+              
+              {/* Compliance Progress Bar */}
+              <div className="mt-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">Overall Compliance</span>
+                  <span className="text-sm text-gray-500">
+                    {complianceData.data?.length > 0 
+                      ? Math.round((complianceData.data.filter((a: any) => a.status === 'compliant').length / complianceData.data.length) * 100)
+                      : 0}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-gradient-to-r from-emerald-500 to-teal-500 h-2 rounded-full transition-all duration-300"
+                    style={{ 
+                      width: `${complianceData.data?.length > 0 
+                        ? Math.round((complianceData.data.filter((a: any) => a.status === 'compliant').length / complianceData.data.length) * 100)
+                        : 0}%` 
+                    }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                <Zap className="h-5 w-5 text-blue-600" />
+                <h2 className="text-lg font-semibold text-gray-800">Quick Actions</h2>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">Common compliance management tasks</p>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <button className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors">
+                  <Calendar className="h-5 w-5 text-green-600" />
+                  <div className="text-left">
+                    <p className="font-medium text-green-800">Schedule Inspections</p>
+                    <p className="text-sm text-green-600">Book upcoming compliance checks</p>
+                  </div>
+                </button>
+                
+                <button className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors">
+                  <Upload className="h-5 w-5 text-blue-600" />
+                  <div className="text-left">
+                    <p className="font-medium text-blue-800">Upload Documents</p>
+                    <p className="text-sm text-blue-600">Add compliance certificates</p>
+                  </div>
+                </button>
+                
+                <button className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-violet-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors">
+                  <Bell className="h-5 w-5 text-purple-600" />
+                  <div className="text-left">
+                    <p className="font-medium text-purple-800">Set Reminders</p>
+                    <p className="text-sm text-purple-600">Configure due date alerts</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Upcoming Compliance Items */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-amber-600" />
+                <h2 className="text-lg font-semibold text-gray-800">Items Requiring Attention</h2>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">Compliance items that need your immediate attention</p>
+            </div>
+            <div className="p-6">
+              {(() => {
+                const attentionItems = (complianceData.data || []).filter((item: any) => 
+                  item.status === 'overdue' || item.status === 'due_soon'
+                ).slice(0, 5); // Show top 5 items
+                
+                if (attentionItems.length === 0) {
+                  return (
+                    <div className="text-center py-8">
+                      <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
+                      <p className="text-gray-600">All compliance items are up to date!</p>
+                    </div>
+                  );
+                }
+                
+                return (
+                  <div className="space-y-3">
+                    {attentionItems.map((item: any) => {
+                      const daysUntilDue = item.next_due_date 
+                        ? Math.ceil((new Date(item.next_due_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+                        : 999;
+                      const isOverdue = daysUntilDue < 0;
+                      
+                      return (
+                        <div key={item.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-3 h-3 rounded-full ${
+                              isOverdue ? 'bg-red-500' : 'bg-yellow-500'
+                            }`}></div>
+                            <div>
+                              <p className="font-medium text-gray-900">{item.asset_name}</p>
+                              <p className="text-sm text-gray-600">{item.category}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className={`text-sm font-medium ${
+                              isOverdue ? 'text-red-600' : 'text-yellow-600'
+                            }`}>
+                              {isOverdue ? `${Math.abs(daysUntilDue)} days overdue` : `Due in ${daysUntilDue} days`}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {item.next_due_date ? new Date(item.next_due_date).toLocaleDateString('en-GB') : 'No due date'}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+
+          {/* Recent Compliance Activities */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                <Clock className="h-5 w-5 text-indigo-600" />
+                <h2 className="text-lg font-semibold text-gray-800">Recent Activities</h2>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">Latest updates and changes to compliance items</p>
+            </div>
+            <div className="p-6">
+              <div className="space-y-4">
+                {(() => {
+                  // Get recent activities (last 5 updated items)
+                  const recentItems = (complianceData.data || [])
+                    .sort((a: any, b: any) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+                    .slice(0, 5);
+                  
+                  if (recentItems.length === 0) {
+                    return (
+                      <div className="text-center py-6 text-gray-500">
+                        <Clock className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                        <p className="text-sm">No recent activities</p>
+                      </div>
+                    );
+                  }
+                  
+                  return recentItems.map((item: any) => {
+                    const updatedDate = new Date(item.updated_at);
+                    const timeAgo = Math.floor((Date.now() - updatedDate.getTime()) / (1000 * 60 * 60 * 24));
+                    
+                    return (
+                      <div key={item.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">
+                            {item.asset_name} updated
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {timeAgo === 0 ? 'Today' : 
+                             timeAgo === 1 ? 'Yesterday' : 
+                             `${timeAgo} days ago`}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <BlocIQBadge variant="secondary" className="text-xs">
+                            {item.status}
+                          </BlocIQBadge>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+          </div>
+
+          {/* Compliance Trends & Insights */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="bg-gradient-to-r from-rose-50 to-pink-50 px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                <BarChart3 className="h-5 w-5 text-rose-600" />
+                <h2 className="text-lg font-semibold text-gray-800">Insights & Recommendations</h2>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">AI-powered insights to improve compliance management</p>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Priority Actions */}
+                <div className="space-y-4">
+                  <h3 className="font-medium text-gray-900">Priority Actions</h3>
+                  {(() => {
+                    const overdueItems = (complianceData.data || []).filter((item: any) => item.status === 'overdue');
+                    const dueSoonItems = (complianceData.data || []).filter((item: any) => item.status === 'due_soon');
+                    
+                    if (overdueItems.length === 0 && dueSoonItems.length === 0) {
+                      return (
+                        <div className="text-sm text-gray-500 italic">
+                          No urgent actions required at this time.
+                        </div>
+                      );
+                    }
+                    
+                    return (
+                      <div className="space-y-3">
+                        {overdueItems.slice(0, 3).map((item: any) => (
+                          <div key={item.id} className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <AlertTriangle className="h-4 w-4 text-red-600 flex-shrink-0" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-red-800">Address overdue: {item.asset_name}</p>
+                              <p className="text-xs text-red-600">Immediate action required</p>
+                            </div>
+                          </div>
+                        ))}
+                        
+                        {dueSoonItems.slice(0, 3).map((item: any) => (
+                          <div key={item.id} className="flex items-center gap-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <Clock className="h-4 w-4 text-yellow-600 flex-shrink-0" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-yellow-800">Plan for: {item.asset_name}</p>
+                              <p className="text-xs text-yellow-600">Due within 30 days</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+                
+                {/* Compliance Tips */}
+                <div className="space-y-4">
+                  <h3 className="font-medium text-gray-900">Best Practices</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <Info className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-blue-800">Regular Reviews</p>
+                        <p className="text-xs text-blue-600">Review compliance status monthly to catch issues early</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-green-800">Document Everything</p>
+                        <p className="text-xs text-green-600">Keep all certificates and reports organized</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start gap-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                      <Bell className="h-4 w-4 text-purple-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-purple-800">Set Reminders</p>
+                        <p className="text-xs text-purple-600">Use calendar reminders for upcoming due dates</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Tracking Mode Mini Hero */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-6 py-4 border-b border-gray-200">
@@ -178,7 +491,11 @@ export default function BuildingCompliancePage({ params }: { params: { id: strin
               <p className="text-sm text-gray-600 mt-1">Monitor and manage compliance status for all building assets</p>
             </div>
             <div className="p-6">
-              <ComplianceTrackingPanel buildingId={buildingId} buildingName={building?.name} />
+              <ComprehensiveComplianceTracker 
+                building={building!}
+                complianceAssets={complianceData.data || []}
+                onRefresh={refresh}
+              />
             </div>
           </div>
         </div>
