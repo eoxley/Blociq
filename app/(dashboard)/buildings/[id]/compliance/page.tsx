@@ -30,27 +30,42 @@ export default function BuildingCompliancePage({ params }: { params: { id: strin
         const buildingData = await buildingResponse.json();
         setBuilding(buildingData.building);
         console.log("Building data:", buildingData.building);
+      } else {
+        console.error("Failed to fetch building:", buildingResponse.status, buildingResponse.statusText);
+        throw new Error(`Failed to fetch building: ${buildingResponse.status}`);
       }
 
       // Fetch compliance data
       const complianceResponse = await fetch(`/api/buildings/${buildingId}/compliance`, { cache: "no-store" });
+      if (!complianceResponse.ok) {
+        console.error("Failed to fetch compliance data:", complianceResponse.status, complianceResponse.statusText);
+        throw new Error(`Failed to fetch compliance data: ${complianceResponse.status}`);
+      }
+      
       const complianceData = await complianceResponse.json();
       console.log("Compliance data:", complianceData);
       
+      if (complianceData.error) {
+        throw new Error(complianceData.error);
+      }
+      
       setComplianceData(complianceData);
       
-      const any = (complianceData.data || []).length > 0;
-      console.log("Has rows:", any, "Data length:", complianceData.data?.length);
+      const hasComplianceData = (complianceData.data || []).length > 0;
+      console.log("Has compliance data:", hasComplianceData, "Data length:", complianceData.data?.length);
       
       // Debug: Log the actual data structure
       if (complianceData.data && complianceData.data.length > 0) {
         console.log("First compliance item:", complianceData.data[0]);
       }
       
-      setHasRows(any);
-      if (any) setMode("tracking");
+      setHasRows(hasComplianceData);
+      if (hasComplianceData) setMode("tracking");
     } catch (error) {
       console.error("Error fetching data:", error);
+      // Set error state but don't crash the page
+      setComplianceData({ data: [], error: error instanceof Error ? error.message : 'Unknown error' });
+      setHasRows(false);
     } finally {
       setLoading(false);
     }
@@ -168,6 +183,33 @@ export default function BuildingCompliancePage({ params }: { params: { id: strin
           </div>
         </div>
       </div>
+
+      {/* Error Display */}
+      {complianceData.error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-8">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-6 w-6 text-red-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-red-800 mb-2">Compliance System Error</h3>
+              <p className="text-red-700 mb-4">{complianceData.error}</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={refresh}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Try Again
+                </button>
+                <button
+                  onClick={() => setComplianceData({ data: [], error: null })}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Content Area */}
       {mode === "tracking" && hasRows ? (

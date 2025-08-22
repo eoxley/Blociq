@@ -78,24 +78,36 @@ export default function SetupComplianceModalV2({
     
     (async () => {
       try {
-        const [m, s] = await Promise.all([
-          fetch("/api/compliance/assets/list").then(r => r.json()),
-          fetch(`/api/buildings/${buildingId}/compliance/selected`, { cache: "no-store" }).then(r => r.json())
+        console.log('🔍 Loading compliance assets for building:', buildingId);
+        
+        const [masterResponse, selectedResponse] = await Promise.all([
+          fetch("/api/compliance/assets/list").then(r => {
+            if (!r.ok) throw new Error(`Failed to fetch master assets: ${r.status} ${r.statusText}`);
+            return r.json();
+          }),
+          fetch(`/api/buildings/${buildingId}/compliance/selected`, { cache: "no-store" }).then(r => {
+            if (!r.ok) throw new Error(`Failed to fetch selected assets: ${r.status} ${r.statusText}`);
+            return r.json();
+          })
         ]);
         
         if (!alive) return;
         
-        if (m.error) throw new Error(m.error);
-        if (s.error) throw new Error(s.error);
+        if (masterResponse.error) throw new Error(`Master assets error: ${masterResponse.error}`);
+        if (selectedResponse.error) throw new Error(`Selected assets error: ${selectedResponse.error}`);
         
-        setMaster(m.data || []);
-        const ex = new Set<string>((s.asset_ids || []) as string[]);
+        console.log('✅ Loaded master assets:', masterResponse.data?.length || 0);
+        console.log('✅ Loaded selected assets:', selectedResponse.asset_ids?.length || 0);
+        
+        setMaster(masterResponse.data || []);
+        const ex = new Set<string>((selectedResponse.asset_ids || []) as string[]);
         setExisting(ex);
         const pre: Record<string, boolean> = {};
         ex.forEach(id => pre[id] = true);
         setSelected(pre);
       } catch (e: any) { 
-        setErr(e.message || "Failed to load compliance assets"); 
+        console.error('❌ Error loading compliance assets:', e);
+        setErr(e.message || "Failed to load compliance assets. Please try again."); 
       } finally {
         if (alive) setLoading(false);
       }
@@ -353,9 +365,37 @@ export default function SetupComplianceModalV2({
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           {loading ? (
-            <div className="p-8 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading compliance assets...</p>
+            <div className="flex items-center justify-center p-8">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#008C8F] mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading compliance assets...</p>
+              </div>
+            </div>
+          ) : err ? (
+            <div className="flex items-center justify-center p-8">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertTriangle className="w-8 h-8 text-red-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to Load Assets</h3>
+                <p className="text-gray-600 mb-4">{err}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-[#008C8F] text-white rounded-lg hover:bg-[#007A7D] transition-colors"
+                >
+                  Try Again
+                </button>
+              </div>
+            </div>
+          ) : master.length === 0 ? (
+            <div className="flex items-center justify-center p-8">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <FileText className="w-8 h-8 text-yellow-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Compliance Assets Found</h3>
+                <p className="text-gray-600">There are no compliance assets configured in the system.</p>
+              </div>
             </div>
           ) : (
             <div className="p-6 grid gap-6 md:grid-cols-2 max-h-full">
