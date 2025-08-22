@@ -170,11 +170,68 @@ export async function searchLeaseholderDirect(query: string, supabaseClient: any
       .single();
     
     if (error || !data) {
-      console.log('❌ Unit not found:', unitMatch);
-      return null;
+      console.log('❌ Unit not found in view:', unitMatch, 'Error:', error);
+      
+      // Fallback: try direct table query
+      console.log('🔄 Trying fallback direct table query...');
+      const { data: fallbackData, error: fallbackError } = await supabaseClient
+        .from('units')
+        .select(`
+          id,
+          unit_number,
+          building_id,
+          leaseholder_id,
+          leaseholders!inner (
+            id,
+            name,
+            full_name,
+            email,
+            phone
+          )
+        `)
+        .eq('building_id', building.id)
+        .eq('unit_number', unitMatch)
+        .single();
+      
+      if (fallbackError || !fallbackData) {
+        console.log('❌ Fallback query also failed:', fallbackError);
+        return null;
+      }
+      
+      console.log('✅ Found via fallback query:', fallbackData);
+      
+      const results: SearchResults = {
+        building,
+        units: [{
+          id: fallbackData.id,
+          unit_number: fallbackData.unit_number,
+          floor: null,
+          type: null,
+          leaseholder: fallbackData.leaseholder_id ? {
+            id: fallbackData.leaseholder_id,
+            name: fallbackData.leaseholders?.full_name || fallbackData.leaseholders?.name || 'Unknown',
+            email: fallbackData.leaseholders?.email || null,
+            phone: fallbackData.leaseholders?.phone || null
+          } : null
+        }],
+        leaseholders: fallbackData.leaseholder_id ? [{
+          id: fallbackData.leaseholder_id,
+          name: fallbackData.leaseholders?.full_name || fallbackData.leaseholders?.name || 'Unknown',
+          email: fallbackData.leaseholders?.email || null,
+          phone: fallbackData.leaseholders?.phone || null,
+          units: [{
+            id: fallbackData.id,
+            unit_number: fallbackData.unit_number,
+            floor: null,
+            type: null
+          }]
+        }] : []
+      };
+      
+      return results;
     }
     
-    console.log('✅ Unit and leaseholder found:', data.unit_number, data.leaseholder_name);
+    console.log('✅ Unit and leaseholder found via view:', data.unit_number, data.leaseholder_name);
     
     const results: SearchResults = {
       building,
@@ -225,10 +282,13 @@ function extractBuildingName(query: string): string | null {
   for (const pattern of patterns) {
     const match = query.match(pattern);
     if (match && match[1]) {
-      return match[1].trim();
+      const extracted = match[1].trim();
+      console.log('🔍 Extracted building name:', extracted, 'from query:', query);
+      return extracted;
     }
   }
   
+  console.log('❌ No building name extracted from query:', query);
   return null;
 }
 
@@ -237,18 +297,24 @@ function extractUnitNumber(query: string): string | null {
   const patterns = [
     // Specific pattern for "5 ashwood house" - extract the 5
     /^(\d+)\s+[^,\s]+(?:\s+(?:house|apartments|court|gardens|heights|point|view|mews|square|place|road|street|lane|close|way|drive|avenue|terrace|walk|rise|hill|park|manor|hall|tower|building|block|estate|development))?/i,
+    // Pattern for "flat 5" or "unit 5" - extract the 5
     /(?:unit|flat|apartment|apart|no\.?|number)\s*(\d+[a-z]?)/i,
+    // Pattern for "5 ashwood" or "5 flat" - extract the 5
     /(\d+[a-z]?)\s*(?:ashwood|house|flat|apartment|unit)/i,
+    // Fallback: any number
     /(\d+[a-z]?)/i
   ];
   
   for (const pattern of patterns) {
     const match = query.match(pattern);
     if (match && match[1]) {
-      return match[1].trim();
+      const extracted = match[1].trim();
+      console.log('🔍 Extracted unit number:', extracted, 'from query:', query);
+      return extracted;
     }
   }
   
+  console.log('❌ No unit number extracted from query:', query);
   return null;
 }
 
@@ -262,71 +328,52 @@ async function searchBuilding(buildingName: string, supabaseClient: any): Promis
     console.log('🔍 Searching for building:', { original: buildingName, clean: cleanName });
     
     // Try exact match first
-    let { data, error } = await supabaseClient
+    let { data: building, error } = await supabaseClient
       .from('buildings')
-      .select(`
-        id,
-        name,
-        address,
-        unit_count,
-        building_manager_name,
-        building_manager_email
-      `)
+      .select('id, name, address, unit_count, building_manager_name, building_manager_email')
       .eq('name', buildingName)
       .single();
     
-    if (!error && data) {
-      console.log('✅ Exact match found:', data.name);
-      return data;
+    if (building) {
+      console.log('✅ Found building with exact match:', building.name);
+      return building;
     }
     
-    // Try partial match with the clean name
-    const { data: partialData, error: partialError } = await supabaseClient
-      .from('buildings')
-      .select(`
-        id,
-        name,
-        address,
-        unit_count,
-        building_manager_name,
-        building_manager_email
-      `)
-      .ilike('name', `%${cleanName}%`)
-      .limit(1)
-      .single();
-    
-    if (!partialError && partialData) {
-      console.log('✅ Partial match found:', partialData.name);
-      return partialData;
-    }
-    
-    // Try searching for "ashwood" specifically
-    if (buildingName.toLowerCase().includes('ashwood')) {
-      const { data: ashwoodData, error: ashwoodError } = await supabaseClient
+    // Try partial match with cleaned name
+    if (cleanName && cleanName !== buildingName) {
+      console.log('🔍 Trying partial match with cleaned name:', cleanName);
+      const { data: partialMatch, error: partialError } = await supabaseClient
         .from('buildings')
-        .select(`
-          id,
-          name,
-          address,
-          unit_count,
-          building_manager_name,
-          building_manager_email
-        `)
-        .ilike('name', '%ashwood%')
-        .limit(1)
+        .select('id, name, address, unit_count, building_manager_name, building_manager_email')
+        .ilike('name', `%${cleanName}%`)
         .single();
       
-      if (!ashwoodError && ashwoodData) {
-        console.log('✅ Ashwood match found:', ashwoodData.name);
-        return ashwoodData;
+      if (partialMatch) {
+        console.log('✅ Found building with partial match:', partialMatch.name);
+        return partialMatch;
       }
     }
     
-    console.log('❌ No building match found');
+    // Try fuzzy search
+    console.log('🔍 Trying fuzzy search for building name');
+    const { data: fuzzyMatches, error: fuzzyError } = await supabaseClient
+      .from('buildings')
+      .select('id, name, address, unit_count, building_manager_name, building_manager_email')
+      .ilike('name', `%${buildingName}%`)
+      .limit(5);
+    
+    if (fuzzyMatches && fuzzyMatches.length > 0) {
+      console.log('🔍 Found potential matches:', fuzzyMatches.map((b: any) => b.name));
+      // Return the first match
+      console.log('✅ Using first fuzzy match:', fuzzyMatches[0].name);
+      return fuzzyMatches[0];
+    }
+    
+    console.log('❌ No building found for:', buildingName);
     return null;
     
   } catch (error) {
-    console.error('Error searching building:', error);
+    console.error('Error searching for building:', error);
     return null;
   }
 }
