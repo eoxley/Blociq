@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
     const { default: OpenAI } = await import('openai');
     const { insertAiLog } = await import('../../../lib/supabase/ai_logs');
     const { MAX_CHARS_PER_DOC, MAX_TOTAL_DOC_CHARS, truncate, isSummariseLike } = await import("../../../lib/ask/text");
-    const { searchBuildingAndUnits } = await import('../../../lib/supabase/buildingSearch');
+    const { searchBuildingAndUnits, searchLeaseholderDirect } = await import('../../../lib/supabase/buildingSearch');
     const { searchEntireDatabase, formatSearchResultsForAI, extractRelevantContext } = await import('../../../lib/supabase/comprehensiveDataSearch');
 
     const supabase = createRouteHandlerClient({ cookies });
@@ -387,7 +387,23 @@ ${communicationsContext}
     // This ensures we can find leaseholder information from queries like "who is the leaseholder of 5 ashwood house"
     try {
       console.log('🔍 Performing building and unit search for query:', prompt);
-      const searchResults = await searchBuildingAndUnits(prompt, supabase);
+      
+      // Check if this is a leaseholder-specific query
+      const isLeaseholderQuery = /\b(who is|leaseholder|tenant|resident|occupant|lives in|living in|contact details|phone|email)\b/i.test(prompt);
+      
+      let searchResults;
+      if (isLeaseholderQuery) {
+        console.log('🔍 Detected leaseholder query, using direct search...');
+        searchResults = await searchLeaseholderDirect(prompt, supabase);
+        if (!searchResults) {
+          // Fallback to regular search if direct search fails
+          console.log('🔍 Direct search failed, falling back to regular search...');
+          searchResults = await searchBuildingAndUnits(prompt, supabase);
+        }
+      } else {
+        searchResults = await searchBuildingAndUnits(prompt, supabase);
+      }
+      
       if (searchResults) {
         let searchContext = 'Building & Unit Search Results:\n';
         
