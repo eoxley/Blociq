@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, Sparkles } from 'lucide-react';
+import { Send, Loader2, Sparkles, ArrowUp } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface AIInputProps {
@@ -95,7 +95,7 @@ export default function AIInput({
 
   return (
     <div className={`w-full ${className}`}>
-      <form onSubmit={handleSubmit} className="relative">
+      <form onSubmit={handleSubmit} className="space-y-3">
         <div className="relative">
           <textarea
             ref={textareaRef}
@@ -103,22 +103,27 @@ export default function AIInput({
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full p-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none transition-all"
             rows={1}
             disabled={isLoading}
           />
           <button
             type="submit"
-            disabled={!input.trim() || isLoading}
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            disabled={isLoading || !input.trim()}
+            className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 text-blue-600 hover:text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
             ) : (
-              <Send className="h-4 w-4" />
+              <ArrowUp className="w-5 h-5" />
             )}
           </button>
         </div>
+        
+        {/* Disclaimer */}
+        <p className="text-xs text-gray-500 italic text-center">
+          💡 Sometimes BlocIQ can get things muddled - please verify important information
+        </p>
       </form>
       
       {isTyping && (

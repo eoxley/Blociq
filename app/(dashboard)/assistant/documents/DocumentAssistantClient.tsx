@@ -308,7 +308,10 @@ export default function DocumentAssistantClient({ buildings, recentDocuments }: 
 
         {/* Ask AI Section */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">💬 Ask the AI</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">💬 Ask the AI</h2>
+          <p className="text-xs text-gray-500 italic mb-4">
+            💡 Sometimes BlocIQ can get things muddled - please verify important information
+          </p>
           
           <div className="space-y-4">
             <textarea

@@ -585,6 +585,16 @@ export default function AskBlocIQ({
 
   return (
     <div className={`flex flex-col h-full ${className}`}>
+      {/* Header */}
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          Ask BlocIQ
+        </h2>
+        <p className="text-sm text-gray-500 italic">
+          💡 Sometimes BlocIQ can get things muddled - please verify important information
+        </p>
+      </div>
+
       {/* Chat Messages */}
       <div 
         ref={chatContainerRef}
