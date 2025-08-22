@@ -211,7 +211,7 @@ export default function BuildingComplianceTracker({ complianceData }: BuildingCo
             </p>
           </div>
           <BlocIQButton
-            onClick={() => window.location.href = `/buildings/${building.id}/compliance/setup`}
+                            onClick={() => window.location.href = `/buildings/${building.id}/compliance`}
             className="bg-[#2BBEB4] hover:bg-[#0F5D5D] text-white"
           >
             <Shield className="w-4 h-4 mr-2" />
@@ -318,7 +318,7 @@ export default function BuildingComplianceTracker({ complianceData }: BuildingCo
                             <BlocIQButton
                               variant="outline"
                               size="sm"
-                              onClick={() => window.location.href = `/buildings/${building.id}/compliance/setup`}
+                              onClick={() => window.location.href = `/buildings/${building.id}/compliance`}
                             >
                               <Eye className="w-4 h-4 mr-1" />
                               Manage

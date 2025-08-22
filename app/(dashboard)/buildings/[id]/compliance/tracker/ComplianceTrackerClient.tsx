@@ -667,7 +667,7 @@ export default function ComplianceTrackerClient({ building, complianceAssets }: 
           </p>
           {!searchTerm && selectedCategory === 'all' && statusFilter === 'all' && (
             <Link
-              href={`/buildings/${building.id}/compliance/setup`}
+                              href={`/buildings/${building.id}/compliance`}
               className="inline-flex items-center gap-2 px-4 py-2 bg-[#0F5D5D] text-white rounded-lg hover:bg-[#0A4A4A] transition-colors"
             >
               <PlusCircle className="h-4 w-4" />

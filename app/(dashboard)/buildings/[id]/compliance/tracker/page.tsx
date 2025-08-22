@@ -334,7 +334,7 @@ export default async function ComplianceTrackerPage({ params }: { params: Promis
                       This building has no compliance assets set up. Set up compliance tracking to monitor requirements and deadlines.
                     </p>
                     <Button asChild className="bg-blue-600 hover:bg-blue-700">
-                      <Link href="/compliance/setup">
+                      <Link href="/buildings/compliance/setup">
                         <Settings className="h-4 w-4 mr-2" />
                         Go to Setup Wizard
                       </Link>
