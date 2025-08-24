@@ -209,7 +209,7 @@ export default function AskBlocIQHomepage() {
         })
       }
 
-      const response = await fetch('/api/ask-ai', {
+      const response = await fetch('/api/ask-ai-public', {
         method: 'POST',
         headers,
         body: requestBody,

@@ -176,7 +176,9 @@ export default function PublicAskBlocIQ({ isPublic = true, isVisible = false }: 
         });
       }
 
-      const response = await fetch('/api/ask-ai', {
+      // Use public endpoint for public access, main endpoint for authenticated users
+      const endpoint = isPublic ? '/api/ask-ai-public' : '/api/ask-ai';
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers,
         body: requestBody,
