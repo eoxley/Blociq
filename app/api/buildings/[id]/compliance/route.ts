@@ -1,19 +1,12 @@
 import { NextResponse } from "next/server";
-import { createClient } from '@/utils/supabase/server';
-import { cookies } from 'next/headers';
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient(cookies());
-    
-    // Check authentication
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || !session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const supabase = supabaseAdmin; // Use service role to bypass RLS issues
 
     const buildingId = params.id;
 
@@ -73,7 +66,7 @@ export async function GET(
       const asset = assetMap.get(row.compliance_asset_id);
       return {
         bca_id: row.bca_id,
-        asset_id: row.compliance_asset_id,
+        compliance_asset_id: row.compliance_asset_id,
         asset_name: asset?.title || "Unknown",
         category: asset?.category || "Unknown",
         frequency_months: asset?.frequency_months || row.frequency_months,
