@@ -2,7 +2,6 @@ import { ReactNode } from 'react'
 import { redirect } from 'next/navigation'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import MobileNavigation from '@/components/MobileNavigation'
-import Footer from '@/components/Footer'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
@@ -42,7 +41,6 @@ export default async function DashboardLayout({
           </div>
         </main>
       </div>
-      <Footer />
     </div>
   )
 } 
