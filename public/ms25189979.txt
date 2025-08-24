@@ -1,0 +1,5 @@
+{
+  "Description": "Domain ownership verification file for Microsoft 365 - place in the website root",
+  "Domain": "blociq.co.uk",
+  "Id": "df5da18e-8181-441b-936d-e416157aed33"
+}
