@@ -7,7 +7,7 @@
     xsi:type="MailApp">
 
     <!-- Begin Basic Settings -->
-    <Id>blocIQ-assistant</Id>
+    <Id>df5da18e-8181-441b-936d-e416157aed33</Id>
     <Version>1.0.0.0</Version>
     <ProviderName>BlocIQ</ProviderName>
     <DefaultLocale>en-US</DefaultLocale>
