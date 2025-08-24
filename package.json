@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:worker": "cd worker && python worker.py",
+    "dev:api": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
