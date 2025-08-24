@@ -3,7 +3,6 @@ import { getLeaseholderData } from '@/lib/supabase/leaseholders';
 import { getDocumentSummaries } from '@/lib/supabase/documents';
 import { getEmailThreadContext } from '@/lib/supabase/emails';
 import { getFounderGuidance } from '@/lib/ai/founder';
-import { getComplianceContext } from '@/lib/supabase/compliance';
 import { getMajorWorksContext, getMajorWorksProjectContext } from '@/lib/supabase/majorWorks';
 import { searchBuildingAndUnits } from '@/lib/supabase/buildingSearch';
 import { createClient } from '@supabase/supabase-js';
@@ -81,7 +80,7 @@ export async function buildPrompt({
 
   // 🔍 Enhanced Building & Unit Search (for natural language queries)
   if (!buildingId && question) {
-    const searchResults = await searchBuildingAndUnits(question);
+    const searchResults = await searchBuildingAndUnits(question, supabase);
     if (searchResults) {
       let searchContext = 'Building & Unit Search Results:\n';
       
@@ -141,10 +140,32 @@ export async function buildPrompt({
     if (lease) contextSections.push(`Leaseholder Info:\n${JSON.stringify(lease, null, 2)}`);
   }
 
-  // ✅ Compliance Context
+  // ✅ Compliance Context (using new compliance system)
   if (contextType === 'compliance' && buildingId) {
-    const compliance = await getComplianceContext(buildingId);
-    if (compliance) contextSections.push(`Compliance Info:\n${compliance}`);
+    try {
+      const { data: complianceAssets } = await supabase
+        .from('building_compliance_assets')
+        .select(`
+          asset_id,
+          status,
+          priority,
+          due_date,
+          last_completed,
+          assigned_to,
+          notes
+        `)
+        .eq('building_id', buildingId)
+        .order('priority', { ascending: false });
+
+      if (complianceAssets && complianceAssets.length > 0) {
+        const complianceInfo = complianceAssets.map(asset => 
+          `- ${asset.asset_id}: ${asset.status} (${asset.priority} priority, due: ${asset.due_date || 'Not set'})`
+        ).join('\n');
+        contextSections.push(`Compliance Assets:\n${complianceInfo}`);
+      }
+    } catch (error) {
+      console.warn('Could not fetch compliance context:', error);
+    }
   }
 
   // 🏗️ Major Works Context
