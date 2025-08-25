@@ -11,8 +11,8 @@
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="BlocIQ Assistant"/>
   <Description DefaultValue="AI-powered assistant for Outlook"/>
-  <IconUrl DefaultValue="https://www.blociq.co.uk/assets/icon-32.png"/>
-  <HighResolutionIconUrl DefaultValue="https://www.blociq.co.uk/assets/icon-32.png"/>
+  <IconUrl DefaultValue="https://www.blociq.co.uk/addin/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://www.blociq.co.uk/addin/icon-80.png"/>
   <SupportUrl DefaultValue="https://www.blociq.co.uk/support"/>
   <AppDomains>
     <AppDomain>https://www.blociq.co.uk</AppDomain>
@@ -91,9 +91,9 @@
     </Hosts>
     <Resources>
       <bt:Images>
-        <bt:Image id="icon16" DefaultValue="https://www.blociq.co.uk/assets/icon-32.png"/>
-        <bt:Image id="icon32" DefaultValue="https://www.blociq.co.uk/assets/icon-32.png"/>
-        <bt:Image id="icon80" DefaultValue="https://www.blociq.co.uk/assets/icon-32.png"/>
+        <bt:Image id="icon16" DefaultValue="https://www.blociq.co.uk/addin/icon-16.png"/>
+        <bt:Image id="icon32" DefaultValue="https://www.blociq.co.uk/addin/icon-32.png"/>
+        <bt:Image id="icon80" DefaultValue="https://www.blociq.co.uk/addin/icon-80.png"/>
       </bt:Images>
       <bt:Urls>
         <bt:Url id="functionFile" DefaultValue="https://www.blociq.co.uk/addin/function.js"/>

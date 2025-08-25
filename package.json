@@ -20,7 +20,8 @@
     "fix:email-user-ids": "node scripts/fix_email_user_ids.js",
     "test:dummy-buildings": "node scripts/test-dummy-buildings.js",
     "deploy:check": "node test-deployment.js",
-    "deploy:vercel": "vercel --prod"
+    "deploy:vercel": "vercel --prod",
+    "build:icons": "node scripts/build-icons.mjs"
   },
   "dependencies": {
     "@azure/msal-node": "^3.6.2",
@@ -77,6 +78,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-dropzone": "^14.3.8",
+    "sharp": "^0.33.2",
     "sonner": "^2.0.6",
     "swr": "^2.3.6",
     "tailwind-merge": "^3.3.1",
