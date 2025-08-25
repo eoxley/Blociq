@@ -5,108 +5,34 @@
   xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
   xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.1"
   xsi:type="MailApp">
+
   <Id>c518d2f2-3bc7-4db4-a863-7cc313c921f5</Id>
   <Version>1.0.0.0</Version>
   <ProviderName>BlocIQ</ProviderName>
-  <DefaultLocale>en-US</DefaultLocale>
+  <DefaultLocale>en-GB</DefaultLocale>
   <DisplayName DefaultValue="BlocIQ Assistant"/>
   <Description DefaultValue="AI-powered assistant for Outlook"/>
   <IconUrl DefaultValue="https://www.blociq.co.uk/addin/icon-32.png"/>
   <HighResolutionIconUrl DefaultValue="https://www.blociq.co.uk/addin/icon-80.png"/>
   <SupportUrl DefaultValue="https://www.blociq.co.uk/support"/>
+
+  <!-- Use bare domain(s), no scheme -->
   <AppDomains>
-    <AppDomain>https://www.blociq.co.uk</AppDomain>
+    <AppDomain>blociq.co.uk</AppDomain>
   </AppDomains>
+
   <Hosts>
     <Host Name="Mailbox"/>
   </Hosts>
+
   <Requirements>
     <Sets>
       <Set Name="Mailbox" MinVersion="1.3"/>
     </Sets>
   </Requirements>
-  <DefaultSettings>
-    <SourceLocation DefaultValue="https://www.blociq.co.uk/addin/taskpane.html"/>
-  </DefaultSettings>
-  <Permissions>ReadWriteMailbox</Permissions>
-  <Rule xsi:type="RuleCollection" Mode="Or">
-    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read"/>
-    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Edit"/>
-  </Rule>
-  <DisableEntityHighlighting>false</DisableEntityHighlighting>
-  <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
-    <Hosts>
-      <Host xsi:type="MailHost">
-        <DesktopFormFactor>
-          <FunctionFile resid="functionFile"/>
-          <ExtensionPoint xsi:type="MessageReadCommandSurface">
-            <OfficeTab id="TabDefault">
-              <Group id="msgReadGroup">
-                <Label resid="groupLabel"/>
-                <Control xsi:type="Button" id="msgReadOpenPaneButton">
-                  <Label resid="paneButtonLabel"/>
-                  <Supertip>
-                    <Title resid="paneSuperTipTitle"/>
-                    <Description resid="paneSuperTipDescription"/>
-                  </Supertip>
-                  <Icon>
-                    <bt:Image size="16" resid="icon16"/>
-                    <bt:Image size="32" resid="icon32"/>
-                    <bt:Image size="80" resid="icon80"/>
-                  </Icon>
-                  <Action xsi:type="ExecuteFunction">
-                    <FunctionName>openTaskpane</FunctionName>
-                  </Action>
-                </Control>
-              </Group>
-            </OfficeTab>
-          </ExtensionPoint>
-          <ExtensionPoint xsi:type="MessageComposeCommandSurface">
-            <OfficeTab id="TabDefault">
-              <Group id="msgComposeGroup">
-                <Label resid="groupLabel"/>
-                <Control xsi:type="Button" id="msgComposeOpenPaneButton">
-                  <Label resid="paneButtonLabel"/>
-                  <Supertip>
-                    <Title resid="paneSuperTipTitle"/>
-                    <Description resid="paneSuperTipDescription"/>
-                  </Supertip>
-                  <Icon>
-                    <bt:Image size="16" resid="icon16"/>
-                    <bt:Image size="32" resid="icon32"/>
-                    <bt:Image size="80" resid="icon80"/>
-                  </Icon>
-                  <Action xsi:type="ExecuteFunction">
-                    <FunctionName>openTaskpane</FunctionName>
-                  </Action>
-                </Control>
-              </Group>
-            </OfficeTab>
-          </ExtensionPoint>
-          <DefaultSettings>
-            <SourceLocation resid="taskpaneUrl"/>
-          </DefaultSettings>
-        </DesktopFormFactor>
-      </Host>
-    </Hosts>
-    <Resources>
-      <bt:Images>
-        <bt:Image id="icon16" DefaultValue="https://www.blociq.co.uk/addin/icon-16.png"/>
-        <bt:Image id="icon32" DefaultValue="https://www.blociq.co.uk/addin/icon-32.png"/>
-        <bt:Image id="icon80" DefaultValue="https://www.blociq.co.uk/addin/icon-80.png"/>
-      </bt:Images>
-      <bt:Urls>
-        <bt:Url id="functionFile" DefaultValue="https://www.blociq.co.uk/addin/function.js"/>
-        <bt:Url id="taskpaneUrl" DefaultValue="https://www.blociq.co.uk/addin/taskpane.html"/>
-      </bt:Urls>
-      <bt:ShortStrings>
-        <bt:String id="groupLabel" DefaultValue="BlocIQ Assistant"/>
-        <bt:String id="paneButtonLabel" DefaultValue="Open Assistant"/>
-        <bt:String id="paneSuperTipTitle" DefaultValue="BlocIQ Assistant"/>
-      </bt:ShortStrings>
-      <bt:LongStrings>
-        <bt:String id="paneSuperTipDescription" DefaultValue="Open BlocIQ Assistant to work with this email."/>
-      </bt:LongStrings>
-    </Resources>
-  </VersionOverrides>
-</OfficeApp>
+
+  <!-- For schema 1.1 MailApp, use FormSettings instead of DefaultSettings -->
+  <FormSettings>
+    <Form xsi:type="ItemRead">
+      <DesktopSettings>
+        <SourceLocation DefaultValue="https://www.blociq.co.uk/addin/taskpane.html"/>
