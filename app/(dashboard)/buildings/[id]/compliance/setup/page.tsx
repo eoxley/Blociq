@@ -5,12 +5,10 @@ import { cookies } from 'next/headers';
 import ComplianceSetupWizard from './ComplianceSetupWizard';
 
 interface ComplianceSetupPageProps {
-  params: {
-    buildingId: string;
-  };
+  params: Promise<{ id: string }>;
 }
 
-export default async function ComplianceSetupPage({ params }: ComplianceSetupPageProps) {
+export default async function BuildingComplianceSetupPage({ params }: ComplianceSetupPageProps) {
   const supabase = createServerComponentClient({ cookies });
   
   // Check authentication
@@ -19,11 +17,18 @@ export default async function ComplianceSetupPage({ params }: ComplianceSetupPag
     redirect('/login');
   }
 
+  // Get buildingId from params
+  const { id: buildingId } = await params;
+  
+  if (!buildingId) {
+    redirect('/buildings');
+  }
+
   // Get building information
   const { data: building, error: buildingError } = await supabase
     .from('buildings')
     .select('*')
-    .eq('id', params.buildingId)
+    .eq('id', buildingId)
     .single();
 
   if (buildingError || !building) {
@@ -36,7 +41,7 @@ export default async function ComplianceSetupPage({ params }: ComplianceSetupPag
     .select('building_id')
     .eq('user_id', user.id);
 
-  if (accessError || !userBuildings?.some(ub => ub.building_id === params.buildingId)) {
+  if (accessError || !userBuildings?.some(ub => ub.building_id === buildingId)) {
     redirect('/buildings');
   }
 
@@ -44,7 +49,7 @@ export default async function ComplianceSetupPage({ params }: ComplianceSetupPag
   const { data: existingAssets, error: assetsError } = await supabase
     .from('building_compliance_assets')
     .select('asset_id')
-    .eq('building_id', params.buildingId);
+    .eq('building_id', buildingId);
 
   const existingAssetIds = existingAssets?.map(asset => asset.asset_id) || [];
 
@@ -52,6 +57,14 @@ export default async function ComplianceSetupPage({ params }: ComplianceSetupPag
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
+          <div className="flex items-center gap-4 mb-4">
+            <a
+              href={`/buildings/${buildingId}/compliance`}
+              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+            >
+              ← Back to Compliance
+            </a>
+          </div>
           <h1 className="text-3xl font-bold text-gray-900">
             Compliance Setup
           </h1>
@@ -61,7 +74,7 @@ export default async function ComplianceSetupPage({ params }: ComplianceSetupPag
         </div>
         
         <ComplianceSetupWizard 
-          buildingId={params.buildingId}
+          buildingId={buildingId}
           buildingName={building.name}
           existingAssetIds={existingAssetIds}
         />

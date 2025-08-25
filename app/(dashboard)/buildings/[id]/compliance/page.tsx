@@ -79,7 +79,7 @@ export default async function BuildingCompliancePage({ params }: BuildingComplia
               You'll need to configure which compliance items to track for this building.
             </p>
             <a
-              href={`/buildings/compliance/setup?buildingId=${params.id}`}
+              href={`/buildings/${params.id}/compliance/setup`}
               className="px-6 py-3 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               Setup Industry Knowledge Assets
