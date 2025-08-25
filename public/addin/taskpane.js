@@ -249,7 +249,7 @@ async function callAskBlocIQ(prompt, emailContext) {
       
       // Handle specific error cases
       if (errorData.action === 'login_required') {
-        return `🔐 ${errorData.message}\n\nTo use the full BlocIQ Assistant features, please:\n1. Open your browser and go to https://www.blociq.co.uk\n2. Log in to your BlocIQ account\n3. Return to Outlook and try your question again\n\nFor now, I can help with general property management questions.`;
+        return `🔐 ${errorData.message}\n\nPlease ensure you are logged into your BlocIQ account in your browser.`;
       }
       
       throw new Error(`API error: ${response.status} - ${errorData.message || errorData.error || 'Unknown error'}`);
@@ -266,7 +266,7 @@ async function callAskBlocIQ(prompt, emailContext) {
     
     // Provide more specific error messages
     if (error.message.includes('401')) {
-      return '🔐 I need to authenticate with BlocIQ. Please log in to your BlocIQ account in your browser and try again.';
+      return '🔐 I need to authenticate with BlocIQ. Please ensure you are logged into your BlocIQ account.';
     } else if (error.message.includes('403')) {
       return '🚫 I don\'t have permission to access that information. Please check your BlocIQ account permissions.';
     } else if (error.message.includes('500')) {
