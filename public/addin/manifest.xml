@@ -29,7 +29,7 @@
     </Sets>
   </Requirements>
 
-  <!-- ✅ REQUIRED by schema: dummy FormSettings block -->
+  <!--  ✅ REQUIRED by schema: dummy FormSettings block  -->
   <FormSettings>
     <Form xsi:type="ItemRead">
       <DesktopSettings>
@@ -39,7 +39,7 @@
     </Form>
   </FormSettings>
 
-  <!-- ✅ Permissions must come AFTER FormSettings -->
+  <!--  ✅ Permissions must come AFTER FormSettings  -->
   <Permissions>ReadWriteItem</Permissions>
 
   <Rule xsi:type="RuleCollection" Mode="Or">
@@ -54,7 +54,7 @@
     <Hosts>
       <Host xsi:type="MailHost">
         <DesktopFormFactor>
-          <!-- Read -->
+          <!--  Read  -->
           <ExtensionPoint xsi:type="MessageReadCommandSurface">
             <OfficeTab id="TabDefault">
               <Group id="msgReadGroup">
@@ -78,7 +78,7 @@
             </OfficeTab>
           </ExtensionPoint>
 
-          <!-- Compose -->
+          <!--  Compose  -->
           <ExtensionPoint xsi:type="MessageComposeCommandSurface">
             <OfficeTab id="TabDefault">
               <Group id="msgComposeGroup">
