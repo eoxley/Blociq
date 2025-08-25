@@ -387,6 +387,40 @@
     .ai-reply-section.visible {
       display: block;
     }
+    
+    /* Building context display */
+    .building-context {
+      background: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 16px;
+      font-size: 12px;
+    }
+    
+    .building-context h4 {
+      margin: 0 0 8px 0;
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+    
+    .building-context p {
+      margin: 0;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+    
+    .context-badge {
+      display: inline-block;
+      background: var(--primary);
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: 500;
+      margin-right: 6px;
+      margin-bottom: 4px;
+    }
   </style>
 </head>
 <body>
@@ -406,6 +440,12 @@
     
     <!-- Input Area -->
     <div class="input-area">
+      <!-- Building Context Display -->
+      <div class="building-context" id="buildingContext" style="display: none;">
+        <h4>🏢 Building Context</h4>
+        <div id="buildingContextContent"></div>
+      </div>
+      
       <!-- Email Actions -->
       <div class="email-actions">
         <button class="action-button primary" id="triageInbox">🚀 Triage Inbox</button>
@@ -456,6 +496,7 @@
   <script>
     let messages = [];
     let currentEmailContext = null;
+    let currentBuildingContext = null;
     
     // DOM elements
     const chatContainer = document.getElementById('chatContainer');
@@ -468,6 +509,8 @@
     const aiReplySection = document.getElementById('aiReplySection');
     const generateReplyBtn = document.getElementById('generateReply');
     const generateReplyAllBtn = document.getElementById('generateReplyAll');
+    const buildingContext = document.getElementById('buildingContext');
+    const buildingContextContent = document.getElementById('buildingContextContent');
     
     // Auto-resize textarea
     function adjustTextareaHeight() {
@@ -494,7 +537,7 @@
       messages.push({ content, type, timestamp: new Date() });
     }
     
-    // Handle Ask BlocIQ
+    // Enhanced Ask BlocIQ with building context
     async function handleAskBlocIQ() {
       const question = inputField.value.trim();
       if (!question) return;
@@ -513,10 +556,14 @@
       chatContainer.scrollTop = chatContainer.scrollHeight;
       
       try {
-        // Get current email context
+        // Get current email context and building info
         const emailContext = await getCurrentEmailContext();
+        const buildingContext = await detectBuildingFromEmail(emailContext);
         
-        // Call BlocIQ Ask AI API
+        // Determine context type based on question and building
+        const contextType = determineContextType(question, buildingContext);
+        
+        // Call BlocIQ Ask AI API with full context
         const response = await fetch('https://www.blociq.co.uk/api/ask-ai', {
           method: 'POST',
           headers: { 
@@ -524,9 +571,11 @@
             'Authorization': `Bearer ${await getAuthToken()}`
           },
           body: JSON.stringify({ 
-            question,
-            contextType: 'outlook_addin',
-            emailContext
+            prompt: question,
+            building_id: buildingContext?.id || null,
+            contextType: contextType,
+            emailContext: emailContext,
+            is_outlook_addin: true
           })
         });
         
@@ -544,6 +593,11 @@
         chatContainer.removeChild(loadingDiv);
         addMessage(answer, 'assistant');
         
+        // Update building context display if we have building info
+        if (buildingContext) {
+          updateBuildingContextDisplay(buildingContext);
+        }
+        
       } catch (error) {
         // Remove loading message and add error
         chatContainer.removeChild(loadingDiv);
@@ -551,6 +605,127 @@
       } finally {
         sendButton.disabled = false;
       }
+    }
+    
+    // Detect building from email content
+    async function detectBuildingFromEmail(emailContext) {
+      if (!emailContext) return null;
+      
+      try {
+        // Try to extract building info from email content
+        const response = await fetch('https://www.blociq.co.uk/api/ai-extract-building', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${await getAuthToken()}`
+          },
+          body: JSON.stringify({
+            subject: emailContext.subject,
+            body: emailContext.body,
+            from: emailContext.from
+          })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.building) {
+            currentBuildingContext = data.building;
+            return data.building;
+          }
+        }
+        
+        // Fallback: try to match by sender domain or building references
+        return await fallbackBuildingDetection(emailContext);
+        
+      } catch (error) {
+        console.error('Error detecting building:', error);
+        return null;
+      }
+    }
+    
+    // Fallback building detection
+    async function fallbackBuildingDetection(emailContext) {
+      try {
+        // Search for buildings by name/address in email content
+        const searchTerms = extractSearchTerms(emailContext.subject + ' ' + emailContext.body);
+        
+        if (searchTerms.length > 0) {
+          const response = await fetch('https://www.blociq.co.uk/api/buildings/search', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${await getAuthToken()}`
+            },
+            body: JSON.stringify({
+              query: searchTerms.join(' '),
+              limit: 5
+            })
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.buildings && data.buildings.length > 0) {
+              // Return the most relevant building
+              return data.buildings[0];
+            }
+          }
+        }
+        
+        return null;
+      } catch (error) {
+        console.error('Error in fallback building detection:', error);
+        return null;
+      }
+    }
+    
+    // Extract search terms from text
+    function extractSearchTerms(text) {
+      // Remove common words and extract potential building names/addresses
+      const commonWords = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'];
+      const words = text.toLowerCase().split(/\s+/);
+      const searchTerms = words.filter(word => 
+        word.length > 3 && 
+        !commonWords.includes(word) &&
+        /^[a-zA-Z0-9\s]+$/.test(word)
+      );
+      
+      return searchTerms.slice(0, 5); // Limit to 5 terms
+    }
+    
+    // Determine context type based on question and building
+    function determineContextType(question, buildingContext) {
+      const questionLower = question.toLowerCase();
+      
+      if (questionLower.includes('compliance') || questionLower.includes('regulatory') || questionLower.includes('safety')) {
+        return 'compliance';
+      }
+      
+      if (questionLower.includes('leaseholder') || questionLower.includes('tenant') || questionLower.includes('resident')) {
+        return 'leaseholder';
+      }
+      
+      if (questionLower.includes('major works') || questionLower.includes('section 20') || questionLower.includes('project')) {
+        return 'major_works';
+      }
+      
+      if (buildingContext) {
+        return 'general';
+      }
+      
+      return 'public';
+    }
+    
+    // Update building context display
+    function updateBuildingContextDisplay(building) {
+      if (!building) return;
+      
+      buildingContext.style.display = 'block';
+      buildingContextContent.innerHTML = `
+        <p><span class="context-badge">🏢</span> <strong>${building.name || 'Unknown Building'}</strong></p>
+        <p><span class="context-badge">📍</span> ${building.address || 'Address not available'}</p>
+        ${building.unit_count ? `<p><span class="context-badge">🏠</span> ${building.unit_count} units</p>` : ''}
+        ${building.is_hrb ? '<p><span class="context-badge">🛡️</span> High Risk Building</p>' : ''}
+      `;
     }
     
     // Get current email context
@@ -801,6 +976,10 @@
           addMessage(`🏢 Building: ${buildingInfo.name}`, 'assistant');
           addMessage(`📍 Address: ${buildingInfo.address}`, 'assistant');
           addMessage(`📊 Units: ${buildingInfo.unitCount}`, 'assistant');
+          
+          // Update building context
+          currentBuildingContext = buildingInfo;
+          updateBuildingContextDisplay(buildingInfo);
         } else {
           addMessage('❌ Could not identify building from email content', 'assistant');
         }
@@ -864,7 +1043,7 @@
           body: JSON.stringify({
             subject: emailContext.subject,
             body: emailContext.body,
-            building_id: null, // Will be extracted by AI
+            building_id: currentBuildingContext?.id || null,
             from_email: emailContext.from,
             from_name: emailContext.from,
             replyType: replyType
@@ -889,7 +1068,7 @@
               if (result.status === Office.AsyncResultStatus.Succeeded) {
                 addMessage(`✅ AI ${replyType} generated and inserted!`, 'assistant');
               } else {
-                addMessage(`❌ Failed to insert reply: ${result.error.message}`, 'assistant`);
+                addMessage(`❌ Failed to insert reply: ${result.error.message}`, 'assistant');
               }
             }
           );
@@ -966,10 +1145,10 @@
       checkComposeMode();
     });
     
-    // Send button click handler
+    // Send button click handler - FIXED: Now properly connected
     sendButton.onclick = handleAskBlocIQ;
     
-    // Enable send button when there's input
+    // Enable send button when there's input - FIXED: Now properly working
     inputField.addEventListener('input', () => {
       sendButton.disabled = !inputField.value.trim();
     });
