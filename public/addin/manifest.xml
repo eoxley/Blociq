@@ -11,8 +11,8 @@
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="BlocIQ Assistant"/>
   <Description DefaultValue="AI-powered assistant for Outlook"/>
-  <IconUrl DefaultValue="https://www.blociq.co.uk/assets/icon-32.png"/>
-  <HighResolutionIconUrl DefaultValue="https://www.blociq.co.uk/assets/icon-32.png"/>
+  <IconUrl DefaultValue="icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="icon-32.png"/>
   <SupportUrl DefaultValue="https://www.blociq.co.uk/support"/>
   <AppDomains>
     <AppDomain>https://www.blociq.co.uk</AppDomain>
@@ -26,7 +26,7 @@
     </Sets>
   </Requirements>
   <DefaultSettings>
-    <SourceLocation DefaultValue="https://www.blociq.co.uk/addin/taskpane.html"/>
+    <SourceLocation DefaultValue="taskpane.html"/>
   </DefaultSettings>
   <Permissions>ReadWriteMailbox</Permissions>
   <Rule xsi:type="RuleCollection" Mode="Or">
@@ -91,13 +91,13 @@
     </Hosts>
     <Resources>
       <bt:Images>
-        <bt:Image id="icon16" DefaultValue="https://www.blociq.co.uk/assets/icon-32.png"/>
-        <bt:Image id="icon32" DefaultValue="https://www.blociq.co.uk/assets/icon-32.png"/>
-        <bt:Image id="icon80" DefaultValue="https://www.blociq.co.uk/assets/icon-32.png"/>
+        <bt:Image id="icon16" DefaultValue="icon-32.png"/>
+        <bt:Image id="icon32" DefaultValue="icon-32.png"/>
+        <bt:Image id="icon80" DefaultValue="icon-32.png"/>
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="functionFile" DefaultValue="https://www.blociq.co.uk/addin/function.js"/>
-        <bt:Url id="taskpaneUrl" DefaultValue="https://www.blociq.co.uk/addin/taskpane.html"/>
+        <bt:Url id="functionFile" DefaultValue="function.js"/>
+        <bt:Url id="taskpaneUrl" DefaultValue="taskpane.html"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="groupLabel" DefaultValue="BlocIQ Assistant"/>

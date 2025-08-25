@@ -6,5 +6,15 @@ Office.onReady(() => {
 });
 
 function openTaskpane(event) {
-  Office.addin.showAsTaskpane().then(() => event.completed());
+  Office.context.ui.displayDialogAsync(
+    "taskpane.html",
+    { height: 50, width: 50 },
+    function (asyncResult) {
+      console.log("Dialog opened", asyncResult);
+    }
+  );
+  event.completed();
 }
+
+// Make the function available globally
+window.openTaskpane = openTaskpane;

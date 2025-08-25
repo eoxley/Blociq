@@ -1,31 +1,41 @@
+import { ReactNode } from 'react'
 import { redirect } from 'next/navigation'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import DashboardSidebar from '@/components/DashboardSidebar'
+import MobileNavigation from '@/components/MobileNavigation'
 import HomePageClient from './HomePageClient'
-import LayoutWithSidebar from '@/components/LayoutWithSidebar'
 
 export default async function HomePage() {
   const cookieStore = cookies()
   const supabase = createServerComponentClient({ cookies: () => cookieStore })
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) redirect('/login')
-
-  // Get user profile data
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name, email')
-    .eq('id', user.id)
-    .single()
-
-  const userData = {
-    name: profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Property Manager',
-    email: user.email || ''
+  // Redirect to login if user is not authenticated
+  if (!user) {
+    redirect('/login')
   }
 
   return (
-    <LayoutWithSidebar>
-      <HomePageClient userData={userData} />
-    </LayoutWithSidebar>
+    <div className="min-h-screen flex flex-col bg-[#FAFAFA]">
+      <div className="flex flex-1 overflow-hidden">
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:block">
+          <DashboardSidebar />
+        </div>
+        
+        {/* Mobile Navigation */}
+        <MobileNavigation />
+        
+        <main className="flex-1 overflow-y-auto">
+          {/* Main Content */}
+          <div className="p-4 lg:p-6">
+            <div className="w-full max-w-[1800px] mx-auto px-4 lg:px-6 xl:px-8">
+              <HomePageClient />
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
   )
 }
