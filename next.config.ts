@@ -60,6 +60,15 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      {
+        source: '/addin/:path*',
+        headers: [
+          { 
+            key: 'Content-Security-Policy', 
+            value: "frame-ancestors 'self' https://outlook.office.com https://outlook.office365.com https://*.office.com https://*.office365.com;" 
+          },
+        ],
+      },
     ];
   },
   // Add output configuration for better deployment

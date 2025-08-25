@@ -21,7 +21,8 @@
     "test:dummy-buildings": "node scripts/test-dummy-buildings.js",
     "deploy:check": "node test-deployment.js",
     "deploy:vercel": "vercel --prod",
-    "build:icons": "node scripts/build-icons.mjs"
+    "build:icons": "node scripts/build-icons.mjs",
+    "validate:addin": "office-addin-manifest validate public/addin/manifest.xml"
   },
   "dependencies": {
     "@azure/msal-node": "^3.6.2",
@@ -100,6 +101,7 @@
     "@types/uuid": "^10.0.0",
     "eslint": "9.31.0",
     "eslint-config-next": "15.4.1",
+    "office-addin-manifest": "^2.0.3",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.4",
     "typescript": "^5"

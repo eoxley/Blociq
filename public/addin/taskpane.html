@@ -1,11 +1,88 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
+  <meta charset="utf-8" />
   <title>BlocIQ Assistant</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <style>
+    :root { color-scheme: light dark; }
+    html, body { height: 100%; margin: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; display: grid; place-items: center; }
+    .card { padding: 24px 28px; border-radius: 16px; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 8px 24px rgba(0,0,0,0.06); text-align: center; max-width: 560px; }
+    h1 { font-size: 20px; margin: 0 0 8px; }
+    p  { font-size: 14px; opacity: 0.9; margin: 0 0 12px; }
+    .row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 12px; }
+    button { padding: 10px 14px; border-radius: 10px; border: 1px solid #ddd; cursor: pointer; }
+    pre { text-align: left; background: rgba(0,0,0,0.04); border-radius: 10px; padding: 12px; max-width: 560px; overflow:auto; }
+  </style>
 </head>
 <body>
-  <h2>BlocIQ Assistant Connected ✅</h2>
-  <p>This Outlook add-in is live and ready to triage emails.</p>
+  <div class="card">
+    <h1>🧠 BlocIQ Assistant</h1>
+    <p>Connected ✅ This Outlook add-in is live and ready to triage emails.</p>
+
+    <div class="row">
+      <button id="getSubject">Get Subject</button>
+      <button id="analyse">Analyse Email</button>
+      <button id="insertDraft" disabled>Insert Draft</button>
+    </div>
+
+    <pre id="out"></pre>
+  </div>
+
+  <script>
+    let lastDraft = "";
+
+    function out(txt) {
+      document.getElementById("out").textContent = txt;
+    }
+
+    Office.onReady(() => {
+      document.getElementById("getSubject").onclick = () => {
+        const item = Office.context?.mailbox?.item;
+        if (!item) return out("No item context.");
+        item.subject.getAsync(r => {
+          out(r.status === Office.AsyncResultStatus.Succeeded ? "Subject: " + r.value : r.error.message);
+        });
+      };
+
+      document.getElementById("analyse").onclick = async () => {
+        const item = Office.context?.mailbox?.item;
+        if (!item) return out("No item context.");
+        const subject = await new Promise((resolve, reject) =>
+          item.subject.getAsync(r => r.status === Office.AsyncResultStatus.Succeeded ? resolve(r.value) : reject(r.error))
+        );
+        const userEmail = Office.context.mailbox.userProfile?.emailAddress || "unknown@user";
+        const itemId = item.itemId || "";
+
+        out("Analysing…");
+        try {
+          const res = await fetch("https://www.blociq.co.uk/api/addin/triage", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ subject, itemId, userEmail })
+          });
+          if (!res.ok) throw new Error("API " + res.status);
+          const data = await res.json();
+          lastDraft = data.draft || "";
+          document.getElementById("insertDraft").disabled = !lastDraft;
+          out(`Category: ${data.category}\nAction: ${data.action}\n\nDraft:\n${lastDraft || "(none)"}`);
+        } catch (e) {
+          out("Analyse failed: " + e.message);
+        }
+      };
+
+      document.getElementById("insertDraft").onclick = () => {
+        if (!lastDraft) return;
+        Office.context.mailbox.item.body.setAsync(
+          lastDraft,
+          { coercionType: Office.CoercionType.Text },
+          r => out(r.status === Office.AsyncResultStatus.Succeeded ? "Draft inserted ✅" : r.error.message)
+        );
+      };
+    });
+  </script>
 </body>
 </html>
