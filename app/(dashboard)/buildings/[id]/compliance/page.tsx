@@ -40,36 +40,101 @@ export default async function BuildingCompliancePage({ params }: BuildingComplia
     redirect('/buildings');
   }
 
-  // Get building compliance assets
-  const { data: complianceAssets, error: assetsError } = await supabase
+  // Check if this building has any compliance assets set up
+  const { data: existingAssets, error: assetsCheckError } = await supabase
     .from('building_compliance_assets')
-    .select(`
-      *,
-      compliance_documents (
-        id,
-        title,
-        document_type,
-        file_url,
-        file_name,
-        uploaded_at,
-        notes
-      )
-    `)
+    .select('id')
     .eq('building_id', params.id)
-    .order('priority', { ascending: false });
+    .limit(1);
 
-  if (assetsError) {
-    console.error('Error fetching compliance assets:', assetsError);
-    // Don't redirect, just show empty state
+  if (assetsCheckError) {
+    console.error('Error checking existing assets:', assetsCheckError);
   }
 
-  // Get compliance documents count
-  const { data: documentsCount, error: docsError } = await supabase
-    .from('compliance_documents')
-    .select('id', { count: 'exact' })
-    .eq('building_id', params.id);
+  // If no assets are set up, show the setup page instead
+  if (!existingAssets || existingAssets.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="mb-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">
+                  Industry Knowledge Setup
+                </h1>
+                <p className="mt-2 text-gray-600">
+                  {building.name} - Set up your industry knowledge tracking
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="text-center py-12">
+            <div className="text-gray-400 text-6xl mb-4">📋</div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No Industry Knowledge Assets Configured
+            </h3>
+            <p className="text-gray-600 mb-6">
+              This building doesn't have any industry knowledge assets set up yet. 
+              You'll need to configure which compliance items to track for this building.
+            </p>
+            <a
+              href={`/buildings/compliance/setup?buildingId=${params.id}`}
+              className="px-6 py-3 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              Setup Industry Knowledge Assets
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  const totalDocuments = documentsCount || 0;
+  // If assets exist, fetch the full data and show the dashboard
+  let complianceAssets: any[] = [];
+  let totalDocuments = 0;
+
+  try {
+    // Get building compliance assets from the existing table
+    const { data: assets, error: assetsError } = await supabase
+      .from('building_compliance_assets')
+      .select(`
+        *,
+        compliance_assets (
+          id,
+          title,
+          name,
+          category,
+          description,
+          frequency_months,
+          frequency
+        )
+      `)
+      .eq('building_id', params.id);
+
+    if (assetsError) {
+      console.error('Error fetching compliance assets:', assetsError);
+      // Continue with empty array
+    } else if (assets) {
+      complianceAssets = assets;
+    }
+
+    // Get compliance documents count from the existing table
+    const { data: documentsCount, error: docsError } = await supabase
+      .from('compliance_documents')
+      .select('id', { count: 'exact' })
+      .eq('building_id', params.id);
+
+    if (docsError) {
+      console.error('Error fetching documents count:', docsError);
+      // Continue with 0 count
+    } else if (documentsCount !== null) {
+      totalDocuments = documentsCount;
+    }
+  } catch (error) {
+    console.error('Error fetching compliance data:', error);
+    // Continue with empty data to prevent crashes
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -105,7 +170,7 @@ export default async function BuildingCompliancePage({ params }: BuildingComplia
         <BuildingComplianceDashboard 
           buildingId={params.id}
           buildingName={building.name}
-          complianceAssets={complianceAssets || []}
+          complianceAssets={complianceAssets}
           totalDocuments={totalDocuments}
         />
       </div>

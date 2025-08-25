@@ -44,6 +44,12 @@ export default function BuildingComplianceDashboard({
 
   // Update filtered assets when compliance assets change
   useEffect(() => {
+    // Safety check: prevent infinite loops with empty or undefined data
+    if (!complianceAssets || complianceAssets.length === 0) {
+      setFilteredAssets([]);
+      return;
+    }
+
     let filtered = [...complianceAssets];
     
     // Apply search
@@ -153,15 +159,15 @@ export default function BuildingComplianceDashboard({
     return (
       <div className="text-center py-12">
         <div className="text-gray-400 text-6xl mb-4">📋</div>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">No Compliance Assets Configured</h3>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">No Industry Knowledge Assets Configured</h3>
         <p className="text-gray-600 mb-6">
-          This building doesn't have any compliance assets set up yet.
+          This building doesn't have any industry knowledge assets set up yet.
         </p>
         <a
           href={`/buildings/compliance/setup?buildingId=${buildingId}`}
           className="px-6 py-3 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          Setup Compliance Assets
+          Setup Industry Knowledge Assets
         </a>
       </div>
     );
@@ -245,7 +251,7 @@ export default function BuildingComplianceDashboard({
       {/* Compliance Percentage Bar */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-medium text-gray-900">Overall Compliance</h3>
+          <h3 className="text-lg font-medium text-gray-900">Overall Industry Knowledge Status</h3>
           <span className="text-2xl font-bold text-blue-600">{complianceStatus.compliance_percentage}%</span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-3">
