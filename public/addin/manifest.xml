@@ -6,7 +6,7 @@
            xsi:type="MailApp">
 
   <Id>c518d2f2-3bc7-4db4-a863-7cc313c921f5</Id>
-  <Version>1.0.0.1</Version>
+  <Version>1.0.0.2</Version>
   <ProviderName>BlocIQ</ProviderName>
   <DefaultLocale>en-GB</DefaultLocale>
   <DisplayName DefaultValue="BlocIQ Assistant"/>
@@ -29,7 +29,6 @@
     </Sets>
   </Requirements>
 
-  <!-- Some validators require a FormSettings path; keep it minimal -->
   <FormSettings>
     <Form xsi:type="ItemRead">
       <DesktopSettings>
@@ -39,7 +38,6 @@
     </Form>
   </FormSettings>
 
-  <!-- Keep install easy while testing -->
   <Permissions>ReadItem</Permissions>
 
   <Rule xsi:type="RuleCollection" Mode="Or">
@@ -47,17 +45,15 @@
     <Rule xsi:type="ItemIs" ItemType="Message" FormType="Edit"/>
   </Rule>
 
-  <!-- Must appear before VersionOverrides in this schema branch -->
   <DisableEntityHighlighting>false</DisableEntityHighlighting>
 
-  <!-- IMPORTANT: VersionOverrides must be in the mailappversionoverrides namespace -->
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides"
                     xsi:type="VersionOverridesV1_0">
     <Hosts>
       <Host xsi:type="MailHost">
         <DesktopFormFactor>
 
-          <!-- Ribbon button on READ -->
+          <!-- READ -->
           <ExtensionPoint xsi:type="MessageReadCommandSurface">
             <OfficeTab id="TabDefault">
               <Group id="msgReadGroup">
@@ -75,14 +71,13 @@
                   </Icon>
                   <Action xsi:type="ShowTaskpane">
                     <SourceLocation resid="taskpaneUrl"/>
-                    <SupportsPinning>true</SupportsPinning>
                   </Action>
                 </Control>
               </Group>
             </OfficeTab>
           </ExtensionPoint>
 
-          <!-- Ribbon button on COMPOSE -->
+          <!-- COMPOSE -->
           <ExtensionPoint xsi:type="MessageComposeCommandSurface">
             <OfficeTab id="TabDefault">
               <Group id="msgComposeGroup">
@@ -100,7 +95,6 @@
                   </Icon>
                   <Action xsi:type="ShowTaskpane">
                     <SourceLocation resid="taskpaneUrl"/>
-                    <SupportsPinning>true</SupportsPinning>
                   </Action>
                 </Control>
               </Group>
@@ -117,17 +111,14 @@
         <bt:Image id="icon32" DefaultValue="https://www.blociq.co.uk/addin/icon-32.png"/>
         <bt:Image id="icon80" DefaultValue="https://www.blociq.co.uk/addin/icon-80.png"/>
       </bt:Images>
-
       <bt:Urls>
         <bt:Url id="taskpaneUrl" DefaultValue="https://www.blociq.co.uk/addin/taskpane.html"/>
       </bt:Urls>
-
       <bt:ShortStrings>
         <bt:String id="groupLabel" DefaultValue="BlocIQ Assistant"/>
         <bt:String id="paneButtonLabel" DefaultValue="Open Assistant"/>
         <bt:String id="paneSuperTipTitle" DefaultValue="BlocIQ Assistant"/>
       </bt:ShortStrings>
-
       <bt:LongStrings>
         <bt:String id="paneSuperTipDescription" DefaultValue="Open BlocIQ Assistant to work with this email."/>
       </bt:LongStrings>
