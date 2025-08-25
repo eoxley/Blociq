@@ -39,9 +39,57 @@ const nextConfig: NextConfig = {
     
     return config;
   },
-  // Add headers to prevent caching issues
+  // Add headers to prevent caching issues and enable Outlook add-in
   async headers() {
     return [
+      // Outlook Add-in headers
+      {
+        source: '/addin/:path*',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: "frame-ancestors 'self' https://outlook.office.com https://outlook.office365.com https://*.office.com https://*.office365.com;",
+          },
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: 'https://outlook.office.com',
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, PUT, DELETE, OPTIONS',
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type, Authorization, X-Requested-With',
+          },
+          {
+            key: 'Access-Control-Allow-Credentials',
+            value: 'true',
+          },
+        ],
+      },
+      // API routes for add-in
+      {
+        source: '/api/:path*',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: 'https://outlook.office.com',
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, PUT, DELETE, OPTIONS',
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type, Authorization, X-Requested-With',
+          },
+          {
+            key: 'Access-Control-Allow-Credentials',
+            value: 'true',
+          },
+        ],
+      },
       {
         source: '/_next/static/chunks/:path*',
         headers: [
