@@ -1,7 +1,7 @@
-import InboxV3 from '@/components/inbox_v3/InboxV3'
+import InboxV2 from '@/components/inbox_v2/InboxV2'
 
 export const dynamic = 'force-dynamic'
 
 export default function InboxPage() {
-  return <InboxV3 />
+  return <InboxV2 />
 }
