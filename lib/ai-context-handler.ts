@@ -1,5 +1,6 @@
 import { AI_PROMPTS, getPromptForContext, shouldAutoPolish, isComplaint, isDocumentSummaryRequest } from './ai-prompts';
 import { formatBuildingContextForAI, formatUnitSpecificContext } from './ai/buildingContextFormatter';
+import ComplianceKnowledgeService from './compliance/knowledge-service';
 
 export interface AIResponse {
   content: string;
@@ -9,6 +10,8 @@ export interface AIResponse {
     complaintHandled?: boolean;
     documentSummary?: any;
     wordCount?: number;
+    complianceValidated?: boolean;
+    standardsReferenced?: string[];
   };
 }
 
@@ -45,10 +48,17 @@ export interface ComplaintResponse {
 }
 
 export class AIContextHandler {
+  private static complianceService = ComplianceKnowledgeService.getInstance();
+
   /**
    * Determines the appropriate prompt context based on user input and files
    */
-  static determineContext(userInput: string, uploadedFiles?: File[]): 'core' | 'doc_summary' | 'auto_polish' | 'complaints' {
+  static determineContext(userInput: string, uploadedFiles?: File[]): 'core' | 'doc_summary' | 'auto_polish' | 'complaints' | 'compliance' {
+    // Check for compliance-related queries
+    if (this.isComplianceQuery(userInput)) {
+      return 'compliance';
+    }
+    
     // Check for document summary requests
     if (isDocumentSummaryRequest(userInput) || (uploadedFiles && uploadedFiles.length > 0)) {
       return 'doc_summary';
@@ -66,6 +76,49 @@ export class AIContextHandler {
     
     // Default to core
     return 'core';
+  }
+
+  /**
+   * Detects if the user is asking about compliance
+   */
+  private static isComplianceQuery(userInput: string): boolean {
+    const complianceKeywords = [
+      'compliance', 'fire safety', 'electrical', 'gas safety', 'asbestos', 'legionella',
+      'lift inspection', 'pat testing', 'eicr', 'fire risk assessment', 'bs standard',
+      'building regulations', 'hse guidance', 'loler', 'acop', 'hsg'
+    ];
+    
+    const input = userInput.toLowerCase();
+    return complianceKeywords.some(keyword => input.includes(keyword));
+  }
+
+  /**
+   * Detects compliance category from user input
+   */
+  private static detectComplianceCategory(userInput: string): string | null {
+    const input = userInput.toLowerCase();
+    
+    const categoryMappings = {
+      'fire': 'Fire & Life Safety',
+      'electrical': 'Electrical & Mechanical',
+      'gas': 'Gas Safety',
+      'water': 'Water Hygiene & Drainage',
+      'asbestos': 'Structural, Access & Systems',
+      'lift': 'Electrical & Mechanical',
+      'structural': 'Structural, Access & Systems',
+      'insurance': 'Insurance & Risk',
+      'governance': 'Leasehold / Governance',
+      'bsa': 'Building Safety Act (BSA / HRB)',
+      'hrb': 'Building Safety Act (BSA / HRB)'
+    };
+    
+    for (const [keyword, category] of Object.entries(categoryMappings)) {
+      if (input.includes(keyword)) {
+        return category;
+      }
+    }
+    
+    return null;
   }
 
   /**
@@ -233,7 +286,7 @@ export class AIContextHandler {
    * Builds the complete prompt with context and user input
    */
   static async buildPrompt(
-    context: 'core' | 'doc_summary' | 'auto_polish' | 'complaints',
+    context: 'core' | 'doc_summary' | 'auto_polish' | 'complaints' | 'compliance',
     userInput: string,
     buildingContext?: string,
     uploadedFiles?: File[]
@@ -241,6 +294,20 @@ export class AIContextHandler {
     const basePrompt = getPromptForContext(context);
     
     let fullPrompt = `${basePrompt}\n\n`;
+    
+    // Add compliance knowledge context if this is a compliance query
+    if (context === 'compliance') {
+      const complianceCategory = this.detectComplianceCategory(userInput);
+      if (complianceCategory) {
+        try {
+          const complianceContext = await this.complianceService.getComplianceContext(complianceCategory, userInput);
+          fullPrompt += `${complianceContext}\n\n`;
+        } catch (error) {
+          console.warn('Failed to fetch compliance context:', error);
+          // Continue without compliance context if there's an error
+        }
+      }
+    }
     
     // Detect if user is asking about a specific building
     const buildingQuery = this.detectBuildingQuery(userInput);
@@ -274,10 +341,10 @@ export class AIContextHandler {
   /**
    * Processes AI response based on context
    */
-  static processResponse(
+  static async processResponse(
     aiResponse: string,
-    context: 'core' | 'doc_summary' | 'auto_polish' | 'complaints'
-  ): AIResponse {
+    context: 'core' | 'doc_summary' | 'auto_polish' | 'complaints' | 'compliance'
+  ): Promise<AIResponse> {
     const response: AIResponse = {
       content: aiResponse,
       metadata: {
@@ -300,6 +367,20 @@ export class AIContextHandler {
         const complaintData = this.extractComplaintResponse(aiResponse);
         if (complaintData) {
           response.metadata!.documentSummary = complaintData;
+        }
+        break;
+      
+      case 'compliance':
+        // Validate compliance response against standards
+        const complianceCategory = this.detectComplianceCategory(aiResponse);
+        if (complianceCategory) {
+          try {
+            const validation = await this.complianceService.validateResponseAgainstStandards(aiResponse, complianceCategory);
+            response.metadata!.complianceValidated = validation.isValid;
+            response.metadata!.standardsReferenced = validation.standardsReferenced;
+          } catch (error) {
+            console.warn('Failed to validate compliance response:', error);
+          }
         }
         break;
     }
@@ -385,6 +466,13 @@ export class AIContextHandler {
         // For auto-polish, return the polished content
         return content;
       
+      case 'compliance':
+        // For compliance, add standards reference if available
+        if (metadata.standardsReferenced && metadata.standardsReferenced.length > 0) {
+          return `${content}\n\n📋 **Standards Referenced**: ${metadata.standardsReferenced.join(', ')}`;
+        }
+        return content;
+      
       default:
         return content;
     }
@@ -412,6 +500,14 @@ export class AIContextHandler {
     
     if (metadata.complaintHandled) {
       result.complaintHandled = true;
+    }
+    
+    if (metadata.complianceValidated !== undefined) {
+      result.complianceValidated = metadata.complianceValidated;
+    }
+    
+    if (metadata.standardsReferenced) {
+      result.standardsReferenced = metadata.standardsReferenced;
     }
     
     return result;
