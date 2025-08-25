@@ -238,6 +238,30 @@
       height: 20px;
     }
 
+    /* Debug Section */
+    .debug-section {
+      padding: 12px 20px;
+      background: #FEF3C7;
+      border-top: 1px solid #F59E0B;
+      font-size: 11px;
+      color: #92400E;
+    }
+
+    .debug-button {
+      background: #F59E0B;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 10px;
+      cursor: pointer;
+      margin-left: 8px;
+    }
+
+    .debug-button:hover {
+      background: #D97706;
+    }
+
     /* Status Indicator */
     .status-indicator {
       text-align: center;
@@ -326,6 +350,13 @@
       </div>
     </div>
 
+    <!-- Debug Section (temporary) -->
+    <div class="debug-section">
+      <strong>Debug:</strong> Testing API connection
+      <button class="debug-button" onclick="testAPIConnection()">Test API</button>
+      <button class="debug-button" onclick="testSimpleQuery()">Test Query</button>
+    </div>
+
     <!-- Input Area -->
     <div class="input-area">
       <div class="input-container">
@@ -350,5 +381,70 @@
   </div>
 
   <script src="taskpane.js"></script>
+  <script>
+    // Debug functions
+    async function testAPIConnection() {
+      try {
+        console.log('🧪 Testing Add-in API connection...');
+        const response = await fetch('https://www.blociq.co.uk/api/addin/ask-ai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            prompt: 'Hello, this is a test',
+            contextType: 'general',
+            is_outlook_addin: true
+          })
+        });
+        
+        console.log('✅ API Response Status:', response.status);
+        console.log('✅ API Response Headers:', [...response.headers.entries()]);
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('✅ API Response Data:', data);
+          addMessage('✅ Add-in API connection successful! Response received.', 'assistant');
+        } else {
+          const errorData = await response.json();
+          console.error('❌ API Error:', errorData);
+          addMessage(`❌ API Error: ${response.status} - ${errorData.message || errorData.error}`, 'assistant');
+        }
+      } catch (error) {
+        console.error('❌ API Connection Failed:', error);
+        addMessage(`❌ Connection failed: ${error.message}`, 'assistant');
+      }
+    }
+
+    async function testSimpleQuery() {
+      try {
+        console.log('🧪 Testing simple query...');
+        const response = await fetch('https://www.blociq.co.uk/api/addin/ask-ai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            prompt: 'What is a section 20?',
+            contextType: 'compliance',
+            is_outlook_addin: true
+          })
+        });
+        
+        console.log('✅ Query Response Status:', response.status);
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('✅ Query Response Data:', data);
+          addMessage(`✅ Query successful! Response: ${data.response || 'No response content'}`, 'assistant');
+        } else {
+          const errorData = await response.json();
+          console.error('❌ Query Error:', errorData);
+          addMessage(`❌ Query Error: ${response.status} - ${errorData.message || errorData.error}`, 'assistant');
+        }
+      } catch (error) {
+        console.error('❌ Query Failed:', error);
+        addMessage(`❌ Query failed: ${error.message}`, 'assistant');
+      }
+    }
+  </script>
 </body>
 </html>

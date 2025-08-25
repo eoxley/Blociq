@@ -208,34 +208,74 @@ async function handleSendMessage() {
 // Call Ask BlocIQ API with full context
 async function callAskBlocIQ(prompt, emailContext) {
   try {
+    console.log('🔍 Calling BlocIQ Add-in API with prompt:', prompt);
+    
     // Get current building context if available
     const buildingContext = await getBuildingContext();
     
-    const response = await fetch('https://www.blociq.co.uk/api/ask-ai', {
+    const requestBody = {
+      prompt: prompt,
+      contextType: determineContextType(prompt, buildingContext),
+      is_outlook_addin: true,
+    };
+
+    // Add building context if available
+    if (buildingContext?.buildingId) {
+      requestBody.building_id = buildingContext.buildingId;
+    }
+
+    // Add email context if available
+    if (emailContext) {
+      requestBody.emailContext = emailContext;
+    }
+
+    console.log('📤 Request body:', requestBody);
+
+    // Use the add-in specific endpoint
+    const response = await fetch('https://www.blociq.co.uk/api/addin/ask-ai', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        prompt: prompt,
-        building_id: buildingContext?.buildingId || null,
-        contextType: determineContextType(prompt, buildingContext),
-        emailContext: emailContext,
-        is_outlook_addin: true,
-        includeIndustryKnowledge: true,
-      }),
+      credentials: 'include', // Include cookies for authentication
+      body: JSON.stringify(requestBody),
     });
 
+    console.log('📥 Response status:', response.status);
+
     if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+      const errorData = await response.json();
+      console.error('API error response:', errorData);
+      
+      // Handle specific error cases
+      if (errorData.action === 'login_required') {
+        return `🔐 ${errorData.message}\n\nTo use the full BlocIQ Assistant features, please:\n1. Open your browser and go to https://www.blociq.co.uk\n2. Log in to your BlocIQ account\n3. Return to Outlook and try your question again\n\nFor now, I can help with general property management questions.`;
+      }
+      
+      throw new Error(`API error: ${response.status} - ${errorData.message || errorData.error || 'Unknown error'}`);
     }
 
     const data = await response.json();
+    console.log('📥 Response data:', data);
+    
+    // Return the response
     return data.response || 'I apologize, but I couldn\'t generate a response. Please try again.';
 
   } catch (error) {
     console.error('Ask BlocIQ API call failed:', error);
-    throw error;
+    
+    // Provide more specific error messages
+    if (error.message.includes('401')) {
+      return '🔐 I need to authenticate with BlocIQ. Please log in to your BlocIQ account in your browser and try again.';
+    } else if (error.message.includes('403')) {
+      return '🚫 I don\'t have permission to access that information. Please check your BlocIQ account permissions.';
+    } else if (error.message.includes('500')) {
+      return '⚠️ There was a server error. Please try again in a few moments.';
+    } else if (error.message.includes('fetch') || error.message.includes('Failed to fetch')) {
+      return '🌐 I couldn\'t connect to BlocIQ. Please check your internet connection and try again.';
+    } else {
+      return `❌ Sorry, I encountered an error: ${error.message}. Please try again.`;
+    }
   }
 }
 
@@ -294,6 +334,7 @@ async function extractBuildingFromEmail(emailContext) {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({
         emailContent: `${emailContext.subject}\n\n${emailContext.body}`,
       }),
