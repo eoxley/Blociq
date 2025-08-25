@@ -156,8 +156,8 @@ Return in this JSON format:
   }
 }`,
 
-  // NEW: Compliance Expert Prompt
-  COMPLIANCE: `You are a **compliance expert** for UK block management, specializing in building safety, fire safety, electrical safety, and all statutory compliance requirements.
+  // NEW: Industry Knowledge Expert Prompt
+  INDUSTRY: `You are an **industry knowledge expert** for UK block management, specializing in building safety, fire safety, electrical safety, and all statutory compliance requirements.
 
 ■ **CRITICAL**: You MUST base your responses on the compliance knowledge and industry standards provided in the context. Do NOT rely on general knowledge.
 
@@ -201,7 +201,7 @@ Return in this JSON format:
 /**
  * Gets the appropriate prompt for a given context
  */
-export function getPromptForContext(context: 'core' | 'doc_summary' | 'auto_polish' | 'complaints' | 'compliance'): string {
+export function getPromptForContext(context: 'core' | 'doc_summary' | 'auto_polish' | 'complaints' | 'industry'): string {
   return AI_PROMPTS[context] || AI_PROMPTS.CORE;
 }
 

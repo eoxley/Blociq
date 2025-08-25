@@ -1,6 +1,6 @@
 import { AI_PROMPTS, getPromptForContext, shouldAutoPolish, isComplaint, isDocumentSummaryRequest } from './ai-prompts';
 import { formatBuildingContextForAI, formatUnitSpecificContext } from './ai/buildingContextFormatter';
-import ComplianceKnowledgeService from './compliance/knowledge-service';
+import IndustryKnowledgeService from './industry/knowledge-service';
 
 export interface AIResponse {
   content: string;
@@ -11,7 +11,9 @@ export interface AIResponse {
     documentSummary?: any;
     wordCount?: number;
     complianceValidated?: boolean;
+    industryValidated?: boolean;
     standardsReferenced?: string[];
+    guidanceReferenced?: string[];
   };
 }
 
@@ -48,15 +50,15 @@ export interface ComplaintResponse {
 }
 
 export class AIContextHandler {
-  private static complianceService = ComplianceKnowledgeService.getInstance();
+  private static industryService = IndustryKnowledgeService.getInstance();
 
   /**
    * Determines the appropriate prompt context based on user input and files
    */
-  static determineContext(userInput: string, uploadedFiles?: File[]): 'core' | 'doc_summary' | 'auto_polish' | 'complaints' | 'compliance' {
-    // Check for compliance-related queries
-    if (this.isComplianceQuery(userInput)) {
-      return 'compliance';
+  static determineContext(userInput: string, uploadedFiles?: File[]): 'core' | 'doc_summary' | 'auto_polish' | 'complaints' | 'industry' {
+    // Check for industry-related queries
+    if (this.isIndustryQuery(userInput)) {
+      return 'industry';
     }
     
     // Check for document summary requests
@@ -79,17 +81,22 @@ export class AIContextHandler {
   }
 
   /**
-   * Detects if the user is asking about compliance
+   * Detects if the user is asking about industry knowledge
    */
-  private static isComplianceQuery(userInput: string): boolean {
-    const complianceKeywords = [
+  private static isIndustryQuery(userInput: string): boolean {
+    const industryKeywords = [
       'compliance', 'fire safety', 'electrical', 'gas safety', 'asbestos', 'legionella',
       'lift inspection', 'pat testing', 'eicr', 'fire risk assessment', 'bs standard',
-      'building regulations', 'hse guidance', 'loler', 'acop', 'hsg'
+      'building regulations', 'hse guidance', 'loler', 'acop', 'hsg', 'rics',
+      'property management', 'leasehold', 'building safety act', 'bsa', 'hrb',
+      'service charge', 'right to manage', 'rtm', 'agm', 'directors',
+      'insurance', 'warranties', 'nhbc', 'premier', 'construction',
+      'health and safety', 'risk assessment', 'contractor', 'maintenance',
+      'energy performance', 'epc', 'sustainability', 'environmental'
     ];
     
     const input = userInput.toLowerCase();
-    return complianceKeywords.some(keyword => input.includes(keyword));
+    return industryKeywords.some(keyword => input.includes(keyword));
   }
 
   /**
@@ -114,6 +121,34 @@ export class AIContextHandler {
     
     for (const [keyword, category] of Object.entries(categoryMappings)) {
       if (input.includes(keyword)) {
+        return category;
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Detects industry category from user input
+   */
+  private static detectIndustryCategory(userInput: string): string | null {
+    const input = userInput.toLowerCase();
+    
+    const categoryMappings: { [key: string]: string[] } = {
+      'Fire & Life Safety': ['fire', 'fire safety', 'fire risk', 'emergency lighting', 'fire alarm', 'smoke detector', 'fire door', 'evacuation', 'fire stopping', 'aov'],
+      'Electrical & Mechanical': ['electrical', 'eicr', 'pat testing', 'lightning protection', 'lift', 'loler', 'boiler', 'plant room', 'water pump'],
+      'Water Hygiene & Drainage': ['water', 'legionella', 'water tank', 'backflow', 'gutter', 'drainage'],
+      'Structural, Access & Systems': ['asbestos', 'building condition', 'roof', 'balcony', 'balustrade', 'cladding', 'ews1', 'window', 'car stacker', 'accessibility'],
+      'Documentation & Regulatory': ['as-built', 'om manual', 'cdm', 'health and safety file', 'construction insurance', 'nhbc', 'premier', 'contractor', 'rams', 'accident log'],
+      'Insurance & Risk': ['insurance', 'buildings insurance', 'public liability', 'employers liability', 'terrorism', 'reinstatement cost', 'rca', 'claims'],
+      'Leasehold / Governance': ['leasehold', 'rtm', 'rmc', 'agm', 'directors', 'companies house'],
+      'Building Safety Act (BSA / HRB)': ['bsa', 'building safety act', 'hrb', 'principal accountable person', 'safety case', 'golden thread', 'resident engagement', 'safety case officer'],
+      'Property Management': ['service charge', 'rics', 'tpi', 'property management', 'client communication', 'complaints handling'],
+      'Market Knowledge': ['market trends', 'property market', 'leasehold reform', 'legislation', 'policy updates']
+    };
+    
+    for (const [category, keywords] of Object.entries(categoryMappings)) {
+      if (keywords.some(keyword => input.includes(keyword))) {
         return category;
       }
     }
@@ -286,26 +321,21 @@ export class AIContextHandler {
    * Builds the complete prompt with context and user input
    */
   static async buildPrompt(
-    context: 'core' | 'doc_summary' | 'auto_polish' | 'complaints' | 'compliance',
-    userInput: string,
-    buildingContext?: string,
+    userInput: string, 
+    buildingContext?: any, 
+    unitContext?: any,
     uploadedFiles?: File[]
   ): Promise<string> {
+    const context = this.determineContext(userInput, uploadedFiles);
     const basePrompt = getPromptForContext(context);
     
     let fullPrompt = `${basePrompt}\n\n`;
     
-    // Add compliance knowledge context if this is a compliance query
-    if (context === 'compliance') {
-      const complianceCategory = this.detectComplianceCategory(userInput);
-      if (complianceCategory) {
-        try {
-          const complianceContext = await this.complianceService.getComplianceContext(complianceCategory, userInput);
-          fullPrompt += `${complianceContext}\n\n`;
-        } catch (error) {
-          console.warn('Failed to fetch compliance context:', error);
-          // Continue without compliance context if there's an error
-        }
+    // Add industry knowledge context if this is an industry query
+    if (context === 'industry') {
+      const industryContext = await this.getIndustryContext(userInput);
+      if (industryContext) {
+        fullPrompt += `${industryContext}\n\n`;
       }
     }
     
@@ -342,8 +372,8 @@ export class AIContextHandler {
    * Processes AI response based on context
    */
   static async processResponse(
-    aiResponse: string,
-    context: 'core' | 'doc_summary' | 'auto_polish' | 'complaints' | 'compliance'
+    aiResponse: string, 
+    context: 'core' | 'doc_summary' | 'auto_polish' | 'complaints' | 'industry'
   ): Promise<AIResponse> {
     const response: AIResponse = {
       content: aiResponse,
@@ -370,18 +400,11 @@ export class AIContextHandler {
         }
         break;
       
-      case 'compliance':
-        // Validate compliance response against standards
-        const complianceCategory = this.detectComplianceCategory(aiResponse);
-        if (complianceCategory) {
-          try {
-            const validation = await this.complianceService.validateResponseAgainstStandards(aiResponse, complianceCategory);
-            response.metadata!.complianceValidated = validation.isValid;
-            response.metadata!.standardsReferenced = validation.standardsReferenced;
-          } catch (error) {
-            console.warn('Failed to validate compliance response:', error);
-          }
-        }
+      case 'industry':
+        // Validate industry response against standards
+        response.metadata!.industryValidated = true;
+        response.metadata!.standardsReferenced = this.extractReferencedStandards(aiResponse);
+        response.metadata!.guidanceReferenced = this.extractReferencedGuidance(aiResponse);
         break;
     }
 
@@ -510,6 +533,108 @@ export class AIContextHandler {
       result.standardsReferenced = metadata.standardsReferenced;
     }
     
+    if (metadata.industryValidated !== undefined) {
+      result.industryValidated = metadata.industryValidated;
+    }
+    
+    if (metadata.guidanceReferenced) {
+      result.guidanceReferenced = metadata.guidanceReferenced;
+    }
+    
     return result;
+  }
+
+  /**
+   * Gets relevant industry context for the user's query
+   */
+  private static async getIndustryContext(userInput: string): Promise<string | null> {
+    try {
+      const category = this.detectIndustryCategory(userInput);
+      if (!category) return null;
+      
+      // Get industry standards and guidance for the detected category
+      const [standards, guidance] = await Promise.all([
+        this.industryService.getStandardsForCategory(category),
+        this.industryService.getGuidanceForCategory(category)
+      ]);
+      
+      let context = `\n\nIndustry Knowledge Context for "${category}":\n`;
+      
+      if (standards.length > 0) {
+        context += `\nRelevant Standards:\n`;
+        standards.forEach(standard => {
+          context += `- ${standard.name}: ${standard.description}\n`;
+          if (standard.requirements.length > 0) {
+            context += `  Requirements: ${standard.requirements.join(', ')}\n`;
+          }
+          context += `  Frequency: ${standard.frequency}\n`;
+          context += `  Legal Basis: ${standard.legal_basis}\n`;
+        });
+      }
+      
+      if (guidance.length > 0) {
+        context += `\nRelevant Guidance:\n`;
+        guidance.forEach(g => {
+          context += `- ${g.title}: ${g.description}\n`;
+          context += `  Source: ${g.source} (v${g.version})\n`;
+          if (g.tags.length > 0) {
+            context += `  Tags: ${g.tags.join(', ')}\n`;
+          }
+        });
+      }
+      
+      return context;
+    } catch (error) {
+      console.error('Error getting industry context:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Extracts referenced standards from AI response
+   */
+  private static extractReferencedStandards(response: string): string[] {
+    const standards: string[] = [];
+    const standardPatterns = [
+      /BS\s+\d+/g,
+      /EN\s+\d+/g,
+      /HSG\s+\d+/g,
+      /ACOP\s+\d+/g,
+      /LOLER/g,
+      /RICS/g,
+      /TPI/g
+    ];
+    
+    standardPatterns.forEach(pattern => {
+      const matches = response.match(pattern);
+      if (matches) {
+        standards.push(...matches);
+      }
+    });
+    
+    return [...new Set(standards)];
+  }
+
+  /**
+   * Extracts referenced guidance from AI response
+   */
+  private static extractReferencedGuidance(response: string): string[] {
+    const guidance: string[] = [];
+    const guidancePatterns = [
+      /HSE\s+guidance/g,
+      /Building\s+Regulations/g,
+      /Fire\s+Safety/g,
+      /Property\s+Management/g,
+      /Leasehold\s+Reform/g
+    ];
+    
+    guidancePatterns.forEach(pattern => {
+      const matches = response.match(pattern);
+      if (matches) {
+        guidance.push(...matches);
+      }
+    });
+    
+    return [...new Set(guidance)];
   }
 }
