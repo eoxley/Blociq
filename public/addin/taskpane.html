@@ -49,7 +49,7 @@
     html, body { 
       height: 100%; 
       margin: 0; 
-      font-family: "Georgia", "serif", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
       background: var(--background);
       color: var(--foreground);
     }
@@ -409,19 +409,20 @@
       </div>
     </div>
     
-    <!-- Email Actions -->
-    <div class="input-area">
-      <div class="email-actions">
-        <button class="action-button" id="getSubject">📧 Get Subject</button>
-        <button class="action-button primary" id="analyse">🔍 Analyse Email</button>
-        <button class="action-button" id="insertDraft" disabled>✏️ Insert Draft</button>
-      </div>
+          <!-- Email Actions -->
+      <div class="input-area">
+        <div class="email-actions">
+          <button class="action-button" id="getSubject">📧 Get Subject</button>
+          <button class="action-button primary" id="analyse">🔍 Analyse Email</button>
+          <button class="action-button" id="insertDraft" disabled>✏️ Insert Draft</button>
+        </div>
+        
+        <!-- Batch Processing -->
+        <div class="email-actions" style="margin-top: 8px;">
+          <button class="action-button primary" id="triageInbox">🚀 Triage Inbox</button>
+        </div>
       
-      <!-- AI Reply Generation -->
-      <div class="email-actions" style="margin-top: 8px;">
-        <button class="action-button primary" id="generateReply">🤖 AI Reply</button>
-        <button class="action-button primary" id="generateReplyAll">🤖 AI Reply All</button>
-      </div>
+
       
       <!-- Email Capture Status -->
       <div class="email-capture-status">
@@ -466,9 +467,8 @@
     const getSubjectBtn = document.getElementById('getSubject');
     const analyseBtn = document.getElementById('analyse');
     const insertDraftBtn = document.getElementById('insertDraft');
-    const generateReplyBtn = document.getElementById('generateReply');
-    const generateReplyAllBtn = document.getElementById('generateReplyAll');
     const manualLogEmailBtn = document.getElementById('manualLogEmail');
+    const triageInboxBtn = document.getElementById('triageInbox');
     
     // Auto-resize textarea
     function adjustTextareaHeight() {
@@ -607,15 +607,265 @@
       );
     };
     
-    // AI Reply Generation Functions
-    generateReplyBtn.onclick = async () => {
-      await generateAIReply('reply');
+
+    
+    // Send button click handler
+    sendButton.onclick = handleAskBlocIQ;
+    
+    // Enable/disable send button based on input
+    inputField.addEventListener('input', () => {
+      sendButton.disabled = !inputField.value.trim();
+    });
+    
+    // Manual log email button
+    manualLogEmailBtn.onclick = async () => {
+      const item = Office.context?.mailbox?.item;
+      if (!item || item.itemType !== Office.MailboxEnums.ItemType.Message) {
+        addMessage('❌ No email context available for logging', 'assistant');
+        return;
+      }
+      
+      addMessage('📝 Manually logging current email...', 'assistant');
+      
+      try {
+        // Get email details
+        const subject = await getItemProperty(item, 'subject');
+        const body = await getItemProperty(item, 'body');
+        const to = await getItemProperty(item, 'to');
+        const cc = await getItemProperty(item, 'cc');
+        const bcc = await getItemProperty(item, 'bcc');
+        
+        // Prepare recipients array
+        const recipients = [];
+        if (to) recipients.push(...parseRecipients(to));
+        if (cc) recipients.push(...parseRecipients(cc));
+        if (bcc) recipients.push(...parseRecipients(bcc));
+        
+        // Log the email
+        await logOutgoingEmail({
+          subject: subject || 'No Subject',
+          body: body || 'No Content',
+          recipients: recipients,
+          sentAt: new Date().toISOString(),
+          messageId: item.itemId || null
+        });
+        
+      } catch (error) {
+        console.error('Error manually logging email:', error);
+        addMessage('❌ Error logging email: ' + error.message, 'assistant');
+      }
     };
     
-    generateReplyAllBtn.onclick = async () => {
-      await generateAIReply('replyAll');
+    // Triage Inbox functionality
+    triageInboxBtn.onclick = async () => {
+      addMessage('🚀 Starting inbox triage process...', 'assistant');
+      
+      try {
+        // Fetch inbox items from BlocIQ
+        const response = await fetch('https://www.blociq.co.uk/api/addin/triage-inbox', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include'
+        });
+        
+        if (!response.ok) throw new Error(`API ${response.status}`);
+        
+        const data = await response.json();
+        
+        if (data.success && data.emails && data.emails.length > 0) {
+          addMessage(`📧 Found ${data.emails.length} emails to triage`, 'assistant');
+          
+          // Process each email
+          await processInboxBatch(data.emails);
+          
+        } else {
+          addMessage('📭 No emails found in inbox to triage', 'assistant');
+        }
+        
+      } catch (error) {
+        console.error('Error in inbox triage:', error);
+        addMessage('❌ Inbox triage failed: ' + error.message, 'assistant');
+      }
     };
     
+    // Process inbox batch
+    async function processInboxBatch(emails) {
+      let processed = 0;
+      let draftsCreated = 0;
+      let errors = 0;
+      
+      for (const email of emails) {
+        try {
+          addMessage(`🔄 Processing: ${email.subject || 'No Subject'}`, 'assistant');
+          
+          // AI analyze the email
+          const analysis = await analyzeEmailForTriage(email);
+          
+          // Generate draft response
+          const draft = await generateDraftForEmail(email, analysis);
+          
+          // Create draft in BlocIQ system
+          const draftCreated = await createDraftInSystem(email, draft, analysis);
+          
+          if (draftCreated) {
+            draftsCreated++;
+            addMessage(`✅ Draft created for: ${email.subject || 'No Subject'}`, 'assistant');
+          }
+          
+          processed++;
+          
+          // Small delay to avoid overwhelming the API
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+        } catch (error) {
+          console.error('Error processing email:', error);
+          errors++;
+          addMessage(`❌ Failed to process: ${email.subject || 'No Subject'} - ${error.message}`, 'assistant');
+        }
+      }
+      
+      // Summary
+      addMessage(`🎉 Inbox triage complete!`, 'assistant');
+      addMessage(`📊 Summary: ${processed} processed, ${draftsCreated} drafts created, ${errors} errors`, 'assistant');
+    }
+    
+    // AI analyze email for triage
+    async function analyzeEmailForTriage(email) {
+      try {
+        const response = await fetch('https://www.blociq.co.uk/api/addin/triage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            subject: email.subject || '',
+            body: email.body || email.body_preview || '',
+            itemId: email.id || '',
+            userEmail: Office.context.mailbox.userProfile?.emailAddress || 'unknown@user'
+          })
+        });
+        
+        if (!response.ok) throw new Error(`API ${response.status}`);
+        
+        const data = await response.json();
+        return data;
+        
+      } catch (error) {
+        console.error('Error analyzing email:', error);
+        // Return default analysis
+        return {
+          category: 'General',
+          action: 'Review and respond',
+          draft: null
+        };
+      }
+    }
+    
+    // Generate draft response for email
+    async function generateDraftForEmail(email, analysis) {
+      try {
+        const response = await fetch('https://www.blociq.co.uk/api/generate-email-reply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            emailContent: {
+              subject: email.subject || '',
+              body: email.body || email.body_preview || '',
+              from: email.from_email || email.from || 'unknown',
+              fromName: email.from_name || 'Unknown'
+            },
+            context: 'inbox-triage',
+            replyType: 'reply'
+          })
+        });
+        
+        if (!response.ok) throw new Error(`API ${response.status}`);
+        
+        const data = await response.json();
+        return data.reply || 'Unable to generate draft response.';
+        
+      } catch (error) {
+        console.error('Error generating draft:', error);
+        return 'Unable to generate draft response at this time.';
+      }
+    }
+    
+    // Create draft in BlocIQ system
+    async function createDraftInSystem(email, draft, analysis) {
+      try {
+        const response = await fetch('https://www.blociq.co.uk/api/addin/create-draft', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            emailId: email.id,
+            subject: email.subject || '',
+            originalContent: email.body || email.body_preview || '',
+            draftContent: draft,
+            category: analysis.category || 'General',
+            action: analysis.action || 'Review and respond',
+            buildingId: email.building_id || null,
+            unitId: email.unit_id || null,
+            leaseholderId: email.leaseholder_id || null,
+            fromEmail: email.from_email || email.from || '',
+            fromName: email.from_name || 'Unknown'
+          })
+        });
+        
+        if (!response.ok) throw new Error(`API ${response.status}`);
+        
+        const data = await response.json();
+        return data.success;
+        
+      } catch (error) {
+        console.error('Error creating draft:', error);
+        return false;
+      }
+    }
+    
+    // Initialize Office.js
+    Office.onReady(() => {
+      addMessage('🚀 Add-in loaded successfully! You can now ask me questions or analyze emails.', 'assistant');
+      
+      // Set up email capture for outgoing emails
+      setupEmailCapture();
+      
+      // Check if we're in compose mode and show AI reply functionality
+      checkComposeMode();
+    });
+    
+    // Check if we're in compose mode (reply/reply all context)
+    function checkComposeMode() {
+      const item = Office.context?.mailbox?.item;
+      if (item && item.itemType === Office.MailboxEnums.ItemType.Message) {
+        // We're in compose mode - show AI reply functionality
+        showAIReplyFunctionality();
+      }
+    }
+    
+    // Show AI reply functionality in compose mode
+    function showAIReplyFunctionality() {
+      // Create AI reply buttons
+      const aiReplySection = document.createElement('div');
+      aiReplySection.className = 'email-actions';
+      aiReplySection.style.marginTop = '8px';
+      aiReplySection.innerHTML = `
+        <button class="action-button primary" id="generateReply">🤖 AI Reply</button>
+        <button class="action-button primary" id="generateReplyAll">🤖 AI Reply All</button>
+      `;
+      
+      // Insert after the existing email actions
+      const existingActions = document.querySelector('.email-actions');
+      existingActions.parentNode.insertBefore(aiReplySection, existingActions.nextSibling);
+      
+      // Add event listeners for the new buttons
+      document.getElementById('generateReply').onclick = () => generateAIReply('reply');
+      document.getElementById('generateReplyAll').onclick = () => generateAIReply('replyAll');
+      
+      addMessage('🤖 AI Reply functionality enabled for this email context', 'assistant');
+    }
+    
+    // AI Reply Generation Functions (only available in compose mode)
     async function generateAIReply(replyType) {
       const item = Office.context?.mailbox?.item;
       if (!item) return addMessage('No email context available.', 'assistant');
@@ -686,61 +936,6 @@
         addMessage(`❌ AI ${replyType} generation failed: ${error.message}`, 'assistant');
       }
     }
-    
-    // Send button click handler
-    sendButton.onclick = handleAskBlocIQ;
-    
-    // Enable/disable send button based on input
-    inputField.addEventListener('input', () => {
-      sendButton.disabled = !inputField.value.trim();
-    });
-    
-    // Manual log email button
-    manualLogEmailBtn.onclick = async () => {
-      const item = Office.context?.mailbox?.item;
-      if (!item || item.itemType !== Office.MailboxEnums.ItemType.Message) {
-        addMessage('❌ No email context available for logging', 'assistant');
-        return;
-      }
-      
-      addMessage('📝 Manually logging current email...', 'assistant');
-      
-      try {
-        // Get email details
-        const subject = await getItemProperty(item, 'subject');
-        const body = await getItemProperty(item, 'body');
-        const to = await getItemProperty(item, 'to');
-        const cc = await getItemProperty(item, 'cc');
-        const bcc = await getItemProperty(item, 'bcc');
-        
-        // Prepare recipients array
-        const recipients = [];
-        if (to) recipients.push(...parseRecipients(to));
-        if (cc) recipients.push(...parseRecipients(cc));
-        if (bcc) recipients.push(...parseRecipients(bcc));
-        
-        // Log the email
-        await logOutgoingEmail({
-          subject: subject || 'No Subject',
-          body: body || 'No Content',
-          recipients: recipients,
-          sentAt: new Date().toISOString(),
-          messageId: item.itemId || null
-        });
-        
-      } catch (error) {
-        console.error('Error manually logging email:', error);
-        addMessage('❌ Error logging email: ' + error.message, 'assistant');
-      }
-    };
-    
-    // Initialize Office.js
-    Office.onReady(() => {
-      addMessage('🚀 Add-in loaded successfully! You can now ask me questions or analyze emails.', 'assistant');
-      
-      // Set up email capture for outgoing emails
-      setupEmailCapture();
-    });
     
     // Email capture functionality
     function setupEmailCapture() {
