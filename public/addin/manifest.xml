@@ -6,7 +6,7 @@
            xsi:type="MailApp">
 
   <Id>c518d2f2-3bc7-4db4-a863-7cc313c921f5</Id>
-  <Version>1.0.0.6</Version>
+  <Version>1.0.0.8</Version>
   <ProviderName>BlocIQ</ProviderName>
   <DefaultLocale>en-GB</DefaultLocale>
   <DisplayName DefaultValue="BlocIQ Assistant"/>
@@ -29,21 +29,8 @@
     </Sets>
   </Requirements>
 
-  <FormSettings>
-    <Form xsi:type="ItemRead">
-      <DesktopSettings>
-        <SourceLocation DefaultValue="https://www.blociq.co.uk/addin/taskpane.html"/>
-        <RequestedHeight>350</RequestedHeight>
-      </DesktopSettings>
-    </Form>
-    <Form xsi:type="ItemEdit">
-      <DesktopSettings>
-        <SourceLocation DefaultValue="https://www.blociq.co.uk/addin/taskpane.html"/>
-        <RequestedHeight>350</RequestedHeight>
-      </DesktopSettings>
-    </Form>
-  </FormSettings>
-
+  <!-- REMOVE FormSettings completely to fix schema -->
+  
   <Permissions>ReadWriteItem</Permissions>
 
   <Rule xsi:type="RuleCollection" Mode="Or">
@@ -58,8 +45,7 @@
     <Hosts>
       <Host xsi:type="MailHost">
         <DesktopFormFactor>
-
-          <!-- READ -->
+          <!-- Ribbon (Read) -->
           <ExtensionPoint xsi:type="MessageReadCommandSurface">
             <OfficeTab id="TabDefault">
               <Group id="msgReadGroup">
@@ -83,7 +69,7 @@
             </OfficeTab>
           </ExtensionPoint>
 
-          <!-- COMPOSE -->
+          <!-- Ribbon (Compose) -->
           <ExtensionPoint xsi:type="MessageComposeCommandSurface">
             <OfficeTab id="TabDefault">
               <Group id="msgComposeGroup">
@@ -106,7 +92,6 @@
               </Group>
             </OfficeTab>
           </ExtensionPoint>
-
         </DesktopFormFactor>
       </Host>
     </Hosts>
@@ -117,14 +102,17 @@
         <bt:Image id="icon32" DefaultValue="https://www.blociq.co.uk/addin/icon-32.png"/>
         <bt:Image id="icon80" DefaultValue="https://www.blociq.co.uk/addin/icon-80.png"/>
       </bt:Images>
+
       <bt:Urls>
         <bt:Url id="taskpaneUrl" DefaultValue="https://www.blociq.co.uk/addin/taskpane.html"/>
       </bt:Urls>
+
       <bt:ShortStrings>
         <bt:String id="groupLabel" DefaultValue="BlocIQ Assistant"/>
         <bt:String id="paneButtonLabel" DefaultValue="Open Assistant"/>
         <bt:String id="paneSuperTipTitle" DefaultValue="BlocIQ Assistant"/>
       </bt:ShortStrings>
+
       <bt:LongStrings>
         <bt:String id="paneSuperTipDescription" DefaultValue="Open BlocIQ Assistant to work with this email."/>
       </bt:LongStrings>
