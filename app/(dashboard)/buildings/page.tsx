@@ -16,185 +16,358 @@ import {
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
-interface Building {
-  id: string
-  name: string
-  address: string
-  unit_count: number
-  is_hrb: boolean
-  created_at: string
-  agency_id: string
-}
+// Hardcoded dummy buildings for demo purposes
+const dummyBuildings = [
+  { 
+    id: 'dummy-1', 
+    name: "Kingsmere House", 
+    address: "Wimbledon, London SW19", 
+    units: 42,
+    isDummy: true,
+    is_hrb: true
+  },
+  { 
+    id: 'dummy-2', 
+    name: "Harbour View", 
+    address: "Brighton Seafront, BN1", 
+    units: 28,
+    isDummy: true,
+    is_hrb: true
+  },
+  { 
+    id: 'dummy-3', 
+    name: "Maple Row", 
+    address: "Guildford, Surrey GU1", 
+    units: 16,
+    isDummy: true
+  },
+  { 
+    id: 'dummy-4', 
+    name: "Riverside Court", 
+    address: "Kingston upon Thames, KT1", 
+    units: 35,
+    isDummy: true
+  },
+  { 
+    id: 'dummy-5', 
+    name: "Oakwood Gardens", 
+    address: "Epsom, Surrey KT18", 
+    units: 24,
+    isDummy: true,
+    is_hrb: true
+  },
+  { 
+    id: 'dummy-6', 
+    name: "Victoria Heights", 
+    address: "Croydon, London CR0", 
+    units: 31,
+    isDummy: true
+  },
+  { 
+    id: 'dummy-7', 
+    name: "Parkview Apartments", 
+    address: "Sutton, Surrey SM1", 
+    units: 19,
+    isDummy: true
+  },
+  { 
+    id: 'dummy-8', 
+    name: "The Regency", 
+    address: "Worthing, West Sussex BN11", 
+    units: 22,
+    isDummy: true
+  },
+  { 
+    id: 'dummy-9', 
+    name: "Marina Point", 
+    address: "Portsmouth, Hampshire PO1", 
+    units: 38,
+    isDummy: true
+  },
+  { 
+    id: 'dummy-10', 
+    name: "St. James Court", 
+    address: "Southampton, Hampshire SO14", 
+    units: 27,
+    isDummy: true
+  },
+  { 
+    id: 'dummy-11', 
+    name: "The Grand", 
+    address: "Bournemouth, Dorset BH1", 
+    units: 33,
+    isDummy: true
+  },
+  { 
+    id: 'dummy-12', 
+    name: "Cliffside Manor",
+    address: "Eastbourne, East Sussex BN20",
+    units: 26,
+    isDummy: true
+  }
+]
 
-export default function BuildingsPage() {
-  const [buildings, setBuildings] = useState<Building[]>([])
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [userAgency, setUserAgency] = useState<string | null>(null)
+function BuildingsList() {
+  const [searchQuery, setSearchQuery] = useState('')
+  const [realBuildings, setRealBuildings] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [userBuildings, setUserBuildings] = useState<any[]>([])
   const supabase = createClientComponentClient()
 
   useEffect(() => {
-    fetchUserAgencyAndBuildings()
-  }, [])
-
-  const fetchUserAgencyAndBuildings = async () => {
-    try {
-      // Get current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-      if (userError || !user) {
-        console.error('User not authenticated')
-        return
-      }
-
-      // Get user's agency
-      const { data: userProfile, error: profileError } = await supabase
-        .from('users')
-        .select('agency_id')
-        .eq('id', user.id)
-        .single()
-
-      if (profileError) {
-        console.error('Error fetching user profile:', profileError)
-        return
-      }
-
-      setUserAgency(userProfile.agency_id)
-
-      // Fetch buildings for user's agency only
-      if (userProfile.agency_id) {
-        const { data: buildingsData, error: buildingsError } = await supabase
-          .from('buildings')
-          .select('*')
-          .eq('agency_id', userProfile.agency_id)
-          .order('name', { ascending: true })
-
-        if (buildingsError) {
-          console.error('Error fetching buildings:', buildingsError)
-        } else {
-          setBuildings(buildingsData || [])
+    const fetchRealBuildings = async () => {
+      try {
+        setIsLoading(true)
+        
+        // First, get the current user's session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        if (sessionError || !session) {
+          console.log('No session found, skipping real buildings fetch')
+          setRealBuildings([])
+          return
         }
+
+        // Get buildings the user has access to
+        const { data: userAccess, error: accessError } = await supabase
+          .from('building_users')
+          .select(`
+            building_id,
+            buildings (
+              id,
+              name,
+              address,
+              unit_count,
+              created_at
+            )
+          `)
+          .eq('user_id', session.user.id)
+
+        if (accessError) {
+          console.error('Error fetching user building access:', accessError)
+          setRealBuildings([])
+          return
+        }
+
+        // Set user buildings for access control
+        setUserBuildings(userAccess || [])
+
+        // Only fetch buildings the user has access to
+        if (userAccess && userAccess.length > 0) {
+          const buildingIds = userAccess.map(ub => ub.building_id)
+          
+          const { data: buildings, error: buildingsError } = await supabase
+            .from('buildings')
+            .select('id, name, address, unit_count, created_at')
+            .in('id', buildingIds)
+            .order('name')
+
+          if (buildingsError) {
+            console.error('Error fetching buildings:', buildingsError)
+            setRealBuildings([])
+          } else {
+            setRealBuildings(buildings || [])
+          }
+        } else {
+          // User has no building access
+          setRealBuildings([])
+        }
+      } catch (error) {
+        console.error('Error in fetchRealBuildings:', error)
+        setRealBuildings([])
+      } finally {
+        setIsLoading(false)
       }
-    } catch (error) {
-      console.error('Error in fetchUserAgencyAndBuildings:', error)
-    } finally {
-      setLoading(false)
     }
-  }
 
+    fetchRealBuildings()
+  }, [supabase])
+
+  // Combine real and dummy buildings
+  const combinedBuildings = useMemo(() => {
+    return [...realBuildings, ...dummyBuildings]
+  }, [realBuildings])
+
+  // Filter buildings based on search term (case-insensitive)
   const filteredBuildings = useMemo(() => {
-    if (!searchTerm) return buildings
-    return buildings.filter(building =>
-      building.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      building.address.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  }, [buildings, searchTerm])
+    if (!searchQuery.trim()) return combinedBuildings
+    
+    return combinedBuildings.filter(building => {
+      const searchLower = searchQuery.toLowerCase()
+      const nameMatch = building.name.toLowerCase().includes(searchLower)
+      const addressMatch = building.address.toLowerCase().includes(searchLower)
+      return nameMatch || addressMatch
+    })
+  }, [combinedBuildings, searchQuery])
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading buildings...</p>
-        </div>
-      </div>
-    )
+  // Calculate HRB and total units
+  const hrbBuildings = useMemo(() => {
+    return combinedBuildings.filter(building => building.is_hrb)
+  }, [combinedBuildings])
+
+  const totalUnits = useMemo(() => {
+    return combinedBuildings.reduce((sum, building) => sum + (building.units || building.unit_count || 0), 0)
+  }, [combinedBuildings])
+
+  // Check if user has access to a building
+  const hasUserAccess = (buildingId: string) => {
+    if (buildingId.startsWith('dummy-')) return false // Dummy buildings are demo only
+    return userBuildings.some(ub => ub.building_id === buildingId)
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Buildings</h1>
-              <p className="mt-2 text-gray-600">
-                Manage your property portfolio
-              </p>
-            </div>
-            <Link href="/buildings/new">
-              <BlocIQButton>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Building
-              </BlocIQButton>
-            </Link>
+    <div>
+      {/* Hero Section */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-16 px-6 rounded-3xl mb-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <Building2 className="h-10 w-10 text-white" />
           </div>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">
+            Building Portfolio
+          </h1>
+          <p className="text-xl text-blue-100 max-w-2xl mx-auto leading-relaxed">
+            Manage your property portfolio with comprehensive oversight, compliance tracking, and operational insights.
+          </p>
         </div>
+      </div>
 
-        {/* Search */}
-        <div className="mb-6">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+      {/* Search and Stats */}
+      <div className="mb-8">
+        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between mb-6">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
             <input
               type="text"
               placeholder="Search buildings..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             />
           </div>
+          
+          <div className="flex items-center gap-6 text-sm">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-gray-900">{combinedBuildings.length}</div>
+              <div className="text-gray-600">Buildings</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">{hrbBuildings.length}</div>
+              <div className="text-gray-600">HRB</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-600">{totalUnits}</div>
+              <div className="text-gray-600">Units</div>
+            </div>
+          </div>
         </div>
+      </div>
 
-        {/* Buildings Grid */}
-        {filteredBuildings.length === 0 ? (
-          <div className="text-center py-12">
-            <Building2 className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {searchTerm ? 'No buildings found' : 'No buildings yet'}
-            </h3>
-            <p className="text-gray-600 mb-6">
-              {searchTerm 
-                ? 'Try adjusting your search terms'
-                : 'Get started by adding your first building'
-              }
-            </p>
-            {!searchTerm && (
-              <Link href="/buildings/new">
-                <BlocIQButton>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Your First Building
-                </BlocIQButton>
-              </Link>
-            )}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredBuildings.map((building) => (
-              <div
-                key={building.id}
-                className="bg-white rounded-2xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow overflow-hidden"
-              >
-                {/* Building Image Placeholder */}
-                <div className="h-48 bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-                  <Building2 className="h-16 w-16 text-blue-600" />
-                </div>
-
-                {/* Building Info */}
-                <div className="px-6 pb-6 text-center">
-                  <h3 className="text-xl font-bold text-gray-900 mb-2 leading-tight">{building.name}</h3>
-                  <p className="text-gray-600 mb-4 font-medium">{building.address}</p>
-                  <div className="text-gray-700 font-semibold mb-6">{building.unit_count || 0} Units</div>
-                  
-                  {/* Action Buttons */}
-                  <div className="space-y-3">
-                    <Link
-                      href={`/buildings/${building.id}`}
-                      className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white border-0 transition-all duration-300 rounded-2xl font-bold text-base shadow-lg hover:shadow-xl py-3 block text-center"
-                    >
-                      View Building
-                    </Link>
-                    <Link
-                      href={`/buildings/${building.id}/compliance`}
-                      className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white border-0 transition-all duration-300 rounded-2xl font-bold text-base shadow-lg hover:shadow-xl py-3 block text-center"
-                    >
-                      View Compliance
-                    </Link>
-                  </div>
-                </div>
+      {/* Buildings Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {/* Real Buildings */}
+        {realBuildings.map((building) => (
+          <div
+            key={building.id}
+            className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden"
+          >
+            {/* Building Header */}
+            <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-6 text-white">
+              <div className="flex items-center justify-between mb-2">
+                <Building2 className="h-6 w-6" />
+                <Shield className="h-5 w-5 opacity-80" />
               </div>
-            ))}
+              <div className="text-sm opacity-90">Real Building</div>
+            </div>
+
+            {/* Building Info */}
+            <div className="px-6 pb-6 text-center">
+              <h3 className="text-xl font-bold text-gray-900 mb-2 leading-tight">{building.name}</h3>
+              <p className="text-gray-600 mb-4 font-medium">{building.address}</p>
+              <div className="text-gray-700 font-semibold mb-6">{building.unit_count || 0} Units</div>
+              
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                <Link
+                  href={`/buildings/${building.id}`}
+                  className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white border-0 transition-all duration-300 rounded-2xl font-bold text-base shadow-lg hover:shadow-xl py-3 block text-center"
+                >
+                  View Building
+                </Link>
+                <Link
+                  href={`/buildings/${building.id}/compliance`}
+                  className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white border-0 transition-all duration-300 rounded-2xl font-bold text-base shadow-lg hover:shadow-xl py-3 block text-center"
+                >
+                  View Compliance
+                </Link>
+              </div>
+            </div>
           </div>
-        )}
+        ))}
+
+        {/* Demo Building Tiles */}
+        {dummyBuildings.map((building) => (
+          <div
+            key={building.id}
+            className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden"
+          >
+            {/* Building Header */}
+            <div className="bg-gradient-to-r from-gray-500 to-gray-600 p-6 text-white">
+              <div className="flex items-center justify-between mb-2">
+                <Building2 className="h-6 w-6" />
+                <Sparkles className="h-5 w-5 opacity-80" />
+              </div>
+              <div className="text-sm opacity-90">Demo Building</div>
+            </div>
+
+            {/* Building Info */}
+            <div className="px-6 pb-6 text-center">
+              <h3 className="text-xl font-bold text-gray-900 mb-2 leading-tight">{building.name}</h3>
+              <p className="text-gray-600 mb-4 font-medium">{building.address}</p>
+              <div className="text-gray-700 font-semibold mb-6">{building.units} Units</div>
+              
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                <button
+                  className="w-full bg-gradient-to-r from-gray-400 to-gray-500 text-white border-0 transition-all duration-300 rounded-2xl font-bold text-base shadow-lg hover:shadow-xl py-3 cursor-not-allowed opacity-75"
+                  disabled
+                >
+                  Demo Only
+                </button>
+                <button
+                  className="w-full bg-gradient-to-r from-gray-400 to-gray-500 text-white border-0 transition-all duration-300 rounded-2xl font-bold text-base shadow-lg hover:shadow-xl py-3 cursor-not-allowed opacity-75"
+                  disabled
+                >
+                  Demo Only
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* No Access Message */}
+      {realBuildings.length === 0 && !isLoading && (
+        <div className="text-center py-12">
+          <Building2 className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">No Building Access</h3>
+          <p className="text-gray-600 mb-6">
+            You don't have access to any buildings yet. Contact your administrator to get building access.
+          </p>
+          <BlocIQButton variant="primary" size="lg">
+            Contact Admin
+          </BlocIQButton>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Main component that renders the buildings list
+export default function BuildingsPage() {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <BuildingsList />
       </div>
     </div>
   )
