@@ -333,7 +333,7 @@ function BuildingsList() {
                       className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white border-0 transition-all duration-300 rounded-2xl font-bold text-base shadow-xl hover:shadow-2xl hover:shadow-emerald-500/40 py-3 transform hover:-translate-y-1 hover:scale-[1.02] flex items-center justify-center gap-2"
                     >
                       <Shield className="h-4 w-4" />
-                      View Compliance
+                      View Industry Knowledge
                     </Link>
                   </div>
                 </div>

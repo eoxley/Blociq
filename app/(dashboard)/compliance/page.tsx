@@ -31,16 +31,16 @@ export default function CompliancePortfolioPage() {
               <Shield className="h-10 w-10 text-white" />
             </div>
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              Compliance Portfolio
+              Industry Knowledge Portfolio
             </h1>
             <p className="text-xl text-white/90 max-w-3xl mx-auto leading-relaxed">
-              Live status across all buildings with comprehensive compliance tracking and management.
+              Live status across all buildings with comprehensive industry knowledge tracking and management.
             </p>
             <div className="mt-6 bg-white/20 backdrop-blur-sm rounded-xl p-4 max-w-2xl mx-auto">
               <div className="flex items-center justify-center gap-2 text-white/90">
                 <Sparkles className="h-5 w-5" />
                 <span className="text-sm font-medium">
-                  {loading ? 'Loading compliance data...' : `Monitoring ${counts.length} buildings`}
+                  {loading ? 'Loading industry knowledge data...' : `Monitoring ${counts.length} buildings`}
                 </span>
               </div>
             </div>
