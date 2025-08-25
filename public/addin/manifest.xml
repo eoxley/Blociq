@@ -30,16 +30,23 @@
     </Sets>
   </Requirements>
 
-  <!-- Minimal FormSettings required by schema -->
+  <!-- Some tenants/schemas REQUIRE RequestedHeight inside DesktopSettings -->
   <FormSettings>
     <Form xsi:type="ItemRead">
       <DesktopSettings>
         <SourceLocation DefaultValue="https://www.blociq.co.uk/addin/taskpane.html"/>
+        <RequestedHeight>350</RequestedHeight>
+      </DesktopSettings>
+    </Form>
+    <Form xsi:type="ItemEdit">
+      <DesktopSettings>
+        <SourceLocation DefaultValue="https://www.blociq.co.uk/addin/taskpane.html"/>
+        <RequestedHeight>350</RequestedHeight>
       </DesktopSettings>
     </Form>
   </FormSettings>
 
-  <!-- Permissions must appear after FormSettings -->
+  <!-- Permissions MUST come after FormSettings in this schema -->
   <Permissions>ReadItem</Permissions>
 
   <Rule xsi:type="RuleCollection" Mode="Or">
@@ -56,80 +63,3 @@
     <Hosts>
       <Host xsi:type="MailHost">
         <DesktopFormFactor>
-
-          <ExtensionPoint xsi:type="MessageReadCommandSurface">
-            <OfficeTab id="TabDefault">
-              <Group id="msgReadGroup">
-                <Label resid="groupLabel"/>
-                <Control xsi:type="Button" id="msgReadOpenPaneButton">
-                  <Label resid="paneButtonLabel"/>
-                  <Supertip>
-                    <Title resid="paneSuperTipTitle"/>
-                    <Description resid="paneSuperTipDescription"/>
-                  </Supertip>
-                  <Icon>
-                    <bt:Image size="16" resid="icon16"/>
-                    <bt:Image size="32" resid="icon32"/>
-                    <bt:Image size="80" resid="icon80"/>
-                  </Icon>
-                  <Action xsi:type="ShowTaskpane">
-                    <SourceLocation resid="taskpaneUrl"/>
-                    <SupportsPinning>true</SupportsPinning>
-                  </Action>
-                </Control>
-              </Group>
-            </OfficeTab>
-          </ExtensionPoint>
-
-          <ExtensionPoint xsi:type="MessageComposeCommandSurface">
-            <OfficeTab id="TabDefault">
-              <Group id="msgComposeGroup">
-                <Label resid="groupLabel"/>
-                <Control xsi:type="Button" id="msgComposeOpenPaneButton">
-                  <Label resid="paneButtonLabel"/>
-                  <Supertip>
-                    <Title resid="paneSuperTipTitle"/>
-                    <Description resid="paneSuperTipDescription"/>
-                  </Supertip>
-                  <Icon>
-                    <bt:Image size="16" resid="icon16"/>
-                    <bt:Image size="32" resid="icon32"/>
-                    <bt:Image size="80" resid="icon80"/>
-                  </Icon>
-                  <Action xsi:type="ShowTaskpane">
-                    <SourceLocation resid="taskpaneUrl"/>
-                    <SupportsPinning>true</SupportsPinning>
-                  </Action>
-                </Control>
-              </Group>
-            </OfficeTab>
-          </ExtensionPoint>
-
-        </DesktopFormFactor>
-      </Host>
-    </Hosts>
-
-    <Resources>
-      <bt:Images>
-        <bt:Image id="icon16" DefaultValue="https://www.blociq.co.uk/addin/icon-16.png"/>
-        <bt:Image id="icon32" DefaultValue="https://www.blociq.co.uk/addin/icon-32.png"/>
-        <bt:Image id="icon80" DefaultValue="https://www.blociq.co.uk/addin/icon-80.png"/>
-      </bt:Images>
-
-      <bt:Urls>
-        <bt:Url id="taskpaneUrl" DefaultValue="https://www.blociq.co.uk/addin/taskpane.html"/>
-      </bt:Urls>
-
-      <bt:ShortStrings>
-        <bt:String id="groupLabel" DefaultValue="BlocIQ Assistant"/>
-        <bt:String id="paneButtonLabel" DefaultValue="Open Assistant"/>
-        <bt:String id="paneSuperTipTitle" DefaultValue="BlocIQ Assistant"/>
-      </bt:ShortStrings>
-
-      <bt:LongStrings>
-        <bt:String id="paneSuperTipDescription" DefaultValue="Open BlocIQ Assistant to work with this email."/>
-      </bt:LongStrings>
-    </Resources>
-
-  </VersionOverrides>
-</OfficeApp>
