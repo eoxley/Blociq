@@ -421,6 +421,159 @@
       margin-right: 6px;
       margin-bottom: 4px;
     }
+
+    /* New styles for AI Reply Generation section */
+    .ai-reply-header {
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
+    .ai-reply-header h4 {
+      margin: 0 0 4px 0;
+      font-size: 16px;
+      color: var(--text-primary);
+    }
+
+    .ai-reply-subtitle {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+
+    .button-icon {
+      margin-right: 8px;
+      font-size: 16px;
+    }
+
+    .reply-mode-indicator {
+      background: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--text-primary);
+    }
+
+    .indicator-content {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .indicator-icon {
+      font-size: 20px;
+    }
+    
+    /* Enhanced AI Reply section styling */
+    .ai-reply-section {
+      background: linear-gradient(135deg, rgba(13, 148, 136, 0.05) 0%, rgba(37, 99, 235, 0.05) 100%);
+      border: 1px solid var(--border-light);
+      border-radius: 16px;
+      padding: 20px;
+      margin-top: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .ai-reply-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    }
+    
+    .ai-reply-header {
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    
+    .ai-reply-header h4 {
+      margin: 0 0 6px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    
+    .ai-reply-subtitle {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin: 0;
+      line-height: 1.4;
+    }
+    
+    .button-icon {
+      margin-right: 8px;
+      font-size: 16px;
+    }
+    
+    .reply-mode-indicator {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
+      border: 1px solid var(--success);
+      border-radius: 12px;
+      padding: 12px;
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--text-primary);
+      animation: fadeIn 0.3s ease-in-out;
+    }
+    
+    .indicator-content {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .indicator-icon {
+      font-size: 20px;
+      color: var(--success);
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Enhanced button styling for AI reply */
+    .ai-reply-section .action-button.primary {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      font-weight: 500;
+      box-shadow: 0 2px 8px rgba(13, 148, 136, 0.2);
+      transition: all 0.2s ease-in-out;
+    }
+    
+    .ai-reply-section .action-button.primary:hover {
+      background: linear-gradient(135deg, var(--primary-hover) 0%, var(--secondary-hover) 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
+    }
+    
+    .ai-reply-section .action-button {
+      background: var(--surface);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      padding: 10px 16px;
+      font-weight: 500;
+      transition: all 0.2s ease-in-out;
+    }
+    
+    .ai-reply-section .action-button:hover {
+      background: var(--muted);
+      border-color: var(--primary);
+      transform: translateY(-1px);
+    }
   </style>
 </head>
 <body>
@@ -455,9 +608,31 @@
       
       <!-- AI Reply Generation (Dynamically added in compose mode) -->
       <div class="ai-reply-section" id="aiReplySection">
+        <div class="ai-reply-header">
+          <h4>🤖 AI Reply Generation</h4>
+          <p class="ai-reply-subtitle">Generate professional responses using BlocIQ AI</p>
+        </div>
+        
         <div class="email-actions">
-          <button class="action-button primary" id="generateReply">🤖 AI Reply</button>
-          <button class="action-button primary" id="generateReplyAll">🤖 AI Reply All</button>
+          <button class="action-button primary" id="generateReply">
+            <span class="button-icon">📧</span>
+            AI Reply
+          </button>
+          <button class="action-button primary" id="generateReplyAll">
+            <span class="button-icon">📬</span>
+            AI Reply All
+          </button>
+          <button class="action-button" id="generateForward">
+            <span class="button-icon">📤</span>
+            AI Forward
+          </button>
+        </div>
+        
+        <div class="reply-mode-indicator" id="replyModeIndicator" style="display: none;">
+          <div class="indicator-content">
+            <span class="indicator-icon">📧</span>
+            <span class="indicator-text">Reply mode detected - AI can generate contextual responses</span>
+          </div>
         </div>
       </div>
       
@@ -509,8 +684,10 @@
     const aiReplySection = document.getElementById('aiReplySection');
     const generateReplyBtn = document.getElementById('generateReply');
     const generateReplyAllBtn = document.getElementById('generateReplyAll');
+    const generateForwardBtn = document.getElementById('generateForward');
     const buildingContext = document.getElementById('buildingContext');
     const buildingContextContent = document.getElementById('buildingContextContent');
+    const replyModeIndicator = document.getElementById('replyModeIndicator');
     
     // Auto-resize textarea
     function adjustTextareaHeight() {
@@ -1023,6 +1200,10 @@
     generateReplyAllBtn.onclick = async () => {
       await generateAIReply('replyAll');
     };
+
+    generateForwardBtn.onclick = async () => {
+      await generateAIReply('forward');
+    };
     
     async function generateAIReply(replyType) {
       addMessage(`🤖 Generating AI ${replyType}...`, 'assistant');
@@ -1034,19 +1215,20 @@
           return;
         }
         
-        const response = await fetch('https://www.blociq.co.uk/api/generate-draft', {
+        // Use the same API as the application for consistency
+        const response = await fetch('https://www.blociq.co.uk/api/ask-ai', {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${await getAuthToken()}`
           },
           body: JSON.stringify({
-            subject: emailContext.subject,
-            body: emailContext.body,
+            prompt: `Generate a professional ${replyType} to this email. Consider the building context and maintain a professional tone suitable for property management.`,
             building_id: currentBuildingContext?.id || null,
-            from_email: emailContext.from,
-            from_name: emailContext.from,
-            replyType: replyType
+            contextType: 'email_reply',
+            emailContext: emailContext,
+            replyType: replyType,
+            is_outlook_addin: true
           })
         });
         
@@ -1058,22 +1240,24 @@
         }
         
         const data = await response.json();
+        const generatedReply = data.response || data.result;
         
-        if (data.success && data.reply) {
+        if (generatedReply) {
           // Insert the reply into the email body
           Office.context.mailbox.item.body.setAsync(
-            data.reply,
+            generatedReply,
             { coercionType: Office.CoercionType.Text },
             (result) => {
               if (result.status === Office.AsyncResultStatus.Succeeded) {
                 addMessage(`✅ AI ${replyType} generated and inserted!`, 'assistant');
+                addMessage(`💡 You can now edit the generated text before sending.`, 'assistant');
               } else {
                 addMessage(`❌ Failed to insert reply: ${result.error.message}`, 'assistant');
               }
             }
           );
         } else {
-          addMessage(`❌ Failed to generate ${replyType}: ${data.error || 'Unknown error'}`, 'assistant');
+          addMessage(`❌ Failed to generate ${replyType}: No response from AI service`, 'assistant');
         }
         
       } catch (error) {
@@ -1081,17 +1265,72 @@
       }
     }
     
-    // Check if we're in compose mode and show AI reply functionality
-    function checkComposeMode() {
-      const item = Office.context?.mailbox?.item;
-      if (item && item.itemType === Office.MailboxEnums.ItemType.Message) {
-        // We're in compose mode - show AI reply functionality
-        aiReplySection.classList.add('visible');
-        addMessage('🤖 AI Reply functionality enabled for this email context', 'assistant');
+    // Enhanced AI Reply Generation with automatic detection
+    async function generateAIReply(replyType) {
+      addMessage(`🤖 Generating AI ${replyType}...`, 'assistant');
+      
+      try {
+        const emailContext = await getCurrentEmailContext();
+        if (!emailContext) {
+          addMessage('❌ No email context available', 'assistant');
+          return;
+        }
+        
+        // Use the same API as the application for consistency
+        const response = await fetch('https://www.blociq.co.uk/api/ask-ai', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${await getAuthToken()}`
+          },
+          body: JSON.stringify({
+            prompt: `Generate a professional ${replyType} to this email. Consider the building context and maintain a professional tone suitable for property management.`,
+            building_id: currentBuildingContext?.id || null,
+            contextType: 'email_reply',
+            emailContext: emailContext,
+            replyType: replyType,
+            is_outlook_addin: true
+          })
+        });
+        
+        if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error('Please log in to BlocIQ to use this feature');
+          }
+          throw new Error(`API error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        const generatedReply = data.response || data.result;
+        
+        if (generatedReply) {
+          // Insert the reply into the email body
+          Office.context.mailbox.item.body.setAsync(
+            generatedReply,
+            { coercionType: Office.CoercionType.Text },
+            (result) => {
+              if (result.status === Office.AsyncResultStatus.Succeeded) {
+                addMessage(`✅ AI ${replyType} generated and inserted!`, 'assistant');
+                addMessage(`💡 You can now edit the generated text before sending.`, 'assistant');
+              } else {
+                addMessage(`❌ Failed to insert reply: ${result.error.message}`, 'assistant');
+              }
+            }
+          );
+        } else {
+          addMessage(`❌ Failed to generate ${replyType}: No response from AI service`, 'assistant');
+        }
+        
+      } catch (error) {
+        addMessage(`❌ Failed to generate ${replyType}: ${error.message}`, 'assistant');
       }
     }
     
-    // Setup email capture
+    // Automatic reply detection and AI generation
+    let isReplyMode = false;
+    let originalEmailContext = null;
+    
+    // Enhanced email capture setup
     function setupEmailCapture() {
       // Listen for email changes
       Office.context.mailbox.addHandlerAsync(Office.EventType.ItemChanged, handleItemChanged);
@@ -1099,16 +1338,55 @@
       // Listen for email sends
       Office.context.mailbox.addHandlerAsync(Office.EventType.ItemSend, handleItemSend);
       
+      // Listen for reply/forward actions
+      Office.context.mailbox.addHandlerAsync(Office.EventType.ItemChanged, detectReplyMode);
+      
       addMessage('📧 Email capture system activated', 'assistant');
     }
     
-    // Handle item changed
+    // Detect when user is in reply/forward mode
+    function detectReplyMode(event) {
+      const item = Office.context?.mailbox?.item;
+      if (!item) return;
+      
+      try {
+        // Check if we're in reply mode by examining the item
+        const currentSubject = item.subject?.getAsync((result) => {
+          if (result.status === Office.AsyncResultStatus.Succeeded) {
+            const subject = result.value || '';
+            const isReply = subject.toLowerCase().includes('re:') || subject.toLowerCase().includes('re:');
+            const isForward = subject.toLowerCase().includes('fw:') || subject.toLowerCase().includes('fwd:');
+            
+            if (isReply || isForward) {
+              isReplyMode = true;
+              addMessage(`📧 ${isReply ? 'Reply' : 'Forward'} mode detected! Use the AI Reply buttons above to generate responses.`, 'assistant');
+              
+              // Show reply mode indicator
+              replyModeIndicator.style.display = 'block';
+              
+              // Store original email context for better AI generation
+              getCurrentEmailContext().then(context => {
+                originalEmailContext = context;
+              });
+            } else {
+              isReplyMode = false;
+              replyModeIndicator.style.display = 'none';
+            }
+          }
+        });
+      } catch (error) {
+        console.error('Error detecting reply mode:', error);
+      }
+    }
+    
+    // Enhanced item changed handler
     function handleItemChanged(event) {
       currentEmailContext = null; // Reset context
+      detectReplyMode(event); // Check for reply mode
       addMessage('📧 Email context updated', 'assistant');
     }
     
-    // Handle item send
+    // Enhanced item send handler
     async function handleItemSend(event) {
       try {
         const emailContext = await getCurrentEmailContext();
@@ -1127,14 +1405,33 @@
               to: emailContext.to,
               itemId: emailContext.itemId,
               itemType: emailContext.itemType,
-              direction: 'outgoing'
+              direction: 'outgoing',
+              isReply: isReplyMode,
+              originalContext: originalEmailContext
             })
           });
           
           addMessage('📧 Outgoing email logged to BlocIQ', 'assistant');
+          
+          // Reset reply mode
+          isReplyMode = false;
+          originalEmailContext = null;
         }
       } catch (error) {
         console.error('Error logging outgoing email:', error);
+      }
+    }
+    
+    // Check if we're in compose mode and show AI reply functionality
+    function checkComposeMode() {
+      const item = Office.context?.mailbox?.item;
+      if (item && item.itemType === Office.MailboxEnums.ItemType.Message) {
+        // We're in compose mode - show AI reply functionality
+        aiReplySection.classList.add('visible');
+        addMessage('🤖 AI Reply functionality enabled for this email context', 'assistant');
+        
+        // Check if this is a reply/forward
+        detectReplyMode();
       }
     }
     
