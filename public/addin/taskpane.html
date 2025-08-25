@@ -6,83 +6,921 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
   <style>
-    :root { color-scheme: light dark; }
-    html, body { height: 100%; margin: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; display: grid; place-items: center; }
-    .card { padding: 24px 28px; border-radius: 16px; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 8px 24px rgba(0,0,0,0.06); text-align: center; max-width: 560px; }
-    h1 { font-size: 20px; margin: 0 0 8px; }
-    p  { font-size: 14px; opacity: 0.9; margin: 0 0 12px; }
-    .row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 12px; }
-    button { padding: 10px 14px; border-radius: 10px; border: 1px solid #ddd; cursor: pointer; }
-    pre { text-align: left; background: rgba(0,0,0,0.04); border-radius: 10px; padding: 12px; max-width: 560px; overflow:auto; }
+    :root { 
+      color-scheme: light dark; 
+      
+      /* BlocIQ Brand Colors - Exact match from your app */
+      --primary: #0d9488; /* Teal-600 */
+      --primary-hover: #0f5d5d; /* Deep Teal */
+      --secondary: #2563eb; /* Blue-600 */
+      --secondary-hover: #1d4ed8; /* Blue-700 */
+      --accent: #9333ea; /* Purple-600 */
+      --accent-hover: #7c3aed; /* Purple-700 */
+      
+      /* Background and surface colors */
+      --background: #FAFAFA;
+      --surface: #FFFFFF;
+      --muted: #F3F4F6;
+      --muted-foreground: #64748B;
+      
+      /* Text colors */
+      --foreground: #333333;
+      --text-primary: #333333;
+      --text-secondary: #64748B;
+      
+      /* Border and shadow colors */
+      --border: #E2E8F0;
+      --border-light: #F1F5F9;
+      --shadow: rgba(0, 0, 0, 0.05);
+      --shadow-medium: rgba(0, 0, 0, 0.1);
+      
+      /* Status colors */
+      --success: #10B981;
+      --warning: #FBBF24;
+      --error: #EF4444;
+    }
+    
+    * { 
+      box-sizing: border-box; 
+      margin: 0;
+      padding: 0;
+    }
+    
+    html, body { 
+      height: 100%; 
+      margin: 0; 
+      font-family: "Georgia", "serif", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background: var(--background);
+      color: var(--foreground);
+    }
+    
+    body { 
+      background: var(--background);
+      overflow: hidden;
+    }
+    
+    .container {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      max-width: 400px;
+      margin: 0 auto;
+      background: var(--surface);
+      border-radius: 0;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 50%, var(--accent) 100%);
+      color: white;
+      padding: 20px 24px;
+      text-align: center;
+      border-radius: 0;
+      box-shadow: 0 4px 12px var(--shadow-medium);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+      pointer-events: none;
+    }
+    
+    .header h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+      position: relative;
+      z-index: 1;
+    }
+    
+    .header p {
+      margin: 6px 0 0 0;
+      font-size: 13px;
+      opacity: 0.95;
+      position: relative;
+      z-index: 1;
+    }
+    
+    .chat-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      background: var(--background);
+    }
+    
+    .message {
+      padding: 16px 20px;
+      border-radius: 16px;
+      max-width: 85%;
+      word-wrap: break-word;
+      line-height: 1.5;
+      font-size: 14px;
+      position: relative;
+    }
+    
+    .message.user {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: white;
+      align-self: flex-end;
+      margin-left: auto;
+      box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
+    }
+    
+    .message.assistant {
+      background: var(--surface);
+      color: var(--text-primary);
+      border: 1px solid var(--border-light);
+      align-self: flex-start;
+      box-shadow: 0 2px 8px var(--shadow);
+    }
+    
+    .message.assistant.loading {
+      background: var(--muted);
+      color: var(--text-secondary);
+      font-style: italic;
+    }
+    
+    .input-area {
+      padding: 20px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-radius: 0;
+      box-shadow: 0 -2px 8px var(--shadow);
+    }
+    
+    .email-actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    
+    .email-actions:last-of-type {
+      margin-bottom: 20px;
+    }
+    
+    .action-button {
+      flex: 1;
+      padding: 10px 14px;
+      background: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease-in-out;
+      color: var(--text-primary);
+      font-family: inherit;
+    }
+    
+    .action-button:hover:not(:disabled) {
+      background: var(--border-light);
+      border-color: var(--primary);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px var(--shadow);
+    }
+    
+    .action-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .action-button.primary {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: white;
+      border-color: transparent;
+      box-shadow: 0 2px 8px rgba(13, 148, 136, 0.2);
+    }
+    
+    .action-button.primary:hover:not(:disabled) {
+      background: linear-gradient(135deg, var(--primary-hover) 0%, var(--secondary-hover) 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
+    }
+    
+    .input-container {
+      position: relative;
+      margin-bottom: 16px;
+    }
+    
+    .input-field {
+      width: 100%;
+      padding: 14px 18px;
+      padding-right: 52px;
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      font-size: 14px;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      transition: all 0.2s ease-in-out;
+      min-height: 52px;
+      max-height: 120px;
+      overflow-y: auto;
+      background: var(--surface);
+      color: var(--text-primary);
+    }
+    
+    .input-field:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+    }
+    
+    .input-field::placeholder {
+      color: var(--text-secondary);
+    }
+    
+    .send-button {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      border: none;
+      border-radius: 12px;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease-in-out;
+      font-size: 14px;
+      box-shadow: 0 2px 8px rgba(13, 148, 136, 0.2);
+    }
+    
+    .send-button:hover:not(:disabled) {
+      background: linear-gradient(135deg, var(--primary-hover) 0%, var(--secondary-hover) 100%);
+      transform: translateY(-50%) scale(1.05);
+      box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
+    }
+    
+    .send-button:disabled {
+      background: var(--muted);
+      cursor: not-allowed;
+      transform: translateY(-50%) scale(1);
+      box-shadow: none;
+    }
+    
+    .send-button svg {
+      width: 18px;
+      height: 18px;
+    }
+    
+    .disclaimer {
+      font-size: 11px;
+      color: var(--text-secondary);
+      text-align: center;
+      font-style: italic;
+      margin-top: 12px;
+      line-height: 1.4;
+    }
+    
+    .typing-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-secondary);
+      font-size: 12px;
+      padding: 8px 16px;
+    }
+    
+    .typing-dots {
+      display: flex;
+      gap: 2px;
+    }
+    
+    .typing-dot {
+      width: 4px;
+      height: 4px;
+      background: var(--text-secondary);
+      border-radius: 50%;
+      animation: typing 1.4s infinite ease-in-out;
+    }
+    
+    .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+    
+    @keyframes typing {
+      0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+    
+    .scrollbar {
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) var(--muted);
+    }
+    
+    .scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    .scrollbar::-webkit-scrollbar-track {
+      background: var(--muted);
+      border-radius: 3px;
+    }
+    
+    .scrollbar::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+    
+    .scrollbar::-webkit-scrollbar-thumb:hover {
+      background: var(--text-secondary);
+    }
+    
+    /* Loading animation for buttons */
+    .loading-spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Email capture status */
+    .email-capture-status {
+      margin-top: 16px;
+      padding: 12px;
+      background: var(--muted);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+    
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--muted-foreground);
+    }
+    
+    .status-dot.active {
+      background: var(--success);
+      animation: pulse 2s infinite;
+    }
+    
+    .status-text {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>🧠 BlocIQ Assistant</h1>
-    <p>Connected ✅ This Outlook add-in is live and ready to triage emails.</p>
-
-    <div class="row">
-      <button id="getSubject">Get Subject</button>
-      <button id="analyse">Analyse Email</button>
-      <button id="insertDraft" disabled>Insert Draft</button>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>🧠 BlocIQ Assistant</h1>
+      <p>AI-powered email triage & assistance</p>
     </div>
-
-    <pre id="out"></pre>
+    
+    <!-- Chat Container -->
+    <div class="chat-container scrollbar" id="chatContainer">
+      <div class="message assistant">
+        👋 Hi! I'm your BlocIQ Assistant. I can help you triage emails, answer questions, and generate responses. What would you like to know?
+      </div>
+    </div>
+    
+    <!-- Email Actions -->
+    <div class="input-area">
+      <div class="email-actions">
+        <button class="action-button" id="getSubject">📧 Get Subject</button>
+        <button class="action-button primary" id="analyse">🔍 Analyse Email</button>
+        <button class="action-button" id="insertDraft" disabled>✏️ Insert Draft</button>
+      </div>
+      
+      <!-- AI Reply Generation -->
+      <div class="email-actions" style="margin-top: 8px;">
+        <button class="action-button primary" id="generateReply">🤖 AI Reply</button>
+        <button class="action-button primary" id="generateReplyAll">🤖 AI Reply All</button>
+      </div>
+      
+      <!-- Email Capture Status -->
+      <div class="email-capture-status">
+        <div class="status-indicator">
+          <span class="status-dot active"></span>
+          <span class="status-text">📧 Email capture active</span>
+        </div>
+        <button class="action-button" id="manualLogEmail" style="margin-top: 8px;">
+          📝 Manually Log Current Email
+        </button>
+      </div>
+      
+      <!-- Input Container -->
+      <div class="input-container">
+        <textarea
+          class="input-field"
+          id="inputField"
+          placeholder="Ask BlocIQ anything, or describe what you need help with..."
+          rows="1"
+        ></textarea>
+        <button class="send-button" id="sendButton" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+          </svg>
+        </button>
+      </div>
+      
+      <p class="disclaimer">
+        💡 Sometimes BlocIQ can get things muddled - please verify important information
+      </p>
+    </div>
   </div>
 
   <script>
     let lastDraft = "";
-
-    function out(txt) {
-      document.getElementById("out").textContent = txt;
+    let messages = [];
+    
+    // DOM elements
+    const chatContainer = document.getElementById('chatContainer');
+    const inputField = document.getElementById('inputField');
+    const sendButton = document.getElementById('sendButton');
+    const getSubjectBtn = document.getElementById('getSubject');
+    const analyseBtn = document.getElementById('analyse');
+    const insertDraftBtn = document.getElementById('insertDraft');
+    const generateReplyBtn = document.getElementById('generateReply');
+    const generateReplyAllBtn = document.getElementById('generateReplyAll');
+    const manualLogEmailBtn = document.getElementById('manualLogEmail');
+    
+    // Auto-resize textarea
+    function adjustTextareaHeight() {
+      inputField.style.height = 'auto';
+      const newHeight = Math.min(inputField.scrollHeight, 120);
+      inputField.style.height = `${newHeight}px`;
     }
-
-    Office.onReady(() => {
-      document.getElementById("getSubject").onclick = () => {
-        const item = Office.context?.mailbox?.item;
-        if (!item) return out("No item context.");
-        item.subject.getAsync(r => {
-          out(r.status === Office.AsyncResultStatus.Succeeded ? "Subject: " + r.value : r.error.message);
+    
+    inputField.addEventListener('input', adjustTextareaHeight);
+    inputField.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleAskBlocIQ();
+      }
+    });
+    
+    // Add message to chat
+    function addMessage(content, type = 'assistant') {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${type}`;
+      messageDiv.textContent = content;
+      chatContainer.appendChild(messageDiv);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+      messages.push({ content, type, timestamp: new Date() });
+    }
+    
+    // Handle Ask BlocIQ
+    async function handleAskBlocIQ() {
+      const question = inputField.value.trim();
+      if (!question) return;
+      
+      // Add user message
+      addMessage(question, 'user');
+      inputField.value = '';
+      adjustTextareaHeight();
+      sendButton.disabled = true;
+      
+      // Add loading message
+      const loadingDiv = document.createElement('div');
+      loadingDiv.className = 'message assistant loading';
+      loadingDiv.textContent = '🤔 Thinking...';
+      chatContainer.appendChild(loadingDiv);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+      
+      try {
+        // Call your Ask AI API
+        const response = await fetch('https://www.blociq.co.uk/api/ask-ai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ question })
         });
-      };
-
-      document.getElementById("analyse").onclick = async () => {
-        const item = Office.context?.mailbox?.item;
-        if (!item) return out("No item context.");
+        
+        if (!response.ok) throw new Error(`API ${response.status}`);
+        
+        const data = await response.json();
+        const answer = data.result || data.answer || 'I received your question but couldn\'t process it properly.';
+        
+        // Remove loading message and add response
+        chatContainer.removeChild(loadingDiv);
+        addMessage(answer, 'assistant');
+        
+      } catch (error) {
+        // Remove loading message and add error
+        chatContainer.removeChild(loadingDiv);
+        addMessage(`Sorry, I encountered an error: ${error.message}`, 'assistant');
+      } finally {
+        sendButton.disabled = false;
+      }
+    }
+    
+    // Email context functions
+    getSubjectBtn.onclick = () => {
+      const item = Office.context?.mailbox?.item;
+      if (!item) return addMessage('No email context available.', 'assistant');
+      
+      item.subject.getAsync(r => {
+        if (r.status === Office.AsyncResultStatus.Succeeded) {
+          addMessage(`📧 Subject: ${r.value}`, 'assistant');
+        } else {
+          addMessage(`Error getting subject: ${r.error.message}`, 'assistant');
+        }
+      });
+    };
+    
+    analyseBtn.onclick = async () => {
+      const item = Office.context?.mailbox?.item;
+      if (!item) return addMessage('No email context available.', 'assistant');
+      
+      try {
         const subject = await new Promise((resolve, reject) =>
-          item.subject.getAsync(r => r.status === Office.AsyncResultStatus.Succeeded ? resolve(r.value) : reject(r.error))
+          item.subject.getAsync(r => 
+            r.status === Office.AsyncResultStatus.Succeeded ? resolve(r.value) : reject(r.error)
+          )
         );
+        
         const userEmail = Office.context.mailbox.userProfile?.emailAddress || "unknown@user";
         const itemId = item.itemId || "";
-
-        out("Analysing…");
-        try {
-          const res = await fetch("https://www.blociq.co.uk/api/addin/triage", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ subject, itemId, userEmail })
-          });
-          if (!res.ok) throw new Error("API " + res.status);
-          const data = await res.json();
-          lastDraft = data.draft || "";
-          document.getElementById("insertDraft").disabled = !lastDraft;
-          out(`Category: ${data.category}\nAction: ${data.action}\n\nDraft:\n${lastDraft || "(none)"}`);
-        } catch (e) {
-          out("Analyse failed: " + e.message);
+        
+        addMessage('🔍 Analysing email...', 'assistant');
+        
+        const res = await fetch("https://www.blociq.co.uk/api/addin/triage", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ subject, itemId, userEmail })
+        });
+        
+        if (!res.ok) throw new Error(`API ${res.status}`);
+        
+        const data = await res.json();
+        lastDraft = data.draft || "";
+        insertDraftBtn.disabled = !lastDraft;
+        
+        const analysis = `📊 Analysis Complete!\n\nCategory: ${data.category}\nAction: ${data.action}\n\nDraft Response:\n${lastDraft || "(none)"}`;
+        addMessage(analysis, 'assistant');
+        
+      } catch (e) {
+        addMessage(`❌ Analysis failed: ${e.message}`, 'assistant');
+      }
+    };
+    
+    insertDraftBtn.onclick = () => {
+      if (!lastDraft) return;
+      
+      Office.context.mailbox.item.body.setAsync(
+        lastDraft,
+        { coercionType: Office.CoercionType.Text },
+        r => {
+          if (r.status === Office.AsyncResultStatus.Succeeded) {
+            addMessage('✅ Draft inserted successfully!', 'assistant');
+          } else {
+            addMessage(`❌ Failed to insert draft: ${r.error.message}`, 'assistant');
+          }
         }
-      };
-
-      document.getElementById("insertDraft").onclick = () => {
-        if (!lastDraft) return;
-        Office.context.mailbox.item.body.setAsync(
-          lastDraft,
-          { coercionType: Office.CoercionType.Text },
-          r => out(r.status === Office.AsyncResultStatus.Succeeded ? "Draft inserted ✅" : r.error.message)
+      );
+    };
+    
+    // AI Reply Generation Functions
+    generateReplyBtn.onclick = async () => {
+      await generateAIReply('reply');
+    };
+    
+    generateReplyAllBtn.onclick = async () => {
+      await generateAIReply('replyAll');
+    };
+    
+    async function generateAIReply(replyType) {
+      const item = Office.context?.mailbox?.item;
+      if (!item) return addMessage('No email context available.', 'assistant');
+      
+      try {
+        // Get email context
+        const subject = await new Promise((resolve, reject) =>
+          item.subject.getAsync(r => 
+            r.status === Office.AsyncResultStatus.Succeeded ? resolve(r.value) : reject(r.error)
+          )
         );
-      };
+        
+        const body = await new Promise((resolve, reject) =>
+          item.body.getAsync({ coercionType: Office.CoercionType.Text }, r => 
+            r.status === Office.AsyncResultStatus.Succeeded ? resolve(r.value) : reject(r.error)
+          )
+        );
+        
+        const userEmail = Office.context.mailbox.userProfile?.emailAddress || "unknown@user";
+        const itemId = item.itemId || "";
+        
+        addMessage(`🤖 Generating AI ${replyType}...`, 'assistant');
+        
+        // Call your AI reply generation API
+        const response = await fetch('https://www.blociq.co.uk/api/generate-email-reply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ 
+            emailContent: {
+              subject, 
+              body, 
+              from: userEmail,
+              fromName: Office.context.mailbox.userProfile?.displayName || 'Property Manager'
+            },
+            context: 'outlook-addin',
+            replyType
+          })
+        });
+        
+        if (!response.ok) throw new Error(`API ${response.status}`);
+        
+        const data = await response.json();
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to generate reply');
+        }
+        const aiReply = data.reply || 'Sorry, I couldn\'t generate a reply at this time.';
+        
+        // Insert the AI-generated reply into the email body
+        Office.context.mailbox.item.body.setAsync(
+          aiReply,
+          { coercionType: Office.CoercionType.Text },
+          r => {
+            if (r.status === Office.AsyncResultStatus.Succeeded) {
+              addMessage(`✅ AI ${replyType} generated and inserted successfully!`, 'assistant');
+              
+              // If this is a reply/reply all, we might want to add a greeting
+              if (replyType === 'reply' || replyType === 'replyAll') {
+                addMessage(`💡 Tip: The AI reply has been inserted. You can now edit it and add any personal touches before sending.`, 'assistant');
+              }
+            } else {
+              addMessage(`❌ Failed to insert AI reply: ${r.error.message}`, 'assistant');
+            }
+          }
+        );
+        
+      } catch (error) {
+        addMessage(`❌ AI ${replyType} generation failed: ${error.message}`, 'assistant');
+      }
+    }
+    
+    // Send button click handler
+    sendButton.onclick = handleAskBlocIQ;
+    
+    // Enable/disable send button based on input
+    inputField.addEventListener('input', () => {
+      sendButton.disabled = !inputField.value.trim();
     });
+    
+    // Manual log email button
+    manualLogEmailBtn.onclick = async () => {
+      const item = Office.context?.mailbox?.item;
+      if (!item || item.itemType !== Office.MailboxEnums.ItemType.Message) {
+        addMessage('❌ No email context available for logging', 'assistant');
+        return;
+      }
+      
+      addMessage('📝 Manually logging current email...', 'assistant');
+      
+      try {
+        // Get email details
+        const subject = await getItemProperty(item, 'subject');
+        const body = await getItemProperty(item, 'body');
+        const to = await getItemProperty(item, 'to');
+        const cc = await getItemProperty(item, 'cc');
+        const bcc = await getItemProperty(item, 'bcc');
+        
+        // Prepare recipients array
+        const recipients = [];
+        if (to) recipients.push(...parseRecipients(to));
+        if (cc) recipients.push(...parseRecipients(cc));
+        if (bcc) recipients.push(...parseRecipients(bcc));
+        
+        // Log the email
+        await logOutgoingEmail({
+          subject: subject || 'No Subject',
+          body: body || 'No Content',
+          recipients: recipients,
+          sentAt: new Date().toISOString(),
+          messageId: item.itemId || null
+        });
+        
+      } catch (error) {
+        console.error('Error manually logging email:', error);
+        addMessage('❌ Error logging email: ' + error.message, 'assistant');
+      }
+    };
+    
+    // Initialize Office.js
+    Office.onReady(() => {
+      addMessage('🚀 Add-in loaded successfully! You can now ask me questions or analyze emails.', 'assistant');
+      
+      // Set up email capture for outgoing emails
+      setupEmailCapture();
+    });
+    
+    // Email capture functionality
+    function setupEmailCapture() {
+      // Listen for item changes (when composing emails)
+      Office.context.mailbox.addHandlerAsync(
+        Office.EventType.ItemChanged,
+        handleItemChanged
+      );
+      
+      // Listen for item send (when emails are sent)
+      Office.context.mailbox.addHandlerAsync(
+        Office.EventType.ItemSend,
+        handleItemSend
+      );
+      
+      addMessage('📧 Email capture enabled - all outgoing emails will be logged to BlocIQ', 'assistant');
+    }
+    
+    async function handleItemChanged(eventArgs) {
+      // This fires when the user starts composing or changes the email
+      try {
+        const item = Office.context.mailbox.item;
+        if (item && item.itemType === Office.MailboxEnums.ItemType.Message) {
+          // User is composing a message
+          addMessage('✍️ Composing new email - will be logged when sent', 'assistant');
+        }
+      } catch (error) {
+        console.log('Item changed handler error:', error);
+      }
+    }
+    
+    async function handleItemSend(eventArgs) {
+      // This fires when the user sends an email
+      try {
+        const item = Office.context.mailbox.item;
+        if (!item || item.itemType !== Office.MailboxEnums.ItemType.Message) {
+          return;
+        }
+        
+        addMessage('📤 Email sent! Logging to BlocIQ communications...', 'assistant');
+        
+        // Get email details
+        const subject = await getItemProperty(item, 'subject');
+        const body = await getItemProperty(item, 'body');
+        const to = await getItemProperty(item, 'to');
+        const cc = await getItemProperty(item, 'cc');
+        const bcc = await getItemProperty(item, 'bcc');
+        
+        // Prepare recipients array
+        const recipients = [];
+        if (to) recipients.push(...parseRecipients(to));
+        if (cc) recipients.push(...parseRecipients(cc));
+        if (bcc) recipients.push(...parseRecipients(bcc));
+        
+        // Log the email
+        await logOutgoingEmail({
+          subject: subject || 'No Subject',
+          body: body || 'No Content',
+          recipients: recipients,
+          sentAt: new Date().toISOString(),
+          messageId: item.itemId || null
+        });
+        
+      } catch (error) {
+        console.error('Error in item send handler:', error);
+        addMessage('❌ Error logging email: ' + error.message, 'assistant');
+      }
+    }
+    
+    async function getItemProperty(item, property) {
+      return new Promise((resolve, reject) => {
+        try {
+          switch (property) {
+            case 'subject':
+              item.subject.getAsync(r => {
+                if (r.status === Office.AsyncResultStatus.Succeeded) {
+                  resolve(r.value);
+                } else {
+                  resolve(null);
+                }
+              });
+              break;
+            case 'body':
+              item.body.getAsync({ coercionType: Office.CoercionType.Text }, r => {
+                if (r.status === Office.AsyncResultStatus.Succeeded) {
+                  resolve(r.value);
+                } else {
+                  resolve(null);
+                }
+              });
+              break;
+            case 'to':
+              item.to.getAsync(r => {
+                if (r.status === Office.AsyncResultStatus.Succeeded) {
+                  resolve(r.value);
+                } else {
+                  resolve(null);
+                }
+              });
+              break;
+            case 'cc':
+              item.cc.getAsync(r => {
+                if (r.status === Office.AsyncResultStatus.Succeeded) {
+                  resolve(r.value);
+                } else {
+                  resolve(null);
+                }
+              });
+              break;
+            case 'bcc':
+              item.bcc.getAsync(r => {
+                if (r.status === Office.AsyncResultStatus.Succeeded) {
+                  resolve(r.value);
+                } else {
+                  resolve(null);
+                }
+              });
+              break;
+            default:
+              resolve(null);
+          }
+        } catch (error) {
+          resolve(null);
+        }
+      });
+    }
+    
+    function parseRecipients(recipientsString) {
+      if (!recipientsString) return [];
+      
+      // Parse email addresses from Outlook format
+      const emails = recipientsString.split(';').map(r => r.trim()).filter(r => r);
+      
+      return emails.map(email => {
+        // Handle "Name <email@domain.com>" format
+        const match = email.match(/^(.+?)\s*<(.+?)>$/);
+        if (match) {
+          return { name: match[1].trim(), email: match[2].trim() };
+        }
+        return { name: email, email: email };
+      });
+    }
+    
+    async function logOutgoingEmail(emailData) {
+      try {
+        const response = await fetch('https://www.blociq.co.uk/api/addin/log-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(emailData)
+        });
+        
+        if (!response.ok) {
+          throw new Error(`API ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          let matchInfo = '';
+          if (data.matched.buildingId) {
+            matchInfo += `🏢 Building: ${data.matched.buildingId}`;
+          }
+          if (data.matched.leaseholderId) {
+            matchInfo += ` 👤 Leaseholder: ${data.matched.leaseholderId}`;
+          }
+          if (data.matched.unitId) {
+            matchInfo += ` 🏠 Unit: ${data.matched.unitId}`;
+          }
+          
+          addMessage(`✅ Email logged successfully! ${matchInfo}`, 'assistant');
+        } else {
+          addMessage('⚠️ Email logged but with warnings: ' + (data.error || 'Unknown issue'), 'assistant');
+        }
+        
+      } catch (error) {
+        console.error('Error logging email:', error);
+        addMessage('❌ Failed to log email: ' + error.message, 'assistant');
+      }
+    }
   </script>
 </body>
 </html>
