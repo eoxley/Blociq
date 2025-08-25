@@ -2,36 +2,9 @@
 // Automatically extracts key lease clauses from PDF text
 
 export const keyTerms = [
-  "Term",
-  "Consent", 
-  "Reserve fund",
-  "Windows",
-  "Pipes",
-  "Heating",
-  "Parking",
-  "Right of Access",
-  "TV",
-  "Assignment",
-  "Alterations",
-  "Notice",
-  "Sublet",
-  "Pets",
-  "Debt recovery",
-  "Interest",
-  "Exterior redecorations",
-  "Interior Redecorations",
-  "Service charge",
-  "Ground rent",
-  "Insurance",
-  "Repairs",
-  "Maintenance",
-  "Forfeiture",
-  "Break clause",
-  "Rent review",
-  "Use clause",
-  "Quiet enjoyment",
-  "Landlord's covenant",
-  "Tenant's covenant"
+  "Term", "Consent", "Reserve fund", "Windows", "Pipes", "Heating", "Parking",
+  "Right of Access", "TV", "Assignment", "Alterations", "Notice", "Sublet",
+  "Pets", "Debt recovery", "Interest", "Exterior redecorations", "Interior Redecorations"
 ];
 
 export interface LeaseClause {
@@ -52,6 +25,80 @@ export interface LeaseExtractionResult {
     keyTermsFound: number;
     extractionTimestamp: string;
   };
+}
+
+/**
+ * Extract lease clauses from text using regex patterns
+ * Returns Record<string, string> as specified in the user's implementation
+ */
+export function extractLeaseClauses(text: string): Record<string, string> {
+  const result: Record<string, string> = {};
+  
+  for (const term of keyTerms) {
+    // Create regex pattern to find term with surrounding context
+    // Look for 0-50 chars before, term, then 0-300 chars after
+    const regex = new RegExp(`.{0,50}${term}.{0,300}`, 'i');
+    
+    const match = text.match(regex);
+    
+    if (match && match[0]) {
+      // Clean up the extracted text
+      let cleanText = match[0].trim();
+      
+      // Try to find sentence boundaries
+      const sentences = cleanText.split(/[.!?]+/);
+      if (sentences.length > 1) {
+        // Take the first complete sentence that contains the term
+        cleanText = sentences.find(s => s.toLowerCase().includes(term.toLowerCase())) || cleanText;
+      }
+      
+      result[term] = cleanText;
+    } else {
+      result[term] = "❌ Not found";
+    }
+  }
+  
+  return result;
+}
+
+/**
+ * Enhanced version that returns structured LeaseClause objects
+ */
+export function extractLeaseClausesEnhanced(text: string): Record<string, LeaseClause> {
+  const result: Record<string, LeaseClause> = {};
+  
+  for (const term of keyTerms) {
+    // Create regex pattern to find term with surrounding context
+    const regex = new RegExp(`.{0,50}${term}.{0,300}`, 'i');
+    
+    const match = text.match(regex);
+    
+    if (match && match[0]) {
+      // Clean up the extracted text
+      let cleanText = match[0].trim();
+      
+      // Try to find sentence boundaries
+      const sentences = cleanText.split(/[.!?]+/);
+      if (sentences.length > 1) {
+        // Take the first complete sentence that contains the term
+        cleanText = sentences.find(s => s.toLowerCase().includes(term.toLowerCase())) || cleanText;
+      }
+      
+      result[term.toLowerCase().replace(/\s+/g, '_')] = {
+        term,
+        text: cleanText,
+        found: true
+      };
+    } else {
+      result[term.toLowerCase().replace(/\s+/g, '_')] = {
+        term,
+        text: "❌ Clause not found in document",
+        found: false
+      };
+    }
+  }
+  
+  return result;
 }
 
 /**
@@ -100,47 +147,6 @@ export function isLeaseDocument(fileName: string, text: string): boolean {
 }
 
 /**
- * Extract lease clauses from text using regex patterns
- */
-export function extractLeaseClauses(text: string): Record<string, LeaseClause> {
-  const result: Record<string, LeaseClause> = {};
-  
-  for (const term of keyTerms) {
-    // Create regex pattern to find term with surrounding context
-    // Look for 0-50 chars before, term, then 0-300 chars after
-    const regex = new RegExp(`.{0,50}${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}.{0,300}`, 'gi');
-    
-    const match = text.match(regex);
-    
-    if (match && match[0]) {
-      // Clean up the extracted text
-      let cleanText = match[0].trim();
-      
-      // Try to find sentence boundaries
-      const sentences = cleanText.split(/[.!?]+/);
-      if (sentences.length > 1) {
-        // Take the first complete sentence that contains the term
-        cleanText = sentences.find(s => s.toLowerCase().includes(term.toLowerCase())) || cleanText;
-      }
-      
-      result[term.toLowerCase().replace(/\s+/g, '_')] = {
-        term,
-        text: cleanText,
-        found: true
-      };
-    } else {
-      result[term.toLowerCase().replace(/\s+/g, '_')] = {
-        term,
-        text: "❌ Clause not found in document",
-        found: false
-      };
-    }
-  }
-  
-  return result;
-}
-
-/**
  * Generate a structured summary of extracted lease clauses
  */
 export function generateLeaseSummary(clauses: Record<string, LeaseClause>): string {
@@ -168,53 +174,6 @@ export function generateLeaseSummary(clauses: Record<string, LeaseClause>): stri
   summary += `📊 **Coverage**: ${Math.round((foundClauses.length / keyTerms.length) * 100)}% of key terms found`;
   
   return summary;
-}
-
-/**
- * Enhanced clause extraction with page numbers and better context
- */
-export function extractLeaseClausesEnhanced(text: string, pageTexts?: string[]): Record<string, LeaseClause> {
-  const result: Record<string, LeaseClause> = {};
-  
-  if (pageTexts && pageTexts.length > 0) {
-    // Extract with page context
-    for (const term of keyTerms) {
-      let bestMatch: { text: string; page: number } | null = null;
-      
-      for (let pageIndex = 0; pageIndex < pageTexts.length; pageIndex++) {
-        const pageText = pageTexts[pageIndex];
-        const regex = new RegExp(`.{0,50}${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}.{0,300}`, 'gi');
-        const match = pageText.match(regex);
-        
-        if (match && match[0]) {
-          const cleanText = match[0].trim();
-          if (!bestMatch || cleanText.length > bestMatch.text.length) {
-            bestMatch = { text: cleanText, page: pageIndex + 1 };
-          }
-        }
-      }
-      
-      if (bestMatch) {
-        result[term.toLowerCase().replace(/\s+/g, '_')] = {
-          term,
-          text: bestMatch.text,
-          found: true,
-          page: bestMatch.page
-        };
-      } else {
-        result[term.toLowerCase().replace(/\s+/g, '_')] = {
-          term,
-          text: "❌ Clause not found in document",
-          found: false
-        };
-      }
-    }
-  } else {
-    // Fallback to simple extraction
-    return extractLeaseClauses(text);
-  }
-  
-  return result;
 }
 
 /**
