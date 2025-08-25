@@ -1,0 +1,109 @@
+{
+  "documents": [
+    {
+      "title": "HSE Fire Safety Guidance 2024",
+      "category": "Fire & Life Safety",
+      "source": "HSE",
+      "version": "2024",
+      "file_url": "https://example.com/path/to/document.pdf",
+      "file_name": "hse-fire-safety-2024.pdf",
+      "file_size": 2048576,
+      "mime_type": "application/pdf",
+      "extracted_content": "This document provides comprehensive guidance on fire safety management in buildings. Key requirements include: 1) Annual fire risk assessments, 2) Monthly emergency lighting tests, 3) Weekly fire alarm checks, 4) Staff fire safety training, 5) Emergency evacuation procedures. The guidance is based on BS 9999:2017 and Building Regulations Approved Document B.",
+      "tags": ["fire safety", "HSE", "guidance", "risk assessment", "emergency procedures"]
+    },
+    {
+      "title": "BS 5839-1:2017 Fire Detection Systems",
+      "category": "Fire & Life Safety",
+      "source": "BSI",
+      "version": "2017",
+      "file_url": "https://example.com/path/to/bs5839.pdf",
+      "file_name": "bs5839-1-2017.pdf",
+      "file_size": 1536000,
+      "mime_type": "application/pdf",
+      "extracted_content": "British Standard for fire detection and fire alarm systems for buildings. Covers system design, installation, commissioning, and maintenance. Requirements include: weekly functional testing, annual servicing, quarterly inspection of detectors, and monthly testing of emergency lighting. Essential for compliance with Fire Safety Order 2005.",
+      "tags": ["fire detection", "BS 5839", "alarm systems", "testing", "maintenance"]
+    }
+  ],
+  "standards": [
+    {
+      "name": "BS 9999:2017 Fire Safety",
+      "category": "Fire & Life Safety",
+      "description": "Code of practice for fire safety in the design, management and use of buildings",
+      "requirements": [
+        "Fire risk assessment",
+        "Fire safety strategy",
+        "Emergency planning",
+        "Staff training",
+        "Fire safety equipment maintenance",
+        "Regular inspections"
+      ],
+      "frequency": "Annual review",
+      "legal_basis": "Building Regulations Approved Document B",
+      "guidance_notes": "Essential for all non-domestic buildings. Provides comprehensive guidance on fire safety management."
+    },
+    {
+      "name": "BS 5839-1:2017 Fire Detection",
+      "category": "Fire & Life Safety",
+      "description": "Fire detection and fire alarm systems for buildings",
+      "requirements": [
+        "System design to BS 5839-1",
+        "Installation to BS 5839-6",
+        "Commissioning to BS 5839-1",
+        "Weekly functional testing",
+        "Annual servicing",
+        "Quarterly detector inspection"
+      ],
+      "frequency": "Weekly testing, annual service",
+      "legal_basis": "Fire Safety Order 2005",
+      "guidance_notes": "Critical for building safety compliance. Covers all aspects of fire detection systems."
+    },
+    {
+      "name": "BS 7671:2018 Electrical Safety",
+      "category": "Electrical & Mechanical",
+      "description": "Requirements for Electrical Installations (IET Wiring Regulations)",
+      "requirements": [
+        "EICR every 5 years",
+        "PAT testing annually",
+        "Emergency lighting testing",
+        "Fire alarm system maintenance",
+        "Lift safety inspections"
+      ],
+      "frequency": "5-yearly EICR, annual PAT",
+      "legal_basis": "Electricity at Work Regulations 1989",
+      "guidance_notes": "Fundamental standard for electrical safety in buildings."
+    }
+  ],
+  "guidance": [
+    {
+      "category": "Fire & Life Safety",
+      "title": "Fire Safety Management Best Practice",
+      "description": "Comprehensive guide to fire safety management in buildings",
+      "content": "Effective fire safety management requires a systematic approach including regular risk assessments, staff training, emergency planning, and ongoing monitoring. Key elements include: 1) Fire risk assessment review at least annually, 2) Staff fire safety training for all employees, 3) Emergency evacuation procedures and drills, 4) Fire safety equipment maintenance schedules, 5) Incident reporting and investigation procedures. Regular audits and reviews ensure continuous improvement and compliance with current regulations.",
+      "source": "Industry Best Practice",
+      "version": "2024",
+      "relevance_score": 95,
+      "tags": ["fire safety", "management", "best practice", "compliance", "risk assessment"]
+    },
+    {
+      "category": "Water Hygiene & Drainage",
+      "title": "Legionella Control in Buildings",
+      "description": "Guidance on preventing Legionella bacteria growth in water systems",
+      "content": "Legionella control requires regular risk assessments, temperature monitoring, and system maintenance. Key requirements: 1) Annual Legionella risk assessment, 2) Monthly temperature monitoring of hot water systems, 3) Quarterly shower head cleaning, 4) Annual water tank inspection and cleaning, 5) Staff training on Legionella awareness. Based on ACoP L8 and HSG274 guidance.",
+      "source": "HSE",
+      "version": "2024",
+      "relevance_score": 90,
+      "tags": ["legionella", "water hygiene", "HSE", "risk assessment", "temperature monitoring"]
+    },
+    {
+      "category": "Building Safety Act (BSA / HRB)",
+      "title": "Building Safety Case Requirements",
+      "description": "Guidance on Building Safety Case Reports for Higher Risk Buildings",
+      "content": "Building Safety Cases are required for all Higher Risk Buildings (HRBs) under the Building Safety Act 2022. Key requirements include: 1) Principal Accountable Person registration, 2) Building Safety Case Report preparation, 3) Golden Thread documentation maintenance, 4) Resident engagement strategy, 5) Safety Case Officer appointment. Reports must be submitted to the Building Safety Regulator and kept updated.",
+      "source": "Building Safety Regulator",
+      "version": "2024",
+      "relevance_score": 100,
+      "tags": ["building safety act", "BSA", "HRB", "safety case", "golden thread"]
+    }
+  ]
+}
