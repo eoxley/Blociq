@@ -19,6 +19,7 @@ import {
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import MobileNavigation from '@/components/MobileNavigation'
+import AskBlocIQHomepage from '@/components/AskBlocIQHomepage'
 
 interface DashboardStats {
   totalBuildings: number
@@ -294,6 +295,12 @@ export default function HomePage() {
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* Ask BlocIQ AI Component */}
+                <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">🧠 Ask BlocIQ AI</h2>
+                  <AskBlocIQHomepage />
                 </div>
               </div>
             </div>

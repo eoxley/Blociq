@@ -13,9 +13,9 @@ const navItems = [
   { label: "Home", icon: "🏠", href: "/home", comingSoon: false, description: "Dashboard overview" },
   { label: "Inbox", icon: "📥", href: "/inbox", comingSoon: false, description: "Email management" },
   { label: "Buildings", icon: "🏢", href: "/buildings", comingSoon: false, description: "Property portfolio" },
-  { label: "Industry Knowledge", icon: "🛡️", href: "/compliance", comingSoon: false, description: "Industry standards & guidance" },
+  { label: "Compliance", icon: "🛡️", href: "/compliance", comingSoon: false, description: "Regulatory tracking" },
+  { label: "Industry Knowledge", icon: "📚", href: "/industry-knowledge", comingSoon: false, description: "Industry standards & guidance" },
   { label: "Communications", icon: "📣", href: "/communications", comingSoon: false, description: "Letter & email templates" },
-
   { label: "Major Works", icon: "🔧", href: "/major-works", comingSoon: false, description: "Project management" },
   { label: "Finances", icon: "💷", href: "#", comingSoon: true, description: "Financial tracking" },
   { label: "Contractors", icon: "👷", href: "#", comingSoon: true, description: "Vendor management" },

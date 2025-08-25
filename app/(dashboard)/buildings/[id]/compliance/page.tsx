@@ -60,10 +60,10 @@ export default async function BuildingCompliancePage({ params }: BuildingComplia
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">
-                  Industry Knowledge Setup
+                  Compliance Setup
                 </h1>
                 <p className="mt-2 text-gray-600">
-                  {building.name} - Set up your industry knowledge tracking
+                  {building.name} - Set up your compliance tracking
                 </p>
               </div>
             </div>
@@ -72,17 +72,17 @@ export default async function BuildingCompliancePage({ params }: BuildingComplia
           <div className="text-center py-12">
             <div className="text-gray-400 text-6xl mb-4">📋</div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No Industry Knowledge Assets Configured
+              No Compliance Assets Configured
             </h3>
             <p className="text-gray-600 mb-6">
-              This building doesn't have any industry knowledge assets set up yet. 
+              This building doesn't have any compliance assets set up yet. 
               You'll need to configure which compliance items to track for this building.
             </p>
             <a
               href={`/buildings/${params.id}/compliance/setup`}
               className="px-6 py-3 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              Setup Industry Knowledge Assets
+              Setup Compliance Assets
             </a>
           </div>
         </div>
@@ -99,10 +99,19 @@ export default async function BuildingCompliancePage({ params }: BuildingComplia
     const { data: assets, error: assetsError } = await supabase
       .from('building_compliance_assets')
       .select(`
-        *,
+        id,
+        asset_id,
+        status,
+        priority,
+        due_date,
+        last_completed,
+        next_due,
+        assigned_to,
+        notes,
+        created_at,
+        updated_at,
         compliance_assets (
           id,
-          title,
           name,
           category,
           description,
@@ -114,26 +123,24 @@ export default async function BuildingCompliancePage({ params }: BuildingComplia
 
     if (assetsError) {
       console.error('Error fetching compliance assets:', assetsError);
-      // Continue with empty array
-    } else if (assets) {
-      complianceAssets = assets;
+    } else {
+      complianceAssets = assets || [];
     }
 
-    // Get compliance documents count from the existing table
-    const { data: documentsCount, error: docsError } = await supabase
+    // Get compliance documents count
+    const { data: documents, error: docsError } = await supabase
       .from('compliance_documents')
-      .select('id', { count: 'exact' })
+      .select('id')
       .eq('building_id', params.id);
 
     if (docsError) {
-      console.error('Error fetching documents count:', docsError);
-      // Continue with 0 count
-    } else if (documentsCount !== null) {
-      totalDocuments = documentsCount;
+      console.error('Error fetching compliance documents:', docsError);
+    } else {
+      totalDocuments = documents?.length || 0;
     }
+
   } catch (error) {
-    console.error('Error fetching compliance data:', error);
-    // Continue with empty data to prevent crashes
+    console.error('Error in compliance data fetch:', error);
   }
 
   return (
@@ -143,25 +150,18 @@ export default async function BuildingCompliancePage({ params }: BuildingComplia
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
-                Industry Knowledge Dashboard
+                Compliance Dashboard
               </h1>
               <p className="mt-2 text-gray-600">
-                {building.name} - Real-time industry knowledge monitoring
+                {building.name} - Monitor and manage compliance requirements
               </p>
             </div>
-            
-            <div className="flex space-x-3">
+            <div className="flex items-center gap-3">
               <a
-                href={`/buildings/compliance/setup?buildingId=${params.id}`}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                href={`/buildings/${params.id}/compliance/setup`}
+                className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                Setup Industry Knowledge
-              </a>
-              <a
-                href={`/buildings/${params.id}/compliance/reports`}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                Generate Reports
+                Setup Compliance Assets
               </a>
             </div>
           </div>

@@ -1,9 +1,9 @@
 "use client";
-import { useEffect, useState } from "react";
-import { Shield, Sparkles } from "lucide-react";
-import Link from "next/link";
+import { useState, useEffect } from 'react';
+import { Shield, Sparkles, TrendingUp, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import Link from 'next/link';
 
-type CountRow = { building_id:string; building_name:string; total:number; compliant:number; due_soon:number; overdue:number; missing:number };
+type CountRow = { building_id:string; building_name:string; total:number; compliant:number; due_soon:number; overdue:number };
 type UpcomingRow = { building_id:string; building_name:string; asset_name:string; category:string; bca_id:string; next_due_date:string; status:string };
 
 export default function CompliancePortfolioPage() {
@@ -31,16 +31,16 @@ export default function CompliancePortfolioPage() {
               <Shield className="h-10 w-10 text-white" />
             </div>
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              Industry Knowledge Portfolio
+              Compliance Portfolio
             </h1>
             <p className="text-xl text-white/90 max-w-3xl mx-auto leading-relaxed">
-              Live status across all buildings with comprehensive industry knowledge tracking and management.
+              Live status across all buildings with comprehensive compliance tracking and management.
             </p>
             <div className="mt-6 bg-white/20 backdrop-blur-sm rounded-xl p-4 max-w-2xl mx-auto">
               <div className="flex items-center justify-center gap-2 text-white/90">
                 <Sparkles className="h-5 w-5" />
                 <span className="text-sm font-medium">
-                  {loading ? 'Loading industry knowledge data...' : `Monitoring ${counts.length} buildings`}
+                  {loading ? 'Loading compliance data...' : `Monitoring ${counts.length} buildings`}
                 </span>
               </div>
             </div>
@@ -50,7 +50,7 @@ export default function CompliancePortfolioPage() {
         {/* Decorative Elements */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
           <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-10 right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-10 right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
           <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-white/5 rounded-full blur-2xl"></div>
         </div>
       </section>
@@ -75,61 +75,83 @@ export default function CompliancePortfolioPage() {
       </div>
 
       {/* Upcoming table (90 days) */}
-      <div className="rounded-2xl border border-neutral-200 bg-white shadow-sm overflow-auto">
-        <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between">
-          <div className="text-sm font-semibold text-neutral-800">Upcoming (next 90 days)</div>
+      <div className="bg-white rounded-2xl border border-neutral-200 p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-neutral-900">Upcoming (90 days)</h2>
+          <div className="flex items-center gap-2 text-sm text-neutral-600">
+            <Clock className="h-4 w-4" />
+            <span>Next 90 days</span>
+          </div>
         </div>
-        <table className="min-w-full text-sm">
-          <thead className="bg-neutral-50 text-neutral-600">
-            <tr>
-              <th className="px-4 py-2 text-left">Building</th>
-              <th className="px-4 py-2 text-left">Asset</th>
-              <th className="px-4 py-2 text-left">Category</th>
-              <th className="px-4 py-2 text-left">Due</th>
-              <th className="px-4 py-2 text-left">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-100">
-            {upcoming.map((r, i) => (
-              <tr key={`${r.bca_id}-${i}`} className="hover:bg-neutral-50/60">
-                <td className="px-4 py-2">{r.building_name}</td>
-                <td className="px-4 py-2">{r.asset_name}</td>
-                <td className="px-4 py-2">{r.category}</td>
-                <td className="px-4 py-2">{r.next_due_date}</td>
-                <td className="px-4 py-2">
-                  <div className="flex gap-2">
-                    <button onClick={() => addToOutlook(r)} className="rounded border border-neutral-300 px-2 py-1 hover:bg-neutral-50">Add to Outlook</button>
-                    <button onClick={() => draftTender(r)} className="rounded border border-neutral-300 px-2 py-1 hover:bg-neutral-50">Draft tender email</button>
-                  </div>
-                </td>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-neutral-200">
+                <th className="text-left py-3 px-4 font-medium text-neutral-700">Building</th>
+                <th className="text-left py-3 px-4 font-medium text-neutral-700">Asset</th>
+                <th className="text-left py-3 px-4 font-medium text-neutral-700">Category</th>
+                <th className="text-left py-3 px-4 font-medium text-neutral-700">Due Date</th>
+                <th className="text-left py-3 px-4 font-medium text-neutral-700">Status</th>
               </tr>
-            ))}
-            {!upcoming.length && !loading ? (
-              <tr><td colSpan={5} className="px-4 py-6 text-center text-neutral-500">No upcoming compliance items</td></tr>
-            ) : null}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {upcoming.map(row => (
+                <tr key={row.bca_id} className="border-b border-neutral-100 hover:bg-neutral-50">
+                  <td className="py-3 px-4">
+                    <Link 
+                      href={`/buildings/${row.building_id}/compliance`}
+                      className="text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      {row.building_name}
+                    </Link>
+                  </td>
+                  <td className="py-3 px-4 text-neutral-800">{row.asset_name}</td>
+                  <td className="py-3 px-4 text-neutral-600">{row.category}</td>
+                  <td className="py-3 px-4 text-neutral-600">{new Date(row.next_due_date).toLocaleDateString()}</td>
+                  <td className="py-3 px-4">
+                    <StatusBadge status={row.status} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
+}
 
-  async function addToOutlook(r: UpcomingRow) {
-    const body = {
-      bca: { asset_name: r.asset_name, next_due_date: r.next_due_date, notes: "" },
-      building: { name: r.building_name },
-      inbox_user_id: null
-    };
-    const res = await fetch("/api/compliance/reminder", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) }).then(r=>r.json());
-    if (res.mode === "outlook_event" && res.draft?.webLink) window.open(res.draft.webLink, "_blank");
-    else if (res.mode === "ics" && res.ics) downloadICS(res.ics, "compliance.ics");
-  }
-  async function draftTender(r: UpcomingRow) {
-    const payload = { building: { name: r.building_name }, work: { title: `${r.asset_name} service/inspection` }, return_by: r.next_due_date, contact: {}, extras: {} };
-    const j = await fetch("/api/tender/prepare", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(payload) }).then(r=>r.json());
-    const mailto = `mailto:?subject=${encodeURIComponent(j.subject)}&body=${encodeURIComponent(j.body)}`;
-    window.location.href = mailto; // soft fallback (Outlook draft route can be added later)
-  }
-  function downloadICS(text:string, filename:string){ const blob=new Blob([text],{type:"text/calendar"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url); }
+function Card({ label, v, tone = "text-neutral-700" }: { label: string; v: number; tone?: string }) {
+  return (
+    <div className="text-center">
+      <div className={`text-lg font-bold ${tone}`}>{v}</div>
+      <div className="text-xs text-neutral-500">{label}</div>
+    </div>
+  );
+}
 
-  function Card({label,v,tone}:{label:string;v:number;tone?:string}){ return <div className="rounded-xl border border-neutral-200 p-3 text-center"><div className="text-xs text-neutral-500">{label}</div><div className={`text-lg font-semibold ${tone||"text-neutral-900"}`}>{v}</div></div>; }
+function StatusBadge({ status }: { status: string }) {
+  const getStatusConfig = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'compliant':
+        return { color: 'bg-emerald-100 text-emerald-800', icon: CheckCircle };
+      case 'due_soon':
+        return { color: 'bg-amber-100 text-amber-800', icon: Clock };
+      case 'overdue':
+        return { color: 'bg-red-100 text-red-800', icon: AlertTriangle };
+      default:
+        return { color: 'bg-neutral-100 text-neutral-800', icon: Clock };
+    }
+  };
+
+  const config = getStatusConfig(status);
+  const Icon = config.icon;
+
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
+      <Icon className="h-3 w-3" />
+      {status.replace('_', ' ')}
+    </span>
+  );
 }
