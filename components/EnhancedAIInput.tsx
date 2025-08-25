@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import AIFeedback from './AIFeedback';
-import ComplianceBadge from './ComplianceBadge';
+// Removed ComplianceBadge import
 import MajorWorksBadge from './MajorWorksBadge';
 
 interface EnhancedAIInputProps {
@@ -114,9 +114,7 @@ export default function EnhancedAIInput({
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-semibold">AI Response:</h3>
               <div className="flex gap-2">
-                {usedComplianceData && (
-                  <ComplianceBadge />
-                )}
+                        {/* ComplianceBadge removed */}
                 {usedMajorWorksData && (
                   <MajorWorksBadge />
                 )}

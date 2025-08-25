@@ -13,7 +13,7 @@ import {
   Sparkles,
   RefreshCw
 } from "lucide-react";
-import { UK_COMPLIANCE_ITEMS } from "@/lib/complianceUtils";
+// Removed compliance import - using local data instead
 import { toast } from "sonner";
 
 interface DocumentTypeSelectorProps {
@@ -48,8 +48,50 @@ export default function DocumentTypeSelector({
 
   useEffect(() => {
     if (isOpen) {
-      // Use the UK compliance items from complianceUtils
-      setComplianceItems(UK_COMPLIANCE_ITEMS);
+      // Local compliance items data
+      const localComplianceItems = [
+        {
+          id: 1,
+          name: "Fire Safety Certificate",
+          description: "Annual fire safety assessment and certification",
+          required_if: "always" as const,
+          default_frequency: "12 months",
+          category: "Fire Safety"
+        },
+        {
+          id: 2,
+          name: "Gas Safety Certificate",
+          description: "Annual gas safety inspection and certification",
+          required_if: "always" as const,
+          default_frequency: "12 months",
+          category: "Gas Safety"
+        },
+        {
+          id: 3,
+          name: "Electrical Safety Certificate (EICR)",
+          description: "Electrical installation condition report",
+          required_if: "always" as const,
+          default_frequency: "60 months",
+          category: "Electrical Safety"
+        },
+        {
+          id: 4,
+          name: "Lift Maintenance Certificate",
+          description: "Annual lift safety inspection and maintenance",
+          required_if: "if present" as const,
+          default_frequency: "12 months",
+          category: "Lift Safety"
+        },
+        {
+          id: 5,
+          name: "Water System Testing",
+          description: "Legionella testing and water system certification",
+          required_if: "always" as const,
+          default_frequency: "12 months",
+          category: "Water Safety"
+        }
+      ];
+      setComplianceItems(localComplianceItems);
     }
   }, [isOpen]);
 
