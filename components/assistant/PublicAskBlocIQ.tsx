@@ -364,8 +364,7 @@ export default function PublicAskBlocIQ() {
                   <Brain className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">Ask BlocIQ</h2>
-                  <p className="text-sm text-gray-600">Your AI Property Assistant</p>
+                  <h2 className="text-lg font-bold text-gray-900">Ask BlocIQ – Your AI Property Assistant</h2>
                 </div>
                 <button
                   onClick={handleCloseGuide}
@@ -377,36 +376,56 @@ export default function PublicAskBlocIQ() {
               
               {/* Description */}
               <div className="mb-4">
-                <p className="text-sm text-gray-700 leading-relaxed">
-                  Ask BlocIQ is your intelligent property management assistant. Get instant answers about compliance, 
-                  maintenance schedules, leaseholder queries, and more. Simply click the brain icon below to start chatting.
+                <p className="text-sm text-gray-700 leading-relaxed mb-3">
+                  You are welcome to try our <strong>Ask BlocIQ AI</strong>.<br/>
+                  This is BlocIQ's own secure, ring-fenced AI service — designed specifically for <strong>UK leasehold property management</strong>.
+                </p>
+                <p className="text-sm text-gray-700 leading-relaxed mb-3">
+                  All information you input and receive is <strong>GDPR-safe, confidential, and never shared with third parties</strong>. Your chats stay private, and the service runs on a secure UK-based server.
+                </p>
+                <p className="text-sm text-gray-700 leading-relaxed mb-3">
+                  👉 All we ask is your email to get started. This will not be used for marketing or shared with anyone — it's simply to give you access.
                 </p>
               </div>
               
-              {/* Features */}
-              <div className="mb-4 space-y-2">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span>Compliance tracking & alerts</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span>Document analysis & search</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span>Maintenance scheduling</span>
+              {/* Try Asking Section */}
+              <div className="mb-4">
+                <p className="text-sm font-medium text-gray-700 mb-2">💡 Try asking about:</p>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <span className="text-gray-400">•</span>
+                    <span>Legislation and compliance requirements</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <span className="text-gray-400">•</span>
+                    <span>Drafting an email or letter to your leaseholders or clients</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <span className="text-gray-400">•</span>
+                    <span>Maintenance schedules and best practice advice</span>
+                  </div>
                 </div>
               </div>
               
-              {/* Disclosure */}
-              <div className="bg-gray-50 rounded-lg p-3 mb-4 border border-gray-200">
-                <div className="flex items-start gap-2">
-                  <Shield className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
-                  <div className="text-xs text-gray-600">
-                    <p className="font-medium mb-1">Privacy Notice</p>
-                    <p>Your conversations and uploaded documents are used to improve our AI service. 
-                    We do not share your data with third parties.</p>
+              {/* BlocIQ Clients Benefits */}
+              <div className="mb-4">
+                <p className="text-sm font-medium text-gray-700 mb-2">BlocIQ clients benefit from the full power of Ask BlocIQ, including:</p>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <span className="text-gray-400">•</span>
+                    <span>Contextual answers based on their <strong>specific buildings and portfolio</strong></span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <span className="text-gray-400">•</span>
+                    <span><strong>Instant document retrieval</strong> and AI-generated notices</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <span className="text-gray-400">•</span>
+                    <span><strong>Lease reviews</strong> and summaries in seconds</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <span className="text-gray-400">•</span>
+                    <span><strong>LPE1 packs</strong> produced instantly</span>
                   </div>
                 </div>
               </div>
