@@ -411,12 +411,19 @@ export default function LandingPage() {
             <div className="flex justify-center lg:justify-end">
               <div className="w-64 h-64 bg-gradient-to-br from-[#6A00F5] to-[#8A2BE2] rounded-full flex items-center justify-center shadow-2xl overflow-hidden">
                 <Image
-                  src="/assets/ellie-oxley-headshot.jpg"
+                  src="/assets/ellie-oxley-headshot.png"
                   alt="Ellie Oxley - Founder of BlocIQ"
                   width={256}
                   height={256}
                   className="w-full h-full object-cover rounded-full"
                   priority
+                  style={{ objectPosition: 'center 20%' }}
+                  onError={(e) => {
+                    console.error('Image failed to load:', e);
+                  }}
+                  onLoad={() => {
+                    console.log('Image loaded successfully');
+                  }}
                 />
               </div>
             </div>
@@ -474,12 +481,19 @@ export default function LandingPage() {
               <div className="flex justify-center lg:justify-end">
                 <div className="w-80 h-80 bg-gradient-to-br from-[#6A00F5] to-[#8A2BE2] rounded-full flex items-center justify-center shadow-2xl overflow-hidden">
                   <Image
-                    src="/assets/ellie-oxley-headshot.jpg"
+                    src="/assets/ellie-oxley-headshot.png"
                     alt="Ellie Oxley - Founder of BlocIQ"
                     width={320}
                     height={320}
                     className="w-full h-full object-cover rounded-full"
                     priority
+                    style={{ objectPosition: 'center 20%' }}
+                    onError={(e) => {
+                      console.error('Image failed to load:', e);
+                    }}
+                    onLoad={() => {
+                      console.log('Image loaded successfully');
+                    }}
                   />
                 </div>
               </div>
