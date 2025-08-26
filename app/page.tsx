@@ -391,34 +391,20 @@ export default function LandingPage() {
       {/* Section 4: Narrative */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="text-4xl font-bold text-gray-900 mb-8">
-                Why We Exist
-              </h2>
-              <div className="space-y-6 text-lg text-gray-600 leading-relaxed">
-                <p>
-                  The property management industry faces unprecedented challenges: BSA regulations, post-Grenfell compliance requirements, and increasing fines for non-compliance.
-                </p>
-                <p>
-                  Meanwhile, property managers are experiencing burnout and staff shortages, struggling to keep up with the administrative burden while maintaining service quality.
-                </p>
-                <p>
-                  BlocIQ was built to solve these problems. We provide a safe, modern, and supportive platform that reduces admin, strengthens compliance, and improves transparency — all while making property management more human.
-                </p>
-              </div>
-            </div>
-            <div className="flex justify-center lg:justify-end">
-              <div className="w-64 h-64 bg-gradient-to-br from-[#6A00F5] to-[#8A2BE2] rounded-full flex items-center justify-center shadow-2xl overflow-hidden">
-                <Image
-                  src="/addin/icon-80.png"
-                  alt="BlocIQ Logo"
-                  width={80}
-                  height={80}
-                  className="w-20 h-20 object-contain"
-                  priority
-                />
-              </div>
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-4xl font-bold text-gray-900 mb-8 text-center">
+              Why We Exist
+            </h2>
+            <div className="space-y-6 text-lg text-gray-600 leading-relaxed">
+              <p>
+                The property management industry faces unprecedented challenges: BSA regulations, post-Grenfell compliance requirements, and increasing fines for non-compliance.
+              </p>
+              <p>
+                Meanwhile, property managers are experiencing burnout and staff shortages, struggling to keep up with the administrative burden while maintaining service quality.
+              </p>
+              <p>
+                BlocIQ was built to solve these problems. We provide a safe, modern, and supportive platform that reduces admin, strengthens compliance, and improves transparency — all while making property management more human.
+              </p>
             </div>
           </div>
           
