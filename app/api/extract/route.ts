@@ -1,325 +1,277 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
-import { 
-  extractLeaseClauses, 
-  extractLeaseClausesEnhanced,
-  isLeaseDocument, 
-  generateLeaseSummary,
-  classifyLeaseDocument,
-  type LeaseExtractionResult 
-} from "@/utils/leaseExtractor";
-import { createClient } from "@supabase/supabase-js";
-import { OpenAI } from "openai";
-import fs from "fs";
-import path from "path";
-import pdf from "pdf-parse";
-import { createWorker } from "tesseract.js";
-import { pdfToPng } from "pdf-to-png-converter";
+import { NextRequest, NextResponse } from 'next/server';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
+import pdf from 'pdf-parse';
+import { extractLeaseClausesEnhanced, isLeaseDocument } from '@/utils/leaseExtractor';
+import OpenAI from 'openai';
 
-/**
- * Run OCR on PDF pages using Tesseract.js
- * Fallback for scanned or image-based leases
- */
-async function runOCR(pdfBuffer: Buffer): Promise<string> {
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+export async function POST(request: NextRequest) {
   try {
-    console.log("🖼️ Running OCR fallback for scanned PDF...");
-    
-    const pages = await pdfToPng(pdfBuffer, { 
-      outputFolder: '/tmp'
-    });
-
-    const worker = await createWorker('eng');
-    let fullText = "";
-
-    for (const page of pages) {
-      const { data: { text } } = await worker.recognize(page.path);
-      fullText += text + "\n";
-      
-      // Clean up temporary page file
-      try {
-        fs.unlinkSync(page.path);
-      } catch (cleanupError) {
-        console.warn("Failed to cleanup temporary page file:", cleanupError);
-      }
-    }
-
-    await worker.terminate();
-    console.log(`✅ OCR completed: ${fullText.length} characters extracted`);
-    
-    return fullText;
-  } catch (error) {
-    console.error("❌ OCR failed:", error);
-    throw new Error("OCR processing failed");
-  }
-}
-
-export async function POST(req: NextRequest) {
-  try {
-    // 1. Check authentication
+    // Check authentication
     const supabase = createRouteHandlerClient({ cookies });
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
+
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    // 2. Parse form data
-    const formData = await req.formData();
-    const file = formData.get("file") as File;
-    const buildingId = formData.get("building_id") as string;
-    const documentType = formData.get("document_type") as string;
+    // Parse form data
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+    const building_id = formData.get('building_id') as string;
+    const document_type = formData.get('document_type') as string || 'unknown';
 
     if (!file) {
-      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    console.log(`📄 Processing file: ${file.name} (${file.size} bytes)`);
+    // Validate file type
+    if (file.type !== 'application/pdf') {
+      return NextResponse.json({ error: 'Only PDF files are supported' }, { status: 400 });
+    }
 
-    // 3. Extract text from PDF using multiple methods
-    let extractedText = "";
-    let extractionMethod = "unknown";
-    
+    // Convert file to buffer
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    // Extract text using pdf-parse
+    let extractedText = '';
     try {
-      const buffer = Buffer.from(await file.arrayBuffer());
-      
-      // Method 1: Try PDF text extraction first
-      try {
-        console.log("🔍 Attempting PDF text extraction...");
-        const pdfData = await pdf(buffer);
-        extractedText = pdfData.text;
-        extractionMethod = "pdf_parse";
-        console.log(`✅ PDF text extraction successful: ${extractedText.length} characters`);
-      } catch (pdfError) {
-        console.log("⚠️ PDF text extraction failed, trying OCR...");
-        extractedText = "";
-      }
-
-      // Method 2: Fallback to OCR if PDF text is insufficient
-      if (!extractedText || extractedText.trim().length < 100) {
-        console.log("🖼️ PDF text insufficient, running OCR...");
-        extractedText = await runOCR(buffer);
-        extractionMethod = "ocr_tesseract";
-        console.log(`✅ OCR extraction successful: ${extractedText.length} characters`);
-      }
-
-      // Validate extracted text
-      if (!extractedText || extractedText.trim().length < 50) {
-        throw new Error("Failed to extract sufficient text from document");
-      }
-
-    } catch (extractionError) {
-      console.error("❌ Text extraction failed:", extractionError);
+      const pdfData = await pdf(buffer);
+      extractedText = pdfData.text;
+      console.log(`Extracted ${extractedText.length} characters from PDF`);
+    } catch (pdfError) {
+      console.error('PDF parsing failed:', pdfError);
       return NextResponse.json({ 
-        error: "Failed to extract text from PDF",
-        details: extractionError instanceof Error ? extractionError.message : "Unknown extraction error"
-      }, { status: 500 });
+        error: 'Failed to extract text from PDF',
+        details: 'The PDF may be corrupted, password-protected, or image-based. Only text-based PDFs are currently supported.'
+      }, { status: 400 });
     }
 
-    // 4. Check if this is a lease document
+    // Check if we have sufficient text
+    if (!extractedText || extractedText.trim().length < 100) {
+      return NextResponse.json({ 
+        error: 'Insufficient text extracted from PDF',
+        details: 'The PDF appears to be image-based or contains very little text. Only text-based PDFs are currently supported.',
+        extractedLength: extractedText?.length || 0
+      }, { status: 400 });
+    }
+
+    // Check if this is a lease document
     const isLease = isLeaseDocument(file.name, extractedText);
-    console.log(`🔍 Document type detection: ${isLease ? 'Lease detected' : 'Not a lease'}`);
+    console.log(`Document identified as lease: ${isLease}`);
 
-    // 5. Extract lease clauses if it's a lease
-    let extractionResult: LeaseExtractionResult | null = null;
-    let extractedClauses: Record<string, any> = {};
-    
+    // Extract lease clauses if it's a lease document
+    let leaseExtraction = null;
+    let summary = null;
+
     if (isLease) {
-      console.log("📋 Extracting lease clauses...");
-      
-      // Extract clauses using the enhanced method for structured data
-      extractedClauses = extractLeaseClausesEnhanced(extractedText);
-      const summary = generateLeaseSummary(extractedClauses);
-      const documentType = classifyLeaseDocument(extractedClauses);
-      
-      extractionResult = {
-        isLease: true,
-        confidence: 0.9, // High confidence for detected leases
-        clauses: extractedClauses,
-        summary,
-        metadata: {
-          totalPages: 1, // We'll enhance this later with actual page count
-          extractedTextLength: extractedText.length,
-          keyTermsFound: Object.values(extractedClauses).filter(c => c.found).length,
-          extractionTimestamp: new Date().toISOString()
-        }
-      };
-      
-      console.log(`✅ Lease extraction complete: ${extractionResult.metadata.keyTermsFound} terms found`);
-    }
+      try {
+        // Extract structured clauses
+        const clauses = extractLeaseClausesEnhanced(extractedText);
+        console.log(`Extracted ${Object.keys(clauses).length} lease clauses`);
 
-    // 6. Generate AI summary using OpenAI
-    let aiSummary = "";
-    try {
-      if (process.env.OPENAI_API_KEY) {
-        console.log("🤖 Generating AI summary...");
-        
-        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-        const completion = await openai.chat.completions.create({
-          model: "gpt-4o",
-          messages: [
-            { 
-              role: "system", 
-              content: "You are a property management expert. Generate a concise lease summary focusing on key terms, obligations, and important clauses." 
-            },
-            { 
-              role: "user", 
-              content: `From these extracted lease clauses, generate a clear summary for property managers:\n\n${JSON.stringify(extractedClauses, null, 2)}` 
-            }
-          ],
-          max_tokens: 500,
-          temperature: 0.3
-        });
+        // Generate AI summary using OpenAI
+        if (process.env.OPENAI_API_KEY) {
+          try {
+            const prompt = `Based on the following lease clauses extracted from a property lease document, provide a clear, concise summary in plain English. Focus on the key terms and conditions that would be most important for property managers and leaseholders to understand.
 
-        aiSummary = completion.choices[0]?.message?.content || "";
-        console.log("✅ AI summary generated successfully");
-      }
-    } catch (aiError) {
-      console.warn("⚠️ AI summary generation failed:", aiError);
-      // Don't fail the whole request, just continue without AI summary
-    }
+Lease Clauses:
+${Object.entries(clauses).map(([term, clause]) => `${term}: ${clause.text || 'Not found'}`).join('\n')}
 
-    // 7. Save to Supabase
-    try {
-      const { data: documentRecord, error: documentError } = await supabase
-        .from('documents')
-        .insert({
-          filename: file.name,
-          file_size: file.size,
-          file_type: file.type || 'application/pdf',
-          building_id: buildingId || null,
-          document_type: documentType || 'unknown',
-          uploaded_by: user.id,
-          extraction_status: 'completed',
-          extracted_text: extractedText,
-          lease_extraction: extractionResult,
-          metadata: {
-            isLease,
-            extractionMethod,
-            aiSummary: aiSummary || null,
-            processingTimestamp: new Date().toISOString()
+Please provide:
+1. A brief overview of the lease type and key terms
+2. Important clauses that were found and their significance
+3. Any notable conditions or restrictions
+4. A confidence assessment of the extraction quality
+
+Keep the summary professional but accessible, suitable for property management professionals.`;
+
+            const completion = await openai.chat.completions.create({
+              model: 'gpt-4o',
+              messages: [{ role: 'user', content: prompt }],
+              max_tokens: 500,
+              temperature: 0.3,
+            });
+
+            summary = completion.choices[0]?.message?.content || 'Summary generation failed';
+            console.log('AI summary generated successfully');
+          } catch (aiError) {
+            console.error('AI summary generation failed:', aiError);
+            summary = 'AI summary generation failed - using extracted clauses only';
           }
-        })
-        .select()
-        .single();
+        } else {
+          summary = 'AI summary not available - OpenAI API key not configured';
+        }
 
-      if (documentError) {
-        console.error("Failed to save document:", documentError);
-        throw documentError;
+        leaseExtraction = {
+          isLease: true,
+          confidence: 0.8, // Base confidence for text-based extraction
+          keyTermsFound: Object.keys(clauses).length,
+          totalTerms: 18, // Total terms we look for
+          extractionMethod: 'pdf_parser',
+          summary: summary
+        };
+
+      } catch (extractionError) {
+        console.error('Lease extraction failed:', extractionError);
+        leaseExtraction = {
+          isLease: true,
+          confidence: 0.3,
+          error: 'Extraction failed',
+          extractionMethod: 'pdf_parser'
+        };
       }
+    }
 
-      console.log(`💾 Document saved with ID: ${documentRecord.id}`);
+    // Store document in Supabase
+    const { data: document, error: documentError } = await supabase
+      .from('documents')
+      .insert({
+        filename: file.name,
+        file_size: file.size,
+        file_type: file.type,
+        building_id: building_id || null,
+        document_type: document_type,
+        uploaded_by: user.id,
+        extraction_status: 'completed',
+        extracted_text: extractedText,
+        lease_extraction: leaseExtraction,
+        metadata: {
+          isLease: isLease,
+          extractionMethod: 'pdf_parser',
+          extractedLength: extractedText.length,
+          originalFilename: file.name
+        }
+      })
+      .select()
+      .single();
 
-      // 8. If it's a lease, save detailed extraction data
-      if (extractionResult && documentRecord.id) {
+    if (documentError) {
+      console.error('Failed to store document:', documentError);
+      return NextResponse.json({ error: 'Failed to store document' }, { status: 500 });
+    }
+
+    // If it's a lease, store detailed extraction data
+    if (isLease && leaseExtraction && Object.keys(extractLeaseClausesEnhanced(extractedText)).length > 0) {
+      try {
+        const clauses = extractLeaseClausesEnhanced(extractedText);
+        
         const { error: extractionError } = await supabase
           .from('lease_extractions')
           .insert({
-            document_id: documentRecord.id,
-            building_id: buildingId || null,
-            extracted_clauses: extractedClauses,
-            summary: aiSummary || extractionResult.summary,
-            confidence: extractionResult.confidence,
+            document_id: document.id,
+            building_id: building_id || null,
+                         extracted_clauses: Object.entries(clauses).map(([term, clause]) => ({
+               term: term,
+               text: clause.text || 'Not found',
+               page: clause.page || null,
+               found: clause.found || false
+             })),
+            summary: summary,
+            confidence: leaseExtraction.confidence || 0.8,
             metadata: {
-              ...extractionResult.metadata,
-              extractionMethod,
-              aiSummaryGenerated: !!aiSummary
+              keyTermsFound: Object.keys(clauses).length,
+              totalTerms: 18,
+              extractionMethod: 'pdf_parser',
+              processingTime: Date.now()
             },
             extracted_by: user.id
           });
 
         if (extractionError) {
-          console.error("Failed to save lease extraction:", extractionError);
-          // Don't fail the whole request, just log the error
+          console.error('Failed to store lease extraction:', extractionError);
+          // Don't fail the entire request, just log the error
         }
+      } catch (extractionError) {
+        console.error('Failed to store lease extraction:', extractionError);
+        // Don't fail the entire request, just log the error
       }
-
-      // 9. Return success response
-      return NextResponse.json({
-        success: true,
-        document_id: documentRecord.id,
-        filename: file.name,
-        isLease,
-        extraction: extractionResult,
-        aiSummary: aiSummary || null,
-        extractionMethod,
-        message: isLease 
-          ? `Lease document processed successfully. ${extractionResult?.metadata.keyTermsFound} key terms extracted.`
-          : "Document processed successfully."
-      });
-
-    } catch (dbError) {
-      console.error("Database operation failed:", dbError);
-      return NextResponse.json({ 
-        error: "Failed to save document",
-        details: "Database error"
-      }, { status: 500 });
     }
 
+    // Return success response
+    return NextResponse.json({
+      success: true,
+      document_id: document.id,
+      filename: file.name,
+      isLease: isLease,
+      extractedTextLength: extractedText.length,
+      leaseExtraction: leaseExtraction,
+      summary: summary,
+      message: isLease 
+        ? 'Lease document processed successfully with clause extraction'
+        : 'Document processed successfully (not identified as lease)'
+    });
+
   } catch (error) {
-    console.error("Extract API failed:", error);
-    
+    console.error('Extract API error:', error);
     return NextResponse.json({ 
-      error: "Extraction failed",
-      details: error instanceof Error ? error.message : "Unknown error"
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }
 
-export async function GET(req: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    // 1. Check authentication
+    // Check authentication
     const supabase = createRouteHandlerClient({ cookies });
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
+
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    // 2. Get extraction history for the user
-    const { searchParams } = new URL(req.url);
-    const buildingId = searchParams.get('building_id');
-    const limit = parseInt(searchParams.get('limit') || '50');
+    // Get query parameters
+    const { searchParams } = new URL(request.url);
+    const building_id = searchParams.get('building_id');
 
+    // Build query
     let query = supabase
       .from('documents')
       .select(`
         id,
         filename,
         file_size,
-        document_type,
+        file_type,
         building_id,
+        document_type,
         extraction_status,
+        extracted_text,
         lease_extraction,
         metadata,
-        created_at
+        created_at,
+        updated_at
       `)
       .eq('uploaded_by', user.id)
-      .order('created_at', { ascending: false })
-      .limit(limit);
+      .order('created_at', { ascending: false });
 
-    if (buildingId) {
-      query = query.eq('building_id', buildingId);
+    if (building_id) {
+      query = query.eq('building_id', building_id);
     }
 
     const { data: documents, error } = await query;
 
     if (error) {
-      throw error;
+      console.error('Failed to fetch documents:', error);
+      return NextResponse.json({ error: 'Failed to fetch documents' }, { status: 500 });
     }
 
     return NextResponse.json({
       success: true,
       documents: documents || [],
-      total: documents?.length || 0
+      count: documents?.length || 0
     });
 
   } catch (error) {
-    console.error("Failed to get extraction history:", error);
-    
+    console.error('Extract API GET error:', error);
     return NextResponse.json({ 
-      error: "Failed to retrieve extraction history",
-      details: error instanceof Error ? error.message : "Unknown error"
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }
@@ -330,7 +282,7 @@ export async function OPTIONS() {
     status: 200,
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },
   });

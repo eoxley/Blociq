@@ -1,8 +1,9 @@
 -- Migration: Add Lease Extraction Tables
 -- This migration creates tables to store lease document extractions and metadata
 
--- Enable UUID extension if not already enabled
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Enable required extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";  -- For UUID generation
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";    -- For trigram text search and GIN indexes
 
 -- Create documents table for storing uploaded files and extraction metadata
 CREATE TABLE IF NOT EXISTS public.documents (
@@ -36,11 +37,15 @@ CREATE TABLE IF NOT EXISTS public.lease_extractions (
 );
 
 -- Create indexes for better performance
+-- Standard indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_documents_uploaded_by ON public.documents(uploaded_by);
 CREATE INDEX IF NOT EXISTS idx_documents_building_id ON public.documents(building_id);
 CREATE INDEX IF NOT EXISTS idx_documents_extraction_status ON public.documents(extraction_status);
 CREATE INDEX IF NOT EXISTS idx_documents_created_at ON public.documents(created_at);
-CREATE INDEX IF NOT EXISTS idx_documents_is_lease ON public.documents USING GIN ((metadata->>'isLease'));
+CREATE INDEX IF NOT EXISTS idx_documents_document_type ON public.documents(document_type);
+
+-- GIN index for JSONB metadata queries (e.g., searching lease documents)
+CREATE INDEX IF NOT EXISTS idx_documents_lease_metadata ON public.documents USING GIN (metadata);
 
 CREATE INDEX IF NOT EXISTS idx_lease_extractions_document_id ON public.lease_extractions(document_id);
 CREATE INDEX IF NOT EXISTS idx_lease_extractions_building_id ON public.lease_extractions(building_id);
