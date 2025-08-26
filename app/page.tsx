@@ -410,10 +410,14 @@ export default function LandingPage() {
             </div>
             <div className="flex justify-center lg:justify-end">
               <div className="w-64 h-64 bg-gradient-to-br from-[#6A00F5] to-[#8A2BE2] rounded-full flex items-center justify-center shadow-2xl overflow-hidden">
-                <div className="text-white text-center">
-                  <div className="text-4xl mb-2">🏠</div>
-                  <div className="text-sm font-medium">BlocIQ</div>
-                </div>
+                <Image
+                  src="/addin/icon-80.png"
+                  alt="BlocIQ Logo"
+                  width={80}
+                  height={80}
+                  className="w-20 h-20 object-contain"
+                  priority
+                />
               </div>
             </div>
           </div>
