@@ -171,9 +171,6 @@ export default function LandingPage() {
               <h3 className="text-2xl font-bold text-gray-900 mb-4">
                 AI Inbox Assistant 🤖
               </h3>
-              <div className="bg-gray-100 rounded-lg p-4 mb-6 h-32 flex items-center justify-center">
-                <div className="text-gray-500 text-sm">Inbox Screenshot Placeholder</div>
-              </div>
               <p className="text-gray-600 mb-6 leading-relaxed">
                 Automatically categorize, prioritize, and draft responses to resident emails using AI trained on property management best practices.
               </p>
@@ -201,9 +198,6 @@ export default function LandingPage() {
               <h3 className="text-2xl font-bold text-gray-900 mb-4">
                 Compliance & Document Hub 📂
               </h3>
-              <div className="bg-gray-100 rounded-lg p-4 mb-6 h-32 flex items-center justify-center">
-                <div className="text-gray-500 text-sm">Document Hub Screenshot Placeholder</div>
-              </div>
               <p className="text-gray-600 mb-6 leading-relaxed">
                 Track compliance deadlines, store documents securely, and maintain audit trails for all your property requirements.
               </p>
@@ -231,9 +225,6 @@ export default function LandingPage() {
               <h3 className="text-2xl font-bold text-gray-900 mb-4">
                 Portfolio Calendar & Events 📅
               </h3>
-              <div className="bg-gray-100 rounded-lg p-4 mb-6 h-32 flex items-center justify-center">
-                <div className="text-gray-500 text-sm">Calendar Screenshot Placeholder</div>
-              </div>
               <p className="text-gray-600 mb-6 leading-relaxed">
                 Manage inspections, maintenance schedules, and property events with intelligent scheduling and automated reminders.
               </p>
@@ -261,9 +252,6 @@ export default function LandingPage() {
               <h3 className="text-2xl font-bold text-gray-900 mb-4">
                 UK-Based AI Assistant 🧠
               </h3>
-              <div className="bg-gray-100 rounded-lg p-4 mb-6 h-32 flex items-center justify-center">
-                <div className="text-gray-500 text-sm">AI Assistant Screenshot Placeholder</div>
-              </div>
               <p className="text-gray-600 mb-6 leading-relaxed">
                 Get instant answers to property management questions with AI trained specifically on UK leasehold law and regulations.
               </p>
@@ -291,9 +279,6 @@ export default function LandingPage() {
               <h3 className="text-2xl font-bold text-gray-900 mb-4">
                 Agency-Wide Document Vault 📂
               </h3>
-              <div className="bg-gray-100 rounded-lg p-4 mb-6 h-32 flex items-center justify-center">
-                <div className="text-gray-500 text-sm">Document Vault Screenshot Placeholder</div>
-              </div>
               <p className="text-gray-600 mb-6 leading-relaxed">
                 Centralized document storage with AI-powered search and organization across your entire property portfolio.
               </p>
@@ -321,9 +306,6 @@ export default function LandingPage() {
               <h3 className="text-2xl font-bold text-gray-900 mb-4">
                 Communication & Logging 📨
               </h3>
-              <div className="bg-gray-100 rounded-lg p-4 mb-6 h-32 flex items-center justify-center">
-                <div className="text-gray-500 text-sm">Communication Screenshot Placeholder</div>
-              </div>
               <p className="text-gray-600 mb-6 leading-relaxed">
                 Track all communications with residents, contractors, and stakeholders with automated logging and audit trails.
               </p>
