@@ -13,15 +13,63 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user's buildings and compliance overview
-    const { data: overview, error: overviewError } = await supabase
-      .rpc('get_user_compliance_overview', { user_uuid: user.id });
-
-    if (overviewError) {
+    let overview = [];
+    try {
+      // First try to use the database function if it exists
+      const { data: functionResult, error: functionError } = await supabase
+        .rpc('get_user_compliance_overview', { user_uuid: user.id });
+      
+      if (!functionError && functionResult) {
+        overview = functionResult;
+      } else {
+        // Fallback: do the query manually
+        console.log('Database function not found, using manual query fallback');
+        
+        // Get user's buildings
+        const { data: buildings, error: buildingsError } = await supabase
+          .from('buildings')
+          .select('id, name')
+          .or(`user_id.eq.${user.id},id.in.(select building_id from building_members where user_id = '${user.id}')`);
+        
+        if (buildingsError) {
+          console.error('Error fetching buildings:', buildingsError);
+          throw buildingsError;
+        }
+        
+        // Get compliance data for each building
+        const buildingIds = buildings.map(b => b.id);
+        if (buildingIds.length > 0) {
+          const { data: complianceData, error: complianceError } = await supabase
+            .from('compliance_assets')
+            .select('building_id, status')
+            .in('building_id', buildingIds);
+          
+          if (complianceError) {
+            console.error('Error fetching compliance data:', complianceError);
+            throw complianceError;
+          }
+          
+          // Calculate overview for each building
+          overview = buildings.map(building => {
+            const buildingAssets = complianceData.filter(ca => ca.building_id === building.id);
+            return {
+              building_id: building.id,
+              building_name: building.name,
+              total_assets: buildingAssets.length,
+              compliant_assets: buildingAssets.filter(ca => ca.status === 'compliant').length,
+              overdue_assets: buildingAssets.filter(ca => ca.status === 'overdue').length,
+              due_soon_assets: buildingAssets.filter(ca => ca.status === 'due_soon').length,
+              pending_assets: buildingAssets.filter(ca => ca.status === 'pending').length
+            };
+          });
+        }
+      }
+    } catch (overviewError) {
       console.error('Error fetching compliance overview:', overviewError);
       return NextResponse.json({ 
         success: false, 
         error: 'Failed to fetch compliance overview',
-        details: overviewError.message 
+        details: overviewError instanceof Error ? overviewError.message : 'Unknown error'
       }, { status: 500 });
     }
 

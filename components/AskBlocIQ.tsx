@@ -489,79 +489,68 @@ export default function AskBlocIQ({
 
       // Handle file uploads first if any files are present
       if (uploadedFiles.length > 0) {
-        // Process each file through OCR and get analysis
+        // Process each file through comprehensive document analysis
         for (const uploadedFile of uploadedFiles) {
           try {
-            console.log('🔄 Processing file:', uploadedFile.name, 'Type:', uploadedFile.file.type);
+            console.log('🔄 Processing file through comprehensive analysis:', uploadedFile.name, 'Type:', uploadedFile.file.type);
             
-            // Convert file to base64 for OCR processing
+            // Convert file to base64 for analysis
             const base64Data = await fileToBase64(uploadedFile.file);
             console.log('✅ File converted to base64, length:', base64Data.length);
             
-            // Process through OCR endpoint
-            const ocrResponse = await fetch('/api/ocr', {
+            // Process through comprehensive document analysis endpoint
+            const analysisResponse = await fetch('/api/documents/analyze-comprehensive', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({
-                base64Image: base64Data,
-                mimeType: uploadedFile.file.type,
-                filename: uploadedFile.name,
-                processWithOCR: true,
-                extractText: true,
-                enableOCR: true,
-                useGoogleVision: true
+                file: base64Data,
+                fileName: uploadedFile.name,
+                buildingId: buildingId
               }),
             });
 
-            if (!ocrResponse.ok) {
-              const errorText = await ocrResponse.text();
-              console.error('❌ OCR processing failed:', ocrResponse.status, errorText);
-              throw new Error(`OCR processing failed: ${ocrResponse.status}`);
+            if (!analysisResponse.ok) {
+              const errorText = await analysisResponse.text();
+              console.error('❌ Comprehensive analysis failed:', analysisResponse.status, errorText);
+              throw new Error(`Document analysis failed: ${analysisResponse.status}`);
             }
 
-            const ocrResult = await ocrResponse.json();
-            console.log('✅ OCR processing successful:', ocrResult);
+            const analysisResult = await analysisResponse.json();
+            console.log('✅ Comprehensive analysis successful:', analysisResult);
             
-            if (ocrResult.success && ocrResult.text) {
-              // Now send the extracted text to AI for analysis
-              const aiResponse = await fetch('/api/ask-ai', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  prompt: `Analyze this document: ${uploadedFile.name}\n\nExtracted Text:\n${ocrResult.text}\n\nPlease provide a comprehensive analysis, summary, and any relevant insights.`,
-                  building_id: buildingId,
-                  contextType: isMajorWorksContext ? 'major_works' : 'general',
-                  projectId: isMajorWorksContext ? projectId : undefined,
-                  documentType: 'uploaded_file',
-                  extractedText: ocrResult.text
-                }),
-              });
+            if (analysisResult.success) {
+              // Create structured document analysis result
+              const documentAnalysis: DocumentAnalysis = {
+                filename: uploadedFile.name,
+                summary: analysisResult.analysis.summary || 'Document analyzed successfully',
+                suggestedActions: analysisResult.suggestedActions || [],
+                extractionMethod: 'comprehensive_analysis',
+                extractedText: analysisResult.extractedText,
+                documentType: analysisResult.documentType
+              };
+              
+              uploadedFileResults.push(documentAnalysis);
 
-              if (aiResponse.ok) {
-                const aiResult = await aiResponse.json();
-                
-                uploadedFileResults.push({
-                  filename: uploadedFile.name,
-                  summary: aiResult.response || aiResult.result || 'Document analyzed successfully',
-                  suggestedActions: aiResult.suggestedActions || [],
-                  extractionMethod: 'ocr_google_vision',
-                  extractedText: ocrResult.text
-                });
-
-                // Add file analysis to the prompt
-                if (!finalPrompt) {
-                  finalPrompt = `Please analyze the uploaded document: ${uploadedFile.name}`;
-                }
-                finalPrompt += `\n\nDocument: ${uploadedFile.name}\nSummary: ${aiResult.response || aiResult.result}\n\nPlease provide insights and answer any specific questions about this document.`;
-              } else {
-                throw new Error('AI analysis failed');
+              // Add comprehensive analysis to the prompt
+              if (!finalPrompt) {
+                finalPrompt = `Please analyze the uploaded document: ${uploadedFile.name}`;
               }
+              finalPrompt += `\n\nDocument: ${uploadedFile.name}\nType: ${analysisResult.documentType}\nSummary: ${analysisResult.analysis.summary}\n\nPlease provide insights and answer any specific questions about this document.`;
+              
+              // Add document analysis to messages for display
+              const analysisMessage: Message = {
+                id: Date.now().toString(),
+                role: 'assistant',
+                content: `📄 **${uploadedFile.name}** analyzed successfully!\n\n**Document Type:** ${analysisResult.documentType}\n**Summary:** ${analysisResult.analysis.summary}`,
+                timestamp: new Date(),
+                documentAnalysis: [documentAnalysis]
+              };
+              
+              setMessages(prev => [...prev, analysisMessage]);
             } else {
-              throw new Error('OCR text extraction failed');
+              throw new Error('Document analysis failed');
             }
           } catch (uploadError) {
             console.error(`Error processing ${uploadedFile.name}:`, uploadError);
