@@ -36,6 +36,14 @@ export default async function DashboardLayout({
           {/* Main Content */}
           <div className="p-4 lg:p-6">
             <div className="w-full max-w-[1800px] mx-auto px-4 lg:px-6 xl:px-8">
+              {/* Mobile Breadcrumb Navigation */}
+              <div className="lg:hidden mb-4">
+                <nav className="flex items-center space-x-2 text-sm text-gray-500">
+                  <a href="/home" className="hover:text-gray-700 transition-colors">Home</a>
+                  <span>/</span>
+                  <span className="text-gray-900 font-medium">Current Page</span>
+                </nav>
+              </div>
               {children}
             </div>
           </div>

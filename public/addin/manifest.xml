@@ -135,6 +135,8 @@
               </Group>
             </OfficeTab>
           </ExtensionPoint>
+          <!-- Function File Reference - Required for ExecuteFunction actions -->
+          <FunctionFile resid="functionFileUrl"/>
         </DesktopFormFactor>
       </Host>
     </Hosts>
@@ -148,6 +150,7 @@
 
       <bt:Urls>
         <bt:Url id="taskpaneUrl" DefaultValue="https://www.blociq.co.uk/addin/taskpane.html"/>
+        <bt:Url id="functionFileUrl" DefaultValue="https://www.blociq.co.uk/addin/functions.html"/>
       </bt:Urls>
 
       <bt:ShortStrings>
