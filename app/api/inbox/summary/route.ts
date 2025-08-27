@@ -21,29 +21,40 @@ export async function GET(req: NextRequest) {
     console.log('✅ User authenticated:', session.user.id);
 
     // Get recent emails from the communications system
-    const { data: emails, error: emailsError } = await supabase
-      .from('communications')
-      .select(`
-        id,
-        subject,
-        content,
-        from_email,
-        to_email,
-        sent_at,
-        type,
-        status,
-        priority,
-        building_id,
-        unit_id,
-        leaseholder_id
-      `)
-      .eq('user_email', session.user.email)
-      .order('sent_at', { ascending: false })
-      .limit(50);
+    let emails = [];
+    let emailsError = null;
+    
+    try {
+      const { data: emailsData, error: emailsErrorData } = await supabase
+        .from('communications')
+        .select(`
+          id,
+          subject,
+          content,
+          from_email,
+          to_email,
+          sent_at,
+          type,
+          status,
+          priority,
+          building_id,
+          unit_id,
+          leaseholder_id
+        `)
+        .eq('user_email', session.user.email)
+        .order('sent_at', { ascending: false })
+        .limit(50);
 
-    if (emailsError) {
-      console.error('❌ Error fetching emails:', emailsError);
-      throw emailsError;
+      if (emailsErrorData) {
+        console.error('❌ Error fetching emails:', emailsErrorData);
+        emailsError = emailsErrorData;
+      } else {
+        emails = emailsData || [];
+      }
+    } catch (error) {
+      console.error('❌ Communications table access error:', error);
+      // Fallback to empty emails array if table doesn't exist or has RLS issues
+      emails = [];
     }
 
     // Get building information for context
@@ -51,15 +62,24 @@ export async function GET(req: NextRequest) {
     let buildings = {};
     
     if (buildingIds.length > 0) {
-      const { data: buildingData } = await supabase
-        .from('buildings')
-        .select('id, name, address')
-        .in('id', buildingIds);
-      
-      buildings = buildingData?.reduce((acc, building) => {
-        acc[building.id] = building;
-        return acc;
-      }, {}) || {};
+      try {
+        const { data: buildingData, error: buildingError } = await supabase
+          .from('buildings')
+          .select('id, name, address')
+          .in('id', buildingIds);
+        
+        if (buildingError) {
+          console.error('❌ Error fetching buildings:', buildingError);
+        } else {
+          buildings = buildingData?.reduce((acc, building) => {
+            acc[building.id] = building;
+            return acc;
+          }, {}) || {};
+        }
+      } catch (error) {
+        console.error('❌ Buildings table access error:', error);
+        // Continue with empty buildings object
+      }
     }
 
     // Process emails into summary categories
@@ -123,6 +143,28 @@ export async function GET(req: NextRequest) {
       aiSuggestions.push('Review recent communications for any missed actions');
       aiSuggestions.push('Check building compliance status updates');
       aiSuggestions.push('Process any pending leaseholder requests');
+    }
+
+    // If we couldn't fetch any emails due to database issues, provide a fallback summary
+    if (emails.length === 0 && emailsError) {
+      console.log('⚠️ Using fallback inbox summary due to database access issues');
+      
+      return NextResponse.json({
+        success: true,
+        data: {
+          urgent: [],
+          needsAction: [],
+          aiSuggestions: [
+            'Database connection issue detected - some features may be limited',
+            'Please check your connection and try refreshing',
+            'Contact support if the issue persists'
+          ],
+          totalEmails: 0,
+          lastUpdated: new Date().toISOString(),
+          fallback: true,
+          error: emailsError.message
+        }
+      });
     }
 
     const summary = {
