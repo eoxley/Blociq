@@ -442,3 +442,409 @@ window.BlocIQAssistant = {
   getBuildingContext,
   logOutgoingEmail,
 };
+
+// BlocIQ Outlook Add-in Function Commands
+// This handles the "Generate by Ask BlocIQ" button functionality
+
+Office.onReady(() => {
+  console.log('BlocIQ function commands loaded');
+});
+
+// Main function called when user clicks "Generate by Ask BlocIQ" button
+function showAIReplyModal(event) {
+  try {
+    console.log('Opening AI Reply Modal');
+    
+    // Get current email context
+    getCurrentEmailContext()
+      .then(emailContext => {
+        if (!emailContext) {
+          showError('No email context available. Please ensure you have an email open.');
+          return;
+        }
+        
+        // Determine reply type based on email context
+        const replyType = determineReplyType(emailContext);
+        
+        // Open the AI reply generation dialog
+        Office.context.ui.displayDialogAsync(
+          'https://www.blociq.co.uk/addin/ai-reply-modal.html?replyType=' + replyType,
+          {
+            height: 70,
+            width: 60,
+            displayInIframe: true
+          },
+          (result) => {
+            if (result.status === Office.AsyncResultStatus.Succeeded) {
+              const dialog = result.value;
+              
+              // Handle messages from the dialog
+              dialog.addEventHandler(Office.EventType.DialogMessageReceived, (arg) => {
+                try {
+                  const data = JSON.parse(arg.message);
+                  
+                  switch (data.action) {
+                    case 'insertReply':
+                      insertGeneratedReply(data.content);
+                      dialog.close();
+                      break;
+                      
+                    case 'close':
+                      dialog.close();
+                      break;
+                      
+                    case 'error':
+                      showError(data.message);
+                      break;
+                  }
+                } catch (error) {
+                  console.error('Error handling dialog message:', error);
+                }
+              });
+              
+              // Handle dialog close
+              dialog.addEventHandler(Office.EventType.DialogEventReceived, (arg) => {
+                console.log('Dialog event:', arg);
+              });
+              
+            } else {
+              console.error('Failed to open dialog:', result.error);
+              showError('Failed to open AI Reply dialog');
+            }
+          }
+        );
+      })
+      .catch(error => {
+        console.error('Error getting email context:', error);
+        showError('Error accessing email context');
+      });
+    
+  } catch (error) {
+    console.error('Error in showAIReplyModal:', error);
+    showError('Unexpected error occurred');
+  } finally {
+    event.completed();
+  }
+}
+
+// Function to show inbox triage modal
+function showInboxTriage(event) {
+  try {
+    console.log('Opening Inbox Triage Modal');
+    
+    // Open the triage dialog
+    Office.context.ui.displayDialogAsync(
+      'https://www.blociq.co.uk/addin/ai-triage-modal.html',
+      {
+        height: 80,
+        width: 70,
+        displayInIframe: true
+      },
+      (result) => {
+        if (result.status === Office.AsyncResultStatus.Succeeded) {
+          const dialog = result.value;
+          
+          // Handle messages from the dialog
+          dialog.addEventHandler(Office.EventType.DialogMessageReceived, (arg) => {
+            try {
+              const data = JSON.parse(arg.message);
+              
+              switch (data.action) {
+                case 'triageComplete':
+                  showSuccess(`Triage complete! Generated ${data.count} draft replies.`);
+                  dialog.close();
+                  break;
+                  
+                case 'close':
+                  dialog.close();
+                  break;
+                  
+                case 'error':
+                  showError(data.message);
+                  break;
+              }
+            } catch (error) {
+              console.error('Error handling triage dialog message:', error);
+            }
+          });
+          
+        } else {
+          console.error('Failed to open triage dialog:', result.error);
+          showError('Failed to open Inbox Triage dialog');
+        }
+      }
+    );
+    
+  } catch (error) {
+    console.error('Error in showInboxTriage:', error);
+    showError('Unexpected error occurred');
+  } finally {
+    event.completed();
+  }
+}
+
+// Get current email context
+async function getCurrentEmailContext() {
+  try {
+    const item = Office.context.mailbox.item;
+    if (!item) return null;
+
+    const [subject, body, from, to, conversationId] = await Promise.all([
+      getItemProperty(item.subject),
+      getItemProperty(item.body),
+      getItemProperty(item.from),
+      getItemProperty(item.to),
+      Promise.resolve(item.conversationId)
+    ]);
+
+    // Get email thread if available
+    let emailThread = null;
+    try {
+      emailThread = await getEmailThread(conversationId);
+    } catch (error) {
+      console.log('Could not retrieve email thread:', error);
+    }
+
+    return {
+      subject: subject || 'No subject',
+      body: body || 'No content',
+      from: typeof from === 'string' ? from : (from?.emailAddress || from?.displayName || 'Unknown'),
+      to: Array.isArray(to) ? to.map(t => t.emailAddress || t.displayName || t).join(', ') : 
+          (typeof to === 'string' ? to : (to?.emailAddress || to?.displayName || 'Unknown')),
+      itemId: item.itemId,
+      conversationId: conversationId,
+      emailThread: emailThread,
+      itemType: item.itemType, // Message or Appointment
+      isReply: subject && subject.toLowerCase().startsWith('re:'),
+      isForward: subject && (subject.toLowerCase().startsWith('fw:') || subject.toLowerCase().startsWith('fwd:'))
+    };
+
+  } catch (error) {
+    console.error('Error getting email context:', error);
+    throw error;
+  }
+}
+
+// Get email thread for better context
+async function getEmailThread(conversationId) {
+  return new Promise((resolve) => {
+    if (!conversationId) {
+      resolve(null);
+      return;
+    }
+
+    try {
+      // Try to get conversation items
+      Office.context.mailbox.getSelectedItemAsync((result) => {
+        if (result.status === Office.AsyncResultStatus.Succeeded) {
+          // This is a simplified approach - in production you'd want to
+          // use Graph API to get full conversation thread
+          resolve({
+            conversationId: conversationId,
+            itemCount: 1,
+            items: [result.value]
+          });
+        } else {
+          resolve(null);
+        }
+      });
+    } catch (error) {
+      console.error('Error getting email thread:', error);
+      resolve(null);
+    }
+  });
+}
+
+// Determine reply type based on context
+function determineReplyType(emailContext) {
+  if (!emailContext) return 'reply';
+  
+  const subject = emailContext.subject?.toLowerCase() || '';
+  
+  if (subject.startsWith('fw:') || subject.startsWith('fwd:')) {
+    return 'forward';
+  } else if (subject.startsWith('re:')) {
+    return 'reply';
+  } else {
+    // Default to reply for new compositions
+    return 'reply';
+  }
+}
+
+// Insert the generated reply into the email body
+function insertGeneratedReply(content) {
+  try {
+    console.log('Inserting generated reply');
+    
+    // Insert the content into the email body
+    Office.context.mailbox.item.body.setAsync(
+      content,
+      {
+        coercionType: Office.CoercionType.Text,
+        asyncContext: { action: 'insertReply' }
+      },
+      (result) => {
+        if (result.status === Office.AsyncResultStatus.Succeeded) {
+          console.log('Reply inserted successfully');
+          showSuccess('AI-generated reply has been inserted into your email.');
+        } else {
+          console.error('Failed to insert reply:', result.error);
+          showError('Failed to insert the generated reply. Please try copying and pasting manually.');
+        }
+      }
+    );
+    
+  } catch (error) {
+    console.error('Error inserting reply:', error);
+    showError('Error inserting the generated reply');
+  }
+}
+
+// Get item property safely
+function getItemProperty(property) {
+  return new Promise((resolve) => {
+    if (!property) {
+      resolve(null);
+      return;
+    }
+
+    if (typeof property === 'string') {
+      resolve(property);
+      return;
+    }
+
+    if (property.getAsync) {
+      property.getAsync((result) => {
+        if (result.status === Office.AsyncResultStatus.Succeeded) {
+          resolve(result.value);
+        } else {
+          resolve(null);
+        }
+      });
+    } else {
+      resolve(property);
+    }
+  });
+}
+
+// Show success notification
+function showSuccess(message) {
+  try {
+    Office.context.ui.messageParent(JSON.stringify({
+      action: 'notification',
+      type: 'success',
+      message: message
+    }));
+  } catch (error) {
+    console.log('Success:', message);
+  }
+}
+
+// Show error notification
+function showError(message) {
+  try {
+    Office.context.ui.messageParent(JSON.stringify({
+      action: 'notification',
+      type: 'error',
+      message: message
+    }));
+  } catch (error) {
+    console.error('Error:', message);
+  }
+}
+
+// Log outgoing emails automatically when they're sent
+Office.context.mailbox.addHandlerAsync(Office.EventType.ItemSend, async (event) => {
+  try {
+    console.log('Email send event detected');
+    
+    const emailContext = await getCurrentEmailContext();
+    if (emailContext) {
+      // Log the email to your communications system
+      await logEmailToSupabase(emailContext, 'outgoing');
+    }
+    
+  } catch (error) {
+    console.error('Error logging outgoing email:', error);
+  }
+});
+
+// Log email to Supabase communications system
+async function logEmailToSupabase(emailContext, direction = 'outgoing') {
+  try {
+    const logData = {
+      type: 'email',
+      direction: direction,
+      subject: emailContext.subject,
+      content: emailContext.body,
+      from_email: direction === 'outgoing' ? Office.context.mailbox.userProfile.emailAddress : emailContext.from,
+      to_email: direction === 'outgoing' ? emailContext.to : Office.context.mailbox.userProfile.emailAddress,
+      sent_at: new Date().toISOString(),
+      conversation_id: emailContext.conversationId,
+      outlook_item_id: emailContext.itemId,
+      is_reply: emailContext.isReply,
+      is_forward: emailContext.isForward,
+      user_email: Office.context.mailbox.userProfile.emailAddress,
+      source: 'outlook_addin'
+    };
+
+    // Extract building/property information from email content
+    const buildingInfo = await extractBuildingFromContent(emailContext);
+    if (buildingInfo) {
+      logData.building_id = buildingInfo.building_id;
+      logData.unit_id = buildingInfo.unit_id;
+      logData.leaseholder_id = buildingInfo.leaseholder_id;
+    }
+
+    // Send to your communications logging API
+    const response = await fetch('https://www.blociq.co.uk/api/communications/log', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(logData),
+    });
+
+    if (response.ok) {
+      console.log('Email logged successfully to communications system');
+    } else {
+      console.error('Failed to log email:', response.status);
+    }
+
+  } catch (error) {
+    console.error('Error logging email to Supabase:', error);
+  }
+}
+
+// Extract building information from email content
+async function extractBuildingFromContent(emailContext) {
+  try {
+    const response = await fetch('https://www.blociq.co.uk/api/ai/extract-building', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        content: `${emailContext.subject}\n\n${emailContext.body}`,
+        from_email: emailContext.from,
+        to_email: emailContext.to
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return data.building_info || null;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error extracting building info:', error);
+    return null;
+  }
+}
+
+// Register function commands
+Office.actions.associate('showAIReplyModal', showAIReplyModal);
+Office.actions.associate('showInboxTriage', showInboxTriage);
