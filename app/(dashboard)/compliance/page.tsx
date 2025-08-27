@@ -145,6 +145,7 @@ export default function CompliancePage() {
               <RefreshCw className="h-6 w-6 animate-spin text-blue-600" />
               <span className="text-lg text-gray-600">Loading compliance data...</span>
             </div>
+            <p className="text-sm text-gray-500 mt-2">Checking authentication and database access...</p>
           </div>
         </div>
       </div>
