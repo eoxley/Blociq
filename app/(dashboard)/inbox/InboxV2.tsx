@@ -342,46 +342,48 @@ export default function InboxV2() {
 
   return (
     <InboxContext.Provider value={contextValue}>
-      {/* Enhanced Modern Email Client Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-6 shadow-sm">
+      {/* Enhanced Modern Email Client Header with Full BlocIQ Design Magic */}
+      <div className="bg-gradient-to-r from-white via-blue-50/30 to-purple-50/30 border-b border-gray-200 px-8 py-8 shadow-lg backdrop-blur-sm">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <div className="relative">
-              <div className="w-12 h-12 bg-gradient-to-r from-[#4f46e5] via-[#7c3aed] to-[#a855f7] rounded-2xl flex items-center justify-center shadow-lg">
-                <MessageSquare className="h-6 w-6 text-white" />
+          <div className="flex items-center gap-8">
+            <div className="relative group">
+              <div className="w-16 h-16 bg-gradient-to-r from-[#4f46e5] via-[#7c3aed] to-[#a855f7] rounded-3xl flex items-center justify-center shadow-2xl group-hover:shadow-3xl transition-all duration-500 group-hover:scale-110">
+                <MessageSquare className="h-8 w-8 text-white" />
               </div>
-              {/* Floating sparkles */}
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
-              <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-cyan-400 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+              {/* Enhanced floating sparkles with more animation */}
+              <div className="absolute -top-2 -right-2 w-4 h-4 bg-yellow-400 rounded-full animate-pulse group-hover:animate-bounce"></div>
+              <div className="absolute -bottom-2 -left-2 w-3 h-3 bg-cyan-400 rounded-full animate-pulse group-hover:animate-bounce" style={{ animationDelay: '0.5s' }}></div>
+              <div className="absolute top-1/2 -right-3 w-2 h-2 bg-pink-400 rounded-full animate-ping"></div>
+              <div className="absolute top-1/2 -left-3 w-2 h-2 bg-green-400 rounded-full animate-ping" style={{ animationDelay: '1s' }}></div>
             </div>
             <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-[#4f46e5] to-[#a855f7] bg-clip-text text-transparent">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-[#4f46e5] via-[#7c3aed] to-[#a855f7] bg-clip-text text-transparent drop-shadow-sm">
                 Inbox
               </h1>
-              <div className="flex items-center gap-4 mt-2">
-                <p className="text-sm text-gray-600 flex items-center gap-2">
-                  <Users className="h-4 w-4" />
+              <div className="flex items-center gap-4 mt-3">
+                <p className="text-sm text-gray-600 flex items-center gap-2 bg-white/70 backdrop-blur-sm px-3 py-1 rounded-full border border-gray-200/50">
+                  <Users className="h-4 w-4 text-blue-500" />
                   {selectedFolder ? selectedFolder.displayName : 'Loading...'} • {totalMessages} messages
                 </p>
                 {unreadCount > 0 && (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 border border-blue-300 shadow-sm">
                     <TrendingUp className="h-3 w-3 mr-1" />
                     {unreadCount} unread
                   </span>
                 )}
                 {urgentMessages > 0 && (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-red-100 to-red-200 text-red-800 border border-red-300 shadow-sm">
                     <Zap className="h-3 w-3 mr-1" />
                     {urgentMessages} urgent
                   </span>
                 )}
                 {isMovingMessage && (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 border border-yellow-300 shadow-sm">
                     <RefreshCw className="h-3 w-3 animate-spin mr-1" />
                     Moving...
                   </span>
                 )}
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 border border-gray-300 shadow-sm">
                   <Clock className="h-3 w-3 mr-1" />
                   Last updated: {lastRefreshTime.toLocaleTimeString()}
                 </span>
@@ -389,21 +391,29 @@ export default function InboxV2() {
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <button
               onClick={() => setNewEmailModalOpen(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white rounded-xl hover:from-[#4338ca] hover:to-[#6d28d9] transition-all duration-200 shadow-lg hover:shadow-xl font-medium transform hover:scale-105"
+              className="group relative inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-[#4f46e5] via-[#7c3aed] to-[#a855f7] text-white rounded-2xl hover:from-[#4338ca] hover:via-[#6d28d9] hover:to-[#9333ea] transition-all duration-300 shadow-2xl hover:shadow-3xl font-semibold transform hover:scale-105 hover:-translate-y-1"
             >
-              <Plus className="h-5 w-5" />
-              New Email
+              <div className="relative">
+                <Plus className="h-6 w-6" />
+                <div className="absolute inset-0 bg-white/20 rounded-full animate-ping"></div>
+              </div>
+              <span className="text-lg">New Email</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </button>
             
             <button
               onClick={() => setDraftsPanelOpen(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:from-emerald-600 hover:to-teal-700 transition-all duration-200 shadow-lg hover:shadow-xl font-medium transform hover:scale-105"
+              className="group relative inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 text-white rounded-2xl hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-700 transition-all duration-300 shadow-2xl hover:shadow-3xl font-semibold transform hover:scale-105 hover:-translate-y-1"
             >
-              <FileText className="h-5 w-5" />
-              AI Drafts
+              <div className="relative">
+                <FileText className="h-6 w-6" />
+                <div className="absolute inset-0 bg-white/20 rounded-full animate-pulse"></div>
+              </div>
+              <span className="text-lg">AI Drafts</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </button>
             
             <TriageButton 
@@ -448,13 +458,16 @@ export default function InboxV2() {
         </div>
       </div>
 
-      {/* Enhanced Main Email Client Layout */}
-      <div className="flex h-[calc(100vh-180px)] bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      {/* Enhanced Main Email Client Layout with Full BlocIQ Design Magic */}
+      <div className="flex h-[calc(100vh-200px)] bg-gradient-to-br from-gray-50 via-blue-50/20 to-purple-50/20">
         {/* Left Column: Enhanced Folder Sidebar */}
-        <div className="w-80 bg-white border-r border-gray-200 flex flex-col shadow-sm">
-          <div className="p-6 border-b border-gray-200 bg-gradient-to-b from-gray-50/50 to-white">
+        <div className="w-80 bg-white/80 backdrop-blur-sm border-r border-gray-200/50 flex flex-col shadow-xl">
+          <div className="p-6 border-b border-gray-200/50 bg-gradient-to-b from-white/90 via-blue-50/30 to-purple-50/30">
             <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-purple-500" />
+              <div className="relative">
+                <Sparkles className="h-4 w-4 text-purple-500" />
+                <div className="absolute inset-0 bg-purple-400/30 rounded-full animate-ping"></div>
+              </div>
               Folders
             </h3>
             <FolderSidebar 
@@ -471,29 +484,30 @@ export default function InboxV2() {
         </div>
 
         {/* Middle Column: Enhanced Message List */}
-        <div className="w-96 bg-white border-r border-gray-200 flex flex-col shadow-sm">
-          <div className="p-6 border-b border-gray-200 bg-gradient-to-b from-gray-50/50 to-white">
+        <div className="w-96 bg-white/80 backdrop-blur-sm border-r border-gray-200/50 flex flex-col shadow-xl">
+          <div className="p-6 border-b border-gray-200/50 bg-gradient-to-b from-white/90 via-blue-50/30 to-purple-50/30">
             <div className="flex items-center gap-3 mb-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <div className="relative flex-1 group">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" />
                 <input
                   type="text"
                   placeholder="Search messages..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent shadow-sm transition-all duration-200"
+                  className="w-full pl-12 pr-4 py-3 border border-gray-300/50 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent shadow-lg transition-all duration-300 bg-white/80 backdrop-blur-sm focus:bg-white focus:shadow-2xl"
                 />
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/10 to-purple-500/0 rounded-2xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-300"></div>
               </div>
               <button
                 onClick={() => setShowUnreadOnly(!showUnreadOnly)}
-                className={`p-3 rounded-xl transition-all duration-200 ${
+                className={`group relative p-3 rounded-2xl transition-all duration-300 ${
                   showUnreadOnly 
-                    ? 'bg-blue-100 text-blue-700 border border-blue-200' 
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 border border-transparent'
+                    ? 'bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700 border border-blue-300 shadow-lg' 
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-200 border border-transparent hover:border-gray-300 hover:shadow-lg'
                 }`}
                 title="Show unread only"
               >
-                <Filter className="h-4 w-4" />
+                <Filter className={`h-4 w-4 transition-transform duration-200 ${showUnreadOnly ? 'scale-110' : 'group-hover:scale-110'}`} />
               </button>
             </div>
           </div>
@@ -514,7 +528,7 @@ export default function InboxV2() {
         </div>
 
         {/* Right Column: Enhanced Message Preview */}
-        <div className="flex-1 bg-white flex flex-col shadow-sm">
+        <div className="flex-1 bg-white/80 backdrop-blur-sm flex flex-col shadow-xl">
           {selectedMessage ? (
             <MessagePreview 
               selectedMessage={selectedMessage}
@@ -524,18 +538,21 @@ export default function InboxV2() {
               triageResult={triage}
             />
           ) : (
-            <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-50 to-white">
-              <div className="text-center">
+            <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-50/50 via-blue-50/20 to-purple-50/20">
+              <div className="text-center group">
                 <div className="relative mb-6">
-                  <MessageSquare className="h-20 w-20 text-gray-300 mx-auto" />
-                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full flex items-center justify-center">
+                  <MessageSquare className="h-20 w-20 text-gray-300 mx-auto group-hover:text-gray-400 transition-colors duration-300" />
+                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full flex items-center justify-center shadow-lg">
                     <Zap className="h-4 w-4 text-white" />
                   </div>
+                  {/* Enhanced floating elements */}
+                  <div className="absolute -top-4 -left-4 w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
+                  <div className="absolute -bottom-4 -right-4 w-2 h-2 bg-cyan-400 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
                 </div>
                 <h3 className="text-xl font-medium text-gray-900 mb-3">No message selected</h3>
                 <p className="text-gray-500 mb-4">Select a message from the list to preview it here</p>
-                <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
-                  <Sparkles className="h-4 w-4" />
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-400 bg-white/70 backdrop-blur-sm px-4 py-2 rounded-full border border-gray-200/50">
+                  <Sparkles className="h-4 w-4 text-purple-500" />
                   <span>Use the AskBlocIQ AI button for assistance</span>
                 </div>
               </div>
@@ -544,28 +561,46 @@ export default function InboxV2() {
         </div>
       </div>
 
-      {/* Enhanced Success/Error Message Display */}
+      {/* Enhanced Success/Error Message Display with Full BlocIQ Design Magic */}
       {moveSuccess && (
         <div className={cn(
-          "fixed bottom-6 right-6 px-6 py-4 rounded-2xl shadow-2xl z-50 animate-in slide-in-from-bottom-2 transition-all duration-300 border",
-          moveSuccess.message.includes('✅') ? 'bg-green-500 text-white border-green-400' : 
-          moveSuccess.message.includes('❌') ? 'bg-red-500 text-white border-red-400' : 
-          'bg-blue-500 text-white border-blue-400'
+          "fixed bottom-6 right-6 px-8 py-5 rounded-3xl shadow-2xl z-50 animate-in slide-in-from-bottom-2 transition-all duration-500 border backdrop-blur-sm",
+          moveSuccess.message.includes('✅') ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white border-green-400 shadow-green-500/25' : 
+          moveSuccess.message.includes('❌') ? 'bg-gradient-to-r from-red-500 to-rose-600 text-white border-red-400 shadow-red-500/25' : 
+          'bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-blue-400 shadow-blue-500/25'
         )}>
-          <div className="flex items-center gap-3">
-            {moveSuccess.message.includes('✅') && <span className="text-xl">✅</span>}
-            {moveSuccess.message.includes('❌') && <span className="text-xl">❌</span>}
-            {!moveSuccess.message.includes('✅') && !moveSuccess.message.includes('❌') && <span className="text-xl">⏳</span>}
-            <span className="font-medium">{moveSuccess.message}</span>
+          <div className="flex items-center gap-4">
+            {moveSuccess.message.includes('✅') && (
+              <div className="relative">
+                <span className="text-2xl">✅</span>
+                <div className="absolute inset-0 bg-white/30 rounded-full animate-ping"></div>
+              </div>
+            )}
+            {moveSuccess.message.includes('❌') && (
+              <div className="relative">
+                <span className="text-2xl">❌</span>
+                <div className="absolute inset-0 bg-white/30 rounded-full animate-ping"></div>
+              </div>
+            )}
+            {!moveSuccess.message.includes('✅') && !moveSuccess.message.includes('❌') && (
+              <div className="relative">
+                <span className="text-2xl">⏳</span>
+                <div className="absolute inset-0 bg-white/30 rounded-full animate-ping"></div>
+              </div>
+            )}
+            <span className="font-semibold text-lg">{moveSuccess.message}</span>
           </div>
         </div>
       )}
 
       {triageSuccess && (
-        <div className="fixed bottom-6 right-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-4 rounded-2xl shadow-2xl z-50 animate-in slide-in-from-bottom-2 border border-green-400">
-          <div className="flex items-center gap-3">
-            <Sparkles className="h-5 w-5" />
-            <span className="font-medium">{triageSuccess.message}</span>
+        <div className="fixed bottom-6 right-6 bg-gradient-to-r from-green-500 via-emerald-500 to-teal-600 text-white px-8 py-5 rounded-3xl shadow-2xl z-50 animate-in slide-in-from-bottom-2 border border-emerald-400 backdrop-blur-sm shadow-emerald-500/25">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <Sparkles className="h-6 w-6" />
+              <div className="absolute inset-0 bg-white/30 rounded-full animate-ping"></div>
+            </div>
+            <span className="font-semibold text-lg">{triageSuccess.message}</span>
           </div>
         </div>
       )}
@@ -582,7 +617,7 @@ export default function InboxV2() {
         onClose={() => setNewEmailModalOpen(false)}
       />
 
-      {/* Enhanced Ask BlocIQ AI Assistant */}
+      {/* Enhanced Ask BlocIQ AI Assistant with Pulsating Brain Design */}
       <AskBlocIQButton selectedMessage={selectedMessage} />
 
       {/* AI Drafts Panel */}
