@@ -11,6 +11,7 @@ type Message = {
   content: string;
   timestamp: Date;
   files?: UploadedFile[];
+  documentAnalysis?: DocumentAnalysis[]; // Added for document analysis results
 };
 
 type UploadedFile = {
@@ -19,11 +20,45 @@ type UploadedFile = {
   name: string;
   size: number;
   type: string;
+  extractionMethod?: 'ocr' | 'enhanced' | 'standard'; // Added for extraction method
+};
+
+type SuggestedAction = {
+  type: 'todo';
+  title: string;
+  priority: 'High' | 'Medium' | 'Low';
+  due_date?: string | null;
+  description?: string;
+};
+
+type DocumentSearchResult = {
+  id: string;
+  title: string;
+  summary: string;
+  doc_url: string;
+  uploaded_at: string;
+  expiry_date?: string;
 };
 
 type AIResponse = {
   success: boolean;
   response: string;
+  documentSearch?: boolean;
+  documents?: DocumentSearchResult[];
+  suggested_action?: SuggestedAction;
+  context?: {
+    majorWorksUsed?: boolean;
+    complianceUsed?: boolean;
+  };
+};
+
+// Document analysis types (mirroring the main component)
+type DocumentAnalysis = {
+  filename: string;
+  summary: string;
+  suggestedActions: string[];
+  extractionMethod: string;
+  extractedText: string;
 };
 
 export default function PublicAskBlocIQ() {
@@ -50,6 +85,12 @@ export default function PublicAskBlocIQ() {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   
+  // Enhanced AI functionality state
+  const [suggestedAction, setSuggestedAction] = useState<SuggestedAction | null>(null);
+  const [documentResults, setDocumentResults] = useState<DocumentSearchResult[]>([]);
+  const [isDocumentSearch, setIsDocumentSearch] = useState(false);
+  const [usedMajorWorksData, setUsedMajorWorksData] = useState(false);
+  
   // Session management
   const [sessionId, setSessionId] = useState<string | null>(null);
   
@@ -58,9 +99,31 @@ export default function PublicAskBlocIQ() {
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
 
   // File handling
-  const acceptedFileTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+  const acceptedFileTypes = [
+    'application/pdf', 
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 
+    'text/plain',
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/gif',
+    'image/bmp',
+    'image/tiff',
+    'image/webp'
+  ];
   const maxFileSize = 10 * 1024 * 1024; // 10MB
   const maxFiles = 5;
+
+  // Suggested prompts for public users
+  const getSuggestedPrompts = () => [
+    "What are the key compliance requirements for UK residential blocks?",
+    "How do I handle a leak complaint from a leaseholder?",
+    "What's the process for Section 20 consultation?",
+    "How do I draft a professional email to leaseholders?",
+    "What are the fire safety requirements for residential buildings?",
+    "How do I handle service charge queries?",
+    "What maintenance schedules are recommended for residential blocks?"
+  ];
 
   // Check if user has already unlocked and show guide popup on first visit
   useEffect(() => {
