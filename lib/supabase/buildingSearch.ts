@@ -328,7 +328,7 @@ async function searchBuilding(buildingName: string, supabaseClient: any): Promis
     console.log('🔍 Searching for building:', { original: buildingName, clean: cleanName });
     
     // Try exact match first
-    let { data: building, error } = await supabaseClient
+    const { data: building, error } = await supabaseClient
       .from('buildings')
       .select('id, name, address, unit_count, building_manager_name, building_manager_email')
       .eq('name', buildingName)

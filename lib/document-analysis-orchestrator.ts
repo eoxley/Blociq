@@ -3,6 +3,11 @@ import { analyzeEICR, EICRAnalysis } from './document-analyzers/eicr-analyzer';
 import { analyzeGasSafety, GasSafetyAnalysis } from './document-analyzers/gas-safety-analyzer';
 import { analyzeFireRiskAssessment, FireRiskAssessmentAnalysis } from './document-analyzers/fire-assessment-analyzer';
 import { analyzeMajorWorks, MajorWorksAnalysis } from './document-analyzers/major-works-analyzer';
+import { analyzeSection20, Section20Analysis } from './document-analyzers/section20-analyzer';
+import { analyzeAsbestosSurvey, AsbestosSurveyAnalysis } from './document-analyzers/asbestos-survey-analyzer';
+import { analyzeLiftInspection, LiftInspectionAnalysis } from './document-analyzers/lift-inspection-analyzer';
+import { analyzeInsuranceValuation, InsuranceValuationAnalysis } from './document-analyzers/insurance-valuation-analyzer';
+import { analyzeBuildingSurvey, BuildingSurveyAnalysis } from './document-analyzers/building-survey-analyzer';
 import { analyzeGeneralDocument, GeneralDocumentAnalysis } from './document-analyzers/general-analyzer';
 
 export type DocumentAnalysis = 
@@ -10,6 +15,11 @@ export type DocumentAnalysis =
   | GasSafetyAnalysis 
   | FireRiskAssessmentAnalysis 
   | MajorWorksAnalysis
+  | Section20Analysis
+  | AsbestosSurveyAnalysis
+  | LiftInspectionAnalysis
+  | InsuranceValuationAnalysis
+  | BuildingSurveyAnalysis
   | GeneralDocumentAnalysis;
 
 export interface ComprehensiveDocumentAnalysis {
@@ -107,10 +117,20 @@ async function routeToAnalyzer(
       return analyzeMajorWorks(extractedText, filename);
       
     case 'section20':
+      return analyzeSection20(extractedText, filename);
+      
     case 'asbestos-survey':
+      return analyzeAsbestosSurvey(extractedText, filename);
+      
     case 'lift-inspection':
+      return analyzeLiftInspection(extractedText, filename);
+      
     case 'insurance-valuation':
+      return analyzeInsuranceValuation(extractedText, filename);
+      
     case 'building-survey':
+      return analyzeBuildingSurvey(extractedText, filename);
+      
     case 'other':
     default:
       return analyzeGeneralDocument(extractedText, filename);
@@ -458,7 +478,7 @@ Original Question: ${originalMessage}`;
   
   const docTypeDescription = getDocumentTypeDescription(docType);
   
-  let prompt = `You are analyzing a ${docTypeDescription} for a UK leasehold block management platform called BlocIQ.
+  const prompt = `You are analyzing a ${docTypeDescription} for a UK leasehold block management platform called BlocIQ.
 
 Document: ${filename}
 Original User Question: ${originalMessage}

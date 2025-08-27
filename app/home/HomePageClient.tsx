@@ -511,8 +511,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       // Handle file uploads separately from text-only requests
       if (uploadedFiles.length > 0) {
         // Process multiple files sequentially
-        let allSummaries: string[] = []
-        let allSuggestions: string[] = []
+        const allSummaries: string[] = []
+        const allSuggestions: string[] = []
         
         for (const uploadedFile of uploadedFiles) {
           try {

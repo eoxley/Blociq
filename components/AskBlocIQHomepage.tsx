@@ -186,7 +186,7 @@ export default function AskBlocIQHomepage() {
     try {
       // Create FormData if files are uploaded
       let requestBody: FormData | string
-      let headers: Record<string, string> = {
+      const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       }
 

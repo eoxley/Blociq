@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
           const parsedResult = parseTriageResult(result);
 
           // Perform actions on the email if requested
-          let actionsPerformed = {
+          const actionsPerformed = {
             markedAsRead: false,
             categorized: false,
             tagged: false,
