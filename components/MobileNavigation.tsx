@@ -13,7 +13,7 @@ import { BlocIQBadge } from '@/components/ui/blociq-badge';
 const navItems = [
   { label: "Home", icon: "🏠", href: "/home", comingSoon: false, description: "Dashboard overview" },
   { label: "Inbox Overview", icon: "📥", href: "/inbox-overview", comingSoon: false, description: "Email triage dashboard" },
-      { label: "Buildings", icon: "🏢", href: "/dashboard/buildings", comingSoon: false, description: "Property portfolio" },
+      { label: "Buildings", icon: "🏢", href: "/buildings", comingSoon: false, description: "Property portfolio" },
   { label: "Compliance", icon: "🛡️", href: "/compliance", comingSoon: false, description: "Regulatory tracking" },
   { label: "Communications", icon: "📣", href: "/communications", comingSoon: false, description: "Letter & email templates" },
   { label: "Major Works", icon: "🔧", href: "/major-works", comingSoon: false, description: "Project management" },
