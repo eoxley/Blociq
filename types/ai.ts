@@ -22,6 +22,7 @@ export interface AIResponse {
   response?: string;
   error?: string;
   documentAnalysis?: DocumentAnalysis[];
+  results?: DocumentAnalysis[]; // Added for document analysis results from API
 }
 
 export interface SummarizeAndSuggestResult {
