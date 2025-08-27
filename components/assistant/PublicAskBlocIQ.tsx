@@ -725,6 +725,87 @@ export default function PublicAskBlocIQ() {
                           </div>
                         )}
                         
+                        {/* Document Analysis Results */}
+                        {message.role === 'assistant' && message.documentAnalysis && (
+                          <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
+                            <h4 className="font-semibold text-sm mb-2 text-gray-800">
+                              📊 Document Analysis Results
+                            </h4>
+                            <div className="space-y-2 text-sm">
+                              {message.documentAnalysis.summary && (
+                                <div>
+                                  <span className="font-medium text-gray-700">Summary:</span>
+                                  <p className="text-gray-600 mt-1">{message.documentAnalysis.summary}</p>
+                                </div>
+                              )}
+                              {message.documentAnalysis.complianceStatus && (
+                                <div>
+                                  <span className="font-medium text-gray-700">Compliance Status:</span>
+                                  <p className="text-gray-600 mt-1">{message.documentAnalysis.complianceStatus}</p>
+                                </div>
+                              )}
+                              {message.documentAnalysis.keyDates && message.documentAnalysis.keyDates.length > 0 && (
+                                <div>
+                                  <span className="font-medium text-gray-700">Key Dates:</span>
+                                  <ul className="text-gray-600 mt-1 space-y-1">
+                                    {message.documentAnalysis.keyDates.map((date, index) => (
+                                      <li key={index} className="flex justify-between">
+                                        <span>{date.description}</span>
+                                        <span className="text-mono">{date.date}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                              {message.documentAnalysis.actionItems && message.documentAnalysis.actionItems.length > 0 && (
+                                <div>
+                                  <span className="font-medium text-gray-700">Action Items:</span>
+                                  <ul className="text-gray-600 mt-1 space-y-1">
+                                    {message.documentAnalysis.actionItems.map((item, index) => (
+                                      <li key={index} className="flex items-center gap-2">
+                                        <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                                        <span>{item.description}</span>
+                                        {item.priority && (
+                                          <span className={`px-2 py-0.5 text-xs rounded ${
+                                            item.priority === 'high' ? 'bg-red-100 text-red-700' :
+                                            item.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                            'bg-green-100 text-green-700'
+                                          }`}>
+                                            {item.priority}
+                                          </span>
+                                        )}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Suggested Action Panel */}
+                        {message.role === 'assistant' && (
+                          <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                            <h4 className="font-semibold text-sm mb-2 text-blue-800">
+                              💡 Suggested Actions
+                            </h4>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => toast.info('Add to To-Do feature available for BlocIQ clients')}
+                                className="flex items-center gap-1 px-3 py-1.5 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                              >
+                                ✅ Add to To-Do
+                              </button>
+                              <button
+                                onClick={() => toast.info('Add to Calendar feature available for BlocIQ clients')}
+                                className="flex items-center gap-1 px-3 py-1.5 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
+                              >
+                                📅 Add to Calendar
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                        
                         {/* Files */}
                         {message.files && message.files.length > 0 && (
                           <div className="mt-3 space-y-2">
