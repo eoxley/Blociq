@@ -34,8 +34,7 @@ export default function InboxOverviewPage() {
   const [summary, setSummary] = useState<InboxSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [dbHealth, setDbHealth] = useState<any>(null);
-  const [checkingHealth, setCheckingHealth] = useState(false);
+
 
   const fetchInboxSummary = async () => {
     try {
@@ -65,23 +64,7 @@ export default function InboxOverviewPage() {
     fetchInboxSummary();
   }, []);
 
-  const checkDatabaseHealth = async () => {
-    try {
-      setCheckingHealth(true);
-      const response = await fetch('/api/health/database');
-      if (response.ok) {
-        const result = await response.json();
-        setDbHealth(result);
-        console.log('Database health check result:', result);
-      } else {
-        console.error('Database health check failed:', response.status);
-      }
-    } catch (err) {
-      console.error('Error checking database health:', err);
-    } finally {
-      setCheckingHealth(false);
-    }
-  };
+
 
   if (loading) {
     return (
@@ -192,89 +175,7 @@ export default function InboxOverviewPage() {
             </div>
           </div>
 
-          {/* Fallback Warning */}
-          {summary.fallback && (
-            <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <div className="flex items-center space-x-2 text-yellow-800">
-                <AlertCircle className="h-5 w-5" />
-                <h3 className="text-sm font-medium">Limited Functionality</h3>
-              </div>
-              <p className="mt-2 text-sm text-yellow-700">
-                Some database tables are currently inaccessible. This may be due to:
-              </p>
-              <ul className="mt-2 text-sm text-yellow-700 list-disc list-inside space-y-1">
-                <li>Row Level Security (RLS) policy restrictions</li>
-                <li>Missing or misconfigured database tables</li>
-                <li>Authentication or permission issues</li>
-              </ul>
-              <div className="mt-3 flex items-center space-x-3">
-                <p className="text-sm text-yellow-700">
-                  Contact your administrator to resolve these database access issues.
-                </p>
-                <BlocIQButton
-                  onClick={checkDatabaseHealth}
-                  disabled={checkingHealth}
-                  className="text-xs px-3 py-1"
-                >
-                  {checkingHealth ? (
-                    <>
-                      <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
-                      Checking...
-                    </>
-                  ) : (
-                    'Check Database Health'
-                  )}
-                </BlocIQButton>
-              </div>
-            </div>
-          )}
 
-          {/* Database Health Results */}
-          {dbHealth && (
-            <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-2 text-blue-800">
-                  <AlertCircle className="h-5 w-5" />
-                  <h3 className="text-sm font-medium">Database Health Check Results</h3>
-                </div>
-                <Badge variant={dbHealth.overallHealth === 'healthy' ? 'default' : 'destructive'}>
-                  {dbHealth.overallHealth}
-                </Badge>
-              </div>
-              
-              <div className="text-sm text-blue-700 space-y-2">
-                <p><strong>Summary:</strong> {dbHealth.summary.accessibleTables}/{dbHealth.summary.totalTables} tables accessible</p>
-                
-                {dbHealth.recommendations && dbHealth.recommendations.length > 0 && (
-                  <div>
-                    <p className="font-medium mt-3 mb-2">Recommendations:</p>
-                    <ul className="list-disc list-inside space-y-1">
-                      {dbHealth.recommendations.map((rec: string, index: number) => (
-                        <li key={index}>{rec}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                
-                <details className="mt-3">
-                  <summary className="cursor-pointer font-medium">Detailed Table Status</summary>
-                  <div className="mt-2 space-y-2">
-                    {Object.entries(dbHealth.tableHealth).map(([tableName, status]: [string, any]) => (
-                      <div key={tableName} className="flex items-center justify-between text-xs">
-                        <span className="font-mono">{tableName}</span>
-                        <Badge 
-                          variant={status.accessible ? 'default' : 'destructive'}
-                          className="text-xs"
-                        >
-                          {status.accessible ? '✅' : '❌'}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </details>
-              </div>
-            </div>
-          )}
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8">

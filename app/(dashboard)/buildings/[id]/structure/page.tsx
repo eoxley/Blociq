@@ -34,7 +34,7 @@ export default async function BuildingStructurePage({ params }: PageProps) {
 
     if (buildingError || !building) {
       console.error('Building not found:', buildingError)
-      redirect('/dashboard/buildings')
+      redirect('/buildings')
     }
 
     return (
@@ -49,7 +49,7 @@ export default async function BuildingStructurePage({ params }: PageProps) {
               </div>
               <div className="flex items-center space-x-4">
                 <a
-                  href={`/dashboard/buildings/${params.id}`}
+                  href={`/buildings/${params.id}`}
                   className="text-sm text-gray-500 hover:text-gray-700"
                 >
                   ← Back to Building
@@ -84,7 +84,7 @@ export default async function BuildingStructurePage({ params }: PageProps) {
             {error instanceof Error ? error.message : 'An unexpected error occurred'}
           </p>
           <a
-            href="/dashboard/buildings"
+            href="/buildings"
             className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
           >
             Back to Buildings

@@ -2,7 +2,7 @@
 
 ## 🚨 **Root Cause Identified**
 
-The compliance system was throwing **HTTP 400 errors** because multiple components were trying to navigate to `/buildings` instead of `/dashboard/buildings`. The route `/buildings` doesn't exist, causing the server to return a 400 Bad Request error.
+The compliance system was throwing **HTTP 400 errors** because multiple components were trying to navigate to `/dashboard/buildings` instead of `/buildings`. The route `/dashboard/buildings` doesn't exist, causing the server to return a 400 Bad Request error.
 
 ## 🔍 **Error Analysis**
 
@@ -12,7 +12,7 @@ The compliance system was throwing **HTTP 400 errors** because multiple componen
 [Error] ❌ Error fetching compliance data: – Object
 ```
 
-**The Problem**: Components were calling `/buildings` (non-existent route) instead of `/dashboard/buildings` (correct route)
+**The Problem**: Components were calling `/dashboard/buildings` (non-existent route) instead of `/buildings` (correct route)
 
 ## ✅ **Components Fixed**
 
@@ -42,7 +42,7 @@ The compliance system was throwing **HTTP 400 errors** because multiple componen
 
 ## 🚀 **What's Fixed Now**
 
-✅ **All navigation links** now point to `/dashboard/buildings`
+✅ **All navigation links** now point to `/buildings`
 ✅ **Building detail pages** have correct routing
 ✅ **Search components** navigate to correct routes
 ✅ **Mobile navigation** uses proper paths

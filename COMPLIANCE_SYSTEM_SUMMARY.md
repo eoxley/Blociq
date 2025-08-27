@@ -15,7 +15,7 @@ The BlocIQ Compliance System has been completely rebuilt with a modern, comprehe
   - BlocIQ AI integration for compliance queries
   - Responsive design with BlocIQ branding
 
-### **2. Building-Specific Page (`/dashboard/buildings/[id]/compliance/page.tsx`)**
+### **2. Building-Specific Page (`/buildings/[id]/compliance/page.tsx`)**
 - **Purpose**: Detailed compliance management for individual buildings
 - **Features**:
   - Building-specific compliance overview
