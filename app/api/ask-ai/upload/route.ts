@@ -119,7 +119,7 @@ export async function POST(req: Request) {
       }
 
       const ab = await file.arrayBuffer()
-      const text = await extractText(file)
+      const text = await extractText(new Uint8Array(ab), file.name)
       const out = await summarizeAndSuggest(text.text, file.name)
       
       // Determine extraction method for user feedback
