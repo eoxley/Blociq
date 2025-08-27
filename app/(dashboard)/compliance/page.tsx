@@ -20,7 +20,8 @@ import {
   Users,
   Sparkles
 } from 'lucide-react'
-import { BlocIQButton } from '@/components/ui/blociq-button'
+import AssetManagementModal from '@/components/compliance/AssetManagementModal'
+import AskBlocIQ from '@/components/AskBlocIQ'
 
 // Types
 interface ComplianceAsset {
@@ -100,6 +101,8 @@ export default function CompliancePage() {
   const [filterCategory, setFilterCategory] = useState<string>('all')
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [assetManagementOpen, setAssetManagementOpen] = useState(false)
+  const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null)
 
   useEffect(() => {
     fetchComplianceData()
@@ -118,76 +121,49 @@ export default function CompliancePage() {
 
       console.log('🔐 User authenticated:', session.user.id)
 
-      // Fetch all buildings the user manages
-      const { data: buildingsData, error: buildingsError } = await supabase
-        .from('buildings')
-        .select('id, name, is_hrb')
-        .order('name')
-
-      if (buildingsError) {
-        console.error('❌ Buildings query error:', buildingsError)
-        throw buildingsError
+      // Use the new compliance overview API endpoint
+      const response = await fetch('/api/compliance/overview')
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('❌ Compliance overview API error:', response.status, errorText)
+        throw new Error(`Failed to fetch compliance data: ${response.status}`)
       }
 
-      const userBuildings = buildingsData || []
-      console.log('✅ Buildings fetched:', userBuildings.length)
-
-      // Fetch compliance data for all buildings
-      const { data, error } = await supabase
-        .from('building_compliance_assets')
-        .select(`
-          *,
-          buildings (id, name, is_hrb),
-          compliance_assets (id, title, category, description, frequency_months, is_required),
-          building_documents (id, file_url, uploaded_at)
-        `)
-        .in('building_id', userBuildings.map(b => b.id))
-        .order('next_due_date', { ascending: true })
-
-      if (error) {
-        console.error('❌ Compliance data query error:', error)
-        throw error
+      const apiData = await response.json()
+      if (!apiData.success) {
+        throw new Error(apiData.error || 'Failed to fetch compliance data')
       }
 
-      console.log('✅ Compliance data fetched:', data?.length || 0, 'items')
-      setComplianceData(data || [])
+      const { overview, summary: apiSummary } = apiData.data
+      console.log('✅ Compliance overview fetched:', overview?.length || 0, 'buildings')
 
-      // Process data to create building summaries
-      const buildingSummaries = userBuildings.map(building => {
-        const buildingAssets = data?.filter(item => item.building_id === building.id) || []
-        const compliant = buildingAssets.filter(item => item.status === 'compliant').length
-        const overdue = buildingAssets.filter(item => item.status === 'overdue').length
-        const upcoming = buildingAssets.filter(item => item.status === 'upcoming').length
-        const notApplied = buildingAssets.filter(item => item.status === 'not_applied').length
-
-        return {
-          ...building,
-          compliance_assets_count: buildingAssets.length,
-          compliant_count: compliant,
-          overdue_count: overdue,
-          upcoming_count: upcoming,
-          not_applied_count: notApplied
-        }
-      })
+      // Transform API data to match our component structure
+      const buildingSummaries = overview.map((building: any) => ({
+        id: building.building_id,
+        name: building.building_name,
+        is_hrb: false, // We'll get this from buildings table
+        compliance_assets_count: building.total_assets,
+        compliant_count: building.compliant_assets,
+        overdue_count: building.overdue_assets,
+        upcoming_count: building.due_soon_assets,
+        not_applied_count: building.pending_assets
+      }))
 
       setBuildings(buildingSummaries)
 
-      // Calculate overall summary
-      const totalAssets = data?.length || 0
-      const compliant = data?.filter(item => item.status === 'compliant').length || 0
-      const overdue = data?.filter(item => item.status === 'overdue').length || 0
-      const upcoming = data?.filter(item => item.status === 'upcoming').length || 0
-      const notApplied = data?.filter(item => item.status === 'not_applied').length || 0
-
+      // Set summary from API
       setSummary({
-        total_buildings: userBuildings.length,
-        total_assets: totalAssets,
-        compliant_count: compliant,
-        overdue_count: overdue,
-        upcoming_count: upcoming,
-        not_applied_count: notApplied,
-        compliance_percentage: totalAssets > 0 ? Math.round((compliant / totalAssets) * 100) : 0
+        total_buildings: apiSummary.totalBuildings,
+        total_assets: apiSummary.totalAssets,
+        compliant_count: apiSummary.compliantAssets,
+        overdue_count: apiSummary.overdueAssets,
+        upcoming_count: apiSummary.dueSoonAssets,
+        not_applied_count: apiSummary.pendingAssets,
+        compliance_percentage: apiSummary.totalAssets > 0 ? Math.round((apiSummary.compliantAssets / apiSummary.totalAssets) * 100) : 0
       })
+
+      // For now, set empty compliance data since we're using the overview API
+      setComplianceData([])
 
     } catch (err) {
       console.error('❌ Error fetching compliance data:', err)
@@ -195,6 +171,15 @@ export default function CompliancePage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const openAssetManagement = (building: Building) => {
+    setSelectedBuilding(building)
+    setAssetManagementOpen(true)
+  }
+
+  const handleAssetsUpdated = () => {
+    fetchComplianceData()
   }
 
   const getStatusIcon = (status: string) => {
@@ -229,8 +214,10 @@ export default function CompliancePage() {
     }
   }
 
-  const getCategoryColor = (category: string) => {
-    switch (category?.toLowerCase()) {
+  const getCategoryColor = (category: string | undefined) => {
+    if (!category) return 'bg-gray-100 text-gray-800 border-gray-200'
+    
+    switch (category.toLowerCase()) {
       case 'safety':
         return 'bg-red-100 text-red-800 border-red-200'
       case 'legal':
@@ -338,8 +325,8 @@ export default function CompliancePage() {
                 <RefreshCw className="h-5 w-5" />
               </button>
               
-              <BlocIQButton
-                buildingId={null}
+              <AskBlocIQ
+                buildingId={undefined}
                 buildingName="Compliance System"
                 context="compliance"
                 placeholder="Ask about compliance requirements..."
@@ -530,7 +517,7 @@ export default function CompliancePage() {
                 {/* Quick Actions */}
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => router.push(`/buildings/${building.id}/compliance`)}
+                    onClick={() => openAssetManagement(building)}
                     className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 text-sm rounded-lg hover:bg-blue-100 transition-colors"
                   >
                     <Plus className="h-4 w-4" />
@@ -647,6 +634,19 @@ export default function CompliancePage() {
               </button>
             )}
           </div>
+        )}
+
+        {/* Asset Management Modal */}
+        {selectedBuilding && (
+          <AssetManagementModal
+            building={selectedBuilding}
+            isOpen={assetManagementOpen}
+            onClose={() => {
+              setAssetManagementOpen(false)
+              setSelectedBuilding(null)
+            }}
+            onAssetsUpdated={handleAssetsUpdated}
+          />
         )}
       </div>
     </div>
