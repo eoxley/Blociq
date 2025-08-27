@@ -126,18 +126,22 @@ export async function POST(request: NextRequest) {
         // Generate AI summary using OpenAI
         if (process.env.OPENAI_API_KEY) {
           try {
-            const prompt = `Based on the following lease clauses extracted from a property lease document, provide a clear, concise summary in plain English. Focus on the key terms and conditions that would be most important for property managers and leaseholders to understand.
+            const prompt = `You are analysing a UK residential lease. Using the extracted clauses below, produce a structured summary with key metadata. If an item is missing, state "Not specified".
 
 Lease Clauses:
 ${Object.entries(clauses).map(([term, clause]) => `${term}: ${clause.text || 'Not found'}`).join('\n')}
 
-Please provide:
-1. A brief overview of the lease type and key terms
-2. Important clauses that were found and their significance
-3. Any notable conditions or restrictions
-4. A confidence assessment of the extraction quality
+Include in your summary:
+1. Leaseholder (tenant) name
+2. Unit or property address/identifier
+3. Lease start date and term or expiry date
+4. Ground rent and service charge obligations
+5. Repair and maintenance responsibilities
+6. Restrictions (e.g. pets, alterations, subletting)
+7. Any other notable conditions or covenants
+8. A confidence assessment of the extraction quality
 
-Keep the summary professional but accessible, suitable for property management professionals.`;
+Conclude with a one-sentence overall summary. Use professional, concise language suitable for property managers.`;
 
             const completion = await openai.chat.completions.create({
               model: 'gpt-4o',

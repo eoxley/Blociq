@@ -154,6 +154,7 @@ export async function POST(req: Request) {
       const ab = await file.arrayBuffer()
       const text = await extractText(new Uint8Array(ab), file.name)
       const out = await summarizeAndSuggest(text.text, file.name)
+      console.debug('summarizeAndSuggest output:', out)
       
       // Determine extraction method for user feedback
       let extractionMethod = 'standard';
@@ -175,7 +176,7 @@ export async function POST(req: Request) {
         filename: file.name,
         buildingId,
         summary: out.summary,
-        suggestedActions: out.suggestions ?? [],
+        suggestedActions: Array.isArray(out.suggestions) ? out.suggestions : [],
         extractionMethod,
         extractionNote,
         textLength: text.text.length,
@@ -197,16 +198,17 @@ export async function POST(req: Request) {
       if (error || !data) return NextResponse.json({ success: false, error: error?.message || 'download failed' }, { status: 500 })
 
       const ab = await data.arrayBuffer()
-      const text = await extractText(new Uint8Array(ab), path)
-      const out = await summarizeAndSuggest(text, path)
-      return NextResponse.json({
-        success: true,
-        filename: path.split('/').pop(),
-        buildingId,
-        summary: out.summary,
-        suggestedActions: out.suggestedActions ?? [],
-      })
-    }
+        const text = await extractText(new Uint8Array(ab), path)
+        const out = await summarizeAndSuggest(text, path)
+        console.debug('summarizeAndSuggest output:', out)
+        return NextResponse.json({
+          success: true,
+          filename: path.split('/').pop(),
+          buildingId,
+          summary: out.summary,
+          suggestedActions: Array.isArray(out.suggestedActions) ? out.suggestedActions : [],
+        })
+      }
 
     return NextResponse.json({ success: false, error: `Unsupported content-type: ${ct}` }, { status: 415 })
   } catch (e: any) {
