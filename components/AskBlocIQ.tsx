@@ -596,6 +596,12 @@ export default function AskBlocIQ({
           documentAnalysis: data.results || uploadedFileResults.length > 0 ? uploadedFileResults : undefined
         };
 
+        // Debug logging
+        console.log('🔍 API Response data:', data);
+        console.log('🔍 API results:', data.results);
+        console.log('🔍 Component uploadedFileResults:', uploadedFileResults);
+        console.log('🔍 Final documentAnalysis:', assistantMessage.documentAnalysis);
+
         setMessages(prev => [...prev, assistantMessage]);
         setAnswer(data.response);
         
@@ -821,30 +827,34 @@ export default function AskBlocIQ({
                     <div className="mt-3 pt-3 border-t border-gray-200">
                       <p className="text-xs text-gray-500 font-medium mb-2">📊 Document Analysis:</p>
                       <div className="space-y-2">
-                        {message.documentAnalysis.map((analysis: any, index: number) => (
-                          <div key={index} className="bg-gray-50 p-3 rounded-lg">
-                            <p className="text-sm font-medium text-gray-900 mb-1">
-                              📄 {analysis.filename}
-                            </p>
-                            <p className="text-xs text-gray-600 mb-2">
-                              {analysis.summary}
-                            </p>
-                            {analysis.suggestedActions && analysis.suggestedActions.length > 0 && (
-                              <div className="flex flex-wrap gap-1">
-                                {analysis.suggestedActions.map((action: any, actionIndex: number) => (
-                                  <span
-                                    key={actionIndex}
-                                    className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
-                                  >
-                                    {typeof action === 'string'
-                                      ? action
-                                      : action?.label || action?.key || JSON.stringify(action)}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                        {message.documentAnalysis.map((analysis: any, index: number) => {
+                          console.log('🔍 Rendering analysis:', analysis);
+                          console.log('🔍 Analysis suggestedActions:', analysis.suggestedActions);
+                          return (
+                            <div key={index} className="bg-gray-50 p-3 rounded-lg">
+                              <p className="text-sm font-medium text-gray-900 mb-1">
+                                📄 {analysis.filename}
+                              </p>
+                              <p className="text-xs text-gray-600 mb-2">
+                                {analysis.summary}
+                              </p>
+                              {analysis.suggestedActions && analysis.suggestedActions.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {analysis.suggestedActions.map((action: any, actionIndex: number) => (
+                                    <span
+                                      key={actionIndex}
+                                      className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
+                                    >
+                                      {typeof action === 'string'
+                                        ? action
+                                        : action?.label || action?.key || JSON.stringify(action)}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
