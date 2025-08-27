@@ -309,6 +309,27 @@ export default function PublicAskBlocIQ() {
     return '📎';
   };
 
+  // Handle suggested prompt click
+  const handleSuggestedPrompt = (prompt: string) => {
+    setQuestion(prompt);
+    setShowChat(true);
+  };
+
+  // Handle create letter (public version - just shows info)
+  const handleCreateLetter = (aiContent: string) => {
+    toast.info('Letter creation feature available for BlocIQ clients. Contact us to learn more!');
+  };
+
+  // Handle send email (public version - just shows info)
+  const handleSendEmail = (aiContent: string) => {
+    toast.info('Email sending feature available for BlocIQ clients. Contact us to learn more!');
+  };
+
+  // Handle save as notice (public version - just shows info)
+  const handleSaveAsNotice = (aiContent: string) => {
+    toast.info('Notice saving feature available for BlocIQ clients. Contact us to learn more!');
+  };
+
   // Handle chat submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -644,24 +665,23 @@ export default function PublicAskBlocIQ() {
                   <div className="space-y-3">
                     <p className="text-sm font-medium text-gray-700">Try asking:</p>
                     <div className="flex flex-wrap gap-2 justify-center">
-                      <button
-                        onClick={() => setQuestion("What are the key compliance requirements for residential properties?")}
-                        className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm border border-blue-200"
-                      >
-                        What are the key compliance requirements for residential properties?
-                      </button>
-                      <button
-                        onClick={() => setQuestion("How can I improve my property management workflow?")}
-                        className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm border border-blue-200"
-                      >
-                        How can I improve my property management workflow?
-                      </button>
-                      <button
-                        onClick={() => setQuestion("What should I include in a Section 20 notice?")}
-                        className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm border border-blue-200"
-                      >
-                        What should I include in a Section 20 notice?
-                      </button>
+                      {getSuggestedPrompts().slice(0, 3).map((prompt, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handleSuggestedPrompt(prompt)}
+                          className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm border border-blue-200"
+                        >
+                          {prompt}
+                        </button>
+                      ))}
+                      {uploadedFiles.length > 0 && (
+                        <button
+                          onClick={() => setQuestion("What are the key points in the uploaded documents?")}
+                          className="px-3 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm border border-green-200"
+                        >
+                          📄 Analyze Documents
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -680,6 +700,30 @@ export default function PublicAskBlocIQ() {
                         <div className="whitespace-pre-wrap leading-relaxed">
                           {message.content}
                         </div>
+                        
+                        {/* Action Buttons for AI Responses */}
+                        {message.role === 'assistant' && (
+                          <div className="flex gap-2 mt-3 pt-3 border-t border-gray-200">
+                            <button
+                              onClick={() => handleCreateLetter(message.content)}
+                              className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                            >
+                              📝 Create Letter
+                            </button>
+                            <button
+                              onClick={() => handleSendEmail(message.content)}
+                              className="flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
+                            >
+                              📨 Send Email
+                            </button>
+                            <button
+                              onClick={() => handleSaveAsNotice(message.content)}
+                              className="flex items-center gap-1 px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors"
+                            >
+                              📄 Save as Notice
+                            </button>
+                          </div>
+                        )}
                         
                         {/* Files */}
                         {message.files && message.files.length > 0 && (
