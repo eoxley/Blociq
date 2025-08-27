@@ -310,5 +310,6 @@ export default function InboxOverviewPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

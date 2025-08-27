@@ -61,10 +61,10 @@ export async function POST(request: NextRequest) {
     } catch (pdfError) {
       console.log('⚠️ pdf-parse failed or yielded insufficient text, trying OCR...');
       
-             // Method 2: Try OCR microservice with fallback
+             // Method 2: Try OCR microservice with comprehensive fallback
        try {
-         console.log('🔄 Attempting OCR processing with fallback...');
-         const { processDocumentWithFallback } = await import('@/lib/ocr');
+         console.log('🔄 Attempting OCR processing with comprehensive fallback...');
+         const { processDocumentWithFallback } = await import('@/lib/ocr-fallback');
          
          // Create a temporary file object for OCR processing
          const tempFile = new File([buffer], file.name, { type: file.type });
@@ -72,16 +72,21 @@ export async function POST(request: NextRequest) {
          
          if (ocrResult.text && ocrResult.text.trim().length > 50) {
            extractedText = ocrResult.text;
-           extractionMethod = 'ocr_microservice';
+           extractionMethod = `ocr_${ocrResult.method}`;
            confidence = ocrResult.quality || 'medium';
            ocrSource = ocrResult.source;
+           
+           // Log fallback information
+           if (ocrResult.attempts > 1) {
+             console.log(`🔄 OCR required ${ocrResult.attempts} attempts: ${ocrResult.fallbackReasons.join(', ')}`);
+           }
            
            // Log warnings if any
            if (ocrResult.warnings && ocrResult.warnings.length > 0) {
              console.log('⚠️ OCR warnings:', ocrResult.warnings);
            }
            
-           console.log(`✅ OCR successful: ${extractedText.length} characters extracted (quality: ${ocrResult.quality})`);
+           console.log(`✅ OCR successful: ${extractedText.length} characters extracted (quality: ${ocrResult.quality}, method: ${ocrResult.method})`);
          } else {
            throw new Error('OCR yielded insufficient text');
          }
@@ -250,6 +255,11 @@ Keep the summary professional but accessible, suitable for property management p
       ocrSource: ocrSource,
       leaseExtraction: leaseExtraction,
       summary: summary,
+      fallbackInfo: extractionMethod.startsWith('ocr_') ? {
+        method: extractionMethod,
+        confidence: confidence,
+        source: ocrSource
+      } : null,
       message: isLease 
         ? 'Lease document processed successfully with clause extraction'
         : 'Document processed successfully (not identified as lease)'
