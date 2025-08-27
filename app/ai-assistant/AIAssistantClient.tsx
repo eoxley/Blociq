@@ -201,6 +201,52 @@ export default function AIAssistantClient({ userData }: AIAssistantClientProps) 
                     }`}
                   >
                     <p className="text-sm">{message.content}</p>
+                    
+                    {/* Show OCR status and file information for user messages */}
+                    {message.role === 'user' && message.files && message.files.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-blue-200">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <FileText className="w-3 h-3" />
+                          <span className="text-xs font-medium">Documents:</span>
+                        </div>
+                        {message.files.map((file, index) => (
+                          <div key={index} className="text-xs text-blue-100 mb-1">
+                            📄 {file.name}
+                            {message.ocrStatus === 'processing' && (
+                              <span className="ml-2 text-yellow-200">⏳ Processing...</span>
+                            )}
+                            {message.ocrStatus === 'completed' && (
+                              <span className="ml-2 text-green-200">✅ OCR Complete</span>
+                            )}
+                            {message.ocrStatus === 'failed' && (
+                              <span className="ml-2 text-red-200">❌ OCR Failed</span>
+                            )}
+                          </div>
+                        ))}
+                        
+                        {/* Show OCR processing status */}
+                        {message.ocrStatus === 'processing' && (
+                          <div className="text-xs text-yellow-200 mt-1">
+                            🔍 Processing document with OCR...
+                          </div>
+                        )}
+                        
+                        {/* Show OCR completion status */}
+                        {message.ocrStatus === 'completed' && (
+                          <div className="text-xs text-green-200 mt-1">
+                            ✨ Document processed successfully
+                          </div>
+                        )}
+                        
+                        {/* Show OCR failure status */}
+                        {message.ocrStatus === 'failed' && (
+                          <div className="text-xs text-red-200 mt-1">
+                            ⚠️ OCR processing failed - proceeding with original content
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
                     <p className={`text-xs mt-1 ${
                       message.role === 'user' ? 'text-blue-100' : 'text-gray-500'
                     }`}>
