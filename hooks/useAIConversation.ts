@@ -104,8 +104,14 @@ export function useAIConversation(): UseAIConversationReturn {
               const analysis = await analyzeDocument(ocrResult.text, file.name, content.trim());
               documentAnalyses.push(analysis);
               
-              // Use the AI prompt from document analysis
-              enhancedContent = analysis.aiPrompt;
+                          // Use the AI prompt from document analysis
+            enhancedContent = analysis.aiPrompt;
+            console.log('🔍 Document analysis AI prompt:', {
+              filename: file.name,
+              promptLength: analysis.aiPrompt?.length || 0,
+              hasExtractedText: !!analysis.extractedText,
+              extractedTextLength: analysis.extractedText?.length || 0
+            });
             } catch (analysisError) {
               console.error('Document analysis failed:', analysisError);
               // Fallback to basic OCR text
@@ -137,8 +143,8 @@ export function useAIConversation(): UseAIConversationReturn {
         if (conversationId) formData.append('conversationId', conversationId);
         
         // Add building ID if available (this should come from context)
-        // TODO: Get building ID from current context/session
-        // const buildingId = getCurrentBuildingId(); // This needs to be implemented
+        // For now, we'll use null as the building ID will be determined by the endpoint
+        formData.append('buildingId', 'null');
         
         files.forEach((file, index) => {
           formData.append(`file_${index}`, file);
@@ -158,7 +164,7 @@ export function useAIConversation(): UseAIConversationReturn {
         const aiMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: data.result || data.answer || 'No response received',
+          content: data.response || data.result || data.answer || 'No response received',
           timestamp: new Date()
         };
         setMessages(prev => [...prev, aiMessage]);

@@ -49,6 +49,7 @@ export interface ComprehensiveDocumentAnalysis {
   };
   recommendations: string[];
   nextSteps: string[];
+  extractedText: string;
   aiPrompt: string;
 }
 
@@ -72,7 +73,8 @@ export async function analyzeDocument(
     classification,
     analysis,
     filename,
-    originalMessage
+    originalMessage,
+    extractedText
   );
   
   return comprehensive;
@@ -122,7 +124,8 @@ function generateComprehensiveAnalysis(
   classification: { type: DocumentType; confidence: number; keywords: string[]; reasoning: string },
   analysis: DocumentAnalysis,
   filename: string,
-  originalMessage: string
+  originalMessage: string,
+  extractedText: string
 ): ComprehensiveDocumentAnalysis {
   
   // Extract common fields from analysis
@@ -148,7 +151,13 @@ function generateComprehensiveAnalysis(
   const nextSteps = generateNextSteps(analysis, classification);
   
   // Generate AI prompt
-  const aiPrompt = generateAIPrompt(analysis, classification, originalMessage);
+  const aiPrompt = generateAIPrompt(
+    analysis,
+    classification,
+    originalMessage,
+    extractedText,
+    filename
+  );
   
   return {
     documentType: classification.type,
@@ -163,6 +172,7 @@ function generateComprehensiveAnalysis(
     legalRequirements,
     recommendations,
     nextSteps,
+    extractedText,
     aiPrompt
   };
 }
@@ -425,14 +435,32 @@ function generateNextSteps(
 function generateAIPrompt(
   analysis: DocumentAnalysis,
   classification: { type: DocumentType; confidence: number; keywords: string[]; reasoning: string },
-  originalMessage: string
+  originalMessage: string,
+  extractedText: string,
+  filename: string
 ): string {
   const docType = classification.type;
+  
+  if (docType === 'lease') {
+    return `You are a leasehold property management assistant. Analyse the following residential lease and extract:
+- Property details (address, term, parties)
+- Financial terms (rent, review dates, service charge %)
+- Repair responsibilities
+- Rights and restrictions
+- Clauses: subletting, assignment, alterations
+- Compliance summary (Y/N): Pets / Subletting / Reserve Fund / Windows / Heating / Access / Redecoration / Interest on arrears
+
+Lease text:
+${extractedText}
+
+Original Question: ${originalMessage}`;
+  }
+  
   const docTypeDescription = getDocumentTypeDescription(docType);
   
   let prompt = `You are analyzing a ${docTypeDescription} for a UK leasehold block management platform called BlocIQ.
 
-Document: ${analysis.filename}
+Document: ${filename}
 Original User Question: ${originalMessage}
 
 Please provide a comprehensive analysis of this document including:
@@ -465,7 +493,7 @@ Please provide a comprehensive analysis of this document including:
 Please format your response clearly with these sections and provide specific details from the document where possible. Focus on UK property management regulations and compliance requirements.
 
 Document Content:
-${analysis.analysis ? 'Document has been analyzed by specialist system' : 'Document content available for review'}`;
+${extractedText}`;
 
   return prompt;
 }

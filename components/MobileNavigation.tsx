@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
@@ -58,7 +58,7 @@ export default function MobileNavigation() {
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="lg:hidden fixed top-4 right-4 z-50 w-12 h-12 bg-gradient-to-r from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center shadow-lg hover:scale-105 transition-transform"
+        className="lg:hidden fixed top-4 right-4 z-[60] w-12 h-12 bg-gradient-to-r from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center shadow-lg hover:scale-105 transition-transform"
         aria-label={isOpen ? "Close menu" : "Open menu"}
       >
         {isOpen ? (
@@ -70,7 +70,7 @@ export default function MobileNavigation() {
 
       {/* Mobile Menu Overlay */}
       {isOpen && (
-        <div className="lg:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={closeMenu}>
+        <div className="lg:hidden fixed inset-0 z-[50] bg-black/50 backdrop-blur-sm" onClick={closeMenu}>
           <div 
             className="absolute right-0 top-0 h-full w-80 sm:w-96 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out"
             onClick={(e) => e.stopPropagation()}
