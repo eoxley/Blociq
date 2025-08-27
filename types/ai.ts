@@ -13,6 +13,8 @@ export interface DocumentAnalysis {
   suggestedActions?: SuggestedAction[];
   extractionMethod?: string;
   confidence?: number;
+  documentType?: string;
+  extractedText?: string;
 }
 
 export interface AIResponse {
