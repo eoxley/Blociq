@@ -4,6 +4,7 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "nextjs",
+  "ignoreCommand": "bash scripts/should-build-frontend.sh",
   "crons": [
     {
       "path": "/api/cron/sync-inbox",

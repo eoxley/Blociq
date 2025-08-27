@@ -23,6 +23,10 @@ export const DialogTitle = ({ children }: { children: React.ReactNode }) => (
   <h2 className="text-xl font-bold mb-2">{children}</h2>
 );
 
+export const DialogDescription = ({ children }: { children: React.ReactNode }) => (
+  <p className="text-sm text-gray-600 mb-4">{children}</p>
+);
+
 export const DialogFooter = ({ children }: { children: React.ReactNode }) => (
   <div className="flex justify-end gap-2 mt-6">{children}</div>
 ); 
