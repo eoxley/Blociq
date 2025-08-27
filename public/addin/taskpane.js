@@ -939,6 +939,5 @@ function showError(message) {
   // You can implement a toast notification here
 }
 
-// Register function commands
-Office.actions.associate('showAIReplyModal', showAIReplyModal);
-Office.actions.associate('showInboxTriage', showInboxTriage);
+// Function commands are now registered in functions.js
+// These functions are kept for reference but not registered here

@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BlocIQ Functions Test</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #e0e0e0;
+    }
+    .header h1 {
+      color: #008C8F;
+      margin: 0;
+      font-size: 2.5em;
+    }
+    .header p {
+      color: #666;
+      margin: 10px 0 0 0;
+      font-size: 1.1em;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      background: #fafafa;
+    }
+    .test-section h3 {
+      margin: 0 0 15px 0;
+      color: #333;
+    }
+    .button {
+      background: linear-gradient(135deg, #008C8F, #7645ED);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      margin: 10px 10px 10px 0;
+      transition: all 0.3s ease;
+    }
+    .button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    }
+    .button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    .status {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 6px;
+      font-weight: 500;
+    }
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .status.info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+    .log {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 6px;
+      padding: 15px;
+      margin: 15px 0;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 14px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .log-entry {
+      margin: 5px 0;
+      padding: 5px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+    .log-time {
+      color: #666;
+      font-size: 12px;
+    }
+    .log-message {
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🧪 BlocIQ Functions Test</h1>
+      <p>Test the ExecuteFunction handlers for the Outlook Add-in</p>
+    </div>
+
+    <div class="test-section">
+      <h3>🔌 Office.js Status</h3>
+      <button class="button" onclick="checkOfficeStatus()">Check Office.js Status</button>
+      <div id="officeStatus" class="status info">Click to check Office.js status...</div>
+    </div>
+
+    <div class="test-section">
+      <h3>🚀 Function Tests</h3>
+      <button class="button" onclick="testShowAIReplyModal()">Test AI Reply Modal</button>
+      <button class="button" onclick="testShowInboxTriage()">Test Inbox Triage</button>
+      <div id="functionStatus" class="status info">Click to test functions...</div>
+    </div>
+
+    <div class="test-section">
+      <h3>📋 Test Log</h3>
+      <button class="button" onclick="clearLog()">Clear Log</button>
+      <div id="testLog" class="log">
+        <div class="log-entry">
+          <span class="log-time">[System]</span>
+          <span class="log-message">Test page loaded. Ready to test functions.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let logEntries = [];
+
+    // Initialize the test page
+    Office.onReady(() => {
+      log('Office.js is ready');
+      document.getElementById('officeStatus').innerHTML = 
+        '<span class="status success">✅ Office.js loaded successfully</span>';
+    });
+
+    // Logging function
+    function log(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = {
+        time: timestamp,
+        message: message,
+        type: type
+      };
+      
+      logEntries.push(logEntry);
+      updateLogDisplay();
+    }
+
+    // Update the log display
+    function updateLogDisplay() {
+      const logContainer = document.getElementById('testLog');
+      logContainer.innerHTML = logEntries.map(entry => 
+        `<div class="log-entry">
+          <span class="log-time">[${entry.time}]</span>
+          <span class="log-message">${entry.message}</span>
+        </div>`
+      ).join('');
+      
+      // Auto-scroll to bottom
+      logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    // Clear the log
+    function clearLog() {
+      logEntries = [];
+      updateLogDisplay();
+      log('Log cleared');
+    }
+
+    // Check Office.js status
+    function checkOfficeStatus() {
+      try {
+        if (Office && Office.context) {
+          log('✅ Office.js context available', 'success');
+          log(`Host: ${Office.context.document ? 'Document' : 'Mailbox'}`);
+          log(`Platform: ${Office.context.platform}`);
+          
+          if (Office.context.mailbox) {
+            log('✅ Mailbox context available');
+            log(`Item type: ${Office.context.mailbox.item ? 'Available' : 'Not available'}`);
+          }
+        } else {
+          log('❌ Office.js context not available', 'error');
+        }
+      } catch (error) {
+        log(`❌ Error checking Office.js status: ${error.message}`, 'error');
+      }
+    }
+
+    // Test the showAIReplyModal function
+    function testShowAIReplyModal() {
+      try {
+        log('🚀 Testing showAIReplyModal function...');
+        
+        // Check if the function exists
+        if (typeof showAIReplyModal === 'function') {
+          log('✅ showAIReplyModal function found');
+          
+          // Create a mock event object
+          const mockEvent = {
+            completed: () => {
+              log('✅ Event completed successfully');
+            }
+          };
+          
+          // Call the function
+          showAIReplyModal(mockEvent);
+          log('✅ showAIReplyModal called successfully');
+          
+        } else {
+          log('❌ showAIReplyModal function not found', 'error');
+          log('Make sure functions.js is loaded and the function is defined');
+        }
+        
+      } catch (error) {
+        log(`❌ Error testing showAIReplyModal: ${error.message}`, 'error');
+      }
+    }
+
+    // Test the showInboxTriage function
+    function testShowInboxTriage() {
+      try {
+        log('🚀 Testing showInboxTriage function...');
+        
+        // Check if the function exists
+        if (typeof showInboxTriage === 'function') {
+          log('✅ showInboxTriage function found');
+          
+          // Create a mock event object
+          const mockEvent = {
+            completed: () => {
+              log('✅ Event completed successfully');
+            }
+          };
+          
+          // Call the function
+          showInboxTriage(mockEvent);
+          log('✅ showInboxTriage called successfully');
+          
+        } else {
+          log('❌ showInboxTriage function not found', 'error');
+          log('Make sure functions.js is loaded and the function is defined');
+        }
+        
+      } catch (error) {
+        log(`❌ Error testing showInboxTriage: ${error.message}`, 'error');
+      }
+    }
+
+    // Load the functions.js file
+    function loadFunctions() {
+      const script = document.createElement('script');
+      script.src = 'functions.js';
+      script.onload = () => {
+        log('✅ functions.js loaded successfully');
+        log('Functions available: ' + (typeof showAIReplyModal === 'function' ? 'showAIReplyModal' : '') + 
+            (typeof showInboxTriage === 'function' ? ', showInboxTriage' : ''));
+      };
+      script.onerror = () => {
+        log('❌ Failed to load functions.js', 'error');
+      };
+      document.head.appendChild(script);
+    }
+
+    // Load functions when page loads
+    window.addEventListener('load', () => {
+      setTimeout(loadFunctions, 1000); // Small delay to ensure Office.js is ready
+    });
+  </script>
+</body>
+</html>
