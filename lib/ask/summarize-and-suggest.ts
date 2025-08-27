@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
+import { SummarizeAndSuggestResult } from '@/types/ai';
 
-export async function summarizeAndSuggest(text: string, filename: string): Promise<{ summary: string, suggestions: Array<{key:string, label:string, icon?:string, action?:string}>, suggestedActions: Array<{key:string, label:string, icon?:string, action?:string}> }> {
+export async function summarizeAndSuggest(text: string, filename: string): Promise<SummarizeAndSuggestResult> {
   const prompt = `
 You are an assistant that summarizes arbitrary uploaded documents and proposes actionable next steps.
 - Give a clear, concise summary (bullet points + short TL;DR).
