@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
     // Get existing compliance assets for this building
     const { data: existingAssets, error: existingError } = await supabase
-      .from('compliance_assets')
+      .from('building_compliance_assets')
       .select('id, asset_type')
       .eq('building_id', building_id);
 
@@ -40,35 +40,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Failed to fetch existing assets' }, { status: 500 });
     }
 
-    // Create a map of existing asset types
-    const existingAssetTypes = new Set(existingAssets?.map(asset => asset.asset_type) || []);
-
-    // Process active assets
-    const assetsToAdd = [];
+    // Determine which assets to add/remove
+    const existingAssetTypes = existingAssets?.map(asset => asset.asset_type) || [];
+    const assetsToAdd = active_assets.filter(assetType => !existingAssetTypes.includes(assetType));
     const assetsToRemove = [];
 
-    for (const assetType of active_assets) {
-      if (!existingAssetTypes.has(assetType)) {
-        // Asset needs to be added
-        assetsToAdd.push({
-          building_id,
-          user_id: session.user.id,
-          asset_type: assetType,
-          asset_name: getAssetName(assetType),
-          category: getAssetCategory(assetType),
-          description: getAssetDescription(assetType),
-          inspection_frequency: getAssetFrequency(assetType),
-          is_required: getAssetRequired(assetType),
-          priority: getAssetPriority(assetType),
-          is_hrb_only: getAssetHRBOnly(assetType),
-          status: 'pending',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-      }
-    }
-
-    // Find assets to remove (existing but not in active list)
     for (const existingAsset of existingAssets || []) {
       if (!active_assets.includes(existingAsset.asset_type)) {
         assetsToRemove.push(existingAsset.id);
@@ -82,7 +58,7 @@ export async function POST(request: NextRequest) {
     // Add new assets
     if (assetsToAdd.length > 0) {
       const { data: addedAssets, error: addError } = await supabase
-        .from('compliance_assets')
+        .from('building_compliance_assets')
         .insert(assetsToAdd)
         .select();
 
@@ -96,7 +72,7 @@ export async function POST(request: NextRequest) {
     // Remove inactive assets
     if (assetsToRemove.length > 0) {
       const { error: removeError } = await supabase
-        .from('compliance_assets')
+        .from('building_compliance_assets')
         .delete()
         .in('id', assetsToRemove);
 

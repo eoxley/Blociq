@@ -81,6 +81,7 @@ export default function AskXray() {
           Healthcheck
         </a>
         <p>Expected: Direct DB answers for leaseholder queries, fallback for unknown data</p>
+        <p className="mt-2 text-green-600">✅ Hotfix Applied: Document analysis + Google Vision OCR + Fixed [object Object] issue</p>
       </div>
     </div>
   );

@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
         const buildingIds = buildings.map(b => b.id);
         if (buildingIds.length > 0) {
           const { data: complianceData, error: complianceError } = await supabase
-            .from('compliance_assets')
+            .from('building_compliance_assets')
             .select('building_id, status')
             .in('building_id', buildingIds);
           
