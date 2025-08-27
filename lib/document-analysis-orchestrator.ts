@@ -1,3 +1,4 @@
+
 import { classifyDocument, DocumentType } from './document-classifier';
 import { analyzeEICR, EICRAnalysis } from './document-analyzers/eicr-analyzer';
 import { analyzeGasSafety, GasSafetyAnalysis } from './document-analyzers/gas-safety-analyzer';
@@ -8,6 +9,7 @@ import { analyzeAsbestosSurvey, AsbestosSurveyAnalysis } from './document-analyz
 import { analyzeLiftInspection, LiftInspectionAnalysis } from './document-analyzers/lift-inspection-analyzer';
 import { analyzeInsuranceValuation, InsuranceValuationAnalysis } from './document-analyzers/insurance-valuation-analyzer';
 import { analyzeBuildingSurvey, BuildingSurveyAnalysis } from './document-analyzers/building-survey-analyzer';
+import { analyzeLeaseDocument, LeaseAnalysisResult } from './document-analyzers/lease-analyzer';
 import { analyzeGeneralDocument, GeneralDocumentAnalysis } from './document-analyzers/general-analyzer';
 
 export type DocumentAnalysis = 
