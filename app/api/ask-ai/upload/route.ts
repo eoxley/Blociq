@@ -6,40 +6,61 @@ let summarizeAndSuggest: (text: string, name?: string) => Promise<{ summary: str
 
 async function lazyDeps() {
   if (!extractText) {
+    console.log('🔄 Loading extractText function...')
     // Enhanced fallback with OCR capabilities
     try {
       const mod = await import('@/lib/extract-text')
       extractText = mod.extractText
+      console.log('✅ Using primary extractText from @/lib/extract-text')
     } catch {
-      // Try alternative extraction methods
-      try {
-        const { extractTextFromPDF } = await import('@/lib/extractTextFromPdf')
-        extractText = async (file: File) => {
-          const buffer = Buffer.from(await file.arrayBuffer())
-          const result = await extractTextFromPDF(buffer, file.name)
-          return {
-            text: result.text,
-            meta: { name: file.name, type: file.type, bytes: file.size }
-          }
-        }
-      } catch {
-        // Final fallback with OCR
+                      // Try alternative extraction methods
         try {
-          const { ocrWithFallbacks } = await import('@/lib/ocr')
+          console.log('🔄 Trying PDF extraction fallback...')
+          const { extractTextFromPDF } = await import('@/lib/extractTextFromPdf')
           extractText = async (file: File) => {
-            const buffer = Buffer.from(await file.arrayBuffer())
-            const ocrResult = await ocrWithFallbacks(buffer)
-            return {
-              text: ocrResult.text || `[[OCR Fallback]] ${file.name} (${file.size} bytes) - ${ocrResult.method}`,
-              meta: { name: file.name, type: file.type, bytes: file.size }
+            try {
+              const buffer = Buffer.from(await file.arrayBuffer())
+              const result = await extractTextFromPDF(buffer, file.name)
+              return {
+                text: result.text,
+                meta: { name: file.name, type: file.type, bytes: file.size }
+              }
+            } catch (pdfError) {
+              console.warn('PDF extraction failed:', pdfError)
+              return {
+                text: `[[PDF Extraction Failed]] ${file.name} (${file.size} bytes) - Unable to extract text`,
+                meta: { name: file.name, type: file.type, bytes: file.size }
+              }
             }
           }
         } catch {
-          // Ultimate fallback
-          extractText = async (file: File) => ({
-            text: `[[Fallback extractor]] ${file.name} (${file.size} bytes). Unable to extract text - document may be image-based or corrupted.`,
-            meta: { name: file.name, type: file.type, bytes: file.size }
-          })
+          // Final fallback with OCR
+          try {
+            console.log('🔄 Trying OCR fallback...')
+            const { processDocumentOCR } = await import('@/lib/ocr')
+            extractText = async (file: File) => {
+              try {
+                const ocrResult = await processDocumentOCR(file)
+                return {
+                  text: ocrResult.text || `[[OCR Fallback]] ${file.name} (${file.size} bytes) - OCR processed`,
+                  meta: { name: file.name, type: file.type, bytes: file.size }
+                }
+              } catch (ocrError) {
+                console.warn('OCR fallback failed:', ocrError)
+                return {
+                  text: `[[OCR Fallback Failed]] ${file.name} (${file.size} bytes) - Unable to extract text`,
+                  meta: { name: file.name, type: file.type, bytes: file.size }
+                }
+              }
+            }
+          } catch {
+            // Ultimate fallback
+            console.log('⚠️ Using ultimate fallback extractor')
+            extractText = async (file: File) => ({
+              text: `[[Fallback extractor]] ${file.name} (${file.size} bytes). Unable to extract text - document may be image-based or corrupted.`,
+              meta: { name: file.name, type: file.type, bytes: file.size }
+            })
+          }
         }
       }
     }
@@ -53,16 +74,28 @@ async function lazyDeps() {
       try {
         const { generateSummary } = await import('@/lib/documentProcessor')
         summarizeAndSuggest = async (text: string, name?: string) => {
-          const summary = await generateSummary(text, name || 'document')
-          return {
-            summary: summary || `Summary of ${name || 'document'}: ${text.slice(0, 300)}${text.length > 300 ? '…' : ''}`,
-            suggestions: [
-              'Confirm the document type and relevance.',
-              'Assign to a property or general filing.',
-              'Create any follow-up tasks or reminders.',
-              'Review extracted text for accuracy.',
-              'Consider manual verification if OCR was used.'
-            ],
+          try {
+            const summary = await generateSummary(text, name || 'document')
+            return {
+              summary: summary || `Summary of ${name || 'document'}: ${text.slice(0, 300)}${text.length > 300 ? '…' : ''}`,
+              suggestions: [
+                'Confirm the document type and relevance.',
+                'Assign to a property or general filing.',
+                'Create any follow-up tasks or reminders.',
+                'Review extracted text for accuracy.',
+                'Consider manual verification if OCR was used.'
+              ],
+            }
+          } catch (summaryError) {
+            console.warn('Summary generation failed:', summaryError)
+            return {
+              summary: `Summary of ${name || 'document'}: ${text.slice(0, 300)}${text.length > 300 ? '…' : ''}`,
+              suggestions: [
+                'Confirm the document type and relevance.',
+                'Assign to a property or general filing.',
+                'Create any follow-up tasks or reminders.',
+              ],
+            }
           }
         }
       } catch {
