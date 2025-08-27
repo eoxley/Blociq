@@ -23,7 +23,7 @@ export default function MobilePageNavigation({
   const quickNavItems = [
     { label: "Home", href: "/home", icon: "🏠" },
     { label: "Inbox Overview", href: "/inbox-overview", icon: "📥" },
-    { label: "Buildings", href: "/buildings", icon: "🏢" },
+    { label: "Buildings", href: "/dashboard/buildings", icon: "🏢" },
     { label: "Compliance", href: "/compliance", icon: "🛡️" },
     { label: "Communications", href: "/communications", icon: "📣" },
     { label: "Major Works", href: "/major-works", icon: "🔧" },
