@@ -41,8 +41,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine which assets to add/remove
-    const existingAssetTypes = existingAssets?.map(asset => asset.asset_type) || [];
-    const assetsToAdd = active_assets.filter(assetType => !existingAssetTypes.includes(assetType));
+    const existingAssetTypes = existingAssets?.map((asset: any) => asset.asset_type) || [];
+    const assetsToAdd = active_assets.filter((assetType: string) => !existingAssetTypes.includes(assetType));
     const assetsToRemove = [];
 
     for (const existingAsset of existingAssets || []) {
