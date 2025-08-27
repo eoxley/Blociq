@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
     // Build query
     let query = supabase
-      .from('compliance_assets')
+      .from('building_compliance_assets')
       .select(`
         *,
         buildings (
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
 
     // Insert new compliance asset
     const { data: newAsset, error: insertError } = await supabase
-      .from('compliance_assets')
+      .from('building_compliance_assets')
       .insert({
         building_id,
         user_id: user.id,
@@ -186,7 +186,7 @@ export async function PUT(request: NextRequest) {
 
     // Get the asset to verify ownership
     const { data: asset, error: assetError } = await supabase
-      .from('compliance_assets')
+      .from('building_compliance_assets')
       .select('*')
       .eq('id', id)
       .single();
@@ -220,7 +220,7 @@ export async function PUT(request: NextRequest) {
 
     // Update the compliance asset
     const { data: updatedAsset, error: updateError } = await supabase
-      .from('compliance_assets')
+      .from('building_compliance_assets')
       .update({
         asset_name: asset_name || asset.asset_name,
         description: description !== undefined ? description : asset.description,
@@ -281,7 +281,7 @@ export async function DELETE(request: NextRequest) {
 
     // Get the asset to verify ownership
     const { data: asset, error: assetError } = await supabase
-      .from('compliance_assets')
+      .from('building_compliance_assets')
       .select('*')
       .eq('id', id)
       .single();
@@ -315,7 +315,7 @@ export async function DELETE(request: NextRequest) {
 
     // Delete the compliance asset
     const { error: deleteError } = await supabase
-      .from('compliance_assets')
+      .from('building_compliance_assets')
       .delete()
       .eq('id', id);
 

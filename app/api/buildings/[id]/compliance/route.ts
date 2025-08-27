@@ -41,7 +41,7 @@ export async function GET(
 
     // Get building compliance assets
     const { data: assets, error: assetsError } = await supabase
-      .from('compliance_assets')
+      .from('building_compliance_assets')
       .select(`
         *,
         compliance_inspections (

@@ -59,6 +59,9 @@ type DocumentAnalysis = {
   suggestedActions: string[];
   extractionMethod: string;
   extractedText: string;
+  complianceStatus?: string;
+  keyDates?: Array<{ description: string; date: string }>;
+  actionItems?: Array<{ description: string; priority?: 'high' | 'medium' | 'low' }>;
 };
 
 export default function PublicAskBlocIQ() {
@@ -116,13 +119,13 @@ export default function PublicAskBlocIQ() {
 
   // Suggested prompts for public users
   const getSuggestedPrompts = () => [
-    "What are the key compliance requirements for UK residential blocks?",
-    "How do I handle a leak complaint from a leaseholder?",
-    "What's the process for Section 20 consultation?",
     "How do I draft a professional email to leaseholders?",
     "What are the fire safety requirements for residential buildings?",
     "How do I handle service charge queries?",
-    "What maintenance schedules are recommended for residential blocks?"
+    "What maintenance schedules are recommended for residential blocks?",
+    "How do I manage building access and security?",
+    "What's the best way to communicate with leaseholders?",
+    "How do I handle emergency situations in residential blocks?"
   ];
 
   // Check if user has already unlocked and show guide popup on first visit
@@ -726,29 +729,29 @@ export default function PublicAskBlocIQ() {
                         )}
                         
                         {/* Document Analysis Results */}
-                        {message.role === 'assistant' && message.documentAnalysis && (
+                        {message.documentAnalysis && message.documentAnalysis.length > 0 && (
                           <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
                             <h4 className="font-semibold text-sm mb-2 text-gray-800">
                               📊 Document Analysis Results
                             </h4>
                             <div className="space-y-2 text-sm">
-                              {message.documentAnalysis.summary && (
+                              {message.documentAnalysis[0].summary && (
                                 <div>
                                   <span className="font-medium text-gray-700">Summary:</span>
-                                  <p className="text-gray-600 mt-1">{message.documentAnalysis.summary}</p>
+                                  <p className="text-gray-600 mt-1">{message.documentAnalysis[0].summary}</p>
                                 </div>
                               )}
-                              {message.documentAnalysis.complianceStatus && (
+                              {message.documentAnalysis[0].complianceStatus && (
                                 <div>
                                   <span className="font-medium text-gray-700">Compliance Status:</span>
-                                  <p className="text-gray-600 mt-1">{message.documentAnalysis.complianceStatus}</p>
+                                  <p className="text-gray-600 mt-1">{message.documentAnalysis[0].complianceStatus}</p>
                                 </div>
                               )}
-                              {message.documentAnalysis.keyDates && message.documentAnalysis.keyDates.length > 0 && (
+                              {message.documentAnalysis[0].keyDates && message.documentAnalysis[0].keyDates.length > 0 && (
                                 <div>
                                   <span className="font-medium text-gray-700">Key Dates:</span>
                                   <ul className="text-gray-600 mt-1 space-y-1">
-                                    {message.documentAnalysis.keyDates.map((date, index) => (
+                                    {message.documentAnalysis[0].keyDates.map((date: { description: string; date: string }, index: number) => (
                                       <li key={index} className="flex justify-between">
                                         <span>{date.description}</span>
                                         <span className="text-mono">{date.date}</span>
@@ -757,11 +760,11 @@ export default function PublicAskBlocIQ() {
                                   </ul>
                                 </div>
                               )}
-                              {message.documentAnalysis.actionItems && message.documentAnalysis.actionItems.length > 0 && (
+                              {message.documentAnalysis[0].actionItems && message.documentAnalysis[0].actionItems.length > 0 && (
                                 <div>
                                   <span className="font-medium text-gray-700">Action Items:</span>
                                   <ul className="text-gray-600 mt-1 space-y-1">
-                                    {message.documentAnalysis.actionItems.map((item, index) => (
+                                    {message.documentAnalysis[0].actionItems.map((item: { description: string; priority?: 'high' | 'medium' | 'low' }, index: number) => (
                                       <li key={index} className="flex items-center gap-2">
                                         <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
                                         <span>{item.description}</span>
