@@ -32,7 +32,7 @@ export default function MobilePageNavigation({
   return (
     <>
       {/* Mobile Navigation Bar */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-white border-b border-gray-200 px-4 py-3">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-[40] bg-white border-b border-gray-200 px-4 py-3">
         <div className="flex items-center justify-between">
           {/* Back Button */}
           <Link 
@@ -63,7 +63,7 @@ export default function MobilePageNavigation({
 
       {/* Quick Navigation Menu */}
       {isMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={() => setIsMenuOpen(false)}>
+        <div className="lg:hidden fixed inset-0 z-[45] bg-black/50 backdrop-blur-sm" onClick={() => setIsMenuOpen(false)}>
           <div 
             className="absolute top-0 right-0 h-full w-80 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out"
             onClick={(e) => e.stopPropagation()}

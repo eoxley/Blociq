@@ -2,6 +2,7 @@ import { ReactNode } from 'react'
 import { redirect } from 'next/navigation'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import MobileNavigation from '@/components/MobileNavigation'
+import { NavigationProvider } from '@/components/NavigationContext'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
@@ -22,33 +23,37 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAFAFA]">
-      <div className="flex flex-1 overflow-hidden">
-        {/* Desktop Sidebar */}
-        <div className="hidden lg:block">
-          <DashboardSidebar />
-        </div>
-        
-        {/* Mobile Navigation */}
-        <MobileNavigation />
-        
-        <main className="flex-1 overflow-y-auto">
-          {/* Main Content */}
-          <div className="p-4 lg:p-6">
-            <div className="w-full max-w-[1800px] mx-auto px-4 lg:px-6 xl:px-8">
-              {/* Mobile Breadcrumb Navigation */}
-              <div className="lg:hidden mb-4">
-                <nav className="flex items-center space-x-2 text-sm text-gray-500">
-                  <a href="/home" className="hover:text-gray-700 transition-colors">Home</a>
-                  <span>/</span>
-                  <span className="text-gray-900 font-medium">Current Page</span>
-                </nav>
-              </div>
-              {children}
-            </div>
+    <NavigationProvider>
+      <div className="min-h-screen flex flex-col bg-[#FAFAFA]">
+        <div className="flex flex-1 overflow-hidden">
+          {/* Desktop Sidebar */}
+          <div className="hidden lg:block">
+            <DashboardSidebar />
           </div>
-        </main>
+          
+          {/* Mobile Navigation */}
+          <MobileNavigation />
+          
+          <main className="flex-1 overflow-y-auto">
+            {/* Main Content */}
+            <div className="p-4 lg:p-6">
+              <div className="w-full max-w-[1800px] mx-auto px-4 lg:px-6 xl:px-8">
+                {/* Mobile Breadcrumb Navigation */}
+                <div className="lg:hidden mb-4">
+                  <nav className="flex items-center space-x-2 text-sm text-gray-500">
+                    <a href="/home" className="hover:text-gray-700 transition-colors">Home</a>
+                    <span>/</span>
+                    <span className="text-gray-900 font-medium">Current Page</span>
+                  </nav>
+                </div>
+                {/* Add top margin for mobile navigation bar */}
+                <div className="lg:hidden h-16"></div>
+                {children}
+              </div>
+            </div>
+          </main>
+        </div>
       </div>
-    </div>
+    </NavigationProvider>
   )
 } 

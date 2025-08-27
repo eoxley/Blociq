@@ -137,7 +137,7 @@ export default function InboxOverviewPage() {
   return (
     <>
       <MobilePageNavigation title="Inbox Overview" backTo="/home" backLabel="Home" />
-      <div className="min-h-screen bg-gray-50 p-4 lg:p-6">
+      <div className="min-h-screen bg-gray-50 p-4 lg:p-6 pt-20 lg:pt-6">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-6 lg:mb-8">
