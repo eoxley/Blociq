@@ -55,6 +55,7 @@ type AIResponse = {
     majorWorksUsed?: boolean;
     complianceUsed?: boolean;
   };
+  results?: DocumentAnalysis[]; // Added for document analysis results
 };
 
 interface AskBlocIQProps {
@@ -592,7 +593,7 @@ export default function AskBlocIQ({
           role: 'assistant',
           content: data.response,
           timestamp: new Date(),
-          documentAnalysis: uploadedFileResults.length > 0 ? uploadedFileResults : undefined
+          documentAnalysis: data.results || uploadedFileResults.length > 0 ? uploadedFileResults : undefined
         };
 
         setMessages(prev => [...prev, assistantMessage]);
