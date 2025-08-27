@@ -12,7 +12,28 @@ const DEFAULT_FOLDERS = [
   { id: 'junk', displayName: 'Junk Email', wellKnownName: 'junkemail' }
 ]
 
-const fetcher = (url: string) => fetch(url).then(res => res.json())
+// Enhanced fetcher with better error handling and retry logic
+const enhancedFetcher = async (url: string) => {
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Fetch error:', error)
+    throw error
+  }
+}
 
 // Get manual folders from localStorage
 const getManualFolders = (): any[] => {
@@ -38,7 +59,19 @@ const saveManualFolders = (folders: any[]): void => {
 export function useFolders() {
   const [manualFolders, setManualFolders] = useState(getManualFolders)
   
-  const { data, error, isLoading, mutate } = useSWR('/api/outlook/v2/folders', fetcher)
+  // Enhanced SWR configuration for real-time updates
+  const { data, error, isLoading, mutate } = useSWR(
+    '/api/outlook/v2/folders', 
+    enhancedFetcher,
+    {
+      refreshInterval: 30000, // Refresh every 30 seconds
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      errorRetryCount: 3,
+      errorRetryInterval: 5000,
+      dedupingInterval: 10000, // Dedupe requests within 10 seconds
+    }
+  )
   
   // Combine Graph folders with manual folders
   const graphFolders = data?.ok && data?.items?.length > 0 ? data.items : []
@@ -67,8 +100,13 @@ export function useFolders() {
     console.log('Updated manual folders:', updatedManualFolders)
   }, [manualFolders])
   
-  const refresh = useCallback(() => {
-    mutate()
+  const refresh = useCallback(async () => {
+    try {
+      await mutate()
+      console.log('Folders refreshed successfully')
+    } catch (error) {
+      console.error('Failed to refresh folders:', error)
+    }
   }, [mutate])
   
   // Debug logging
@@ -77,7 +115,8 @@ export function useFolders() {
       graphFolders: graphFolders.length,
       manualFolders: manualFolders.length,
       totalFolders: folders.length,
-      isFallback
+      isFallback,
+      lastUpdated: new Date().toISOString()
     })
   }, [graphFolders.length, manualFolders.length, folders.length, isFallback])
   
@@ -85,6 +124,7 @@ export function useFolders() {
     folders,
     isFallback,
     isLoading,
+    error,
     refresh,
     addManualFolder
   }
@@ -95,14 +135,36 @@ export function useMessages(folderId: string | null) {
   const [triage, setTriage] = useState<any | null>(null)
   const [isTriaging, setIsTriaging] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
   const user = useUser()
   
+  // Enhanced SWR configuration for messages with real-time updates
   const { data, error: fetchError, isLoading, mutate } = useSWR(
-    folderId ? `/api/outlook/v2/messages/list?folderId=${folderId}` : null,
-    fetcher
+    folderId ? `/api/outlook/v2/messages/list?folderId=${folderId}&t=${Date.now()}` : null,
+    enhancedFetcher,
+    {
+      refreshInterval: 15000, // Refresh every 15 seconds for messages
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      errorRetryCount: 3,
+      errorRetryInterval: 3000,
+      dedupingInterval: 5000, // Dedupe requests within 5 seconds
+    }
   )
   
   const messages = data?.ok ? data.items : []
+  
+  // Enhanced refresh function with timestamp
+  const refresh = useCallback(async () => {
+    try {
+      setLastRefresh(new Date())
+      await mutate()
+      console.log('Messages refreshed successfully at:', new Date().toISOString())
+    } catch (error) {
+      console.error('Failed to refresh messages:', error)
+      setError('Failed to refresh messages')
+    }
+  }, [mutate])
   
   // Selection stability: auto-select first message if none selected and messages exist
   useEffect(() => {
@@ -125,6 +187,7 @@ export function useMessages(folderId: string | null) {
     setError(null)
   }, [folderId])
   
+  // Enhanced triage function with better error handling
   const triageMessage = useCallback(async (messageId?: string) => {
     const targetMessageId = messageId || selectedId
     if (!targetMessageId) {
@@ -152,6 +215,12 @@ export function useMessages(folderId: string | null) {
       
       const result = await response.json()
       setTriage(result.triage)
+      
+      // Refresh messages after successful triage
+      setTimeout(() => {
+        refresh()
+      }, 1000)
+      
       return result.triage
       
     } catch (err: any) {
@@ -161,7 +230,32 @@ export function useMessages(folderId: string | null) {
     } finally {
       setIsTriaging(false)
     }
-  }, [selectedId])
+  }, [selectedId, refresh])
+  
+  // Auto-refresh messages when user becomes active
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && folderId) {
+        console.log('User became active, refreshing messages')
+        refresh()
+      }
+    }
+    
+    const handleFocus = () => {
+      if (folderId) {
+        console.log('Window focused, refreshing messages')
+        refresh()
+      }
+    }
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleFocus)
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [folderId, refresh])
   
   // Debug logging (development only)
   useEffect(() => {
@@ -172,10 +266,11 @@ export function useMessages(folderId: string | null) {
         selectedId,
         isLoading, 
         error: fetchError,
-        userId: user?.id
+        userId: user?.id,
+        lastRefresh: lastRefresh.toISOString()
       })
     }
-  }, [folderId, messages.length, selectedId, isLoading, fetchError, user?.id])
+  }, [folderId, messages.length, selectedId, isLoading, fetchError, user?.id, lastRefresh])
   
   return {
     messages,
@@ -186,6 +281,7 @@ export function useMessages(folderId: string | null) {
     error,
     triageMessage,
     isLoading,
-    refresh: mutate
+    refresh,
+    lastRefresh
   }
 }

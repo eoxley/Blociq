@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, createContext, useContext, useEffect, useCallback } from 'react'
-import { MessageSquare, Plus, Search, Filter, RefreshCw, Settings, MoreVertical, FileText } from 'lucide-react'
+import { MessageSquare, Plus, Search, Filter, RefreshCw, Settings, MoreVertical, FileText, Sparkles, Zap, TrendingUp, Users, Clock } from 'lucide-react'
 import FolderSidebar from '@/components/inbox_v2/FolderSidebar'
 import MessageList from '@/components/inbox_v2/MessageList'
 import MessagePreview from '@/components/inbox_v2/MessagePreview'
@@ -49,9 +49,10 @@ export default function InboxV2() {
   const [isMovingMessage, setIsMovingMessage] = useState(false)
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set())
   const [draftsPanelOpen, setDraftsPanelOpen] = useState(false)
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date())
 
-  // Get folders and messages
-  const { folders, isLoading: foldersLoading } = useFolders()
+  // Get folders and messages with enhanced data fetching
+  const { folders, isLoading: foldersLoading, isFallback } = useFolders()
   const { 
     messages, 
     selectedId, 
@@ -62,6 +63,12 @@ export default function InboxV2() {
     triageMessage,
     refresh: refreshMessages 
   } = useMessages(selectedFolderId)
+
+  // Enhanced refresh function with timestamp update
+  const handleRefresh = useCallback(async () => {
+    setLastRefreshTime(new Date())
+    await refreshMessages()
+  }, [refreshMessages])
 
   // Set the inbox folder as default when folders are loaded
   useEffect(() => {
@@ -148,7 +155,7 @@ export default function InboxV2() {
         setSelectedMessage(null)
         setSelectedId(null)
         // Refresh messages
-        refreshMessages()
+        handleRefresh()
       } else {
         console.error('Failed to delete message')
       }
@@ -176,7 +183,7 @@ export default function InboxV2() {
           setSelectedMessage(null)
           setSelectedId(null)
         }
-        refreshMessages()
+        handleRefresh()
       } else {
         console.error('Some messages failed to delete')
       }
@@ -201,122 +208,61 @@ export default function InboxV2() {
         return
       }
 
-      // If reply modal is open, only handle Escape key, disable all other shortcuts
-      if (replyModal.isOpen) {
-        if (e.key === 'Escape') {
-          e.preventDefault()
-          handleCloseReplyModal()
-        }
-        // Prevent all other keyboard shortcuts when modal is open
+      // Refresh with F5 or Ctrl+R
+      if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
         e.preventDefault()
-        return
+        handleRefresh()
       }
 
-      switch (e.key) {
-        case 'Delete':
-          // Check if we have selected messages in the message list first
-          if (selectedMessages && selectedMessages.size > 0) {
-            e.preventDefault()
-            // Delete all selected messages
-            handleDeleteMultiple(Array.from(selectedMessages))
-          } else if (selectedMessage) {
-            // Fallback to deleting the selected message preview
-            e.preventDefault()
-            handleDeleteMessage(selectedMessage.id)
-          }
-          break
-        case 'Escape':
-          if (newEmailModalOpen) {
-            e.preventDefault()
-            setNewEmailModalOpen(false)
-          }
-          break
+      // New email with Ctrl+N
+      if (e.ctrlKey && e.key === 'n') {
+        e.preventDefault()
+        setNewEmailModalOpen(true)
+      }
+
+      // Triage with Ctrl+T
+      if (e.ctrlKey && e.key === 't') {
+        e.preventDefault()
+        if (selectedId) {
+          triageMessage(selectedId)
+        }
       }
     }
 
     document.addEventListener('keydown', handleGlobalKeyDown)
     return () => document.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [selectedMessage, selectedMessages, replyModal.isOpen, newEmailModalOpen, handleDeleteMultiple, handleDeleteMessage, handleCloseReplyModal])
+  }, [handleRefresh, selectedId, triageMessage])
 
-  const moveMessage = async (messageId: string, destinationFolderId: string) => {
-    setIsMovingMessage(true)
+  const handleMessageSelect = useCallback((message: any) => {
+    setSelectedMessage(message)
+    setSelectedId(message.id)
+  }, [])
+
+  const moveMessage = useCallback(async (messageId: string, destinationFolderId: string): Promise<boolean> => {
     try {
-      if (process.env.NODE_ENV === 'development') {
-        console.debug(`[Inbox] Moving message ${messageId} to folder ${destinationFolderId}`)
-      }
-      
-      const response = await fetch('/api/outlook/v2/messages/move', {
+      const response = await fetch(`/api/outlook/v2/messages/${messageId}/move`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          messageId,
           destinationFolderId
         })
       })
 
       if (response.ok) {
-        const data = await response.json()
-        
-        if (data.ok) {
-          // Clear selected message if it was moved
-          if (selectedMessage?.id === messageId) {
-            setSelectedMessage(null)
-            setSelectedId(null)
-          }
-
-          // Show success message
-          const message = messages.find((msg: any) => msg.id === messageId)
-          const subject = message?.subject || 'Message'
-          const destinationFolder = folders.find(f => f.id === destinationFolderId)
-          const folderName = destinationFolder?.displayName || destinationFolderId
-          
-          if (process.env.NODE_ENV === 'development') {
-            console.debug(`[Inbox] Successfully moved "${subject}" to folder ${folderName}`)
-          }
-          
-          // Immediately invalidate relevant caches for better reliability
-          try {
-            // Clear the current folder's cache
-            if (selectedFolderId) {
-              const currentFolderKey = `/api/outlook/v2/messages/list?folderId=${selectedFolderId}`
-              await mutate(currentFolderKey, undefined, false)
-            }
-            
-            // Clear the destination folder's cache if it's different
-            if (destinationFolderId !== selectedFolderId) {
-              const destFolderKey = `/api/outlook/v2/messages/list?folderId=${destinationFolderId}`
-              await mutate(destFolderKey, undefined, false)
-            }
-            
-            // Refresh the current folder to show updated state
-            await refreshMessages()
-            
-          } catch (cacheError) {
-            if (process.env.NODE_ENV === 'development') {
-              console.warn('[Inbox] Cache clearing warning:', cacheError)
-            }
-          }
-          
-          if (process.env.NODE_ENV === 'development') {
-            console.debug('[Inbox] Message move completed successfully')
-          }
-          
-          return true
-        } else {
-          throw new Error(data.error || 'Failed to move message')
-        }
+        // Refresh messages to get updated state
+        handleRefresh()
+        return true
       } else {
-        throw new Error('Failed to move message')
+        console.error('Failed to move message')
+        return false
       }
     } catch (error) {
       console.error('Error moving message:', error)
-      throw error
-    } finally {
-      setIsMovingMessage(false)
+      return false
     }
-  }
+  }, [handleRefresh])
 
   const contextValue: InboxContextType = {
     selectedFolderId,
@@ -326,84 +272,21 @@ export default function InboxV2() {
     moveMessage
   }
 
-  const handleMessageSelect = (messageId: string | null) => {
-    if (messageId === null) {
-      setSelectedMessage(null)
-      setSelectedId(null)
-    } else {
-      // Find message in current messages
-      const message = messages.find((msg: any) => msg.id === messageId)
-      if (message) {
-        setSelectedMessage(message)
-        setSelectedId(messageId)
-      } else {
-        // If message not found, clear selection
-        setSelectedMessage(null)
-        setSelectedId(null)
-      }
-    }
-  }
-
-  const handleMoveSuccess = useCallback(async (messageId: string, destinationFolderId: string) => {
-    console.log('Message move success:', { messageId, destinationFolderId })
-    
-    // Update the move success state
-    setMoveSuccess({ 
-      message: `✅ Email moved to ${destinationFolderId}`, 
-      timestamp: Date.now() 
-    })
-    
-    // Clear success message after 3 seconds
-    setTimeout(() => setMoveSuccess(null), 3000)
-    
-    // Refresh messages in the current folder to show updated state
-    if (refreshMessages) {
-      refreshMessages()
-    }
-    
-    // If the moved message was selected, clear the selection
-    if (selectedMessage?.id === messageId) {
-      setSelectedMessage(null)
-      setSelectedId(null)
-    }
-  }, [selectedMessage, selectedId, refreshMessages])
-
-  const handleMoveError = useCallback((messageId: string, error: string) => {
-    console.error('Message move error:', { messageId, error })
-    
-    // Show error message
-    setMoveSuccess({ 
-      message: `❌ Failed to move email: ${error}`, 
-      timestamp: Date.now() 
-    })
-    
-    // Clear error message after 5 seconds
-    setTimeout(() => setMoveSuccess(null), 5000)
-    
-    // Refresh messages to restore the original state
-    if (refreshMessages) {
-      refreshMessages()
-    }
-  }, [refreshMessages])
-
-  // Enhanced drag and drop handlers
   const handleDragStart = useCallback((e: React.DragEvent, messageId: string, sourceFolderId: string) => {
     setDraggedMessage({ messageId, sourceFolderId })
     e.dataTransfer.effectAllowed = 'move'
     
-    // Add visual feedback
-    if (e.dataTransfer.setDragImage) {
-      const dragImage = document.createElement('div')
-      dragImage.textContent = 'Moving email...'
-      dragImage.style.position = 'absolute'
-      dragImage.style.top = '-1000px'
-      dragImage.style.left = '-1000px'
-      document.body.appendChild(dragImage)
-      e.dataTransfer.setDragImage(dragImage, 0, 0)
-      
-      // Clean up after drag starts
-      setTimeout(() => document.body.removeChild(dragImage), 0)
-    }
+    // Create a custom drag image
+    const dragImage = document.createElement('div')
+    dragImage.innerHTML = '📧 Moving email...'
+    dragImage.style.position = 'absolute'
+    dragImage.style.top = '-1000px'
+    dragImage.style.left = '-1000px'
+    document.body.appendChild(dragImage)
+    e.dataTransfer.setDragImage(dragImage, 0, 0)
+    
+    // Clean up after drag starts
+    setTimeout(() => document.body.removeChild(dragImage), 0)
   }, [])
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -447,52 +330,79 @@ export default function InboxV2() {
     }
   }, [draggedMessage, moveMessage])
 
-  // Calculate unread count
+  // Calculate enhanced statistics
   const unreadCount = messages.filter((message: any) => !message.isRead).length
   const selectedFolder = folders.find(f => f.id === selectedFolderId)
+  const totalMessages = messages.length
+  const urgentMessages = messages.filter((message: any) => 
+    message.importance === 'high' || 
+    message.subject?.toLowerCase().includes('urgent') ||
+    message.subject?.toLowerCase().includes('asap')
+  ).length
 
   return (
     <InboxContext.Provider value={contextValue}>
-      {/* Modern Email Client Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+      {/* Enhanced Modern Email Client Header */}
+      <div className="bg-white border-b border-gray-200 px-6 py-6 shadow-sm">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-lg flex items-center justify-center">
-              <MessageSquare className="h-5 w-5 text-white" />
+          <div className="flex items-center gap-6">
+            <div className="relative">
+              <div className="w-12 h-12 bg-gradient-to-r from-[#4f46e5] via-[#7c3aed] to-[#a855f7] rounded-2xl flex items-center justify-center shadow-lg">
+                <MessageSquare className="h-6 w-6 text-white" />
+              </div>
+              {/* Floating sparkles */}
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
+              <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-cyan-400 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Inbox</h1>
-              <p className="text-sm text-gray-600">
-                {selectedFolder ? selectedFolder.displayName : 'Loading...'} • {messages.length} messages
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-[#4f46e5] to-[#a855f7] bg-clip-text text-transparent">
+                Inbox
+              </h1>
+              <div className="flex items-center gap-4 mt-2">
+                <p className="text-sm text-gray-600 flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  {selectedFolder ? selectedFolder.displayName : 'Loading...'} • {totalMessages} messages
+                </p>
                 {unreadCount > 0 && (
-                  <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                    <TrendingUp className="h-3 w-3 mr-1" />
                     {unreadCount} unread
                   </span>
                 )}
+                {urgentMessages > 0 && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                    <Zap className="h-3 w-3 mr-1" />
+                    {urgentMessages} urgent
+                  </span>
+                )}
                 {isMovingMessage && (
-                  <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
                     <RefreshCw className="h-3 w-3 animate-spin mr-1" />
                     Moving...
                   </span>
                 )}
-              </p>
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                  <Clock className="h-3 w-3 mr-1" />
+                  Last updated: {lastRefreshTime.toLocaleTimeString()}
+                </span>
+              </div>
             </div>
           </div>
           
           <div className="flex items-center gap-3">
             <button
               onClick={() => setNewEmailModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white rounded-lg hover:brightness-110 transition-all duration-200 shadow-sm font-medium"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white rounded-xl hover:from-[#4338ca] hover:to-[#6d28d9] transition-all duration-200 shadow-lg hover:shadow-xl font-medium transform hover:scale-105"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-5 w-5" />
               New Email
             </button>
             
             <button
               onClick={() => setDraftsPanelOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-lg hover:brightness-110 transition-all duration-200 shadow-sm font-medium"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:from-emerald-600 hover:to-teal-700 transition-all duration-200 shadow-lg hover:shadow-xl font-medium transform hover:scale-105"
             >
-              <FileText className="h-4 w-4" />
+              <FileText className="h-5 w-5" />
               AI Drafts
             </button>
             
@@ -523,27 +433,30 @@ export default function InboxV2() {
             />
             
             <button
-              onClick={() => refreshMessages()}
+              onClick={handleRefresh}
               disabled={foldersLoading}
-              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-200"
-              title="Refresh"
+              className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all duration-200 hover:scale-110"
+              title="Refresh (F5)"
             >
               <RefreshCw className={`h-5 w-5 ${foldersLoading ? 'animate-spin' : ''}`} />
             </button>
             
-            <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-200" title="Settings">
+            <button className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all duration-200 hover:scale-110" title="Settings">
               <Settings className="h-5 w-5" />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Main Email Client Layout */}
-      <div className="flex h-[calc(100vh-120px)] bg-gray-50">
-        {/* Left Column: Folder Sidebar */}
-        <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
-          <div className="p-4 border-b border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-3">Folders</h3>
+      {/* Enhanced Main Email Client Layout */}
+      <div className="flex h-[calc(100vh-180px)] bg-gradient-to-br from-gray-50 via-white to-gray-50">
+        {/* Left Column: Enhanced Folder Sidebar */}
+        <div className="w-80 bg-white border-r border-gray-200 flex flex-col shadow-sm">
+          <div className="p-6 border-b border-gray-200 bg-gradient-to-b from-gray-50/50 to-white">
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-purple-500" />
+              Folders
+            </h3>
             <FolderSidebar 
               selectedFolderId={selectedFolderId}
               onFolderSelect={(folderId) => {
@@ -557,26 +470,26 @@ export default function InboxV2() {
           </div>
         </div>
 
-        {/* Middle Column: Message List */}
-        <div className="w-96 bg-white border-r border-gray-200 flex flex-col">
-          <div className="p-4 border-b border-gray-200">
-            <div className="flex items-center gap-2 mb-3">
+        {/* Middle Column: Enhanced Message List */}
+        <div className="w-96 bg-white border-r border-gray-200 flex flex-col shadow-sm">
+          <div className="p-6 border-b border-gray-200 bg-gradient-to-b from-gray-50/50 to-white">
+            <div className="flex items-center gap-3 mb-4">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Search messages..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
+                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent shadow-sm transition-all duration-200"
                 />
               </div>
               <button
                 onClick={() => setShowUnreadOnly(!showUnreadOnly)}
-                className={`p-2 rounded-lg transition-all duration-200 ${
+                className={`p-3 rounded-xl transition-all duration-200 ${
                   showUnreadOnly 
-                    ? 'bg-blue-100 text-blue-700' 
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                    ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 border border-transparent'
                 }`}
                 title="Show unread only"
               >
@@ -600,22 +513,31 @@ export default function InboxV2() {
           </div>
         </div>
 
-        {/* Right Column: Message Preview */}
-        <div className="flex-1 bg-white flex flex-col">
+        {/* Right Column: Enhanced Message Preview */}
+        <div className="flex-1 bg-white flex flex-col shadow-sm">
           {selectedMessage ? (
             <MessagePreview 
               selectedMessage={selectedMessage}
               onReply={() => handleReply('reply')}
               onReplyAll={() => handleReply('replyAll')}
-              onMessageUpdate={refreshMessages}
+              onMessageUpdate={handleRefresh}
               triageResult={triage}
             />
           ) : (
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-50 to-white">
               <div className="text-center">
-                <MessageSquare className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No message selected</h3>
-                <p className="text-gray-500">Select a message from the list to preview it here</p>
+                <div className="relative mb-6">
+                  <MessageSquare className="h-20 w-20 text-gray-300 mx-auto" />
+                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full flex items-center justify-center">
+                    <Zap className="h-4 w-4 text-white" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-medium text-gray-900 mb-3">No message selected</h3>
+                <p className="text-gray-500 mb-4">Select a message from the list to preview it here</p>
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
+                  <Sparkles className="h-4 w-4" />
+                  <span>Use the AskBlocIQ AI button for assistance</span>
+                </div>
               </div>
             </div>
           )}
@@ -625,23 +547,26 @@ export default function InboxV2() {
       {/* Enhanced Success/Error Message Display */}
       {moveSuccess && (
         <div className={cn(
-          "fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 animate-in slide-in-from-bottom-2 transition-all duration-300",
-          moveSuccess.message.includes('✅') ? 'bg-green-500 text-white' : 
-          moveSuccess.message.includes('❌') ? 'bg-red-500 text-white' : 
-          'bg-blue-500 text-white'
+          "fixed bottom-6 right-6 px-6 py-4 rounded-2xl shadow-2xl z-50 animate-in slide-in-from-bottom-2 transition-all duration-300 border",
+          moveSuccess.message.includes('✅') ? 'bg-green-500 text-white border-green-400' : 
+          moveSuccess.message.includes('❌') ? 'bg-red-500 text-white border-red-400' : 
+          'bg-blue-500 text-white border-blue-400'
         )}>
-          <div className="flex items-center gap-2">
-            {moveSuccess.message.includes('✅') && <span>✅</span>}
-            {moveSuccess.message.includes('❌') && <span>❌</span>}
-            {!moveSuccess.message.includes('✅') && !moveSuccess.message.includes('❌') && <span>⏳</span>}
+          <div className="flex items-center gap-3">
+            {moveSuccess.message.includes('✅') && <span className="text-xl">✅</span>}
+            {moveSuccess.message.includes('❌') && <span className="text-xl">❌</span>}
+            {!moveSuccess.message.includes('✅') && !moveSuccess.message.includes('❌') && <span className="text-xl">⏳</span>}
             <span className="font-medium">{moveSuccess.message}</span>
           </div>
         </div>
       )}
 
       {triageSuccess && (
-        <div className="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-in slide-in-from-bottom-2">
-          {triageSuccess.message}
+        <div className="fixed bottom-6 right-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-4 rounded-2xl shadow-2xl z-50 animate-in slide-in-from-bottom-2 border border-green-400">
+          <div className="flex items-center gap-3">
+            <Sparkles className="h-5 w-5" />
+            <span className="font-medium">{triageSuccess.message}</span>
+          </div>
         </div>
       )}
 
@@ -657,7 +582,7 @@ export default function InboxV2() {
         onClose={() => setNewEmailModalOpen(false)}
       />
 
-      {/* Ask BlocIQ AI Assistant */}
+      {/* Enhanced Ask BlocIQ AI Assistant */}
       <AskBlocIQButton selectedMessage={selectedMessage} />
 
       {/* AI Drafts Panel */}
