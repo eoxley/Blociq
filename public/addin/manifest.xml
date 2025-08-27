@@ -29,7 +29,6 @@
     </Sets>
   </Requirements>
 
-  <!--  ✅ REQUIRED by schema: dummy FormSettings block  -->
   <FormSettings>
     <Form xsi:type="ItemRead">
       <DesktopSettings>
@@ -39,7 +38,6 @@
     </Form>
   </FormSettings>
 
-  <!--  ✅ Permissions must come AFTER FormSettings  -->
   <Permissions>ReadWriteItem</Permissions>
 
   <Rule xsi:type="RuleCollection" Mode="Or">
@@ -54,7 +52,7 @@
     <Hosts>
       <Host xsi:type="MailHost">
         <DesktopFormFactor>
-          <!--  Read  -->
+          <!-- Read -->
           <ExtensionPoint xsi:type="MessageReadCommandSurface">
             <OfficeTab id="TabDefault">
               <Group id="msgReadGroup">
@@ -78,7 +76,7 @@
             </OfficeTab>
           </ExtensionPoint>
 
-          <!--  Compose  -->
+          <!-- Compose -->
           <ExtensionPoint xsi:type="MessageComposeCommandSurface">
             <OfficeTab id="TabDefault">
               <Group id="msgComposeGroup">
@@ -98,7 +96,7 @@
                     <SourceLocation resid="taskpaneUrl"/>
                   </Action>
                 </Control>
-                
+
                 <!-- AI Reply Button -->
                 <Control xsi:type="Button" id="aiReplyButton">
                   <Label resid="aiReplyButtonLabel"/>
@@ -115,7 +113,7 @@
                     <FunctionName>showAIReplyModal</FunctionName>
                   </Action>
                 </Control>
-                
+
                 <!-- Inbox Triage Button -->
                 <Control xsi:type="Button" id="inboxTriageButton">
                   <Label resid="inboxTriageButtonLabel"/>
@@ -135,8 +133,6 @@
               </Group>
             </OfficeTab>
           </ExtensionPoint>
-          <!-- Function File Reference - Required for ExecuteFunction actions -->
-          <FunctionFile resid="functionFileUrl"/>
         </DesktopFormFactor>
       </Host>
     </Hosts>
@@ -152,6 +148,9 @@
         <bt:Url id="taskpaneUrl" DefaultValue="https://www.blociq.co.uk/addin/taskpane.html"/>
         <bt:Url id="functionFileUrl" DefaultValue="https://www.blociq.co.uk/addin/functions.html"/>
       </bt:Urls>
+
+      <!-- ✅ Correct location for FunctionFile -->
+      <FunctionFile resid="functionFileUrl"/>
 
       <bt:ShortStrings>
         <bt:String id="groupLabel" DefaultValue="BlocIQ Assistant"/>
