@@ -747,12 +747,14 @@ export default function AskBlocIQ({
                             </p>
                             {analysis.suggestedActions && analysis.suggestedActions.length > 0 && (
                               <div className="flex flex-wrap gap-1">
-                                {analysis.suggestedActions.map((action: string, actionIndex: number) => (
-                                  <span 
+                                {analysis.suggestedActions.map((action: any, actionIndex: number) => (
+                                  <span
                                     key={actionIndex}
                                     className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
                                   >
-                                    {action}
+                                    {typeof action === 'string'
+                                      ? action
+                                      : action?.label || action?.key || JSON.stringify(action)}
                                   </span>
                                 ))}
                               </div>

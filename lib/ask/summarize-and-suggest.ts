@@ -29,6 +29,7 @@ SUGGESTIONS:
   });
 
   const content = resp.choices?.[0]?.message?.content || '';
+  console.debug('Raw AI summarize output:', content);
   const [ , summaryPart = '', suggestionsPart = '[]' ] =
     content.match(/SUMMARY:\s*([\s\S]*?)\nSUGGESTIONS:\s*([\s\S]*)$/i) || [];
 

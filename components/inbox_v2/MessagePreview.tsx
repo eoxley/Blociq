@@ -409,8 +409,12 @@ export default function MessagePreview({ selectedMessage, onReply, onReplyAll, o
                 <div className="mt-2">
                   <strong>Suggested Actions:</strong>
                   <ul className="list-disc list-inside mt-1 ml-2">
-                    {triageResult.suggestedActions.map((action: string, index: number) => (
-                      <li key={index}>{action}</li>
+                    {triageResult.suggestedActions.map((action: any, index: number) => (
+                      <li key={index}>
+                        {typeof action === 'string'
+                          ? action
+                          : action?.label || action?.key || JSON.stringify(action)}
+                      </li>
                     ))}
                   </ul>
                 </div>
