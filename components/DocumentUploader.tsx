@@ -166,7 +166,7 @@ export default function DocumentUploader({
 
       // Navigate to documents page or building documents
       if (result.building_id) {
-        router.push(`/buildings/${result.building_id}/documents`);
+        router.push(`/dashboard/buildings/${result.building_id}/documents`);
       } else {
         router.push('/ai-assistant');
       }

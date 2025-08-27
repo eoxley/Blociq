@@ -186,7 +186,7 @@ export default function DocumentUploadPage() {
       });
 
       // Redirect back to project details
-      router.push(`/buildings/${buildingId}/major-works/${projectId}`);
+              router.push(`/dashboard/buildings/${buildingId}/major-works/${projectId}`);
 
     } catch (error) {
       console.error('Error uploading document:', error);

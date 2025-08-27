@@ -94,19 +94,19 @@ export default function SmartSearch({ className = "" }: SmartSearchProps) {
 
     switch (result.type) {
       case 'building':
-        router.push(`/buildings/${result.id}`)
+        router.push(`/dashboard/buildings/${result.id}`)
         break
       case 'leaseholder':
         // For leaseholders, we could open a modal or navigate to a leaseholder page
         // For now, let's navigate to the building page if we have building_id
         if (result.building_id) {
-          router.push(`/buildings/${result.building_id}`)
+          router.push(`/dashboard/buildings/${result.building_id}`)
         }
         break
       case 'unit':
         // For units, navigate to the building page
         if (result.building_id) {
-          router.push(`/buildings/${result.building_id}`)
+          router.push(`/dashboard/buildings/${result.building_id}`)
         }
         break
     }
