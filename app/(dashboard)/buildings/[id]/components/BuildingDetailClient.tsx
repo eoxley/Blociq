@@ -326,7 +326,7 @@ export default function BuildingDetailClient({
           <p className="text-gray-600 mt-1">Manage building details and access information</p>
         </div>
         <Link
-          href="/buildings"
+                          href="/dashboard/buildings"
           className="inline-flex items-center gap-2 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50"
         >
           <ChevronLeft className="h-4 w-4" />
