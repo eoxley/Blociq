@@ -56,6 +56,14 @@ export default function CompliancePage() {
       setLoading(true)
       setError(null)
 
+      // First check if user is authenticated
+      const { data: { session }, error: authError } = await supabase.auth.getSession()
+      if (authError || !session) {
+        throw new Error('Authentication required. Please log in.')
+      }
+
+      console.log('🔐 User authenticated:', session.user.id)
+
       const { data, error } = await supabase
         .from('building_compliance_assets')
         .select(`
@@ -66,12 +74,14 @@ export default function CompliancePage() {
         .order('next_due_date', { ascending: true })
 
       if (error) {
+        console.error('❌ Database query error:', error)
         throw error
       }
 
+      console.log('✅ Compliance data fetched:', data?.length || 0, 'items')
       setComplianceData(data || [])
     } catch (err) {
-      console.error('Error fetching compliance data:', err)
+      console.error('❌ Error fetching compliance data:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch compliance data')
     } finally {
       setLoading(false)
@@ -151,6 +161,20 @@ export default function CompliancePage() {
               <h2 className="text-lg font-semibold">Error Loading Compliance Data</h2>
             </div>
             <p className="mt-2 text-red-700">{error}</p>
+            <div className="mt-3 text-sm text-red-600">
+              {error.includes('Authentication') && (
+                <p>• Please ensure you are logged in</p>
+              )}
+              {error.includes('permission') && (
+                <p>• Check your access permissions for this data</p>
+              )}
+              {error.includes('relation') && (
+                <p>• Database table may not exist or be accessible</p>
+              )}
+              {error.includes('JWT') && (
+                <p>• Your session may have expired - try refreshing the page</p>
+              )}
+            </div>
             <BlocIQButton 
               onClick={fetchComplianceData}
               className="mt-4"
