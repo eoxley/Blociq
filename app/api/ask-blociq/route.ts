@@ -13,8 +13,6 @@ import OpenAI from 'openai';
 import { buildPrompt } from '@/lib/buildPrompt';
 import { insertAiLog } from '@/lib/supabase/ai_logs';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 export async function POST(req: NextRequest) {
   try {
     // Check if OpenAI API key is configured
@@ -24,6 +22,8 @@ export async function POST(req: NextRequest) {
         error: 'OpenAI API key not configured. Please check environment variables.' 
       }, { status: 500 });
     }
+
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
     const supabase = createRouteHandlerClient({ cookies });
     
