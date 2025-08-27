@@ -177,7 +177,7 @@ export default async function BuildingDetailPage({ params }: BuildingDetailPageP
             {error instanceof Error ? error.message : 'An unexpected error occurred'}
           </p>
           <a 
-                            href="/dashboard/buildings"
+                            href="/buildings"
             className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity inline-block"
           >
             Back to Buildings
