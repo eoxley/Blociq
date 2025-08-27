@@ -987,10 +987,10 @@ export default function AskBlocIQ({
               {buildingId && (
                 <div className="mt-3 pt-3 border-t border-gray-200">
                   <a
-                    href={`/buildings/${buildingId}/compliance`}
+                    href="/compliance"
                     className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1"
                   >
-                    🔗 View All in Compliance Tracker
+                    🔗 View All in Compliance Overview
                   </a>
                 </div>
               )}

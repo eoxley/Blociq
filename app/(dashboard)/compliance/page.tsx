@@ -1,135 +1,395 @@
-"use client";
-import { useEffect, useState } from "react";
-import { Shield, Sparkles } from "lucide-react";
-import Link from "next/link";
+'use client'
 
-type CountRow = { building_id:string; building_name:string; total:number; compliant:number; due_soon:number; overdue:number; missing:number };
-type UpcomingRow = { building_id:string; building_name:string; asset_name:string; category:string; bca_id:string; next_due_date:string; status:string };
+import React, { useState, useEffect } from 'react'
+import { supabase } from '@/utils/supabase/client'
+import { 
+  Shield, 
+  AlertTriangle, 
+  CheckCircle, 
+  Clock, 
+  Building2,
+  RefreshCw,
+  AlertCircle
+} from 'lucide-react'
+import { BlocIQButton } from '@/components/ui/blociq-button'
 
-export default function CompliancePortfolioPage() {
-  const [counts, setCounts] = useState<CountRow[]>([]);
-  const [upcoming, setUpcoming] = useState<UpcomingRow[]>([]);
-  const [loading, setLoading] = useState(true);
+interface ComplianceAsset {
+  id: string
+  name: string
+  category: string
+  description: string
+  frequency_months: number
+}
 
-  async function load() {
-    const [c, u] = await Promise.all([
-      fetch("/api/portfolio/compliance/summary").then(r=>r.json()),
-      fetch("/api/portfolio/compliance/upcoming").then(r=>r.json())
-    ]);
-    setCounts(c.data || []); setUpcoming(u.data || []);
+interface BuildingComplianceAsset {
+  id: string
+  building_id: string
+  compliance_asset_id: string
+  last_renewed_date: string | null
+  next_due_date: string | null
+  status: 'compliant' | 'pending' | 'overdue' | 'unknown'
+  status_override: string | null
+  notes: string | null
+  contractor: string | null
+  created_at: string
+  updated_at: string
+  buildings: {
+    name: string
+  } | null
+  compliance_assets: ComplianceAsset | null
+}
+
+export default function CompliancePage() {
+  const [complianceData, setComplianceData] = useState<BuildingComplianceAsset[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [filterStatus, setFilterStatus] = useState<string>('all')
+
+
+
+  useEffect(() => {
+    fetchComplianceData()
+  }, [])
+
+  const fetchComplianceData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const { data, error } = await supabase
+        .from('building_compliance_assets')
+        .select(`
+          *,
+          buildings (name),
+          compliance_assets (name, category, description, frequency_months)
+        `)
+        .order('next_due_date', { ascending: true })
+
+      if (error) {
+        throw error
+      }
+
+      setComplianceData(data || [])
+    } catch (err) {
+      console.error('Error fetching compliance data:', err)
+      setError(err instanceof Error ? err.message : 'Failed to fetch compliance data')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  useEffect(() => { setLoading(true); load().finally(()=>setLoading(false)); }, []);
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'compliant':
+        return <CheckCircle className="h-5 w-5 text-green-500" />
+      case 'pending':
+        return <Clock className="h-5 w-5 text-yellow-500" />
+      case 'overdue':
+        return <AlertTriangle className="h-5 w-5 text-red-500" />
+      default:
+        return <AlertCircle className="h-5 w-5 text-gray-500" />
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'compliant':
+        return 'bg-green-100 text-green-800'
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800'
+      case 'overdue':
+        return 'bg-red-100 text-red-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const filteredData = complianceData.filter(item => {
+    if (filterStatus === 'all') return true
+    return item.status === filterStatus
+  })
+
+  const getDaysUntilDue = (dueDate: string | null) => {
+    if (!dueDate) return null
+    const today = new Date()
+    const due = new Date(dueDate)
+    const diffTime = due.getTime() - today.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return diffDays
+  }
+
+  const getUrgencyColor = (daysUntilDue: number | null) => {
+    if (daysUntilDue === null) return 'text-gray-500'
+    if (daysUntilDue < 0) return 'text-red-600 font-semibold'
+    if (daysUntilDue <= 30) return 'text-orange-600 font-semibold'
+    if (daysUntilDue <= 90) return 'text-yellow-600 font-semibold'
+    return 'text-green-600'
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-center h-64">
+            <div className="flex items-center space-x-2">
+              <RefreshCw className="h-6 w-6 animate-spin text-blue-600" />
+              <span className="text-lg text-gray-600">Loading compliance data...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+            <div className="flex items-center space-x-2 text-red-800">
+              <AlertCircle className="h-6 w-6" />
+              <h2 className="text-lg font-semibold">Error Loading Compliance Data</h2>
+            </div>
+            <p className="mt-2 text-red-700">{error}</p>
+            <BlocIQButton 
+              onClick={fetchComplianceData}
+              className="mt-4"
+            >
+              Try Again
+            </BlocIQButton>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-4">
-      {/* Hero Banner - Matching Inbox Page Style */}
-      <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16 mb-8">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center">
-            <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
-              <Shield className="h-10 w-10 text-white" />
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center space-x-3 mb-4">
+            <Shield className="h-8 w-8 text-blue-600" />
+            <h1 className="text-3xl font-bold text-gray-900">Compliance Overview</h1>
+          </div>
+          <p className="text-gray-600">
+            Track compliance status across all buildings and assets
+          </p>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Compliant</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {complianceData.filter(item => item.status === 'compliant').length}
+                </p>
+              </div>
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              Compliance Portfolio
-            </h1>
-            <p className="text-xl text-white/90 max-w-3xl mx-auto leading-relaxed">
-              Live status across all buildings with comprehensive compliance tracking and management.
-            </p>
-            <div className="mt-6 bg-white/20 backdrop-blur-sm rounded-xl p-4 max-w-2xl mx-auto">
-              <div className="flex items-center justify-center gap-2 text-white/90">
-                <Sparkles className="h-5 w-5" />
-                <span className="text-sm font-medium">
-                  {loading ? 'Loading compliance data...' : `Monitoring ${counts.length} buildings`}
-                </span>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <Clock className="h-6 w-6 text-yellow-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Pending</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {complianceData.filter(item => item.status === 'pending').length}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <AlertTriangle className="h-6 w-6 text-red-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Overdue</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {complianceData.filter(item => item.status === 'overdue').length}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Building2 className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Assets</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {complianceData.length}
+                </p>
               </div>
             </div>
           </div>
         </div>
-        
-        {/* Decorative Elements */}
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-          <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-10 right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-          <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-white/5 rounded-full blur-2xl"></div>
-        </div>
-      </section>
 
-      {/* Summary grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-        {counts.map(row => (
-          <Link 
-            key={row.building_id} 
-            href={`/buildings/${row.building_id}/compliance`}
-            className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-          >
-            <div className="text-sm font-semibold text-neutral-800">{row.building_name}</div>
-            <div className="mt-2 grid grid-cols-4 gap-2 text-center">
-              <Card label="Total" v={row.total} />
-              <Card label="Compliant" v={row.compliant} tone="text-emerald-700" />
-              <Card label="Due soon" v={row.due_soon} tone="text-amber-800" />
-              <Card label="Overdue" v={row.overdue} tone="text-red-700" />
+        {/* Filters */}
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <div className="flex items-center space-x-4">
+            <label className="text-sm font-medium text-gray-700">Filter by Status:</label>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Statuses</option>
+              <option value="compliant">Compliant</option>
+              <option value="pending">Pending</option>
+              <option value="overdue">Overdue</option>
+              <option value="unknown">Unknown</option>
+            </select>
+            
+            <BlocIQButton 
+              onClick={fetchComplianceData}
+              variant="outline"
+              size="sm"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </BlocIQButton>
+          </div>
+        </div>
+
+        {/* Compliance Table */}
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">Compliance Assets</h2>
+          </div>
+          
+          {filteredData.length === 0 ? (
+            <div className="p-8 text-center">
+              <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No compliance data found</h3>
+              <p className="text-gray-500">
+                {filterStatus === 'all' 
+                  ? 'No compliance assets have been configured yet.'
+                  : `No assets with status "${filterStatus}" found.`
+                }
+              </p>
             </div>
-          </Link>
-        ))}
-      </div>
-
-      {/* Upcoming table (90 days) */}
-      <div className="rounded-2xl border border-neutral-200 bg-white shadow-sm overflow-auto">
-        <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between">
-          <div className="text-sm font-semibold text-neutral-800">Upcoming (next 90 days)</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Building
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Asset
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Category
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Next Due
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Last Renewed
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Contractor
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredData.map((item) => {
+                    const daysUntilDue = getDaysUntilDue(item.next_due_date)
+                    return (
+                      <tr key={item.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <Building2 className="h-4 w-4 text-gray-400 mr-2" />
+                            <span className="text-sm font-medium text-gray-900">
+                              {item.buildings?.name || 'Unknown Building'}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {item.compliance_assets?.name || 'Unknown Asset'}
+                            </div>
+                            {item.compliance_assets?.description && (
+                              <div className="text-sm text-gray-500 max-w-xs truncate">
+                                {item.compliance_assets.description}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {item.compliance_assets?.category || 'Unknown'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            {getStatusIcon(item.status)}
+                            <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
+                              {item.status}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {item.next_due_date ? (
+                            <div>
+                              <div className={`text-sm ${getUrgencyColor(daysUntilDue)}`}>
+                                {new Date(item.next_due_date).toLocaleDateString()}
+                              </div>
+                              {daysUntilDue !== null && (
+                                <div className="text-xs text-gray-500">
+                                  {daysUntilDue < 0 
+                                    ? `${Math.abs(daysUntilDue)} days overdue`
+                                    : daysUntilDue === 0
+                                    ? 'Due today'
+                                    : `${daysUntilDue} days remaining`
+                                  }
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-sm text-gray-500">Not set</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.last_renewed_date 
+                            ? new Date(item.last_renewed_date).toLocaleDateString()
+                            : 'Never'
+                          }
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.contractor || 'Not assigned'}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-        <table className="min-w-full text-sm">
-          <thead className="bg-neutral-50 text-neutral-600">
-            <tr>
-              <th className="px-4 py-2 text-left">Building</th>
-              <th className="px-4 py-2 text-left">Asset</th>
-              <th className="px-4 py-2 text-left">Category</th>
-              <th className="px-4 py-2 text-left">Due</th>
-              <th className="px-4 py-2 text-left">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-100">
-            {upcoming.map((r, i) => (
-              <tr key={`${r.bca_id}-${i}`} className="hover:bg-neutral-50/60">
-                <td className="px-4 py-2">{r.building_name}</td>
-                <td className="px-4 py-2">{r.asset_name}</td>
-                <td className="px-4 py-2">{r.category}</td>
-                <td className="px-4 py-2">{r.next_due_date}</td>
-                <td className="px-4 py-2">
-                  <div className="flex gap-2">
-                    <button onClick={() => addToOutlook(r)} className="rounded border border-neutral-300 px-2 py-1 hover:bg-neutral-50">Add to Outlook</button>
-                    <button onClick={() => draftTender(r)} className="rounded border border-neutral-300 px-2 py-1 hover:bg-neutral-50">Draft tender email</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {!upcoming.length && !loading ? (
-              <tr><td colSpan={5} className="px-4 py-6 text-center text-neutral-500">No upcoming compliance items</td></tr>
-            ) : null}
-          </tbody>
-        </table>
+
+        {/* Footer */}
+        <div className="mt-8 text-center text-sm text-gray-500">
+          <p>Last updated: {new Date().toLocaleString()}</p>
+        </div>
       </div>
     </div>
-  );
-
-  async function addToOutlook(r: UpcomingRow) {
-    const body = {
-      bca: { asset_name: r.asset_name, next_due_date: r.next_due_date, notes: "" },
-      building: { name: r.building_name },
-      inbox_user_id: null
-    };
-    const res = await fetch("/api/compliance/reminder", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) }).then(r=>r.json());
-    if (res.mode === "outlook_event" && res.draft?.webLink) window.open(res.draft.webLink, "_blank");
-    else if (res.mode === "ics" && res.ics) downloadICS(res.ics, "compliance.ics");
-  }
-  async function draftTender(r: UpcomingRow) {
-    const payload = { building: { name: r.building_name }, work: { title: `${r.asset_name} service/inspection` }, return_by: r.next_due_date, contact: {}, extras: {} };
-    const j = await fetch("/api/tender/prepare", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(payload) }).then(r=>r.json());
-    const mailto = `mailto:?subject=${encodeURIComponent(j.subject)}&body=${encodeURIComponent(j.body)}`;
-    window.location.href = mailto; // soft fallback (Outlook draft route can be added later)
-  }
-  function downloadICS(text:string, filename:string){ const blob=new Blob([text],{type:"text/calendar"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url); }
-
-  function Card({label,v,tone}:{label:string;v:number;tone?:string}){ return <div className="rounded-xl border border-neutral-200 p-3 text-center"><div className="text-xs text-neutral-500">{label}</div><div className={`text-lg font-semibold ${tone||"text-neutral-900"}`}>{v}</div></div>; }
+  )
 }
