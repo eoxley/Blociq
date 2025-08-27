@@ -1,6 +1,6 @@
 /**
  * OCR utility module for BlocIQ lease document processing
- * Handles document text extraction using the OCR microservice
+ * Handles document text extraction using local Google Vision API
  */
 
 export interface OCRResult {
@@ -19,7 +19,7 @@ export interface OCRProcessingError {
 }
 
 /**
- * Process document through OCR microservice
+ * Process document through local OCR API
  * @param file - The file to process
  * @returns Promise<OCRResult> - Extracted text and metadata
  */
@@ -37,26 +37,36 @@ export async function processDocumentOCR(file: File): Promise<OCRResult> {
       throw new Error('File size too large. Maximum size is 10MB.');
     }
 
-    // Create form data for upload
-    const formData = new FormData();
-    formData.append('file', file);
+    // Convert file to base64 for Google Vision API
+    const base64Data = await fileToBase64(file);
     
-    // POST to OCR microservice
-    const response = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
+    // POST to local OCR API
+    const response = await fetch('/api/ocr', {
       method: 'POST',
-      body: formData,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        base64Image: base64Data,
+        mimeType: file.type,
+        filename: file.name
+      }),
       // Add timeout for network requests
       signal: AbortSignal.timeout(30000) // 30 second timeout
     });
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'Unknown error');
-      throw new Error(`OCR service error: ${response.status} - ${errorText}`);
+      throw new Error(`OCR API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
     
     // Validate OCR response
+    if (!data.success) {
+      throw new Error(`OCR processing failed: ${data.error || 'Unknown error'}`);
+    }
+
     if (!data.text || typeof data.text !== 'string') {
       throw new Error('Invalid OCR response: No text extracted');
     }
@@ -70,8 +80,10 @@ export async function processDocumentOCR(file: File): Promise<OCRResult> {
 
     return {
       text: data.text.trim(),
-      source: 'ocr_microservice',
-      filename: file.name
+      source: 'google_vision_api',
+      filename: file.name,
+      confidence: data.confidence || 0.8,
+      quality: data.text.length > 100 ? 'high' : 'medium'
     };
 
   } catch (error) {
@@ -87,9 +99,9 @@ export async function processDocumentOCR(file: File): Promise<OCRResult> {
         } as OCRProcessingError;
       }
       
-      if (error.message.includes('OCR service error')) {
+      if (error.message.includes('OCR API error')) {
         throw {
-          message: 'OCR service is currently unavailable. Please try again later.',
+          message: 'OCR processing failed. Please try again.',
           code: 'PROCESSING_ERROR' as const,
           details: error.message
         } as OCRProcessingError;
@@ -106,7 +118,7 @@ export async function processDocumentOCR(file: File): Promise<OCRResult> {
     
     // Generic error fallback
     throw {
-      message: 'OCR processing failed. Please try again or contact support.',
+      message: 'OCR processing failed. Please try again.',
       code: 'UNKNOWN_ERROR' as const,
       details: error instanceof Error ? error.message : 'Unknown error occurred'
     } as OCRProcessingError;
@@ -114,21 +126,107 @@ export async function processDocumentOCR(file: File): Promise<OCRResult> {
 }
 
 /**
+ * Convert file to base64 string
+ * @param file - The file to convert
+ * @returns Promise<string> - Base64 encoded string
+ */
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      try {
+        // Remove data:image/jpeg;base64, prefix
+        const base64 = reader.result as string;
+        const base64Data = base64.split(',')[1];
+        if (!base64Data) {
+          reject(new Error('Failed to convert file to base64'));
+          return;
+        }
+        resolve(base64Data);
+      } catch (error) {
+        reject(error);
+      }
+    };
+    reader.onerror = () => reject(new Error('Failed to read file'));
+  });
+}
+
+/**
  * Validate file type for OCR processing
+ * @param file - The file to validate
+ * @returns boolean - True if file type is supported
  */
 function isValidFileType(file: File): boolean {
-  const validTypes = [
+  const supportedTypes = [
     'application/pdf',
-    'image/png',
     'image/jpeg',
     'image/jpg',
+    'image/png',
     'image/gif',
     'image/bmp',
     'image/tiff',
     'image/webp'
   ];
   
-  return validTypes.includes(file.type) || file.name.toLowerCase().endsWith('.pdf');
+  return supportedTypes.includes(file.type) || 
+         file.name.toLowerCase().match(/\.(pdf|jpg|jpeg|png|gif|bmp|tiff|webp)$/);
+}
+
+/**
+ * Process document with Google Vision API (alternative method)
+ * @param file - The file to process
+ * @returns Promise<OCRResult> - Extracted text and metadata
+ */
+export async function processDocumentWithGoogleVision(file: File): Promise<OCRResult> {
+  try {
+    console.log('🔄 Starting Google Vision processing for:', file.name);
+    
+    // Convert file to base64
+    const base64Data = await fileToBase64(file);
+    
+    // Call the OCR API with specific Google Vision parameters
+    const response = await fetch('/api/ocr', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        base64Image: base64Data,
+        mimeType: file.type,
+        filename: file.name,
+        useGoogleVision: true,
+        features: ['TEXT_DETECTION', 'DOCUMENT_TEXT_DETECTION']
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      throw new Error(`Google Vision API error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    
+    if (!data.success) {
+      throw new Error(`Google Vision processing failed: ${data.error || 'Unknown error'}`);
+    }
+
+    return {
+      text: data.text.trim(),
+      source: 'google_vision_api',
+      filename: file.name,
+      confidence: data.confidence || 0.9,
+      quality: 'high'
+    };
+
+  } catch (error) {
+    console.error('❌ Google Vision processing failed for:', file.name, error);
+    throw {
+      message: 'Google Vision processing failed. Please try again.',
+      code: 'PROCESSING_ERROR' as const,
+      details: error instanceof Error ? error.message : 'Unknown error occurred'
+    } as OCRProcessingError;
+  }
 }
 
 /**

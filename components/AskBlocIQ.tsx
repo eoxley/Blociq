@@ -145,7 +145,18 @@ export default function AskBlocIQ({
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // File handling
-  const acceptedFileTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+  const acceptedFileTypes = [
+    'application/pdf', 
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 
+    'text/plain',
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/gif',
+    'image/bmp',
+    'image/tiff',
+    'image/webp'
+  ];
   const maxFileSize = 10 * 1024 * 1024; // 10MB
   const maxFiles = 5;
 
@@ -210,7 +221,7 @@ export default function AskBlocIQ({
 
   const validateFile = (file: File): boolean => {
     if (!acceptedFileTypes.includes(file.type)) {
-      toast.error(`File type not supported. Please upload PDF, DOCX, or TXT files.`);
+      toast.error(`File type not supported. Please upload PDF, DOCX, TXT, or image files (JPG, PNG, GIF, BMP, TIFF, WEBP).`);
       return false;
     }
     
@@ -242,10 +253,27 @@ export default function AskBlocIQ({
         };
         
         setUploadedFiles(prev => [...prev, uploadedFile]);
-        toast.success(`✅ ${file.name} uploaded successfully!`, {
-          description: "You can now ask questions about this document.",
-          duration: 4000,
-        });
+        
+        // Show appropriate message based on file type
+        const isImage = file.type.startsWith('image/');
+        const isPDF = file.type === 'application/pdf';
+        
+        if (isImage) {
+          toast.success(`✅ ${file.name} uploaded successfully!`, {
+            description: "Image will be processed with Google Vision OCR for text extraction.",
+            duration: 4000,
+          });
+        } else if (isPDF) {
+          toast.success(`✅ ${file.name} uploaded successfully!`, {
+            description: "PDF will be processed with OCR for text extraction and AI analysis.",
+            duration: 4000,
+          });
+        } else {
+          toast.success(`✅ ${file.name} uploaded successfully!`, {
+            description: "Document will be processed with OCR for text extraction.",
+            duration: 4000,
+          });
+        }
       }
     });
   };
@@ -294,6 +322,29 @@ export default function AskBlocIQ({
 
   const cleanFileName = (fileName: string) => {
     return fileName.replace(/\.[^/.]+$/, "");
+  };
+
+  // Convert file to base64 for OCR processing
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        try {
+          // Remove data:image/jpeg;base64, prefix
+          const base64 = reader.result as string;
+          const base64Data = base64.split(',')[1];
+          if (!base64Data) {
+            reject(new Error('Failed to convert file to base64'));
+            return;
+          }
+          resolve(base64Data);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+    });
   };
 
   const handleSuggestedPrompt = (prompt: string) => {
@@ -438,41 +489,83 @@ export default function AskBlocIQ({
 
       // Handle file uploads first if any files are present
       if (uploadedFiles.length > 0) {
-        // Upload each file and get analysis
+        // Process each file through OCR and get analysis
         for (const uploadedFile of uploadedFiles) {
           try {
-            const formData = new FormData();
-            formData.append('file', uploadedFile.file);
-            formData.append('buildingId', buildingId || 'null');
+            console.log('🔄 Processing file:', uploadedFile.name, 'Type:', uploadedFile.file.type);
             
-            const uploadResponse = await fetch('/api/ask-ai/upload', {
+            // Convert file to base64 for OCR processing
+            const base64Data = await fileToBase64(uploadedFile.file);
+            console.log('✅ File converted to base64, length:', base64Data.length);
+            
+            // Process through OCR endpoint
+            const ocrResponse = await fetch('/api/ocr', {
               method: 'POST',
-              body: formData,
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                base64Image: base64Data,
+                mimeType: uploadedFile.file.type,
+                filename: uploadedFile.name,
+                processWithOCR: true,
+                extractText: true,
+                enableOCR: true,
+                useGoogleVision: true
+              }),
             });
 
-            if (!uploadResponse.ok) {
-              throw new Error(`Failed to upload ${uploadedFile.name}`);
+            if (!ocrResponse.ok) {
+              const errorText = await ocrResponse.text();
+              console.error('❌ OCR processing failed:', ocrResponse.status, errorText);
+              throw new Error(`OCR processing failed: ${ocrResponse.status}`);
             }
 
-            const uploadResult = await uploadResponse.json();
+            const ocrResult = await ocrResponse.json();
+            console.log('✅ OCR processing successful:', ocrResult);
             
-            if (uploadResult.success) {
-              uploadedFileResults.push({
-                filename: uploadResult.filename,
-                summary: uploadResult.summary,
-                suggestedActions: uploadResult.suggestedActions || [],
-                extractionMethod: uploadResult.extractionMethod || 'standard' // Capture extraction method
+            if (ocrResult.success && ocrResult.text) {
+              // Now send the extracted text to AI for analysis
+              const aiResponse = await fetch('/api/ask-ai', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  prompt: `Analyze this document: ${uploadedFile.name}\n\nExtracted Text:\n${ocrResult.text}\n\nPlease provide a comprehensive analysis, summary, and any relevant insights.`,
+                  building_id: buildingId,
+                  contextType: isMajorWorksContext ? 'major_works' : 'general',
+                  projectId: isMajorWorksContext ? projectId : undefined,
+                  documentType: 'uploaded_file',
+                  extractedText: ocrResult.text
+                }),
               });
 
-              // Add file analysis to the prompt
-              if (!finalPrompt) {
-                finalPrompt = `Please analyze the uploaded document: ${uploadedFile.name}`;
+              if (aiResponse.ok) {
+                const aiResult = await aiResponse.json();
+                
+                uploadedFileResults.push({
+                  filename: uploadedFile.name,
+                  summary: aiResult.response || aiResult.result || 'Document analyzed successfully',
+                  suggestedActions: aiResult.suggestedActions || [],
+                  extractionMethod: 'ocr_google_vision',
+                  extractedText: ocrResult.text
+                });
+
+                // Add file analysis to the prompt
+                if (!finalPrompt) {
+                  finalPrompt = `Please analyze the uploaded document: ${uploadedFile.name}`;
+                }
+                finalPrompt += `\n\nDocument: ${uploadedFile.name}\nSummary: ${aiResult.response || aiResult.result}\n\nPlease provide insights and answer any specific questions about this document.`;
+              } else {
+                throw new Error('AI analysis failed');
               }
-              finalPrompt += `\n\nDocument: ${uploadedFile.name}\nSummary: ${uploadResult.summary}\n\nPlease provide insights and answer any specific questions about this document.`;
+            } else {
+              throw new Error('OCR text extraction failed');
             }
           } catch (uploadError) {
-            console.error(`Error uploading ${uploadedFile.name}:`, uploadError);
-            toast.error(`Failed to upload ${uploadedFile.name}`);
+            console.error(`Error processing ${uploadedFile.name}:`, uploadError);
+            toast.error(`Failed to process ${uploadedFile.name}: ${uploadError instanceof Error ? uploadError.message : 'Unknown error'}`);
           }
         }
       }
