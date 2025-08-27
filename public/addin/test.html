@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BlocIQ Add-in Test</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: linear-gradient(135deg, #008C8F, #7645ED);
+      color: white;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 20px;
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+    }
+    button {
+      background: white;
+      color: #008C8F;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #f0f0f0;
+    }
+    .status {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 6px;
+      font-family: monospace;
+    }
+    .success { background: rgba(16, 185, 129, 0.2); }
+    .error { background: rgba(239, 68, 68, 0.2); }
+    .info { background: rgba(59, 130, 246, 0.2); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔧 BlocIQ Add-in Test</h1>
+    <p>This page helps test and debug the Outlook add-in functionality.</p>
+    
+    <div class="test-section">
+      <h3>📧 Office.js Status</h3>
+      <button onclick="checkOfficeStatus()">Check Office.js</button>
+      <div id="officeStatus" class="status"></div>
+    </div>
+    
+    <div class="test-section">
+      <h3>🔌 API Test</h3>
+      <button onclick="testAPI()">Test Add-in API</button>
+      <div id="apiStatus" class="status"></div>
+    </div>
+    
+    <div class="test-section">
+      <h3>📝 Ask BlocIQ Test</h3>
+      <input type="text" id="testPrompt" placeholder="Enter a test question..." style="width: 100%; padding: 10px; margin: 10px 0; border-radius: 6px; border: none;">
+      <button onclick="testAskBlocIQ()">Send Test Question</button>
+      <div id="askStatus" class="status"></div>
+    </div>
+    
+    <div class="test-section">
+      <h3>🔍 Debug Info</h3>
+      <button onclick="showDebugInfo()">Show Debug Info</button>
+      <div id="debugInfo" class="status"></div>
+    </div>
+  </div>
+
+  <script>
+    let officeReady = false;
+    
+    // Initialize Office.js
+    Office.onReady(() => {
+      officeReady = true;
+      console.log('✅ Office.js ready');
+      document.getElementById('officeStatus').innerHTML = '<span class="success">✅ Office.js loaded successfully</span>';
+    });
+    
+    // Check Office.js status
+    function checkOfficeStatus() {
+      const status = document.getElementById('officeStatus');
+      if (officeReady) {
+        status.innerHTML = '<span class="success">✅ Office.js is ready</span>';
+        if (Office.context.mailbox) {
+          status.innerHTML += '<br><span class="info">📧 Mailbox context available</span>';
+        }
+        if (Office.context.document) {
+          status.innerHTML += '<br><span class="info">📄 Document context available</span>';
+        }
+      } else {
+        status.innerHTML = '<span class="error">❌ Office.js not ready</span>';
+      }
+    }
+    
+    // Test the add-in API
+    async function testAPI() {
+      const status = document.getElementById('apiStatus');
+      status.innerHTML = '<span class="info">🔄 Testing API...</span>';
+      
+      try {
+        const response = await fetch('https://www.blociq.co.uk/api/addin/ask-ai', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            prompt: 'Test connection',
+            contextType: 'test',
+            is_outlook_addin: true
+          }),
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          status.innerHTML = `<span class="success">✅ API working! Response: ${JSON.stringify(data, null, 2)}</span>`;
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          status.innerHTML = `<span class="error">❌ API error ${response.status}: ${errorData.message || errorData.error || 'Unknown error'}</span>`;
+        }
+      } catch (error) {
+        status.innerHTML = `<span class="error">❌ Network error: ${error.message}</span>`;
+      }
+    }
+    
+    // Test Ask BlocIQ functionality
+    async function testAskBlocIQ() {
+      const prompt = document.getElementById('testPrompt').value.trim();
+      if (!prompt) {
+        document.getElementById('askStatus').innerHTML = '<span class="error">❌ Please enter a test question</span>';
+        return;
+      }
+      
+      const status = document.getElementById('askStatus');
+      status.innerHTML = '<span class="info">🔄 Sending test question...</span>';
+      
+      try {
+        const response = await fetch('https://www.blociq.co.uk/api/addin/ask-ai', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            prompt: prompt,
+            contextType: 'test',
+            is_outlook_addin: true
+          }),
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          status.innerHTML = `<span class="success">✅ Response received!</span><br><br><strong>Question:</strong> ${prompt}<br><br><strong>Answer:</strong> ${data.response}`;
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          status.innerHTML = `<span class="error">❌ Error ${response.status}: ${errorData.message || errorData.error || 'Unknown error'}</span>`;
+        }
+      } catch (error) {
+        status.innerHTML = `<span class="error">❌ Network error: ${error.message}</span>`;
+      }
+    }
+    
+    // Show debug information
+    function showDebugInfo() {
+      const debug = document.getElementById('debugInfo');
+      const info = {
+        userAgent: navigator.userAgent,
+        officeReady: officeReady,
+        hasMailbox: !!Office.context?.mailbox,
+        hasDocument: !!Office.context?.document,
+        currentUrl: window.location.href,
+        timestamp: new Date().toISOString()
+      };
+      
+      debug.innerHTML = `<span class="info">🔍 Debug Information:</span><br><pre>${JSON.stringify(info, null, 2)}</pre>`;
+    }
+    
+    // Auto-check Office.js status on load
+    setTimeout(checkOfficeStatus, 1000);
+  </script>
+</body>
+</html>

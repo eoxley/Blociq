@@ -14,6 +14,13 @@ Office.onReady(() => {
   console.log('BlocIQ Assistant loaded successfully');
   setupEventListeners();
   setupEmailCapture(); // Add email capture functionality
+  
+  // Register function commands for the add-in
+  if (Office.context.document) {
+    Office.context.document.addHandlerAsync(Office.EventType.DocumentSelectionChanged, handleDocumentSelectionChanged);
+  }
+  
+  console.log('✅ Function commands registered');
 });
 
 // Setup event listeners
@@ -232,6 +239,7 @@ async function callAskBlocIQ(prompt, emailContext) {
     console.log('📤 Request body:', requestBody);
 
     // Use the add-in specific endpoint
+    console.log('🌐 Calling API endpoint: https://www.blociq.co.uk/api/addin/ask-ai');
     const response = await fetch('https://www.blociq.co.uk/api/addin/ask-ai', {
       method: 'POST',
       headers: {
@@ -843,6 +851,92 @@ async function extractBuildingFromContent(emailContext) {
     console.error('Error extracting building info:', error);
     return null;
   }
+}
+
+// Function command implementations
+function showAIReplyModal(event) {
+  try {
+    console.log('🔧 AI Reply modal requested');
+    
+    // Open the AI reply modal in a dialog
+    Office.context.ui.displayDialogAsync(
+      'https://www.blociq.co.uk/addin/ai-reply-modal.html',
+      { height: 600, width: 800, displayInIframe: true },
+      (result) => {
+        if (result.status === Office.AsyncResultStatus.Succeeded) {
+          console.log('✅ AI Reply modal opened successfully');
+          
+          // Listen for messages from the dialog
+          result.value.addEventHandler(Office.EventType.DialogMessageReceived, (arg) => {
+            console.log('📨 Message from AI Reply modal:', arg.message);
+            
+            // Handle the generated reply
+            if (arg.message.type === 'insert_reply') {
+              insertGeneratedReply(arg.message.content);
+            }
+            
+            // Close the dialog
+            result.value.close();
+          });
+        } else {
+          console.error('❌ Failed to open AI Reply modal:', result.error);
+          showError('Failed to open AI Reply modal');
+        }
+      }
+    );
+    
+  } catch (error) {
+    console.error('❌ Error showing AI Reply modal:', error);
+    showError('Error opening AI Reply modal');
+  }
+}
+
+function showInboxTriage(event) {
+  try {
+    console.log('🔧 Inbox Triage modal requested');
+    
+    // Open the inbox triage modal in a dialog
+    Office.context.ui.displayDialogAsync(
+      'https://www.blociq.co.uk/addin/ai-triage-modal.html',
+      { height: 700, width: 900, displayInIframe: true },
+      (result) => {
+        if (result.status === Office.AsyncResultStatus.Succeeded) {
+          console.log('✅ Inbox Triage modal opened successfully');
+          
+          // Listen for messages from the dialog
+          result.value.addEventHandler(Office.EventType.DialogMessageReceived, (arg) => {
+            console.log('📨 Message from Inbox Triage modal:', arg.message);
+            
+            // Handle any actions from the triage modal
+            if (arg.message.type === 'triage_complete') {
+              showSuccess('Inbox triage completed successfully');
+            }
+            
+            // Close the dialog
+            result.value.close();
+          });
+        } else {
+          console.error('❌ Failed to open Inbox Triage modal:', result.error);
+          showError('Failed to open Inbox Triage modal');
+        }
+      }
+    );
+    
+  } catch (error) {
+    console.error('❌ Error showing Inbox Triage modal:', error);
+    showError('Error opening Inbox Triage modal');
+  }
+}
+
+// Helper functions
+function showSuccess(message) {
+  console.log('✅ Success:', message);
+  // You can implement a toast notification here
+}
+
+function showError(message) {
+  console.error('❌ Error:', message);
+  // You can implement a toast notification here
 }
 
 // Register function commands

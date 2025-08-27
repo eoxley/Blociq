@@ -98,6 +98,40 @@
                     <SourceLocation resid="taskpaneUrl"/>
                   </Action>
                 </Control>
+                
+                <!-- AI Reply Button -->
+                <Control xsi:type="Button" id="aiReplyButton">
+                  <Label resid="aiReplyButtonLabel"/>
+                  <Supertip>
+                    <Title resid="aiReplySuperTipTitle"/>
+                    <Description resid="aiReplySuperTipDescription"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="icon16"/>
+                    <bt:Image size="32" resid="icon32"/>
+                    <bt:Image size="80" resid="icon80"/>
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>showAIReplyModal</FunctionName>
+                  </Action>
+                </Control>
+                
+                <!-- Inbox Triage Button -->
+                <Control xsi:type="Button" id="inboxTriageButton">
+                  <Label resid="inboxTriageButtonLabel"/>
+                  <Supertip>
+                    <Title resid="inboxTriageSuperTipTitle"/>
+                    <Description resid="inboxTriageSuperTipDescription"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="icon16"/>
+                    <bt:Image size="32" resid="icon32"/>
+                    <bt:Image size="80" resid="icon80"/>
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>showInboxTriage</FunctionName>
+                  </Action>
+                </Control>
               </Group>
             </OfficeTab>
           </ExtensionPoint>
@@ -120,10 +154,16 @@
         <bt:String id="groupLabel" DefaultValue="BlocIQ Assistant"/>
         <bt:String id="paneButtonLabel" DefaultValue="Open Assistant"/>
         <bt:String id="paneSuperTipTitle" DefaultValue="BlocIQ Assistant"/>
+        <bt:String id="aiReplyButtonLabel" DefaultValue="AI Reply"/>
+        <bt:String id="aiReplySuperTipTitle" DefaultValue="Generate AI Reply"/>
+        <bt:String id="inboxTriageButtonLabel" DefaultValue="Inbox Triage"/>
+        <bt:String id="inboxTriageSuperTipTitle" DefaultValue="AI Inbox Triage"/>
       </bt:ShortStrings>
 
       <bt:LongStrings>
         <bt:String id="paneSuperTipDescription" DefaultValue="Open BlocIQ Assistant to work with this email."/>
+        <bt:String id="aiReplySuperTipDescription" DefaultValue="Generate an AI-powered reply to this email."/>
+        <bt:String id="inboxTriageSuperTipDescription" DefaultValue="Use AI to triage and respond to multiple emails."/>
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>
