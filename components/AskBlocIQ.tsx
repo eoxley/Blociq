@@ -565,7 +565,7 @@ export default function AskBlocIQ({
         building_id: buildingId,
         contextType: isMajorWorksContext ? 'major_works' : 'general',
         projectId: isMajorWorksContext ? projectId : undefined,
-        uploadedFiles: uploadedFileResults // Include file analysis results
+        files: uploadedFileResults // Fixed: changed from 'uploadedFiles' to 'files'
       });
 
       const response = await fetch('/api/ask-ai', {

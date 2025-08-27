@@ -182,7 +182,7 @@ async function extractTextWithGoogleVision(fileBuffer: Buffer): Promise<string> 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { question, files } = body;
+    const { question, files, prompt } = body;
 
     // Handle file uploads with OCR and analysis
     if (files && Array.isArray(files) && files.length > 0) {
@@ -192,91 +192,107 @@ export async function POST(req: NextRequest) {
       
       for (const file of files) {
         try {
-          console.log(`🔍 Processing file: ${file.name}`);
+          console.log(`🔍 Processing file: ${file.filename || file.name}`);
           
-          // Extract text using Google Vision OCR
-          let extractedText = '';
-          try {
-            const fileBuffer = Buffer.from(file.data, 'base64');
-            extractedText = await extractTextWithGoogleVision(fileBuffer);
-            console.log(`✅ OCR completed for ${file.name}, extracted ${extractedText.length} characters`);
-          } catch (ocrError) {
-            console.error(`❌ OCR failed for ${file.name}:`, ocrError);
-            extractedText = `Unable to extract text from ${file.name}. The document may be scanned or corrupted.`;
-          }
-
-          // Analyze document with AI
-          const analysis = await analyzeDocumentWithAI(extractedText, file.name);
-          
-          if (analysis) {
-            // Format suggested actions properly
-            const suggestedActions = [
-              {
-                key: 'review_document',
-                label: 'Review Document Analysis',
-                icon: 'file-text',
-                action: 'Review the AI-generated analysis and summary'
-              },
-              {
-                key: 'update_compliance',
-                label: 'Update Compliance Tracker',
-                icon: 'check-circle',
-                action: 'Add to compliance monitoring system'
-              },
-              {
-                key: 'schedule_followup',
-                label: 'Schedule Follow-up',
-                icon: 'calendar',
-                action: 'Set reminders for key dates'
-              }
-            ];
-
-            // Add specific actions based on document type
-            if (analysis.classification === 'Lease Agreement') {
-              suggestedActions.push({
-                key: 'extract_lease_details',
-                label: 'Extract Lease Details',
-                icon: 'home',
-                action: 'Extract key lease terms and dates'
-              });
-            }
-
-            if (analysis.next_due_date) {
-              suggestedActions.push({
-                key: 'set_reminder',
-                label: 'Set Due Date Reminder',
-                icon: 'bell',
-                action: `Remind on ${analysis.next_due_date}`
-              });
-            }
-
+          // Check if this is a pre-analyzed result or raw file
+          if (file.analysis && file.suggestedActions) {
+            // This is a pre-analyzed result from the component
+            console.log(`✅ Using pre-analyzed result for ${file.filename || file.name}`);
             results.push({
-              filename: file.name,
-              extractedText: extractedText.substring(0, 500) + '...',
-              analysis: analysis,
-              suggestedActions: suggestedActions,
-              source: 'google_vision_ocr'
+              filename: file.filename || file.name,
+              extractedText: file.extractedText || 'Pre-analyzed document',
+              analysis: file.analysis,
+              suggestedActions: file.suggestedActions,
+              source: 'pre_analyzed'
             });
           } else {
-            results.push({
-              filename: file.name,
-              extractedText: extractedText.substring(0, 500) + '...',
-              analysis: null,
-              suggestedActions: [
+            // This is a raw file that needs processing
+            console.log(`🔄 Processing raw file: ${file.name}`);
+            
+            // Extract text using Google Vision OCR
+            let extractedText = '';
+            try {
+              const fileBuffer = Buffer.from(file.data, 'base64');
+              extractedText = await extractTextWithGoogleVision(fileBuffer);
+              console.log(`✅ OCR completed for ${file.name}, extracted ${extractedText.length} characters`);
+            } catch (ocrError) {
+              console.error(`❌ OCR failed for ${file.name}:`, ocrError);
+              extractedText = `Unable to extract text from ${file.name}. The document may be scanned or corrupted.`;
+            }
+
+            // Analyze document with AI
+            const analysis = await analyzeDocumentWithAI(extractedText, file.name);
+            
+            if (analysis) {
+              // Format suggested actions properly
+              const suggestedActions = [
                 {
-                  key: 'manual_review',
-                  label: 'Manual Review Required',
-                  icon: 'eye',
-                  action: 'Review document manually due to analysis failure'
+                  key: 'review_document',
+                  label: 'Review Document Analysis',
+                  icon: 'file-text',
+                  action: 'Review the AI-generated analysis and summary'
+                },
+                {
+                  key: 'update_compliance',
+                  label: 'Update Compliance Tracker',
+                  icon: 'check-circle',
+                  action: 'Add to compliance monitoring system'
+                },
+                {
+                  key: 'schedule_followup',
+                  label: 'Schedule Follow-up',
+                  icon: 'calendar',
+                  action: 'Set reminders for key dates'
                 }
-              ],
-              source: 'google_vision_ocr_fallback'
-            });
+              ];
+
+              // Add specific actions based on document type
+              if (analysis.classification === 'Lease Agreement') {
+                suggestedActions.push({
+                  key: 'extract_lease_details',
+                  label: 'Extract Lease Details',
+                  icon: 'home',
+                  action: 'Extract key lease terms and dates'
+                });
+              }
+
+              if (analysis.next_due_date) {
+                suggestedActions.push({
+                  key: 'set_reminder',
+                  label: 'Set Due Date Reminder',
+                  icon: 'bell',
+                  action: `Remind on ${analysis.next_due_date}`
+                });
+              }
+
+              results.push({
+                filename: file.name,
+                extractedText: extractedText.substring(0, 500) + '...',
+                analysis: analysis,
+                suggestedActions: suggestedActions,
+                source: 'google_vision_ocr'
+              });
+            } else {
+              results.push({
+                filename: file.name,
+                extractedText: extractedText.substring(0, 500) + '...',
+                analysis: null,
+                suggestedActions: [
+                  {
+                    key: 'manual_review',
+                    label: 'Manual Review Required',
+                    icon: 'eye',
+                    action: 'Review document manually due to analysis failure'
+                  }
+                ],
+                source: 'google_vision_ocr_fallback'
+              });
+            }
           }
         } catch (fileError) {
-          console.error(`❌ Failed to process file ${file.name}:`, fileError);
+          console.error(`❌ Failed to process file ${file.filename || file.name}:`, fileError);
           results.push({
-            filename: file.name,
+            filename: file.filename || file.name,
             error: 'Processing failed',
             suggestedActions: [
               {
