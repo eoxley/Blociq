@@ -74,9 +74,9 @@ export interface UseAskBlocIQReturn {
   addingToCalendar: boolean;
   
   // Refs
-  messagesEndRef: React.RefObject<HTMLDivElement>;
-  fileInputRef: React.RefObject<HTMLInputElement>;
-  inputRef: React.RefObject<HTMLTextAreaElement>;
+  messagesEndRef: React.RefObject<HTMLDivElement | null>;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  inputRef: React.RefObject<HTMLTextAreaElement | null>;
   
   // Context
   projectId: string | null;
@@ -169,7 +169,7 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
   
   const pathname = usePathname();
   const projectId = extractProjectId(pathname || '');
-  const isMajorWorksContext = pathname?.includes('major-works') && projectId;
+  const isMajorWorksContext = Boolean(pathname?.includes('major-works') && projectId);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -563,7 +563,7 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
     handleAddToOutlook,
     getFileIcon,
     formatFileSize,
-    getSuggestedPrompts: () => getSuggestedPrompts(buildingName, isMajorWorksContext, projectId),
+    getSuggestedPrompts: () => getSuggestedPrompts(buildingName, isMajorWorksContext, projectId || undefined),
     
     // Utility functions
     fileToBase64,
