@@ -496,7 +496,7 @@ export default function CompliancePage() {
                   </div>
                   
                   <button
-                    onClick={() => router.push(`/dashboard/buildings/${building.id}/compliance`)}
+                    onClick={() => router.push(`/buildings/${building.id}/compliance`)}
                     className="inline-flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-[#004AAD] to-[#7209B7] text-white text-sm rounded-lg hover:from-[#003A8C] hover:to-[#5A078F] transition-all duration-200 transform hover:scale-105"
                   >
                     <Shield className="h-4 w-4" />
@@ -530,7 +530,7 @@ export default function CompliancePage() {
                 {/* Quick Actions */}
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => router.push(`/dashboard/buildings/${building.id}/compliance`)}
+                    onClick={() => router.push(`/buildings/${building.id}/compliance`)}
                     className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 text-sm rounded-lg hover:bg-blue-100 transition-colors"
                   >
                     <Plus className="h-4 w-4" />
@@ -538,7 +538,7 @@ export default function CompliancePage() {
                   </button>
                   
                   <button
-                    onClick={() => router.push(`/dashboard/buildings/${building.id}`)}
+                    onClick={() => router.push(`/buildings/${building.id}`)}
                     className="inline-flex items-center justify-center gap-2 px-3 py-2 bg-gray-50 text-gray-700 text-sm rounded-lg hover:bg-gray-100 transition-colors"
                   >
                     <Building2 className="h-4 w-4" />
@@ -611,7 +611,7 @@ export default function CompliancePage() {
                         )}
                         
                         <button
-                          onClick={() => router.push(`/dashboard/buildings/${item.building_id}/compliance`)}
+                          onClick={() => router.push(`/buildings/${item.building_id}/compliance`)}
                           className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 text-sm rounded-lg hover:bg-blue-100 transition-colors"
                         >
                           <Shield className="h-4 w-4" />
@@ -639,7 +639,7 @@ export default function CompliancePage() {
             </p>
             {!searchQuery && filterBuilding === 'all' && filterCategory === 'all' && filterStatus === 'all' && (
               <button
-                onClick={() => router.push('/dashboard/buildings')}
+                onClick={() => router.push('/buildings')}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#004AAD] to-[#7209B7] text-white rounded-lg hover:from-[#003A8C] hover:to-[#5A078F] transition-all duration-200"
               >
                 <Plus className="h-4 w-4" />
