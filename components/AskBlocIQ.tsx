@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Plus, Calendar, Loader2, Send, Upload, FileText, X, Check, Sparkles, File, FileText as FileTextIcon, Building2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import CommunicationModal from './CommunicationModal';
+import { SuggestedAction as AISuggestedAction, DocumentAnalysis } from '@/types/ai';
 
 type Message = {
   id: string;
@@ -15,7 +16,7 @@ type Message = {
   content: string;
   timestamp: Date;
   files?: UploadedFile[];
-  documentAnalysis?: any[]; // Added for document analysis results
+  documentAnalysis?: DocumentAnalysis[]; // Added for document analysis results
 };
 
 type UploadedFile = {

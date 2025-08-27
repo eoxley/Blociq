@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 
 // If you use these, keep; otherwise swap to your own utils:
 let extractText: (buf: Uint8Array, name?: string) => Promise<string>
-let summarizeAndSuggest: (text: string, name?: string) => Promise<{ summary: string; suggestedActions?: string[] }>
+let summarizeAndSuggest: (text: string, name?: string) => Promise<{ summary: string; suggestedActions?: any[] }>
 
 async function lazyDeps() {
   if (!extractText) {

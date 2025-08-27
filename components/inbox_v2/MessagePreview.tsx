@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Reply, ReplyAll, Forward, Paperclip, Clock, User, MessageSquare, Calendar, Download, Eye, EyeOff, Star, Flag, MoreVertical, Trash2 } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
+import { SuggestedAction } from '@/types/ai';
 
 // Function to detect if content looks like HTML
 function looksLikeHtml(content: string): boolean {
@@ -93,7 +94,12 @@ interface MessagePreviewProps {
   onReply: () => void
   onReplyAll: () => void
   onMessageUpdate?: () => void
-  triageResult?: any
+  triageResult?: {
+    category: string;
+    summary?: string;
+    suggestedActions?: SuggestedAction[];
+    confidence?: number;
+  }
 }
 
 interface FullMessage {
