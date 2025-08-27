@@ -9,6 +9,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "echo \"No tests configured yet. Run 'npm run lint' to check code quality.\"",
     "clear-cache": "node scripts/clear-cache.js",
     "seed:compliance": "tsx scripts/seedComplianceAssets.ts",
     "check:compliance": "tsx scripts/checkComplianceAssets.ts",

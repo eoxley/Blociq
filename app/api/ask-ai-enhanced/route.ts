@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
 
     let enhancedPrompt = userQuestion;
-    let documentAnalyses: any[] = [];
+    const documentAnalyses: any[] = [];
 
     // 3. Process files through OCR and store in database
     if (files.length > 0) {

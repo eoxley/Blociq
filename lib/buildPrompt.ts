@@ -41,7 +41,7 @@ export async function buildPrompt({
   leaseholderId?: string;
   projectId?: string;
 }) {
-  let contextSections: string[] = [];
+  const contextSections: string[] = [];
 
   // 📘 Founder Guidance
   const ctx = detectContext(question, { wordCount: question.split(/\s+/).length });

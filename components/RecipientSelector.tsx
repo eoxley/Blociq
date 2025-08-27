@@ -62,7 +62,7 @@ export default function RecipientSelector({
     try {
       const { supabase } = await import("@/utils/supabase");
       
-      let query = supabase
+      const query = supabase
         .from('units')
         .select(`
           id,

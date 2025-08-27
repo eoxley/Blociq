@@ -485,7 +485,7 @@ export default function AskBlocIQ({
     
     try {
       let finalPrompt = question.trim();
-      let uploadedFileResults: any[] = [];
+      const uploadedFileResults: any[] = [];
 
       // Handle file uploads first if any files are present
       if (uploadedFiles.length > 0) {

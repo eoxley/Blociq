@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Test 5: Check API endpoints (if testMode is true)
-    let apiTests: any = {};
+    const apiTests: any = {};
     if (testMode) {
       console.log('📊 Test 5: Testing API endpoints...');
       
