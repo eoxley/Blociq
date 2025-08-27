@@ -80,17 +80,20 @@ async function extractImageText(buffer: Buffer): Promise<ExtractionResult> {
   } catch (error) {
     console.error('Tesseract OCR failed:', error);
     
-    // Try Google Cloud Vision if credentials are available
-    if (process.env.GOOGLE_CLOUD_VISION_CREDENTIALS) {
-      try {
-        const vision = await import('@google-cloud/vision');
-        const client = new vision.ImageAnnotatorClient({
-          credentials: JSON.parse(process.env.GOOGLE_CLOUD_VISION_CREDENTIALS)
-        });
-        
-        const [result] = await client.textDetection(buffer);
-        const detections = result.textAnnotations;
-        const text = detections?.[0]?.description || '';
+         // Try Google Cloud Vision if credentials are available
+     const visionCreds = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+     if (visionCreds) {
+       try {
+         const vision = await import('@google-cloud/vision');
+         const client = new vision.ImageAnnotatorClient({
+           credentials: JSON.parse(visionCreds)
+         });
+
+         const [result] = await client.textDetection({
+           image: { content: buffer.toString('base64') }
+         });
+         const detections = result.textAnnotations;
+         const text = detections?.[0]?.description || '';
         
         return {
           text,
