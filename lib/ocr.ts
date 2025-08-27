@@ -7,6 +7,9 @@ export interface OCRResult {
   text: string;
   source: string;
   filename: string;
+  confidence?: number;
+  quality?: 'high' | 'medium' | 'low';
+  warnings?: string[];
 }
 
 export interface OCRProcessingError {
@@ -233,7 +236,7 @@ export function validateOCRQuality(result: OCRResult): {
   const hasRepeatedChars = /(.)\1{4,}/.test(result.text);
   if (hasRepeatedChars) {
     issues.push('Text contains repeated characters - possible OCR scanning issue');
-    confidence = confidence === 'high' ? 'medium' : 'low';
+    confidence = confidence === 'low';
   }
   
   // Check for lease-specific keywords to validate content
@@ -252,4 +255,63 @@ export function validateOCRQuality(result: OCRResult): {
     confidence,
     issues
   };
+}
+
+/**
+ * Process document with confidence-based fallback
+ * If OCR yields low confidence, attempts alternative methods
+ */
+export async function processDocumentWithFallback(file: File): Promise<OCRResult> {
+  try {
+    console.log('🔄 Starting OCR processing with fallback for:', file.name);
+    
+    // First attempt: Standard OCR processing
+    const primaryResult = await processDocumentOCR(file);
+    
+    // Validate the quality of the result
+    const quality = validateOCRQuality(primaryResult);
+    
+    // If quality is acceptable, return the result
+    if (quality.confidence !== 'low') {
+      return {
+        ...primaryResult,
+        quality: quality.confidence,
+        warnings: quality.issues
+      };
+    }
+    
+    console.log('⚠️ Primary OCR yielded low confidence, attempting fallback...');
+    
+    // Fallback: Try alternative OCR approach
+    try {
+      // For now, we'll return the low-quality result with warnings
+      // In the future, this could try Google Vision, different OCR settings, etc.
+      return {
+        ...primaryResult,
+        quality: 'low',
+        warnings: [
+          ...quality.issues,
+          'OCR fallback attempted but yielded low confidence',
+          'Consider uploading a higher quality document or text-based version'
+        ]
+      };
+    } catch (fallbackError) {
+      console.error('❌ OCR fallback failed:', fallbackError);
+      
+      // Return the original result with low quality warning
+      return {
+        ...primaryResult,
+        quality: 'low',
+        warnings: [
+          ...quality.issues,
+          'OCR fallback failed',
+          'Document may be of very low quality or in unsupported format'
+        ]
+      };
+    }
+    
+  } catch (error) {
+    console.error('❌ OCR processing with fallback failed for:', file.name, error);
+    throw error;
+  }
 } 

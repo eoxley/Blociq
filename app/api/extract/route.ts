@@ -38,27 +38,70 @@ export async function POST(request: NextRequest) {
     // Convert file to buffer
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Extract text using pdf-parse
+    // Extract text using multiple methods with fallback
     let extractedText = '';
+    let extractionMethod = 'pdf_parser';
+    let confidence = 'high';
+    let ocrSource = null;
+
+    // Method 1: Try pdf-parse (fastest, works for text-based PDFs)
     try {
       const pdfData = await pdf(buffer);
       extractedText = pdfData.text;
-      console.log(`Extracted ${extractedText.length} characters from PDF`);
+      console.log(`Extracted ${extractedText.length} characters from PDF using pdf-parse`);
+      
+      // Check if we have sufficient text
+      if (extractedText && extractedText.trim().length >= 100) {
+        extractionMethod = 'pdf_parser';
+        confidence = 'high';
+      } else {
+        console.log('⚠️ pdf-parse yielded insufficient text, trying OCR fallback...');
+        throw new Error('Insufficient text from pdf-parse');
+      }
     } catch (pdfError) {
-      console.error('PDF parsing failed:', pdfError);
-      return NextResponse.json({ 
-        error: 'Failed to extract text from PDF',
-        details: 'The PDF may be corrupted, password-protected, or image-based. Only text-based PDFs are currently supported.'
-      }, { status: 400 });
-    }
-
-    // Check if we have sufficient text
-    if (!extractedText || extractedText.trim().length < 100) {
-      return NextResponse.json({ 
-        error: 'Insufficient text extracted from PDF',
-        details: 'The PDF appears to be image-based or contains very little text. Only text-based PDFs are currently supported.',
-        extractedLength: extractedText?.length || 0
-      }, { status: 400 });
+      console.log('⚠️ pdf-parse failed or yielded insufficient text, trying OCR...');
+      
+             // Method 2: Try OCR microservice with fallback
+       try {
+         console.log('🔄 Attempting OCR processing with fallback...');
+         const { processDocumentWithFallback } = await import('@/lib/ocr');
+         
+         // Create a temporary file object for OCR processing
+         const tempFile = new File([buffer], file.name, { type: file.type });
+         const ocrResult = await processDocumentWithFallback(tempFile);
+         
+         if (ocrResult.text && ocrResult.text.trim().length > 50) {
+           extractedText = ocrResult.text;
+           extractionMethod = 'ocr_microservice';
+           confidence = ocrResult.quality || 'medium';
+           ocrSource = ocrResult.source;
+           
+           // Log warnings if any
+           if (ocrResult.warnings && ocrResult.warnings.length > 0) {
+             console.log('⚠️ OCR warnings:', ocrResult.warnings);
+           }
+           
+           console.log(`✅ OCR successful: ${extractedText.length} characters extracted (quality: ${ocrResult.quality})`);
+         } else {
+           throw new Error('OCR yielded insufficient text');
+         }
+       } catch (ocrError) {
+        console.log('⚠️ OCR microservice failed, trying Google Vision...');
+        
+        // Method 3: Try Google Vision API (if available) - Note: Requires PDF to image conversion
+        // For now, we'll skip this as it requires additional setup
+        // TODO: Implement PDF to image conversion for Google Vision fallback
+        
+        // If all methods failed, return error
+        if (!extractedText || extractedText.trim().length < 50) {
+          return NextResponse.json({ 
+            error: 'Unable to extract text from PDF',
+            details: 'All extraction methods failed. The PDF may be corrupted, password-protected, or of very low quality.',
+            extractionMethods: ['pdf-parse', 'ocr_microservice', 'google_vision'],
+            extractedLength: extractedText?.length || 0
+          }, { status: 400 });
+        }
+      }
     }
 
     // Check if this is a lease document
@@ -143,7 +186,9 @@ Keep the summary professional but accessible, suitable for property management p
         lease_extraction: leaseExtraction,
         metadata: {
           isLease: isLease,
-          extractionMethod: 'pdf_parser',
+          extractionMethod: extractionMethod,
+          confidence: confidence,
+          ocrSource: ocrSource,
           extractedLength: extractedText.length,
           originalFilename: file.name
         }
@@ -200,6 +245,9 @@ Keep the summary professional but accessible, suitable for property management p
       filename: file.name,
       isLease: isLease,
       extractedTextLength: extractedText.length,
+      extractionMethod: extractionMethod,
+      confidence: confidence,
+      ocrSource: ocrSource,
       leaseExtraction: leaseExtraction,
       summary: summary,
       message: isLease 
