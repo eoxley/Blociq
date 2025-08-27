@@ -43,18 +43,23 @@ export async function GET(
     const { data: assets, error: assetsError } = await supabase
       .from('building_compliance_assets')
       .select(`
-        *,
-        compliance_inspections (
+        id,
+        building_id,
+        status,
+        next_due_date,
+        last_renewed_date,
+        notes,
+        contractor,
+        compliance_assets (
           id,
-          inspection_date,
-          next_due_date,
-          status,
-          notes,
-          document_url
+          name,
+          category,
+          description,
+          frequency_months
         )
       `)
       .eq('building_id', buildingId)
-      .order('category, asset_name');
+      .order('compliance_assets.category, compliance_assets.name');
 
     if (assetsError) {
       console.error('Error fetching compliance assets:', assetsError);
