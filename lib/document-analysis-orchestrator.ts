@@ -22,6 +22,7 @@ export type DocumentAnalysis =
   | LiftInspectionAnalysis
   | InsuranceValuationAnalysis
   | BuildingSurveyAnalysis
+  | LeaseAnalysisResult
   | GeneralDocumentAnalysis;
 
 export interface ComprehensiveDocumentAnalysis {
@@ -112,8 +113,7 @@ async function routeToAnalyzer(
       return analyzeFireRiskAssessment(extractedText, filename);
       
     case 'lease':
-      // Lease documents use the existing enhanced prompt system
-      return analyzeGeneralDocument(extractedText, filename);
+      return analyzeLeaseDocument(extractedText, filename);
       
     case 'major-works':
       return analyzeMajorWorks(extractedText, filename);
