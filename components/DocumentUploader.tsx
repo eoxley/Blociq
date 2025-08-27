@@ -165,11 +165,11 @@ export default function DocumentUploader({
       setEditableFields({});
 
       // Navigate to documents page or building documents
-      if (result.building_id) {
-        router.push(`/dashboard/buildings/${result.building_id}/documents`);
-      } else {
-        router.push('/ai-assistant');
-      }
+              if (result.building_id) {
+          router.push(`/buildings/${result.building_id}/documents`);
+        } else {
+          router.push('/ai-assistant');
+        }
 
     } catch (error: any) {
       console.error("❌ Save error:", error);
