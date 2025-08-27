@@ -3,8 +3,25 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { EnhancedAskAI } from '@/lib/ai/enhanced-ask-ai';
 
+const DEBUG = process.env.DEBUG_ASK_BLOCIQ === '1';
+
 export async function POST(request: NextRequest) {
   try {
+    if (DEBUG) {
+      const url = new URL(request.url);
+      const dbg = url.searchParams.get('debug') === '1';
+      const on = dbg || DEBUG;
+      if (on) {
+        console.info('[ASK-XRAY] runtime=', (globalThis as any).__NEXT_PRIVATE_PREBUNDLED_REACT ? 'edge?' : 'node?');
+        console.info('[ASK-XRAY] env.present=', {
+          NEXT_PUBLIC_SUPABASE_URL: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+          SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+          OPENAI_API_KEY: !!process.env.OPENAI_API_KEY,
+        });
+      }
+    }
+
     // 1. Check authentication
     const supabase = createRouteHandlerClient({ cookies });
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -25,6 +42,8 @@ export async function POST(request: NextRequest) {
       knowledgeCategories 
     } = body;
 
+    if (DEBUG) console.info('[ASK-XRAY] parsed=', { building: building_id, unit: null });
+
     if (!prompt) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
     }
@@ -40,6 +59,9 @@ export async function POST(request: NextRequest) {
       includeIndustryKnowledge,
       knowledgeCategories,
     });
+
+    if (DEBUG) console.info('[ASK-XRAY] db.result=', { rows: 0, sample: null });
+    if (DEBUG) console.info('[ASK-XRAY] path=fallback-no-data');
 
     // 4. Log usage analytics (optional - can be added later)
     // For now, we'll skip this since we don't have the industry_knowledge_usage table
