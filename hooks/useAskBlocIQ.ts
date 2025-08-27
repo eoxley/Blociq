@@ -120,7 +120,21 @@ const extractProjectId = (pathname: string): string | null => {
 };
 
 // Suggested prompts based on building context and major works
-const getSuggestedPrompts = (buildingName?: string, isMajorWorksContext?: boolean, projectId?: string) => {
+const getSuggestedPrompts = (buildingName?: string, isMajorWorksContext?: boolean, projectId?: string, isPublic: boolean = false) => {
+  if (isPublic) {
+    // Public mode: Generic property management prompts
+    return [
+      "What are the key responsibilities of a property manager?",
+      "How do I handle a maintenance request?",
+      "What should I include in a property inspection?",
+      "How do I deal with noisy neighbors?",
+      "What are the basics of lease management?",
+      "How do I handle emergency situations?",
+      "What are common property management challenges?",
+      "How do I improve tenant relations?"
+    ];
+  }
+
   if (isMajorWorksContext && projectId) {
     return [
       "Generate a Section 20 notice for this project",
@@ -321,68 +335,120 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
 
       // Handle file uploads first if any files are present
       if (uploadedFiles.length > 0) {
-        // Process each file through comprehensive document analysis
+        // Process each file through appropriate analysis based on mode
         for (const uploadedFile of uploadedFiles) {
           try {
-            console.log('🔄 Processing file through comprehensive analysis:', uploadedFile.name, 'Type:', uploadedFile.file.type);
+            console.log('🔄 Processing file:', uploadedFile.name, 'Type:', uploadedFile.file.type);
             
-            // Convert file to base64 for analysis
-            const base64Data = await fileToBase64(uploadedFile.file);
-            console.log('✅ File converted to base64, length:', base64Data.length);
-            
-            // Process through comprehensive document analysis endpoint
-            const analysisResponse = await fetch('/api/documents/analyze-comprehensive', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                file: base64Data,
-                fileName: uploadedFile.name,
-                buildingId: buildingId
-              }),
-            });
+            if (isPublic) {
+              // Public mode: Use Google Vision OCR fallback
+              console.log('🔒 Public mode: Using Google Vision OCR fallback');
+              
+              const formData = new FormData();
+              formData.append('file', uploadedFile.file);
+              
+              const ocrResponse = await fetch('/api/ocr', {
+                method: 'POST',
+                body: formData,
+              });
 
-            if (!analysisResponse.ok) {
-              const errorText = await analysisResponse.text();
-              console.error('❌ Comprehensive analysis failed:', analysisResponse.status, errorText);
-              throw new Error(`Document analysis failed: ${analysisResponse.status}`);
-            }
+              if (!ocrResponse.ok) {
+                throw new Error(`OCR failed: ${ocrResponse.status}`);
+              }
 
-            const analysisResult = await analysisResponse.json();
-            console.log('✅ Comprehensive analysis successful:', analysisResult);
-            
-            if (analysisResult.success) {
-              // Create structured document analysis result
+              const ocrResult = await ocrResponse.json();
+              console.log('✅ Google Vision OCR successful');
+              
+              // Create basic document analysis result for public mode
               const documentAnalysis: DocumentAnalysis = {
                 filename: uploadedFile.name,
-                summary: analysisResult.analysis.summary || 'Document analyzed successfully',
-                suggestedActions: analysisResult.suggestedActions || [],
-                extractionMethod: 'comprehensive_analysis',
-                extractedText: analysisResult.extractedText,
-                documentType: analysisResult.documentType
+                summary: ocrResult.text ? `Document processed via OCR. Extracted ${ocrResult.text.length} characters.` : 'Document processed via OCR.',
+                suggestedActions: [],
+                extractionMethod: 'google_vision_ocr',
+                extractedText: ocrResult.text || '',
+                documentType: 'other'
               };
               
               uploadedFileResults.push(documentAnalysis);
 
-              // Add comprehensive analysis to the prompt
+              // Add OCR analysis to the prompt
               if (!finalPrompt) {
                 finalPrompt = `Please analyze the uploaded document: ${uploadedFile.name}`;
               }
-              finalPrompt += `\n\nDocument: ${uploadedFile.name}\nType: ${analysisResult.documentType}\nSummary: ${analysisResult.analysis.summary}\n\nPlease provide insights and answer any specific questions about this document.`;
+              finalPrompt += `\n\nDocument: ${uploadedFile.name}\nOCR Text: ${ocrResult.text ? ocrResult.text.substring(0, 500) + '...' : 'No text extracted'}\n\nPlease provide insights based on the OCR content.`;
               
               // Add document analysis to messages for display
               const analysisMessage: Message = {
                 id: Date.now().toString(),
                 role: 'assistant',
-                content: `📄 **${uploadedFile.name}** analyzed successfully!\n\n**Document Type:** ${analysisResult.documentType}\n**Summary:** ${analysisResult.analysis.summary}`,
+                content: `📄 **${uploadedFile.name}** processed via OCR!\n\n**Extraction Method:** Google Vision OCR\n**Text Length:** ${ocrResult.text ? ocrResult.text.length : 0} characters`,
                 timestamp: new Date(),
                 documentAnalysis: [documentAnalysis]
               };
               
               setMessages(prev => [...prev, analysisMessage]);
             } else {
-              throw new Error('Document analysis failed');
+              // Full mode: Use comprehensive document analysis
+              console.log('🔄 Processing file through comprehensive analysis:', uploadedFile.name, 'Type:', uploadedFile.file.type);
+              
+              // Convert file to base64 for analysis
+              const base64Data = await fileToBase64(uploadedFile.file);
+              console.log('✅ File converted to base64, length:', base64Data.length);
+              
+              // Process through comprehensive document analysis endpoint
+              const analysisResponse = await fetch('/api/documents/analyze-comprehensive', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  file: base64Data,
+                  fileName: uploadedFile.name,
+                  buildingId: buildingId
+                }),
+              });
+
+              if (!analysisResponse.ok) {
+                const errorText = await analysisResponse.text();
+                console.error('❌ Comprehensive analysis failed:', analysisResponse.status, errorText);
+                throw new Error(`Document analysis failed: ${analysisResponse.status}`);
+              }
+
+              const analysisResult = await analysisResponse.json();
+              console.log('✅ Comprehensive analysis successful:', analysisResult);
+              
+              if (analysisResult.success) {
+                // Create structured document analysis result
+                const documentAnalysis: DocumentAnalysis = {
+                  filename: uploadedFile.name,
+                  summary: analysisResult.analysis.summary || 'Document analyzed successfully',
+                  suggestedActions: analysisResult.suggestedActions || [],
+                  extractionMethod: 'comprehensive_analysis',
+                  extractedText: analysisResult.extractedText,
+                  documentType: analysisResult.documentType
+                };
+                
+                uploadedFileResults.push(documentAnalysis);
+
+                // Add comprehensive analysis to the prompt
+                if (!finalPrompt) {
+                  finalPrompt = `Please analyze the uploaded document: ${uploadedFile.name}`;
+                }
+                finalPrompt += `\n\nDocument: ${uploadedFile.name}\nType: ${analysisResult.documentType}\nSummary: ${analysisResult.analysis.summary}\n\nPlease provide insights and answer any specific questions about this document.`;
+                
+                // Add document analysis to messages for display
+                const analysisMessage: Message = {
+                  id: Date.now().toString(),
+                  role: 'assistant',
+                  content: `📄 **${uploadedFile.name}** analyzed successfully!\n\n**Document Type:** ${analysisResult.documentType}\n**Summary:** ${analysisResult.analysis.summary}`,
+                  timestamp: new Date(),
+                  documentAnalysis: [documentAnalysis]
+                };
+                
+                setMessages(prev => [...prev, analysisMessage]);
+              } else {
+                throw new Error('Document analysis failed');
+              }
             }
           } catch (uploadError) {
             console.error(`Error processing ${uploadedFile.name}:`, uploadError);
@@ -394,10 +460,11 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
       // Now send the enhanced prompt to the main ask-ai endpoint
       const requestBody = JSON.stringify({
         prompt: finalPrompt,
-        building_id: buildingId,
-        contextType: isMajorWorksContext ? 'major_works' : 'general',
-        projectId: isMajorWorksContext ? projectId : undefined,
-        uploadedFiles: uploadedFileResults
+        building_id: isPublic ? undefined : buildingId, // Block building_id in public mode
+        contextType: isPublic ? 'public' : (isMajorWorksContext ? 'major_works' : 'general'),
+        projectId: isPublic ? undefined : (isMajorWorksContext ? projectId : undefined),
+        uploadedFiles: uploadedFileResults,
+        isPublic: isPublic // Flag to indicate public mode
       });
 
       const response = await fetch('/api/ask-ai', {
@@ -415,8 +482,10 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
       const data: AIResponse = await response.json();
       
       if (data.success && data.response) {
-        // Check if Major Works data was used
-        setUsedMajorWorksData(data.context?.majorWorksUsed || false);
+        // Check if Major Works data was used (only in full mode)
+        if (!isPublic) {
+          setUsedMajorWorksData(data.context?.majorWorksUsed || false);
+        }
         
         // Add assistant message to history
         const assistantMessage: Message = {
@@ -429,36 +498,38 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
 
         setMessages(prev => [...prev, assistantMessage]);
         
-        // Handle document search results
-        if (data.documentSearch && data.documents) {
+        // Handle document search results (only in full mode)
+        if (!isPublic && data.documentSearch && data.documents) {
           setIsDocumentSearch(true);
           setDocumentResults(data.documents);
         }
         
-        // Check if there's a suggested action
-        if (data.suggested_action) {
+        // Check if there's a suggested action (only in full mode)
+        if (!isPublic && data.suggested_action) {
           setSuggestedAction(data.suggested_action);
         }
 
-        // Log the interaction to ai_logs
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            await supabase
-              .from('ai_logs')
-              .insert({
-                user_id: user.id,
-                question: finalPrompt,
-                response: data.response,
-                timestamp: new Date().toISOString(),
-                building_id: buildingId,
-                document_search: data.documentSearch || false,
-                documents_found: data.documents?.length || 0,
-                files_uploaded: uploadedFiles.length
-              });
+        // Log the AI interaction to ai_logs (only in full mode)
+        if (!isPublic) {
+          try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              await supabase
+                .from('ai_logs')
+                .insert({
+                  user_id: user.id,
+                  question: finalPrompt,
+                  response: data.response,
+                  timestamp: new Date().toISOString(),
+                  building_id: buildingId,
+                  document_search: data.documentSearch || false,
+                  documents_found: data.documents?.length || 0,
+                  files_uploaded: uploadedFiles.length
+                });
+            }
+          } catch (logError) {
+            console.error('Failed to log AI interaction:', logError);
           }
-        } catch (logError) {
-          console.error('Failed to log AI interaction:', logError);
         }
       } else {
         toast.error('Error: No response from AI service');
@@ -563,7 +634,7 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
     handleAddToOutlook,
     getFileIcon,
     formatFileSize,
-    getSuggestedPrompts: () => getSuggestedPrompts(buildingName, isMajorWorksContext, projectId || undefined),
+    getSuggestedPrompts: () => getSuggestedPrompts(buildingName, isMajorWorksContext, projectId || undefined, isPublic),
     
     // Utility functions
     fileToBase64,
