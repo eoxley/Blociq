@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { InboxIcon, MailWarning, MailCheck, Sparkles, RefreshCw, AlertCircle } from "lucide-react";
-import AskBlocIQ from "@/components/AskBlocIQ";
+import { InboxIcon, MailWarning, MailCheck, Sparkles, RefreshCw, AlertCircle, Brain, TrendingUp, Users, Clock } from "lucide-react";
 import { BlocIQButton } from "@/components/ui/blociq-button";
 import MobilePageNavigation from "@/components/MobilePageNavigation";
+import AskBlocIQButton from "@/components/inbox_v2/AskBlocIQButton";
 
 interface EmailItem {
   id: string;
@@ -139,15 +139,57 @@ export default function InboxOverviewPage() {
       <MobilePageNavigation title="Inbox Overview" backTo="/home" backLabel="Home" />
       <div className="min-h-screen bg-gray-50 p-4 lg:p-6 pt-20 lg:pt-6">
         <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-6 lg:mb-8">
-            <div className="flex items-center space-x-3 mb-4">
-              <InboxIcon className="h-8 w-8 text-blue-600" />
-              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Inbox Overview</h1>
+          {/* Hero Banner */}
+          <div className="bg-gradient-to-r from-[#4f46e5] via-[#7c3aed] to-[#a855f7] px-8 py-8 rounded-3xl shadow-2xl mb-8">
+            <div className="flex items-center justify-between">
+              <div className="text-white">
+                <div className="flex items-center space-x-3 mb-4">
+                  <InboxIcon className="h-10 w-10 text-white" />
+                  <h1 className="text-3xl lg:text-4xl font-bold">Inbox Overview</h1>
+                </div>
+                <p className="text-xl text-white/90 mb-6">
+                  Smart triage dashboard for your communications and emails
+                </p>
+                <div className="flex items-center gap-6 text-white/80">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" />
+                    <span className="text-sm font-medium">{summary.totalEmails} Total Emails</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    <span className="text-sm font-medium">{summary.urgent.length} Urgent</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-5 w-5" />
+                    <span className="text-sm font-medium">Last: {new Date(summary.lastUpdated).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Pulsating Brain Widget */}
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
+                <div className="text-center">
+                  <div className="relative inline-block mb-3">
+                    <div className="w-16 h-16 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg">
+                      <Brain className="h-8 w-8 text-white" />
+                    </div>
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-cyan-400 rounded-full animate-ping"></div>
+                    <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-pink-400 rounded-full animate-pulse"></div>
+                  </div>
+                  <p className="text-white font-medium mb-2">Ask BlocIQ AI</p>
+                  <p className="text-white/70 text-sm mb-3">Smart email assistance</p>
+                  <button
+                    onClick={() => {
+                      const button = document.querySelector('[data-askblociq-button]') as HTMLElement;
+                      if (button) button.click();
+                    }}
+                    className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-sm rounded-lg transition-all duration-200 hover:scale-105 border border-white/30"
+                  >
+                    Ask Now
+                  </button>
+                </div>
+              </div>
             </div>
-            <p className="text-gray-600">
-              Triage dashboard for your communications and emails
-            </p>
           </div>
 
           {/* Fallback Warning */}
@@ -353,7 +395,7 @@ export default function InboxOverviewPage() {
                           {new Date(email.sent_at).toLocaleDateString()}
                         </Badge>
                         {email.status && (
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge variant="outline" className="text-xs">
                             {email.status}
                           </Badge>
                         )}
@@ -391,15 +433,7 @@ export default function InboxOverviewPage() {
           </CardContent>
         </Card>
 
-        {/* Ask BlocIQ AI Assistant */}
-        <div className="mb-6 lg:mb-8">
-          <AskBlocIQ 
-            buildingId={null}
-            buildingName="General"
-            context="inbox-overview"
-            placeholder="Ask BlocIQ about your inbox or any property management questions..."
-          />
-        </div>
+
 
         {/* Footer */}
         <div className="text-center text-sm text-gray-500 py-4">
@@ -415,6 +449,9 @@ export default function InboxOverviewPage() {
           </Button>
         </div>
       </div>
+      
+      {/* AskBlocIQ Button */}
+      <AskBlocIQButton selectedMessage={null} data-askblociq-button />
     </div>
     </>
   );
