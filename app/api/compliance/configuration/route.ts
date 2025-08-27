@@ -32,7 +32,14 @@ export async function POST(request: NextRequest) {
     // Get existing compliance assets for this building
     const { data: existingAssets, error: existingError } = await supabase
       .from('building_compliance_assets')
-      .select('id, asset_type')
+      .select(`
+        id,
+        compliance_asset_id,
+        compliance_assets (
+          name,
+          category
+        )
+      `)
       .eq('building_id', building_id);
 
     if (existingError) {
@@ -41,12 +48,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine which assets to add/remove
-    const existingAssetTypes = existingAssets?.map((asset: any) => asset.asset_type) || [];
+    const existingAssetTypes = existingAssets?.map((asset: any) => asset.compliance_assets?.name).filter(Boolean) || [];
     const assetsToAdd = active_assets.filter((assetType: string) => !existingAssetTypes.includes(assetType));
     const assetsToRemove = [];
 
     for (const existingAsset of existingAssets || []) {
-      if (!active_assets.includes(existingAsset.asset_type)) {
+      if (!active_assets.includes(existingAsset.compliance_assets?.name)) {
         assetsToRemove.push(existingAsset.id);
       }
     }
@@ -57,9 +64,29 @@ export async function POST(request: NextRequest) {
 
     // Add new assets
     if (assetsToAdd.length > 0) {
+      // First, get the compliance asset IDs for the asset names
+      const { data: complianceAssets, error: assetLookupError } = await supabase
+        .from('compliance_assets')
+        .select('id, name')
+        .in('name', assetsToAdd);
+
+      if (assetLookupError) {
+        console.error('Error looking up compliance assets:', assetLookupError);
+        return NextResponse.json({ success: false, error: 'Failed to lookup compliance assets' }, { status: 500 });
+      }
+
+      // Create the building compliance asset records
+      const newBuildingAssets = complianceAssets.map(asset => ({
+        building_id: building_id,
+        compliance_asset_id: asset.id,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }));
+
       const { data: addedAssets, error: addError } = await supabase
         .from('building_compliance_assets')
-        .insert(assetsToAdd)
+        .insert(newBuildingAssets)
         .select();
 
       if (addError) {

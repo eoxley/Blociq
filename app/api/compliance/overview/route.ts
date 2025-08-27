@@ -41,7 +41,16 @@ export async function GET(request: NextRequest) {
         if (buildingIds.length > 0) {
           const { data: complianceData, error: complianceError } = await supabase
             .from('building_compliance_assets')
-            .select('building_id, status')
+            .select(`
+              building_id,
+              status,
+              next_due_date,
+              compliance_assets (
+                name,
+                category,
+                description
+              )
+            `)
             .in('building_id', buildingIds);
           
           if (complianceError) {
@@ -58,7 +67,13 @@ export async function GET(request: NextRequest) {
               total_assets: buildingAssets.length,
               compliant_assets: buildingAssets.filter(ca => ca.status === 'compliant').length,
               overdue_assets: buildingAssets.filter(ca => ca.status === 'overdue').length,
-              due_soon_assets: buildingAssets.filter(ca => ca.status === 'due_soon').length,
+              due_soon_assets: buildingAssets.filter(ca => {
+                if (!ca.next_due_date) return false;
+                const dueDate = new Date(ca.next_due_date);
+                const now = new Date();
+                const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                return daysUntilDue <= 30 && daysUntilDue > 0;
+              }).length,
               pending_assets: buildingAssets.filter(ca => ca.status === 'pending').length
             };
           });

@@ -22,17 +22,23 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('building_compliance_assets')
       .select(`
-        *,
+        id,
+        building_id,
+        status,
+        next_due_date,
+        last_renewed_date,
+        notes,
+        contractor,
         buildings (
           id,
           name
         ),
-        compliance_inspections (
+        compliance_assets (
           id,
-          inspection_date,
-          next_due_date,
-          status,
-          notes
+          name,
+          category,
+          description,
+          frequency_months
         )
       `)
       .eq('user_id', user.id);
