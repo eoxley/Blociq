@@ -35,6 +35,10 @@ function createSupabaseClient() {
       })
     };
   } else {
+    console.log('🔗 Creating Supabase client with:', {
+      url: supabaseUrl?.substring(0, 30) + '...',
+      key: supabaseKey ? '***' + supabaseKey.slice(-4) : 'missing'
+    });
     supabaseInstance = createClient(supabaseUrl, supabaseKey);
   }
 
