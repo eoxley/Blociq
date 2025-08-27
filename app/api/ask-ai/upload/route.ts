@@ -13,58 +13,58 @@ async function lazyDeps() {
       extractText = mod.extractText
       console.log('✅ Using primary extractText from @/lib/extract-text')
     } catch {
-                      // Try alternative extraction methods
+      // Try alternative extraction methods
+      try {
+        console.log('🔄 Trying PDF extraction fallback...')
+        const { extractTextFromPDF } = await import('@/lib/extractTextFromPdf')
+        extractText = async (file: File) => {
+          try {
+            const buffer = Buffer.from(await file.arrayBuffer())
+            const result = await extractTextFromPDF(buffer, file.name)
+            return {
+              text: result.text,
+              meta: { name: file.name, type: file.type, bytes: file.size }
+            }
+          } catch (pdfError) {
+            console.warn('PDF extraction failed:', pdfError)
+            return {
+              text: `[[PDF Extraction Failed]] ${file.name} (${file.size} bytes) - Unable to extract text`,
+              meta: { name: file.name, type: file.type, bytes: file.size }
+            }
+          }
+        }
+      } catch {
+        // Final fallback with OCR
         try {
-          console.log('🔄 Trying PDF extraction fallback...')
-          const { extractTextFromPDF } = await import('@/lib/extractTextFromPdf')
+          console.log('🔄 Trying OCR fallback...')
+          const { processDocumentOCR } = await import('@/lib/ocr')
           extractText = async (file: File) => {
             try {
-              const buffer = Buffer.from(await file.arrayBuffer())
-              const result = await extractTextFromPDF(buffer, file.name)
+              const ocrResult = await processDocumentOCR(file)
               return {
-                text: result.text,
+                text: ocrResult.text || `[[OCR Fallback]] ${file.name} (${file.size} bytes) - OCR processed`,
                 meta: { name: file.name, type: file.type, bytes: file.size }
               }
-            } catch (pdfError) {
-              console.warn('PDF extraction failed:', pdfError)
+            } catch (ocrError) {
+              console.warn('OCR fallback failed:', ocrError)
               return {
-                text: `[[PDF Extraction Failed]] ${file.name} (${file.size} bytes) - Unable to extract text`,
+                text: `[[OCR Fallback Failed]] ${file.name} (${file.size} bytes) - Unable to extract text`,
                 meta: { name: file.name, type: file.type, bytes: file.size }
               }
             }
           }
         } catch {
-          // Final fallback with OCR
-          try {
-            console.log('🔄 Trying OCR fallback...')
-            const { processDocumentOCR } = await import('@/lib/ocr')
-            extractText = async (file: File) => {
-              try {
-                const ocrResult = await processDocumentOCR(file)
-                return {
-                  text: ocrResult.text || `[[OCR Fallback]] ${file.name} (${file.size} bytes) - OCR processed`,
-                  meta: { name: file.name, type: file.type, bytes: file.size }
-                }
-              } catch (ocrError) {
-                console.warn('OCR fallback failed:', ocrError)
-                return {
-                  text: `[[OCR Fallback Failed]] ${file.name} (${file.size} bytes) - Unable to extract text`,
-                  meta: { name: file.name, type: file.type, bytes: file.size }
-                }
-              }
-            }
-          } catch {
-            // Ultimate fallback
-            console.log('⚠️ Using ultimate fallback extractor')
-            extractText = async (file: File) => ({
-              text: `[[Fallback extractor]] ${file.name} (${file.size} bytes). Unable to extract text - document may be image-based or corrupted.`,
-              meta: { name: file.name, type: file.type, bytes: file.size }
-            })
-          }
+          // Ultimate fallback
+          console.log('⚠️ Using ultimate fallback extractor')
+          extractText = async (file: File) => ({
+            text: `[[Fallback extractor]] ${file.name} (${file.size} bytes). Unable to extract text - document may be image-based or corrupted.`,
+            meta: { name: file.name, type: file.type, bytes: file.size }
+          })
         }
       }
     }
   }
+  
   if (!summarizeAndSuggest) {
     try {
       const mod = await import('@/lib/ask/summarize-and-suggest')
