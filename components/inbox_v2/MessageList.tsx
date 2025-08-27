@@ -1,15 +1,15 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useMessages } from '@/hooks/inbox_v2'
-import { Paperclip, Clock, Trash2, Mail, Filter, Eye, EyeOff, Star, Flag, Reply, ReplyAll, Forward } from 'lucide-react'
+import { Paperclip, Clock, Trash2, Mail, Filter, Eye, EyeOff, Star, Flag, Reply, ReplyAll, Forward, Search, RefreshCw, AlertCircle, CheckCircle } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { DraggableEmailRow } from './DraggableEmailRow'
 
 interface MessageListProps {
   selectedFolderId: string | null
   selectedMessageId: string | null
-  onMessageSelect: (messageId: string | null) => void
+  onMessageSelect: (message: any) => void
   searchQuery?: string
   showUnreadOnly?: boolean
   onDragStart?: (e: React.DragEvent, messageId: string, sourceFolderId: string) => void
@@ -29,17 +29,80 @@ export default function MessageList({
   setSelectedMessages: externalSetSelectedMessages,
   onDelete: externalOnDelete
 }: MessageListProps) {
-  const { messages, isLoading, refresh } = useMessages(selectedFolderId)
+  const { messages, isLoading, refresh, lastRefresh } = useMessages(selectedFolderId)
   const [focusedMessageIndex, setFocusedMessageIndex] = useState<number>(-1)
-  const [filteredMessages, setFilteredMessages] = useState<any[]>([])
+  const [localRefreshTime, setLocalRefreshTime] = useState<Date>(new Date())
   
   // Use external selectedMessages if provided, otherwise use local state
   const [localSelectedMessages, setLocalSelectedMessages] = useState<Set<string>>(new Set())
   const selectedMessages = externalSelectedMessages || localSelectedMessages
   const setSelectedMessages = externalSetSelectedMessages || setLocalSelectedMessages
 
-  // Calculate unread count
+  // Enhanced filtering with memoization for better performance
+  const filteredMessages = useMemo(() => {
+    let filtered = messages
+
+    // Apply unread filter
+    if (showUnreadOnly) {
+      filtered = filtered.filter((message: any) => !message.isRead)
+    }
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter((message: any) => {
+        const subject = message.subject?.toLowerCase() || ''
+        const sender = message.from?.emailAddress?.address?.toLowerCase() || ''
+        const senderName = message.from?.emailAddress?.name?.toLowerCase() || ''
+        const body = message.bodyPreview?.toLowerCase() || ''
+        
+        return subject.includes(query) || 
+               sender.includes(query) || 
+               senderName.includes(query) || 
+               body.includes(query)
+      })
+    }
+
+    // Sort messages: unread first, then by date (newest first)
+    filtered.sort((a: any, b: any) => {
+      // Unread messages first
+      if (!a.isRead && b.isRead) return -1
+      if (a.isRead && !b.isRead) return -1
+      
+      // Then by date (newest first)
+      const dateA = new Date(a.receivedDateTime || a.createdDateTime || 0)
+      const dateB = new Date(b.receivedDateTime || b.createdDateTime || 0)
+      return dateB.getTime() - dateA.getTime()
+    })
+
+    return filtered
+  }, [messages, searchQuery, showUnreadOnly])
+
+  // Calculate enhanced statistics
   const unreadCount = messages.filter((message: any) => !message.isRead).length
+  const urgentCount = messages.filter((message: any) => 
+    message.importance === 'high' || 
+    message.subject?.toLowerCase().includes('urgent') ||
+    message.subject?.toLowerCase().includes('asap')
+  ).length
+
+  // Enhanced refresh function
+  const handleRefresh = useCallback(async () => {
+    setLocalRefreshTime(new Date())
+    await refresh()
+  }, [refresh])
+
+  // Auto-refresh when component becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && selectedFolderId) {
+        handleRefresh()
+      }
+    }
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [selectedFolderId, handleRefresh])
 
   // Keyboard navigation and shortcuts
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -51,7 +114,7 @@ export default function MessageList({
         setFocusedMessageIndex(prev => {
           const newIndex = Math.min(prev + 1, filteredMessages.length - 1)
           if (newIndex >= 0) {
-            onMessageSelect(filteredMessages[newIndex].id)
+            onMessageSelect(filteredMessages[newIndex])
           }
           return newIndex
         })
@@ -62,7 +125,7 @@ export default function MessageList({
         setFocusedMessageIndex(prev => {
           const newIndex = Math.max(prev - 1, 0)
           if (newIndex < filteredMessages.length) {
-            onMessageSelect(filteredMessages[newIndex].id)
+            onMessageSelect(filteredMessages[newIndex])
           }
           return newIndex
         })
@@ -89,7 +152,7 @@ export default function MessageList({
         e.preventDefault()
         if (focusedMessageIndex >= 0 && focusedMessageIndex < filteredMessages.length) {
           const message = filteredMessages[focusedMessageIndex]
-          onMessageSelect(message.id)
+          onMessageSelect(message)
         }
         break
     }
@@ -104,8 +167,9 @@ export default function MessageList({
     // Handle Escape to clear selection
     if (e.key === 'Escape') {
       setSelectedMessages(new Set())
+      setFocusedMessageIndex(-1)
     }
-  }, [filteredMessages, focusedMessageIndex, onMessageSelect, selectedMessages, setSelectedMessages, externalOnDelete])
+  }, [filteredMessages, selectedMessages, focusedMessageIndex, onMessageSelect, externalOnDelete, setSelectedMessages])
 
   // Set up keyboard event listener
   useEffect(() => {
@@ -113,198 +177,50 @@ export default function MessageList({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])
 
-  // Reset focused index when messages change
-  useEffect(() => {
-    setFocusedMessageIndex(-1)
-  }, [messages])
+  // Handle message selection
+  const handleMessageClick = useCallback((message: any, index: number) => {
+    onMessageSelect(message)
+    setFocusedMessageIndex(index)
+  }, [onMessageSelect])
 
-  // Auto-select first message when messages load
-  useEffect(() => {
-    if (filteredMessages.length > 0 && !selectedMessageId) {
-      onMessageSelect(filteredMessages[0].id)
-      setFocusedMessageIndex(0)
-    }
-  }, [filteredMessages, selectedMessageId, onMessageSelect])
-
-  // Auto-mark message as read when selected (removes blue dot)
-  useEffect(() => {
-    if (selectedMessageId) {
-      const selectedMessage = messages.find((msg: any) => msg.id === selectedMessageId)
-      
-      // If the selected message is unread, mark it as read
-      if (selectedMessage && !selectedMessage.isRead) {
-        // Mark as read directly here to avoid dependency issues
-        const markAsRead = async () => {
-          try {
-            const response = await fetch('/api/outlook/v2/messages/mark-read', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ messageId: selectedMessageId, isRead: true })
-            })
-            
-            if (response.ok) {
-              // Refresh messages to show updated state
-              refresh()
-            } else {
-              console.error('Failed to mark message as read')
-            }
-          } catch (error) {
-            console.error('Error marking message as read:', error)
-          }
-        }
-        markAsRead()
+  // Handle message selection with checkbox
+  const handleMessageSelect = useCallback((messageId: string, checked: boolean) => {
+    setSelectedMessages(prev => {
+      const newSet = new Set(prev)
+      if (checked) {
+        newSet.add(messageId)
+      } else {
+        newSet.delete(messageId)
       }
-    }
-  }, [selectedMessageId, messages, refresh])
-
-  // Optimize message filtering and selection
-  useEffect(() => {
-    let filtered = messages
-    
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
-      filtered = filtered.filter((message: any) => {
-        const subject = message.subject?.toLowerCase() || ''
-        const sender = message.from?.emailAddress?.name?.toLowerCase() || 
-                      message.from?.emailAddress?.address?.toLowerCase() || ''
-        const body = message.bodyPreview?.toLowerCase() || ''
-        
-        return subject.includes(query) || sender.includes(query) || body.includes(query)
-      })
-    }
-    
-    // Apply unread filter
-    if (showUnreadOnly) {
-      filtered = filtered.filter((message: any) => !message.isRead)
-    }
-    
-    // Sort messages: unread first, then by date (newest first)
-    filtered.sort((a: any, b: any) => {
-      // Unread messages first
-      if (a.isRead !== b.isRead) {
-        return a.isRead ? 1 : -1
-      }
-      
-      // Then by date (newest first)
-      const dateA = new Date(a.receivedDateTime || a.createdDateTime || 0)
-      const dateB = new Date(b.receivedDateTime || b.createdDateTime || 0)
-      return dateB.getTime() - dateA.getTime()
+      return newSet
     })
-    
-    setFilteredMessages(filtered)
-    
-    // Reset focused index when filters change
-    setFocusedMessageIndex(-1)
-    
-    // Clear selection when filters change significantly
-    if (selectedMessages.size > 0) {
-      const visibleMessageIds = new Set(filtered.map((msg: any) => msg.id))
-      const stillVisible = Array.from(selectedMessages).filter(id => visibleMessageIds.has(id))
-      if (stillVisible.length !== selectedMessages.size) {
-        setSelectedMessages(new Set(stillVisible))
-      }
+  }, [setSelectedMessages])
+
+  // Handle select all
+  const handleSelectAll = useCallback(() => {
+    if (selectedMessages.size === filteredMessages.length) {
+      setSelectedMessages(new Set())
+    } else {
+      const allMessageIds = filteredMessages.map(msg => msg.id)
+      setSelectedMessages(new Set(allMessageIds))
     }
-  }, [messages, searchQuery, showUnreadOnly, selectedMessages])
+  }, [selectedMessages.size, filteredMessages, setSelectedMessages])
 
-  const handleDelete = async (messageId: string) => {
-    if (!confirm('Are you sure you want to delete this message?')) return
-    
-    try {
-      // Move to deleted folder instead of permanent deletion
-      const response = await fetch('/api/outlook/v2/messages/move', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          messageId, 
-          destinationFolderId: 'deleteditems' // Move to deleted items folder
-        })
-      })
-      
-      if (response.ok) {
-        // Clear selected message if it was the deleted one
-        if (selectedMessageId === messageId) {
-          onMessageSelect(null)
-        }
-        // Refresh messages
-        refresh()
-      } else {
-        console.error('Failed to move message to deleted folder')
-      }
-    } catch (error) {
-      console.error('Error moving message to deleted folder:', error)
+  // Handle delete selected
+  const handleDeleteSelected = useCallback(() => {
+    if (selectedMessages.size > 0 && externalOnDelete) {
+      const messageIds = Array.from(selectedMessages)
+      externalOnDelete(messageIds)
+      setSelectedMessages(new Set())
     }
-  }
+  }, [selectedMessages, externalOnDelete, setSelectedMessages])
 
-  const handleDeleteMultiple = async (messageIds: string[]) => {
-    if (!confirm(`Are you sure you want to delete ${messageIds.length} messages?`)) return
-
-    try {
-      // Move all selected messages to deleted folder
-      const promises = messageIds.map(messageId => 
-        fetch('/api/outlook/v2/messages/move', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ 
-            messageId, 
-            destinationFolderId: 'deleteditems' // Move to deleted items folder
-          })
-        })
-      )
-
-      const responses = await Promise.all(promises)
-      const allSuccessful = responses.every(response => response.ok)
-
-      if (allSuccessful) {
-        // Clear selected messages
-        setSelectedMessages(new Set())
-        // Clear selected message if it was among the deleted ones
-        if (selectedMessageId && messageIds.includes(selectedMessageId)) {
-          onMessageSelect(null)
-        }
-        // Refresh messages
-        refresh()
-      } else {
-        console.error('Failed to move some messages to deleted folder')
-      }
-    } catch (error) {
-      console.error('Error moving messages to deleted folder:', error)
-    }
-  }
-
-  const handleMarkAsRead = async (messageId: string, isRead: boolean) => {
-    try {
-      const response = await fetch('/api/outlook/v2/messages/mark-read', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ messageId, isRead })
-      })
-      
-      if (response.ok) {
-        // Refresh messages to show updated state
-        refresh()
-      } else {
-        console.error('Failed to mark message as read')
-      }
-    } catch (error) {
-      console.error('Error marking message as read:', error)
-    }
-  }
-
-  if (isLoading) {
+  if (isLoading && messages.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4f46e5] mx-auto mb-2"></div>
-          <p className="text-sm text-gray-500">Loading messages...</p>
+          <RefreshCw className="h-8 w-8 text-gray-400 animate-spin mx-auto mb-3" />
+          <p className="text-gray-500">Loading messages...</p>
         </div>
       </div>
     )
@@ -312,14 +228,20 @@ export default function MessageList({
 
   if (filteredMessages.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
-          <Mail className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-          <h3 className="text-lg font-medium text-gray-900 mb-1">No messages found</h3>
+          <Search className="h-8 w-8 text-gray-400 mx-auto mb-3" />
           <p className="text-gray-500">
-            {searchQuery ? 'Try adjusting your search terms' : 
-             showUnreadOnly ? 'No unread messages' : 'No messages in this folder'}
+            {searchQuery || showUnreadOnly 
+              ? 'No messages match your filters' 
+              : 'No messages in this folder'
+            }
           </p>
+          {searchQuery && (
+            <p className="text-sm text-gray-400 mt-1">
+              Try adjusting your search terms
+            </p>
+          )}
         </div>
       </div>
     )
@@ -327,152 +249,93 @@ export default function MessageList({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Message List Header */}
-      <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-        <div className="flex items-center justify-between text-sm text-gray-600">
+      {/* Enhanced Header with Statistics */}
+      <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
-            <span>{filteredMessages.length} of {messages.length} messages</span>
-            {selectedMessages.size > 0 && (
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                {selectedMessages.size} selected
-              </span>
-            )}
+            <h4 className="text-sm font-medium text-gray-700">
+              Messages ({filteredMessages.length})
+            </h4>
             {unreadCount > 0 && (
               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                 {unreadCount} unread
               </span>
             )}
+            {urgentCount > 0 && (
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                {urgentCount} urgent
+              </span>
+            )}
           </div>
-          
-          {/* Selection Controls */}
-          {selectedMessages.size > 0 && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleRefresh}
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Refresh messages"
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            </button>
+            <span className="text-xs text-gray-400">
+              {localRefreshTime.toLocaleTimeString()}
+            </span>
+          </div>
+        </div>
+        
+        {/* Bulk Actions */}
+        {selectedMessages.size > 0 && (
+          <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <span className="text-sm text-blue-700">
+              {selectedMessages.size} message{selectedMessages.size !== 1 ? 's' : ''} selected
+            </span>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setSelectedMessages(new Set())}
-                className="text-xs text-gray-600 hover:text-gray-800 px-2 py-1 rounded hover:bg-gray-200"
+                onClick={handleDeleteSelected}
+                className="inline-flex items-center gap-1 px-3 py-1 bg-red-500 text-white text-xs rounded-lg hover:bg-red-600 transition-colors"
               >
-                Clear
-              </button>
-              <button
-                onClick={() => handleDeleteMultiple(Array.from(selectedMessages))}
-                className="text-xs text-red-600 hover:text-red-800 px-2 py-1 rounded hover:bg-red-100"
-              >
-                Delete ({selectedMessages.size})
+                <Trash2 className="h-3 w-3" />
+                Delete
               </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Message List */}
       <div className="flex-1 overflow-y-auto">
-        {filteredMessages.map((message, index) => (
-          <DraggableEmailRow
-            key={message.id}
-            messageId={message.id}
-            sourceFolderId={selectedFolderId || ''}
-            onDragStart={onDragStart || (() => {})}
-            className={`border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150 cursor-pointer ${
-              selectedMessageId === message.id ? 'bg-blue-50 border-l-4 border-l-[#4f46e5]' : ''
-            }`}
-          >
-            <div className="px-4 py-3">
-              {/* Message Header with Selection Checkbox */}
-              <div className="flex items-start gap-3 mb-2">
-                {/* Selection Checkbox */}
-                <input
-                  type="checkbox"
-                  checked={selectedMessages.has(message.id)}
-                  onChange={(e) => {
-                    e.stopPropagation()
-                    const newSelected = new Set(selectedMessages)
-                    if (e.target.checked) {
-                      newSelected.add(message.id)
-                    } else {
-                      newSelected.delete(message.id)
-                    }
-                    setSelectedMessages(newSelected)
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                  className="mt-1 h-4 w-4 text-[#4f46e5] border-gray-300 rounded focus:ring-[#4f46e5] focus:ring-2"
-                />
-                
-                <div className="flex items-center gap-2 flex-1 min-w-0" onClick={() => onMessageSelect(message.id)}>
-                  {/* Unread indicator */}
-                  {!message.isRead && (
-                    <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
-                  )}
-                  
-                  {/* Sender */}
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium truncate ${
-                      !message.isRead ? 'text-gray-900' : 'text-gray-700'
-                    }`}>
-                      {message.from?.emailAddress?.name || message.from?.emailAddress?.address || 'Unknown'}
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Time */}
-                <span className="text-xs text-gray-500 flex-shrink-0">
-                  {formatDistanceToNow(new Date(message.receivedDateTime || message.createdDateTime || Date.now()), { addSuffix: true })}
-                </span>
-              </div>
+        <div className="divide-y divide-gray-100">
+          {filteredMessages.map((message: any, index: number) => (
+            <DraggableEmailRow
+              key={message.id}
+              message={message}
+              isSelected={selectedMessageId === message.id}
+              isFocused={focusedMessageIndex === index}
+              isChecked={selectedMessages.has(message.id)}
+              onSelect={() => handleMessageClick(message, index)}
+              onCheck={(checked) => handleMessageSelect(message.id, checked)}
+              onDragStart={onDragStart}
+              sourceFolderId={selectedFolderId || ''}
+            />
+          ))}
+        </div>
+      </div>
 
-              {/* Subject */}
-              <h4 className={`text-sm font-medium mb-1 truncate ${
-                !message.isRead ? 'text-gray-900' : 'text-gray-700'
-              }`} onClick={() => onMessageSelect(message.id)}>
-                {message.subject || '(No subject)'}
-              </h4>
-
-              {/* Preview */}
-              <p className="text-sm text-gray-600 line-clamp-2 mb-2" onClick={() => onMessageSelect(message.id)}>
-                {message.bodyPreview || 'No preview available'}
-              </p>
-
-              {/* Message Actions */}
-              <div className="flex items-center gap-2 text-gray-400">
-                {message.hasAttachments && (
-                  <Paperclip className="h-4 w-4" />
-                )}
-                
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleMarkAsRead(message.id, !message.isRead)
-                  }}
-                  className="p-1 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                  title={message.isRead ? 'Mark as unread' : 'Mark as read'}
-                >
-                  {message.isRead ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-                
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    // TODO: Implement flag functionality
-                  }}
-                  className="p-1 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                  title="Flag message"
-                >
-                  <Flag className="h-4 w-4" />
-                </button>
-                
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    // TODO: Implement star functionality
-                  }}
-                  className="p-1 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                  title="Star message"
-                >
-                  <Star className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          </DraggableEmailRow>
-        ))}
+      {/* Enhanced Footer */}
+      <div className="p-3 border-t border-gray-200 bg-gray-50">
+        <div className="flex items-center justify-between text-xs text-gray-500">
+          <span>
+            Showing {filteredMessages.length} of {messages.length} messages
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSelectAll}
+              className="text-blue-600 hover:text-blue-800 transition-colors"
+            >
+              {selectedMessages.size === filteredMessages.length ? 'Deselect All' : 'Select All'}
+            </button>
+            <span>•</span>
+            <span>Last updated: {lastRefresh?.toLocaleTimeString() || 'Unknown'}</span>
+          </div>
+        </div>
       </div>
     </div>
   )
