@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, createContext, useContext, useEffect, useCallback } from 'react'
-import { MessageSquare, Plus, Search, Filter, RefreshCw, Settings, MoreVertical, FileText, Sparkles, Zap, TrendingUp, Users, Clock } from 'lucide-react'
+import { MessageSquare, Plus, Search, Filter, RefreshCw, Settings, MoreVertical, FileText, Sparkles, Zap, TrendingUp, Users, Clock, Brain } from 'lucide-react'
 import FolderSidebar from '@/components/inbox_v2/FolderSidebar'
 import MessageList from '@/components/inbox_v2/MessageList'
 import MessagePreview from '@/components/inbox_v2/MessagePreview'
@@ -458,8 +458,87 @@ export default function InboxV2() {
         </div>
       </div>
 
+      {/* 🎯 HERO BANNER SECTION - Making the page engaging and informative */}
+      <div className="bg-gradient-to-r from-[#4f46e5] via-[#7c3aed] to-[#a855f7] px-8 py-6 shadow-2xl">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <div className="relative">
+              <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/30">
+                <TrendingUp className="h-6 w-6 text-white" />
+              </div>
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-300 rounded-full animate-pulse"></div>
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-2">Email Management Dashboard</h2>
+              <p className="text-white/90 text-sm">
+                {totalMessages} total messages • {unreadCount} unread • {urgentMessages} urgent • Last updated {lastRefreshTime.toLocaleTimeString()}
+              </p>
+            </div>
+          </div>
+          
+          {/* 🧠 MINI ASKBLOQIQ WIDGET - Compact AI assistant */}
+          <div className="flex items-center gap-4">
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <div className="w-10 h-10 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg">
+                    <Brain className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-cyan-400 rounded-full animate-ping"></div>
+                  <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-pink-400 rounded-full animate-pulse"></div>
+                </div>
+                <div className="text-white">
+                  <p className="text-sm font-medium">Ask BlocIQ AI</p>
+                  <p className="text-xs text-white/70">Smart email assistance</p>
+                </div>
+                <button
+                  onClick={() => document.querySelector('[data-askblociq-button]')?.click()}
+                  className="px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white text-xs rounded-lg transition-all duration-200 hover:scale-105 border border-white/30"
+                >
+                  Ask Now
+                </button>
+              </div>
+            </div>
+            
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center shadow-lg">
+                  <Zap className="h-5 w-5 text-white" />
+                </div>
+                <div className="text-white">
+                  <p className="text-sm font-medium">AI Triage</p>
+                  <p className="text-xs text-white/70">Auto-categorize emails</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 📊 QUICK STATS SECTION - Visual metrics and insights */}
+      <div className="bg-white/90 backdrop-blur-sm border-b border-gray-200/50 px-8 py-4">
+        <div className="grid grid-cols-4 gap-6">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-gray-900">{totalMessages}</div>
+            <div className="text-sm text-gray-600">Total Messages</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-blue-600">{unreadCount}</div>
+            <div className="text-sm text-gray-600">Unread</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-red-600">{urgentMessages}</div>
+            <div className="text-sm text-gray-600">Urgent</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-purple-600">{selectedFolder ? selectedFolder.displayName : 'Inbox'}</div>
+            <div className="text-sm text-gray-600">Current Folder</div>
+          </div>
+        </div>
+      </div>
+
       {/* Enhanced Main Email Client Layout with Full BlocIQ Design Magic */}
-      <div className="flex h-[calc(100vh-200px)] bg-gradient-to-br from-gray-50 via-blue-50/20 to-purple-50/20">
+      <div className="flex h-[calc(100vh-400px)] bg-gradient-to-br from-gray-50 via-blue-50/20 to-purple-50/20">
         {/* Left Column: Enhanced Folder Sidebar */}
         <div className="w-80 bg-white/80 backdrop-blur-sm border-r border-gray-200/50 flex flex-col shadow-xl">
           <div className="p-6 border-b border-gray-200/50 bg-gradient-to-b from-white/90 via-blue-50/30 to-purple-50/30">
@@ -468,7 +547,7 @@ export default function InboxV2() {
                 <Sparkles className="h-4 w-4 text-purple-500" />
                 <div className="absolute inset-0 bg-purple-400/30 rounded-full animate-ping"></div>
               </div>
-              Folders
+              <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">Folders</span>
             </h3>
             <FolderSidebar 
               selectedFolderId={selectedFolderId}
@@ -486,29 +565,38 @@ export default function InboxV2() {
         {/* Middle Column: Enhanced Message List */}
         <div className="w-96 bg-white/80 backdrop-blur-sm border-r border-gray-200/50 flex flex-col shadow-xl">
           <div className="p-6 border-b border-gray-200/50 bg-gradient-to-b from-white/90 via-blue-50/30 to-purple-50/30">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="relative flex-1 group">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" />
-                <input
-                  type="text"
-                  placeholder="Search messages..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border border-gray-300/50 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent shadow-lg transition-all duration-300 bg-white/80 backdrop-blur-sm focus:bg-white focus:shadow-2xl"
-                />
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/10 to-purple-500/0 rounded-2xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-300"></div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider flex items-center gap-2">
+                <div className="relative">
+                  <MessageSquare className="h-4 w-4 text-blue-500" />
+                  <div className="absolute inset-0 bg-blue-400/30 rounded-full animate-pulse"></div>
+                </div>
+                <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Messages</span>
+              </h3>
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1 group w-80">
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" />
+                  <input
+                    type="text"
+                    placeholder="Search messages..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-12 pr-4 py-3 border border-gray-300/50 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent shadow-lg transition-all duration-300 bg-white/80 backdrop-blur-sm focus:bg-white focus:shadow-2xl"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/10 to-purple-500/0 rounded-2xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-300"></div>
+                </div>
+                <button
+                  onClick={() => setShowUnreadOnly(!showUnreadOnly)}
+                  className={`group relative p-3 rounded-2xl transition-all duration-300 ${
+                    showUnreadOnly 
+                      ? 'bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700 border border-blue-300 shadow-lg' 
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-200 border border-transparent hover:border-gray-300 hover:shadow-lg'
+                  }`}
+                  title="Show unread only"
+                >
+                  <Filter className={`h-4 w-4 transition-transform duration-200 ${showUnreadOnly ? 'scale-110' : 'group-hover:scale-110'}`} />
+                </button>
               </div>
-              <button
-                onClick={() => setShowUnreadOnly(!showUnreadOnly)}
-                className={`group relative p-3 rounded-2xl transition-all duration-300 ${
-                  showUnreadOnly 
-                    ? 'bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700 border border-blue-300 shadow-lg' 
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-200 border border-transparent hover:border-gray-300 hover:shadow-lg'
-                }`}
-                title="Show unread only"
-              >
-                <Filter className={`h-4 w-4 transition-transform duration-200 ${showUnreadOnly ? 'scale-110' : 'group-hover:scale-110'}`} />
-              </button>
             </div>
           </div>
           
@@ -618,7 +706,7 @@ export default function InboxV2() {
       />
 
       {/* Enhanced Ask BlocIQ AI Assistant with Pulsating Brain Design */}
-      <AskBlocIQButton selectedMessage={selectedMessage} />
+      <AskBlocIQButton selectedMessage={selectedMessage} data-askblociq-button />
 
       {/* AI Drafts Panel */}
       <DraftsPanel
