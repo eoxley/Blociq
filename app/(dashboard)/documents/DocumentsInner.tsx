@@ -48,7 +48,7 @@ export default function DocumentsInner() {
           </div>
           <div className="flex items-center gap-3">
             <Link
-              href="/compliance/documents"
+              href="/assistant/documents"
               className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <Upload className="h-4 w-4 mr-2" />
@@ -73,7 +73,7 @@ export default function DocumentsInner() {
                 Upload your first document to get started.
               </p>
               <Link
-                href="/compliance/documents"
+                href="/assistant/documents"
                 className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <Plus className="h-4 w-4 mr-2" />

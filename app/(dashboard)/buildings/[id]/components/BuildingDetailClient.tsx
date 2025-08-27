@@ -570,7 +570,7 @@ export default function BuildingDetailClient({
               <h3 className="font-semibold">Compliance Overview</h3>
             </div>
             <Link
-              href={`/buildings/${buildingId}/compliance`}
+              href="/compliance"
               className="text-white/90 hover:text-white text-sm font-medium transition-colors"
             >
               View All
@@ -615,11 +615,11 @@ export default function BuildingDetailClient({
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
           <Link
-                            href={`/buildings/${buildingId}/compliance`}
+            href="/compliance"
             className="flex items-center p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <Shield className="h-5 w-5 text-[#4f46e5] mr-3" />
-            <span className="text-gray-700">Compliance Setup</span>
+            <span className="text-gray-700">Compliance Overview</span>
           </Link>
           <Link
             href={`/buildings/${buildingId}/communications`}

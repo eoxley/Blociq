@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { analyzeDocument, ComprehensiveDocumentAnalysis } from '../lib/document-analysis-orchestrator';
+import { processFileWithOCR, batchProcessOCR } from '../lib/ocr-integration';
 
 interface Message {
   id: string;
@@ -32,39 +33,7 @@ interface UseAIConversationReturn {
   clearMessages: () => void;
 }
 
-// OCR processing function
-async function processFileWithOCR(file: File): Promise<{ text: string; success: boolean; error?: string }> {
-  try {
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    const response = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
-      method: 'POST',
-      body: formData
-    });
-
-    if (!response.ok) {
-      throw new Error(`OCR service error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    if (data.text) {
-      return { text: data.text, success: true };
-    } else {
-      return { text: '', success: false, error: 'No text extracted from OCR' };
-    }
-  } catch (error) {
-    console.error('OCR processing failed:', error);
-    return { 
-      text: '', 
-      success: false, 
-      error: error instanceof Error ? error.message : 'OCR processing failed' 
-    };
-  }
-}
-
-// Document analysis is now handled by the comprehensive document analysis system
+// OCR processing is now handled by the lib/ocr-integration module
 
 export function useAIConversation(): UseAIConversationReturn {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -117,9 +86,15 @@ export function useAIConversation(): UseAIConversationReturn {
         let allOcrText = '';
         let documentAnalyses: ComprehensiveDocumentAnalysis[] = [];
         
-        // Process each file with OCR and document analysis
-        for (const file of files) {
-          const ocrResult = await processFileWithOCR(file);
+        // Process files through OCR and document analysis using the utility module
+        const ocrResults = await Promise.all(
+          files.map(file => processFileWithOCR(file))
+        );
+        
+        // Build enhanced content from OCR results and document analysis
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          const ocrResult = ocrResults[i];
           
           if (ocrResult.success) {
             allOcrText += `\n\n--- ${file.name} ---\n${ocrResult.text}\n`;
@@ -160,6 +135,10 @@ export function useAIConversation(): UseAIConversationReturn {
         formData.append('userQuestion', enhancedContent);
         formData.append('useMemory', useMemory.toString());
         if (conversationId) formData.append('conversationId', conversationId);
+        
+        // Add building ID if available (this should come from context)
+        // TODO: Get building ID from current context/session
+        // const buildingId = getCurrentBuildingId(); // This needs to be implemented
         
         files.forEach((file, index) => {
           formData.append(`file_${index}`, file);
