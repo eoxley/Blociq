@@ -1,222 +1,385 @@
 import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
-// If you use these, keep; otherwise swap to your own utils:
-let extractText: (buf: Uint8Array, name?: string) => Promise<{ text: string; meta: { name: string; type: string; bytes: number } }>
-let summarizeAndSuggest: (text: string, filename: string) => Promise<{ summary: string; suggestedActions?: any[] }>
+// Service imports - no lazy loading to avoid module load failures
+import { extractText } from '@/lib/extract-text'
+import { analyzeLeaseDocument } from '@/lib/lease-analyzer'
+import { classifyDocument } from '@/lib/document-classifier'
 
-// Enhanced document analysis functions
-let analyzeLeaseDocument: ((text: string, filename: string, buildingId?: string) => Promise<any>) | null
-let classifyDocument: ((text: string, filename: string) => any) | null
+// Types
+interface DocumentAnalysisResult {
+  success: boolean;
+  filename: string;
+  buildingId?: string;
+  summary: string;
+  extractionMethod: string;
+  extractionNote: string;
+  textLength: number;
+  confidence: number;
+  documentType?: string;
+  leaseDetails?: any;
+  complianceChecklist?: any[];
+  financialObligations?: any[];
+  keyRights?: any[];
+  restrictions?: any[];
+  buildingContext?: any;
+  error?: string;
+  warning?: string;
+}
 
-async function lazyDeps() {
-  if (!extractText) {
-    console.log('🔄 Loading extractText function...')
+// Configuration
+const CONFIG = {
+  MAX_FILE_BYTES: 12 * 1024 * 1024, // 12MB
+  SUPPORTED_TYPES: [
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/msword',
+    'text/plain'
+  ],
+  BUCKET: process.env.DOCS_BUCKET || 'documents'
+} as const;
+
+// Document processing service
+class DocumentProcessor {
+  async processFile(file: File, buildingId?: string): Promise<DocumentAnalysisResult> {
     try {
-      const mod = await import('@/lib/extract-text')
-      extractText = mod.extractText
-      console.log('✅ Using primary extractText from @/lib/extract-text')
-    } catch (error) {
-      console.error('❌ Failed to load extractText:', error)
-      throw new Error('Text extraction module failed to load')
+      // Validate file
+      const validation = this.validateFile(file);
+      if (!validation.isValid) {
+        throw new Error(validation.error);
+      }
+
+      console.log(`Processing file: ${file.name} (${file.size} bytes)`);
+
+      // Extract text
+      const arrayBuffer = await file.arrayBuffer();
+      const extractedData = await extractText(new Uint8Array(arrayBuffer), file.name);
+      
+      console.log(`Text extracted: ${extractedData.text.length} characters`);
+
+      // Determine extraction method
+      const extractionMethod = this.getExtractionMethod(extractedData.text);
+      const extractionNote = this.getExtractionNote(extractionMethod);
+
+      // Classify document
+      const classification = classifyDocument(extractedData.text, file.name);
+      console.log(`Document classified as: ${classification.type} (${classification.confidence}% confidence)`);
+
+      // Process based on document type
+      if (classification.type === 'lease' && classification.confidence > 70) {
+        return await this.processLeaseDocument(
+          file.name,
+          extractedData.text,
+          extractionMethod,
+          extractionNote,
+          buildingId
+        );
+      } else {
+        return await this.processGeneralDocument(
+          file.name,
+          extractedData.text,
+          extractionMethod,
+          extractionNote,
+          classification,
+          buildingId
+        );
+      }
+
+    } catch (error: any) {
+      console.error(`Document processing failed for ${file.name}:`, error);
+      
+      return {
+        success: false,
+        filename: file.name,
+        buildingId,
+        summary: `Document processing failed: ${error.message}`,
+        extractionMethod: 'failed',
+        extractionNote: 'Processing encountered an error',
+        textLength: 0,
+        confidence: 0,
+        error: error.message
+      };
     }
   }
-  
-  if (!summarizeAndSuggest) {
+
+  async processFromStorage(path: string, buildingId?: string): Promise<DocumentAnalysisResult> {
     try {
-      const mod = await import('@/lib/ask/summarize-and-suggest')
-      summarizeAndSuggest = mod.summarizeAndSuggest
-    } catch (error) {
-      console.error('❌ Failed to load summarizeAndSuggest:', error)
-      throw new Error('Summarization module failed to load')
+      // Validate environment
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        throw new Error('Supabase configuration missing');
+      }
+
+      // Download file from storage
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+      
+      const { data, error } = await supabase.storage.from(CONFIG.BUCKET).download(path);
+      
+      if (error || !data) {
+        throw new Error(error?.message || 'File download failed');
+      }
+
+      // Process as if it were an uploaded file
+      const arrayBuffer = await data.arrayBuffer();
+      const extractedData = await extractText(new Uint8Array(arrayBuffer), path);
+      
+      const extractionMethod = this.getExtractionMethod(extractedData.text);
+      const extractionNote = 'Document processed from storage';
+      
+      const classification = classifyDocument(extractedData.text, path);
+      const filename = path.split('/').pop() || path;
+
+      if (classification.type === 'lease' && classification.confidence > 70) {
+        return await this.processLeaseDocument(
+          filename,
+          extractedData.text,
+          extractionMethod,
+          extractionNote,
+          buildingId
+        );
+      } else {
+        return await this.processGeneralDocument(
+          filename,
+          extractedData.text,
+          extractionMethod,
+          extractionNote,
+          classification,
+          buildingId
+        );
+      }
+
+    } catch (error: any) {
+      console.error(`Storage processing failed for ${path}:`, error);
+      
+      return {
+        success: false,
+        filename: path.split('/').pop() || path,
+        buildingId,
+        summary: `Storage processing failed: ${error.message}`,
+        extractionMethod: 'failed',
+        extractionNote: 'Storage processing encountered an error',
+        textLength: 0,
+        confidence: 0,
+        error: error.message
+      };
     }
   }
 
-  // Load enhanced document analysis functions
-  if (!analyzeLeaseDocument) {
+  private async processLeaseDocument(
+    filename: string,
+    text: string,
+    extractionMethod: string,
+    extractionNote: string,
+    buildingId?: string
+  ): Promise<DocumentAnalysisResult> {
     try {
-      console.log('🔄 Loading lease analyzer...')
-      const mod = await import('@/lib/lease-analyzer')
-      analyzeLeaseDocument = mod.analyzeLeaseDocument
-      console.log('✅ Lease analyzer loaded successfully')
-    } catch (error) {
-      console.warn('Failed to load lease analyzer:', error)
-      analyzeLeaseDocument = null
+      console.log(`Processing as lease document: ${filename}`);
+      
+      const leaseAnalysis = await analyzeLeaseDocument(text, filename, buildingId);
+      const formattedText = this.formatLeaseAnalysis(leaseAnalysis);
+      
+      return {
+        success: true,
+        filename,
+        buildingId,
+        summary: formattedText,
+        extractionMethod,
+        extractionNote,
+        textLength: text.length,
+        confidence: leaseAnalysis.confidence || 0.8,
+        documentType: 'lease',
+        leaseDetails: leaseAnalysis.leaseDetails || {},
+        complianceChecklist: leaseAnalysis.complianceChecklist || [],
+        financialObligations: leaseAnalysis.financialObligations || [],
+        keyRights: leaseAnalysis.keyRights || [],
+        restrictions: leaseAnalysis.restrictions || [],
+        buildingContext: leaseAnalysis.buildingContext || {
+          buildingId: buildingId || null,
+          buildingStatus: buildingId ? 'matched' : 'not_found',
+          extractedAddress: leaseAnalysis.leaseDetails?.propertyAddress || null,
+          extractedBuildingType: leaseAnalysis.leaseDetails?.buildingType || null
+        }
+      };
+
+    } catch (error: any) {
+      console.error(`Lease analysis failed for ${filename}:`, error);
+      
+      // Fallback to basic document processing
+      const basicSummary = `Lease document detected but analysis failed. Document contains ${text.length} characters. Error: ${error.message}`;
+      
+      return {
+        success: true,
+        filename,
+        buildingId,
+        summary: basicSummary,
+        extractionMethod,
+        extractionNote,
+        textLength: text.length,
+        confidence: 0.3,
+        documentType: 'lease',
+        warning: 'Lease analysis failed, using basic processing',
+        error: error.message
+      };
     }
   }
 
-  if (!classifyDocument) {
+  private async processGeneralDocument(
+    filename: string,
+    text: string,
+    extractionMethod: string,
+    extractionNote: string,
+    classification: any,
+    buildingId?: string
+  ): Promise<DocumentAnalysisResult> {
     try {
-      console.log('🔄 Loading document classifier...')
-      const mod = await import('@/lib/document-classifier')
-      classifyDocument = mod.classifyDocument
-      console.log('✅ Document classifier loaded successfully')
-    } catch (error) {
-      console.warn('Failed to load document classifier:', error)
-      classifyDocument = null
+      // Import summarization function
+      const { summarizeAndSuggest } = await import('@/lib/ask/summarize-and-suggest');
+      
+      const analysis = await summarizeAndSuggest(text, filename);
+      
+      const summary = `Document Analysis (${classification.type.toUpperCase()})\n\n${analysis.summary}\n\nDocument Type: ${classification.type}\nConfidence: ${classification.confidence}%`;
+      
+      return {
+        success: true,
+        filename,
+        buildingId,
+        summary,
+        extractionMethod,
+        extractionNote,
+        textLength: text.length,
+        confidence: extractionMethod === 'standard' ? 0.9 : 0.7,
+        documentType: classification.type
+      };
+
+    } catch (error: any) {
+      console.warn(`General document analysis failed for ${filename}:`, error);
+      
+      // Minimal fallback
+      const fallbackSummary = `Document processed successfully. Type: ${classification.type}. Contains ${text.length} characters of extracted text.`;
+      
+      return {
+        success: true,
+        filename,
+        buildingId,
+        summary: fallbackSummary,
+        extractionMethod,
+        extractionNote,
+        textLength: text.length,
+        confidence: 0.5,
+        documentType: classification.type,
+        warning: 'Used basic analysis due to processing error'
+      };
     }
+  }
+
+  private validateFile(file: File): { isValid: boolean; error?: string } {
+    if (!file) {
+      return { isValid: false, error: 'No file provided' };
+    }
+
+    if (file.size > CONFIG.MAX_FILE_BYTES) {
+      return { 
+        isValid: false, 
+        error: `File too large (${(file.size / 1048576).toFixed(1)} MB). Maximum size is ${CONFIG.MAX_FILE_BYTES / 1048576} MB` 
+      };
+    }
+
+    // Note: file.type can be empty or spoofed, so this is just a first check
+    if (file.type && !CONFIG.SUPPORTED_TYPES.includes(file.type)) {
+      return { 
+        isValid: false, 
+        error: `File type ${file.type} not supported. Allowed types: PDF, DOCX, DOC, TXT` 
+      };
+    }
+
+    return { isValid: true };
+  }
+
+  private getExtractionMethod(text: string): string {
+    if (text.includes('[OCR Fallback]')) return 'ocr';
+    if (text.includes('[Enhanced processor]')) return 'enhanced';
+    if (text.includes('[Raw text extraction]')) return 'fallback';
+    return 'standard';
+  }
+
+  private getExtractionNote(method: string): string {
+    switch (method) {
+      case 'ocr': return 'Document processed using OCR - text accuracy may vary';
+      case 'enhanced': return 'Document processed using enhanced extraction methods';
+      case 'fallback': return 'Document processed using fallback methods';
+      default: return 'Document processed using standard extraction methods';
+    }
+  }
+
+  private formatLeaseAnalysis(analysis: any): string {
+    let formattedText = 'COMPREHENSIVE LEASE ANALYSIS\n\n';
+    
+    // Property Details
+    if (analysis.leaseDetails) {
+      formattedText += 'PROPERTY DETAILS\n';
+      const details = analysis.leaseDetails;
+      
+      if (details.propertyAddress) formattedText += `Address: ${details.propertyAddress}\n`;
+      if (details.buildingType) formattedText += `Property Type: ${details.buildingType}\n`;
+      if (details.propertyDescription) formattedText += `Description: ${details.propertyDescription}\n`;
+      if (details.floorArea) formattedText += `Floor Area: ${details.floorArea}\n`;
+      formattedText += '\n';
+    }
+    
+    // Lease Terms
+    if (analysis.leaseDetails) {
+      formattedText += 'LEASE TERMS\n';
+      const details = analysis.leaseDetails;
+      
+      if (details.leaseStartDate) formattedText += `Start Date: ${details.leaseStartDate}\n`;
+      if (details.leaseEndDate) formattedText += `End Date: ${details.leaseEndDate}\n`;
+      if (details.leaseTerm) formattedText += `Lease Length: ${details.leaseTerm}\n`;
+      if (details.landlord) formattedText += `Landlord: ${details.landlord}\n`;
+      if (details.tenant) formattedText += `Tenant: ${details.tenant}\n`;
+      formattedText += '\n';
+    }
+    
+    // Financial Summary
+    if (analysis.leaseDetails) {
+      formattedText += 'FINANCIAL SUMMARY\n';
+      const details = analysis.leaseDetails;
+      
+      if (details.premium) formattedText += `Premium: ${details.premium}\n`;
+      if (details.initialRent) formattedText += `Initial Rent: ${details.initialRent}\n`;
+      if (details.monthlyRent) formattedText += `Monthly Rent: ${details.monthlyRent}\n`;
+      if (details.annualRent) formattedText += `Annual Rent: ${details.annualRent}\n`;
+      if (details.serviceCharge) formattedText += `Service Charge: ${details.serviceCharge}\n`;
+      if (details.deposit) formattedText += `Deposit: ${details.deposit}\n`;
+      formattedText += '\n';
+    }
+    
+    // Compliance Checklist
+    if (analysis.complianceChecklist?.length > 0) {
+      formattedText += 'COMPLIANCE CHECKLIST\n';
+      analysis.complianceChecklist.forEach((item: any) => {
+        formattedText += `${item.item}: ${item.status}\n`;
+        if (item.details) formattedText += `  Details: ${item.details}\n`;
+      });
+      formattedText += '\n';
+    }
+    
+    // Summary
+    if (analysis.summary && analysis.summary !== 'Lease document analyzed successfully') {
+      formattedText += 'LEASE SUMMARY\n';
+      formattedText += `${analysis.summary}\n\n`;
+    }
+    
+    return formattedText;
   }
 }
 
-// Helper function to detect if document is a lease
-function isLeaseDocument(filename: string, text: string): boolean {
-  const filenameLower = filename.toLowerCase()
-  const textLower = text.toLowerCase()
-  
-  // Check filename for lease indicators
-  const leaseKeywords = ['lease', 'tenancy', 'rental', 'agreement', 'contract']
-  const hasLeaseFilename = leaseKeywords.some(keyword => filenameLower.includes(keyword))
-  
-  // Check content for lease indicators
-  const leaseContentKeywords = [
-    'lease', 'tenant', 'landlord', 'rent', 'premium', 'service charge',
-    'term of years', 'ground rent', 'leasehold', 'freehold', 'assignment',
-    'subletting', 'break clause', 'forfeiture', 'covenant'
-  ]
-  const hasLeaseContent = leaseContentKeywords.some(keyword => textLower.includes(keyword))
-  
-  return hasLeaseFilename || hasLeaseContent
-}
+// Main route handlers
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
-// Helper function to convert lease analysis to detailed formatted text
-function formatLeaseAnalysisToText(analysis: any): string {
-  console.log('🔍 Formatting lease analysis:', analysis);
-  
-  let formattedText = '📋 **COMPREHENSIVE LEASE ANALYSIS**\n\n'
-  
-  // Property Details
-  if (analysis.leaseDetails) {
-    formattedText += '**🏠 PROPERTY DETAILS**\n'
-    if (analysis.leaseDetails.propertyAddress) {
-      formattedText += `• Address: ${analysis.leaseDetails.propertyAddress}\n`
-    }
-    if (analysis.leaseDetails.buildingType) {
-      formattedText += `• Property Type: ${analysis.leaseDetails.buildingType}\n`
-    }
-    if (analysis.leaseDetails.propertyDescription) {
-      formattedText += `• Description: ${analysis.leaseDetails.propertyDescription}\n`
-    }
-    if (analysis.leaseDetails.floorArea) {
-      formattedText += `• Floor Area: ${analysis.leaseDetails.floorArea}\n`
-    }
-    formattedText += '\n'
-  }
-  
-  // Lease Terms
-  if (analysis.leaseDetails) {
-    formattedText += '**📅 LEASE TERMS**\n'
-    if (analysis.leaseDetails.leaseStartDate) {
-      formattedText += `• Start Date: ${analysis.leaseDetails.leaseStartDate}\n`
-    }
-    if (analysis.leaseDetails.leaseEndDate) {
-      formattedText += `• End Date: ${analysis.leaseDetails.leaseEndDate}\n`
-    }
-    if (analysis.leaseDetails.leaseTerm) {
-      formattedText += `• Lease Length: ${analysis.leaseDetails.leaseTerm}\n`
-    }
-    if (analysis.leaseDetails.landlord) {
-      formattedText += `• Landlord: ${analysis.leaseDetails.landlord}\n`
-    }
-    if (analysis.leaseDetails.tenant) {
-      formattedText += `• Tenant: ${analysis.leaseDetails.tenant}\n`
-    }
-    formattedText += '\n'
-  }
-  
-  // Financial Summary
-  if (analysis.leaseDetails) {
-    formattedText += '**💰 FINANCIAL SUMMARY**\n'
-    if (analysis.leaseDetails.premium) {
-      formattedText += `• Premium: £${analysis.leaseDetails.premium}\n`
-    }
-    if (analysis.leaseDetails.initialRent) {
-      formattedText += `• Initial Rent: £${analysis.leaseDetails.initialRent}\n`
-    }
-    if (analysis.leaseDetails.monthlyRent) {
-      formattedText += `• Monthly Rent: £${analysis.leaseDetails.monthlyRent}\n`
-    }
-    if (analysis.leaseDetails.annualRent) {
-      formattedText += `• Annual Rent: £${analysis.leaseDetails.annualRent}\n`
-    }
-    if (analysis.leaseDetails.serviceCharge) {
-      formattedText += `• Service Charge: ${analysis.leaseDetails.serviceCharge}\n`
-    }
-    if (analysis.leaseDetails.deposit) {
-      formattedText += `• Deposit: £${analysis.leaseDetails.deposit}\n`
-    }
-    formattedText += '\n'
-  }
-  
-  // Compliance Checklist
-  if (analysis.complianceChecklist && analysis.complianceChecklist.length > 0) {
-    formattedText += '**🔍 COMPLIANCE CHECKLIST**\n'
-    analysis.complianceChecklist.forEach((item: any, index: number) => {
-      formattedText += `❓ ${item.title}: ${item.description || 'Not specified'}\n`
-    })
-    formattedText += '\n'
-  }
-  
-  // Financial Obligations
-  if (analysis.financialObligations && analysis.financialObligations.length > 0) {
-    formattedText += '**💰 FINANCIAL OBLIGATIONS**\n'
-    analysis.financialObligations.forEach((item: any, index: number) => {
-      formattedText += `• ${item.title}: ${item.description || 'Not specified'}\n`
-    })
-    formattedText += '\n'
-  }
-  
-  // Key Rights
-  if (analysis.keyRights && analysis.keyRights.length > 0) {
-    formattedText += '**⚖️ KEY RIGHTS**\n'
-    analysis.keyRights.forEach((item: any, index: number) => {
-      formattedText += `• ${item.title}: ${item.description || 'Not specified'}\n`
-    })
-    formattedText += '\n'
-  }
-  
-  // Restrictions
-  if (analysis.restrictions && analysis.restrictions.length > 0) {
-    formattedText += '**🚫 RESTRICTIONS**\n'
-    analysis.restrictions.forEach((item: any, index: number) => {
-      formattedText += `• ${item.title}: ${item.description || 'Not specified'}\n`
-    })
-    formattedText += '\n'
-  }
-  
-  // Building Context
-  if (analysis.buildingContext) {
-    formattedText += '**🏢 BUILDING CONTEXT**\n'
-    if (analysis.buildingContext.buildingStatus) {
-      formattedText += `• Status: ${analysis.buildingContext.buildingStatus === 'matched' ? '✅ Building Found in Portfolio' : '⚠️ Building Not Found in Portfolio'}\n`
-    }
-    if (analysis.buildingContext.extractedAddress) {
-      formattedText += `• Extracted Address: ${analysis.buildingContext.extractedAddress}\n`
-    }
-    if (analysis.buildingContext.extractedBuildingType) {
-      formattedText += `• Extracted Building Type: ${analysis.buildingContext.extractedBuildingType}\n`
-    }
-    formattedText += '\n'
-  }
-  
-  // Summary
-  if (analysis.summary && analysis.summary !== 'Lease document analyzed successfully') {
-    formattedText += '**📝 LEASE SUMMARY**\n'
-    formattedText += `${analysis.summary}\n\n`
-  }
-  
-  console.log('🔍 Formatted text result:', formattedText.substring(0, 300) + '...');
-  
-  return formattedText;
-}
-
-// Required for Node-only PDF libs
-export const runtime = 'nodejs'
-export const dynamic = 'force-dynamic'
-export const maxDuration = 60
-
-const MAX_FILE_BYTES = 12 * 1024 * 1024 // 12MB safety
-const BUCKET = process.env.DOCS_BUCKET || 'documents'
-
-// Allow preflight (defensive; same-origin form-data usually won't send this)
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,
@@ -225,266 +388,61 @@ export async function OPTIONS() {
       'Access-Control-Allow-Methods': 'POST,OPTIONS',
       'Access-Control-Allow-Headers': 'content-type, authorization',
     },
-  })
+  });
 }
 
 export async function POST(req: Request) {
+  const processor = new DocumentProcessor();
+  
   try {
-    await lazyDeps()
-    const ct = req.headers.get('content-type') || ''
-    console.log('🔍 Upload request received:', { contentType: ct, url: req.url })
+    const contentType = req.headers.get('content-type') || '';
+    console.log(`Upload request received: ${contentType}`);
     
-    // 1) Multipart: small drag-and-drop files
-    if (ct.includes('multipart/form-data')) {
-      console.log('🔍 Processing multipart form data')
-      const form = await req.formData()
-      const file = form.get('file') as File | null
-      const buildingId = (form.get('buildingId') as string) || (form.get('building_id') as string) || null
+    if (contentType.includes('multipart/form-data')) {
+      // Handle file upload
+      const form = await req.formData();
+      const file = form.get('file') as File | null;
+      const buildingId = (form.get('buildingId') || form.get('building_id')) as string || undefined;
 
       if (!file) {
-        console.error('❌ No file received in form data')
-        return NextResponse.json({ success: false, error: 'No file received' }, { status: 400 })
-      }
-      
-      console.log('🔍 File details:', { 
-        name: file.name, 
-        size: file.size, 
-        type: file.type,
-        buildingId 
-      })
-      
-      if (file.size > MAX_FILE_BYTES) {
-        console.error('❌ File too large:', file.size, 'bytes')
-        return NextResponse.json(
-          { success: false, error: `File too large (${(file.size / 1048576).toFixed(1)} MB)`, code: 'FILE_TOO_LARGE' },
-          { status: 413 }
-        )
-      }
-
-      console.log('🔍 Converting file to ArrayBuffer...')
-      const ab = await file.arrayBuffer()
-      console.log('✅ File converted to ArrayBuffer, size:', ab.byteLength)
-      
-      console.log('🔍 Calling extractText...')
-      const text = await extractText(new Uint8Array(ab), file.name)
-      console.log('✅ Text extraction completed, length:', text.text.length)
-      
-      // Determine extraction method for user feedback
-      let extractionMethod = 'standard';
-      let extractionNote = '';
-      
-      if (text.text.includes('[OCR Fallback]')) {
-        extractionMethod = 'ocr';
-        extractionNote = 'Document processed using OCR - text accuracy may vary';
-      } else if (text.text.includes('[Enhanced processor]')) {
-        extractionMethod = 'enhanced';
-        extractionNote = 'Document processed using enhanced extraction methods';
-      } else if (text.text.includes('[Fallback extractor]')) {
-        extractionMethod = 'fallback';
-        extractionNote = 'Document processed using fallback methods';
-      }
-
-      // Enhanced document analysis for lease documents
-      if (isLeaseDocument(file.name, text.text) && analyzeLeaseDocument) {
-        console.log('🔍 ===== LEASE DOCUMENT DETECTED =====')
-        console.log('🔍 File name:', file.name)
-        console.log('🔍 Building ID:', buildingId)
-        console.log('🔍 Text length:', text.text.length)
-        console.log('🔍 analyzeLeaseDocument function available:', !!analyzeLeaseDocument)
-
-        // CRITICAL DEBUGGING: Log the actual OCR content
-        console.log('=== ACTUAL PDF CONTENT ===');
-        console.log('OCR extracted text length:', text.text?.length);
-        console.log('First 500 chars:', text.text?.substring(0, 500));
-        console.log('Does text contain "landlord"?', text.text?.toLowerCase().includes('landlord'));
-        console.log('Does text contain "£"?', text.text?.includes('£'));
-        console.log('Does text contain "rent"?', text.text?.toLowerCase().includes('rent'));
-        console.log('Does text contain "lease"?', text.text?.toLowerCase().includes('lease'));
-        console.log('Does text contain "tenant"?', text.text?.toLowerCase().includes('tenant'));
-        console.log('Does text contain "property"?', text.text?.toLowerCase().includes('property'));
-        console.log('Does text contain "address"?', text.text?.toLowerCase().includes('address'));
-        console.log('Does text contain "premium"?', text.text?.toLowerCase().includes('premium'));
-        console.log('Does text contain "service charge"?', text.text?.toLowerCase().includes('service charge'));
-        console.log('Does text contain "deposit"?', text.text?.toLowerCase().includes('deposit'));
-        console.log('=== END PDF CONTENT ===');
-
-        try {
-          console.log('🔍 Calling analyzeLeaseDocument with:');
-          console.log('  - text.text:', text.text.substring(0, 200) + '...');
-          console.log('  - file.name:', file.name);
-          console.log('  - buildingId:', buildingId);
-
-          const leaseAnalysis = await analyzeLeaseDocument(text.text, file.name, buildingId || undefined)
-          
-          console.log('🔍 Lease analysis completed:', {
-            summary: leaseAnalysis.summary,
-            leaseDetails: leaseAnalysis.leaseDetails,
-            complianceChecklist: leaseAnalysis.complianceChecklist,
-            financialObligations: leaseAnalysis.financialObligations,
-            buildingContext: leaseAnalysis.buildingContext
-          })
-          
-          // Convert lease analysis to detailed formatted text
-          const formattedText = formatLeaseAnalysisToText(leaseAnalysis)
-          
-          console.log('🔍 Formatted lease analysis:', formattedText.substring(0, 200) + '...')
-          
-          return NextResponse.json({
-            success: true,
-            filename: file.name,
-            buildingId,
-            summary: formattedText,
-            extractionMethod,
-            extractionNote,
-            textLength: text.text.length,
-            confidence: leaseAnalysis.confidence || 0.8,
-            documentType: 'lease',
-            leaseDetails: leaseAnalysis.leaseDetails || {},
-            complianceChecklist: leaseAnalysis.complianceChecklist || [],
-            financialObligations: leaseAnalysis.financialObligations || [],
-            keyRights: leaseAnalysis.keyRights || [],
-            restrictions: leaseAnalysis.restrictions || [],
-            buildingContext: leaseAnalysis.buildingContext || {
-              buildingId: buildingId,
-              buildingStatus: buildingId ? 'matched' : 'not_found',
-              extractedAddress: leaseAnalysis.leaseDetails?.propertyAddress || null,
-              extractedBuildingType: leaseAnalysis.leaseDetails?.buildingType || null
-            }
-          })
-        } catch (leaseError: any) {
-          console.error('❌ Enhanced lease analysis failed:', leaseError)
-          console.error('❌ Error details:', {
-            message: leaseError.message,
-            stack: leaseError.stack,
-            name: leaseError.name
-          })
-          
-          // Fall back to basic analysis if enhanced analysis fails
-          console.log('🔍 Falling back to basic analysis...')
-          const out = await summarizeAndSuggest(text.text, file.name)
-          console.log('🔍 Fallback analysis result:', out)
-          
-          const basicFormattedText = `📋 **BASIC DOCUMENT ANALYSIS**\n\n**Summary:**\n${out.summary}\n\n**Note:** Enhanced lease analysis failed. This is a basic summary of the document content.`
-          
-          return NextResponse.json({
-            success: true,
-            filename: file.name,
-            buildingId,
-            summary: basicFormattedText,
-            extractionMethod,
-            extractionNote,
-            textLength: text.text.length,
-            confidence: extractionMethod === 'standard' ? 'high' : 'medium',
-            warning: 'Enhanced lease analysis failed, using basic analysis',
-            error: leaseError.message
-          })
-        }
-      } else {
-        console.log('🔍 ===== NOT A LEASE DOCUMENT =====')
-        console.log('🔍 File name:', file.name)
-        console.log('🔍 isLeaseDocument result:', isLeaseDocument(file.name, text.text))
-        console.log('🔍 analyzeLeaseDocument available:', !!analyzeLeaseDocument)
-        console.log('🔍 Using standard analysis instead')
-        
-        // Use standard analysis for non-lease documents
-        const out = await summarizeAndSuggest(text.text, file.name)
-        console.log('🔍 Standard analysis result:', out)
-        
-        const basicFormattedText = `📋 **BASIC DOCUMENT ANALYSIS**\n\n**Summary:**\n${out.summary}\n\n**Note:** This document was processed using standard analysis methods.`
-        
         return NextResponse.json({
-          success: true,
-          filename: file.name,
-          buildingId,
-          summary: basicFormattedText,
-          extractionMethod,
-          extractionNote,
-          textLength: text.text.length,
-          confidence: extractionMethod === 'standard' ? 'high' : 'medium'
-        })
+          success: false,
+          error: 'No file received'
+        }, { status: 400 });
       }
+
+      const result = await processor.processFile(file, buildingId);
+      return NextResponse.json(result);
+
+    } else if (contentType.includes('application/json')) {
+      // Handle storage file processing
+      const body = await req.json();
+      const path = body?.path as string;
+      const buildingId = body?.buildingId as string;
+
+      if (!path) {
+        return NextResponse.json({
+          success: false,
+          error: 'File path is required'
+        }, { status: 400 });
+      }
+
+      const result = await processor.processFromStorage(path, buildingId);
+      return NextResponse.json(result);
+
+    } else {
+      return NextResponse.json({
+        success: false,
+        error: `Unsupported content-type: ${contentType}`
+      }, { status: 415 });
     }
 
-    // 2) JSON: { path, buildingId? } → fetch from Supabase (already uploaded)
-    if (ct.includes('application/json')) {
-      const body = await req.json().catch(() => ({}))
-      const path = body?.path as string | undefined
-      const buildingId = (body?.buildingId as string) || null
-      if (!path) return NextResponse.json({ success: false, error: 'path required' }, { status: 400 })
-
-      // Lazy import to avoid bundling cost if you don't use this path
-      const { createClient } = await import('@supabase/supabase-js')
-      const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
-      const { data, error } = await supabase.storage.from(BUCKET).download(path)
-      if (error || !data) return NextResponse.json({ success: false, error: error?.message || 'download failed' }, { status: 500 })
-
-      const ab = await data.arrayBuffer()
-      const text = await extractText(new Uint8Array(ab), path)
-      
-      // Check if this is a lease document and use enhanced analysis
-      if (isLeaseDocument(path, text.text) && analyzeLeaseDocument) {
-        console.log('🔍 Detected lease document from storage, using enhanced analyzer')
-        try {
-          const leaseAnalysis = await analyzeLeaseDocument(text.text, path.split('/').pop() || path, buildingId || undefined)
-          const formattedText = formatLeaseAnalysisToText(leaseAnalysis)
-          
-          return NextResponse.json({
-            success: true,
-            filename: path.split('/').pop(),
-            buildingId,
-            summary: formattedText,
-            extractionMethod: 'standard',
-            extractionNote: 'Document processed using standard extraction methods',
-            textLength: text.text.length,
-            confidence: leaseAnalysis.confidence || 0.8,
-            documentType: 'lease',
-            leaseDetails: leaseAnalysis.leaseDetails || {},
-            complianceChecklist: leaseAnalysis.complianceChecklist || [],
-            financialObligations: leaseAnalysis.financialObligations || [],
-            keyRights: leaseAnalysis.keyRights || [],
-            restrictions: leaseAnalysis.restrictions || [],
-            buildingContext: leaseAnalysis.buildingContext || {
-              buildingId: buildingId,
-              buildingStatus: buildingId ? 'matched' : 'not_found',
-              extractedAddress: leaseAnalysis.leaseDetails?.propertyAddress || null,
-              extractedBuildingType: leaseAnalysis.leaseDetails?.buildingType || null
-            }
-          })
-        } catch (leaseError: any) {
-          console.warn('Enhanced lease analysis failed, falling back to basic analysis:', leaseError)
-          const out = await summarizeAndSuggest(text.text, path || 'unknown')
-          
-          const basicFormattedText = `📋 **BASIC DOCUMENT ANALYSIS**\n\n**Summary:**\n${out.summary}\n\n**Note:** Enhanced lease analysis failed. This is a basic summary of the document content.`
-          
-          return NextResponse.json({
-            success: true,
-            filename: path.split('/').pop(),
-            buildingId,
-            summary: basicFormattedText,
-            warning: 'Enhanced lease analysis failed, using basic analysis'
-          })
-        }
-      } else {
-        // Use standard analysis for non-lease documents
-        const out = await summarizeAndSuggest(text.text, path || 'unknown')
-        
-        const basicFormattedText = `📋 **BASIC DOCUMENT ANALYSIS**\n\n**Summary:**\n${out.summary}\n\n**Note:** This document was processed using standard analysis methods.`
-        
-        return NextResponse.json({
-          success: true,
-          filename: path.split('/').pop(),
-          buildingId,
-          summary: basicFormattedText,
-        })
-      }
-    }
-
-    return NextResponse.json({ success: false, error: `Unsupported content-type: ${ct}` }, { status: 415 })
-    
-  } catch (e: any) {
-    const msg = e?.message || 'Unexpected error'
-    console.error('❌ ask-ai/upload error:', msg)
-    console.error('❌ Full error details:', e)
-    return NextResponse.json({ success: false, error: msg }, { status: 500 })
+  } catch (error: any) {
+    console.error('Upload route error:', error);
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to process upload request',
+      details: error.message
+    }, { status: 500 });
   }
 }
