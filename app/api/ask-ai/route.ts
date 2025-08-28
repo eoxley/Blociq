@@ -182,7 +182,7 @@ async function extractTextWithGoogleVision(fileBuffer: Buffer): Promise<string> 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { question, files, prompt } = body;
+    const { question, files, prompt, buildingContext } = body;
 
     // Handle both 'question' and 'prompt' parameters for backward compatibility
     const query = question || prompt;
@@ -362,6 +362,78 @@ export async function POST(req: NextRequest) {
         // Ignore logging errors
       }
       return NextResponse.json({ answer: fallback, source: 'fallback' });
+    }
+
+    // Handle general AI queries with building context
+    if (query && typeof query === 'string') {
+      console.log('🔍 Processing general AI query with building context');
+      
+      try {
+        // Use OpenAI for general queries with building context
+        const OpenAI = (await import('openai')).default;
+        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+        // Build context-aware prompt
+        let systemPrompt = `You are BlocIQ, a comprehensive property management AI assistant for UK leasehold blocks. You help property managers with building management, compliance, leaseholder queries, and general property management questions.`;
+        
+        if (buildingContext && buildingContext.building) {
+          systemPrompt += `\n\nBUILDING CONTEXT:\n- Building: ${buildingContext.building.name}\n- Units: ${buildingContext.unitsLeaseholders?.length || 0} units\n- Compliance: ${buildingContext.complianceSummary?.total || 0} assets`;
+          
+          if (buildingContext.complianceSummary) {
+            systemPrompt += `\n- Compliant: ${buildingContext.complianceSummary.compliant}\n- Pending: ${buildingContext.complianceSummary.pending}\n- Overdue: ${buildingContext.complianceSummary.overdue}`;
+          }
+        }
+
+        systemPrompt += `\n\nIMPORTANT: Use UK property management terminology and reference relevant UK legislation. Be professional, helpful, and accurate. If you don't have specific information, clearly state what information would be needed.`;
+
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: query }
+          ],
+          temperature: 0.3,
+          max_tokens: 1000
+        });
+
+        const aiResponse = completion.choices[0]?.message?.content;
+        if (!aiResponse) {
+          throw new Error('No response from AI');
+        }
+
+        // Log the interaction
+        try {
+          await supabase.from('ai_logs').insert({
+            question: query,
+            response: aiResponse,
+            context: JSON.stringify({ 
+              source: 'openai_general',
+              buildingContext: buildingContext ? 'available' : 'none',
+              model: 'gpt-4o-mini'
+            })
+          });
+        } catch (logError) {
+          // Ignore logging errors
+        }
+
+        return NextResponse.json({ 
+          answer: aiResponse, 
+          source: 'openai',
+          buildingContext: buildingContext ? 'available' : 'none'
+        });
+
+      } catch (aiError) {
+        console.error('❌ AI processing failed:', aiError);
+        
+        // Fallback response
+        const fallback = `I'm sorry, I encountered an error processing your request. Please try again or contact support if the issue persists.`;
+        
+        return NextResponse.json({ 
+          answer: fallback, 
+          source: 'fallback',
+          error: 'AI processing failed'
+        });
+      }
     }
 
     return NextResponse.json({ error: 'Missing question/prompt or files' }, { status: 400 });
