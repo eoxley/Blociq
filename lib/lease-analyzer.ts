@@ -125,8 +125,10 @@ function parseLeaseText(ocrText: string, filenameInfo: any) {
   const parsed: any = {};
   
   console.log('🔍 Parsing OCR text for real data...');
+  console.log('🔍 OCR text length:', ocrText.length);
+  console.log('🔍 First 500 chars of OCR:', ocrText.substring(0, 500));
   
-  // Extract address patterns
+  // Extract address patterns - MORE AGGRESSIVE
   if (filenameInfo.buildingNumber) {
     // Look for address patterns starting with the building number
     const addressPattern = new RegExp(`${filenameInfo.buildingNumber}\\s+([a-z\\s]+?)(?:\\s*,\\s*([a-z\\s]+?))?(?:\\s*,\\s*([a-z\\s]+?))?`, 'gi');
@@ -135,17 +137,24 @@ function parseLeaseText(ocrText: string, filenameInfo: any) {
       const match = addressMatches[0];
       parsed.propertyAddress = `${filenameInfo.buildingNumber} ${match[1]}${match[2] ? ', ' + match[2] : ''}${match[3] ? ', ' + match[3] : ''}`;
       console.log('🔍 Found address:', parsed.propertyAddress);
+    } else {
+      // Fallback: look for any address-like pattern
+      const fallbackAddress = ocrText.match(/\d+\s+[A-Za-z\s]+(?:,\s*[A-Za-z\s]+)*/);
+      if (fallbackAddress) {
+        parsed.propertyAddress = fallbackAddress[0];
+        console.log('🔍 Found fallback address:', parsed.propertyAddress);
+      }
     }
   }
   
-  // Extract financial amounts (£ followed by numbers)
+  // Extract financial amounts (£ followed by numbers) - MORE AGGRESSIVE
   const rentPattern = /£[\d,]+(?:\.\d{2})?/g;
   const rentMatches = ocrText.match(rentPattern);
   if (rentMatches) {
     parsed.financialAmounts = rentMatches;
     console.log('🔍 Found financial amounts:', rentMatches);
     
-    // Look for specific financial terms
+    // Look for specific financial terms with more aggressive patterns
     if (text.includes('premium')) {
       const premiumMatch = text.match(/premium[:\s]*£[\d,]+(?:\.\d{2})?/i);
       if (premiumMatch) parsed.premium = premiumMatch[0];
@@ -165,51 +174,95 @@ function parseLeaseText(ocrText: string, filenameInfo: any) {
       const depositMatch = text.match(/deposit[:\s]*£[\d,]+(?:\.\d{2})?/i);
       if (depositMatch) parsed.deposit = depositMatch[0];
     }
+    
+    // If we found amounts but no specific labels, assign them
+    if (rentMatches.length > 0 && !parsed.initialRent) {
+      parsed.initialRent = rentMatches[0];
+      console.log('🔍 Assigned first amount as initial rent:', parsed.initialRent);
+    }
   }
   
-  // Extract dates
+  // Extract dates - MORE AGGRESSIVE
   if (filenameInfo.startDateFormatted) {
     parsed.leaseStartDate = filenameInfo.startDateFormatted;
   }
   
-  // Look for end dates in text
-  const endDatePattern = /(?:expires|until|end|term)[:\s]*(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})/gi;
-  const endDateMatches = [...text.matchAll(endDatePattern)];
-  if (endDateMatches.length > 0) {
-    const match = endDateMatches[0];
-    parsed.leaseEndDate = `${match[1]}${getOrdinalSuffix(parseInt(match[1]))} ${match[2]} ${match[3]}`;
-    console.log('🔍 Found end date:', parsed.leaseEndDate);
+  // Look for end dates in text with multiple patterns
+  const endDatePatterns = [
+    /(?:expires|until|end|term)[:\s]*(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})/gi,
+    /(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})/gi
+  ];
+  
+  for (const pattern of endDatePatterns) {
+    const endDateMatches = [...text.matchAll(pattern)];
+    if (endDateMatches.length > 0) {
+      const match = endDateMatches[0];
+      parsed.leaseEndDate = `${match[1]}${getOrdinalSuffix(parseInt(match[1]))} ${match[2]} ${match[3]}`;
+      console.log('🔍 Found end date:', parsed.leaseEndDate);
+      break;
+    }
   }
   
-  // Extract lease term
-  const termPattern = /(?:term|duration|length)[:\s]*(\d+)\s+(?:years?|months?)/gi;
-  const termMatches = [...text.matchAll(termPattern)];
-  if (termMatches.length > 0) {
-    parsed.leaseTerm = termMatches[0][0];
-    console.log('🔍 Found lease term:', parsed.leaseTerm);
+  // Extract lease term - MORE AGGRESSIVE
+  const termPatterns = [
+    /(?:term|duration|length)[:\s]*(\d+)\s+(?:years?|months?)/gi,
+    /(\d+)\s+(?:years?|months?)/gi
+  ];
+  
+  for (const pattern of termPatterns) {
+    const termMatches = [...text.matchAll(pattern)];
+    if (termMatches.length > 0) {
+      parsed.leaseTerm = termMatches[0][0];
+      console.log('🔍 Found lease term:', parsed.leaseTerm);
+      break;
+    }
   }
   
-  // Extract names
-  const landlordPattern = /(?:landlord|lessor)[:\s]*([a-z\s]+?)(?:\s|$|,)/gi;
-  const landlordMatches = [...text.matchAll(landlordPattern)];
-  if (landlordMatches.length > 0) {
-    parsed.landlord = landlordMatches[0][1].trim();
-    console.log('🔍 Found landlord:', parsed.landlord);
+  // Extract names - MORE AGGRESSIVE
+  const landlordPatterns = [
+    /(?:landlord|lessor)[:\s]*([a-z\s]+?)(?:\s|$|,)/gi,
+    /landlord[:\s]*([a-z\s]+?)(?:\s|$|,)/gi
+  ];
+  
+  for (const pattern of landlordPatterns) {
+    const landlordMatches = [...text.matchAll(pattern)];
+    if (landlordMatches.length > 0) {
+      parsed.landlord = landlordMatches[0][1].trim();
+      console.log('🔍 Found landlord:', parsed.landlord);
+      break;
+    }
   }
   
-  const tenantPattern = /(?:tenant|lessee)[:\s]*([a-z\s]+?)(?:\s|$|,)/gi;
-  const tenantMatches = [...text.matchAll(tenantPattern)];
-  if (tenantMatches.length > 0) {
-    parsed.tenant = tenantMatches[0][1].trim();
-    console.log('🔍 Found tenant:', parsed.tenant);
+  const tenantPatterns = [
+    /(?:tenant|lessee)[:\s]*([a-z\s]+?)(?:\s|$|,)/gi,
+    /tenant[:\s]*([a-z\s]+?)(?:\s|$|,)/gi
+  ];
+  
+  for (const pattern of tenantPatterns) {
+    const tenantMatches = [...text.matchAll(pattern)];
+    if (tenantMatches.length > 0) {
+      parsed.tenant = tenantMatches[0][1].trim();
+      console.log('🔍 Found tenant:', parsed.tenant);
+      break;
+    }
   }
   
-  // Extract property type
+  // Extract property type - MORE AGGRESSIVE
   const propertyTypePattern = /(?:flat|apartment|house|commercial|residential|office|shop)/gi;
   const propertyMatches = ocrText.match(propertyTypePattern);
   if (propertyMatches) {
     parsed.buildingType = propertyMatches[0];
     console.log('🔍 Found property type:', parsed.buildingType);
+  }
+  
+  // If we still don't have enough data, try to extract ANY meaningful information
+  if (!parsed.propertyAddress && ocrText.length > 100) {
+    // Look for any text that looks like an address
+    const anyAddressMatch = ocrText.match(/\d+\s+[A-Za-z\s]+(?:,\s*[A-Za-z\s]+)*/);
+    if (anyAddressMatch) {
+      parsed.propertyAddress = anyAddressMatch[0];
+      console.log('🔍 Found generic address:', parsed.propertyAddress);
+    }
   }
   
   console.log('🔍 Final parsed data:', parsed);
@@ -366,12 +419,19 @@ ${JSON.stringify(parsedData, null, 2)}
 
 IMPORTANT: Use the PARSED DATA above as your primary source. The PARSED DATA contains REAL extracted information from the document. 
 
-CRITICAL INSTRUCTIONS:
-1. Use the PARSED DATA values whenever available - these are REAL extracted data
-2. Only use "Not specified" if the information is genuinely not found in the document text
-3. If PARSED DATA shows an address like "260 High Street", use that exact address
-4. If PARSED DATA shows financial amounts like "£500", use that exact amount
-5. If PARSED DATA shows dates like "17th February 2017", use that exact date
+CRITICAL INSTRUCTIONS - YOU MUST FOLLOW THESE:
+1. **NEVER use "Not specified" if PARSED DATA has a value**
+2. **ALWAYS use the PARSED DATA values first**
+3. **If PARSED DATA shows "260 High Street" → use "260 High Street" (NOT "Not specified")**
+4. **If PARSED DATA shows "£500" → use "£500" (NOT "Not specified")**
+5. **If PARSED DATA shows "17th February 2017" → use "17th February 2017" (NOT "Not specified")**
+
+EXAMPLE:
+- If PARSED DATA has propertyAddress: "260 High Street, London" → use "260 High Street, London"
+- If PARSED DATA has initialRent: "£2,000" → use "£2,000"
+- If PARSED DATA has leaseStartDate: "17th February 2017" → use "17th February 2017"
+
+ONLY use "Not specified" if the PARSED DATA field is completely empty/null/undefined.
 
 Please provide a JSON response with this EXACT structure:
 
@@ -459,24 +519,25 @@ CRITICAL: Extract EVERY detail you can find. If the lease mentions "260 [Street 
     const buildingStatus: 'matched' | 'not_found' | 'unknown' = hasBuildingContext ? 'matched' : 'not_found';
 
     // Transform into LeaseAnalysis format with proper data mapping
+    // CRITICAL: Force the use of parsed data if AI didn't use it
     const result = {
       filename,
       summary: analysis.leaseSummary || analysis.summary || 'Lease document analyzed successfully',
       documentType: 'lease',
       leaseDetails: {
-        propertyAddress: analysis.structuredData?.propertyAddress || null,
-        landlord: analysis.structuredData?.landlord || null,
-        tenant: analysis.structuredData?.tenant || null,
-        leaseStartDate: analysis.structuredData?.leaseStartDate || null,
-        leaseEndDate: analysis.structuredData?.leaseEndDate || null,
-        leaseTerm: analysis.structuredData?.leaseTerm || null,
-        premium: analysis.structuredData?.premium || null,
-        initialRent: analysis.structuredData?.initialRent || null,
-        monthlyRent: analysis.structuredData?.monthlyRent || null,
-        annualRent: analysis.structuredData?.annualRent || null,
-        serviceCharge: analysis.structuredData?.serviceCharge || null,
-        deposit: analysis.structuredData?.deposit || null,
-        buildingType: analysis.structuredData?.buildingType || null,
+        propertyAddress: analysis.structuredData?.propertyAddress || parsedData.propertyAddress || null,
+        landlord: analysis.structuredData?.landlord || parsedData.landlord || null,
+        tenant: analysis.structuredData?.tenant || parsedData.tenant || null,
+        leaseStartDate: analysis.structuredData?.leaseStartDate || parsedData.leaseStartDate || null,
+        leaseEndDate: analysis.structuredData?.leaseEndDate || parsedData.leaseEndDate || null,
+        leaseTerm: analysis.structuredData?.leaseTerm || parsedData.leaseTerm || null,
+        premium: analysis.structuredData?.premium || parsedData.premium || null,
+        initialRent: analysis.structuredData?.initialRent || parsedData.initialRent || null,
+        monthlyRent: analysis.structuredData?.monthlyRent || parsedData.monthlyRent || null,
+        annualRent: analysis.structuredData?.annualRent || parsedData.annualRent || null,
+        serviceCharge: analysis.structuredData?.serviceCharge || parsedData.serviceCharge || null,
+        deposit: analysis.structuredData?.deposit || parsedData.deposit || null,
+        buildingType: analysis.structuredData?.buildingType || parsedData.buildingType || null,
         propertyDescription: analysis.structuredData?.propertyDescription || null,
         floorArea: analysis.structuredData?.floorArea || null
       },
