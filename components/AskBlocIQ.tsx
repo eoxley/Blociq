@@ -721,6 +721,13 @@ export default function AskBlocIQ({
       case 'contact':
         toast.info(`Contact action: ${action.label}`);
         break;
+      case 'add_building':
+        toast.info(`Add Building: ${action.label} - Redirecting to building setup...`);
+        // You can implement navigation to building setup page here
+        break;
+      case 'analyze_only':
+        toast.info(`Analyze Only: ${action.label} - Continuing with lease analysis...`);
+        break;
       default:
         toast.info(`Action: ${action.label}`);
     }
@@ -956,6 +963,79 @@ export default function AskBlocIQ({
                               </ul>
                             </div>
                           )}
+                        </div>
+                      )}
+
+                      {/* Building Context Information */}
+                      {doc.buildingContext && (
+                        <div className="mb-3">
+                          <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide mb-2">
+                            Building Context
+                          </h5>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-gray-700">Status:</span>
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                doc.buildingContext.buildingStatus === 'matched' ? 'bg-green-100 text-green-800' :
+                                doc.buildingContext.buildingStatus === 'not_found' ? 'bg-orange-100 text-orange-800' :
+                                'bg-gray-100 text-gray-600'
+                              }`}>
+                                {doc.buildingContext.buildingStatus === 'matched' ? '✓ Building Found' :
+                                 doc.buildingContext.buildingStatus === 'not_found' ? '⚠ Building Not Found' :
+                                 '? Unknown Status'}
+                              </span>
+                            </div>
+                            
+                            {doc.buildingContext.extractedAddress && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-700">Extracted Address:</span>
+                                <span className="text-sm text-gray-900 font-medium">
+                                  {doc.buildingContext.extractedAddress}
+                                </span>
+                              </div>
+                            )}
+                            
+                            {doc.buildingContext.extractedBuildingType && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-700">Building Type:</span>
+                                <span className="text-sm text-gray-900 font-medium">
+                                  {doc.buildingContext.extractedBuildingType}
+                                </span>
+                              </div>
+                            )}
+                            
+                            {doc.buildingContext.buildingStatus === 'not_found' && (
+                              <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                                <p className="text-sm text-orange-800 mb-2">
+                                  This lease appears to be for a building not currently in your portfolio.
+                                </p>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => handleSuggestedAction({
+                                      key: 'add_building',
+                                      label: 'Add New Building',
+                                      action: 'add_building',
+                                      icon: 'Plus'
+                                    })}
+                                    className="px-3 py-1.5 bg-orange-100 text-orange-800 rounded text-sm hover:bg-orange-200 transition-colors"
+                                  >
+                                    + Add Building
+                                  </button>
+                                  <button
+                                    onClick={() => handleSuggestedAction({
+                                      key: 'analyze_only',
+                                      label: 'Analyze Lease Only',
+                                      action: 'analyze_only',
+                                      icon: 'FileText'
+                                    })}
+                                    className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded text-sm hover:bg-gray-200 transition-colors"
+                                  >
+                                    Analyze Only
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
 
