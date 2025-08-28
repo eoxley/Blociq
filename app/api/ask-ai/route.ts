@@ -17,61 +17,111 @@ class QueryProcessor {
   parseQuery(query: string): QueryIntent {
     const queryLower = query.toLowerCase();
     
-    // Extract building identifiers
+    // Enhanced building identifiers with better pattern matching
     const buildingPatterns = [
-      /(\d+\s+\w+(?:\s+\w+)*)/g, // "5 ashwood", "123 main street"
-      /building\s+(\w+)/g,       // "building ashwood"
-      /(\w+\s+building)/g        // "ashwood building"
+      /(\d+\s+\w+(?:\s+\w+)*?)(?:\s+building|$|\s+house|\s+court|\s+place)/g, // "5 ashwood", "123 main street"
+      /building\s+([a-zA-Z0-9\s]+?)(?:\s|$|,|\?)/g,       // "building ashwood"
+      /([a-zA-Z]+(?:\s+[a-zA-Z]+)*)\s+building/g,         // "ashwood building"
+      /at\s+([a-zA-Z0-9\s]+?)(?:\s|$|,|\?)/g,             // "at ashwood"
+      /property\s+([a-zA-Z0-9\s]+?)(?:\s|$|,|\?)/g,       // "property name"
+      /([a-zA-Z]+(?:\s+[a-zA-Z]+)*)\s+(?:house|court|place|tower|manor|lodge)/gi // Common building types
     ];
     
-    // Extract unit identifiers  
+    // Enhanced unit identifiers with better extraction
     const unitPatterns = [
-      /(?:unit|flat|apartment|apt)\s*(\d+[a-z]?)/gi,
-      /(?:^|\s)(\d+[a-z]?)(?:\s|$)/g // standalone numbers like "5", "3A"
+      /(?:unit|flat|apartment|apt)\s*([0-9]+[a-zA-Z]?)/gi,
+      /(?:^|\s|of\s+|in\s+)([0-9]+[a-zA-Z]?)(?:\s+(?:ashwood|at|building)|$|\s)/g, // "5 ashwood", "3A"
+      /number\s+([0-9]+[a-zA-Z]?)/gi,                     // "number 5"
+      /([0-9]+[a-zA-Z]?)\s+(?:ashwood|at)/gi              // "5 ashwood"
     ];
     
-    // Extract person names
+    // Enhanced person name patterns
     const namePatterns = [
       /(?:who is|who's)\s+(?:the\s+)?(?:leaseholder|tenant|resident)(?:\s+(?:of|in|for))?\s+(.+?)(?:\?|$)/i,
-      /leaseholder\s+(?:of|in|for)\s+(.+?)(?:\?|$)/i
+      /leaseholder\s+(?:of|in|for)\s+(.+?)(?:\?|$)/i,
+      /(?:tenant|resident)\s+(?:of|in|at)\s+(.+?)(?:\?|$)/i
     ];
+
+    // Enhanced intent detection with more patterns
+    let intent: QueryIntent = { type: 'general', confidence: 0.3 };
     
-    // Determine intent
-    if (queryLower.includes('leaseholder') || queryLower.includes('who')) {
-      return {
+    // Leaseholder lookup patterns
+    if (queryLower.includes('leaseholder') || queryLower.includes('who is') || 
+        queryLower.includes('tenant') || queryLower.includes('resident')) {
+      intent = {
         type: 'leaseholder_lookup',
-        buildingIdentifier: this.extractFirst(query, buildingPatterns),
-        unitIdentifier: this.extractFirst(query, unitPatterns),
+        buildingIdentifier: this.extractBestMatch(query, buildingPatterns),
+        unitIdentifier: this.extractBestMatch(query, unitPatterns),
         confidence: 0.9
       };
     }
-    
-    if (queryLower.includes('unit') || queryLower.includes('flat') || queryLower.includes('apartment')) {
-      return {
+    // Unit details patterns
+    else if (queryLower.includes('unit') || queryLower.includes('flat') || 
+             queryLower.includes('apartment') || queryLower.includes('property details')) {
+      intent = {
         type: 'unit_details',
-        buildingIdentifier: this.extractFirst(query, buildingPatterns),
-        unitIdentifier: this.extractFirst(query, unitPatterns),
+        buildingIdentifier: this.extractBestMatch(query, buildingPatterns),
+        unitIdentifier: this.extractBestMatch(query, unitPatterns),
         confidence: 0.8
       };
     }
-    
-    if (queryLower.includes('building') || queryLower.includes('address')) {
-      return {
+    // Building info patterns
+    else if (queryLower.includes('building') || queryLower.includes('address') ||
+             queryLower.includes('property') || queryLower.includes('information about')) {
+      intent = {
         type: 'building_info',
-        buildingIdentifier: this.extractFirst(query, buildingPatterns),
+        buildingIdentifier: this.extractBestMatch(query, buildingPatterns),
         confidence: 0.7
       };
     }
+    // Document queries
+    else if (queryLower.includes('document') || queryLower.includes('lease') ||
+             queryLower.includes('contract') || queryLower.includes('agreement')) {
+      intent = {
+        type: 'document_query',
+        buildingIdentifier: this.extractBestMatch(query, buildingPatterns),
+        unitIdentifier: this.extractBestMatch(query, unitPatterns),
+        confidence: 0.6
+      };
+    }
     
-    return { type: 'general', confidence: 0.3 };
+    return intent;
   }
   
-  private extractFirst(text: string, patterns: RegExp[]): string | undefined {
+  private extractBestMatch(text: string, patterns: RegExp[]): string | undefined {
+    const matches: { match: string; confidence: number }[] = [];
+    
     for (const pattern of patterns) {
-      const match = text.match(pattern);
-      if (match) return match[1] || match[0];
+      const regexMatches = [...text.matchAll(new RegExp(pattern.source, pattern.flags + 'g'))];
+      
+      for (const regexMatch of regexMatches) {
+        const extractedMatch = regexMatch[1] || regexMatch[0];
+        if (extractedMatch && extractedMatch.trim()) {
+          // Calculate confidence based on pattern specificity and match quality
+          let confidence = 0.5;
+          
+          // Higher confidence for more specific patterns
+          if (pattern.source.includes('building|house|court|place')) confidence += 0.3;
+          if (pattern.source.includes('unit|flat|apartment')) confidence += 0.3;
+          if (pattern.source.includes('at\\s+')) confidence += 0.2;
+          
+          // Higher confidence for longer matches
+          if (extractedMatch.length > 5) confidence += 0.1;
+          if (extractedMatch.length > 10) confidence += 0.1;
+          
+          matches.push({ 
+            match: extractedMatch.trim(), 
+            confidence: Math.min(confidence, 1.0)
+          });
+        }
+      }
     }
-    return undefined;
+    
+    if (matches.length === 0) return undefined;
+    
+    // Return the match with highest confidence
+    matches.sort((a, b) => b.confidence - a.confidence);
+    return matches[0].match;
   }
 }
 
@@ -86,8 +136,12 @@ class BuildingContextService {
         .select('id, name, address, postcode');
         
       if (intent.buildingIdentifier) {
+        // Clean building identifier for better matching
+        const cleanIdentifier = intent.buildingIdentifier.trim().toLowerCase();
+        
+        // Enhanced search with multiple strategies
         buildingQuery = buildingQuery.or(
-          `address.ilike.%${intent.buildingIdentifier}%,name.ilike.%${intent.buildingIdentifier}%`
+          `address.ilike.%${cleanIdentifier}%,name.ilike.%${cleanIdentifier}%,postcode.ilike.%${cleanIdentifier}%`
         );
       }
       
@@ -115,8 +169,12 @@ class BuildingContextService {
         .eq('building_id', building.id);
         
       if (intent.unitIdentifier) {
+        // Clean unit identifier for better matching
+        const cleanUnit = intent.unitIdentifier.trim();
+        
+        // Try multiple matching strategies for units
         unitQuery = unitQuery.or(
-          `unit_number.eq.${intent.unitIdentifier},unit_label.ilike.%${intent.unitIdentifier}%`
+          `unit_number.eq.${cleanUnit},unit_label.ilike.%${cleanUnit}%,unit_number.eq.${cleanUnit.replace(/^0+/, '')}`
         );
       }
       
@@ -257,6 +315,32 @@ class ResponseGenerator {
     return response;
   }
   
+  generateDocumentQueryResponse(contextData: any, originalQuery: string): string {
+    if (!contextData.success) {
+      return `I couldn't find specific property information for your document query. ${contextData.error}${contextData.suggestion ? ' ' + contextData.suggestion : ''}`;
+    }
+    
+    const { building, units } = contextData;
+    
+    let response = `Document information for ${building.name} (${building.address}):\n\n`;
+    
+    if (units && units.length > 0) {
+      response += `Units with leaseholder information:\n`;
+      for (const unit of units) {
+        const leaseholders = unit.leaseholders;
+        const leaseholderNames = leaseholders?.length 
+          ? leaseholders.map((lh: any) => lh.full_name || lh.name).join(', ')
+          : 'No leaseholder registered';
+          
+        response += `• Unit ${unit.unit_number || unit.unit_label}: ${leaseholderNames}\n`;
+      }
+    }
+    
+    response += `\nFor specific lease documents or contracts, please upload the documents using the file upload feature for detailed analysis.`;
+    
+    return response;
+  }
+
   generateGeneralResponse(query: string, contextData?: any): string {
     return `I can help you with property management questions. For specific information about leaseholders, units, or buildings, try asking something like:
     
@@ -325,6 +409,11 @@ export async function POST(req: Request) {
       case 'unit_details':
         contextData = await contextService.findLeaseholder(intent);
         response = responseGenerator.generateLeaseholderResponse(contextData, question);
+        break;
+        
+      case 'document_query':
+        contextData = await contextService.findLeaseholder(intent);
+        response = responseGenerator.generateDocumentQueryResponse(contextData, question);
         break;
         
       default:
