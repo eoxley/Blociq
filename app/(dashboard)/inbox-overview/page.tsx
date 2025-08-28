@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { InboxIcon, MailWarning, MailCheck, Sparkles, RefreshCw, AlertCircle, Brain, TrendingUp, Users, Clock } from "lucide-react";
 import { BlocIQButton } from "@/components/ui/blociq-button";
 import MobilePageNavigation from "@/components/MobilePageNavigation";
-import AskBlocIQButton from "@/components/inbox_v2/AskBlocIQButton";
 
 interface EmailItem {
   id: string;
@@ -351,8 +350,8 @@ export default function InboxOverviewPage() {
         </div>
       </div>
       
-      {/* AskBlocIQ Button */}
-      <AskBlocIQButton selectedMessage={null} data-askblociq-button />
+      {/* AI Assistant Button - REMOVED */}
+      {/* <AskBlocIQButton selectedMessage={null} data-askblociq-button /> */}
     </div>
     </>
   );
