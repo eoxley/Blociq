@@ -161,64 +161,110 @@ function isLeaseDocument(filename: string, text: string): boolean {
   return hasLeaseFilename || hasLeaseContent
 }
 
-// Helper function to convert lease analysis to suggested actions
-function convertLeaseAnalysisToActions(analysis: any): any[] {
-  const actions = []
+// Helper function to convert lease analysis to detailed formatted text
+function formatLeaseAnalysisToText(analysis: any): string {
+  let formattedText = '📋 **COMPREHENSIVE LEASE ANALYSIS**\n\n'
   
-  // Add building-related actions
-  if (analysis.buildingContext?.buildingStatus === 'not_found') {
-    actions.push({
-      key: 'add_building',
-      label: 'Add New Building to Portfolio',
-      icon: 'Plus',
-      action: 'add_building'
-    })
+  // Property Details
+  if (analysis.leaseDetails) {
+    formattedText += '**🏠 PROPERTY DETAILS**\n'
+    if (analysis.leaseDetails.propertyAddress) {
+      formattedText += `Address: ${analysis.leaseDetails.propertyAddress}\n`
+    }
+    if (analysis.leaseDetails.buildingType) {
+      formattedText += `Property Type: ${analysis.leaseDetails.buildingType}\n`
+    }
+    formattedText += '\n'
   }
   
-  // Add lease-specific actions
-  if (analysis.leaseDetails?.propertyAddress) {
-    actions.push({
-      key: 'review_lease',
-      label: 'Review Lease Terms',
-      icon: 'FileText',
-      action: 'review'
-    })
+  // Lease Terms
+  if (analysis.leaseDetails) {
+    formattedText += '**📅 LEASE TERMS**\n'
+    if (analysis.leaseDetails.leaseStartDate) {
+      formattedText += `Start Date: ${analysis.leaseDetails.leaseStartDate}\n`
+    }
+    if (analysis.leaseDetails.leaseEndDate) {
+      formattedText += `End Date: ${analysis.leaseDetails.leaseEndDate}\n`
+    }
+    if (analysis.leaseDetails.leaseTerm) {
+      formattedText += `Lease Length: ${analysis.leaseDetails.leaseTerm}\n`
+    }
+    formattedText += '\n'
   }
   
-  if (analysis.complianceChecklist?.length > 0) {
-    actions.push({
-      key: 'compliance_review',
-      label: 'Review Compliance Checklist',
-      icon: 'CheckSquare',
-      action: 'review'
-    })
+  // Financial Summary
+  if (analysis.leaseDetails) {
+    formattedText += '**💰 FINANCIAL SUMMARY**\n'
+    if (analysis.leaseDetails.premium) {
+      formattedText += `Premium: £${analysis.leaseDetails.premium}\n`
+    }
+    if (analysis.leaseDetails.initialRent) {
+      formattedText += `Initial Rent: £${analysis.leaseDetails.initialRent}\n`
+    }
+    if (analysis.leaseDetails.serviceChargePercentage) {
+      formattedText += `Service Charge: ${analysis.leaseDetails.serviceChargePercentage}\n`
+    }
+    formattedText += '\n'
   }
   
-  if (analysis.financialObligations?.length > 0) {
-    actions.push({
-      key: 'financial_review',
-      label: 'Review Financial Obligations',
-      icon: 'DollarSign',
-      action: 'review'
+  // Compliance Checklist
+  if (analysis.complianceChecklist && analysis.complianceChecklist.length > 0) {
+    formattedText += '**🔍 COMPLIANCE CHECKLIST**\n'
+    analysis.complianceChecklist.forEach((item: any, index: number) => {
+      const status = item.status === 'Y' ? '✅' : item.status === 'N' ? '❌' : '❓'
+      formattedText += `${status} ${item.item}: ${item.details || 'No details'}\n`
     })
+    formattedText += '\n'
   }
   
-  // Add general lease actions
-  actions.push({
-    key: 'create_reminders',
-    label: 'Create Lease Reminders',
-    icon: 'Bell',
-    action: 'schedule'
-  })
+  // Financial Obligations
+  if (analysis.financialObligations && analysis.financialObligations.length > 0) {
+    formattedText += '**💰 FINANCIAL OBLIGATIONS**\n'
+    analysis.financialObligations.forEach((obligation: string, index: number) => {
+      formattedText += `• ${obligation}\n`
+    })
+    formattedText += '\n'
+  }
   
-  actions.push({
-    key: 'legal_review',
-    label: 'Legal Review Required',
-    icon: 'Scale',
-    action: 'review'
-  })
+  // Key Rights
+  if (analysis.keyRights && analysis.keyRights.length > 0) {
+    formattedText += '**⚖️ KEY RIGHTS**\n'
+    analysis.keyRights.forEach((right: string, index: number) => {
+      formattedText += `• ${right}\n`
+    })
+    formattedText += '\n'
+  }
   
-  return actions
+  // Restrictions
+  if (analysis.restrictions && analysis.restrictions.length > 0) {
+    formattedText += '**🚫 RESTRICTIONS**\n'
+    analysis.restrictions.forEach((restriction: string, index: number) => {
+      formattedText += `• ${restriction}\n`
+    })
+    formattedText += '\n'
+  }
+  
+  // Building Context
+  if (analysis.buildingContext) {
+    formattedText += '**🏢 BUILDING CONTEXT**\n'
+    if (analysis.buildingContext.buildingStatus === 'matched') {
+      formattedText += 'Status: ✅ Building Found in Portfolio\n'
+    } else if (analysis.buildingContext.buildingStatus === 'not_found') {
+      formattedText += 'Status: ⚠️ Building Not Found in Portfolio\n'
+    } else {
+      formattedText += 'Status: ❓ Unknown Building Status\n'
+    }
+    
+    if (analysis.buildingContext.extractedAddress) {
+      formattedText += `Extracted Address: ${analysis.buildingContext.extractedAddress}\n`
+    }
+    if (analysis.buildingContext.extractedBuildingType) {
+      formattedText += `Building Type: ${analysis.buildingContext.extractedBuildingType}\n`
+    }
+    formattedText += '\n'
+  }
+  
+  return formattedText
 }
 
 // Required for Node-only PDF libs
@@ -295,17 +341,16 @@ export async function POST(req: Request) {
             buildingContext: leaseAnalysis.buildingContext
           })
           
-          // Convert lease analysis to suggested actions
-          const suggestedActions = convertLeaseAnalysisToActions(leaseAnalysis)
+          // Convert lease analysis to detailed formatted text
+          const formattedText = formatLeaseAnalysisToText(leaseAnalysis)
           
-          console.log('🔍 Converted suggested actions:', suggestedActions)
+          console.log('🔍 Formatted lease analysis:', formattedText.substring(0, 200) + '...')
           
           return NextResponse.json({
             success: true,
             filename: file.name,
             buildingId,
-            summary: leaseAnalysis.summary,
-            suggestedActions: suggestedActions,
+            summary: formattedText, // Use formatted text as the main summary
             extractionMethod,
             extractionNote,
             textLength: text.text.length,
@@ -329,12 +374,15 @@ export async function POST(req: Request) {
           // Fall back to basic analysis if enhanced analysis fails
           const out = await summarizeAndSuggest(text.text, file.name)
           console.log('🔍 Fallback analysis result:', out)
+          
+          // Create a basic formatted response for non-lease documents
+          const basicFormattedText = `📋 **BASIC DOCUMENT ANALYSIS**\n\n**Summary:**\n${out.summary}\n\n**Note:** Enhanced lease analysis failed. This is a basic summary of the document content.`
+          
           return NextResponse.json({
             success: true,
             filename: file.name,
             buildingId,
-            summary: out.summary,
-            suggestedActions: out.suggestedActions ?? [],
+            summary: basicFormattedText,
             extractionMethod,
             extractionNote,
             textLength: text.text.length,
@@ -347,12 +395,15 @@ export async function POST(req: Request) {
         // Use standard analysis for non-lease documents
         const out = await summarizeAndSuggest(text.text, file.name)
         console.log('🔍 Standard analysis result:', out)
+        
+        // Create a basic formatted response for non-lease documents
+        const basicFormattedText = `📋 **BASIC DOCUMENT ANALYSIS**\n\n**Summary:**\n${out.summary}\n\n**Note:** This document was processed using standard analysis methods.`
+        
         return NextResponse.json({
           success: true,
           filename: file.name,
           buildingId,
-          summary: out.summary,
-          suggestedActions: out.suggestedActions ?? [],
+          summary: basicFormattedText,
           extractionMethod,
           extractionNote,
           textLength: text.text.length,
@@ -382,14 +433,17 @@ export async function POST(req: Request) {
         console.log('🔍 Detected lease document from storage, using enhanced analyzer')
         try {
           const leaseAnalysis = await analyzeLeaseDocument(text.text, path.split('/').pop() || path, buildingId || undefined)
-          const suggestedActions = convertLeaseAnalysisToActions(leaseAnalysis)
+          const formattedText = formatLeaseAnalysisToText(leaseAnalysis)
           
           return NextResponse.json({
             success: true,
             filename: path.split('/').pop(),
             buildingId,
-            summary: leaseAnalysis.summary,
-            suggestedActions: suggestedActions,
+            summary: formattedText, // Use formatted text as the main summary
+            extractionMethod: 'standard', // Assuming standard extraction for storage
+            extractionNote: 'Document processed using standard extraction methods',
+            textLength: text.text.length,
+            confidence: leaseAnalysis.confidence || 0.8,
             documentType: 'lease',
             leaseDetails: leaseAnalysis.leaseDetails || {},
             complianceChecklist: leaseAnalysis.complianceChecklist || [],
@@ -406,24 +460,30 @@ export async function POST(req: Request) {
         } catch (leaseError) {
           console.warn('Enhanced lease analysis failed, falling back to basic analysis:', leaseError)
           const out = await summarizeAndSuggest(text.text, path)
+          
+          // Create a basic formatted response for failed lease analysis
+          const basicFormattedText = `📋 **BASIC DOCUMENT ANALYSIS**\n\n**Summary:**\n${out.summary}\n\n**Note:** Enhanced lease analysis failed. This is a basic summary of the document content.`
+          
           return NextResponse.json({
             success: true,
             filename: path.split('/').pop(),
             buildingId,
-            summary: out.summary,
-            suggestedActions: out.suggestedActions ?? [],
+            summary: basicFormattedText,
             warning: 'Enhanced lease analysis failed, using basic analysis'
           })
         }
       } else {
         // Use standard analysis for non-lease documents
         const out = await summarizeAndSuggest(text.text, path)
+        
+        // Create a basic formatted response for non-lease documents
+        const basicFormattedText = `📋 **BASIC DOCUMENT ANALYSIS**\n\n**Summary:**\n${out.summary}\n\n**Note:** This document was processed using standard analysis methods.`
+        
         return NextResponse.json({
           success: true,
           filename: path.split('/').pop(),
           buildingId,
-          summary: out.summary,
-          suggestedActions: out.suggestedActions ?? [],
+          summary: basicFormattedText,
         })
       }
     }
