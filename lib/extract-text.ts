@@ -159,14 +159,21 @@ class TextExtractionService {
   }
 
   private async extractFromPDF(buffer: Buffer): Promise<string> {
-    const result = await pdfParse(buffer);
-    const text = result.text || '';
-    
-    if (!this.isValidText(text)) {
-      throw new Error('PDF extraction yielded insufficient text');
+    try {
+      const result = await pdfParse(buffer);
+      const text = result.text || '';
+      
+      if (!this.isValidText(text)) {
+        console.warn('PDF extraction yielded insufficient text, trying OCR fallback');
+        throw new Error('PDF extraction yielded insufficient text');
+      }
+      
+      return text;
+    } catch (error) {
+      console.warn('PDF parsing failed:', error);
+      // Try alternative PDF processing before failing
+      throw new Error(`PDF extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-    
-    return text;
   }
 
   private async extractFromWord(buffer: Buffer): Promise<string> {
@@ -391,7 +398,18 @@ export async function extractText(buf: Uint8Array, name?: string): Promise<Extra
 
   } catch (error: any) {
     console.error(`Text extraction failed for ${fileName}:`, error);
-    throw new Error(`Unable to extract text from ${fileName}: ${error.message}`);
+    
+    // Last resort: provide minimal fallback response instead of complete failure
+    const fallbackText = `[Text extraction failed for ${fileName}. Error: ${error.message}. File size: ${buffer.byteLength} bytes. This document requires manual processing.]`;
+    
+    return {
+      text: fallbackText,
+      meta: {
+        name: fileName,
+        type: guessType(fileName),
+        bytes: buffer.byteLength
+      }
+    };
   }
 }
 

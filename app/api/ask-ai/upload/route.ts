@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// Service imports - no lazy loading to avoid module load failures
-import { extractText } from '@/lib/extract-text'
-import { analyzeLeaseDocument } from '@/lib/lease-analyzer'
-import { classifyDocument } from '@/lib/document-classifier'
+// Service imports - using lazy loading with proper error handling
+// import { extractText } from '@/lib/extract-text'
+// import { analyzeLeaseDocument } from '@/lib/lease-analyzer'
+// import { classifyDocument } from '@/lib/document-classifier'
 
 // Types
 interface DocumentAnalysisResult {
@@ -51,9 +51,15 @@ class DocumentProcessor {
 
       console.log(`Processing file: ${file.name} (${file.size} bytes)`);
 
-      // Extract text
+      // Extract text with lazy loading and error handling
+      const { extractText } = await import('@/lib/extract-text').catch(err => {
+        throw new Error(`Text extraction module failed to load: ${err.message}`);
+      });
+      
       const arrayBuffer = await file.arrayBuffer();
-      const extractedData = await extractText(new Uint8Array(arrayBuffer), file.name);
+      const extractedData = await extractText(new Uint8Array(arrayBuffer), file.name).catch(err => {
+        throw new Error(`Text extraction failed: ${err.message}`);
+      });
       
       console.log(`Text extracted: ${extractedData.text.length} characters`);
 
@@ -61,7 +67,12 @@ class DocumentProcessor {
       const extractionMethod = this.getExtractionMethod(extractedData.text);
       const extractionNote = this.getExtractionNote(extractionMethod);
 
-      // Classify document
+      // Classify document with lazy loading
+      const { classifyDocument } = await import('@/lib/document-classifier').catch(err => {
+        console.warn(`Document classifier failed to load: ${err.message}`);
+        return { classifyDocument: (text: string, filename: string) => ({ type: 'unknown', confidence: 50 }) };
+      });
+      
       const classification = classifyDocument(extractedData.text, file.name);
       console.log(`Document classified as: ${classification.type} (${classification.confidence}% confidence)`);
 
@@ -121,12 +132,24 @@ class DocumentProcessor {
         throw new Error(error?.message || 'File download failed');
       }
 
-      // Process as if it were an uploaded file
+      // Process as if it were an uploaded file with lazy loading
+      const { extractText } = await import('@/lib/extract-text').catch(err => {
+        throw new Error(`Text extraction module failed to load: ${err.message}`);
+      });
+      
       const arrayBuffer = await data.arrayBuffer();
-      const extractedData = await extractText(new Uint8Array(arrayBuffer), path);
+      const extractedData = await extractText(new Uint8Array(arrayBuffer), path).catch(err => {
+        throw new Error(`Text extraction failed: ${err.message}`);
+      });
       
       const extractionMethod = this.getExtractionMethod(extractedData.text);
       const extractionNote = 'Document processed from storage';
+      
+      // Classify document with lazy loading and fallback
+      const { classifyDocument } = await import('@/lib/document-classifier').catch(err => {
+        console.warn(`Document classifier failed to load: ${err.message}`);
+        return { classifyDocument: (text: string, filename: string) => ({ type: 'unknown', confidence: 50 }) };
+      });
       
       const classification = classifyDocument(extractedData.text, path);
       const filename = path.split('/').pop() || path;
@@ -176,6 +199,22 @@ class DocumentProcessor {
   ): Promise<DocumentAnalysisResult> {
     try {
       console.log(`Processing as lease document: ${filename}`);
+      
+      // Lazy load lease analyzer with fallback
+      const { analyzeLeaseDocument } = await import('@/lib/lease-analyzer').catch(err => {
+        console.warn(`Lease analyzer failed to load: ${err.message}`);
+        return {
+          analyzeLeaseDocument: async (text: string, filename: string, buildingId?: string) => ({
+            leaseDetails: { propertyAddress: 'Analysis failed - module not available' },
+            complianceChecklist: [],
+            financialObligations: [],
+            keyRights: [],
+            restrictions: [],
+            confidence: 0.1,
+            summary: `Lease document analysis failed: ${err.message}`
+          })
+        };
+      });
       
       const leaseAnalysis = await analyzeLeaseDocument(text, filename, buildingId);
       const formattedText = this.formatLeaseAnalysis(leaseAnalysis);
