@@ -695,7 +695,7 @@ export default function AskBlocIQ({
 
       if (response.ok) {
         setSuggestedAction(null);
-        toast.success('📅 Event added to your Outlook calendar!');
+        toast.success('✅ Event added to Outlook calendar!');
       } else {
         toast.error('Failed to add to calendar');
       }
@@ -705,6 +705,12 @@ export default function AskBlocIQ({
     } finally {
       setAddingToCalendar(false);
     }
+  };
+
+  const handleSuggestedAction = (action: any) => {
+    console.log('Suggested action clicked:', action);
+    // You can implement specific logic for each action type here
+    toast.info(`Action: ${action.label}`);
   };
 
   const suggestedPrompts = getSuggestedPrompts(buildingName, !!isMajorWorksContext, projectId || undefined);
@@ -838,18 +844,120 @@ export default function AskBlocIQ({
                               <p className="text-xs text-gray-600 mb-2">
                                 {analysis.summary}
                               </p>
+                              
+                              {/* Lease-specific display */}
+                              {analysis.documentType === 'lease' && 'leaseDetails' in analysis && (
+                                <div className="mt-4 space-y-3">
+                                  {/* Property Details */}
+                                  {analysis.leaseDetails && Object.keys(analysis.leaseDetails).length > 0 && (
+                                    <div className="bg-white p-3 rounded border">
+                                      <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Property Details</h5>
+                                      <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
+                                        {analysis.leaseDetails.propertyAddress && (
+                                          <div><span className="font-medium">Address:</span> {analysis.leaseDetails.propertyAddress}</div>
+                                        )}
+                                        {analysis.leaseDetails.leaseTerm && (
+                                          <div><span className="font-medium">Term:</span> {analysis.leaseDetails.leaseTerm}</div>
+                                        )}
+                                        {analysis.leaseDetails.premium && (
+                                          <div><span className="font-medium">Premium:</span> {analysis.leaseDetails.premium}</div>
+                                        )}
+                                        {analysis.leaseDetails.initialRent && (
+                                          <div><span className="font-medium">Rent:</span> {analysis.leaseDetails.initialRent}</div>
+                                        )}
+                                        {analysis.leaseDetails.landlord && (
+                                          <div><span className="font-medium">Landlord:</span> {analysis.leaseDetails.landlord}</div>
+                                        )}
+                                        {analysis.leaseDetails.tenant && (
+                                          <div><span className="font-medium">Tenant:</span> {analysis.leaseDetails.tenant}</div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Compliance Checklist */}
+                                  {'complianceChecklist' in analysis && analysis.complianceChecklist && analysis.complianceChecklist.length > 0 && (
+                                    <div className="bg-white p-3 rounded border">
+                                      <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Compliance Checklist</h5>
+                                      <div className="mt-2 space-y-1">
+                                        {analysis.complianceChecklist.map((item: any, idx: number) => (
+                                          <div key={idx} className="flex items-center justify-between text-sm">
+                                            <span>{item.item}</span>
+                                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                              item.status === 'Y' ? 'bg-green-100 text-green-800' :
+                                              item.status === 'N' ? 'bg-red-100 text-red-800' :
+                                              'bg-gray-100 text-gray-600'
+                                            }`}>
+                                              {item.status === 'Y' ? '✓' : item.status === 'N' ? '✗' : '?'}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Financial Obligations */}
+                                  {'financialObligations' in analysis && analysis.financialObligations && analysis.financialObligations.length > 0 && (
+                                    <div className="bg-white p-3 rounded border">
+                                      <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Financial Obligations</h5>
+                                      <ul className="mt-2 space-y-1 text-sm">
+                                        {analysis.financialObligations.map((obligation: string, idx: number) => (
+                                          <li key={idx} className="flex items-center gap-2">
+                                            <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                                            {obligation}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+
+                                  {/* Key Rights */}
+                                  {'keyRights' in analysis && analysis.keyRights && analysis.keyRights.length > 0 && (
+                                    <div className="bg-white p-3 rounded border">
+                                      <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Key Rights</h5>
+                                      <ul className="mt-2 space-y-1 text-sm">
+                                        {analysis.keyRights.map((right: string, idx: number) => (
+                                          <li key={idx} className="flex items-center gap-2">
+                                            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                                            {right}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+
+                                  {/* Restrictions */}
+                                  {'restrictions' in analysis && analysis.restrictions && analysis.restrictions.length > 0 && (
+                                    <div className="bg-white p-3 rounded border">
+                                      <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Restrictions</h5>
+                                      <ul className="mt-2 space-y-1 text-sm">
+                                        {analysis.restrictions.map((restriction: string, idx: number) => (
+                                          <li key={idx} className="flex items-center gap-2">
+                                            <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                                            {restriction}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Existing suggested actions display */}
                               {analysis.suggestedActions && analysis.suggestedActions.length > 0 && (
-                                <div className="flex flex-wrap gap-1">
-                                  {analysis.suggestedActions.map((action: any, actionIndex: number) => (
-                                    <span
-                                      key={actionIndex}
-                                      className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
-                                    >
-                                      {typeof action === 'string'
-                                        ? action
-                                        : action?.label || action?.key || JSON.stringify(action)}
-                                    </span>
-                                  ))}
+                                <div className="mt-3">
+                                  <h5 className="font-medium text-sm text-gray-600">Suggested Actions:</h5>
+                                  <div className="flex flex-wrap gap-2 mt-1">
+                                    {analysis.suggestedActions.map((action: any, actionIndex: number) => (
+                                      <button
+                                        key={actionIndex}
+                                        className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm hover:bg-blue-200"
+                                        onClick={() => handleSuggestedAction(action)}
+                                      >
+                                        {action.label}
+                                      </button>
+                                    ))}
+                                  </div>
                                 </div>
                               )}
                             </div>

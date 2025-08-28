@@ -3,6 +3,7 @@ import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import { processDocumentOCR } from '@/lib/ocr';
 import { analyzeDocument } from '@/lib/document-analysis-orchestrator';
+import { analyzeLeaseDocument } from '@/lib/lease-analyzer';
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,16 +34,34 @@ export async function POST(req: NextRequest) {
       // Step 1: Process document through OCR
       const ocrResult = await processDocumentOCR(file);
       
-      if (!ocrResult.success || !ocrResult.text) {
+      if (!ocrResult.text) {
         return NextResponse.json({
           success: false,
           error: "OCR processing failed",
-          details: ocrResult.error || "No text extracted"
+          details: "No text extracted"
         }, { status: 400 });
       }
 
-      // Step 2: Analyze document comprehensively
-      const comprehensiveAnalysis = await analyzeDocument(ocrResult.text, fileName, `Analyze document: ${fileName}`);
+      // Step 1.5: Detect if this is a lease document
+      const isLease = fileName.toLowerCase().includes('lease') || 
+                      ocrResult.text.toLowerCase().includes('lease agreement') ||
+                      ocrResult.text.toLowerCase().includes('tenancy agreement') ||
+                      ocrResult.text.toLowerCase().includes('leasehold') ||
+                      ocrResult.text.toLowerCase().includes('lessor') ||
+                      ocrResult.text.toLowerCase().includes('lessee');
+
+      let comprehensiveAnalysis;
+      
+      if (isLease) {
+        console.log("🏠 Lease document detected, using specialized lease analyzer");
+        // Use specialized lease analyzer
+        comprehensiveAnalysis = await analyzeLeaseDocument(ocrResult.text, fileName, buildingId || '');
+      } else {
+        console.log("📋 Using general document analyzer");
+        // Use existing general analysis
+        comprehensiveAnalysis = await analyzeDocument(ocrResult.text, fileName, `Analyze document: ${fileName}`);
+      }
+      
       console.log("📋 Document analyzed comprehensively:", comprehensiveAnalysis.documentType);
 
       // Step 3: Generate suggested actions based on analysis
