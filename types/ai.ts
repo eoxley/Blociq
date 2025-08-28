@@ -17,6 +17,52 @@ export interface DocumentAnalysis {
   extractedText?: string;
 }
 
+// Enhanced lease analysis interface
+export interface LeaseAnalysis extends DocumentAnalysis {
+  leaseDetails?: {
+    propertyAddress?: string;
+    landlord?: string;
+    tenant?: string;
+    leaseStartDate?: string;
+    leaseEndDate?: string;
+    leaseTerm?: string;
+    premium?: string;
+    initialRent?: string;
+    serviceChargePercentage?: string;
+  };
+  complianceChecklist?: LeaseComplianceItem[];
+  financialObligations?: string[];
+  keyRights?: string[];
+  restrictions?: string[];
+}
+
+export interface LeaseComplianceItem {
+  item: string;
+  status: 'Y' | 'N' | 'Unknown';
+  details?: string;
+}
+
+// Standard lease compliance items to check
+export const LEASE_COMPLIANCE_CHECKLIST = [
+  'Term Consent in favour of Client',
+  'Reserve fund',
+  'Windows',
+  'Pipes',
+  'Heating',
+  'Parking',
+  'Right of Access',
+  'TV',
+  'Assignment',
+  'Alterations',
+  'Notice',
+  'Sublet',
+  'Pets',
+  'Debt recovery',
+  'Interest',
+  'Exterior redecorations',
+  'Interior redecorations'
+];
+
 export interface AIResponse {
   success: boolean;
   response?: string;
