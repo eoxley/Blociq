@@ -179,6 +179,38 @@ export class AIContextHandler {
   static formatBuildingContextForAI(data: any): string {
     if (!data) return '';
     
+    // Handle empty database scenarios
+    if (data.databaseEmpty) {
+      return `DATABASE STATUS: Empty database detected
+      
+No buildings table found in the database. This suggests the system is newly set up or the database is empty.
+
+RECOMMENDATION: The user should set up their first building to get started with the system.
+
+RESPONSE: When asked about buildings, leaseholders, or compliance, inform the user that no buildings have been set up yet and guide them to add their first building.`;
+    }
+    
+    if (data.noBuildings) {
+      return `DATABASE STATUS: No buildings in portfolio
+      
+The buildings table exists but contains no buildings. The user's portfolio is empty.
+
+RECOMMENDATION: The user should add their first building to start using the system.
+
+RESPONSE: When asked about buildings, leaseholders, or compliance, inform the user that their portfolio is empty and guide them to add their first building.`;
+    }
+    
+    if (data.buildingNotFound) {
+      return `DATABASE STATUS: Specific building not found
+      
+The requested building ID was not found in the database. This could be due to:
+- Incorrect building ID
+- Building was deleted
+- User doesn't have access to this building
+
+RESPONSE: Inform the user that the specific building was not found and suggest they check the building ID or add the building to their portfolio.`;
+    }
+    
     let context = '';
     
     // Building information

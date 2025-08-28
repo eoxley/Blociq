@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
+import { safeQuery, ensureRequiredTables } from '@/lib/database-setup';
 
 export async function GET(
   request: NextRequest,
@@ -16,12 +17,43 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Verify user has access to this building
-    const { data: building, error: buildingError } = await supabase
-      .from('buildings')
-      .select('id, name, user_id')
-      .eq('id', buildingId)
-      .single();
+    // Ensure required tables exist
+    await ensureRequiredTables();
+
+    // Verify user has access to this building with safe query
+    const { data: building, error: buildingError, tableExists: buildingsTableExists } = await safeQuery(
+      'buildings',
+      async () => {
+        const result = await supabase
+          .from('buildings')
+          .select('id, name, user_id')
+          .eq('id', buildingId)
+          .single();
+        return result;
+      }
+    );
+
+    // Handle case where buildings table doesn't exist
+    if (!buildingsTableExists) {
+      console.log('🏢 buildings table not found, returning empty compliance data');
+      return NextResponse.json({
+        success: true,
+        data: {
+          assets: [],
+          config: null,
+          templates: [],
+          summary: {
+            totalAssets: 0,
+            compliantAssets: 0,
+            overdueAssets: 0,
+            dueSoonAssets: 0,
+            pendingAssets: 0,
+          }
+        },
+        buildingStatus: 'database_empty',
+        message: 'No buildings table found - database may be empty'
+      });
+    }
 
     // Handle case where building doesn't exist - return empty data instead of error
     if (buildingError || !building) {
@@ -56,27 +88,55 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
     }
 
-    // Get building compliance assets
-    const { data: assets, error: assetsError } = await supabase
-      .from('building_compliance_assets')
-      .select(`
-        id,
-        building_id,
-        status,
-        next_due_date,
-        last_renewed_date,
-        notes,
-        contractor,
-        compliance_assets (
-          id,
-          name,
-          category,
-          description,
-          frequency_months
-        )
-      `)
-      .eq('building_id', buildingId)
-      .order('compliance_assets.category, compliance_assets.name');
+    // Get building compliance assets with safe query
+    const { data: assets, error: assetsError, tableExists: complianceTableExists } = await safeQuery(
+      'building_compliance_assets',
+      async () => {
+        const result = await supabase
+          .from('building_compliance_assets')
+          .select(`
+            id,
+            building_id,
+            status,
+            next_due_date,
+            last_renewed_date,
+            notes,
+            contractor,
+            compliance_assets (
+              id,
+              name,
+              category,
+              description,
+              frequency_months
+            )
+          `)
+          .eq('building_id', buildingId)
+          .order('compliance_assets.category, compliance_assets.name');
+        return result;
+      }
+    );
+
+    if (!complianceTableExists) {
+      console.log('🏢 building_compliance_assets table not found, returning empty data');
+      return NextResponse.json({
+        success: true,
+        data: {
+          assets: [],
+          config: null,
+          templates: [],
+          summary: {
+            totalAssets: 0,
+            compliantAssets: 0,
+            overdueAssets: 0,
+            dueSoonAssets: 0,
+            pendingAssets: 0,
+          }
+        },
+        buildingStatus: 'matched',
+        warning: 'Compliance table not found, returning empty data',
+        message: 'Database setup incomplete - compliance data unavailable'
+      });
+    }
 
     if (assetsError) {
       console.error('Error fetching compliance assets:', assetsError);
