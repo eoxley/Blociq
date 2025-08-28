@@ -1,406 +1,325 @@
-/**
- * Lease Document Analyzer for BlocIQ
- * Uses OpenAI API to extract structured lease data and compliance information
- */
+import { LeaseAnalysis, LEASE_COMPLIANCE_CHECKLIST } from '@/types/ai';
 
-import { LeaseAnalysis, LeaseComplianceItem, LEASE_COMPLIANCE_CHECKLIST } from '@/types/ai';
-
-// Legacy interface for backward compatibility
-export interface LeaseAnalysisLegacy {
-  propertyDetails: {
-    address?: string;
-    propertyType?: string;
-    leaseTerm?: string;
-    startDate?: string;
-    endDate?: string;
-    premium?: string;
-    groundRent?: string;
-  };
-  financialObligations: {
-    rent?: string;
-    rentReviewDate?: string;
-    serviceCharge?: string;
-    serviceChargeReviewDate?: string;
-    insurance?: string;
-    insuranceReviewDate?: string;
-    reserveFund?: string;
-    reserveFundReviewDate?: string;
-  };
-  rightsAndRestrictions: {
-    parkingRights?: string;
-    rightOfAccess?: string;
-    tvLicence?: string;
-    assignmentRights?: string;
-    alterationRights?: string;
-    subletRights?: string;
-    petPermissions?: string;
-    decorationRights?: string;
-  };
-  serviceProvisions: {
-    windows?: string;
-    pipes?: string;
-    heating?: string;
-    electrical?: string;
-    plumbing?: string;
-    structural?: string;
-    exterior?: string;
-    interior?: string;
-  };
-  complianceChecklist: {
-    termConsentInFavourOfClient: boolean;
-    reserveFund: boolean;
-    windowsPipesHeatingProvisions: boolean;
-    parkingRights: boolean;
-    rightOfAccess: boolean;
-    tvAssignmentAlterationsClauses: boolean;
-    noticeRequirements: boolean;
-    subletPetsPermissions: boolean;
-    debtRecoveryInterestTerms: boolean;
-    exteriorInteriorRedecorationObligations: boolean;
-  };
-  additionalInfo: {
-    breakClause?: string;
-    forfeitureClause?: string;
-    disputeResolution?: string;
-    legalCosts?: string;
-    stampDuty?: string;
-    registrationRequirements?: string;
-  };
-  metadata: {
-    confidence: number;
-    extractedDate: string;
-    documentType: 'lease' | 'lease_variation' | 'lease_assignment' | 'other';
-    analysisVersion: string;
-    warnings?: string[];
-    notes?: string[];
-  };
+interface ParsedLeaseData {
+  propertyAddress?: string;
+  landlord?: string;
+  tenant?: string;
+  leaseStartDate?: string;
+  leaseEndDate?: string;
+  leaseTerm?: string;
+  premium?: string;
+  initialRent?: string;
+  serviceCharge?: string;
+  deposit?: string;
+  buildingType?: string;
+  financialAmounts?: string[];
 }
 
-export interface LeaseAnalysisOptions {
-  includeComplianceChecklist?: boolean;
-  extractFinancialDetails?: boolean;
-  analyzeServiceProvisions?: boolean;
-  customPrompt?: string;
-}
+class LeaseTextParser {
+  parse(ocrText: string, filename: string): ParsedLeaseData {
+    const text = ocrText.toLowerCase();
+    const parsed: ParsedLeaseData = {};
+    
+    // Validate input
+    if (!ocrText || ocrText.trim().length < 50) {
+      console.warn('Insufficient text for lease parsing');
+      return parsed;
+    }
 
-// Helper function to extract information from filename
-function extractInfoFromFilename(filename: string) {
-  const info: any = {};
-  
-  // Extract date from filename (e.g., "17.02.2017")
-  const dateMatch = filename.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
-  if (dateMatch) {
-    info.startDate = `${dateMatch[1]}.${dateMatch[2]}.${dateMatch[3]}`;
-    info.startDateFormatted = `${dateMatch[1]}${getOrdinalSuffix(parseInt(dateMatch[1]))} ${getMonthName(parseInt(dateMatch[2]))} ${dateMatch[3]}`;
+    // Extract filename info
+    const filenameInfo = this.extractInfoFromFilename(filename);
+    
+    // Extract address
+    parsed.propertyAddress = this.extractAddress(ocrText, filenameInfo);
+    
+    // Extract financial amounts
+    const financialData = this.extractFinancialAmounts(ocrText);
+    Object.assign(parsed, financialData);
+    
+    // Extract dates
+    const dateData = this.extractDates(ocrText, filenameInfo);
+    Object.assign(parsed, dateData);
+    
+    // Extract names
+    const nameData = this.extractNames(ocrText);
+    Object.assign(parsed, nameData);
+    
+    // Extract property type
+    parsed.buildingType = this.extractPropertyType(ocrText);
+    
+    return parsed;
   }
-  
-  // Extract building number (e.g., "260")
-  const buildingMatch = filename.match(/(\d+)/);
-  if (buildingMatch) {
-    info.buildingNumber = buildingMatch[1];
-  }
-  
-  return info;
-}
 
-function getOrdinalSuffix(day: number): string {
-  if (day > 3 && day < 21) return 'th';
-  switch (day % 10) {
-    case 1: return 'st';
-    case 2: return 'nd';
-    case 3: return 'rd';
-    default: return 'th';
+  private extractInfoFromFilename(filename: string) {
+    const info: any = {};
+    
+    // Extract date (DD.MM.YYYY format)
+    const dateMatch = filename.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+    if (dateMatch) {
+      const day = parseInt(dateMatch[1]);
+      const month = parseInt(dateMatch[2]);
+      const year = dateMatch[3];
+      
+      info.startDate = `${dateMatch[1]}.${dateMatch[2]}.${dateMatch[3]}`;
+      info.startDateFormatted = `${day}${this.getOrdinalSuffix(day)} ${this.getMonthName(month)} ${year}`;
+    }
+    
+    // Extract building number
+    const buildingMatch = filename.match(/(\d+)/);
+    if (buildingMatch) {
+      info.buildingNumber = buildingMatch[1];
+    }
+    
+    return info;
   }
-}
 
-function getMonthName(month: number): string {
-  const months = ['January', 'February', 'March', 'April', 'May', 'June', 
-                  'July', 'August', 'September', 'October', 'November', 'December'];
-  return months[month - 1] || '';
-}
-
-// CRITICAL: Function to parse actual lease text and extract real data
-function parseLeaseText(ocrText: string, filenameInfo: any) {
-  const text = ocrText.toLowerCase();
-  const parsed: any = {};
-  
-  console.log('🔍 ===== PARSING OCR TEXT =====');
-  console.log('🔍 OCR text length:', ocrText.length);
-  console.log('🔍 First 500 chars of OCR:', ocrText.substring(0, 500));
-  console.log('🔍 Last 500 chars of OCR:', ocrText.substring(Math.max(0, ocrText.length - 500)));
-  console.log('🔍 Does text contain "landlord"?', ocrText.toLowerCase().includes('landlord'));
-  console.log('🔍 Does text contain "tenant"?', ocrText.toLowerCase().includes('tenant'));
-  console.log('🔍 Does text contain "rent"?', ocrText.toLowerCase().includes('rent'));
-  console.log('🔍 Does text contain "£"?', ocrText.includes('£'));
-  console.log('🔍 Does text contain "lease"?', ocrText.toLowerCase().includes('lease'));
-  console.log('🔍 Does text contain "property"?', ocrText.toLowerCase().includes('property'));
-  console.log('🔍 Does text contain "address"?', ocrText.toLowerCase().includes('address'));
-  console.log('🔍 Does text contain "premium"?', ocrText.toLowerCase().includes('premium'));
-  console.log('🔍 Does text contain "service charge"?', ocrText.toLowerCase().includes('service charge'));
-  console.log('🔍 Does text contain "deposit"?', ocrText.toLowerCase().includes('deposit'));
-  console.log('🔍 Filename info:', filenameInfo);
-  console.log('🔍 ===== END OCR TEXT ANALYSIS =====');
-  
-  // CRITICAL: Check if we're getting real text or placeholder
-  if (ocrText.includes('[[Fallback extractor]]') || ocrText.includes('[[OCR Fallback]]') || ocrText.includes('[[PDF Extraction Failed]]')) {
-    console.error('❌ CRITICAL: OCR text contains fallback placeholders instead of real content!');
-    console.error('❌ This means text extraction failed and we need to fix the OCR pipeline');
-    throw new Error('OCR text extraction failed - received placeholder text instead of real content');
-  }
-  
-  // Extract address patterns - MORE AGGRESSIVE
-  if (filenameInfo.buildingNumber) {
-    // Look for address patterns starting with the building number
-    const addressPattern = new RegExp(`${filenameInfo.buildingNumber}\\s+([a-z\\s]+?)(?:\\s*,\\s*([a-z\\s]+?))?(?:\\s*,\\s*([a-z\\s]+?))?`, 'gi');
-    const addressMatches = [...ocrText.matchAll(addressPattern)];
-    if (addressMatches.length > 0) {
-      const match = addressMatches[0];
-      parsed.propertyAddress = `${filenameInfo.buildingNumber} ${match[1]}${match[2] ? ', ' + match[2] : ''}${match[3] ? ', ' + match[3] : ''}`;
-      console.log('🔍 Found address:', parsed.propertyAddress);
-    } else {
-      // Fallback: look for any address-like pattern
-      const fallbackAddress = ocrText.match(/\d+\s+[A-Za-z\s]+(?:,\s*[A-Za-z\s]+)*/);
-      if (fallbackAddress) {
-        parsed.propertyAddress = fallbackAddress[0];
-        console.log('🔍 Found fallback address:', parsed.propertyAddress);
+  private extractAddress(ocrText: string, filenameInfo: any): string | undefined {
+    // If we have building number from filename, look for it in text
+    if (filenameInfo.buildingNumber) {
+      const pattern = new RegExp(`${filenameInfo.buildingNumber}\\s+([A-Za-z\\s]+?)(?:,|\\n|$)`, 'i');
+      const match = ocrText.match(pattern);
+      if (match) {
+        return `${filenameInfo.buildingNumber} ${match[1].trim()}`;
       }
     }
-  }
-  
-  // Extract financial amounts (£ followed by numbers) - MORE AGGRESSIVE
-  const rentPattern = /£[\d,]+(?:\.\d{2})?/g;
-  const rentMatches = ocrText.match(rentPattern);
-  if (rentMatches) {
-    parsed.financialAmounts = rentMatches;
-    console.log('🔍 Found financial amounts:', rentMatches);
     
-    // Look for specific financial terms with more aggressive patterns
-    if (text.includes('premium')) {
-      const premiumMatch = text.match(/premium[:\s]*£[\d,]+(?:\.\d{2})?/i);
-      if (premiumMatch) parsed.premium = premiumMatch[0];
-    }
+    // Look for any address pattern (number + street name)
+    const addressPatterns = [
+      /(\d+\s+[A-Za-z\s]+(?:Street|Road|Avenue|Lane|Drive|Close|Way|Place))/gi,
+      /(\d+\s+[A-Za-z\s]+)(?:,|\n)/gi
+    ];
     
-    if (text.includes('rent')) {
-      const rentMatch = text.match(/rent[:\s]*£[\d,]+(?:\.\d{2})?/i);
-      if (rentMatch) parsed.initialRent = rentMatch[0];
+    for (const pattern of addressPatterns) {
+      const matches = ocrText.match(pattern);
+      if (matches && matches.length > 0) {
+        return matches[0].replace(/[,\n]$/, '').trim();
+      }
     }
     
-    if (text.includes('service charge')) {
-      const serviceMatch = text.match(/service charge[:\s]*£[\d,]+(?:\.\d{2})?/i);
-      if (serviceMatch) parsed.serviceCharge = serviceMatch[0];
+    return undefined;
+  }
+
+  private extractFinancialAmounts(ocrText: string): Partial<ParsedLeaseData> {
+    const amounts: ParsedLeaseData = {};
+    const text = ocrText.toLowerCase();
+    
+    // Find all monetary amounts
+    const moneyPattern = /£[\d,]+(?:\.\d{2})?/g;
+    const allAmounts = ocrText.match(moneyPattern);
+    
+    if (allAmounts) {
+      amounts.financialAmounts = allAmounts;
+      
+      // Look for specific labeled amounts
+      const labeledAmounts = [
+        { key: 'premium', patterns: ['premium[:\s]*£[\d,]+(?:\.\d{2})?'] },
+        { key: 'initialRent', patterns: ['(?:annual )?rent[:\s]*£[\d,]+(?:\.\d{2})?', 'yearly rent[:\s]*£[\d,]+(?:\.\d{2})?'] },
+        { key: 'serviceCharge', patterns: ['service charge[:\s]*£[\d,]+(?:\.\d{2})?'] },
+        { key: 'deposit', patterns: ['deposit[:\s]*£[\d,]+(?:\.\d{2})?'] }
+      ];
+      
+      for (const { key, patterns } of labeledAmounts) {
+        for (const pattern of patterns) {
+          const match = text.match(new RegExp(pattern, 'i'));
+          if (match) {
+            const amountMatch = match[0].match(/£[\d,]+(?:\.\d{2})?/);
+            if (amountMatch) {
+              (amounts as any)[key] = amountMatch[0];
+              break;
+            }
+          }
+        }
+      }
     }
     
-    if (text.includes('deposit')) {
-      const depositMatch = text.match(/deposit[:\s]*£[\d,]+(?:\.\d{2})?/i);
-      if (depositMatch) parsed.deposit = depositMatch[0];
+    return amounts;
+  }
+
+  private extractDates(ocrText: string, filenameInfo: any): Partial<ParsedLeaseData> {
+    const dates: ParsedLeaseData = {};
+    
+    // Use filename date if available
+    if (filenameInfo.startDateFormatted) {
+      dates.leaseStartDate = filenameInfo.startDateFormatted;
     }
     
-    // If we found amounts but no specific labels, assign them
-    if (rentMatches.length > 0 && !parsed.initialRent) {
-      parsed.initialRent = rentMatches[0];
-      console.log('🔍 Assigned first amount as initial rent:', parsed.initialRent);
+    // Look for end dates
+    const endDatePatterns = [
+      /(?:expires?|until|end(?:s|ing)?|term)[:\s]*(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})/gi,
+      /(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})/gi
+    ];
+    
+    for (const pattern of endDatePatterns) {
+      const matches = [...ocrText.toLowerCase().matchAll(pattern)];
+      if (matches.length > 0) {
+        const match = matches[matches.length - 1]; // Take the last date found
+        const day = parseInt(match[1]);
+        dates.leaseEndDate = `${day}${this.getOrdinalSuffix(day)} ${this.capitalizeFirst(match[2])} ${match[3]}`;
+        break;
+      }
+    }
+    
+    // Extract lease term
+    const termPatterns = [
+      /(?:term|duration|period)[:\s]*(\d+)\s+(years?|months?)/gi,
+      /(\d+)\s+year\s+term/gi
+    ];
+    
+    for (const pattern of termPatterns) {
+      const match = ocrText.match(pattern);
+      if (match) {
+        dates.leaseTerm = match[0];
+        break;
+      }
+    }
+    
+    return dates;
+  }
+
+  private extractNames(ocrText: string): Partial<ParsedLeaseData> {
+    const names: ParsedLeaseData = {};
+    const text = ocrText.toLowerCase();
+    
+    // Extract landlord
+    const landlordPatterns = [
+      /(?:landlord|lessor)[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/g,
+      /landlord[:\s]+([A-Z][a-zA-Z\s]+?)(?:\s*\n|\s*,|\s*\()/g
+    ];
+    
+    for (const pattern of landlordPatterns) {
+      const matches = [...ocrText.matchAll(pattern)];
+      if (matches.length > 0) {
+        names.landlord = matches[0][1].trim();
+        break;
+      }
+    }
+    
+    // Extract tenant
+    const tenantPatterns = [
+      /(?:tenant|lessee)[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/g,
+      /tenant[:\s]+([A-Z][a-zA-Z\s]+?)(?:\s*\n|\s*,|\s*\()/g
+    ];
+    
+    for (const pattern of tenantPatterns) {
+      const matches = [...ocrText.matchAll(pattern)];
+      if (matches.length > 0) {
+        names.tenant = matches[0][1].trim();
+        break;
+      }
+    }
+    
+    return names;
+  }
+
+  private extractPropertyType(ocrText: string): string | undefined {
+    const typePatterns = [
+      /\b(flat|apartment|house|maisonette|studio|penthouse)\b/gi,
+      /\b(residential|commercial|retail|office)\s+(?:property|premises|unit)\b/gi
+    ];
+    
+    for (const pattern of typePatterns) {
+      const match = ocrText.match(pattern);
+      if (match) {
+        return this.capitalizeFirst(match[1]);
+      }
+    }
+    
+    return undefined;
+  }
+
+  private getOrdinalSuffix(day: number): string {
+    if (day > 3 && day < 21) return 'th';
+    switch (day % 10) {
+      case 1: return 'st';
+      case 2: return 'nd';
+      case 3: return 'rd';
+      default: return 'th';
     }
   }
-  
-  // Extract dates - MORE AGGRESSIVE
-  if (filenameInfo.startDateFormatted) {
-    parsed.leaseStartDate = filenameInfo.startDateFormatted;
+
+  private getMonthName(month: number): string {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return months[month - 1] || '';
   }
-  
-  // Look for end dates in text with multiple patterns
-  const endDatePatterns = [
-    /(?:expires|until|end|term)[:\s]*(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})/gi,
-    /(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})/gi
-  ];
-  
-  for (const pattern of endDatePatterns) {
-    const endDateMatches = [...text.matchAll(pattern)];
-    if (endDateMatches.length > 0) {
-      const match = endDateMatches[0];
-      parsed.leaseEndDate = `${match[1]}${getOrdinalSuffix(parseInt(match[1]))} ${match[2]} ${match[3]}`;
-      console.log('🔍 Found end date:', parsed.leaseEndDate);
-      break;
-    }
+
+  private capitalizeFirst(str: string): string {
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
   }
-  
-  // Extract lease term - MORE AGGRESSIVE
-  const termPatterns = [
-    /(?:term|duration|length)[:\s]*(\d+)\s+(?:years?|months?)/gi,
-    /(\d+)\s+(?:years?|months?)/gi
-  ];
-  
-  for (const pattern of termPatterns) {
-    const termMatches = [...text.matchAll(pattern)];
-    if (termMatches.length > 0) {
-      parsed.leaseTerm = termMatches[0][0];
-      console.log('🔍 Found lease term:', parsed.leaseTerm);
-      break;
-    }
-  }
-  
-  // Extract names - MORE AGGRESSIVE
-  const landlordPatterns = [
-    /(?:landlord|lessor)[:\s]*([a-z\s]+?)(?:\s|$|,)/gi,
-    /landlord[:\s]*([a-z\s]+?)(?:\s|$|,)/gi
-  ];
-  
-  for (const pattern of landlordPatterns) {
-    const landlordMatches = [...text.matchAll(pattern)];
-    if (landlordMatches.length > 0) {
-      parsed.landlord = landlordMatches[0][1].trim();
-      console.log('🔍 Found landlord:', parsed.landlord);
-      break;
-    }
-  }
-  
-  const tenantPatterns = [
-    /(?:tenant|lessee)[:\s]*([a-z\s]+?)(?:\s|$|,)/gi,
-    /tenant[:\s]*([a-z\s]+?)(?:\s|$|,)/gi
-  ];
-  
-  for (const pattern of tenantPatterns) {
-    const tenantMatches = [...text.matchAll(pattern)];
-    if (tenantMatches.length > 0) {
-      parsed.tenant = tenantMatches[0][1].trim();
-      console.log('🔍 Found tenant:', parsed.tenant);
-      break;
-    }
-  }
-  
-  // Extract property type - MORE AGGRESSIVE
-  const propertyTypePattern = /(?:flat|apartment|house|commercial|residential|office|shop)/gi;
-  const propertyMatches = ocrText.match(propertyTypePattern);
-  if (propertyMatches) {
-    parsed.buildingType = propertyMatches[0];
-    console.log('🔍 Found property type:', parsed.buildingType);
-  }
-  
-  // If we still don't have enough data, try to extract ANY meaningful information
-  if (!parsed.propertyAddress && ocrText.length > 100) {
-    // Look for any text that looks like an address
-    const anyAddressMatch = ocrText.match(/\d+\s+[A-Za-z\s]+(?:,\s*[A-Za-z\s]+)*/);
-    if (anyAddressMatch) {
-      parsed.propertyAddress = anyAddressMatch[0];
-      console.log('🔍 Found generic address:', parsed.propertyAddress);
-    }
-  }
-  
-  console.log('🔍 Final parsed data:', parsed);
-  return parsed;
 }
 
-/**
- * Legacy analyzeLease function for backward compatibility
- */
-export async function analyzeLease(
-  extractedText: string,
-  options: LeaseAnalysisOptions = {}
-): Promise<LeaseAnalysisLegacy> {
-  try {
-    // Use the new analyzeLeaseDocument function
-    const newAnalysis = await analyzeLeaseDocument(extractedText, 'lease_document', undefined);
+class LeaseAIAnalyzer {
+  async analyze(extractedText: string, parsedData: ParsedLeaseData): Promise<any> {
+    const prompt = this.buildPrompt(extractedText, parsedData);
     
-    // Transform to legacy format
-    return {
-      propertyDetails: {
-        address: newAnalysis.leaseDetails?.propertyAddress || '',
-        propertyType: newAnalysis.leaseDetails?.buildingType || '',
-        leaseTerm: newAnalysis.leaseDetails?.leaseTerm || '',
-        startDate: newAnalysis.leaseDetails?.leaseStartDate || '',
-        endDate: newAnalysis.leaseDetails?.leaseEndDate || '',
-        premium: newAnalysis.leaseDetails?.premium || '',
-        groundRent: ''
-      },
-      financialObligations: {
-        rent: newAnalysis.leaseDetails?.initialRent || '',
-        rentReviewDate: '',
-        serviceCharge: newAnalysis.leaseDetails?.serviceChargePercentage || '',
-        serviceChargeReviewDate: '',
-        insurance: '',
-        insuranceReviewDate: '',
-        reserveFund: '',
-        reserveFundReviewDate: ''
-      },
-      rightsAndRestrictions: {
-        parkingRights: '',
-        rightOfAccess: '',
-        tvLicence: '',
-        assignmentRights: '',
-        alterationRights: '',
-        subletRights: '',
-        petPermissions: '',
-        decorationRights: ''
-      },
-      serviceProvisions: {
-        windows: '',
-        pipes: '',
-        heating: '',
-        electrical: '',
-        plumbing: '',
-        structural: '',
-        exterior: '',
-        interior: ''
-      },
-      complianceChecklist: {
-        termConsentInFavourOfClient: (newAnalysis.complianceChecklist || []).some(item => 
-          item.item.toLowerCase().includes('term consent') && item.status === 'Y'
-        ),
-        reserveFund: (newAnalysis.complianceChecklist || []).some(item => 
-          item.item.toLowerCase().includes('reserve fund') && item.status === 'Y'
-        ),
-        windowsPipesHeatingProvisions: (newAnalysis.complianceChecklist || []).some(item => 
-          (item.item.toLowerCase().includes('windows') || 
-           item.item.toLowerCase().includes('pipes') || 
-           item.item.toLowerCase().includes('heating')) && item.status === 'Y'
-        ),
-        parkingRights: (newAnalysis.complianceChecklist || []).some(item => 
-          item.item.toLowerCase().includes('parking') && item.status === 'Y'
-        ),
-        rightOfAccess: (newAnalysis.complianceChecklist || []).some(item => 
-          item.item.toLowerCase().includes('right of access') && item.status === 'Y'
-        ),
-        tvAssignmentAlterationsClauses: (newAnalysis.complianceChecklist || []).some(item => 
-          (item.item.toLowerCase().includes('tv') || 
-           item.item.toLowerCase().includes('assignment') || 
-           item.item.toLowerCase().includes('alterations')) && item.status === 'Y'
-        ),
-        noticeRequirements: (newAnalysis.complianceChecklist || []).some(item => 
-          item.item.toLowerCase().includes('notice') && item.status === 'Y'
-        ),
-        subletPetsPermissions: (newAnalysis.complianceChecklist || []).some(item => 
-          (item.item.toLowerCase().includes('sublet') || 
-           item.item.toLowerCase().includes('pets')) && item.status === 'Y'
-        ),
-        debtRecoveryInterestTerms: (newAnalysis.complianceChecklist || []).some(item => 
-          (item.item.toLowerCase().includes('debt recovery') || 
-           item.item.toLowerCase().includes('interest')) && item.status === 'Y'
-        ),
-        exteriorInteriorRedecorationObligations: (newAnalysis.complianceChecklist || []).some(item => 
-          (item.item.toLowerCase().includes('exterior') || 
-           item.item.toLowerCase().includes('interior') || 
-           item.item.toLowerCase().includes('redecoration')) && item.status === 'Y'
-        )
-      },
-      additionalInfo: {
-        breakClause: '',
-        forfeitureClause: '',
-        disputeResolution: '',
-        legalCosts: '',
-        stampDuty: '',
-        registrationRequirements: ''
-      },
-      metadata: {
-        confidence: newAnalysis.confidence || 0.8,
-        extractedDate: new Date().toISOString(),
-        documentType: 'lease',
-        analysisVersion: '2.0.0',
-        warnings: [],
-        notes: []
+    try {
+      const { OpenAI } = await import('openai');
+      const openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+      });
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
+        temperature: 0.1,
+      });
+
+      const result = completion.choices[0].message.content;
+      if (!result) {
+        throw new Error('No response from OpenAI');
       }
-    };
-  } catch (error) {
-    console.error('Legacy lease analysis error:', error);
-    throw error;
+
+      return JSON.parse(result);
+
+    } catch (error) {
+      console.error('AI analysis failed:', error);
+      throw error;
+    }
+  }
+
+  private buildPrompt(extractedText: string, parsedData: ParsedLeaseData): string {
+    return `
+You are analyzing a UK lease document. Here is the extracted data and full text:
+
+EXTRACTED DATA:
+${JSON.stringify(parsedData, null, 2)}
+
+FULL DOCUMENT TEXT:
+${extractedText.substring(0, 3000)}
+
+Please provide a JSON response with this structure:
+
+{
+  "summary": "Brief summary of this lease agreement",
+  "leaseDetails": {
+    "propertyAddress": "Property address (use extracted data if available)",
+    "landlord": "Landlord name (use extracted data if available)", 
+    "tenant": "Tenant name (use extracted data if available)",
+    "leaseStartDate": "Start date (use extracted data if available)",
+    "leaseEndDate": "End date (use extracted data if available)",
+    "leaseTerm": "Lease term (use extracted data if available)",
+    "premium": "Premium amount (use extracted data if available)",
+    "initialRent": "Annual rent (use extracted data if available)",
+    "serviceCharge": "Service charge (use extracted data if available)",
+    "buildingType": "Property type (use extracted data if available)"
+  },
+  "complianceChecklist": [
+    {
+      "item": "Term consent in favour of client",
+      "status": "Y/N/Unknown", 
+      "details": "Details if found"
+    }
+  ],
+  "keyRights": ["List of tenant rights found"],
+  "restrictions": ["List of restrictions found"],
+  "suggestedActions": ["Relevant actions based on analysis"]
+}
+
+IMPORTANT: Use the EXTRACTED DATA first - it contains pre-processed information from the document. Only analyze the full text for items not in the extracted data.
+    `;
   }
 }
 
@@ -409,235 +328,112 @@ export async function analyzeLeaseDocument(
   filename: string,
   buildingId?: string
 ): Promise<LeaseAnalysis> {
-  console.log('🔍 ===== ANALYZE LEASE DOCUMENT CALLED =====');
-  console.log('🔍 extractedText parameter:', extractedText ? `"${extractedText.substring(0, 200)}..."` : 'NULL/UNDEFINED');
-  console.log('🔍 extractedText length:', extractedText?.length || 0);
-  console.log('🔍 filename parameter:', filename);
-  console.log('🔍 buildingId parameter:', buildingId);
-  console.log('🔍 ===== END PARAMETER LOGGING =====');
   
+  console.log('Starting lease analysis for:', filename);
+  
+  // Validate input
   if (!extractedText || extractedText.trim().length === 0) {
-    console.error('❌ CRITICAL ERROR: extractedText is empty or null!');
     throw new Error('No text content provided for lease analysis');
   }
   
-  // CRITICAL: Check if we're getting real text or placeholder
-  if (extractedText.includes('[[Fallback extractor]]') || 
-      extractedText.includes('[[OCR Fallback]]') || 
-      extractedText.includes('[[PDF Extraction Failed]]') ||
-      extractedText.includes('Unable to extract text') ||
-      extractedText.includes('document may be image-based or corrupted')) {
-    console.error('❌ CRITICAL ERROR: extractedText contains fallback placeholders instead of real content!');
-    console.error('❌ This means text extraction failed and we need to fix the OCR pipeline');
-    console.error('❌ Text content:', extractedText.substring(0, 500));
-    throw new Error('OCR text extraction failed - received placeholder text instead of real content. Please check the text extraction pipeline.');
+  // Check for extraction failures
+  const failureIndicators = [
+    '[Fallback extractor]',
+    '[OCR Fallback]', 
+    'Unable to extract text',
+    'All extraction methods failed'
+  ];
+  
+  const hasExtractionFailure = failureIndicators.some(indicator => 
+    extractedText.includes(indicator)
+  );
+  
+  if (hasExtractionFailure) {
+    console.warn('Text extraction may have failed for:', filename);
   }
-  
-  console.log('🔍 Starting lease analysis for:', filename);
-  console.log('🔍 Text length:', extractedText.length);
-  console.log('🔍 Building ID:', buildingId);
-  
-  // CRITICAL: Debug the actual OCR text content
-  console.log("=== OCR EXTRACTED TEXT ===");
-  console.log("Raw OCR text (first 1000 chars):", extractedText.substring(0, 1000));
-  console.log("========================");
-  
-  // Extract key information from filename first
-  const filenameInfo = extractInfoFromFilename(filename);
-  console.log('🔍 Filename extracted info:', filenameInfo);
-  
-  // CRITICAL: Parse the actual OCR text for real data before sending to AI
-  const parsedData = parseLeaseText(extractedText, filenameInfo);
-  console.log('🔍 Parsed data from OCR text:', parsedData);
-  
-  // Enhanced prompt that works with or without building context
-  const leasePrompt = `
-You are analyzing a lease document for UK property management. Extract ALL available information and provide a comprehensive analysis.
-
-DOCUMENT TEXT TO ANALYZE:
-${extractedText}
-
-PARSED DATA FOUND:
-${JSON.stringify(parsedData, null, 2)}
-
-IMPORTANT: Use the PARSED DATA above as your primary source. The PARSED DATA contains REAL extracted information from the document. 
-
-CRITICAL INSTRUCTIONS - YOU MUST FOLLOW THESE:
-1. **NEVER use "Not specified" if PARSED DATA has a value**
-2. **ALWAYS use the PARSED DATA values first**
-3. **If PARSED DATA shows "260 High Street" → use "260 High Street" (NOT "Not specified")**
-4. **If PARSED DATA shows "£500" → use "£500" (NOT "Not specified")**
-5. **If PARSED DATA shows "17th February 2017" → use "17th February 2017" (NOT "Not specified")**
-
-EXAMPLE:
-- If PARSED DATA has propertyAddress: "260 High Street, London" → use "260 High Street, London"
-- If PARSED DATA has initialRent: "£2,000" → use "£2,000"
-- If PARSED DATA has leaseStartDate: "17th February 2017" → use "17th February 2017"
-
-ONLY use "Not specified" if the PARSED DATA field is completely empty/null/undefined.
-
-Please provide a JSON response with this EXACT structure:
-
-{
-  "leaseSummary": "Detailed narrative summary of the lease using the PARSED DATA",
-  "structuredData": {
-    "propertyAddress": "Use PARSED DATA propertyAddress if available, otherwise extract from lease text",
-    "landlord": "Use PARSED DATA landlord if available, otherwise extract from lease text",
-    "tenant": "Use PARSED DATA tenant if available, otherwise extract from lease text", 
-    "leaseStartDate": "Use PARSED DATA leaseStartDate if available, otherwise extract from lease text",
-    "leaseEndDate": "Use PARSED DATA leaseEndDate if available, otherwise extract from lease text",
-    "leaseTerm": "Use PARSED DATA leaseTerm if available, otherwise extract from lease text",
-    "premium": "Use PARSED DATA premium if available, otherwise extract from lease text",
-    "initialRent": "Use PARSED DATA initialRent if available, otherwise extract from lease text",
-    "monthlyRent": "Calculate from annual rent if available",
-    "annualRent": "Use PARSED DATA initialRent if available, otherwise extract from lease text",
-    "serviceCharge": "Use PARSED DATA serviceCharge if available, otherwise extract from lease text",
-    "deposit": "Use PARSED DATA deposit if available, otherwise extract from lease text",
-    "buildingType": "Use PARSED DATA buildingType if available, otherwise extract from lease text",
-    "propertyDescription": "Extract from lease text",
-    "floorArea": "Extract from lease text if available"
-  },
-  "complianceChecklist": [
-    {
-      "item": "Term consent in favour of client",
-      "status": "Y/N/Unknown",
-      "details": "Specific details found in lease"
-    }
-  ],
-  "financialObligations": [
-    "List all financial responsibilities found in lease"
-  ],
-  "keyRights": [
-    "List all tenant rights found in lease"
-  ],
-  "restrictions": [
-    "List all restrictions and prohibitions found in lease"
-  ],
-  "suggestedActions": [
-    "Add new building to portfolio if not found",
-    "Update building records with lease details",
-    "Review compliance requirements"
-  ]
-}
-
-CRITICAL: Extract EVERY detail you can find. If the lease mentions "260 [Street Name]", extract that. If it mentions rent amounts, extract them. If it mentions dates, extract them. Be thorough and extract ALL information available.
-  `;
 
   try {
-    console.log('🔍 Sending request to OpenAI...');
+    // Parse the text first
+    const parser = new LeaseTextParser();
+    const parsedData = parser.parse(extractedText, filename);
     
-    // Use OpenAI directly since we're in a server-side context
-    const { OpenAI } = await import('openai');
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: 'user', content: leasePrompt }],
-      response_format: { type: 'json_object' },
-      temperature: 0.1,
-    });
-
-    const aiResult = completion.choices[0].message.content;
-    if (!aiResult) {
-      throw new Error('No response from OpenAI');
-    }
-
-    console.log('🔍 Raw AI response:', aiResult);
-
-    const analysis = JSON.parse(aiResult);
+    console.log('Parsed lease data:', parsedData);
     
-    console.log('🔍 Parsed analysis:', {
-      leaseSummary: analysis.leaseSummary,
-      structuredData: analysis.structuredData,
-      complianceChecklist: analysis.complianceChecklist,
-      financialObligations: analysis.financialObligations,
-      keyRights: analysis.keyRights,
-      restrictions: analysis.restrictions
-    });
+    // Analyze with AI
+    const analyzer = new LeaseAIAnalyzer();
+    const aiResult = await analyzer.analyze(extractedText, parsedData);
+    
+    console.log('AI analysis complete');
 
-    // Determine if we have building context
-    const hasBuildingContext = buildingId && buildingId !== 'unknown';
-    const buildingStatus: 'matched' | 'not_found' | 'unknown' = hasBuildingContext ? 'matched' : 'not_found';
-
-    // Transform into LeaseAnalysis format with proper data mapping
-    // CRITICAL: Force the use of parsed data if AI didn't use it
-    const result = {
+    // Build final result
+    const result: LeaseAnalysis = {
       filename,
-      summary: analysis.leaseSummary || analysis.summary || 'Lease document analyzed successfully',
+      summary: aiResult.summary || 'Lease document analyzed',
       documentType: 'lease',
       leaseDetails: {
-        propertyAddress: analysis.structuredData?.propertyAddress || parsedData.propertyAddress || null,
-        landlord: analysis.structuredData?.landlord || parsedData.landlord || null,
-        tenant: analysis.structuredData?.tenant || parsedData.tenant || null,
-        leaseStartDate: analysis.structuredData?.leaseStartDate || parsedData.leaseStartDate || null,
-        leaseEndDate: analysis.structuredData?.leaseEndDate || parsedData.leaseEndDate || null,
-        leaseTerm: analysis.structuredData?.leaseTerm || parsedData.leaseTerm || null,
-        premium: analysis.structuredData?.premium || parsedData.premium || null,
-        initialRent: analysis.structuredData?.initialRent || parsedData.initialRent || null,
-        monthlyRent: analysis.structuredData?.monthlyRent || parsedData.monthlyRent || null,
-        annualRent: analysis.structuredData?.annualRent || parsedData.annualRent || null,
-        serviceCharge: analysis.structuredData?.serviceCharge || parsedData.serviceCharge || null,
-        deposit: analysis.structuredData?.deposit || parsedData.deposit || null,
-        buildingType: analysis.structuredData?.buildingType || parsedData.buildingType || null,
-        propertyDescription: analysis.structuredData?.propertyDescription || null,
-        floorArea: analysis.structuredData?.floorArea || null
+        // Use parsed data as fallback if AI doesn't provide values
+        propertyAddress: aiResult.leaseDetails?.propertyAddress || parsedData.propertyAddress || null,
+        landlord: aiResult.leaseDetails?.landlord || parsedData.landlord || null,
+        tenant: aiResult.leaseDetails?.tenant || parsedData.tenant || null,
+        leaseStartDate: aiResult.leaseDetails?.leaseStartDate || parsedData.leaseStartDate || null,
+        leaseEndDate: aiResult.leaseDetails?.leaseEndDate || parsedData.leaseEndDate || null,
+        leaseTerm: aiResult.leaseDetails?.leaseTerm || parsedData.leaseTerm || null,
+        premium: aiResult.leaseDetails?.premium || parsedData.premium || null,
+        initialRent: aiResult.leaseDetails?.initialRent || parsedData.initialRent || null,
+        serviceCharge: aiResult.leaseDetails?.serviceCharge || parsedData.serviceCharge || null,
+        buildingType: aiResult.leaseDetails?.buildingType || parsedData.buildingType || null,
+        serviceChargePercentage: aiResult.leaseDetails?.serviceChargePercentage || null
       },
-      complianceChecklist: analysis.complianceChecklist?.map((item: any) => ({
-        item: item.name || item.item,
+      complianceChecklist: aiResult.complianceChecklist?.map((item: any) => ({
+        item: item.item || item.name,
         status: item.status,
         details: item.details
       })) || [],
-      financialObligations: analysis.financialObligations || [],
-      keyRights: analysis.keyRights || [],
-      restrictions: analysis.restrictions || [],
-      suggestedActions: analysis.suggestedActions?.map((action: any, index: number) => ({
-        key: `lease_action_${index}`,
-        label: action.title || action.label || action,
+      financialObligations: aiResult.financialObligations || [],
+      keyRights: aiResult.keyRights || [],
+      restrictions: aiResult.restrictions || [],
+      suggestedActions: aiResult.suggestedActions?.map((action: any, index: number) => ({
+        key: `action_${index}`,
+        label: typeof action === 'string' ? action : action.label || action.title,
         icon: 'FileText',
-        action: action.action || 'review'
+        action: 'review'
       })) || [],
-      extractionMethod: 'ai_lease_analysis',
-      confidence: 0.9,
+      extractionMethod: 'ai_enhanced',
+      confidence: hasExtractionFailure ? 0.3 : 0.8,
       buildingContext: {
         buildingId: buildingId || null,
-        buildingStatus,
-        extractedAddress: analysis.structuredData?.propertyAddress || null,
-        extractedBuildingType: analysis.structuredData?.buildingType || null
+        buildingStatus: buildingId ? 'matched' : 'not_found',
+        extractedAddress: aiResult.leaseDetails?.propertyAddress || parsedData.propertyAddress || null,
+        extractedBuildingType: aiResult.leaseDetails?.buildingType || parsedData.buildingType || null
       }
     };
-
-    console.log('🔍 Final result structure:', {
-      leaseDetails: result.leaseDetails,
-      complianceChecklist: result.complianceChecklist,
-      financialObligations: result.financialObligations,
-      keyRights: result.keyRights,
-      restrictions: result.restrictions
-    });
 
     return result;
 
   } catch (error) {
-    console.error('❌ Lease analysis error:', error);
+    console.error('Lease analysis failed:', error);
     
-    // Fallback to basic analysis
+    // Return fallback result
     return {
       filename,
-      summary: `Lease document analysis failed. Document contains ${extractedText.length} characters of text.`,
+      summary: 'Lease analysis failed due to processing error',
       documentType: 'lease',
       leaseDetails: {},
       complianceChecklist: LEASE_COMPLIANCE_CHECKLIST.map(item => ({
         item,
-        status: 'Unknown' as const
+        status: 'Unknown' as const,
+        details: 'Analysis failed'
       })),
+      financialObligations: [],
+      keyRights: [],
+      restrictions: [],
       suggestedActions: [{
         key: 'manual_review',
-        label: 'Manual lease review required',
+        label: 'Manual review required - automated analysis failed',
         icon: 'AlertTriangle',
         action: 'review'
       }],
-      extractionMethod: 'fallback',
+      extractionMethod: 'failed',
       confidence: 0.1,
       buildingContext: {
         buildingId: buildingId || null,
@@ -647,4 +443,30 @@ CRITICAL: Extract EVERY detail you can find. If the lease mentions "260 [Street 
       }
     };
   }
+}
+
+// Legacy compatibility function
+export async function analyzeLease(
+  extractedText: string,
+  options: any = {}
+): Promise<any> {
+  const newAnalysis = await analyzeLeaseDocument(extractedText, 'legacy_lease', undefined);
+  
+  // Transform to legacy format
+  return {
+    propertyDetails: {
+      address: newAnalysis.leaseDetails?.propertyAddress || '',
+      propertyType: newAnalysis.leaseDetails?.buildingType || '',
+      leaseTerm: newAnalysis.leaseDetails?.leaseTerm || '',
+      startDate: newAnalysis.leaseDetails?.leaseStartDate || '',
+      endDate: newAnalysis.leaseDetails?.leaseEndDate || '',
+      premium: newAnalysis.leaseDetails?.premium || ''
+    },
+    metadata: {
+      confidence: newAnalysis.confidence || 0.5,
+      extractedDate: new Date().toISOString(),
+      documentType: 'lease',
+      analysisVersion: '3.0.0'
+    }
+  };
 }
