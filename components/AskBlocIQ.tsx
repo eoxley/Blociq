@@ -707,10 +707,25 @@ export default function AskBlocIQ({
     }
   };
 
-  const handleSuggestedAction = (action: any) => {
+  const handleSuggestedAction = (action: SuggestedAction) => {
     console.log('Suggested action clicked:', action);
-    // You can implement specific logic for each action type here
-    toast.info(`Action: ${action.label}`);
+    
+    // Handle different action types
+    switch (action.action) {
+      case 'review':
+        toast.info(`Review action: ${action.label}`);
+        break;
+      case 'schedule':
+        toast.info(`Schedule action: ${action.label}`);
+        break;
+      case 'contact':
+        toast.info(`Contact action: ${action.label}`);
+        break;
+      default:
+        toast.info(`Action: ${action.label}`);
+    }
+    
+    // You can extend this to create tasks, calendar events, etc.
   };
 
   const suggestedPrompts = getSuggestedPrompts(buildingName, !!isMajorWorksContext, projectId || undefined);
@@ -854,23 +869,23 @@ export default function AskBlocIQ({
                             <div className="bg-white p-3 rounded border">
                               <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Property Details</h5>
                               <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
-                                {doc.leaseDetails.propertyAddress && (
-                                  <div><span className="font-medium">Address:</span> {doc.leaseDetails.propertyAddress}</div>
+                                {(doc.leaseDetails as any).propertyAddress && (
+                                  <div><span className="font-medium">Address:</span> {(doc.leaseDetails as any).propertyAddress}</div>
                                 )}
-                                {doc.leaseDetails.leaseTerm && (
-                                  <div><span className="font-medium">Term:</span> {doc.leaseDetails.leaseTerm}</div>
+                                {(doc.leaseDetails as any).leaseTerm && (
+                                  <div><span className="font-medium">Term:</span> {(doc.leaseDetails as any).leaseTerm}</div>
                                 )}
-                                {doc.leaseDetails.premium && (
-                                  <div><span className="font-medium">Premium:</span> {doc.leaseDetails.premium}</div>
+                                {(doc.leaseDetails as any).premium && (
+                                  <div><span className="font-medium">Premium:</span> {(doc.leaseDetails as any).premium}</div>
                                 )}
-                                {doc.leaseDetails.initialRent && (
-                                  <div><span className="font-medium">Rent:</span> {doc.leaseDetails.initialRent}</div>
+                                {(doc.leaseDetails as any).initialRent && (
+                                  <div><span className="font-medium">Rent:</span> {(doc.leaseDetails as any).initialRent}</div>
                                 )}
-                                {doc.leaseDetails.landlord && (
-                                  <div><span className="font-medium">Landlord:</span> {doc.leaseDetails.landlord}</div>
+                                {(doc.leaseDetails as any).landlord && (
+                                  <div><span className="font-medium">Landlord:</span> {(doc.leaseDetails as any).landlord}</div>
                                 )}
-                                {doc.leaseDetails.tenant && (
-                                  <div><span className="font-medium">Tenant:</span> {doc.leaseDetails.tenant}</div>
+                                {(doc.leaseDetails as any).tenant && (
+                                  <div><span className="font-medium">Tenant:</span> {(doc.leaseDetails as any).tenant}</div>
                                 )}
                               </div>
                             </div>
