@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server'
 
 // If you use these, keep; otherwise swap to your own utils:
-let extractText: (buf: Uint8Array, name?: string) => Promise<string>
+let extractText: (buf: Uint8Array, name?: string) => Promise<{ text: string; meta: { name: string; type: string; bytes: number } }>
 let summarizeAndSuggest: (text: string, name?: string) => Promise<{ summary: string; suggestedActions?: any[] }>
+
+// Enhanced document analysis functions
+let analyzeLeaseDocument: ((text: string, filename: string, buildingId?: string) => Promise<any>) | null
+let classifyDocument: ((text: string, filename: string) => any) | null
 
 async function lazyDeps() {
   if (!extractText) {
@@ -17,19 +21,19 @@ async function lazyDeps() {
       try {
         console.log('🔄 Trying PDF extraction fallback...')
         const { extractTextFromPDF } = await import('@/lib/extractTextFromPdf')
-        extractText = async (file: File) => {
+        extractText = async (buf: Uint8Array, name?: string) => {
           try {
-            const buffer = Buffer.from(await file.arrayBuffer())
-            const result = await extractTextFromPDF(buffer, file.name)
+            const buffer = Buffer.from(buf)
+            const result = await extractTextFromPDF(buffer, name || 'document')
             return {
               text: result.text,
-              meta: { name: file.name, type: file.type, bytes: file.size }
+              meta: { name: name || 'document', type: 'application/pdf', bytes: buf.length }
             }
           } catch (pdfError) {
             console.warn('PDF extraction failed:', pdfError)
             return {
-              text: `[[PDF Extraction Failed]] ${file.name} (${file.size} bytes) - Unable to extract text`,
-              meta: { name: file.name, type: file.type, bytes: file.size }
+              text: `[[PDF Extraction Failed]] ${name || 'document'} (${buf.length} bytes) - Unable to extract text`,
+              meta: { name: name || 'document', type: 'application/pdf', bytes: buf.length }
             }
           }
         }
@@ -38,27 +42,29 @@ async function lazyDeps() {
         try {
           console.log('🔄 Trying OCR fallback...')
           const { processDocumentOCR } = await import('@/lib/ocr')
-          extractText = async (file: File) => {
+          extractText = async (buf: Uint8Array, name?: string) => {
             try {
+              // Create a File object from the buffer for OCR
+              const file = new File([buf], name || 'document', { type: 'application/pdf' })
               const ocrResult = await processDocumentOCR(file)
               return {
-                text: ocrResult.text || `[[OCR Fallback]] ${file.name} (${file.size} bytes) - OCR processed`,
-                meta: { name: file.name, type: file.type, bytes: file.size }
+                text: ocrResult.text || `[[OCR Fallback]] ${name || 'document'} (${buf.length} bytes) - OCR processed`,
+                meta: { name: name || 'document', type: 'application/pdf', bytes: buf.length }
               }
             } catch (ocrError) {
               console.warn('OCR fallback failed:', ocrError)
               return {
-                text: `[[OCR Fallback Failed]] ${file.name} (${file.size} bytes) - Unable to extract text`,
-                meta: { name: file.name, type: file.type, bytes: file.size }
+                text: `[[OCR Fallback Failed]] ${name || 'document'} (${buf.length} bytes) - Unable to extract text`,
+                meta: { name: name || 'document', type: 'application/pdf', bytes: buf.length }
               }
             }
           }
         } catch {
           // Ultimate fallback
           console.log('⚠️ Using ultimate fallback extractor')
-          extractText = async (file: File) => ({
-            text: `[[Fallback extractor]] ${file.name} (${file.size} bytes). Unable to extract text - document may be image-based or corrupted.`,
-            meta: { name: file.name, type: file.type, bytes: file.size }
+          extractText = async (buf: Uint8Array, name?: string) => ({
+            text: `[[Fallback extractor]] ${name || 'document'} (${buf.length} bytes). Unable to extract text - document may be image-based or corrupted.`,
+            meta: { name: name || 'document', type: 'application/pdf', bytes: buf.length }
           })
         }
       }
@@ -72,12 +78,10 @@ async function lazyDeps() {
     } catch {
       // Enhanced fallback with document analysis
       try {
-        const { generateSummary } = await import('@/lib/documentProcessor')
         summarizeAndSuggest = async (text: string, name?: string) => {
           try {
-            const summary = await generateSummary(text, name || 'document')
             return {
-              summary: summary || `Summary of ${name || 'document'}: ${text.slice(0, 300)}${text.length > 300 ? '…' : ''}`,
+              summary: `Summary of ${name || 'document'}: ${text.slice(0, 300)}${text.length > 300 ? '…' : ''}`,
               suggestions: [
                 'Confirm the document type and relevance.',
                 'Assign to a property or general filing.',
@@ -111,6 +115,109 @@ async function lazyDeps() {
       }
     }
   }
+
+  // Load enhanced document analysis functions
+  if (!analyzeLeaseDocument) {
+    try {
+      const mod = await import('@/lib/lease-analyzer')
+      analyzeLeaseDocument = mod.analyzeLeaseDocument
+      console.log('✅ Loaded enhanced lease analyzer')
+    } catch (error) {
+      console.warn('Failed to load lease analyzer:', error)
+      analyzeLeaseDocument = null
+    }
+  }
+
+  if (!classifyDocument) {
+    try {
+      const mod = await import('@/lib/document-classifier')
+      classifyDocument = mod.classifyDocument
+      console.log('✅ Loaded document classifier')
+    } catch (error) {
+      console.warn('Failed to load document classifier:', error)
+      classifyDocument = null
+    }
+  }
+}
+
+// Helper function to detect if document is a lease
+function isLeaseDocument(filename: string, text: string): boolean {
+  const filenameLower = filename.toLowerCase()
+  const textLower = text.toLowerCase()
+  
+  // Check filename for lease indicators
+  const leaseKeywords = ['lease', 'tenancy', 'rental', 'agreement', 'contract']
+  const hasLeaseFilename = leaseKeywords.some(keyword => filenameLower.includes(keyword))
+  
+  // Check content for lease indicators
+  const leaseContentKeywords = [
+    'lease', 'tenant', 'landlord', 'rent', 'premium', 'service charge',
+    'term of years', 'ground rent', 'leasehold', 'freehold', 'assignment',
+    'subletting', 'break clause', 'forfeiture', 'covenant'
+  ]
+  const hasLeaseContent = leaseContentKeywords.some(keyword => textLower.includes(keyword))
+  
+  return hasLeaseFilename || hasLeaseContent
+}
+
+// Helper function to convert lease analysis to suggested actions
+function convertLeaseAnalysisToActions(analysis: any): any[] {
+  const actions = []
+  
+  // Add building-related actions
+  if (analysis.buildingContext?.buildingStatus === 'not_found') {
+    actions.push({
+      key: 'add_building',
+      label: 'Add New Building to Portfolio',
+      icon: 'Plus',
+      action: 'add_building'
+    })
+  }
+  
+  // Add lease-specific actions
+  if (analysis.leaseDetails?.propertyAddress) {
+    actions.push({
+      key: 'review_lease',
+      label: 'Review Lease Terms',
+      icon: 'FileText',
+      action: 'review'
+    })
+  }
+  
+  if (analysis.complianceChecklist?.length > 0) {
+    actions.push({
+      key: 'compliance_review',
+      label: 'Review Compliance Checklist',
+      icon: 'CheckSquare',
+      action: 'review'
+    })
+  }
+  
+  if (analysis.financialObligations?.length > 0) {
+    actions.push({
+      key: 'financial_review',
+      label: 'Review Financial Obligations',
+      icon: 'DollarSign',
+      action: 'review'
+    })
+  }
+  
+  // Add general lease actions
+  actions.push({
+    key: 'create_reminders',
+    label: 'Create Lease Reminders',
+    icon: 'Bell',
+    action: 'schedule'
+  })
+  
+  actions.push({
+    key: 'legal_review',
+    label: 'Legal Review Required',
+    icon: 'Scale',
+    action: 'review'
+  })
+  
+  return actions
 }
 
 // Required for Node-only PDF libs
@@ -153,7 +260,6 @@ export async function POST(req: Request) {
 
       const ab = await file.arrayBuffer()
       const text = await extractText(new Uint8Array(ab), file.name)
-      const out = await summarizeAndSuggest(text.text, file.name)
       
       // Determine extraction method for user feedback
       let extractionMethod = 'standard';
@@ -169,18 +275,72 @@ export async function POST(req: Request) {
         extractionMethod = 'fallback';
         extractionNote = 'Document processed using fallback methods';
       }
-      
-      return NextResponse.json({
-        success: true,
-        filename: file.name,
-        buildingId,
-        summary: out.summary,
-        suggestedActions: out.suggestions ?? [],
-        extractionMethod,
-        extractionNote,
-        textLength: text.text.length,
-        confidence: extractionMethod === 'standard' ? 'high' : 'medium'
-      })
+
+      // Check if this is a lease document and use enhanced analysis
+      if (isLeaseDocument(file.name, text.text) && analyzeLeaseDocument) {
+        console.log('🔍 Detected lease document, using enhanced analyzer')
+        try {
+          const leaseAnalysis = await analyzeLeaseDocument(text.text, file.name, buildingId || undefined)
+          
+          // Convert lease analysis to suggested actions
+          const suggestedActions = convertLeaseAnalysisToActions(leaseAnalysis)
+          
+          return NextResponse.json({
+            success: true,
+            filename: file.name,
+            buildingId,
+            summary: leaseAnalysis.summary,
+            suggestedActions: suggestedActions,
+            extractionMethod,
+            extractionNote,
+            textLength: text.text.length,
+            confidence: leaseAnalysis.confidence || 0.8,
+            // Enhanced lease analysis data
+            documentType: 'lease',
+            leaseDetails: leaseAnalysis.leaseDetails || {},
+            complianceChecklist: leaseAnalysis.complianceChecklist || [],
+            financialObligations: leaseAnalysis.financialObligations || [],
+            keyRights: leaseAnalysis.keyRights || [],
+            restrictions: leaseAnalysis.restrictions || [],
+            buildingContext: leaseAnalysis.buildingContext || {
+              buildingId: buildingId,
+              buildingStatus: buildingId ? 'matched' : 'not_found',
+              extractedAddress: leaseAnalysis.leaseDetails?.propertyAddress || null,
+              extractedBuildingType: leaseAnalysis.leaseDetails?.buildingType || null
+            }
+          })
+        } catch (leaseError) {
+          console.warn('Enhanced lease analysis failed, falling back to basic analysis:', leaseError)
+          // Fall back to basic analysis if enhanced analysis fails
+          const out = await summarizeAndSuggest(text.text, file.name)
+          return NextResponse.json({
+            success: true,
+            filename: file.name,
+            buildingId,
+            summary: out.summary,
+            suggestedActions: out.suggestedActions ?? [],
+            extractionMethod,
+            extractionNote,
+            textLength: text.text.length,
+            confidence: extractionMethod === 'standard' ? 'high' : 'medium',
+            warning: 'Enhanced lease analysis failed, using basic analysis'
+          })
+        }
+      } else {
+        // Use standard analysis for non-lease documents
+        const out = await summarizeAndSuggest(text.text, file.name)
+        return NextResponse.json({
+          success: true,
+          filename: file.name,
+          buildingId,
+          summary: out.summary,
+          suggestedActions: out.suggestedActions ?? [],
+          extractionMethod,
+          extractionNote,
+          textLength: text.text.length,
+          confidence: extractionMethod === 'standard' ? 'high' : 'medium'
+        })
+      }
     }
 
     // 2) JSON: { path, buildingId? } → fetch from Supabase (already uploaded)
@@ -198,14 +358,56 @@ export async function POST(req: Request) {
 
       const ab = await data.arrayBuffer()
       const text = await extractText(new Uint8Array(ab), path)
-      const out = await summarizeAndSuggest(text, path)
-      return NextResponse.json({
-        success: true,
-        filename: path.split('/').pop(),
-        buildingId,
-        summary: out.summary,
-        suggestedActions: out.suggestedActions ?? [],
-      })
+      
+      // Check if this is a lease document and use enhanced analysis
+      if (isLeaseDocument(path, text.text) && analyzeLeaseDocument) {
+        console.log('🔍 Detected lease document from storage, using enhanced analyzer')
+        try {
+          const leaseAnalysis = await analyzeLeaseDocument(text.text, path.split('/').pop() || path, buildingId || undefined)
+          const suggestedActions = convertLeaseAnalysisToActions(leaseAnalysis)
+          
+          return NextResponse.json({
+            success: true,
+            filename: path.split('/').pop(),
+            buildingId,
+            summary: leaseAnalysis.summary,
+            suggestedActions: suggestedActions,
+            documentType: 'lease',
+            leaseDetails: leaseAnalysis.leaseDetails || {},
+            complianceChecklist: leaseAnalysis.complianceChecklist || [],
+            financialObligations: leaseAnalysis.financialObligations || [],
+            keyRights: leaseAnalysis.keyRights || [],
+            restrictions: leaseAnalysis.restrictions || [],
+            buildingContext: leaseAnalysis.buildingContext || {
+              buildingId: buildingId,
+              buildingStatus: buildingId ? 'matched' : 'not_found',
+              extractedAddress: leaseAnalysis.leaseDetails?.propertyAddress || null,
+              extractedBuildingType: leaseAnalysis.leaseDetails?.buildingType || null
+            }
+          })
+        } catch (leaseError) {
+          console.warn('Enhanced lease analysis failed, falling back to basic analysis:', leaseError)
+          const out = await summarizeAndSuggest(text.text, path)
+          return NextResponse.json({
+            success: true,
+            filename: path.split('/').pop(),
+            buildingId,
+            summary: out.summary,
+            suggestedActions: out.suggestedActions ?? [],
+            warning: 'Enhanced lease analysis failed, using basic analysis'
+          })
+        }
+      } else {
+        // Use standard analysis for non-lease documents
+        const out = await summarizeAndSuggest(text.text, path)
+        return NextResponse.json({
+          success: true,
+          filename: path.split('/').pop(),
+          buildingId,
+          summary: out.summary,
+          suggestedActions: out.suggestedActions ?? [],
+        })
+      }
     }
 
     return NextResponse.json({ success: false, error: `Unsupported content-type: ${ct}` }, { status: 415 })
