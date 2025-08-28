@@ -184,6 +184,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { question, files, prompt } = body;
 
+    // Handle both 'question' and 'prompt' parameters for backward compatibility
+    const query = question || prompt;
+
     // Handle file uploads with OCR and analysis
     if (files && Array.isArray(files) && files.length > 0) {
       console.log('📄 Processing uploaded files:', files.length);
@@ -326,8 +329,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Handle leaseholder queries (existing functionality)
-    if (question && typeof question === 'string') {
-      const { unit, building } = parseQuery(question);
+    if (query && typeof query === 'string') {
+      console.log('🔍 Processing leaseholder query:', query);
+      const { unit, building } = parseQuery(query);
 
       // 1) Try to answer directly from DB
       const ctx = await lookupLeaseholder(building, unit);
@@ -337,7 +341,7 @@ export async function POST(req: NextRequest) {
         // best-effort log (ignore failures)
         try {
           await supabase.from('ai_logs').insert({
-            question, response: answer, context: JSON.stringify({ building, unit, source: 'vw_units_leaseholders' })
+            question: query, response: answer, context: JSON.stringify({ building, unit, source: 'vw_units_leaseholders' })
           });
         } catch (logError) {
           // Ignore logging errors
@@ -352,7 +356,7 @@ export async function POST(req: NextRequest) {
 
       try {
         await supabase.from('ai_logs').insert({
-          question, response: fallback, context: JSON.stringify({ building, unit, found: false })
+          question: query, response: fallback, context: JSON.stringify({ building, unit, found: false })
         });
       } catch (logError) {
         // Ignore logging errors
@@ -360,7 +364,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ answer: fallback, source: 'fallback' });
     }
 
-    return NextResponse.json({ error: 'Missing question or files' }, { status: 400 });
+    return NextResponse.json({ error: 'Missing question/prompt or files' }, { status: 400 });
 
   } catch (e: any) {
     console.error('Ask AI failed:', e);
