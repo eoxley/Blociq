@@ -357,13 +357,14 @@ export async function POST(req: Request) {
         extractionNote = 'Document processed using fallback methods';
       }
 
-      // Check if this is a lease document and use enhanced analysis
+      // Enhanced document analysis for lease documents
       if (isLeaseDocument(file.name, text.text) && analyzeLeaseDocument) {
-        console.log('🔍 Detected lease document, using enhanced analyzer')
+        console.log('🔍 ===== LEASE DOCUMENT DETECTED =====')
         console.log('🔍 File name:', file.name)
         console.log('🔍 Building ID:', buildingId)
         console.log('🔍 Text length:', text.text.length)
-        
+        console.log('🔍 analyzeLeaseDocument function available:', !!analyzeLeaseDocument)
+
         // CRITICAL DEBUGGING: Log the actual OCR content
         console.log('=== ACTUAL PDF CONTENT ===');
         console.log('OCR extracted text length:', text.text?.length);
@@ -375,14 +376,17 @@ export async function POST(req: Request) {
         console.log('Does text contain "tenant"?', text.text?.toLowerCase().includes('tenant'));
         console.log('Does text contain "property"?', text.text?.toLowerCase().includes('property'));
         console.log('Does text contain "address"?', text.text?.toLowerCase().includes('address'));
+        console.log('Does text contain "premium"?', text.text?.toLowerCase().includes('premium'));
+        console.log('Does text contain "service charge"?', text.text?.toLowerCase().includes('service charge'));
+        console.log('Does text contain "deposit"?', text.text?.toLowerCase().includes('deposit'));
         console.log('=== END PDF CONTENT ===');
-        
+
         try {
           console.log('🔍 Calling analyzeLeaseDocument with:');
           console.log('  - text.text:', text.text.substring(0, 200) + '...');
           console.log('  - file.name:', file.name);
           console.log('  - buildingId:', buildingId);
-          
+
           const leaseAnalysis = await analyzeLeaseDocument(text.text, file.name, buildingId || undefined)
           
           console.log('🔍 Lease analysis completed:', {
@@ -421,8 +425,14 @@ export async function POST(req: Request) {
               extractedBuildingType: leaseAnalysis.leaseDetails?.buildingType || null
             }
           })
-        } catch (leaseError) {
-          console.warn('Enhanced lease analysis failed, falling back to basic analysis:', leaseError)
+        } catch (leaseError: any) {
+          console.error('❌ Enhanced lease analysis failed:', leaseError)
+          console.error('❌ Error details:', {
+            message: leaseError.message,
+            stack: leaseError.stack,
+            name: leaseError.name
+          })
+          
           // Fall back to basic analysis if enhanced analysis fails
           const out = await summarizeAndSuggest(text.text, file.name)
           console.log('🔍 Fallback analysis result:', out)
@@ -439,11 +449,17 @@ export async function POST(req: Request) {
             extractionNote,
             textLength: text.text.length,
             confidence: extractionMethod === 'standard' ? 'high' : 'medium',
-            warning: 'Enhanced lease analysis failed, using basic analysis'
+            warning: 'Enhanced lease analysis failed, using basic analysis',
+            error: leaseError.message
           })
         }
       } else {
-        console.log('🔍 Not a lease document or analyzer not available, using standard analysis')
+        console.log('🔍 ===== NOT A LEASE DOCUMENT =====')
+        console.log('🔍 File name:', file.name)
+        console.log('🔍 isLeaseDocument result:', isLeaseDocument(file.name, text.text))
+        console.log('🔍 analyzeLeaseDocument available:', !!analyzeLeaseDocument)
+        console.log('🔍 Using standard analysis instead')
+        
         // Use standard analysis for non-lease documents
         const out = await summarizeAndSuggest(text.text, file.name)
         console.log('🔍 Standard analysis result:', out)
@@ -509,7 +525,7 @@ export async function POST(req: Request) {
               extractedBuildingType: leaseAnalysis.leaseDetails?.buildingType || null
             }
           })
-        } catch (leaseError) {
+        } catch (leaseError: any) {
           console.warn('Enhanced lease analysis failed, falling back to basic analysis:', leaseError)
           const out = await summarizeAndSuggest(text.text, path)
           
