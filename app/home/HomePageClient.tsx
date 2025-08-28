@@ -644,9 +644,42 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
       // For text-only requests, use the main AI endpoint
       console.log('🔍 No files uploaded, using text-only path')
+      
+      // Get building context for enhanced AI responses
+      let buildingContext = null;
+      try {
+        // Check if user has any buildings in their portfolio
+        const { data: buildings } = await supabase
+          .from('buildings')
+          .select('id, name')
+          .limit(1);
+        
+        if (buildings && buildings.length > 0) {
+          // Get building context for the first building (or specific building if needed)
+          const buildingId = buildings[0].id;
+          console.log('🔍 Fetching building context for:', buildingId);
+          
+          const contextResponse = await fetch('/api/ask-ai/building-context', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ buildingId })
+          });
+          
+          if (contextResponse.ok) {
+            buildingContext = await contextResponse.json();
+            console.log('✅ Building context loaded:', buildingContext);
+          } else {
+            console.log('⚠️ Building context failed, continuing without context');
+          }
+        }
+      } catch (contextError) {
+        console.log('⚠️ Building context error, continuing without context:', contextError);
+      }
+      
       const requestBody = JSON.stringify({ 
         prompt: prompt,
-        contextType: 'general'
+        contextType: 'general',
+        buildingContext: buildingContext
       })
 
       // Call the main AI API
@@ -673,14 +706,33 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         throw new Error(data.error)
       }
 
-      // The API returns 'result' not 'response'
-      const aiResponse = data.result || data.response || 'No response received'
+      // Handle different response formats
+      let aiResponse = '';
+      if (data.answer) {
+        // New format with building context
+        aiResponse = data.answer;
+        console.log('✅ Using new AI response format with building context');
+      } else if (data.result) {
+        // Legacy format
+        aiResponse = data.result;
+        console.log('✅ Using legacy response format');
+      } else if (data.response) {
+        // Alternative format
+        aiResponse = data.response;
+        console.log('✅ Using alternative response format');
+      } else {
+        aiResponse = 'No response received';
+        console.log('⚠️ No response format detected');
+      }
       
       // Add AI response to chat
       const aiMessage = { sender: 'ai' as const, text: aiResponse, timestamp: new Date() }
       setMessages(prev => [...prev, aiMessage])
 
-      // Context and actions removed - AI responses are now clean and direct
+      // Show building context info if available
+      if (data.buildingContext === 'available') {
+        console.log('🏢 Building context was used for this response');
+      }
       
       // Show chat interface
       setShowChat(true)
