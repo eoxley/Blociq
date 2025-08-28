@@ -19,6 +19,12 @@ export interface DocumentAnalysis {
   complianceStatus?: string;
   keyDates?: Array<{ description: string; date: string }>;
   actionItems?: Array<{ description: string; priority?: 'high' | 'medium' | 'low' }>;
+  buildingContext?: {
+    buildingId: string | null;
+    buildingStatus: 'matched' | 'not_found' | 'unknown';
+    extractedAddress: string | null;
+    extractedBuildingType: string | null;
+  };
 }
 
 // Enhanced lease analysis interface
@@ -33,6 +39,7 @@ export interface LeaseAnalysis extends DocumentAnalysis {
     premium?: string;
     initialRent?: string;
     serviceChargePercentage?: string;
+    buildingType?: string;
   };
   complianceChecklist?: LeaseComplianceItem[];
   financialObligations?: string[];

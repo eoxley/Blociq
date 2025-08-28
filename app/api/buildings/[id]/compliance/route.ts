@@ -23,8 +23,25 @@ export async function GET(
       .eq('id', buildingId)
       .single();
 
+    // Handle case where building doesn't exist - return empty data instead of error
     if (buildingError || !building) {
-      return NextResponse.json({ success: false, error: 'Building not found' }, { status: 404 });
+      console.log(`Building ${buildingId} not found, returning empty compliance data`);
+      return NextResponse.json({
+        success: true,
+        data: {
+          assets: [],
+          config: null,
+          templates: [],
+          summary: {
+            totalAssets: 0,
+            compliantAssets: 0,
+            overdueAssets: 0,
+            dueSoonAssets: 0,
+            pendingAssets: 0,
+          }
+        },
+        buildingStatus: 'not_found'
+      });
     }
 
     // Check if user owns the building or is a member
@@ -63,11 +80,24 @@ export async function GET(
 
     if (assetsError) {
       console.error('Error fetching compliance assets:', assetsError);
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Failed to fetch compliance assets',
-        details: assetsError.message 
-      }, { status: 500 });
+      // Return empty assets instead of error
+      return NextResponse.json({
+        success: true,
+        data: {
+          assets: [],
+          config: null,
+          templates: [],
+          summary: {
+            totalAssets: 0,
+            compliantAssets: 0,
+            overdueAssets: 0,
+            dueSoonAssets: 0,
+            pendingAssets: 0,
+          }
+        },
+        buildingStatus: 'matched',
+        warning: 'Failed to fetch compliance assets, returning empty data'
+      });
     }
 
     // Get building compliance configuration
@@ -108,7 +138,8 @@ export async function GET(
         templates: templates || [],
         summary,
         lastUpdated: new Date().toISOString()
-      }
+      },
+      buildingStatus: 'matched'
     });
 
   } catch (error) {
@@ -142,7 +173,11 @@ export async function POST(
       .single();
 
     if (buildingError || !building) {
-      return NextResponse.json({ success: false, error: 'Building not found' }, { status: 404 });
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Building not found',
+        buildingStatus: 'not_found'
+      }, { status: 404 });
     }
 
     // Check if user owns the building or is a member
