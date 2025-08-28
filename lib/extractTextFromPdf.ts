@@ -1,4 +1,4 @@
-import pdfParse from 'pdf-parse';
+// import pdfParse from 'pdf-parse'; // Using dynamic import to avoid test file issues
 import mammoth from 'mammoth';
 // @ts-ignore - jsdom types not available
 import { JSDOM } from 'jsdom';
@@ -362,6 +362,34 @@ class TextExtractionService {
   }
 }
 
+// Enhanced PDF extraction function for fallback usage
+export async function extractTextFromPDF(buffer: Buffer, fileName: string): Promise<{ text: string }> {
+  try {
+    // Use safe PDF parser wrapper to prevent debug mode issues
+    const { safePdfParse } = await import('./pdf-parse-wrapper');
+    
+    const result = await safePdfParse(buffer, {
+      normalizeWhitespace: false,
+      disableFontFace: true,
+      disableEmbeddedFonts: true,
+      max: 0
+    });
+    
+    const text = result.text || '';
+    
+    if (text.trim().length < 10) {
+      throw new Error('Extracted text too short, may indicate parsing issues');
+    }
+    
+    return { text };
+    
+  } catch (error) {
+    console.warn(`Enhanced PDF extraction failed for ${fileName}:`, error);
+    // Error messages are already cleaned by the wrapper
+    throw new Error(`Enhanced PDF extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
 // Main export function
 export async function extractText(buf: Uint8Array, name?: string): Promise<ExtractionResult> {
   const buffer = Buffer.from(buf);
@@ -391,7 +419,18 @@ export async function extractText(buf: Uint8Array, name?: string): Promise<Extra
 
   } catch (error: any) {
     console.error(`Text extraction failed for ${fileName}:`, error);
-    throw new Error(`Unable to extract text from ${fileName}: ${error.message}`);
+    
+    // Last resort: provide minimal fallback response instead of complete failure
+    const fallbackText = `[Text extraction failed for ${fileName}. Error: ${error.message}. File size: ${buffer.byteLength} bytes. This document requires manual processing.]`;
+    
+    return {
+      text: fallbackText,
+      meta: {
+        name: fileName,
+        type: guessType(fileName),
+        bytes: buffer.byteLength
+      }
+    };
   }
 }
 

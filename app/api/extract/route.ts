@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import pdf from 'pdf-parse';
+// import pdf from 'pdf-parse'; // Using dynamic import to avoid test file issues
 import { extractLeaseClausesEnhanced, isLeaseDocument } from '@/utils/leaseExtractor';
 import OpenAI from 'openai';
 
@@ -46,7 +46,16 @@ export async function POST(request: NextRequest) {
 
     // Method 1: Try pdf-parse (fastest, works for text-based PDFs)
     try {
-      const pdfData = await pdf(buffer);
+      // Use safe PDF parser wrapper to prevent debug mode issues
+      const { safePdfParse } = await import('@/lib/pdf-parse-wrapper');
+      
+      const pdfData = await safePdfParse(buffer, {
+        normalizeWhitespace: false,
+        disableFontFace: true,
+        disableEmbeddedFonts: true,
+        max: 0
+      });
+      
       extractedText = pdfData.text;
       console.log(`Extracted ${extractedText.length} characters from PDF using pdf-parse`);
       

@@ -37,6 +37,19 @@ const nextConfig: NextConfig = {
       level: 'error',
     };
     
+    // Prevent pdf-parse from entering debug mode
+    config.plugins.push({
+      apply(compiler) {
+        compiler.hooks.compilation.tap('PreventPdfParseDebug', (compilation) => {
+          compilation.hooks.processAssets.tap('PreventPdfParseDebug', () => {
+            // Ensure DEBUG environment variable is not set for pdf-parse
+            process.env.DEBUG = '';
+            process.env.NODE_ENV = process.env.NODE_ENV || 'production';
+          });
+        });
+      },
+    });
+    
     return config;
   },
   // Add headers to prevent caching issues and enable Outlook add-in
