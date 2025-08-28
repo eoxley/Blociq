@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 
 // If you use these, keep; otherwise swap to your own utils:
 let extractText: (buf: Uint8Array, name?: string) => Promise<{ text: string; meta: { name: string; type: string; bytes: number } }>
-let summarizeAndSuggest: (text: string, name?: string) => Promise<{ summary: string; suggestedActions?: any[] }>
+let summarizeAndSuggest: (text: string, filename: string) => Promise<{ summary: string; suggestedActions?: any[] }>
 
 // Enhanced document analysis functions
 let analyzeLeaseDocument: ((text: string, filename: string, buildingId?: string) => Promise<any>) | null
@@ -11,63 +11,13 @@ let classifyDocument: ((text: string, filename: string) => any) | null
 async function lazyDeps() {
   if (!extractText) {
     console.log('🔄 Loading extractText function...')
-    // Enhanced fallback with OCR capabilities
     try {
       const mod = await import('@/lib/extract-text')
       extractText = mod.extractText
       console.log('✅ Using primary extractText from @/lib/extract-text')
-    } catch {
-      // Try alternative extraction methods
-      try {
-        console.log('🔄 Trying PDF extraction fallback...')
-        const { extractTextFromPDF } = await import('@/lib/extractTextFromPdf')
-        extractText = async (buf: Uint8Array, name?: string) => {
-          try {
-            const buffer = Buffer.from(buf)
-            const result = await extractTextFromPDF(buffer, name || 'document')
-            return {
-              text: result.text,
-              meta: { name: name || 'document', type: 'application/pdf', bytes: buf.length }
-            }
-          } catch (pdfError) {
-            console.warn('PDF extraction failed:', pdfError)
-            return {
-              text: `[[PDF Extraction Failed]] ${name || 'document'} (${buf.length} bytes) - Unable to extract text`,
-              meta: { name: name || 'document', type: 'application/pdf', bytes: buf.length }
-            }
-          }
-        }
-      } catch {
-        // Final fallback with OCR
-        try {
-          console.log('🔄 Trying OCR fallback...')
-          const { processDocumentOCR } = await import('@/lib/ocr')
-          extractText = async (buf: Uint8Array, name?: string) => {
-            try {
-              // Create a File object from the buffer for OCR
-              const file = new File([buf], name || 'document', { type: 'application/pdf' })
-              const ocrResult = await processDocumentOCR(file)
-              return {
-                text: ocrResult.text || `[[OCR Fallback]] ${name || 'document'} (${buf.length} bytes) - OCR processed`,
-                meta: { name: name || 'document', type: 'application/pdf', bytes: buf.length }
-              }
-            } catch (ocrError) {
-              console.warn('OCR fallback failed:', ocrError)
-              return {
-                text: `[[OCR Fallback Failed]] ${name || 'document'} (${buf.length} bytes) - Unable to extract text`,
-                meta: { name: name || 'document', type: 'application/pdf', bytes: buf.length }
-              }
-            }
-          }
-        } catch {
-          // Ultimate fallback
-          console.log('⚠️ Using ultimate fallback extractor')
-          extractText = async (buf: Uint8Array, name?: string) => ({
-            text: `[[Fallback extractor]] ${name || 'document'} (${buf.length} bytes). Unable to extract text - document may be image-based or corrupted.`,
-            meta: { name: name || 'document', type: 'application/pdf', bytes: buf.length }
-          })
-        }
-      }
+    } catch (error) {
+      console.error('❌ Failed to load extractText:', error)
+      throw new Error('Text extraction module failed to load')
     }
   }
   
@@ -75,44 +25,9 @@ async function lazyDeps() {
     try {
       const mod = await import('@/lib/ask/summarize-and-suggest')
       summarizeAndSuggest = mod.summarizeAndSuggest
-    } catch {
-      // Enhanced fallback with document analysis
-      try {
-        summarizeAndSuggest = async (text: string, name?: string) => {
-          try {
-            return {
-              summary: `Summary of ${name || 'document'}: ${text.slice(0, 300)}${text.length > 300 ? '…' : ''}`,
-              suggestions: [
-                'Confirm the document type and relevance.',
-                'Assign to a property or general filing.',
-                'Create any follow-up tasks or reminders.',
-                'Review extracted text for accuracy.',
-                'Consider manual verification if OCR was used.'
-              ],
-            }
-          } catch (summaryError) {
-            console.warn('Summary generation failed:', summaryError)
-            return {
-              summary: `Summary of ${name || 'document'}: ${text.slice(0, 300)}${text.length > 300 ? '…' : ''}`,
-              suggestions: [
-                'Confirm the document type and relevance.',
-                'Assign to a property or general filing.',
-                'Create any follow-up tasks or reminders.',
-              ],
-            }
-          }
-        }
-      } catch {
-        // Super-light fallback; keep the route alive even if AI helper isn't ready
-        summarizeAndSuggest = async (text: string, name?: string) => ({
-          summary: `Summary placeholder for ${name || 'file'}: ${text.slice(0, 300)}${text.length > 300 ? '…' : ''}`,
-          suggestions: [
-            'Confirm the document type and relevance.',
-            'Assign to a property or general filing.',
-            'Create any follow-up tasks or reminders.',
-          ],
-        })
-      }
+    } catch (error) {
+      console.error('❌ Failed to load summarizeAndSuggest:', error)
+      throw new Error('Summarization module failed to load')
     }
   }
 
@@ -140,8 +55,6 @@ async function lazyDeps() {
       classifyDocument = null
     }
   }
-
-
 }
 
 // Helper function to detect if document is a lease
