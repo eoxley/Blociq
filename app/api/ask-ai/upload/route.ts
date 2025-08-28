@@ -527,7 +527,7 @@ export async function POST(req: Request) {
           })
         } catch (leaseError: any) {
           console.warn('Enhanced lease analysis failed, falling back to basic analysis:', leaseError)
-          const out = await summarizeAndSuggest(text.text, path)
+          const out = await summarizeAndSuggest(text.text, path || 'unknown')
           
           // Create a basic formatted response for failed lease analysis
           const basicFormattedText = `📋 **BASIC DOCUMENT ANALYSIS**\n\n**Summary:**\n${out.summary}\n\n**Note:** Enhanced lease analysis failed. This is a basic summary of the document content.`
@@ -542,7 +542,7 @@ export async function POST(req: Request) {
         }
       } else {
         // Use standard analysis for non-lease documents
-        const out = await summarizeAndSuggest(text.text, path)
+        const out = await summarizeAndSuggest(text.text, path || 'unknown')
         
         // Create a basic formatted response for non-lease documents
         const basicFormattedText = `📋 **BASIC DOCUMENT ANALYSIS**\n\n**Summary:**\n${out.summary}\n\n**Note:** This document was processed using standard analysis methods.`
