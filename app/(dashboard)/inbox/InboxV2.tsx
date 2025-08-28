@@ -8,7 +8,6 @@ import MessagePreview from '@/components/inbox_v2/MessagePreview'
 import ReplyModal from '@/components/inbox_v2/ReplyModal'
 import NewEmailModal from '@/components/inbox_v2/NewEmailModal'
 import TriageButton from '@/components/inbox_v2/TriageButton'
-import AskBlocIQButton from '@/components/inbox_v2/AskBlocIQButton'
 import DraftsPanel from '@/components/inbox_v2/DraftsPanel'
 import { useMessages, useFolders } from '@/hooks/inbox_v2'
 import { mutate } from 'swr'
@@ -706,7 +705,7 @@ export default function InboxV2() {
       />
 
       {/* Enhanced Ask BlocIQ AI Assistant with Pulsating Brain Design */}
-      <AskBlocIQButton selectedMessage={selectedMessage} data-askblociq-button />
+      {/* <AskBlocIQButton selectedMessage={selectedMessage} data-askblociq-button /> */}
 
       {/* AI Drafts Panel */}
       <DraftsPanel

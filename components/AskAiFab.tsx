@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Brain } from 'lucide-react'
 
+// REMOVED - Competing AI interface
+/*
 /**
  * A minimal floating action button that links to /ai-assistant.
  * Hides itself on the Ask AI page to avoid duplication.
@@ -45,3 +47,4 @@ export default function AskAiFab({ href = '/ai-assistant' }: { href?: string }) 
     </Link>
   )
 }
+*/
