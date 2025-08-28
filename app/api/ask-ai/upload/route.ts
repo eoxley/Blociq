@@ -119,9 +119,10 @@ async function lazyDeps() {
   // Load enhanced document analysis functions
   if (!analyzeLeaseDocument) {
     try {
+      // Import from the main lease analyzer, not the document-analyzers version
       const mod = await import('@/lib/lease-analyzer')
       analyzeLeaseDocument = mod.analyzeLeaseDocument
-      console.log('✅ Loaded enhanced lease analyzer')
+      console.log('✅ Loaded enhanced lease analyzer from main lib')
     } catch (error) {
       console.warn('Failed to load lease analyzer:', error)
       analyzeLeaseDocument = null
@@ -279,11 +280,25 @@ export async function POST(req: Request) {
       // Check if this is a lease document and use enhanced analysis
       if (isLeaseDocument(file.name, text.text) && analyzeLeaseDocument) {
         console.log('🔍 Detected lease document, using enhanced analyzer')
+        console.log('🔍 File name:', file.name)
+        console.log('🔍 Building ID:', buildingId)
+        console.log('🔍 Text length:', text.text.length)
+        
         try {
           const leaseAnalysis = await analyzeLeaseDocument(text.text, file.name, buildingId || undefined)
           
+          console.log('🔍 Lease analysis completed:', {
+            summary: leaseAnalysis.summary,
+            leaseDetails: leaseAnalysis.leaseDetails,
+            complianceChecklist: leaseAnalysis.complianceChecklist,
+            financialObligations: leaseAnalysis.financialObligations,
+            buildingContext: leaseAnalysis.buildingContext
+          })
+          
           // Convert lease analysis to suggested actions
           const suggestedActions = convertLeaseAnalysisToActions(leaseAnalysis)
+          
+          console.log('🔍 Converted suggested actions:', suggestedActions)
           
           return NextResponse.json({
             success: true,
@@ -313,6 +328,7 @@ export async function POST(req: Request) {
           console.warn('Enhanced lease analysis failed, falling back to basic analysis:', leaseError)
           // Fall back to basic analysis if enhanced analysis fails
           const out = await summarizeAndSuggest(text.text, file.name)
+          console.log('🔍 Fallback analysis result:', out)
           return NextResponse.json({
             success: true,
             filename: file.name,
@@ -327,8 +343,10 @@ export async function POST(req: Request) {
           })
         }
       } else {
+        console.log('🔍 Not a lease document or analyzer not available, using standard analysis')
         // Use standard analysis for non-lease documents
         const out = await summarizeAndSuggest(text.text, file.name)
+        console.log('🔍 Standard analysis result:', out)
         return NextResponse.json({
           success: true,
           filename: file.name,
