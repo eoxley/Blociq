@@ -511,8 +511,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       // Handle file uploads separately from text-only requests
       if (uploadedFiles.length > 0) {
         // Process multiple files sequentially
-        const allSummaries: string[] = []
-        const allSuggestions: string[] = []
+        const allResults: any[] = []
         
         for (const uploadedFile of uploadedFiles) {
           try {
@@ -523,14 +522,13 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             setUploadStatus(`Processing ${uploadedFile.name}...`)
             
             const uploadData = await uploadToAskAI(uploadedFile.file)
+            console.log('🔍 Upload response data:', uploadData)
             
-            if (uploadData.summary) {
-              allSummaries.push(`**${uploadedFile.name}:**\n${uploadData.summary}`)
-            }
-            
-            if (uploadData.suggestedActions) {
-              allSuggestions.push(...uploadData.suggestedActions)
-            }
+            // Store the complete result for proper handling
+            allResults.push({
+              filename: uploadedFile.name,
+              data: uploadData
+            })
             
             console.log(`✅ File processed successfully: ${uploadedFile.name}`)
             setUploadStatus(`✅ ${uploadedFile.name} processed`)
@@ -542,26 +540,91 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           }
         }
 
-        // Combine all summaries and suggestions
-        const combinedSummary = allSummaries.join('\n\n')
-        const uniqueSuggestions = [...new Set(allSuggestions)] // Remove duplicates
-
-        // Add AI response to chat
-        const aiMessage = { 
-          sender: 'ai' as const, 
-          text: combinedSummary || 'All documents processed successfully', 
-          timestamp: new Date() 
-        }
-        setMessages(prev => [...prev, aiMessage])
-
-        // Add suggested actions if available
-        if (uniqueSuggestions.length > 0) {
-          const actionsMessage = { 
-            sender: 'ai' as const, 
-            text: `**Suggested Actions:**\n${uniqueSuggestions.join('\n')}`, 
-            timestamp: new Date() 
+        // Process results and display them properly
+        for (const result of allResults) {
+          const { filename, data } = result
+          
+          if (data.documentType === 'lease') {
+            // Display comprehensive lease analysis
+            const leaseMessage = { 
+              sender: 'ai' as const, 
+              text: data.summary || 'Lease analysis completed', 
+              timestamp: new Date() 
+            }
+            setMessages(prev => [...prev, leaseMessage])
+            
+            // Add additional lease details if available
+            if (data.leaseDetails && Object.keys(data.leaseDetails).length > 0) {
+              const detailsText = `**📋 LEASE DETAILS EXTRACTED:**\n\n` +
+                `• **Property Address:** ${data.leaseDetails.propertyAddress || 'Not specified'}\n` +
+                `• **Landlord:** ${data.leaseDetails.landlord || 'Not specified'}\n` +
+                `• **Tenant:** ${data.leaseDetails.tenant || 'Not specified'}\n` +
+                `• **Start Date:** ${data.leaseDetails.leaseStartDate || 'Not specified'}\n` +
+                `• **End Date:** ${data.leaseDetails.leaseEndDate || 'Not specified'}\n` +
+                `• **Rent:** ${data.leaseDetails.initialRent || 'Not specified'}\n` +
+                `• **Service Charge:** ${data.leaseDetails.serviceCharge || 'Not specified'}\n` +
+                `• **Deposit:** ${data.leaseDetails.deposit || 'Not specified'}`
+              
+              const detailsMessage = { 
+                sender: 'ai' as const, 
+                text: detailsText, 
+                timestamp: new Date() 
+              }
+              setMessages(prev => [...prev, detailsMessage])
+            }
+            
+            // Add compliance checklist if available
+            if (data.complianceChecklist && data.complianceChecklist.length > 0) {
+              const complianceText = `**🔍 COMPLIANCE CHECKLIST:**\n\n` +
+                data.complianceChecklist.map((item: any) => 
+                  `• ${item.item}: ${item.status === 'Y' ? '✅' : item.status === 'N' ? '❌' : '❓'} ${item.details || ''}`
+                ).join('\n')
+              
+              const complianceMessage = { 
+                sender: 'ai' as const, 
+                text: complianceText, 
+                timestamp: new Date() 
+              }
+              setMessages(prev => [...prev, complianceMessage])
+            }
+            
+            // Add financial obligations if available
+            if (data.financialObligations && data.financialObligations.length > 0) {
+              const financialText = `**💰 FINANCIAL OBLIGATIONS:**\n\n` +
+                data.financialObligations.map((obligation: string) => `• ${obligation}`).join('\n')
+              
+              const financialMessage = { 
+                sender: 'ai' as const, 
+                text: financialText, 
+                timestamp: new Date() 
+              }
+              setMessages(prev => [...prev, financialMessage])
+            }
+            
+            // Add building context if available
+            if (data.buildingContext) {
+              const contextText = `**🏢 BUILDING CONTEXT:**\n\n` +
+                `• **Status:** ${data.buildingContext.buildingStatus === 'matched' ? '✅ Building Found in Portfolio' : '⚠️ Building Not Found in Portfolio'}\n` +
+                `• **Extracted Address:** ${data.buildingContext.extractedAddress || 'Not specified'}\n` +
+                `• **Building Type:** ${data.buildingContext.extractedBuildingType || 'Not specified'}`
+              
+              const contextMessage = { 
+                sender: 'ai' as const, 
+                text: contextText, 
+                timestamp: new Date() 
+              }
+              setMessages(prev => [...prev, contextMessage])
+            }
+            
+          } else {
+            // Display standard document analysis
+            const standardMessage = { 
+              sender: 'ai' as const, 
+              text: data.summary || 'Document analysis completed', 
+              timestamp: new Date() 
+            }
+            setMessages(prev => [...prev, standardMessage])
           }
-          setMessages(prev => [...prev, actionsMessage])
         }
 
         // Show chat interface
