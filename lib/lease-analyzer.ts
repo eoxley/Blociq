@@ -204,55 +204,70 @@ export async function analyzeLeaseDocument(
   buildingId?: string
 ): Promise<LeaseAnalysis> {
   
+  console.log('🔍 Starting lease analysis for:', filename);
+  console.log('🔍 Text length:', extractedText.length);
+  console.log('🔍 Building ID:', buildingId);
+  console.log('🔍 Sample text (first 500 chars):', extractedText.substring(0, 500));
+  
   // Enhanced prompt that works with or without building context
   const leasePrompt = `
-You are analyzing a lease document for UK property management. Provide a comprehensive analysis in the following structure:
+You are analyzing a lease document for UK property management. Extract ALL available information and provide a comprehensive analysis.
 
-DOCUMENT ANALYSIS:
+DOCUMENT TEXT TO ANALYZE:
 ${extractedText}
 
-Please extract and analyze:
+IMPORTANT: Extract EVERY piece of information you can find. If information is not available, use "Not specified" or "Unknown".
 
-1. **LEASE SUMMARY** - Provide a detailed narrative summary including:
-   - Property address and description
-   - Landlord and tenant names
-   - Lease term dates and duration
-   - Financial details (premium, rent, service charges)
-   - Key rights and restrictions
-   - Service provisions
+Please provide a JSON response with this EXACT structure:
 
-2. **STRUCTURED DATA** - Extract specific details:
-   - Property address (full address if possible)
-   - Landlord name
-   - Tenant name
-   - Lease start/end dates
-   - Lease term (e.g., "125 years")
-   - Premium amount
-   - Initial rent amount
-   - Service charge percentage
-   - Building type (flat, house, commercial, etc.)
-   - Property description
+{
+  "leaseSummary": "Detailed narrative summary of the lease",
+  "structuredData": {
+    "propertyAddress": "Full property address from lease",
+    "landlord": "Landlord name",
+    "tenant": "Tenant name", 
+    "leaseStartDate": "Start date (e.g., '17th February 2017')",
+    "leaseEndDate": "End date if specified",
+    "leaseTerm": "Lease duration (e.g., '125 years', '10 years')",
+    "premium": "Premium amount if specified",
+    "initialRent": "Initial rent amount",
+    "monthlyRent": "Monthly rent if specified",
+    "annualRent": "Annual rent if specified",
+    "serviceCharge": "Service charge amount or percentage",
+    "deposit": "Deposit amount if specified",
+    "buildingType": "Property type (flat, house, commercial, etc.)",
+    "propertyDescription": "Property description from lease",
+    "floorArea": "Floor area if specified"
+  },
+  "complianceChecklist": [
+    {
+      "item": "Term consent in favour of client",
+      "status": "Y/N/Unknown",
+      "details": "Specific details found in lease"
+    }
+  ],
+  "financialObligations": [
+    "List all financial responsibilities found in lease"
+  ],
+  "keyRights": [
+    "List all tenant rights found in lease"
+  ],
+  "restrictions": [
+    "List all restrictions and prohibitions found in lease"
+  ],
+  "suggestedActions": [
+    "Add new building to portfolio if not found",
+    "Update building records with lease details",
+    "Review compliance requirements"
+  ]
+}
 
-3. **COMPLIANCE CHECKLIST** - For each item below, respond Y/N/Unknown and provide brief details if found:
-   ${LEASE_COMPLIANCE_CHECKLIST.map(item => `- ${item}`).join('\n   ')}
-
-4. **FINANCIAL OBLIGATIONS** - List all financial responsibilities
-
-5. **KEY RIGHTS** - List tenant rights and entitlements
-
-6. **RESTRICTIONS** - List prohibitions and limitations
-
-7. **SUGGESTED ACTIONS** - Provide 3-5 actionable next steps for the property manager, including:
-   - If building is not in system: "Add new building to portfolio"
-   - If building exists: "Update building records with lease details"
-   - General compliance actions based on lease terms
-
-8. **BUILDING IDENTIFICATION** - If you can identify a specific building or address, note it clearly
-
-Format the response as structured JSON.
+CRITICAL: Extract EVERY detail you can find. If the lease mentions "260 [Street Name]", extract that. If it mentions rent amounts, extract them. If it mentions dates, extract them. Be thorough and extract ALL information available.
   `;
 
   try {
+    console.log('🔍 Sending request to OpenAI...');
+    
     // Use OpenAI directly since we're in a server-side context
     const { OpenAI } = await import('openai');
     const openai = new OpenAI({
@@ -271,18 +286,45 @@ Format the response as structured JSON.
       throw new Error('No response from OpenAI');
     }
 
+    console.log('🔍 Raw AI response:', aiResult);
+
     const analysis = JSON.parse(aiResult);
+    
+    console.log('🔍 Parsed analysis:', {
+      leaseSummary: analysis.leaseSummary,
+      structuredData: analysis.structuredData,
+      complianceChecklist: analysis.complianceChecklist,
+      financialObligations: analysis.financialObligations,
+      keyRights: analysis.keyRights,
+      restrictions: analysis.restrictions
+    });
 
     // Determine if we have building context
     const hasBuildingContext = buildingId && buildingId !== 'unknown';
-    const buildingStatus = hasBuildingContext ? 'matched' : 'not_found';
+    const buildingStatus: 'matched' | 'not_found' | 'unknown' = hasBuildingContext ? 'matched' : 'not_found';
 
-    // Transform into LeaseAnalysis format
-    return {
+    // Transform into LeaseAnalysis format with proper data mapping
+    const result = {
       filename,
       summary: analysis.leaseSummary || analysis.summary || 'Lease document analyzed successfully',
       documentType: 'lease',
-      leaseDetails: analysis.structuredData || {},
+      leaseDetails: {
+        propertyAddress: analysis.structuredData?.propertyAddress || null,
+        landlord: analysis.structuredData?.landlord || null,
+        tenant: analysis.structuredData?.tenant || null,
+        leaseStartDate: analysis.structuredData?.leaseStartDate || null,
+        leaseEndDate: analysis.structuredData?.leaseEndDate || null,
+        leaseTerm: analysis.structuredData?.leaseTerm || null,
+        premium: analysis.structuredData?.premium || null,
+        initialRent: analysis.structuredData?.initialRent || null,
+        monthlyRent: analysis.structuredData?.monthlyRent || null,
+        annualRent: analysis.structuredData?.annualRent || null,
+        serviceCharge: analysis.structuredData?.serviceCharge || null,
+        deposit: analysis.structuredData?.deposit || null,
+        buildingType: analysis.structuredData?.buildingType || null,
+        propertyDescription: analysis.structuredData?.propertyDescription || null,
+        floorArea: analysis.structuredData?.floorArea || null
+      },
       complianceChecklist: analysis.complianceChecklist?.map((item: any) => ({
         item: item.name || item.item,
         status: item.status,
@@ -307,14 +349,25 @@ Format the response as structured JSON.
       }
     };
 
+    console.log('🔍 Final result structure:', {
+      leaseDetails: result.leaseDetails,
+      complianceChecklist: result.complianceChecklist,
+      financialObligations: result.financialObligations,
+      keyRights: result.keyRights,
+      restrictions: result.restrictions
+    });
+
+    return result;
+
   } catch (error) {
-    console.error('Lease analysis error:', error);
+    console.error('❌ Lease analysis error:', error);
     
     // Fallback to basic analysis
     return {
       filename,
       summary: `Lease document analysis failed. Document contains ${extractedText.length} characters of text.`,
       documentType: 'lease',
+      leaseDetails: {},
       complianceChecklist: LEASE_COMPLIANCE_CHECKLIST.map(item => ({
         item,
         status: 'Unknown' as const

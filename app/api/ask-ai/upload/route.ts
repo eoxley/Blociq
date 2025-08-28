@@ -119,10 +119,10 @@ async function lazyDeps() {
   // Load enhanced document analysis functions
   if (!analyzeLeaseDocument) {
     try {
-      // Import from the main lease analyzer, not the document-analyzers version
+      console.log('🔄 Loading lease analyzer...')
       const mod = await import('@/lib/lease-analyzer')
       analyzeLeaseDocument = mod.analyzeLeaseDocument
-      console.log('✅ Loaded enhanced lease analyzer from main lib')
+      console.log('✅ Lease analyzer loaded successfully')
     } catch (error) {
       console.warn('Failed to load lease analyzer:', error)
       analyzeLeaseDocument = null
@@ -131,14 +131,17 @@ async function lazyDeps() {
 
   if (!classifyDocument) {
     try {
+      console.log('🔄 Loading document classifier...')
       const mod = await import('@/lib/document-classifier')
       classifyDocument = mod.classifyDocument
-      console.log('✅ Loaded document classifier')
+      console.log('✅ Document classifier loaded successfully')
     } catch (error) {
       console.warn('Failed to load document classifier:', error)
       classifyDocument = null
     }
   }
+
+
 }
 
 // Helper function to detect if document is a lease
@@ -163,16 +166,24 @@ function isLeaseDocument(filename: string, text: string): boolean {
 
 // Helper function to convert lease analysis to detailed formatted text
 function formatLeaseAnalysisToText(analysis: any): string {
+  console.log('🔍 Formatting lease analysis:', analysis);
+  
   let formattedText = '📋 **COMPREHENSIVE LEASE ANALYSIS**\n\n'
   
   // Property Details
   if (analysis.leaseDetails) {
     formattedText += '**🏠 PROPERTY DETAILS**\n'
     if (analysis.leaseDetails.propertyAddress) {
-      formattedText += `Address: ${analysis.leaseDetails.propertyAddress}\n`
+      formattedText += `• Address: ${analysis.leaseDetails.propertyAddress}\n`
     }
     if (analysis.leaseDetails.buildingType) {
-      formattedText += `Property Type: ${analysis.leaseDetails.buildingType}\n`
+      formattedText += `• Property Type: ${analysis.leaseDetails.buildingType}\n`
+    }
+    if (analysis.leaseDetails.propertyDescription) {
+      formattedText += `• Description: ${analysis.leaseDetails.propertyDescription}\n`
+    }
+    if (analysis.leaseDetails.floorArea) {
+      formattedText += `• Floor Area: ${analysis.leaseDetails.floorArea}\n`
     }
     formattedText += '\n'
   }
@@ -181,13 +192,19 @@ function formatLeaseAnalysisToText(analysis: any): string {
   if (analysis.leaseDetails) {
     formattedText += '**📅 LEASE TERMS**\n'
     if (analysis.leaseDetails.leaseStartDate) {
-      formattedText += `Start Date: ${analysis.leaseDetails.leaseStartDate}\n`
+      formattedText += `• Start Date: ${analysis.leaseDetails.leaseStartDate}\n`
     }
     if (analysis.leaseDetails.leaseEndDate) {
-      formattedText += `End Date: ${analysis.leaseDetails.leaseEndDate}\n`
+      formattedText += `• End Date: ${analysis.leaseDetails.leaseEndDate}\n`
     }
     if (analysis.leaseDetails.leaseTerm) {
-      formattedText += `Lease Length: ${analysis.leaseDetails.leaseTerm}\n`
+      formattedText += `• Lease Length: ${analysis.leaseDetails.leaseTerm}\n`
+    }
+    if (analysis.leaseDetails.landlord) {
+      formattedText += `• Landlord: ${analysis.leaseDetails.landlord}\n`
+    }
+    if (analysis.leaseDetails.tenant) {
+      formattedText += `• Tenant: ${analysis.leaseDetails.tenant}\n`
     }
     formattedText += '\n'
   }
@@ -196,13 +213,22 @@ function formatLeaseAnalysisToText(analysis: any): string {
   if (analysis.leaseDetails) {
     formattedText += '**💰 FINANCIAL SUMMARY**\n'
     if (analysis.leaseDetails.premium) {
-      formattedText += `Premium: £${analysis.leaseDetails.premium}\n`
+      formattedText += `• Premium: £${analysis.leaseDetails.premium}\n`
     }
     if (analysis.leaseDetails.initialRent) {
-      formattedText += `Initial Rent: £${analysis.leaseDetails.initialRent}\n`
+      formattedText += `• Initial Rent: £${analysis.leaseDetails.initialRent}\n`
     }
-    if (analysis.leaseDetails.serviceChargePercentage) {
-      formattedText += `Service Charge: ${analysis.leaseDetails.serviceChargePercentage}\n`
+    if (analysis.leaseDetails.monthlyRent) {
+      formattedText += `• Monthly Rent: £${analysis.leaseDetails.monthlyRent}\n`
+    }
+    if (analysis.leaseDetails.annualRent) {
+      formattedText += `• Annual Rent: £${analysis.leaseDetails.annualRent}\n`
+    }
+    if (analysis.leaseDetails.serviceCharge) {
+      formattedText += `• Service Charge: ${analysis.leaseDetails.serviceCharge}\n`
+    }
+    if (analysis.leaseDetails.deposit) {
+      formattedText += `• Deposit: £${analysis.leaseDetails.deposit}\n`
     }
     formattedText += '\n'
   }
@@ -247,24 +273,32 @@ function formatLeaseAnalysisToText(analysis: any): string {
   // Building Context
   if (analysis.buildingContext) {
     formattedText += '**🏢 BUILDING CONTEXT**\n'
-    if (analysis.buildingContext.buildingStatus === 'matched') {
-      formattedText += 'Status: ✅ Building Found in Portfolio\n'
-    } else if (analysis.buildingContext.buildingStatus === 'not_found') {
-      formattedText += 'Status: ⚠️ Building Not Found in Portfolio\n'
+    if (analysis.buildingContext.buildingStatus === 'not_found') {
+      formattedText += `• Status: ⚠️ Building Not Found in Portfolio\n`
+    } else if (analysis.buildingContext.buildingStatus === 'matched') {
+      formattedText += `• Status: ✅ Building Matched in Portfolio\n`
     } else {
-      formattedText += 'Status: ❓ Unknown Building Status\n'
+      formattedText += `• Status: ❓ Building Status Unknown\n`
     }
     
     if (analysis.buildingContext.extractedAddress) {
-      formattedText += `Extracted Address: ${analysis.buildingContext.extractedAddress}\n`
+      formattedText += `• Extracted Address: ${analysis.buildingContext.extractedAddress}\n`
     }
     if (analysis.buildingContext.extractedBuildingType) {
-      formattedText += `Building Type: ${analysis.buildingContext.extractedBuildingType}\n`
+      formattedText += `• Extracted Building Type: ${analysis.buildingContext.extractedBuildingType}\n`
     }
     formattedText += '\n'
   }
   
-  return formattedText
+  // Summary
+  if (analysis.summary && analysis.summary !== 'Lease document analyzed successfully') {
+    formattedText += '**📝 LEASE SUMMARY**\n'
+    formattedText += `${analysis.summary}\n\n`
+  }
+  
+  console.log('🔍 Formatted text result:', formattedText.substring(0, 300) + '...');
+  
+  return formattedText;
 }
 
 // Required for Node-only PDF libs
