@@ -291,6 +291,103 @@ export default function CompliancePage() {
     )
   }
 
+  // Show empty state when no buildings or compliance data
+  if (!loading && !error && (buildings.length === 0 || summary.total_assets === 0)) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="bg-white border-b border-gray-200 px-6 py-6 shadow-sm rounded-2xl mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-6">
+                <div className="relative">
+                  <div className="w-12 h-12 bg-gradient-to-r from-[#004AAD] via-[#3B82F6] to-[#7209B7] rounded-2xl flex items-center justify-center shadow-lg">
+                    <Shield className="h-6 w-6 text-white" />
+                  </div>
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
+                  <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-cyan-400 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold bg-gradient-to-r from-[#004AAD] to-[#7209B7] bg-clip-text text-transparent">
+                    Compliance Overview
+                  </h1>
+                  <p className="text-sm text-gray-600 flex items-center gap-2 mt-2">
+                    <Building2 className="h-4 w-4" />
+                    No compliance data available
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={fetchComplianceData}
+                  className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all duration-200 hover:scale-110"
+                  title="Refresh data"
+                >
+                  <RefreshCw className="h-5 w-5" />
+                </button>
+                
+                <AskBlocIQ
+                  buildingId={undefined}
+                  buildingName="Compliance System"
+                  context="compliance"
+                  placeholder="Ask about compliance requirements..."
+                  className="bg-gradient-to-r from-[#004AAD] to-[#7209B7] hover:from-[#003A8C] hover:to-[#5A078F]"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Empty State */}
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-12 text-center">
+            <Shield className="h-24 w-24 text-gray-300 mx-auto mb-6" />
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">No Compliance Data Available</h2>
+            <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
+              {buildings.length === 0 
+                ? "You don't have any buildings set up yet, or there was an issue loading your building data. The system is working correctly but needs buildings to display compliance information."
+                : "No compliance assets have been added to your buildings yet. This is normal for new accounts or when compliance tracking hasn't been set up."
+              }
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              {buildings.length === 0 ? (
+                <button
+                  onClick={() => router.push('/buildings')}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#004AAD] to-[#7209B7] text-white rounded-lg hover:from-[#003A8C] hover:to-[#5A078F] transition-all duration-200"
+                >
+                  <Building2 className="h-5 w-5" />
+                  Set Up Buildings
+                </button>
+              ) : (
+                <button
+                  onClick={() => router.push('/buildings')}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#004AAD] to-[#7209B7] text-white rounded-lg hover:from-[#003A8C] hover:to-[#5A078F] transition-all duration-200"
+                >
+                  <Shield className="h-5 w-5" />
+                  Add Compliance Assets
+                </button>
+              )}
+              
+              <button
+                onClick={fetchComplianceData}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                <RefreshCw className="h-5 w-5" />
+                Refresh Data
+              </button>
+            </div>
+            
+            <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg max-w-2xl mx-auto">
+              <p className="text-sm text-blue-800">
+                <strong>Note:</strong> The compliance system is working correctly. If you're seeing this message, it means either no buildings are set up yet, or no compliance assets have been added to your buildings.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
       {/* Header */}
@@ -311,7 +408,10 @@ export default function CompliancePage() {
                 </h1>
                 <p className="text-sm text-gray-600 flex items-center gap-2 mt-2">
                   <Building2 className="h-4 w-4" />
-                  {summary.total_buildings} buildings • {summary.total_assets} compliance assets
+                  {summary.total_buildings > 0 
+                    ? `${summary.total_buildings} buildings • ${summary.total_assets} compliance assets`
+                    : 'No buildings or compliance data available'
+                  }
                 </p>
               </div>
             </div>
