@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Plus, Calendar, Loader2, Send, Upload, FileText, X, Check, Sparkles, File, FileText as FileTextIcon, Building2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import CommunicationModal from './CommunicationModal';
-import { SuggestedAction as AISuggestedAction, DocumentAnalysis } from '@/types/ai';
+import { SuggestedAction, DocumentAnalysis } from '@/types/ai';
 
 type Message = {
   id: string;
@@ -28,7 +28,7 @@ type UploadedFile = {
   extractionMethod?: 'ocr' | 'enhanced' | 'standard'; // Added for extraction method
 };
 
-type SuggestedAction = {
+type BuildingSuggestedAction = {
   type: 'todo';
   title: string;
   priority: 'High' | 'Medium' | 'Low';
@@ -50,7 +50,7 @@ type AIResponse = {
   response: string;
   documentSearch?: boolean;
   documents?: DocumentSearchResult[];
-  suggested_action?: SuggestedAction;
+  suggested_action?: BuildingSuggestedAction;
   context?: {
     majorWorksUsed?: boolean;
     complianceUsed?: boolean;
@@ -121,7 +121,7 @@ export default function AskBlocIQ({
   const [messages, setMessages] = useState<Message[]>([]);
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
-  const [suggestedAction, setSuggestedAction] = useState<SuggestedAction | null>(null);
+  const [suggestedAction, setSuggestedAction] = useState<BuildingSuggestedAction | null>(null);
   const [documentResults, setDocumentResults] = useState<DocumentSearchResult[]>([]);
   const [isDocumentSearch, setIsDocumentSearch] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -828,144 +828,223 @@ export default function AskBlocIQ({
                     </div>
                   )}
 
-                  {/* Document Analysis Results */}
-                  {message.role === 'assistant' && message.documentAnalysis && (
-                    <div className="mt-3 pt-3 border-t border-gray-200">
-                      <p className="text-xs text-gray-500 font-medium mb-2">📊 Document Analysis:</p>
-                      <div className="space-y-2">
-                        {message.documentAnalysis.map((analysis: any, index: number) => {
-                          console.log('🔍 Rendering analysis:', analysis);
-                          console.log('🔍 Analysis suggestedActions:', analysis.suggestedActions);
-                          return (
-                            <div key={index} className="bg-gray-50 p-3 rounded-lg">
-                              <p className="text-sm font-medium text-gray-900 mb-1">
-                                📄 {analysis.filename}
-                              </p>
-                              <p className="text-xs text-gray-600 mb-2">
-                                {analysis.summary}
-                              </p>
-                              
-                              {/* Lease-specific display */}
-                              {analysis.documentType === 'lease' && 'leaseDetails' in analysis && (
-                                <div className="mt-4 space-y-3">
-                                  {/* Property Details */}
-                                  {analysis.leaseDetails && Object.keys(analysis.leaseDetails).length > 0 && (
-                                    <div className="bg-white p-3 rounded border">
-                                      <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Property Details</h5>
-                                      <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
-                                        {analysis.leaseDetails.propertyAddress && (
-                                          <div><span className="font-medium">Address:</span> {analysis.leaseDetails.propertyAddress}</div>
-                                        )}
-                                        {analysis.leaseDetails.leaseTerm && (
-                                          <div><span className="font-medium">Term:</span> {analysis.leaseDetails.leaseTerm}</div>
-                                        )}
-                                        {analysis.leaseDetails.premium && (
-                                          <div><span className="font-medium">Premium:</span> {analysis.leaseDetails.premium}</div>
-                                        )}
-                                        {analysis.leaseDetails.initialRent && (
-                                          <div><span className="font-medium">Rent:</span> {analysis.leaseDetails.initialRent}</div>
-                                        )}
-                                        {analysis.leaseDetails.landlord && (
-                                          <div><span className="font-medium">Landlord:</span> {analysis.leaseDetails.landlord}</div>
-                                        )}
-                                        {analysis.leaseDetails.tenant && (
-                                          <div><span className="font-medium">Tenant:</span> {analysis.leaseDetails.tenant}</div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* Compliance Checklist */}
-                                  {'complianceChecklist' in analysis && analysis.complianceChecklist && analysis.complianceChecklist.length > 0 && (
-                                    <div className="bg-white p-3 rounded border">
-                                      <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Compliance Checklist</h5>
-                                      <div className="mt-2 space-y-1">
-                                        {analysis.complianceChecklist.map((item: any, idx: number) => (
-                                          <div key={idx} className="flex items-center justify-between text-sm">
-                                            <span>{item.item}</span>
-                                            <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                              item.status === 'Y' ? 'bg-green-100 text-green-800' :
-                                              item.status === 'N' ? 'bg-red-100 text-red-800' :
-                                              'bg-gray-100 text-gray-600'
-                                            }`}>
-                                              {item.status === 'Y' ? '✓' : item.status === 'N' ? '✗' : '?'}
-                                            </span>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* Financial Obligations */}
-                                  {'financialObligations' in analysis && analysis.financialObligations && analysis.financialObligations.length > 0 && (
-                                    <div className="bg-white p-3 rounded border">
-                                      <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Financial Obligations</h5>
-                                      <ul className="mt-2 space-y-1 text-sm">
-                                        {analysis.financialObligations.map((obligation: string, idx: number) => (
-                                          <li key={idx} className="flex items-center gap-2">
-                                            <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                                            {obligation}
-                                          </li>
-                                        ))}
-                                      </ul>
-                                    </div>
-                                  )}
-
-                                  {/* Key Rights */}
-                                  {'keyRights' in analysis && analysis.keyRights && analysis.keyRights.length > 0 && (
-                                    <div className="bg-white p-3 rounded border">
-                                      <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Key Rights</h5>
-                                      <ul className="mt-2 space-y-1 text-sm">
-                                        {analysis.keyRights.map((right: string, idx: number) => (
-                                          <li key={idx} className="flex items-center gap-2">
-                                            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                                            {right}
-                                          </li>
-                                        ))}
-                                      </ul>
-                                    </div>
-                                  )}
-
-                                  {/* Restrictions */}
-                                  {'restrictions' in analysis && analysis.restrictions && analysis.restrictions.length > 0 && (
-                                    <div className="bg-white p-3 rounded border">
-                                      <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Restrictions</h5>
-                                      <ul className="mt-2 space-y-1 text-sm">
-                                        {analysis.restrictions.map((restriction: string, idx: number) => (
-                                          <li key={idx} className="flex items-center gap-2">
-                                            <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                                            {restriction}
-                                          </li>
-                                        ))}
-                                      </ul>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-
-                              {/* Existing suggested actions display */}
-                              {analysis.suggestedActions && analysis.suggestedActions.length > 0 && (
-                                <div className="mt-3">
-                                  <h5 className="font-medium text-sm text-gray-600">Suggested Actions:</h5>
-                                  <div className="flex flex-wrap gap-2 mt-1">
-                                    {analysis.suggestedActions.map((action: any, actionIndex: number) => (
-                                      <button
-                                        key={actionIndex}
-                                        className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm hover:bg-blue-200"
-                                        onClick={() => handleSuggestedAction(action)}
-                                      >
-                                        {action.label}
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
+                  {/* Document Analysis Results - Enhanced Display */}
+                  {message.documentAnalysis?.map((doc, docIndex) => (
+                    <div key={docIndex} className="mt-4 p-4 bg-gray-50 rounded-lg border">
+                      <div className="flex items-center gap-2 mb-3">
+                        <FileText className="h-5 w-5 text-gray-600" />
+                        <h4 className="font-semibold text-gray-900">{doc.filename}</h4>
+                        {doc.documentType && (
+                          <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                            {doc.documentType}
+                          </span>
+                        )}
                       </div>
+
+                      {/* Document Summary */}
+                      <div className="mb-4">
+                        <p className="text-gray-700 leading-relaxed">{doc.summary}</p>
+                      </div>
+
+                      {/* Lease-specific display */}
+                      {doc.documentType === 'lease' && 'leaseDetails' in doc && (
+                        <div className="mt-4 space-y-3">
+                          {/* Property Details */}
+                          {doc.leaseDetails && Object.keys(doc.leaseDetails).length > 0 && (
+                            <div className="bg-white p-3 rounded border">
+                              <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Property Details</h5>
+                              <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
+                                {doc.leaseDetails.propertyAddress && (
+                                  <div><span className="font-medium">Address:</span> {doc.leaseDetails.propertyAddress}</div>
+                                )}
+                                {doc.leaseDetails.leaseTerm && (
+                                  <div><span className="font-medium">Term:</span> {doc.leaseDetails.leaseTerm}</div>
+                                )}
+                                {doc.leaseDetails.premium && (
+                                  <div><span className="font-medium">Premium:</span> {doc.leaseDetails.premium}</div>
+                                )}
+                                {doc.leaseDetails.initialRent && (
+                                  <div><span className="font-medium">Rent:</span> {doc.leaseDetails.initialRent}</div>
+                                )}
+                                {doc.leaseDetails.landlord && (
+                                  <div><span className="font-medium">Landlord:</span> {doc.leaseDetails.landlord}</div>
+                                )}
+                                {doc.leaseDetails.tenant && (
+                                  <div><span className="font-medium">Tenant:</span> {doc.leaseDetails.tenant}</div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Compliance Checklist */}
+                          {'complianceChecklist' in doc && doc.complianceChecklist && doc.complianceChecklist.length > 0 && (
+                            <div className="bg-white p-3 rounded border">
+                              <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Compliance Checklist</h5>
+                              <div className="mt-2 space-y-1">
+                                {doc.complianceChecklist.map((item: any, idx: number) => (
+                                  <div key={idx} className="flex items-center justify-between text-sm">
+                                    <span>{item.item}</span>
+                                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                      item.status === 'Y' ? 'bg-green-100 text-green-800' :
+                                      item.status === 'N' ? 'bg-red-100 text-red-800' :
+                                      'bg-gray-100 text-gray-600'
+                                    }`}>
+                                      {item.status === 'Y' ? '✓' : item.status === 'N' ? '✗' : '?'}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Financial Obligations */}
+                          {'financialObligations' in doc && doc.financialObligations && doc.financialObligations.length > 0 && (
+                            <div className="bg-white p-3 rounded border">
+                              <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Financial Obligations</h5>
+                              <ul className="mt-2 space-y-1 text-sm">
+                                {doc.financialObligations.map((obligation: string, idx: number) => (
+                                  <li key={idx} className="flex items-center gap-2">
+                                    <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                                    {obligation}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Key Rights */}
+                          {'keyRights' in doc && doc.keyRights && doc.keyRights.length > 0 && (
+                            <div className="bg-white p-3 rounded border">
+                              <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Key Rights</h5>
+                              <ul className="mt-2 space-y-1 text-sm">
+                                {doc.keyRights.map((right: string, idx: number) => (
+                                  <li key={idx} className="flex items-center gap-2">
+                                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                                    {right}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Restrictions */}
+                          {'restrictions' in doc && doc.restrictions && doc.restrictions.length > 0 && (
+                            <div className="bg-white p-3 rounded border">
+                              <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Restrictions</h5>
+                              <ul className="mt-2 space-y-1 text-sm">
+                                {doc.restrictions.map((restriction: string, idx: number) => (
+                                  <li key={idx} className="flex items-center gap-2">
+                                    <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                                    {restriction}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Compliance Status */}
+                      {doc.complianceStatus && (
+                        <div className="mb-3">
+                          <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide mb-1">
+                            Compliance Status
+                          </h5>
+                          <p className="text-sm text-gray-700">{doc.complianceStatus}</p>
+                        </div>
+                      )}
+
+                      {/* Key Dates */}
+                      {doc.keyDates && doc.keyDates.length > 0 && (
+                        <div className="mb-3">
+                          <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide mb-2">
+                            Key Dates
+                          </h5>
+                          <div className="space-y-1">
+                            {doc.keyDates.map((date, dateIndex) => (
+                              <div key={dateIndex} className="flex justify-between items-center text-sm py-1">
+                                <span className="text-gray-700">{date.description}</span>
+                                <span className="font-mono text-gray-900 bg-white px-2 py-1 rounded">
+                                  {date.date}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Action Items */}
+                      {doc.actionItems && doc.actionItems.length > 0 && (
+                        <div className="mb-3">
+                          <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide mb-2">
+                            Action Items
+                          </h5>
+                          <div className="space-y-2">
+                            {doc.actionItems.map((item, itemIndex) => (
+                              <div key={itemIndex} className="flex items-start gap-2 text-sm">
+                                <span className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                                  item.priority === 'high' ? 'bg-red-500' :
+                                  item.priority === 'medium' ? 'bg-yellow-500' :
+                                  'bg-green-500'
+                                }`}></span>
+                                <div className="flex-1">
+                                  <span className="text-gray-700">{item.description}</span>
+                                  {item.priority && (
+                                    <span className={`ml-2 px-2 py-0.5 text-xs rounded ${
+                                      item.priority === 'high' ? 'bg-red-100 text-red-700' :
+                                      item.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                      'bg-green-100 text-green-700'
+                                    }`}>
+                                      {item.priority.toUpperCase()}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Suggested Actions - FIXED */}
+                      {doc.suggestedActions && doc.suggestedActions.length > 0 && (
+                        <div className="mt-3">
+                          <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide mb-2">
+                            Suggested Actions
+                          </h5>
+                          <div className="flex flex-wrap gap-2">
+                            {doc.suggestedActions.map((action, actionIndex) => {
+                              const actionLabel = action.label || action.title || `Action ${actionIndex + 1}`;
+                              
+                              return (
+                                <button
+                                  key={actionIndex}
+                                  className="px-3 py-1.5 bg-blue-100 text-blue-800 rounded-full text-sm hover:bg-blue-200 transition-colors font-medium"
+                                  onClick={() => handleSuggestedAction(action)}
+                                >
+                                  {action.icon && <span className="mr-1">{action.icon}</span>}
+                                  {actionLabel}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Extraction Method & Confidence */}
+                      {(doc.extractionMethod || doc.confidence) && (
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          <div className="flex items-center gap-4 text-xs text-gray-500">
+                            {doc.extractionMethod && (
+                              <span>Method: {doc.extractionMethod}</span>
+                            )}
+                            {doc.confidence && (
+                              <span>Confidence: {Math.round(doc.confidence * 100)}%</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  ))}
                 </div>
               </div>
             </div>

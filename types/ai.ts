@@ -3,6 +3,7 @@
 export interface SuggestedAction {
   key: string;
   label: string;
+  title?: string;
   icon?: string;
   action?: string;
 }
@@ -10,11 +11,14 @@ export interface SuggestedAction {
 export interface DocumentAnalysis {
   filename: string;
   summary: string;
-  suggestedActions?: SuggestedAction[];
+  suggestedActions?: SuggestedAction[];  // Changed from string[] to SuggestedAction[]
   extractionMethod?: string;
   confidence?: number;
   documentType?: string;
   extractedText?: string;
+  complianceStatus?: string;
+  keyDates?: Array<{ description: string; date: string }>;
+  actionItems?: Array<{ description: string; priority?: 'high' | 'medium' | 'low' }>;
 }
 
 // Enhanced lease analysis interface
@@ -68,7 +72,9 @@ export interface AIResponse {
   response?: string;
   error?: string;
   documentAnalysis?: DocumentAnalysis[];
-  results?: DocumentAnalysis[]; // Added for document analysis results from API
+  results?: DocumentAnalysis[];  // API returns this field
+  type?: string;
+  message?: string;
 }
 
 export interface SummarizeAndSuggestResult {
