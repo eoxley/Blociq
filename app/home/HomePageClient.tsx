@@ -510,6 +510,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       
       // Handle file uploads separately from text-only requests
       if (uploadedFiles.length > 0) {
+        console.log('🔍 Processing files, skipping text-only path')
+        
         // Process multiple files sequentially
         const allResults: any[] = []
         
@@ -634,10 +636,14 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         setAskInput('')
         setUploadedFiles([])
         setUploadStatus('')
+        
+        // CRITICAL: Return early to prevent falling through to text-only path
+        console.log('🔍 File processing complete, returning early')
         return
       }
 
       // For text-only requests, use the main AI endpoint
+      console.log('🔍 No files uploaded, using text-only path')
       const requestBody = JSON.stringify({ 
         prompt: prompt,
         contextType: 'general'
