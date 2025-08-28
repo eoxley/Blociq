@@ -141,6 +141,13 @@ function parseLeaseText(ocrText: string, filenameInfo: any) {
   console.log('🔍 Filename info:', filenameInfo);
   console.log('🔍 ===== END OCR TEXT ANALYSIS =====');
   
+  // CRITICAL: Check if we're getting real text or placeholder
+  if (ocrText.includes('[[Fallback extractor]]') || ocrText.includes('[[OCR Fallback]]') || ocrText.includes('[[PDF Extraction Failed]]')) {
+    console.error('❌ CRITICAL: OCR text contains fallback placeholders instead of real content!');
+    console.error('❌ This means text extraction failed and we need to fix the OCR pipeline');
+    throw new Error('OCR text extraction failed - received placeholder text instead of real content');
+  }
+  
   // Extract address patterns - MORE AGGRESSIVE
   if (filenameInfo.buildingNumber) {
     // Look for address patterns starting with the building number
@@ -412,6 +419,18 @@ export async function analyzeLeaseDocument(
   if (!extractedText || extractedText.trim().length === 0) {
     console.error('❌ CRITICAL ERROR: extractedText is empty or null!');
     throw new Error('No text content provided for lease analysis');
+  }
+  
+  // CRITICAL: Check if we're getting real text or placeholder
+  if (extractedText.includes('[[Fallback extractor]]') || 
+      extractedText.includes('[[OCR Fallback]]') || 
+      extractedText.includes('[[PDF Extraction Failed]]') ||
+      extractedText.includes('Unable to extract text') ||
+      extractedText.includes('document may be image-based or corrupted')) {
+    console.error('❌ CRITICAL ERROR: extractedText contains fallback placeholders instead of real content!');
+    console.error('❌ This means text extraction failed and we need to fix the OCR pipeline');
+    console.error('❌ Text content:', extractedText.substring(0, 500));
+    throw new Error('OCR text extraction failed - received placeholder text instead of real content. Please check the text extraction pipeline.');
   }
   
   console.log('🔍 Starting lease analysis for:', filename);
