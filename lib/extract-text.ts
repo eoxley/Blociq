@@ -1,4 +1,5 @@
-import pdfParse from 'pdf-parse';
+// Dynamic imports to avoid test file reference issues
+// import pdfParse from 'pdf-parse';
 import mammoth from 'mammoth';
 // @ts-ignore - jsdom types not available
 import { JSDOM } from 'jsdom';
@@ -160,7 +161,16 @@ class TextExtractionService {
 
   private async extractFromPDF(buffer: Buffer): Promise<string> {
     try {
-      const result = await pdfParse(buffer);
+      // Use safe PDF parser wrapper to prevent debug mode issues
+      const { safePdfParse } = await import('./pdf-parse-wrapper');
+      
+      const result = await safePdfParse(buffer, {
+        normalizeWhitespace: false,
+        disableFontFace: true,
+        disableEmbeddedFonts: true,
+        max: 0
+      });
+      
       const text = result.text || '';
       
       if (!this.isValidText(text)) {
@@ -171,7 +181,7 @@ class TextExtractionService {
       return text;
     } catch (error) {
       console.warn('PDF parsing failed:', error);
-      // Try alternative PDF processing before failing
+      // Error messages are already cleaned by the wrapper
       throw new Error(`PDF extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
