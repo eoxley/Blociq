@@ -364,7 +364,25 @@ export async function POST(req: Request) {
         console.log('🔍 Building ID:', buildingId)
         console.log('🔍 Text length:', text.text.length)
         
+        // CRITICAL DEBUGGING: Log the actual OCR content
+        console.log('=== ACTUAL PDF CONTENT ===');
+        console.log('OCR extracted text length:', text.text?.length);
+        console.log('First 500 chars:', text.text?.substring(0, 500));
+        console.log('Does text contain "landlord"?', text.text?.toLowerCase().includes('landlord'));
+        console.log('Does text contain "£"?', text.text?.includes('£'));
+        console.log('Does text contain "rent"?', text.text?.toLowerCase().includes('rent'));
+        console.log('Does text contain "lease"?', text.text?.toLowerCase().includes('lease'));
+        console.log('Does text contain "tenant"?', text.text?.toLowerCase().includes('tenant'));
+        console.log('Does text contain "property"?', text.text?.toLowerCase().includes('property'));
+        console.log('Does text contain "address"?', text.text?.toLowerCase().includes('address'));
+        console.log('=== END PDF CONTENT ===');
+        
         try {
+          console.log('🔍 Calling analyzeLeaseDocument with:');
+          console.log('  - text.text:', text.text.substring(0, 200) + '...');
+          console.log('  - file.name:', file.name);
+          console.log('  - buildingId:', buildingId);
+          
           const leaseAnalysis = await analyzeLeaseDocument(text.text, file.name, buildingId || undefined)
           
           console.log('🔍 Lease analysis completed:', {

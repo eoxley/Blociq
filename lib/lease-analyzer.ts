@@ -124,9 +124,22 @@ function parseLeaseText(ocrText: string, filenameInfo: any) {
   const text = ocrText.toLowerCase();
   const parsed: any = {};
   
-  console.log('🔍 Parsing OCR text for real data...');
+  console.log('🔍 ===== PARSING OCR TEXT =====');
   console.log('🔍 OCR text length:', ocrText.length);
   console.log('🔍 First 500 chars of OCR:', ocrText.substring(0, 500));
+  console.log('🔍 Last 500 chars of OCR:', ocrText.substring(Math.max(0, ocrText.length - 500)));
+  console.log('🔍 Does text contain "landlord"?', ocrText.toLowerCase().includes('landlord'));
+  console.log('🔍 Does text contain "tenant"?', ocrText.toLowerCase().includes('tenant'));
+  console.log('🔍 Does text contain "rent"?', ocrText.toLowerCase().includes('rent'));
+  console.log('🔍 Does text contain "£"?', ocrText.includes('£'));
+  console.log('🔍 Does text contain "lease"?', ocrText.toLowerCase().includes('lease'));
+  console.log('🔍 Does text contain "property"?', ocrText.toLowerCase().includes('property'));
+  console.log('🔍 Does text contain "address"?', ocrText.toLowerCase().includes('address'));
+  console.log('🔍 Does text contain "premium"?', ocrText.toLowerCase().includes('premium'));
+  console.log('🔍 Does text contain "service charge"?', ocrText.toLowerCase().includes('service charge'));
+  console.log('🔍 Does text contain "deposit"?', ocrText.toLowerCase().includes('deposit'));
+  console.log('🔍 Filename info:', filenameInfo);
+  console.log('🔍 ===== END OCR TEXT ANALYSIS =====');
   
   // Extract address patterns - MORE AGGRESSIVE
   if (filenameInfo.buildingNumber) {
@@ -385,10 +398,21 @@ export async function analyzeLease(
 }
 
 export async function analyzeLeaseDocument(
-  extractedText: string, 
+  extractedText: string,
   filename: string,
   buildingId?: string
 ): Promise<LeaseAnalysis> {
+  console.log('🔍 ===== ANALYZE LEASE DOCUMENT CALLED =====');
+  console.log('🔍 extractedText parameter:', extractedText ? `"${extractedText.substring(0, 200)}..."` : 'NULL/UNDEFINED');
+  console.log('🔍 extractedText length:', extractedText?.length || 0);
+  console.log('🔍 filename parameter:', filename);
+  console.log('🔍 buildingId parameter:', buildingId);
+  console.log('🔍 ===== END PARAMETER LOGGING =====');
+  
+  if (!extractedText || extractedText.trim().length === 0) {
+    console.error('❌ CRITICAL ERROR: extractedText is empty or null!');
+    throw new Error('No text content provided for lease analysis');
+  }
   
   console.log('🔍 Starting lease analysis for:', filename);
   console.log('🔍 Text length:', extractedText.length);
