@@ -150,8 +150,7 @@ function formatLeaseAnalysisToText(analysis: any): string {
   if (analysis.complianceChecklist && analysis.complianceChecklist.length > 0) {
     formattedText += '**🔍 COMPLIANCE CHECKLIST**\n'
     analysis.complianceChecklist.forEach((item: any, index: number) => {
-      const status = item.status === 'Y' ? '✅' : item.status === 'N' ? '❌' : '❓'
-      formattedText += `${status} ${item.item}: ${item.details || 'No details'}\n`
+      formattedText += `❓ ${item.title}: ${item.description || 'Not specified'}\n`
     })
     formattedText += '\n'
   }
@@ -159,8 +158,8 @@ function formatLeaseAnalysisToText(analysis: any): string {
   // Financial Obligations
   if (analysis.financialObligations && analysis.financialObligations.length > 0) {
     formattedText += '**💰 FINANCIAL OBLIGATIONS**\n'
-    analysis.financialObligations.forEach((obligation: string, index: number) => {
-      formattedText += `• ${obligation}\n`
+    analysis.financialObligations.forEach((item: any, index: number) => {
+      formattedText += `• ${item.title}: ${item.description || 'Not specified'}\n`
     })
     formattedText += '\n'
   }
@@ -168,8 +167,8 @@ function formatLeaseAnalysisToText(analysis: any): string {
   // Key Rights
   if (analysis.keyRights && analysis.keyRights.length > 0) {
     formattedText += '**⚖️ KEY RIGHTS**\n'
-    analysis.keyRights.forEach((right: string, index: number) => {
-      formattedText += `• ${right}\n`
+    analysis.keyRights.forEach((item: any, index: number) => {
+      formattedText += `• ${item.title}: ${item.description || 'Not specified'}\n`
     })
     formattedText += '\n'
   }
@@ -177,8 +176,8 @@ function formatLeaseAnalysisToText(analysis: any): string {
   // Restrictions
   if (analysis.restrictions && analysis.restrictions.length > 0) {
     formattedText += '**🚫 RESTRICTIONS**\n'
-    analysis.restrictions.forEach((restriction: string, index: number) => {
-      formattedText += `• ${restriction}\n`
+    analysis.restrictions.forEach((item: any, index: number) => {
+      formattedText += `• ${item.title}: ${item.description || 'Not specified'}\n`
     })
     formattedText += '\n'
   }
@@ -186,14 +185,9 @@ function formatLeaseAnalysisToText(analysis: any): string {
   // Building Context
   if (analysis.buildingContext) {
     formattedText += '**🏢 BUILDING CONTEXT**\n'
-    if (analysis.buildingContext.buildingStatus === 'not_found') {
-      formattedText += `• Status: ⚠️ Building Not Found in Portfolio\n`
-    } else if (analysis.buildingContext.buildingStatus === 'matched') {
-      formattedText += `• Status: ✅ Building Matched in Portfolio\n`
-    } else {
-      formattedText += `• Status: ❓ Building Status Unknown\n`
+    if (analysis.buildingContext.buildingStatus) {
+      formattedText += `• Status: ${analysis.buildingContext.buildingStatus === 'matched' ? '✅ Building Found in Portfolio' : '⚠️ Building Not Found in Portfolio'}\n`
     }
-    
     if (analysis.buildingContext.extractedAddress) {
       formattedText += `• Extracted Address: ${analysis.buildingContext.extractedAddress}\n`
     }
@@ -235,25 +229,45 @@ export async function OPTIONS() {
 }
 
 export async function POST(req: Request) {
-  await lazyDeps()
-  const ct = req.headers.get('content-type') || ''
   try {
+    await lazyDeps()
+    const ct = req.headers.get('content-type') || ''
+    console.log('🔍 Upload request received:', { contentType: ct, url: req.url })
+    
     // 1) Multipart: small drag-and-drop files
     if (ct.includes('multipart/form-data')) {
+      console.log('🔍 Processing multipart form data')
       const form = await req.formData()
       const file = form.get('file') as File | null
-      const buildingId = (form.get('buildingId') as string) || (form.get('building_id') as string) || null // accept both parameter names
+      const buildingId = (form.get('buildingId') as string) || (form.get('building_id') as string) || null
 
-      if (!file) return NextResponse.json({ success: false, error: 'No file received' }, { status: 400 })
+      if (!file) {
+        console.error('❌ No file received in form data')
+        return NextResponse.json({ success: false, error: 'No file received' }, { status: 400 })
+      }
+      
+      console.log('🔍 File details:', { 
+        name: file.name, 
+        size: file.size, 
+        type: file.type,
+        buildingId 
+      })
+      
       if (file.size > MAX_FILE_BYTES) {
+        console.error('❌ File too large:', file.size, 'bytes')
         return NextResponse.json(
           { success: false, error: `File too large (${(file.size / 1048576).toFixed(1)} MB)`, code: 'FILE_TOO_LARGE' },
           { status: 413 }
         )
       }
 
+      console.log('🔍 Converting file to ArrayBuffer...')
       const ab = await file.arrayBuffer()
+      console.log('✅ File converted to ArrayBuffer, size:', ab.byteLength)
+      
+      console.log('🔍 Calling extractText...')
       const text = await extractText(new Uint8Array(ab), file.name)
+      console.log('✅ Text extraction completed, length:', text.text.length)
       
       // Determine extraction method for user feedback
       let extractionMethod = 'standard';
@@ -319,12 +333,11 @@ export async function POST(req: Request) {
             success: true,
             filename: file.name,
             buildingId,
-            summary: formattedText, // Use formatted text as the main summary
+            summary: formattedText,
             extractionMethod,
             extractionNote,
             textLength: text.text.length,
             confidence: leaseAnalysis.confidence || 0.8,
-            // Enhanced lease analysis data
             documentType: 'lease',
             leaseDetails: leaseAnalysis.leaseDetails || {},
             complianceChecklist: leaseAnalysis.complianceChecklist || [],
@@ -347,10 +360,10 @@ export async function POST(req: Request) {
           })
           
           // Fall back to basic analysis if enhanced analysis fails
+          console.log('🔍 Falling back to basic analysis...')
           const out = await summarizeAndSuggest(text.text, file.name)
           console.log('🔍 Fallback analysis result:', out)
           
-          // Create a basic formatted response for non-lease documents
           const basicFormattedText = `📋 **BASIC DOCUMENT ANALYSIS**\n\n**Summary:**\n${out.summary}\n\n**Note:** Enhanced lease analysis failed. This is a basic summary of the document content.`
           
           return NextResponse.json({
@@ -377,7 +390,6 @@ export async function POST(req: Request) {
         const out = await summarizeAndSuggest(text.text, file.name)
         console.log('🔍 Standard analysis result:', out)
         
-        // Create a basic formatted response for non-lease documents
         const basicFormattedText = `📋 **BASIC DOCUMENT ANALYSIS**\n\n**Summary:**\n${out.summary}\n\n**Note:** This document was processed using standard analysis methods.`
         
         return NextResponse.json({
@@ -420,8 +432,8 @@ export async function POST(req: Request) {
             success: true,
             filename: path.split('/').pop(),
             buildingId,
-            summary: formattedText, // Use formatted text as the main summary
-            extractionMethod: 'standard', // Assuming standard extraction for storage
+            summary: formattedText,
+            extractionMethod: 'standard',
             extractionNote: 'Document processed using standard extraction methods',
             textLength: text.text.length,
             confidence: leaseAnalysis.confidence || 0.8,
@@ -442,7 +454,6 @@ export async function POST(req: Request) {
           console.warn('Enhanced lease analysis failed, falling back to basic analysis:', leaseError)
           const out = await summarizeAndSuggest(text.text, path || 'unknown')
           
-          // Create a basic formatted response for failed lease analysis
           const basicFormattedText = `📋 **BASIC DOCUMENT ANALYSIS**\n\n**Summary:**\n${out.summary}\n\n**Note:** Enhanced lease analysis failed. This is a basic summary of the document content.`
           
           return NextResponse.json({
@@ -457,7 +468,6 @@ export async function POST(req: Request) {
         // Use standard analysis for non-lease documents
         const out = await summarizeAndSuggest(text.text, path || 'unknown')
         
-        // Create a basic formatted response for non-lease documents
         const basicFormattedText = `📋 **BASIC DOCUMENT ANALYSIS**\n\n**Summary:**\n${out.summary}\n\n**Note:** This document was processed using standard analysis methods.`
         
         return NextResponse.json({
@@ -470,9 +480,11 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ success: false, error: `Unsupported content-type: ${ct}` }, { status: 415 })
+    
   } catch (e: any) {
     const msg = e?.message || 'Unexpected error'
-    console.error('ask-ai/upload error:', msg)
+    console.error('❌ ask-ai/upload error:', msg)
+    console.error('❌ Full error details:', e)
     return NextResponse.json({ success: false, error: msg }, { status: 500 })
   }
 }

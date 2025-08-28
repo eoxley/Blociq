@@ -1,491 +1,406 @@
 import pdfParse from 'pdf-parse';
-import OpenAI from 'openai';
+import mammoth from 'mammoth';
+// @ts-ignore - jsdom types not available
+import { JSDOM } from 'jsdom';
 
-export interface TextExtractionResult {
+interface ExtractionResult {
   text: string;
-  confidence: 'high' | 'medium' | 'low';
-  method: 'pdf-parse' | 'openai-vision' | 'ocr' | 'fallback';
-  pageCount?: number;
-  wordCount?: number;
-  error?: string;
-  suggestions?: string[];
+  meta: {
+    name: string;
+    type: string;
+    bytes: number;
+  };
 }
 
-export interface DocumentAnalysisResult {
-  text: string;
-  confidence: 'high' | 'medium' | 'low';
-  documentType: string;
-  keyPhrases: string[];
-  summary: string;
-  error?: string;
-  suggestions?: string[];
+interface FileTypeInfo {
+  mimeType: string;
+  category: 'pdf' | 'word' | 'text' | 'html' | 'image' | 'unknown';
+  isSupported: boolean;
 }
 
-/**
- * Enhanced text extraction with multiple fallback methods
- */
-export async function extractTextFromPDF(buffer: Buffer, fileName?: string): Promise<TextExtractionResult> {
-  const extractionMethods = [
-    { name: 'pdf-parse', method: extractWithPdfParse },
-    { name: 'openai-vision', method: extractWithOpenAI },
-    { name: 'ocr', method: extractWithOCR }
-  ];
+const CONFIG = {
+  MAX_TEXT_LENGTH: 200_000,
+  MIN_TEXT_LENGTH: 10,
+  TIMEOUT_MS: 30_000,
+} as const;
 
-  for (const { name, method } of extractionMethods) {
+class TextExtractionService {
+  private static instance: TextExtractionService;
+
+  static getInstance(): TextExtractionService {
+    if (!TextExtractionService.instance) {
+      TextExtractionService.instance = new TextExtractionService();
+    }
+    return TextExtractionService.instance;
+  }
+
+  async extractText(buffer: Buffer, fileName: string = 'document'): Promise<string> {
+    const fileInfo = this.analyzeFile(buffer, fileName);
+    
+    if (!fileInfo.isSupported) {
+      throw new Error(`Unsupported file type: ${fileInfo.mimeType}`);
+    }
+
     try {
-      console.log(`🔄 Attempting ${name} extraction...`);
-      const result = await method(buffer, fileName);
-      
-      if (result.text && result.text.trim().length > 50) {
-        console.log(`✅ ${name} extraction successful (${result.text.length} characters)`);
-        return {
-          ...result,
-          method: name as any,
-          wordCount: result.text.split(/\s+/).length
-        };
-      } else {
-        console.log(`⚠️ ${name} extraction yielded insufficient content`);
+      let text = '';
+
+      switch (fileInfo.category) {
+        case 'pdf':
+          text = await this.extractFromPDF(buffer);
+          break;
+        case 'word':
+          text = await this.extractFromWord(buffer);
+          break;
+        case 'text':
+          text = await this.extractFromText(buffer);
+          break;
+        case 'html':
+          text = await this.extractFromHTML(buffer);
+          break;
+        case 'image':
+          text = await this.extractFromImage(buffer, fileName);
+          break;
+        default:
+          throw new Error(`No extractor for category: ${fileInfo.category}`);
       }
+
+      if (this.isValidText(text)) {
+        return this.postProcessText(text);
+      }
+
+      // Try fallback methods
+      return await this.tryFallbackExtraction(buffer, fileName);
+
     } catch (error) {
-      console.error(`❌ ${name} extraction failed:`, error);
+      console.warn(`Primary extraction failed for ${fileName}:`, error);
+      return await this.tryFallbackExtraction(buffer, fileName);
     }
   }
 
-  // All methods failed
-  return {
-    text: 'Document processing failed. The document may be corrupted, password-protected, or in an unsupported format.',
-    confidence: 'low',
-    method: 'fallback',
-    error: 'All extraction methods failed',
-    suggestions: [
-      'Try uploading a different version of the document',
-      'Ensure the document is not password-protected',
-      'Convert the document to PDF format if it\'s in another format',
-      'For scanned documents, try using a text-based version',
-      'Check that the file is not corrupted'
-    ]
-  };
-}
+  private analyzeFile(buffer: Buffer, fileName: string): FileTypeInfo {
+    const signature = this.getFileSignature(buffer);
+    const extension = this.getFileExtension(fileName);
+    
+    // PDF signature: %PDF
+    if (signature.startsWith('25504446') || extension === '.pdf') {
+      return {
+        mimeType: 'application/pdf',
+        category: 'pdf',
+        isSupported: true
+      };
+    }
+    
+    // ZIP signature (for DOCX): PK
+    if (signature.startsWith('504b') && extension === '.docx') {
+      return {
+        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        category: 'word',
+        isSupported: true
+      };
+    }
 
-/**
- * Primary method: pdf-parse
- */
-async function extractWithPdfParse(buffer: Buffer, fileName?: string): Promise<Partial<TextExtractionResult>> {
-  const pdfData = await pdfParse(buffer);
-  const extractedText = pdfData.text || '';
-  
-  return {
-    text: extractedText,
-    confidence: extractedText.trim().length > 200 ? 'high' : 'medium',
-    pageCount: pdfData.numpages
-  };
-}
+    // DOC signature: D0CF11E0
+    if (signature.startsWith('d0cf11e0') && extension === '.doc') {
+      return {
+        mimeType: 'application/msword',
+        category: 'word',
+        isSupported: true
+      };
+    }
 
-/**
- * Fallback method: OpenAI Vision API
- */
-async function extractWithOpenAI(buffer: Buffer, fileName?: string): Promise<Partial<TextExtractionResult>> {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error('OpenAI API key not configured');
+    // Image signatures
+    const imageSignatures = {
+      'ffd8ff': 'image/jpeg',
+      '89504e': 'image/png',
+      '474946': 'image/gif',
+      '424d': 'image/bmp',
+      '49492a': 'image/tiff',
+    };
+
+    for (const [sig, mimeType] of Object.entries(imageSignatures)) {
+      if (signature.startsWith(sig)) {
+        return {
+          mimeType,
+          category: 'image',
+          isSupported: true
+        };
+      }
+    }
+
+    // Fallback to extension-based detection
+    return this.analyzeByExtension(extension);
   }
 
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const base64 = buffer.toString('base64');
+  private getFileSignature(buffer: Buffer): string {
+    return buffer.subarray(0, 8).toString('hex').toLowerCase();
+  }
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: `Extract all readable text from this document. If it's a scanned document or image, describe what you can see. Return only the extracted text without any additional commentary or formatting. If the document appears to be scanned or image-based, mention this clearly.`
-          },
-          {
-            type: "image_url",
-            image_url: {
-              url: `data:application/pdf;base64,${base64}`
-            }
+  private getFileExtension(fileName: string): string {
+    return fileName.toLowerCase().substring(fileName.lastIndexOf('.'));
+  }
+
+  private analyzeByExtension(extension: string): FileTypeInfo {
+    const extensionMap: Record<string, FileTypeInfo> = {
+      '.txt': { mimeType: 'text/plain', category: 'text', isSupported: true },
+      '.csv': { mimeType: 'text/csv', category: 'text', isSupported: true },
+      '.md': { mimeType: 'text/markdown', category: 'text', isSupported: true },
+      '.html': { mimeType: 'text/html', category: 'html', isSupported: true },
+      '.htm': { mimeType: 'text/html', category: 'html', isSupported: true },
+      '.jpg': { mimeType: 'image/jpeg', category: 'image', isSupported: true },
+      '.jpeg': { mimeType: 'image/jpeg', category: 'image', isSupported: true },
+      '.png': { mimeType: 'image/png', category: 'image', isSupported: true },
+    };
+
+    return extensionMap[extension] || {
+      mimeType: 'application/octet-stream',
+      category: 'unknown',
+      isSupported: false
+    };
+  }
+
+  private async extractFromPDF(buffer: Buffer): Promise<string> {
+    const result = await pdfParse(buffer);
+    const text = result.text || '';
+    
+    if (!this.isValidText(text)) {
+      throw new Error('PDF extraction yielded insufficient text');
+    }
+    
+    return text;
+  }
+
+  private async extractFromWord(buffer: Buffer): Promise<string> {
+    const { value } = await mammoth.extractRawText({ buffer });
+    const text = value || '';
+    
+    if (!this.isValidText(text)) {
+      throw new Error('Word extraction yielded insufficient text');
+    }
+    
+    return text;
+  }
+
+  private extractFromText(buffer: Buffer): Promise<string> {
+    const text = buffer.toString('utf-8');
+    
+    if (!this.isValidText(text)) {
+      throw new Error('Text file appears to be empty or corrupted');
+    }
+    
+    return Promise.resolve(text);
+  }
+
+  private extractFromHTML(buffer: Buffer): Promise<string> {
+    try {
+      const dom = new JSDOM(buffer.toString('utf-8'));
+      const text = dom.window.document.body?.textContent || '';
+      
+      if (!this.isValidText(text)) {
+        throw new Error('HTML extraction yielded insufficient text');
+      }
+      
+      return Promise.resolve(text);
+    } catch (error) {
+      throw new Error(`HTML parsing failed: ${error}`);
+    }
+  }
+
+  private async extractFromImage(buffer: Buffer, fileName: string): Promise<string> {
+    try {
+      const { processDocumentOCR } = await import('./ocr');
+      
+      // Create proper blob for OCR
+      const blob = new Blob([buffer], { type: 'image/*' });
+      
+      // Convert to File-like object for OCR compatibility
+      const fileForOCR = Object.assign(blob, {
+        name: fileName,
+        lastModified: Date.now(),
+      }) as File;
+
+      const result = await processDocumentOCR(fileForOCR);
+      
+      if (result.text && this.isValidText(result.text)) {
+        return result.text + ' [OCR Fallback]';
+      }
+
+      throw new Error('OCR returned insufficient text');
+
+    } catch (error) {
+      throw new Error(`OCR processing failed: ${error}`);
+    }
+  }
+
+  private async tryFallbackExtraction(buffer: Buffer, fileName: string): Promise<string> {
+    const fallbackStrategies = [
+      () => this.performOCR(buffer, fileName),
+      () => this.tryEnhancedProcessor(buffer, fileName),
+      () => this.tryRawTextExtraction(buffer)
+    ];
+
+    for (const strategy of fallbackStrategies) {
+      try {
+        const text = await this.withTimeout(
+          strategy(),
+          CONFIG.TIMEOUT_MS,
+          'Fallback extraction timeout'
+        );
+
+        if (this.isValidText(text)) {
+          return this.postProcessText(text);
+        }
+      } catch (error) {
+        console.warn('Fallback strategy failed:', error);
+        continue;
+      }
+    }
+
+    throw new Error(`All extraction methods failed for ${fileName}`);
+  }
+
+  private async performOCR(buffer: Buffer, fileName: string): Promise<string> {
+    try {
+      const { processDocumentOCR } = await import('./ocr');
+      
+      const blob = new Blob([buffer], { type: 'application/pdf' });
+      const fileForOCR = Object.assign(blob, {
+        name: fileName,
+        lastModified: Date.now(),
+      }) as File;
+
+      const result = await processDocumentOCR(fileForOCR);
+      
+      if (result.text && this.isValidText(result.text)) {
+        return result.text + ' [OCR Fallback]';
+      }
+
+      throw new Error('OCR returned insufficient text');
+
+    } catch (error) {
+      throw new Error(`OCR processing failed: ${error}`);
+    }
+  }
+
+  private async tryEnhancedProcessor(buffer: Buffer, fileName: string): Promise<string> {
+    try {
+      const { extractTextFromPDF } = await import('./extractTextFromPdf');
+      const result = await extractTextFromPDF(buffer, fileName);
+      
+      if (result.text && this.isValidText(result.text)) {
+        return result.text + ' [Enhanced processor]';
+      }
+
+      throw new Error('Enhanced processor returned insufficient text');
+
+    } catch (error) {
+      throw new Error(`Enhanced processor failed: ${error}`);
+    }
+  }
+
+  private tryRawTextExtraction(buffer: Buffer): Promise<string> {
+    try {
+      const encodings = ['utf-8', 'latin1', 'ascii'] as const;
+      
+      for (const encoding of encodings) {
+        try {
+          const text = buffer.toString(encoding);
+          if (this.isValidText(text)) {
+            return Promise.resolve(text + ' [Raw text extraction]');
           }
-        ]
-      }
-    ],
-    max_tokens: 4000
-  });
-
-  const extractedText = response.choices[0].message.content || '';
-  
-  return {
-    text: extractedText,
-    confidence: extractedText.includes('scanned') || extractedText.includes('image') ? 'low' : 'high'
-  };
-}
-
-/**
- * OCR fallback method (placeholder for OCR service integration)
- */
-async function extractWithOCR(buffer: Buffer, fileName?: string): Promise<Partial<TextExtractionResult>> {
-  // This would integrate with Google Vision API, Azure Computer Vision, or similar OCR service
-  // For now, return a helpful message suggesting OCR processing
-  
-  return {
-    text: 'This document appears to be scanned or image-based. OCR processing is recommended for better text extraction. Please try uploading a text-based version of the document or contact support for OCR processing.',
-    confidence: 'low',
-    suggestions: [
-      'Upload a text-based version of the document',
-      'Use OCR processing service',
-      'Convert scanned document to searchable PDF',
-      'Contact support for manual processing'
-    ]
-  };
-}
-
-/**
- * Enhanced text extraction with document type detection and analysis
- */
-export async function extractTextWithAnalysis(buffer: Buffer, fileName: string): Promise<DocumentAnalysisResult> {
-  try {
-    const extractionResult = await extractTextFromPDF(buffer, fileName);
-    
-    if (extractionResult.error) {
-      return {
-        text: extractionResult.text,
-        confidence: 'low',
-        documentType: 'Unknown',
-        keyPhrases: [],
-        summary: 'Document processing failed. Please try a different file or format.',
-        error: extractionResult.error,
-        suggestions: extractionResult.suggestions
-      };
-    }
-    
-    // Detect document type based on filename and content
-    const documentType = detectDocumentType(fileName, extractionResult.text);
-    
-    // Extract key phrases for better analysis
-    const keyPhrases = extractKeyPhrases(extractionResult.text);
-    
-    // Generate basic summary
-    const summary = generateBasicSummary(extractionResult.text, documentType);
-    
-    return {
-      text: extractionResult.text,
-      confidence: extractionResult.confidence,
-      documentType,
-      keyPhrases,
-      summary
-    };
-  } catch (error) {
-    console.error('❌ Document analysis failed:', error);
-    return {
-      text: 'Document analysis failed. Please try again.',
-      confidence: 'low',
-      documentType: 'Unknown',
-      keyPhrases: [],
-      summary: 'Unable to analyze document content.',
-      error: error instanceof Error ? error.message : 'Unknown error',
-      suggestions: [
-        'Check that the file is not corrupted',
-        'Try uploading a different version',
-        'Ensure the document is in a supported format',
-        'Contact support if the problem persists'
-      ]
-    };
-  }
-}
-
-/**
- * Extract text from various file types with enhanced error handling
- */
-export async function extractTextFromFile(file: File): Promise<TextExtractionResult> {
-  try {
-    console.log(`📄 Processing file: ${file.name} (${file.type})`);
-    
-    if (file.type === 'text/plain') {
-      const text = await file.text();
-      return {
-        text,
-        confidence: 'high',
-        method: 'pdf-parse',
-        wordCount: text.split(/\s+/).length
-      };
-    } else if (file.type === 'application/pdf') {
-      const buffer = Buffer.from(await file.arrayBuffer());
-      return await extractTextFromPDF(buffer, file.name);
-    } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-      return await extractTextFromDocx(file);
-    } else if (file.type.includes('image/')) {
-      return await extractTextFromImage(file);
-    } else {
-      return {
-        text: `Unsupported file type: ${file.type}. Please upload PDF, DOCX, TXT, or image files.`,
-        confidence: 'low',
-        method: 'fallback',
-        error: 'Unsupported file type',
-        suggestions: [
-          'Convert the file to PDF format',
-          'Upload a text-based version',
-          'Use a supported file type (PDF, DOCX, TXT, JPG, PNG)'
-        ]
-      };
-    }
-  } catch (error) {
-    console.error('❌ File processing failed:', error);
-    return {
-      text: `Error processing file: ${file.name}`,
-      confidence: 'low',
-      method: 'fallback',
-      error: error instanceof Error ? error.message : 'Unknown error',
-      suggestions: [
-        'Check that the file is not corrupted',
-        'Try uploading a different version',
-        'Ensure the file is in a supported format',
-        'Contact support if the problem persists'
-      ]
-    };
-  }
-}
-
-/**
- * Extract text from DOCX files
- */
-async function extractTextFromDocx(file: File): Promise<TextExtractionResult> {
-  try {
-    // For now, use OpenAI Vision API as a fallback for DOCX
-    // In production, you'd use a library like mammoth.js
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    const arrayBuffer = await file.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString('base64');
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: "Extract all the text content from this Word document. Return only the extracted text without any additional commentary or formatting."
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:${file.type};base64,${base64}`
-              }
-            }
-          ]
+        } catch (error) {
+          continue;
         }
-      ],
-      max_tokens: 4000
+      }
+
+      throw new Error('Raw text extraction failed for all encodings');
+
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  }
+
+  private isValidText(text: string): boolean {
+    if (!text || typeof text !== 'string') {
+      return false;
+    }
+
+    const trimmed = text.trim();
+    
+    if (trimmed.length < CONFIG.MIN_TEXT_LENGTH) {
+      return false;
+    }
+
+    // Check if text contains mostly printable characters
+    const printableChars = trimmed.replace(/[\s\n\r\t]/g, '').length;
+    const totalChars = trimmed.length;
+    const printableRatio = printableChars / totalChars;
+
+    return printableRatio >= 0.7;
+  }
+
+  private postProcessText(text: string): string {
+    let cleaned = text
+      .replace(/\f/g, '\n')
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
+    if (cleaned.length > CONFIG.MAX_TEXT_LENGTH) {
+      cleaned = cleaned.slice(0, CONFIG.MAX_TEXT_LENGTH) + `\n\n[Truncated to ${CONFIG.MAX_TEXT_LENGTH} chars]`;
+    }
+
+    return cleaned;
+  }
+
+  private async withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage: string): Promise<T> {
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error(errorMessage)), timeoutMs);
     });
 
-    const extractedText = response.choices[0].message.content || '';
-    
-    return {
-      text: extractedText,
-      confidence: 'high',
-      method: 'openai-vision',
-      wordCount: extractedText.split(/\s+/).length
-    };
-  } catch (error) {
-    console.error('❌ DOCX extraction failed:', error);
-    return {
-      text: `Unable to extract text from Word document: ${file.name}. Please convert to PDF or TXT format.`,
-      confidence: 'low',
-      method: 'fallback',
-      error: 'DOCX extraction failed',
-      suggestions: [
-        'Convert the document to PDF format',
-        'Save as plain text (.txt)',
-        'Copy and paste content into a text file',
-        'Use a different document format'
-      ]
-    };
+    return Promise.race([promise, timeoutPromise]);
   }
 }
 
-/**
- * Extract text from image files
- */
-async function extractTextFromImage(file: File): Promise<TextExtractionResult> {
+// Main export function
+export async function extractText(buf: Uint8Array, name?: string): Promise<ExtractionResult> {
+  const buffer = Buffer.from(buf);
+  const fileName = name || 'document';
+  
+  if (!buffer || buffer.length === 0) {
+    throw new Error('Empty buffer provided for text extraction');
+  }
+
+  if (buffer.length > 50 * 1024 * 1024) {
+    throw new Error('File too large for text extraction (max 50MB)');
+  }
+
+  const extractor = TextExtractionService.getInstance();
+  
   try {
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    const arrayBuffer = await file.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString('base64');
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: "Extract all readable text from this image. If there's no text, describe what you can see. Return only the extracted text or description without additional commentary."
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:${file.type};base64,${base64}`
-              }
-            }
-          ]
-        }
-      ],
-      max_tokens: 2000
-    });
-
-    const extractedText = response.choices[0].message.content || '';
+    const text = await extractor.extractText(buffer, fileName);
     
     return {
-      text: extractedText,
-      confidence: extractedText.length > 50 ? 'medium' : 'low',
-      method: 'openai-vision',
-      wordCount: extractedText.split(/\s+/).length
+      text,
+      meta: {
+        name: fileName,
+        type: guessType(fileName),
+        bytes: buffer.byteLength
+      }
     };
-  } catch (error) {
-    console.error('❌ Image text extraction failed:', error);
-    return {
-      text: `Unable to extract text from image: ${file.name}. The image may not contain readable text or may be of low quality.`,
-      confidence: 'low',
-      method: 'fallback',
-      error: 'Image text extraction failed',
-      suggestions: [
-        'Ensure the image contains clear, readable text',
-        'Try a higher resolution image',
-        'Use a text-based document instead',
-        'Convert image to PDF with embedded text'
-      ]
-    };
+
+  } catch (error: any) {
+    console.error(`Text extraction failed for ${fileName}:`, error);
+    throw new Error(`Unable to extract text from ${fileName}: ${error.message}`);
   }
 }
 
-/**
- * Detect document type based on filename and content
- */
-export function detectDocumentType(fileName: string, text: string): string {
-  const name = fileName.toLowerCase();
-  const content = text.toLowerCase();
-  
-  // Check filename patterns first
-  if (name.includes('asbestos') || content.includes('asbestos')) return 'Asbestos Survey';
-  if (name.includes('eicr') || content.includes('electrical installation condition report')) return 'EICR';
-  if (name.includes('fire') || content.includes('fire risk assessment')) return 'Fire Risk Assessment';
-  if (name.includes('lease') || content.includes('lease agreement')) return 'Lease Agreement';
-  if (name.includes('insurance') || content.includes('insurance certificate')) return 'Insurance Certificate';
-  if (name.includes('major works') || content.includes('major works')) return 'Major Works Scope';
-  if (name.includes('minutes') || content.includes('agm') || content.includes('annual general meeting')) return 'Minutes/AGM';
-  if (name.includes('certificate') || content.includes('certificate')) return 'Certificate';
-  if (name.includes('report') || content.includes('report')) return 'Report';
-  if (name.includes('inspection') || content.includes('inspection')) return 'Inspection Report';
-  
-  // Default based on file extension
-  if (name.endsWith('.pdf')) return 'PDF Document';
-  if (name.endsWith('.doc') || name.endsWith('.docx')) return 'Word Document';
-  
-  return 'General Document';
-}
-
-/**
- * Extract key phrases from document text
- */
-export function extractKeyPhrases(text: string): string[] {
-  const phrases: string[] = [];
-  const content = text.toLowerCase();
-  
-  // Compliance-related phrases
-  if (content.includes('compliant') || content.includes('compliance')) phrases.push('Compliance');
-  if (content.includes('requires attention') || content.includes('action required')) phrases.push('Action Required');
-  if (content.includes('satisfactory') || content.includes('pass')) phrases.push('Satisfactory');
-  if (content.includes('unsatisfactory') || content.includes('fail')) phrases.push('Unsatisfactory');
-  
-  // Safety-related phrases
-  if (content.includes('safety') || content.includes('risk')) phrases.push('Safety/Risk');
-  if (content.includes('emergency') || content.includes('evacuation')) phrases.push('Emergency');
-  if (content.includes('fire') || content.includes('smoke')) phrases.push('Fire Safety');
-  
-  // Financial phrases
-  if (content.includes('cost') || content.includes('£') || content.includes('payment')) phrases.push('Financial');
-  if (content.includes('budget') || content.includes('estimate')) phrases.push('Budget/Estimate');
-  
-  // Legal phrases
-  if (content.includes('legal') || content.includes('regulation') || content.includes('act')) phrases.push('Legal/Regulatory');
-  if (content.includes('duty') || content.includes('responsibility')) phrases.push('Duty/Responsibility');
-  
-  return [...new Set(phrases)]; // Remove duplicates
-}
-
-/**
- * Generate basic summary based on document type and content
- */
-export function generateBasicSummary(text: string, documentType: string): string {
-  const content = text.toLowerCase();
-  
-  // Document type-specific summaries
-  switch (documentType) {
-    case 'Asbestos Survey':
-      if (content.includes('no asbestos') || content.includes('no acm')) {
-        return 'No asbestos-containing materials detected. Building is currently asbestos-clear.';
-      } else if (content.includes('asbestos found') || content.includes('acm')) {
-        return 'Asbestos-containing materials identified. Management plan required.';
-      }
-      break;
-      
-    case 'EICR':
-      if (content.includes('c1') || content.includes('danger present')) {
-        return 'Urgent electrical safety issues identified. Immediate action required.';
-      } else if (content.includes('c2') || content.includes('potentially dangerous')) {
-        return 'Electrical safety issues found. Remedial work required.';
-      } else if (content.includes('c3') || content.includes('improvement recommended')) {
-        return 'Electrical installation satisfactory with minor improvements recommended.';
-      }
-      break;
-      
-    case 'Fire Risk Assessment':
-      if (content.includes('high risk') || content.includes('significant findings')) {
-        return 'Fire safety risks identified. Action plan required.';
-      } else if (content.includes('low risk') || content.includes('satisfactory')) {
-        return 'Fire safety assessment satisfactory. Regular review recommended.';
-      }
-      break;
-      
-    case 'Lease Agreement':
-      return 'Lease agreement document. Review terms and conditions carefully.';
-      
-    case 'Insurance Certificate':
-      return 'Insurance certificate. Verify coverage and expiry dates.';
-      
-    case 'Major Works Scope':
-      return 'Major works scope document. Review specifications and costs.';
-      
-    case 'Minutes/AGM':
-      return 'Meeting minutes or AGM document. Review decisions and actions.';
-  }
-  
-  // Generic summary based on content length
-  if (text.length > 1000) {
-    return 'Comprehensive document with substantial content. Review for key findings and requirements.';
-  } else if (text.length > 100) {
-    return 'Document with moderate content. Review for important information.';
-  } else {
-    return 'Document with limited text content. Consider re-uploading with OCR if scanned.';
-  }
-}
-
-/**
- * Validate if extracted text is sufficient for AI analysis
- */
-export function isTextSufficientForAnalysis(text: string): boolean {
-  return text.trim().length >= 50;
-}
-
-/**
- * Clean and normalize extracted text
- */
-export function cleanExtractedText(text: string): string {
-  return text
-    .replace(/\s+/g, ' ') // Normalize whitespace
-    .replace(/\n\s*\n/g, '\n') // Remove excessive line breaks
-    .trim();
+function guessType(name: string): string {
+  const lower = name.toLowerCase();
+  if (lower.endsWith('.pdf')) return 'application/pdf';
+  if (lower.endsWith('.docx')) return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  if (lower.endsWith('.txt')) return 'text/plain';
+  if (lower.endsWith('.csv')) return 'text/csv';
+  if (lower.endsWith('.html') || lower.endsWith('.htm')) return 'text/html';
+  return 'application/octet-stream';
 }
