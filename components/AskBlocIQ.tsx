@@ -1100,31 +1100,6 @@ export default function AskBlocIQ({
                         </div>
                       )}
 
-                      {/* Suggested Actions - FIXED */}
-                      {doc.suggestedActions && doc.suggestedActions.length > 0 && (
-                        <div className="mt-3">
-                          <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide mb-2">
-                            Suggested Actions
-                          </h5>
-                          <div className="flex flex-wrap gap-2">
-                            {doc.suggestedActions.map((action, actionIndex) => {
-                              const actionLabel = action.label || action.title || `Action ${actionIndex + 1}`;
-                              
-                              return (
-                                <button
-                                  key={actionIndex}
-                                  className="px-3 py-1.5 bg-blue-100 text-blue-800 rounded-full text-sm hover:bg-blue-200 transition-colors font-medium"
-                                  onClick={() => handleSuggestedAction(action)}
-                                >
-                                  {action.icon && <span className="mr-1">{action.icon}</span>}
-                                  {actionLabel}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-
                       {/* Extraction Method & Confidence */}
                       {(doc.extractionMethod || doc.confidence) && (
                         <div className="mt-3 pt-3 border-t border-gray-200">
