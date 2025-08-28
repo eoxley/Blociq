@@ -637,9 +637,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         setUploadedFiles([])
         setUploadStatus('')
         
-        // CRITICAL: Return early to prevent falling through to text-only path
-        console.log('🔍 File processing complete, returning early')
-        return
+        console.log('🔍 File processing complete')
+        // Note: Removed early return to allow proper response display
       }
 
       // For text-only requests, use the main AI endpoint
