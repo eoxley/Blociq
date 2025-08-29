@@ -758,9 +758,14 @@ export async function POST(request: NextRequest) {
     // Initialize and authenticate
     const { supabase, user } = await requireAuth();
 
-    // Parse request
+    // Parse request - CRITICAL FIX: Handle multiple field names
     const formData = await request.formData();
-    const userQuestion = formData.get('userQuestion') as string;
+    
+    // ✅ FIX: Accept both 'userQuestion' and 'prompt' field names
+    const userQuestion = (formData.get('userQuestion') as string) || 
+                        (formData.get('prompt') as string) || 
+                        (formData.get('question') as string);
+    
     const files: File[] = [];
     let index = 0;
     while (formData.has(`file_${index}`)) {
@@ -771,8 +776,26 @@ export async function POST(request: NextRequest) {
       index++;
     }
     
-    const sessionId = crypto.randomUUID();
+    const sessionId = formData.get('sessionId') as string || crypto.randomUUID();
     const source = 'web' as const;
+
+    // ✅ FIX: Add validation and detailed error logging
+    if (!userQuestion || userQuestion.trim().length === 0) {
+      console.error('❌ Missing question field in request');
+      console.error('📋 Available form fields:', Array.from(formData.keys()));
+      
+      return NextResponse.json({
+        error: 'Question field is required',
+        details: 'Expected field: userQuestion, prompt, or question',
+        receivedFields: Array.from(formData.keys()),
+        suggestion: 'Ensure frontend sends question in correct field name'
+      }, { status: 400 });
+    }
+
+    // ✅ FIX: Add comprehensive debug logging
+    console.log(`🔍 Question received: "${userQuestion}"`);
+    console.log(`📁 Files uploaded: ${files.length}`);
+    console.log(`📋 Available form fields: ${Array.from(formData.keys()).join(', ')}`);
 
     // Validate input
     if (!userQuestion && files.length === 0) {
@@ -787,44 +810,60 @@ export async function POST(request: NextRequest) {
       features: ['ocr', 'database-search', 'lease-analysis', 'insights'],
     };
 
-    // Check if this is a database query first (PRIORITY 1)
-    console.log('🔍 Checking if property query for:', userQuestion);
-    const isDbQuery = isPropertyQuery(userQuestion);
-    console.log('🔍 isPropertyQuery result:', isDbQuery);
+    // ✅ FIX: Enhanced property query detection and database search
+    const isDbQuery = checkIfPropertyQuery(userQuestion);
+    console.log(`🏠 Property query detected: ${isDbQuery}`);
     
     if (isDbQuery) {
       console.log('🎯 Database query detected! Searching database first:', userQuestion);
       
       try {
-        console.log('🚀 Starting database search...');
-        const databaseResults = await searchAllRelevantTables(supabase, userQuestion);
-        console.log('📊 Database search completed. Result keys:', Object.keys(databaseResults));
+        console.log('🚀 Starting enhanced database search...');
         
-        if (Object.keys(databaseResults).length > 0) {
-          console.log('✅ Database search successful, found data in tables:', Object.keys(databaseResults));
+        // Primary database search
+        const databaseResults = await searchAllRelevantTables(supabase, userQuestion);
+        console.log('📊 General database search completed. Result keys:', Object.keys(databaseResults));
+        
+        // ✅ FIX: Enhanced leaseholder search for property queries
+        const leaseholderResults = await searchLeaseholders(supabase, userQuestion);
+        console.log(`🏠 Leaseholder search found: ${leaseholderResults.length} records`);
+        
+        // Combine results
+        const totalRecords = Object.values(databaseResults).reduce((sum: number, arr: any) => sum + (Array.isArray(arr) ? arr.length : 0), 0) + leaseholderResults.length;
+        
+        if (totalRecords > 0 || leaseholderResults.length > 0) {
+          console.log(`✅ Database search successful, found ${totalRecords} total records`);
           
-          // Format the database response
-          const formattedResponse = formatDatabaseResponse(userQuestion, databaseResults);
+          // ✅ FIX: Enhanced response formatting with leaseholder data
+          let formattedResponse;
+          if (leaseholderResults.length > 0) {
+            formattedResponse = formatLeaseholderResponse(userQuestion, leaseholderResults);
+          } else {
+            formattedResponse = formatDatabaseResponse(userQuestion, databaseResults);
+          }
           
           return NextResponse.json({
             answer: formattedResponse,
-            sources: ['database_search'],
-            confidence: 0.9,
+            sources: leaseholderResults.length > 0 ? ['leaseholder_database', 'vw_units_leaseholders'] : ['database_search'],
+            confidence: leaseholderResults.length > 0 ? 0.95 : 0.85,
             suggestions: [
-              'Ask about other properties',
-              'Request specific details',
-              'Check compliance information'
+              'Ask about contact details',
+              'Request lease information', 
+              'Check other properties'
             ],
             relatedQueries: [
               'What are the contact details?',
-              'Show me building information',
-              'What other units are there?'
+              'When does the lease expire?',
+              'What is the monthly rent?',
+              'Show me other properties'
             ],
             metadata: {
               processingTime: Date.now() - startTime,
               documentsProcessed: 0,
-              databaseRecordsSearched: Object.values(databaseResults).reduce((sum: number, arr: any) => sum + (Array.isArray(arr) ? arr.length : 0), 0),
-              aiModel: 'database_search',
+              databaseRecordsSearched: totalRecords,
+              leaseholderRecords: leaseholderResults.length,
+              tablesSearched: [...Object.keys(databaseResults), ...(leaseholderResults.length > 0 ? ['vw_units_leaseholders'] : [])],
+              aiModel: 'enhanced_database_search',
               timestamp: new Date().toISOString(),
             },
           });
@@ -942,6 +981,146 @@ async function logLeaseProcessing(
   } catch (error) {
     console.error('Lease processing log error:', error);
     // Don't fail the request if logging fails
+  }
+}
+
+/**
+ * ✅ FIX: Enhanced property query detection
+ */
+function checkIfPropertyQuery(query: string): boolean {
+  if (!query || query.trim().length === 0) {
+    console.warn('⚠️ Empty query provided to property detection');
+    return false;
+  }
+
+  const lowerQuery = query.toLowerCase();
+  console.log(`🔍 Analyzing query for property intent: "${query}"`);
+  
+  // Property-related keywords
+  const propertyKeywords = [
+    'property', 'unit', 'apartment', 'house', 'building',
+    'leaseholder', 'tenant', 'resident', 'occupant',
+    'rent', 'lease', 'rental', 'address',
+    'who lives', 'who is in', 'who rents', 'occupancy'
+  ];
+  
+  // Address patterns
+  const addressPattern = /\b\d+\s+[A-Za-z\s]+(street|st|avenue|ave|road|rd|drive|dr|lane|ln|house|court|ct)\b/i;
+  const hasAddress = addressPattern.test(query);
+  
+  // Check for property keywords
+  const hasPropertyKeywords = propertyKeywords.some(keyword => lowerQuery.includes(keyword));
+  
+  const isProperty = hasAddress || hasPropertyKeywords;
+  console.log(`🏠 Property query result: ${isProperty} (address: ${hasAddress}, keywords: ${hasPropertyKeywords})`);
+  
+  return isProperty;
+}
+
+/**
+ * ✅ FIX: Direct leaseholder search for property queries
+ */
+async function searchLeaseholders(supabase: any, query: string): Promise<any[]> {
+  console.log(`🔍 Searching leaseholders for: "${query}"`);
+  
+  try {
+    // Extract potential address or property identifier
+    const searchTerms = extractSearchTerms(query);
+    console.log(`🔎 Search terms extracted: ${searchTerms.join(', ')}`);
+    
+    if (searchTerms.length === 0) {
+      console.warn('⚠️ No search terms found in query');
+      return [];
+    }
+    
+    // Build search conditions - using the actual column names from vw_units_leaseholders
+    const searchConditions = searchTerms.map(term => [
+      `building_name.ilike.%${term}%`,
+      `unit_address.ilike.%${term}%`, 
+      `unit_number.ilike.%${term}%`,
+      `leaseholder_name.ilike.%${term}%`,
+      `full_name.ilike.%${term}%`
+    ]).flat();
+    
+    const { data, error } = await supabase
+      .from('vw_units_leaseholders')
+      .select('*')
+      .or(searchConditions.join(','))
+      .limit(50);
+
+    if (error) {
+      console.error('❌ Leaseholder search error:', error);
+      return [];
+    }
+
+    console.log(`✅ Leaseholder search found ${data?.length || 0} results`);
+    return data || [];
+  } catch (error) {
+    console.error('❌ Leaseholder search failed:', error);
+    return [];
+  }
+}
+
+/**
+ * Extract search terms from user query
+ */
+function extractSearchTerms(query: string): string[] {
+  const terms: string[] = [];
+  
+  // Extract numbers (could be unit numbers or addresses)
+  const numbers = query.match(/\b\d+\b/g) || [];
+  terms.push(...numbers);
+  
+  // Extract property names (capitalize words)
+  const propertyNames = query.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+(?:House|Court|Building|Apartments?|Complex)\b/g) || [];
+  terms.push(...propertyNames);
+  
+  // Extract street names
+  const streetPattern = /\b\d+\s+([A-Za-z\s]+(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln))\b/gi;
+  const streetMatches = query.match(streetPattern) || [];
+  terms.push(...streetMatches);
+  
+  // Extract individual words that might be property identifiers
+  const words = query.split(/\s+/).filter(word => 
+    word.length > 2 && 
+    !/^(who|is|the|of|in|at|for|and|or|but)$/i.test(word)
+  );
+  terms.push(...words);
+  
+  return [...new Set(terms)]; // Remove duplicates
+}
+
+/**
+ * Format response for leaseholder queries
+ */
+function formatLeaseholderResponse(query: string, leaseholderData: any[]): string {
+  if (leaseholderData.length === 1) {
+    const record = leaseholderData[0];
+    return `## 🏠 Property Information Found
+
+**Property:** ${record.building_name || 'Unknown Property'}
+**Address:** ${record.unit_address || 'Address not available'}
+**Unit:** ${record.unit_number || 'N/A'}
+
+**Current Leaseholder:** ${record.leaseholder_name || record.full_name || 'No current tenant'}
+
+${record.monthly_rent ? `**Monthly Rent:** £${record.monthly_rent.toLocaleString()}` : ''}
+${record.lease_start_date ? `**Lease Start:** ${record.lease_start_date}` : ''}
+${record.lease_end_date ? `**Lease End:** ${record.lease_end_date}` : ''}
+${record.lease_status ? `**Status:** ${record.lease_status}` : ''}
+
+${record.phone || record.email ? '**Contact Info:**' : ''}
+${record.phone ? `• Phone: ${record.phone}` : ''}
+${record.email ? `• Email: ${record.email}` : ''}`;
+  } else {
+    return `## 🏠 Multiple Properties Found (${leaseholderData.length} results)
+
+${leaseholderData.map((record, i) => `
+**${i + 1}. ${record.building_name || 'Property'} ${record.unit_number ? `- Unit ${record.unit_number}` : ''}**
+• Leaseholder: ${record.leaseholder_name || record.full_name || 'Vacant'}
+• Address: ${record.unit_address || 'Not available'}
+${record.monthly_rent ? `• Rent: £${record.monthly_rent.toLocaleString()}` : ''}
+`).join('')}`;
   }
 }
 
