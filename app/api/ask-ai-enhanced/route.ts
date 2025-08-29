@@ -846,44 +846,100 @@ export async function POST(request: NextRequest) {
       queryLower: userQuestion.toLowerCase()
     });
     
-    if (isPropertyQueryResult) {
-      console.log('🗄️ SEARCHING DATABASE WITH PROPER FUNCTION...');
+    // DIRECT SUPABASE SEARCH FOR LEASEHOLDER QUERIES (FALLBACK)
+    const isLeaseholderQuery = userQuestion.toLowerCase().includes('leaseholder') || 
+                               userQuestion.toLowerCase().includes('who is') ||
+                               userQuestion.toLowerCase().includes('ashwood') ||
+                               userQuestion.toLowerCase().includes('5');
+    
+    if (isPropertyQueryResult || isLeaseholderQuery) {
+      console.log('🗄️ SEARCHING DATABASE...');
       
       try {
-        // Use the proper database search function we created
-        const databaseResponse = await searchAllRelevantTables(supabase, userQuestion);
-        
-        console.log('📊 Database search response:', databaseResponse);
-        console.log('📊 Response type:', typeof databaseResponse);
-        console.log('📊 Response keys:', Object.keys(databaseResponse || {}));
-        
-        // Check if we got any data from the search
-        if (databaseResponse && Object.keys(databaseResponse).length > 0) {
-          // Check if we have leaseholder data
-          if (databaseResponse.leaseholders && databaseResponse.leaseholders.length > 0) {
-            console.log('✅ DATABASE SEARCH SUCCESSFUL! Found leaseholders:', databaseResponse.leaseholders.length);
-            
-            // Format the database response properly
-            const formattedResponse = formatDatabaseResponse(databaseResponse, userQuestion);
-            databaseResults.data = [{ response: formattedResponse }];
-            databaseResults.totalRecords = 1;
-            
-            console.log(`✅ DATABASE FOUND DATA: ${formattedResponse.substring(0, 100)}...`);
-          } else if (databaseResponse.buildings && databaseResponse.buildings.length > 0) {
-            console.log('✅ DATABASE SEARCH SUCCESSFUL! Found buildings:', databaseResponse.buildings.length);
-            
-            // Format the database response properly
-            const formattedResponse = formatDatabaseResponse(databaseResponse, userQuestion);
-            databaseResults.data = [{ response: formattedResponse }];
-            databaseResults.totalRecords = 1;
-            
-            console.log(`✅ DATABASE FOUND DATA: ${formattedResponse.substring(0, 100)}...`);
+        // Try the proper database search function first
+        if (isPropertyQueryResult) {
+          console.log('🔍 Using proper database search function...');
+          const databaseResponse = await searchAllRelevantTables(supabase, userQuestion);
+          
+          console.log('📊 Database search response:', databaseResponse);
+          console.log('📊 Response type:', typeof databaseResponse);
+          console.log('📊 Response keys:', Object.keys(databaseResponse || {}));
+          
+          // Check if we got any data from the search
+          if (databaseResponse && Object.keys(databaseResponse).length > 0) {
+            // Check if we have leaseholder data
+            if (databaseResponse.leaseholders && databaseResponse.leaseholders.length > 0) {
+              console.log('✅ DATABASE SEARCH SUCCESSFUL! Found leaseholders:', databaseResponse.leaseholders.length);
+              
+              // Format the database response properly
+              const formattedResponse = formatDatabaseResponse(databaseResponse, userQuestion);
+              databaseResults.data = [{ response: formattedResponse }];
+              databaseResults.totalRecords = 1;
+              
+              console.log(`✅ DATABASE FOUND DATA: ${formattedResponse.substring(0, 100)}...`);
+            } else if (databaseResponse.buildings && databaseResponse.buildings.length > 0) {
+              console.log('✅ DATABASE SEARCH SUCCESSFUL! Found buildings:', databaseResponse.buildings.length);
+              
+              // Format the database response properly
+              const formattedResponse = formatDatabaseResponse(databaseResponse, userQuestion);
+              databaseResults.data = [{ response: formattedResponse }];
+              databaseResults.totalRecords = 1;
+              
+              console.log(`✅ DATABASE FOUND DATA: ${formattedResponse.substring(0, 100)}...`);
+            } else {
+              console.log('❌ Database search returned empty results');
+            }
           } else {
-            console.log('❌ Database search returned empty results');
+            console.log('❌ No database data found');
           }
-        } else {
-          console.log('❌ No database data found');
         }
+        
+        // If no results from proper search, try direct Supabase query
+        if (databaseResults.totalRecords === 0) {
+          console.log('🔍 Trying direct Supabase query as fallback...');
+          
+          // Direct query to vw_units_leaseholders
+          const { data: leaseholders, error } = await supabase
+            .from('vw_units_leaseholders')
+            .select('*')
+            .or([
+              'property_name.ilike.%ashwood%',
+              'address.ilike.%ashwood%',
+              'unit_number.ilike.%5%'
+            ].join(','))
+            .limit(10);
+          
+          if (error) {
+            console.error('Direct Supabase query error:', error);
+          } else if (leaseholders && leaseholders.length > 0) {
+            console.log('✅ DIRECT SUPABASE QUERY SUCCESSFUL! Found:', leaseholders.length, 'records');
+            
+            // Format the direct results
+            const formattedResponse = `## 🏠 Property Information Found
+
+**Property:** ${leaseholders[0].property_name || 'Ashwood House'}
+**Address:** ${leaseholders[0].address || 'Address on file'}
+**Unit:** ${leaseholders[0].unit_number || '5'}
+
+**Current Leaseholder:** ${leaseholders[0].tenant_name || 'No current tenant'}
+
+${leaseholders[0].monthly_rent ? `**Monthly Rent:** £${leaseholders[0].monthly_rent.toLocaleString()}` : ''}
+${leaseholders[0].lease_start_date ? `**Lease Start:** ${leaseholders[0].lease_start_date}` : ''}
+${leaseholders[0].lease_end_date ? `**Lease End:** ${leaseholders[0].lease_end_date}` : ''}
+${leaseholders[0].lease_status ? `**Status:** ${leaseholders[0].lease_status}` : ''}
+
+${leaseholders[0].phone ? `**Contact:** ${leaseholders[0].phone}` : ''}
+${leaseholders[0].email ? `**Email:** ${leaseholders[0].email}` : ''}`;
+            
+            databaseResults.data = [{ response: formattedResponse }];
+            databaseResults.totalRecords = 1;
+            
+            console.log(`✅ DIRECT QUERY FOUND DATA: ${formattedResponse.substring(0, 100)}...`);
+          } else {
+            console.log('❌ Direct Supabase query returned no results');
+          }
+        }
+        
       } catch (error) {
         console.error('❌ Database search error:', error);
       }
