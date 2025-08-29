@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import BlocIQLogo from '@/components/BlocIQLogo';
 import PageHero from '@/components/PageHero';
@@ -9,63 +9,150 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Add CSS animation for fade-in effect
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .animate-fade-in {
+        animation: fadeIn 0.6s ease-out forwards;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      if (document.head.contains(style)) {
+        document.head.removeChild(style);
+      }
+    };
+  }, []);
 
   const handleLogin = async () => {
     setError(null);
+    setIsLoading(true);
 
-    // 🔥 Step 1: kill any stale session
-    await supabase.auth.signOut();
+    try {
+      // 🔥 Step 1: kill any stale session
+      await supabase.auth.signOut();
 
-    // ✅ Step 2: clean login attempt
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+      // ✅ Step 2: clean login attempt
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      setError(error.message);
-    } else {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      if (error) {
+        setError(error.message);
+      } else {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-      console.log('✅ Logged-in user ID:', session?.user?.id);
+        console.log('✅ Logged-in user ID:', session?.user?.id);
 
-      // ✅ Step 3: manual redirect to home
-      window.location.href = '/home';
+        // ✅ Step 3: manual redirect to home
+        window.location.href = '/home';
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <>
       <PageHero title="Login to BlocIQ" subtitle="Sign in to access your property management dashboard." icon={<BlocIQLogo className="text-white" size={28} />} />
-      <main className="flex flex-col items-center justify-center p-10 space-y-6 text-center">
-        <h1 className="text-2xl font-semibold text-gray-900">Login to BlocIQ</h1>
+      <main className="flex flex-col items-center justify-center py-20 px-6 space-y-8 text-center bg-gradient-to-b from-gray-50 to-white min-h-screen relative overflow-hidden">
+        {/* Subtle Background Pattern */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-[#4f46e5]/5 to-[#a855f7]/5 rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-[#14b8a6]/5 to-[#3b82f6]/5 rounded-full blur-3xl"></div>
+        </div>
+        {/* Enhanced Login Form Container */}
+        <div className="w-full max-w-md mx-auto animate-fade-in">
+          {/* Form Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-3">Welcome Back</h1>
+            <p className="text-lg text-gray-600 leading-relaxed">Sign in to access your property management dashboard</p>
+          </div>
 
-        <input
-          type="email"
-          placeholder="Email"
-          className="border border-gray-300 p-3 rounded-xl w-full max-w-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+          {/* Enhanced Login Form */}
+          <div className="bg-white rounded-2xl p-8 shadow-2xl border border-gray-100">
+            <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); handleLogin(); }} onKeyDown={(e) => { if (e.key === 'Enter' && !isLoading) handleLogin(); }}>
+              {/* Email Input */}
+              <div className="space-y-2">
+                <label htmlFor="email" className="block text-sm font-semibold text-gray-700 text-left">
+                  Email Address
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent transition-all duration-200 text-base shadow-sm hover:border-gray-400"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
 
-        <input
-          type="password"
-          placeholder="Password"
-          className="border border-gray-300 p-3 rounded-xl w-full max-w-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+              {/* Password Input */}
+              <div className="space-y-2">
+                <label htmlFor="password" className="block text-sm font-semibold text-gray-700 text-left">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent transition-all duration-200 text-base shadow-sm hover:border-gray-400"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
 
-        <button
-          onClick={handleLogin}
-          className="bg-gradient-to-r from-teal-600 to-teal-700 text-white px-6 py-3 rounded-xl hover:from-teal-700 hover:to-teal-800 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-        >
-          Sign In
-        </button>
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              >
+                {isLoading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span>Signing In...</span>
+                  </div>
+                ) : (
+                  'Sign In to BlocIQ'
+                )}
+              </button>
+            </form>
 
-        {error && <p className="text-red-500">{error}</p>}
+            {/* Error Display */}
+            {error && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl">
+                <p className="text-red-600 text-sm font-medium">{error}</p>
+              </div>
+            )}
+
+            {/* Additional Info */}
+            <div className="mt-6 pt-6 border-t border-gray-100">
+              <p className="text-sm text-gray-500">
+                Need help? Contact{' '}
+                <a href="mailto:hello@blociq.co.uk" className="text-[#4f46e5] hover:text-[#a855f7] font-medium transition-colors">
+                  hello@blociq.co.uk
+                </a>
+              </p>
+            </div>
+          </div>
+        </div>
       </main>
     </>
   );
