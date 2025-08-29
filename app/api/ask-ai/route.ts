@@ -198,16 +198,10 @@ class BuildingContextService {
       // Use first building match for comprehensive data
       const building = buildings[0];
       
-      // 2. Find units and leaseholders with comprehensive data
+      // 2. Find units and leaseholders using the optimized view
       let unitQuery = this.supabase
-        .from('units')
-        .select(`
-          id, unit_number, floor, type, created_at,
-          leaseholders!left(
-            id, name, email, phone,
-            created_at
-          )
-        `)
+        .from('vw_units_leaseholders')
+        .select('*')
         .eq('building_id', building.id)
         .order('unit_number');
         
@@ -241,7 +235,11 @@ class BuildingContextService {
         },
         units: units || [],
         totalUnits: units?.length || 0,
-        hasLeaseholders: units?.some(unit => unit.leaseholders && unit.leaseholders.length > 0) || false,
+        hasLeaseholders: units?.some(unit => 
+          // Handle both view structure and old nested structure
+          unit.leaseholder_name || unit.leaseholder_id || 
+          (unit.leaseholders && unit.leaseholders.length > 0)
+        ) || false,
         searchedFor: {
           building: intent.buildingIdentifier,
           unit: intent.unitIdentifier
@@ -432,8 +430,15 @@ class ResponseGenerator {
     if (units && units.length > 0) {
       response += `\n## 👥 **Leaseholder Information**\n\n`;
       
-      const unitsWithLeaseholders = units.filter((unit: any) => unit.leaseholders && unit.leaseholders.length > 0);
-      const unitsWithoutLeaseholders = units.filter((unit: any) => !unit.leaseholders || unit.leaseholders.length === 0);
+      // Handle both view structure and old nested structure
+      const unitsWithLeaseholders = units.filter((unit: any) => 
+        unit.leaseholder_name || unit.leaseholder_id || 
+        (unit.leaseholders && unit.leaseholders.length > 0)
+      );
+      const unitsWithoutLeaseholders = units.filter((unit: any) => 
+        !unit.leaseholder_name && !unit.leaseholder_id && 
+        (!unit.leaseholders || unit.leaseholders.length === 0)
+      );
       
       if (searchedFor.unit) {
         // Specific unit search
@@ -444,7 +449,17 @@ class ResponseGenerator {
         
         if (targetUnit) {
           response += `### **Unit ${targetUnit.unit_number}${targetUnit.floor ? ` (Floor ${targetUnit.floor})` : ''}**\n`;
-          if (targetUnit.leaseholders && targetUnit.leaseholders.length > 0) {
+          
+          // Handle view structure (flattened) or old nested structure
+          if (targetUnit.leaseholder_name || targetUnit.leaseholder_id) {
+            // View structure - leaseholder data is flattened in the unit record
+            response += `**👤 Leaseholder:** ${targetUnit.leaseholder_name || 'Name not available'}\n`;
+            if (targetUnit.leaseholder_email) response += `**📧 Email:** ${targetUnit.leaseholder_email}\n`;
+            if (targetUnit.leaseholder_phone) response += `**📞 Phone:** ${targetUnit.leaseholder_phone}\n`;
+            if (targetUnit.leaseholder_created_at) response += `**📅 Registered:** ${new Date(targetUnit.leaseholder_created_at).toLocaleDateString()}\n`;
+            response += `\n`;
+          } else if (targetUnit.leaseholders && targetUnit.leaseholders.length > 0) {
+            // Old nested structure
             targetUnit.leaseholders.forEach((lh: any) => {
               response += `**👤 Leaseholder:** ${lh.name || 'Name not available'}\n`;
               if (lh.email) response += `**📧 Email:** ${lh.email}\n`;
@@ -463,15 +478,31 @@ class ResponseGenerator {
         if (unitsWithLeaseholders.length > 0) {
           response += `**📊 Occupied Units (${unitsWithLeaseholders.length}/${units.length}):**\n\n`;
           unitsWithLeaseholders.slice(0, 10).forEach((unit: any) => {
-            const leaseholderNames = unit.leaseholders.map((lh: any) => lh.name || 'Name not available').join(', ');
+            // Handle view structure or old nested structure
+            let leaseholderNames = '';
+            let contactEmail = '';
+            let contactPhone = '';
+            
+            if (unit.leaseholder_name || unit.leaseholder_id) {
+              // View structure - leaseholder data is flattened
+              leaseholderNames = unit.leaseholder_name || 'Name not available';
+              contactEmail = unit.leaseholder_email;
+              contactPhone = unit.leaseholder_phone;
+            } else if (unit.leaseholders && unit.leaseholders.length > 0) {
+              // Old nested structure
+              leaseholderNames = unit.leaseholders.map((lh: any) => lh.name || 'Name not available').join(', ');
+              const firstLH = unit.leaseholders[0];
+              contactEmail = firstLH.email;
+              contactPhone = firstLH.phone;
+            }
+            
             response += `• **Unit ${unit.unit_number}:** ${leaseholderNames}\n`;
             
-            // Show contact details for first leaseholder
-            const firstLH = unit.leaseholders[0];
-            if (firstLH.email || firstLH.phone) {
+            // Show contact details
+            if (contactEmail || contactPhone) {
               response += `  `;
-              if (firstLH.email) response += `📧 ${firstLH.email} `;
-              if (firstLH.phone) response += `📞 ${firstLH.phone}`;
+              if (contactEmail) response += `📧 ${contactEmail} `;
+              if (contactPhone) response += `📞 ${contactPhone}`;
               response += `\n`;
             }
           });
