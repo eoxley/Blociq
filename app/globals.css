@@ -1137,19 +1137,19 @@
 
 /* AI Feature Styling */
 .ai-header {
-  background: var(--ai-gradient);
+  background: var(--hero-gradient);
   color: white;
   border-radius: 12px 12px 0 0;
 }
 
 .ai-card {
   border-top: 3px solid;
-  border-image: var(--ai-gradient) 1;
+  border-image: var(--hero-gradient) 1;
   background: white;
 }
 
 .ai-button {
-  background: var(--ai-gradient);
+  background: var(--hero-gradient);
   color: white;
   border: none;
   border-radius: 12px;
@@ -1162,7 +1162,7 @@
 }
 
 .ai-status {
-  background: var(--ai-gradient);
+  background: var(--hero-gradient);
   border-radius: 20px;
   padding: 4px 12px;
   color: white;
@@ -1256,22 +1256,22 @@
 }
 
 .nav-active {
-  background: var(--brand-gradient);
+  background: var(--hero-gradient);
   color: white;
   font-weight: 600;
-  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
 }
 
 /* Icon Containers */
 .icon-brain {
-  background: var(--ai-gradient);
+  background: var(--hero-gradient);
   border-radius: 12px;
   padding: 8px;
   color: white;
 }
 
 .icon-house {
-  background: var(--brand-gradient);
+  background: var(--hero-gradient);
   border-radius: 12px;
   padding: 8px;
   color: white;
@@ -1279,12 +1279,13 @@
 
 /* Status Badges */
 .badge-coming-soon {
-  background: var(--brand-purple);
-  color: white;
+  background: var(--brand-gray);
+  color: var(--text-secondary);
   padding: 4px 12px;
   border-radius: 20px;
   font-size: 12px;
   font-weight: 500;
+  border: 1px solid var(--border-color);
 }
 
 .badge-active {

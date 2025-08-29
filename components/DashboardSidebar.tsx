@@ -70,10 +70,10 @@ export default function DashboardSidebar() {
             return (
               <div key={label} className="w-full group">
                 <button
-                  className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-text-secondary hover:bg-accent transition-all relative group"
+                  className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-text-secondary hover:bg-[#f8fafc] transition-all relative group"
                   disabled
                 >
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 bg-tertiary-bg group-hover:bg-secondary-bg relative">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 bg-[#f1f5f9] group-hover:bg-[#e2e8f0] relative">
                     <span
                       className="text-base opacity-60"
                       style={{ fontFamily: "'Apple Color Emoji', 'Segoe UI Emoji', sans-serif" }}
@@ -101,7 +101,7 @@ export default function DashboardSidebar() {
                 className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-300 relative group hover-lift ${
                   isActive
                     ? aiPowered ? 'ai-header text-white font-semibold shadow-lg' : 'nav-active'
-                    : 'hover:bg-accent text-text-primary hover:text-brand-teal'
+                    : 'hover:bg-[#f8fafc] text-text-primary hover:text-[#4f46e5]'
                 }`}
               >
                 {/* Active indicator */}
@@ -174,9 +174,9 @@ export default function DashboardSidebar() {
         <div className="space-y-2">
           <Link
             href="/account"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium hover:bg-accent transition-all duration-300 group text-text-primary hover-lift"
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium hover:bg-[#f8fafc] transition-all duration-300 group text-text-primary hover-lift"
           >
-            <div className="w-9 h-9 bg-tertiary-bg rounded-xl flex items-center justify-center group-hover:bg-secondary-bg transition-all duration-300">
+            <div className="w-9 h-9 bg-[#f1f5f9] rounded-xl flex items-center justify-center group-hover:bg-[#e2e8f0] transition-all duration-300">
               <User className="h-4 w-4 text-text-secondary" />
             </div>
             <span className="font-medium text-sm">Account Settings</span>

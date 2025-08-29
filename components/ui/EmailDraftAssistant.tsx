@@ -111,14 +111,14 @@ export default function EmailDraftAssistant(props: Props) {
   }
 
   return (
-    <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-6 mt-4">
+    <div className="bg-gradient-to-r from-gray-50 to-blue-50 border border-gray-200 rounded-xl p-6 mt-4">
       <div className="flex items-center gap-3 mb-4">
-        <div className="flex items-center justify-center w-10 h-10 bg-purple-500 rounded-lg">
+        <div className="flex items-center justify-center w-10 h-10 bg-blue-500 rounded-lg">
           <span className="text-white text-lg">✉️</span>
         </div>
         <div>
           <h3 className="text-lg font-semibold text-gray-900">Email Draft Assistant</h3>
-          <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">Coming Soon</span>
+          <span className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded border border-gray-200">Coming Soon</span>
         </div>
       </div>
       
@@ -132,7 +132,7 @@ export default function EmailDraftAssistant(props: Props) {
         </ul>
       </div>
       
-      <div className="bg-white rounded-lg p-6 border border-purple-200">
+      <div className="bg-white rounded-lg p-6 border border-gray-200">
         <div className="text-center py-8">
           <div className="text-4xl mb-3">🚧</div>
           <h4 className="font-medium text-gray-900 mb-2">AI Email Assistant</h4>
