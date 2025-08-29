@@ -144,7 +144,11 @@ export function useAIConversation(): UseAIConversationReturn {
         
         // Add building ID if available (this should come from context)
         // For now, we'll use null as the building ID will be determined by the endpoint
-        formData.append('buildingId', 'null');
+        if (buildingId) {
+          formData.append('buildingId', buildingId);
+        } else {
+          formData.append('buildingId', 'null');
+        }
         
         files.forEach((file, index) => {
           formData.append(`file_${index}`, file);
@@ -160,6 +164,14 @@ export function useAIConversation(): UseAIConversationReturn {
         }
 
         const data = await response.json();
+        
+        console.log('📤 Received API response:', {
+          hasResponse: !!data.response,
+          responseLength: data.response?.length || 0,
+          isLeaseSummary: data.isLeaseSummary,
+          hasLeaseDocumentInfo: !!data.leaseDocumentInfo,
+          responsePreview: data.response?.substring(0, 200) + '...'
+        });
         
         const aiMessage: Message = {
           id: (Date.now() + 1).toString(),

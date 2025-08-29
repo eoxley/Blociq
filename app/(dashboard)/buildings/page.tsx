@@ -408,7 +408,7 @@ export default function BuildingsPage() {
       <BuildingsList />
 
       {/* Enhanced CTA Section - Matching Landing Page Style */}
-      <section className="py-20 bg-gradient-to-br from-gray-50 to-gray-100">
+      <section className="hero-banner py-16 mx-6" style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)' }}>
         <div className="max-w-4xl mx-auto px-6">
           <div className="bg-white rounded-3xl p-12 shadow-2xl border-2 border-gray-100 text-center">
             <div className="w-20 h-20 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl">

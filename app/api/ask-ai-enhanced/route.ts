@@ -20,7 +20,8 @@ export async function POST(request: NextRequest) {
     const userQuestion = formData.get('userQuestion') as string;
     const useMemory = formData.get('useMemory') as string;
     const conversationId = formData.get('conversationId') as string;
-    const buildingId = formData.get('buildingId') as string;
+    const buildingIdRaw = formData.get('buildingId') as string;
+    const buildingId = buildingIdRaw === 'null' ? null : buildingIdRaw;
     
     // Get files from form data
     const files: File[] = [];
@@ -113,6 +114,13 @@ export async function POST(request: NextRequest) {
             // Perform document analysis using our system
             try {
               console.log('🔍 Starting document analysis for:', file.name);
+              console.log('📊 Document analysis inputs:', {
+                textLength: ocrResult.text?.length || 0,
+                filename: file.name,
+                userQuestion: userQuestion || 'Analyze this document',
+                hasText: !!ocrResult.text
+              });
+              
               const analysis = await analyzeDocument(
                 ocrResult.text, 
                 file.name, 
@@ -124,7 +132,11 @@ export async function POST(request: NextRequest) {
                 documentType: analysis.documentType,
                 summary: analysis.summary?.substring(0, 100) + '...',
                 hasExtractedText: !!analysis.extractedText,
-                extractedTextLength: analysis.extractedText?.length || 0
+                extractedTextLength: analysis.extractedText?.length || 0,
+                analysisKeys: Object.keys(analysis),
+                hasDocumentType: !!analysis.documentType,
+                documentTypeLength: analysis.documentType?.length || 0,
+                fullAnalysis: analysis
               });
               
               documentAnalyses.push(analysis);
@@ -143,15 +155,29 @@ export async function POST(request: NextRequest) {
               
             } catch (analysisError) {
               console.error('Document analysis failed:', analysisError);
+              console.log('📊 Analysis error details:', {
+                errorType: analysisError instanceof Error ? analysisError.constructor.name : 'Unknown',
+                errorMessage: analysisError instanceof Error ? analysisError.message : 'Unknown error',
+                errorStack: analysisError instanceof Error ? analysisError.stack?.substring(0, 200) + '...' : 'No stack trace'
+              });
+              
+              // Check if this is a lease document by filename even if analysis failed
+              const isLeaseByFilename = file.name.toLowerCase().includes('lease');
+              console.log('🔍 Fallback lease detection by filename:', {
+                filename: file.name,
+                isLeaseByFilename,
+                willForceLeaseType: isLeaseByFilename
+              });
+              
               // Fallback to basic OCR text
               enhancedPrompt += `\n\nDocument: ${file.name}\nExtracted Text: ${ocrResult.text.substring(0, 2000)}${ocrResult.text.length > 2000 ? '...' : ''}`;
               
-              // Store basic document info
+              // Store basic document info with lease detection fallback
               processedDocuments.push({
                 id: document.id,
                 filename: file.name,
-                type: 'unknown',
-                summary: 'OCR processing completed',
+                type: isLeaseByFilename ? 'lease' : 'unknown',
+                summary: isLeaseByFilename ? 'Lease document (detected by filename)' : 'OCR processing completed',
                 extractedText: ocrResult.text
               });
             }
@@ -176,6 +202,29 @@ export async function POST(request: NextRequest) {
       doc.filename?.toLowerCase().includes('lease') || 
       doc.type?.toLowerCase().includes('lease')
     );
+    
+    console.log('🔍 Lease detection analysis:', {
+      documentAnalysesCount: documentAnalyses.length,
+      documentAnalysesTypes: documentAnalyses.map(a => a.documentType),
+      documentAnalysesFull: documentAnalyses.map(a => ({
+        documentType: a.documentType,
+        hasDocumentType: !!a.documentType,
+        typeLength: a.documentType?.length || 0,
+        typeIncludesLease: a.documentType?.toLowerCase().includes('lease'),
+        classification: a.classification,
+        filename: a.filename
+      })),
+      processedDocumentsCount: processedDocuments.length,
+      processedDocumentsInfo: processedDocuments.map(d => ({
+        filename: d.filename,
+        type: d.type,
+        filenameLower: d.filename?.toLowerCase(),
+        typeLower: d.type?.toLowerCase(),
+        filenameHasLease: d.filename?.toLowerCase().includes('lease'),
+        typeHasLease: d.type?.toLowerCase().includes('lease')
+      })),
+      initialIsLeaseDocument: isLeaseDocument
+    });
     
     console.log('🔍 Initial lease detection:', {
       documentAnalyses: documentAnalyses.map(a => ({
@@ -222,7 +271,17 @@ export async function POST(request: NextRequest) {
       if (!doc.extractedText) return false;
       const text = doc.extractedText.toLowerCase();
       const leaseKeywords = ['lease', 'agreement', 'lessor', 'lessee', 'demise', 'term', 'ground rent', 'service charge'];
-      return leaseKeywords.some(keyword => text.includes(keyword));
+      const hasKeywords = leaseKeywords.some(keyword => text.includes(keyword));
+      
+      console.log('🔍 Lease keyword check for:', doc.filename, {
+        textLength: text.length,
+        textPreview: text.substring(0, 200) + '...',
+        leaseKeywords,
+        hasKeywords,
+        foundKeywords: leaseKeywords.filter(keyword => text.includes(keyword))
+      });
+      
+      return hasKeywords;
     });
     
     if (hasLeaseKeywords && !isLeaseDocument) {
@@ -234,8 +293,20 @@ export async function POST(request: NextRequest) {
       isLeaseDocument,
       hasLeaseInFilename,
       hasLeaseKeywords,
-      willGenerateSummary: isLeaseDocument && processedDocuments.length > 0
+      willGenerateSummary: isLeaseDocument && processedDocuments.length > 0,
+      processedDocumentsSummary: processedDocuments.map(d => ({
+        filename: d.filename,
+        type: d.type,
+        isLeaseByType: d.type?.toLowerCase().includes('lease'),
+        isLeaseByFilename: d.filename?.toLowerCase().includes('lease')
+      }))
     });
+    
+    // Final fallback: if any document has "lease" in the filename, force lease detection
+    if (!isLeaseDocument && processedDocuments.some(doc => doc.filename?.toLowerCase().includes('lease'))) {
+      console.log('🔍 Final fallback: Forcing lease detection based on filename');
+      isLeaseDocument = true;
+    }
     
     if (isLeaseDocument && processedDocuments.length > 0) {
       console.log('📄 Lease document detected - generating automatic summary');
@@ -266,6 +337,9 @@ export async function POST(request: NextRequest) {
           apiKey: process.env.OPENAI_API_KEY,
         });
         
+        console.log('🔑 OpenAI client created, API key exists:', !!process.env.OPENAI_API_KEY);
+        console.log('📝 About to call OpenAI with lease text length:', leaseText?.length || 0);
+        
         const completion = await openaiClient.chat.completions.create({
           model: 'gpt-4o',
           messages: [{
@@ -295,18 +369,40 @@ Extract the actual information from the lease text. If information is not clearl
           temperature: 0.3,
           max_tokens: 1500
         });
+        
+        console.log('✅ OpenAI API call successful:', {
+          model: completion.model,
+          usage: completion.usage,
+          hasChoices: !!completion.choices,
+          choiceCount: completion.choices?.length || 0
+        });
 
         console.log('✅ OpenAI lease summary generated successfully');
         console.log('📝 Generated summary length:', completion.choices[0].message?.content?.length || 0);
 
+        const leaseSummary = completion.choices[0].message?.content || 'Lease analysis completed but summary generation failed.';
+        
+        console.log('✅ Lease summary generated successfully:', {
+          summaryLength: leaseSummary.length,
+          summaryPreview: leaseSummary.substring(0, 200) + '...',
+          willDisplayInChat: true
+        });
+        
         response = {
-          response: completion.choices[0].message?.content || 'Lease analysis completed but summary generation failed.',
+          response: leaseSummary,
           sources: ['lease_document_analysis'],
           confidence: 0.9,
           knowledgeUsed: ['lease_analysis'],
           documentAnalyses: documentAnalyses,
           processedDocuments: processedDocuments,
           timestamp: new Date().toISOString(),
+          // Add special flag to indicate this is a lease summary
+          isLeaseSummary: true,
+          leaseDocumentInfo: {
+            filename: processedDocuments[0]?.filename,
+            type: processedDocuments[0]?.type,
+            extractedTextLength: processedDocuments[0]?.extractedText?.length || 0
+          }
         };
         
       } catch (openaiError) {
@@ -345,7 +441,7 @@ Extract the actual information from the lease text. If information is not clearl
     }
 
     // 5. Return enhanced response with document analysis
-    return NextResponse.json({
+    const responseData: any = {
       response: response.response,
       sources: response.sources,
       confidence: response.confidence,
@@ -353,7 +449,20 @@ Extract the actual information from the lease text. If information is not clearl
       documentAnalyses: documentAnalyses,
       processedDocuments: processedDocuments, // Include processed document info
       timestamp: new Date().toISOString(),
-    });
+    };
+    
+    // Add lease-specific information if this was a lease summary
+    if ((response as any).isLeaseSummary) {
+      responseData.isLeaseSummary = true;
+      responseData.leaseDocumentInfo = (response as any).leaseDocumentInfo;
+      console.log('📤 Returning lease summary response:', {
+        hasLeaseSummary: true,
+        responseLength: response.response?.length || 0,
+        willDisplayInChat: true
+      });
+    }
+    
+    return NextResponse.json(responseData);
 
   } catch (error) {
     console.error('Enhanced Ask AI failed:', error);
