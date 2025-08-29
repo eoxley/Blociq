@@ -3,7 +3,7 @@
 // Home page client component - Major works dashboard removed for cleaner interface
 import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2, ExternalLink, RefreshCw, MessageCircle, Sparkles, Upload, FileText, Send, Bot, ArrowRight, HelpCircle, Brain, X as XIcon, ChevronDown, ChevronUp, Minimize2, Move, CornerDownRight, FileText as FileTextIcon, Mail, Bell, MapPin, User } from 'lucide-react'
+import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2, ExternalLink, RefreshCw, MessageCircle, Sparkles, Upload, FileText, Send, Bot, ArrowRight, HelpCircle, Brain, X as XIcon, ChevronDown, ChevronUp, Minimize2, Move, CornerDownRight, MapPin, User } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 
 
@@ -977,81 +977,11 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     }
   }
 
-  // Communication action handlers
-  const handleCreateLetter = (aiContent: string) => {
-    // Extract building and leaseholder context if available
-    const contextMessage = messages.find(m => 
-      m.sender === 'ai' && m.text.includes('📌 Building:')
-    )?.text || ''
-    
-    const buildingMatch = contextMessage.match(/📌 Building: (.+)/)
-    const buildingName = buildingMatch ? buildingMatch[1] : 'General'
-    
-    const leaseholderMatch = contextMessage.match(/👤 Leaseholder: (.+)/)
-    const leaseholderName = leaseholderMatch ? leaseholderMatch[1] : null
-    
-    const unitMatch = contextMessage.match(/🏠 Unit: (.+)/)
-    const unitNumber = unitMatch ? unitMatch[1] : null
-    
-    setCommunicationModalData({
-      aiContent,
-      templateType: 'letter',
-      buildingName,
-      leaseholderName,
-      unitNumber
-    })
-    setShowCommunicationModal(true)
-  }
 
-  const handleSendEmail = (aiContent: string) => {
-    // Extract building and leaseholder context
-    const contextMessage = messages.find(m => 
-      m.sender === 'ai' && m.text.includes('📌 Building:')
-    )?.text || ''
-    
-    const buildingMatch = contextMessage.match(/📌 Building: (.+)/)
-    const buildingName = buildingMatch ? buildingMatch[1] : 'General'
-    
-    const leaseholderMatch = contextMessage.match(/👤 Leaseholder: (.+)/)
-    const leaseholderName = leaseholderMatch ? leaseholderMatch[1] : null
-    
-    const unitMatch = contextMessage.match(/🏠 Unit: (.+)/)
-    const unitNumber = unitMatch ? unitMatch[1] : null
-    
-    setCommunicationModalData({
-      aiContent,
-      templateType: 'email',
-      buildingName,
-      leaseholderName,
-      unitNumber
-    })
-    setShowCommunicationModal(true)
-  }
 
-  const handleSaveAsNotice = (aiContent: string) => {
-    // Extract building and leaseholder context
-    const contextMessage = messages.find(m => 
-      m.sender === 'ai' && m.text.includes('📌 Building:')
-    )?.text || ''
-    
-    const buildingMatch = contextMessage.match(/📌 Building: (.+)/)
-    const buildingName = buildingMatch ? buildingMatch[1] : 'General'
-    
-    const leaseholderMatch = contextMessage.match(/👤 Leaseholder: (.+)/)
-    const leaseholderName = leaseholderMatch ? leaseholderMatch[1] : null
-    
-    const unitMatch = contextMessage.match(/🏠 Unit: (.+)/)
-    const unitNumber = unitMatch ? unitMatch[1] : null
-    
-    setCommunicationModalData({
-      aiContent,
-      templateType: 'notice',
-      buildingName,
-      leaseholderName,
-      unitNumber
-    })
-    setShowCommunicationModal(true)
-  }
+
+
+
 
   const handleSaveTemplate = async (template: any) => {
     try {
@@ -1447,7 +1377,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 {/* Scrollable Messages Area */}
                 <div 
                   ref={messagesEndRef}
-                  className="flex-1 overflow-y-auto p-4 space-y-3 bg-white"
+                  className="flex-1 overflow-y-auto p-4 pb-24 space-y-3 bg-white"
                 >
                   {messages.map((message, index) => (
                     <div 
@@ -1468,35 +1398,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                           {message.text}
                         </div>
                         
-                        {/* Action Buttons for AI Responses */}
-                        {message.sender === 'ai' && (
-                          <div className="flex gap-3 mt-3 pt-3 border-t border-gray-100 bg-gradient-to-r from-gray-50/50 to-white/50 rounded-lg p-2 -mx-2">
-                            <button
-                              onClick={() => handleCreateLetter(message.text)}
-                              className="group relative p-2 bg-[#14b8a6] hover:bg-[#0d9488] text-white rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-95"
-                              title="Create Letter"
-                            >
-                              <FileTextIcon className="h-4 w-4" />
-                              <div className="absolute -top-2 -right-2 w-2 h-2 bg-[#ec4899] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-                            </button>
-                            <button
-                              onClick={() => handleSendEmail(message.text)}
-                              className="group relative p-2 bg-[#ec4899] hover:bg-[#db2777] text-white rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-95"
-                              title="Send Email"
-                            >
-                              <Mail className="h-4 w-4" />
-                              <div className="absolute -top-2 -right-2 w-2 h-2 bg-[#14b8a6] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-                            </button>
-                            <button
-                              onClick={() => handleSaveAsNotice(message.text)}
-                              className="group relative p-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-95"
-                              title="Save as Notice"
-                            >
-                              <Bell className="h-4 w-4" />
-                              <div className="absolute -top-2 -right-2 w-2 h-2 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-                            </button>
-                          </div>
-                        )}
+
                         
                         {/* Timestamp */}
                         <div className={`text-xs mt-2 ${
@@ -1526,8 +1428,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                   )}
                 </div>
                 
-                {/* Sticky Input Bar */}
-                <div className="sticky bottom-0 bg-white p-4 border-t border-gray-200 shadow-lg">
+                {/* Input Bar - Positioned at bottom of chat widget */}
+                <div className="absolute bottom-0 left-0 right-0 bg-white p-4 border-t border-gray-200 shadow-lg">
                   {/* File Upload Zone */}
                   {uploadedFiles.length > 0 && (
                     <div className="mb-3">

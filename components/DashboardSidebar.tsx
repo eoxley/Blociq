@@ -100,8 +100,8 @@ export default function DashboardSidebar() {
                 href={href}
                 className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-300 relative group hover-lift ${
                   isActive
-                    ? aiPowered ? 'nav-active text-white font-semibold shadow-lg' : 'bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] text-white font-semibold shadow-lg'
-                    : 'hover:bg-[#f8fafc] text-text-primary hover:text-[#14b8a6]'
+                    ? aiPowered ? 'nav-active text-white font-semibold shadow-lg' : 'bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white font-semibold shadow-lg'
+                    : 'hover:bg-[#f8fafc] text-text-primary hover:text-[#4f46e5]'
                 }`}
               >
                 {/* Active indicator */}
@@ -113,7 +113,7 @@ export default function DashboardSidebar() {
                   isActive
                     ? 'bg-white/20 shadow-md'
                     : aiPowered 
-                      ? 'bg-gradient-to-br from-[#14b8a6]/10 to-[#8b5cf6]/10 group-hover:from-[#14b8a6]/20 group-hover:to-[#8b5cf6]/20' 
+                      ? 'bg-gradient-to-br from-[#4f46e5]/10 to-[#a855f7]/10 group-hover:from-[#4f46e5]/20 group-hover:to-[#a855f7]/20' 
                       : 'bg-gray-50 group-hover:bg-gray-100'
                 }`}>
                   {!isActive && aiPowered && (
@@ -152,7 +152,7 @@ export default function DashboardSidebar() {
                       <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
                     )}
                     {aiPowered && !isActive && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gradient-to-r from-[#14b8a6] to-[#8b5cf6] text-white shadow-sm">AI</span>
+                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white shadow-sm">AI</span>
                     )}
                   </div>
                   <p className={`text-sm mt-1 leading-tight ${
@@ -174,10 +174,10 @@ export default function DashboardSidebar() {
         <div className="space-y-2">
           <Link
             href="/account"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium hover:bg-[#f0fdfa] hover:text-[#14b8a6] transition-all duration-300 group text-text-primary hover-lift"
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium hover:bg-[#f8fafc] hover:text-[#4f46e5] transition-all duration-300 group text-text-primary hover-lift"
           >
-            <div className="w-9 h-9 bg-[#f0fdfa] rounded-xl flex items-center justify-center group-hover:bg-[#ccfbf1] transition-all duration-300">
-              <User className="h-4 w-4 text-[#14b8a6]" />
+            <div className="w-9 h-9 bg-[#f8fafc] rounded-xl flex items-center justify-center group-hover:bg-[#e2e8f0] transition-all duration-300">
+              <User className="h-4 w-4 text-[#4f46e5]" />
             </div>
             <span className="font-medium text-sm">Account Settings</span>
           </Link>
