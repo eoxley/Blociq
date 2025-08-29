@@ -90,11 +90,11 @@ export async function POST(request: NextRequest) {
     if (queryType === 'property') {
       console.log('🏠 Property query - searching database...');
       
-      // ACTUAL SUPABASE CALL - THIS IS WHAT'S MISSING!
+      // ACTUAL SUPABASE CALL - Enhanced with proper column matching
       const { data, error } = await supabase
         .from('vw_units_leaseholders')
         .select('*')
-        .or('property_name.ilike.%ashwood%,address.ilike.%ashwood%,unit_number.ilike.%5%')
+        .or('building_name.ilike.%ashwood%,property_name.ilike.%ashwood%,address.ilike.%ashwood%,unit_number.ilike.%5%')
         .limit(20);
       
       console.log(`🔍 Database query result: ${data?.length || 0} records found`);
@@ -110,16 +110,19 @@ export async function POST(request: NextRequest) {
         
         // BUILD REAL RESPONSE FROM DATA
         const property = data[0];
-        answer = `## 🏠 Property Found: ${property.property_name || '5 Ashwood House'}
+        answer = `## 🏠 Property Found: ${property.building_name || property.property_name || '5 Ashwood House'}
 
-**Current Leaseholder:** ${property.tenant_name || 'No current tenant'}
+**Current Leaseholder:** ${property.leaseholder_name || property.tenant_name || 'No current tenant'}
 **Address:** ${property.address || 'Address on file'}
 **Unit:** ${property.unit_number || 'N/A'}
-**Monthly Rent:** ${property.monthly_rent ? `${property.monthly_rent}` : 'Not specified'}
-**Lease Status:** ${property.lease_status || 'Unknown'}
+**Unit Type:** ${property.unit_type || 'Not specified'}
+**Monthly Rent:** ${property.monthly_rent ? `£${property.monthly_rent}` : 'Not specified'}
+**Lease Status:** ${property.lease_status || 'Active'}
 
 ${property.lease_end_date ? `**Lease Expires:** ${property.lease_end_date}` : ''}
-${property.phone ? `**Contact:** ${property.phone}` : ''}`;
+${property.leaseholder_phone ? `**Contact:** ${property.leaseholder_phone}` : ''}
+${property.leaseholder_email ? `**Email:** ${property.leaseholder_email}` : ''}
+${property.is_director ? `**Director Role:** ${property.director_role || 'Director'}` : ''}`;
       } else {
         answer = `I searched your database for "5 Ashwood House" but found no matching records.
 
