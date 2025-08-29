@@ -177,6 +177,21 @@ export async function POST(request: NextRequest) {
       doc.type?.toLowerCase().includes('lease')
     );
     
+    console.log('🔍 Initial lease detection:', {
+      documentAnalyses: documentAnalyses.map(a => ({
+        documentType: a.documentType,
+        hasType: !!a.documentType,
+        typeIncludesLease: a.documentType?.toLowerCase().includes('lease')
+      })),
+      processedDocuments: processedDocuments.map(d => ({
+        filename: d.filename,
+        type: d.type,
+        filenameIncludesLease: d.filename?.toLowerCase().includes('lease'),
+        typeIncludesLease: d.type?.toLowerCase().includes('lease')
+      })),
+      isLeaseDocument
+    });
+    
     console.log('🔍 Document analysis results:', {
       documentCount: documentAnalyses.length,
       documentTypes: documentAnalyses.map(a => a.documentType),
@@ -238,6 +253,13 @@ export async function POST(request: NextRequest) {
         
         console.log('🔍 About to call OpenAI for lease summary generation');
         console.log('📝 Lease text preview:', leaseText?.substring(0, 200) + '...');
+        console.log('🔑 OpenAI API Key exists:', !!process.env.OPENAI_API_KEY);
+        console.log('📊 Lease document metadata:', {
+          filename: leaseDocument.filename,
+          type: leaseDocument.type,
+          textLength: leaseText?.length || 0,
+          hasText: !!leaseText
+        });
         
         // Generate lease summary using OpenAI with specific formatting
         const openaiClient = new OpenAI({
@@ -290,6 +312,11 @@ Extract the actual information from the lease text. If information is not clearl
       } catch (openaiError) {
         console.error('❌ OpenAI lease analysis error:', openaiError);
         console.log('🔄 Falling back to enhanced AI due to OpenAI error');
+        console.log('📊 Fallback details:', {
+          errorType: openaiError instanceof Error ? openaiError.constructor.name : 'Unknown',
+          errorMessage: openaiError instanceof Error ? openaiError.message : 'Unknown error',
+          willUseEnhancedAI: true
+        });
         // Fall back to enhanced AI
         const enhancedAI = new EnhancedAskAI();
         response = await enhancedAI.generateResponse({
