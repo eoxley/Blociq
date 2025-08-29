@@ -335,30 +335,115 @@ export async function processLeaseAndGenerateResponse(
 }
 
 /**
- * Process OCR document - wrapper for existing OCR function with proper error handling
+ * Process OCR document - Enhanced with local fallback system and better error handling
  */
 async function processOCRDocument(file: File): Promise<{ success: boolean; extractedText?: string; metadata?: any; error?: string }> {
   try {
-    const ocrConfig = getOCRConfig();
-    const result = await processFileWithOCR(file, ocrConfig);
+    console.log(`📄 Starting enhanced OCR processing for: ${file.name} (${file.size} bytes)`);
     
-    if (!result.success) {
+    // Strategy 1: Try local PDF parsing first for PDF files (fastest, most reliable)
+    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+      try {
+        console.log('📋 Attempting direct PDF text extraction...');
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        
+        // Import the local text extraction service
+        const { extractText } = await import('@/lib/extractTextFromPdf');
+        const result = await extractText(new Uint8Array(buffer), file.name);
+        
+        if (result.text && result.text.length > 50) {
+          console.log(`✅ Direct PDF extraction successful: ${result.text.length} characters`);
+          return {
+            success: true,
+            extractedText: result.text,
+            metadata: {
+              fileName: file.name,
+              fileSize: file.size,
+              method: 'pdf-parser',
+              confidence: 'high',
+              processingTime: 0
+            }
+          };
+        }
+        
+        console.log('⚠️ Direct PDF extraction yielded insufficient text, trying OCR fallbacks...');
+      } catch (pdfError) {
+        console.log('⚠️ Direct PDF extraction failed, trying OCR fallbacks...', pdfError);
+      }
+    }
+    
+    // Strategy 2: Try OCR fallback system with OpenAI Vision
+    try {
+      console.log('🔄 Using OCR fallback system with OpenAI Vision...');
+      const { processDocumentWithFallback } = await import('@/lib/ocr-fallback');
+      const fallbackResult = await processDocumentWithFallback(file);
+      
+      if (fallbackResult.text && fallbackResult.text.length > 50) {
+        console.log(`✅ Fallback OCR successful: ${fallbackResult.text.length} characters via ${fallbackResult.method}`);
+        return {
+          success: true,
+          extractedText: fallbackResult.text,
+          metadata: {
+            fileName: file.name,
+            fileSize: file.size,
+            method: fallbackResult.method,
+            confidence: fallbackResult.quality || 'medium',
+            attempts: fallbackResult.attempts,
+            fallbackReasons: fallbackResult.fallbackReasons
+          }
+        };
+      }
+      
+      console.log('⚠️ Fallback OCR yielded insufficient text, trying external service...');
+    } catch (fallbackError) {
+      console.log('⚠️ Fallback OCR failed, trying external service...', fallbackError);
+    }
+    
+    // Strategy 3: Try external OCR service as last resort
+    try {
+      console.log('🌐 Attempting external OCR service...');
+      const ocrConfig = getOCRConfig();
+      const result = await processFileWithOCR(file, ocrConfig);
+      
+      if (result.success && result.text && result.text.length > 50) {
+        console.log(`✅ External OCR successful: ${result.text.length} characters`);
+        return {
+          success: true,
+          extractedText: result.text,
+          metadata: {
+            fileName: file.name,
+            fileSize: file.size,
+            method: 'external-ocr',
+            confidence: result.confidence || 'medium',
+            processingTime: result.metadata?.processingTime
+          }
+        };
+      }
+      
+      // External service returned success but no meaningful text
+      if (result.success && (!result.text || result.text.length <= 50)) {
+        console.log('⚠️ External OCR returned success but insufficient text');
+        return {
+          success: false,
+          error: 'OCR processing completed but extracted text is too short or empty. This may indicate the document is an image-only PDF or has very poor quality.'
+        };
+      }
+      
+      // External service failed
       return {
         success: false,
-        error: result.error || 'OCR processing failed'
+        error: result.error || 'External OCR service failed'
+      };
+      
+    } catch (externalError) {
+      console.error('❌ External OCR service failed:', externalError);
+      return {
+        success: false,
+        error: 'All OCR strategies failed. The document may be corrupted, password-protected, or in an unsupported format.'
       };
     }
     
-    return {
-      success: true,
-      extractedText: result.text || '',
-      metadata: {
-        fileName: file.name,
-        fileSize: file.size,
-        confidence: result.confidence || 'medium',
-        processingTime: result.metadata?.processingTime
-      }
-    };
   } catch (error) {
     console.error('❌ OCR processing error:', error);
     return {
