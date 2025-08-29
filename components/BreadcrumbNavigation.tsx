@@ -138,7 +138,7 @@ export default function BreadcrumbNavigation() {
             {item.href ? (
               <Link
                 href={item.href}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#64748B] hover:text-[#0F5D5D] hover:bg-[#F0FDFA] transition-all duration-200 group"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-text-secondary hover:text-[#14b8a6] hover:bg-[#f0fdfa] transition-all duration-200 group"
               >
                 {item.icon && (
                   <span 
@@ -151,7 +151,7 @@ export default function BreadcrumbNavigation() {
                 <span className="font-medium">{item.label}</span>
               </Link>
             ) : (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-[#14b8a6] to-[#8b5cf6] text-white">
                 {item.icon && (
                   <span 
                     className="text-sm"
@@ -161,9 +161,9 @@ export default function BreadcrumbNavigation() {
                   </span>
                 )}
                 <span className="font-semibold">{item.label}</span>
-                <BlocIQBadge variant="outline" size="sm" className="bg-white/20 text-white border-white/30">
+                <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-white/20 text-white border border-white/30">
                   Current
-                </BlocIQBadge>
+                </span>
               </div>
             )}
           </li>
