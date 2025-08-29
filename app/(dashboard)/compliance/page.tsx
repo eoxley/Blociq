@@ -360,11 +360,18 @@ export default function CompliancePage() {
                 </button>
               ) : (
                 <button
-                  onClick={() => router.push('/buildings')}
+                  onClick={() => {
+                    // Navigate to first building's compliance page for setup
+                    if (buildings.length > 0) {
+                      router.push(`/buildings/${buildings[0].id}/compliance`);
+                    } else {
+                      router.push('/buildings');
+                    }
+                  }}
                   className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#004AAD] to-[#7209B7] text-white rounded-lg hover:from-[#003A8C] hover:to-[#5A078F] transition-all duration-200"
                 >
                   <Shield className="h-5 w-5" />
-                  Add Compliance Assets
+                  Setup Compliance
                 </button>
               )}
               
@@ -726,11 +733,18 @@ export default function CompliancePage() {
             </p>
             {!searchQuery && filterBuilding === 'all' && filterCategory === 'all' && filterStatus === 'all' && (
               <button
-                onClick={() => router.push('/buildings')}
+                onClick={() => {
+                  // Navigate to first building's compliance page for setup
+                  if (buildings.length > 0) {
+                    router.push(`/buildings/${buildings[0].id}/compliance`);
+                  } else {
+                    router.push('/buildings');
+                  }
+                }}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#004AAD] to-[#7209B7] text-white rounded-lg hover:from-[#003A8C] hover:to-[#5A078F] transition-all duration-200"
               >
                 <Plus className="h-4 w-4" />
-                Add Compliance Assets
+                Setup Compliance
               </button>
             )}
           </div>
