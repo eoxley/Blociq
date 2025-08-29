@@ -574,60 +574,59 @@ export default function AskBlocIQ({
         }
       }
 
-      // Now send the enhanced prompt to the main ask-ai endpoint
-      const requestBody = JSON.stringify({
-        prompt: finalPrompt,
-        building_id: buildingId,
-        contextType: isMajorWorksContext ? 'major_works' : 'general',
-        projectId: isMajorWorksContext ? projectId : undefined,
-        files: uploadedFileResults // Fixed: changed from 'uploadedFiles' to 'files'
-      });
+      // Now send the enhanced prompt to the enhanced ask-ai endpoint
+      const formData = new FormData();
+      formData.append('userQuestion', finalPrompt);
+      formData.append('useMemory', 'true');
+      formData.append('buildingId', buildingId || 'null');
+      
+      // Add any files that were processed
+      if (uploadedFileResults && uploadedFileResults.length > 0) {
+        uploadedFileResults.forEach((fileResult, index) => {
+          if (fileResult.file) {
+            formData.append(`file_${index}`, fileResult.file);
+          }
+        });
+      }
 
-      const response = await fetch('/api/ask-ai', {
+      const response = await fetch('/api/ask-ai-enhanced', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: requestBody,
+        body: formData,
       });
 
       if (!response.ok) {
         throw new Error('Failed to get AI response');
       }
 
-      const data: AIResponse = await response.json();
+      const data = await response.json();
       
-      if (data.success && data.response) {
-        // Check if Major Works data was used
-        setUsedMajorWorksData(data.context?.majorWorksUsed || false);
-        
+      if (data.response) {
         // Add assistant message to history
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
           content: data.response,
           timestamp: new Date(),
-          documentAnalysis: data.results || uploadedFileResults.length > 0 ? uploadedFileResults : undefined
+          documentAnalysis: data.documentAnalyses || uploadedFileResults.length > 0 ? uploadedFileResults : undefined
         };
 
         // Debug logging
-        console.log('🔍 API Response data:', data);
-        console.log('🔍 API results:', data.results);
+        console.log('🔍 Enhanced API Response data:', data);
+        console.log('🔍 Document analyses:', data.documentAnalyses);
         console.log('🔍 Component uploadedFileResults:', uploadedFileResults);
         console.log('🔍 Final documentAnalysis:', assistantMessage.documentAnalysis);
 
         setMessages(prev => [...prev, assistantMessage]);
         setAnswer(data.response);
         
-        // Handle document search results
-        if (data.documentSearch && data.documents) {
-          setIsDocumentSearch(true);
-          setDocumentResults(data.documents);
+        // Handle lease summary responses
+        if (data.isLeaseSummary && data.leaseDocumentInfo) {
+          console.log('📋 Lease summary detected:', data.leaseDocumentInfo);
         }
         
-        // Check if there's a suggested action
-        if (data.suggested_action) {
-          setSuggestedAction(data.suggested_action);
+        // Handle document analysis results
+        if (data.documentAnalyses && data.documentAnalyses.length > 0) {
+          console.log('📄 Document analyses received:', data.documentAnalyses.length);
         }
 
         // Log the interaction to ai_logs
