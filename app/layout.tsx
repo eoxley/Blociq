@@ -22,7 +22,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-[#FAFAFA] antialiased`}>
+      <body className={`${inter.className} bg-background text-foreground antialiased`}>
         <BlocIQProvider>
           <SupabaseProvider>
             <div className="min-h-screen flex flex-col">

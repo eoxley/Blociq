@@ -5,6 +5,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Import Inter font for BlocIQ design system */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 /* Import Bradley Hand ITC font for signatures */
 @import url('https://fonts.cdnfonts.com/css/bradley-hand-itc');
 
@@ -121,70 +124,77 @@
 }
 
 :root {
-  --radius: 0.75rem; /* Increased for rounded-xl */
+  --radius: 0.75rem; /* Modern rounded corners */
   
-  /* BlocIQ Brand Colors - Updated to match landing page gradient */
-  --background: #FAFAFA;
-  --foreground: #333333;
-  --card: #FFFFFF;
-  --card-foreground: #333333;
-  --popover: #FFFFFF;
-  --popover-foreground: #333333;
+  /* BlocIQ Design System Colors */
+  --background: #ffffff;
+  --foreground: #1e293b;
+  --card: #ffffff;
+  --card-foreground: #1e293b;
+  --popover: #ffffff;
+  --popover-foreground: #1e293b;
   
-  /* Primary Colors - Updated to match landing page gradient */
-  --primary: #0d9488; /* Teal-600 */
-  --primary-foreground: #FFFFFF;
-  --secondary: #2563eb; /* Blue-600 */
-  --secondary-foreground: #FFFFFF;
-  
-  /* Gradient Colors - Updated to match landing page */
-  --gradient-primary: linear-gradient(135deg, #0d9488 0%, #2563eb 50%, #9333ea 100%);
-  --gradient-action: linear-gradient(135deg, #0d9488 0%, #2563eb 100%);
-  --gradient-sidebar-active: linear-gradient(135deg, #0d9488 0%, #2563eb 50%, #9333ea 100%);
-  
-  /* Brand Colors - Updated to match landing page */
-  --blociq-green: #0d9488; /* Teal-600 */
-  --deep-teal: #0d9488; /* Teal-600 */
-  --soft-white: #FAFAFA;
-  --charcoal: #333333;
-  --accent-blue: #2563eb; /* Blue-600 */
-  --purple: #9333ea; /* Purple-600 */
-  
-  /* Support Colors */
-  --muted: #F3F4F6;
-  --muted-foreground: #64748B;
-  --accent: #F0FDFA;
-  --accent-foreground: #0d9488;
-  --destructive: #EF4444;
-  --destructive-foreground: #FFFFFF;
+  /* AI-Powered Gradient (for all AI sections) */
+  --ai-gradient: linear-gradient(135deg, #ec4899 0%, #14b8a6 50%, #3b82f6 100%);
+  /* Pink → Teal → Blue (as seen in "Ask BlocIQ" modal) */
+
+  /* Primary Brand Gradient (for general branding) */
+  --brand-gradient: linear-gradient(135deg, #14b8a6 0%, #3b82f6 50%, #8b5cf6 100%);
+  /* Teal → Blue → Purple */
+
+  /* Brand Colors */
+  --brand-teal: #0d9488;
+  --brand-blue: #2563eb;
+  --brand-purple: #7c3aed;
+  --brand-pink: #ec4899;
+
+  /* Primary Colors */
+  --primary: #0d9488; /* Brand Teal */
+  --primary-foreground: #ffffff;
+  --secondary: #f8fafc; /* Secondary Background */
+  --secondary-foreground: #1e293b;
   
   /* UI Colors */
-  --border: #E2E8F0;
-  --input: #E2E8F0;
-  --ring: #0d9488; /* Teal-600 */
+  --primary-bg: #ffffff;
+  --secondary-bg: #f8fafc;
+  --tertiary-bg: #f1f5f9;
+  --border: #e2e8f0;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
   
   /* Status Colors */
-  --success: #10B981;
-  --warning: #FBBF24;
-  --info: #6366F1;
-  --error: #EF4444;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  
+  /* UI Support Colors */
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f0fdfa;
+  --accent-foreground: #0d9488;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  
+  --input: #e2e8f0;
+  --ring: #0d9488;
   
   /* Chart Colors */
-  --chart-1: #0d9488; /* Teal-600 */
-  --chart-2: #2563eb; /* Blue-600 */
-  --chart-3: #9333ea; /* Purple-600 */
-  --chart-4: #FBBF24;
-  --chart-5: #6366F1;
+  --chart-1: #0d9488;
+  --chart-2: #2563eb;
+  --chart-3: #8b5cf6;
+  --chart-4: #f59e0b;
+  --chart-5: #6366f1;
   
   /* Sidebar Colors */
-  --sidebar: #FFFFFF;
-  --sidebar-foreground: #333333;
-  --sidebar-primary: #0d9488; /* Teal-600 */
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #F0FDFA;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1e293b;
+  --sidebar-primary: #0d9488;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f0fdfa;
   --sidebar-accent-foreground: #0d9488;
-  --sidebar-border: #E2E8F0;
-  --sidebar-ring: #0d9488; /* Teal-600 */
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #0d9488;
 }
 
 .dark {
@@ -241,7 +251,8 @@
 
 @layer base {
   body {
-   @apply font-serif;
+    @apply font-sans;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   }
 
   a {
@@ -1110,4 +1121,258 @@
   border: none;
   border-top: 1px solid #d1d5db;
   margin: 16px 0;
+}
+
+/* ===== BlocIQ Design System Utility Classes ===== */
+
+/* AI Feature Styling */
+.ai-header {
+  background: var(--ai-gradient);
+  color: white;
+  border-radius: 12px 12px 0 0;
+}
+
+.ai-card {
+  border-top: 3px solid;
+  border-image: var(--ai-gradient) 1;
+  background: white;
+}
+
+.ai-button {
+  background: var(--ai-gradient);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.ai-button:hover {
+  filter: brightness(1.1);
+  transform: scale(1.05);
+}
+
+.ai-status {
+  background: var(--ai-gradient);
+  border-radius: 20px;
+  padding: 4px 12px;
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Button Styles */
+.btn-primary {
+  background: var(--brand-gradient);
+  color: white;
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-secondary {
+  background: white;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: var(--secondary-bg);
+  border-color: var(--brand-teal);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.btn-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-icon:hover {
+  transform: scale(1.05);
+}
+
+/* Card Styles */
+.card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--tertiary-bg);
+  transition: all 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border-color: var(--border);
+}
+
+.feature-card {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  padding: 24px;
+  transition: all 0.2s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Navigation and Branding */
+.nav-gradient {
+  background: var(--brand-gradient);
+}
+
+.nav-active {
+  background: var(--brand-gradient);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
+}
+
+/* Icon Containers */
+.icon-brain {
+  background: var(--ai-gradient);
+  border-radius: 12px;
+  padding: 8px;
+  color: white;
+}
+
+.icon-house {
+  background: var(--brand-gradient);
+  border-radius: 12px;
+  padding: 8px;
+  color: white;
+}
+
+/* Status Badges */
+.badge-coming-soon {
+  background: var(--brand-purple);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.badge-active {
+  background: var(--success);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.badge-warning {
+  background: var(--warning);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Typography */
+.text-gradient {
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-ai-gradient {
+  background: var(--ai-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Interactive Elements */
+.hover-lift {
+  transition: all 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Modern Animations */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive Grid */
+.grid-responsive {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+@media (min-width: 768px) {
+  .grid-responsive {
+    gap: 2rem;
+  }
+}
+
+/* Modern Shadow System */
+.shadow-soft {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.shadow-medium {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.shadow-strong {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
 }

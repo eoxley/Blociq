@@ -1169,9 +1169,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-secondary-bg">
       {/* Enhanced Hero Banner - BlocIQ Landing Page Style */}
-      <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16">
+      <section className="relative overflow-hidden py-16" style={{ background: 'var(--brand-gradient)' }}>
         <div className="max-w-none mx-auto px-6">
           <div className="text-center">
             <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
@@ -1198,7 +1198,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         {/* 🧠 Enhanced Circular Ask BlocIQ Widget */}
         <div className="flex justify-center">
           <div 
-            className={`relative transition-all duration-500 ${showChat ? 'w-[600px] h-[600px] md:w-[700px] md:h-[700px]' : 'w-[400px] h-[400px] md:w-[500px] md:h-[500px]'} rounded-full md:rounded-full rounded-3xl bg-gradient-to-br from-purple-600 via-[#4f46e5] to-indigo-500 shadow-2xl hover:shadow-3xl flex items-center justify-center p-12 group`}
+            className={`relative transition-all duration-500 ${showChat ? 'w-[600px] h-[600px] md:w-[700px] md:h-[700px]' : 'w-[400px] h-[400px] md:w-[500px] md:h-[500px]'} rounded-full md:rounded-full rounded-3xl shadow-2xl hover:shadow-3xl flex items-center justify-center p-12 group`}
+            style={{ background: 'var(--ai-gradient)' }}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
@@ -1254,7 +1255,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                        value={askInput}
                        onChange={(e) => setAskInput(e.target.value)}
                      placeholder="Ask me anything..."
-                       className="w-full px-5 py-4 bg-white text-gray-900 border border-gray-200 rounded-xl placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] transition-all duration-200 text-base pr-16 shadow-lg"
+                       className="w-full px-5 py-4 bg-white text-text-primary border border-border rounded-xl placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-brand-teal transition-all duration-200 text-base pr-16 shadow-lg"
                        onKeyPress={handleKeyPress}
                      />
                      
@@ -1282,7 +1283,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                      <button 
                        onClick={() => handleAskSubmit(askInput)}
                        disabled={(!askInput.trim() && uploadedFiles.length === 0) || isSubmitting}
-                       className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2.5 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                       className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2.5 ai-button hover:brightness-110 text-white rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                      >
                        {isSubmitting ? (
                          <Loader2 className="h-5 w-5 animate-spin" />
@@ -1390,7 +1391,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                   title="Drag to move chat window, double-click to reset size and position"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full flex items-center justify-center">
+                    <div className="w-10 h-10 icon-brain rounded-full flex items-center justify-center">
                       <Brain className="h-5 w-5 text-white" />
                     </div>
                     <div>
@@ -1439,8 +1440,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                     >
                       <div className={`max-w-[70%] rounded-xl p-3 shadow-sm ${
                         message.sender === 'user' 
-                          ? 'bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white' 
-                          : 'bg-white text-gray-900 border border-gray-200 shadow-sm'
+                          ? 'ai-button text-white' 
+                          : 'bg-white text-text-primary border border-border shadow-sm'
                       }`}>
                         {/* Message Content */}
                         <div className="text-sm whitespace-pre-line leading-relaxed mb-2">
@@ -1452,23 +1453,23 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                           <div className="flex gap-3 mt-3 pt-3 border-t border-gray-100 bg-gradient-to-r from-gray-50/50 to-white/50 rounded-lg p-2 -mx-2">
                             <button
                               onClick={() => handleCreateLetter(message.text)}
-                              className="group relative p-2.5 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-95"
+                              className="group relative btn-icon bg-brand-teal hover:bg-teal-700 text-white transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-95"
                               title="Create Letter"
                             >
                               <FileTextIcon className="h-4 w-4" />
-                              <div className="absolute -top-2 -right-2 w-2 h-2 bg-pink-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                              <div className="absolute -top-2 -right-2 w-2 h-2 bg-brand-pink rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
                             </button>
                             <button
                               onClick={() => handleSendEmail(message.text)}
-                              className="group relative p-2.5 bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-95"
+                              className="group relative btn-icon bg-brand-pink hover:bg-pink-600 text-white transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-95"
                               title="Send Email"
                             >
                               <Mail className="h-4 w-4" />
-                              <div className="absolute -top-2 -right-2 w-2 h-2 bg-teal-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                              <div className="absolute -top-2 -right-2 w-2 h-2 bg-brand-teal rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
                             </button>
                             <button
                               onClick={() => handleSaveAsNotice(message.text)}
-                              className="group relative p-2.5 bg-gradient-to-r from-teal-400 to-pink-500 hover:from-teal-500 hover:to-pink-600 text-white rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-95"
+                              className="group relative btn-icon ai-button text-white transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-95"
                               title="Save as Notice"
                             >
                               <Bell className="h-4 w-4" />
@@ -1632,8 +1633,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[600px] mb-8">
             {/* Property Events Widget */}
             <div className="h-full">
-              <div className="bg-white rounded-2xl shadow-lg border-0 overflow-hidden h-full flex flex-col">
-                <div className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] p-6 text-white">
+              <div className="feature-card shadow-lg border-0 overflow-hidden h-full flex flex-col">
+                <div className="p-6 text-white" style={{ background: 'var(--brand-gradient)' }}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
@@ -1684,7 +1685,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                     <div className="text-center mb-6">
                       <button
                         onClick={() => setShowAddEventForm(true)}
-                        className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-6 py-3 rounded-xl font-medium shadow-lg transition-all duration-200"
+                        className="btn-primary hover:brightness-110 shadow-lg transition-all duration-200"
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         Add New Event
@@ -1708,12 +1709,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                       <form onSubmit={handleAddEvent} className="space-y-3">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Event Title</label>
+                            <label className="block text-sm font-medium text-text-primary mb-1">Event Title</label>
                             <input
                               type="text"
                               name="title"
                               required
-                              className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent"
+                              className="w-full px-3 py-2 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent transition-all duration-200"
                               placeholder="Enter event title"
                             />
                           </div>
