@@ -411,6 +411,13 @@ export function detectPropertyManagementContext(query: string): PropertyManageme
     return { type: 'leak_triage' };
   }
 
+  // Access code queries (should be handled by building data, not general AI)
+  if (lowerQuery.includes('access code') || lowerQuery.includes('entry code') || lowerQuery.includes('door code') || 
+      lowerQuery.includes('gate code') || lowerQuery.includes('building code') || lowerQuery.includes('entrance code') ||
+      (lowerQuery.includes('code') && (lowerQuery.includes('access') || lowerQuery.includes('entry') || lowerQuery.includes('door')))) {
+    return { type: 'general', subtype: 'access_codes' };
+  }
+
   return { type: 'general' };
 }
 
