@@ -138,7 +138,7 @@ export default function MobileNavigation() {
                         onClick={closeMenu}
                         className={`flex items-center gap-3 lg:gap-4 rounded-xl px-4 lg:px-5 py-3 lg:py-4 text-base font-medium transition-all ${
                           isActive
-                            ? 'bg-gradient-to-r from-[#14b8a6] to-[#8b5cf6] text-white font-semibold shadow-lg'
+                            ? 'bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white font-semibold shadow-lg'
                             : 'hover:bg-gray-50 text-gray-700'
                         }`}
                       >

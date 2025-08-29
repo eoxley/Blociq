@@ -1252,7 +1252,7 @@
 
 /* Navigation and Branding */
 .nav-gradient {
-  background: var(--brand-gradient);
+  background: var(--hero-gradient);
 }
 
 .nav-active {
