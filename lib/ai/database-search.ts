@@ -338,28 +338,6 @@ export const searchAllRelevantTables = async (
           }
         }
         
-        // If no error but no data, try a direct search on the view
-        if (search.table === 'vw_units_leaseholders' && (!data || data.length === 0)) {
-          console.log('🔍 No data found in view, trying direct search...');
-          
-          try {
-            // Try to search the view directly with broader criteria
-            const { data: directData, error: directError } = await supabase
-              .from('vw_units_leaseholders')
-              .select('*')
-              .limit(50);
-            
-            if (directError) {
-              console.error('❌ Direct view search failed:', directError);
-            } else if (directData && directData.length > 0) {
-              console.log('✅ Direct view search found', directData.length, 'records');
-              return { table: 'vw_units_leaseholders', data: directData, error: null };
-            }
-          } catch (directSearchError) {
-            console.error('❌ Direct search exception:', directSearchError);
-          }
-        }
-        
         console.log(`📊 ${search.table} results:`, { 
           count: data?.length || 0, 
           error: error?.message || null 
