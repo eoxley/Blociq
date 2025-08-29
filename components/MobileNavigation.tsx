@@ -58,7 +58,7 @@ export default function MobileNavigation() {
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="lg:hidden fixed top-4 right-4 z-[60] w-12 h-12 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-2xl flex items-center justify-center shadow-xl hover:scale-105 transition-transform"
+        className="lg:hidden fixed top-4 right-4 z-[60] w-12 h-12 bg-gradient-to-r from-[#14b8a6] to-[#8b5cf6] rounded-2xl flex items-center justify-center shadow-xl hover:scale-105 transition-transform"
         aria-label={isOpen ? "Close menu" : "Open menu"}
       >
         {isOpen ? (
@@ -78,7 +78,7 @@ export default function MobileNavigation() {
             {/* Mobile Menu Content */}
             <div className="flex flex-col h-full">
               {/* Header */}
-              <div className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white p-6 lg:p-8">
+              <div className="bg-gradient-to-r from-[#14b8a6] to-[#8b5cf6] text-white p-6 lg:p-8">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 lg:w-14 lg:h-14 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
@@ -122,7 +122,7 @@ export default function MobileNavigation() {
                             <div className="flex-1 text-left">
                               <div className="flex items-center gap-2 lg:gap-3">
                                 <span className="font-medium text-sm lg:text-base">{label}</span>
-                                <span className="px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded-full font-medium">Soon</span>
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200">Soon</span>
                               </div>
                               <p className="text-xs lg:text-sm text-gray-500 mt-1">{description}</p>
                             </div>
@@ -138,7 +138,7 @@ export default function MobileNavigation() {
                         onClick={closeMenu}
                         className={`flex items-center gap-3 lg:gap-4 rounded-xl px-4 lg:px-5 py-3 lg:py-4 text-base font-medium transition-all ${
                           isActive
-                            ? 'bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white font-semibold shadow-lg'
+                            ? 'bg-gradient-to-r from-[#14b8a6] to-[#8b5cf6] text-white font-semibold shadow-lg'
                             : 'hover:bg-gray-50 text-gray-700'
                         }`}
                       >
