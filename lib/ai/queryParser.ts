@@ -31,9 +31,13 @@ export function parseQueryIntent(query: string): QueryIntent {
   // Enhanced unit identifiers with better extraction
   const unitPatterns = [
     /(?:unit|flat|apartment|apt)\s*([0-9]+[a-zA-Z]?)/i,
-    /(?:^|\s|of\s+|in\s+)([0-9]+[a-zA-Z]?)(?:\s+(?:ashwood|at|building)|$|\s)/,
+    /(?:^|\s|of\s+|in\s+)([0-9]+[a-zA-Z]?)(?:\s+(?:ashwood|oak|building|house|court|place)|$|\s)/i,
     /number\s+([0-9]+[a-zA-Z]?)/i,
-    /([0-9]+[a-zA-Z]?)\s+(?:ashwood|at)/i
+    /([0-9]+[a-zA-Z]?)\s+(?:ashwood|oak|at)/i,
+    // New pattern: number followed by building name (e.g., "5 ashwood house")  
+    /(?:^|\s)([0-9]+[a-zA-Z]?)\s+(?:[a-zA-Z]+\s+)?(?:house|court|place|tower|manor|lodge|building)/i,
+    // Pattern for "leaseholder of 5 ashwood"
+    /leaseholder\s+of\s+([0-9]+[a-zA-Z]?)/i
   ];
   
   // Enhanced person name patterns

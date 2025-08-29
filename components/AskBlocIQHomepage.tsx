@@ -496,19 +496,17 @@ export default function AskBlocIQHomepage() {
       )}
 
       {/* Input Area */}
-      <div className="border-t border-gray-200 p-6 bg-gray-50 rounded-b-2xl">
-        <form onSubmit={handleSubmit} className="space-y-3">
-
-
-          {/* Main Input */}
-          <div className="relative">
+      <div className="border-t border-gray-200 p-6 bg-white">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Main Input - Centered and aligned with chat content */}
+          <div className="relative max-w-4xl mx-auto">
             <textarea
               ref={inputRef}
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               onKeyDown={handleKeyPress}
               placeholder="Ask BlocIQ anything, upload documents, or search for files (e.g., 'show me the last FRA')... Type as much as you need - the textarea will expand automatically."
-              className="w-full pl-4 pr-20 py-3 bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#008C8F] focus:border-transparent transition-all duration-200 resize-none text-gray-900 placeholder-gray-500 custom-scrollbar"
+              className="w-full pl-4 pr-20 py-3 bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent transition-all duration-200 resize-none text-gray-900 placeholder-gray-500 shadow-sm"
               rows={1}
               disabled={isLoading}
               style={{ minHeight: '48px' }}
@@ -525,7 +523,7 @@ export default function AskBlocIQHomepage() {
             <button
               type="submit"
               disabled={isLoading || (!prompt.trim() && uploadedFiles.length === 0)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 p-2 bg-gradient-to-r from-[#008C8F] to-[#7645ED] hover:from-[#007B8A] hover:to-[#6B3FD8] disabled:from-gray-300 disabled:to-gray-400 text-white rounded-xl transition-all duration-200 disabled:cursor-not-allowed shadow-sm"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 p-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
               title="Send with BlocIQ"
             >
               {isLoading ? (
@@ -536,27 +534,33 @@ export default function AskBlocIQHomepage() {
             </button>
           </div>
 
-          {/* Simple Upload Icon */}
-          <div className="mt-4 flex justify-center">
-            <Upload 
-              className="text-white w-6 h-6 cursor-pointer hover:opacity-80 transition-opacity" 
-              title="Upload document to Ask BlocIQ"
-              onClick={() => fileInputRef.current?.click()}
-            />
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept=".pdf,.docx,.txt"
-              onChange={(e) => handleFileSelect(e.target.files)}
-              className="hidden"
-            />
-          </div>
+          {/* Upload and Controls - Centered and aligned */}
+          <div className="max-w-4xl mx-auto space-y-3">
+            {/* Simple Upload Icon */}
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors text-gray-700"
+              >
+                <Upload className="w-5 h-5" />
+                <span className="text-sm font-medium">Upload Document</span>
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept=".pdf,.docx,.txt"
+                onChange={(e) => handleFileSelect(e.target.files)}
+                className="hidden"
+              />
+            </div>
 
-          {/* Keyboard Shortcut Hint */}
-          <p className="text-xs text-gray-500 text-center">
-            Press Cmd+Enter to send • Textarea expands automatically for long content
-          </p>
+            {/* Keyboard Shortcut Hint */}
+            <p className="text-xs text-gray-500 text-center">
+              Press Cmd+Enter to send • Textarea expands automatically for long content
+            </p>
+          </div>
         </form>
       </div>
         </div>
