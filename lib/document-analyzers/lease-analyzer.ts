@@ -181,7 +181,7 @@ export async function analyzeLeaseDocument(
     let complianceStatus: 'compliant' | 'requires_review' | 'non_compliant' | 'unknown' = 'unknown';
     const totalChecklistItems = Object.keys(checklist).length;
     const compliantItems = Object.values(checklist).filter(Boolean).length;
-    const compliancePercentage = (compliantItems / totalChecklistItems) * 100;
+    const compliancePercentage = totalChecklistItems > 0 ? (compliantItems / totalChecklistItems) * 100 : 0;
 
     if (compliancePercentage >= 80) {
       complianceStatus = 'compliant';
@@ -192,8 +192,9 @@ export async function analyzeLeaseDocument(
     }
 
     // Generate summary
-    const leaseTerm = leaseAnalysis.propertyDetails?.leaseTerm || 'standard';
-    const summary = `Lease analysis for ${filename} reveals a ${leaseTerm} lease with ${compliancePercentage.toFixed(0)}% compliance coverage. ${actionItems.length} action items identified requiring attention.`;
+    const leaseTerm = leaseAnalysis.propertyDetails?.leaseTerm || 'lease agreement';
+    const safeCompliancePercentage = totalChecklistItems > 0 ? compliancePercentage.toFixed(0) : '0';
+    const summary = `Lease analysis for ${filename} reveals a ${leaseTerm} with ${safeCompliancePercentage}% compliance coverage. ${actionItems.length} action items identified requiring attention.`;
 
     return {
       documentType: 'lease',
