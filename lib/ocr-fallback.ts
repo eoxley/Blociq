@@ -33,81 +33,112 @@ export class OCRFallbackProcessor {
    * Initialize available OCR strategies
    */
   private async initializeStrategies() {
-    // Strategy 1: OCR Microservice (primary)
-    this.strategies.push({
-      name: 'ocr_microservice',
-      priority: 1,
-      enabled: true,
-      process: async (file: File) => {
-        const { processDocumentOCR } = await import('./ocr');
-        return await processDocumentOCR(file);
+    console.log('🔧 Initializing OCR strategies...');
+    
+    try {
+      // Strategy 1: OCR Microservice (primary)
+      console.log('🔧 Adding OCR Microservice strategy...');
+      this.strategies.push({
+        name: 'ocr_microservice',
+        priority: 1,
+        enabled: true,
+        process: async (file: File) => {
+          try {
+            console.log('🔄 OCR Microservice: Processing file...');
+            const { processDocumentOCR } = await import('./ocr');
+            const result = await processDocumentOCR(file);
+            console.log('✅ OCR Microservice: Success', { textLength: result.text?.length });
+            return result;
+          } catch (error) {
+            console.error('❌ OCR Microservice: Failed', error);
+            throw error;
+          }
+        }
+      });
+
+      // Strategy 2: Google Vision API (if available)
+      if (process.env.GOOGLE_CLOUD_VISION_CREDENTIALS) {
+        console.log('🔧 Adding Google Vision strategy...');
+        this.strategies.push({
+          name: 'google_vision',
+          priority: 2,
+          enabled: true,
+          process: async (file: File) => {
+            // Note: This requires PDF to image conversion
+            // For now, we'll skip this as it requires additional setup
+            throw new Error('Google Vision not yet implemented - requires PDF to image conversion');
+          }
+        });
+      } else {
+        console.log('⚠️ Google Vision strategy not available (no credentials)');
       }
-    });
 
-    // Strategy 2: Google Vision API (if available)
-    if (process.env.GOOGLE_CLOUD_VISION_CREDENTIALS) {
-      this.strategies.push({
-        name: 'google_vision',
-        priority: 2,
-        enabled: true,
-        process: async (file: File) => {
-          // Note: This requires PDF to image conversion
-          // For now, we'll skip this as it requires additional setup
-          throw new Error('Google Vision not yet implemented - requires PDF to image conversion');
-        }
-      });
-    }
-
-    // Strategy 3: OpenAI Vision API (if available)
-    if (process.env.OPENAI_API_KEY) {
-      this.strategies.push({
-        name: 'openai_vision',
-        priority: 3,
-        enabled: true,
-        process: async (file: File) => {
-          const OpenAI = (await import('openai')).default;
-          const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-          
-          // Convert file to base64
-          const arrayBuffer = await file.arrayBuffer();
-          const base64 = Buffer.from(arrayBuffer).toString('base64');
-          
-          const response = await openai.chat.completions.create({
-            model: "gpt-4o",
-            messages: [
-              {
-                role: "user",
-                content: [
+      // Strategy 3: OpenAI Vision API (if available)
+      if (process.env.OPENAI_API_KEY) {
+        console.log('🔧 Adding OpenAI Vision strategy...');
+        this.strategies.push({
+          name: 'openai_vision',
+          priority: 3,
+          enabled: true,
+          process: async (file: File) => {
+            try {
+              console.log('🔄 OpenAI Vision: Processing file...');
+              const OpenAI = (await import('openai')).default;
+              const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+              
+              // Convert file to base64
+              const arrayBuffer = await file.arrayBuffer();
+              const base64 = Buffer.from(arrayBuffer).toString('base64');
+              
+              const response = await openai.chat.completions.create({
+                model: "gpt-4o",
+                messages: [
                   {
-                    type: "text",
-                    text: "Extract all readable text from this document. If it's a scanned document or image, describe what you can see. Return only the extracted text without any additional commentary."
-                  },
-                  {
-                    type: "image_url",
-                    image_url: {
-                      url: `data:${file.type};base64,${base64}`
-                    }
+                    role: "user",
+                    content: [
+                      {
+                        type: "text",
+                        text: "Extract all readable text from this document. If it's a scanned document or image, describe what you can see. Return only the extracted text without any additional commentary."
+                      },
+                      {
+                        type: "image_url",
+                        image_url: {
+                          url: `data:${file.type};base64,${base64}`
+                        }
+                      }
+                    ]
                   }
-                ]
-              }
-            ],
-            max_tokens: 4000
-          });
+                ],
+                max_tokens: 4000
+              });
 
-          const text = response.choices[0]?.message?.content || '';
-          
-          return {
-            text: text.trim(),
-            source: 'openai_vision',
-            filename: file.name,
-            confidence: text.length > 200 ? 0.8 : 0.6,
-            quality: text.length > 200 ? 'high' : 'medium'
-          };
-        }
-      });
+              const text = response.choices[0]?.message?.content || '';
+              console.log('✅ OpenAI Vision: Success', { textLength: text.length });
+              
+              return {
+                text: text.trim(),
+                source: 'openai_vision',
+                filename: file.name,
+                confidence: text.length > 200 ? 0.8 : 0.6,
+                quality: text.length > 200 ? 'high' : 'medium'
+              };
+            } catch (error) {
+              console.error('❌ OpenAI Vision: Failed', error);
+              throw error;
+            }
+          }
+        });
+      } else {
+        console.log('⚠️ OpenAI Vision strategy not available (no API key)');
+      }
+
+      console.log(`✅ OCR Fallback Processor initialized with ${this.strategies.length} strategies:`, 
+        this.strategies.map(s => `${s.name} (${s.enabled ? 'enabled' : 'disabled'})`));
+        
+    } catch (error) {
+      console.error('❌ Error initializing OCR strategies:', error);
+      throw error;
     }
-
-    console.log(`🔧 OCR Fallback Processor initialized with ${this.strategies.length} strategies`);
   }
 
   /**
