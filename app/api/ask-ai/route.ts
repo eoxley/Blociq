@@ -6,7 +6,7 @@ import { insertAiLog } from '@/lib/supabase/ai_logs';
 
 // Natural language query processing
 interface QueryIntent {
-  type: 'leaseholder_lookup' | 'unit_details' | 'building_info' | 'document_query' | 'general';
+  type: 'leaseholder_lookup' | 'unit_details' | 'building_info' | 'document_query' | 'buildings_list' | 'general';
   buildingIdentifier?: string;
   unitIdentifier?: string;
   personName?: string;
@@ -84,6 +84,15 @@ class QueryProcessor {
         confidence: 0.6
       };
     }
+    // Building management queries
+    else if (queryLower.includes('what buildings') || queryLower.includes('list buildings') ||
+             queryLower.includes('buildings do i manage') || queryLower.includes('my buildings') ||
+             queryLower.includes('show buildings') || queryLower.includes('all buildings')) {
+      intent = {
+        type: 'buildings_list',
+        confidence: 0.8
+      };
+    }
     
     return intent;
   }
@@ -92,28 +101,36 @@ class QueryProcessor {
     const matches: { match: string; confidence: number }[] = [];
     
     for (const pattern of patterns) {
-      const regexMatches = [...text.matchAll(new RegExp(pattern.source, pattern.flags + 'g'))];
-      
-      for (const regexMatch of regexMatches) {
-        const extractedMatch = regexMatch[1] || regexMatch[0];
-        if (extractedMatch && extractedMatch.trim()) {
-          // Calculate confidence based on pattern specificity and match quality
-          let confidence = 0.5;
-          
-          // Higher confidence for more specific patterns
-          if (pattern.source.includes('building|house|court|place')) confidence += 0.3;
-          if (pattern.source.includes('unit|flat|apartment')) confidence += 0.3;
-          if (pattern.source.includes('at\\s+')) confidence += 0.2;
-          
-          // Higher confidence for longer matches
-          if (extractedMatch.length > 5) confidence += 0.1;
-          if (extractedMatch.length > 10) confidence += 0.1;
-          
-          matches.push({ 
-            match: extractedMatch.trim(), 
-            confidence: Math.min(confidence, 1.0)
-          });
+      try {
+        // FIX: Prevent duplicate 'g' flags that cause RegExp constructor error
+        const flags = pattern.global ? pattern.flags.replace(/g/g, '') + 'g' : pattern.flags + 'g';
+        const regex = new RegExp(pattern.source, flags);
+        const regexMatches = [...text.matchAll(regex)];
+        
+        for (const regexMatch of regexMatches) {
+          const extractedMatch = regexMatch[1] || regexMatch[0];
+          if (extractedMatch && extractedMatch.trim()) {
+            // Calculate confidence based on pattern specificity and match quality
+            let confidence = 0.5;
+            
+            // Higher confidence for more specific patterns
+            if (pattern.source.includes('building|house|court|place')) confidence += 0.3;
+            if (pattern.source.includes('unit|flat|apartment')) confidence += 0.3;
+            if (pattern.source.includes('at\\s+')) confidence += 0.2;
+            
+            // Higher confidence for longer matches
+            if (extractedMatch.length > 5) confidence += 0.1;
+            if (extractedMatch.length > 10) confidence += 0.1;
+            
+            matches.push({ 
+              match: extractedMatch.trim(), 
+              confidence: Math.min(confidence, 1.0)
+            });
+          }
         }
+      } catch (regexError) {
+        console.warn('RegExp error with pattern:', pattern.source, regexError);
+        continue;
       }
     }
     
@@ -130,43 +147,69 @@ class BuildingContextService {
   
   async findLeaseholder(intent: QueryIntent): Promise<any> {
     try {
-      // 1. Find building by address/name
+      // 1. Find building by address/name with comprehensive data
       let buildingQuery = this.supabase
         .from('buildings')
-        .select('id, name, address, postcode');
+        .select(`
+          id, name, address, postcode, unit_count,
+          building_manager_name, building_manager_email, building_manager_phone,
+          emergency_contact_name, emergency_contact_phone,
+          access_notes, key_access_notes, parking_info,
+          building_age, construction_type, total_floors, lift_available
+        `);
         
       if (intent.buildingIdentifier) {
         // Clean building identifier for better matching
         const cleanIdentifier = intent.buildingIdentifier.trim().toLowerCase();
         
-        // Enhanced search with multiple strategies
+        // Enhanced search with fuzzy matching
         buildingQuery = buildingQuery.or(
           `address.ilike.%${cleanIdentifier}%,name.ilike.%${cleanIdentifier}%,postcode.ilike.%${cleanIdentifier}%`
         );
       }
       
-      const { data: buildings, error: buildingError } = await buildingQuery.limit(5);
+      const { data: buildings, error: buildingError } = await buildingQuery.limit(10);
       
-      if (buildingError || !buildings?.length) {
+      if (buildingError) {
+        console.error('Building query error:', buildingError);
+        return { 
+          success: false,
+          error: 'Database error while searching for building',
+          details: buildingError.message
+        };
+      }
+
+      if (!buildings?.length) {
+        // Try to find similar building names for suggestions
+        const suggestionQuery = await this.supabase
+          .from('buildings')
+          .select('name, address')
+          .limit(5);
+          
+        const suggestions = suggestionQuery.data?.map(b => `${b.name} (${b.address})`).join(', ') || '';
+        
         return { 
           success: false,
           error: `Building "${intent.buildingIdentifier}" not found`,
-          suggestion: 'Please check the building name or address'
+          suggestion: suggestions ? `Try one of these buildings: ${suggestions}` : 'Please check the building name or address'
         };
       }
       
-      // If multiple buildings found, try to narrow down
+      // Use first building match for comprehensive data
       const building = buildings[0];
       
-      // 2. Find unit and leaseholder
+      // 2. Find units and leaseholders with comprehensive data
       let unitQuery = this.supabase
         .from('units')
         .select(`
-          id, unit_number, unit_label, floor,
-          buildings!inner(id, name, address),
-          leaseholders(id, name, full_name, email, phone)
+          id, unit_number, floor, type, created_at,
+          leaseholders!left(
+            id, name, email, phone,
+            created_at
+          )
         `)
-        .eq('building_id', building.id);
+        .eq('building_id', building.id)
+        .order('unit_number');
         
       if (intent.unitIdentifier) {
         // Clean unit identifier for better matching
@@ -174,13 +217,14 @@ class BuildingContextService {
         
         // Try multiple matching strategies for units
         unitQuery = unitQuery.or(
-          `unit_number.eq.${cleanUnit},unit_label.ilike.%${cleanUnit}%,unit_number.eq.${cleanUnit.replace(/^0+/, '')}`
+          `unit_number.eq.${cleanUnit},unit_number.ilike.%${cleanUnit}%`
         );
       }
       
       const { data: units, error: unitError } = await unitQuery;
       
       if (unitError) {
+        console.error('Units query error:', unitError);
         return { 
           success: false,
           error: 'Database error while searching for units',
@@ -188,22 +232,20 @@ class BuildingContextService {
         };
       }
       
-      if (!units?.length) {
-        return {
-          success: false,
-          error: intent.unitIdentifier 
-            ? `Unit "${intent.unitIdentifier}" not found in ${building.name}`
-            : `No units found in ${building.name}`,
-          suggestion: 'Try checking the unit number or building name',
-          buildingInfo: building
-        };
-      }
-      
+      // Return comprehensive building and unit data even if no specific unit found
       return {
         success: true,
-        building,
-        units,
-        totalUnits: units.length
+        building: {
+          ...building,
+          totalUnits: building.unit_count || units?.length || 0
+        },
+        units: units || [],
+        totalUnits: units?.length || 0,
+        hasLeaseholders: units?.some(unit => unit.leaseholders && unit.leaseholders.length > 0) || false,
+        searchedFor: {
+          building: intent.buildingIdentifier,
+          unit: intent.unitIdentifier
+        }
       };
       
     } catch (error) {
@@ -258,39 +300,309 @@ class BuildingContextService {
       };
     }
   }
+  
+  async getBuildingsList(): Promise<any> {
+    try {
+      const query = this.supabase
+        .from('buildings')
+        .select(`
+          id, name, address, postcode, unit_count,
+          building_manager_name, building_manager_email,
+          emergency_contact_name, emergency_contact_phone,
+          created_at, updated_at,
+          units:units(count)
+        `)
+        .order('name');
+      
+      const { data: buildings, error } = await query;
+      
+      if (error) {
+        console.error('Buildings list query error:', error);
+        return {
+          success: false,
+          error: 'Failed to retrieve buildings list',
+          details: error.message
+        };
+      }
+      
+      if (!buildings?.length) {
+        return {
+          success: false,
+          error: 'No buildings found in the system',
+          suggestion: 'You may need to add buildings to your property portfolio first'
+        };
+      }
+      
+      // Get additional stats for each building
+      const buildingsWithStats = await Promise.all(
+        buildings.map(async (building) => {
+          try {
+            // Get leaseholder count
+            const leaseholdersQuery = await this.supabase
+              .from('leaseholders')
+              .select('id', { count: 'exact' })
+              .eq('unit_id', building.id);
+              
+            const leaseholderCount = leaseholdersQuery.count || 0;
+            
+            return {
+              ...building,
+              leaseholderCount,
+              occupancyRate: building.unit_count ? Math.round((leaseholderCount / building.unit_count) * 100) : 0
+            };
+          } catch (error) {
+            console.error(`Error getting stats for building ${building.id}:`, error);
+            return {
+              ...building,
+              leaseholderCount: 0,
+              occupancyRate: 0
+            };
+          }
+        })
+      );
+      
+      return {
+        success: true,
+        buildings: buildingsWithStats,
+        totalBuildings: buildings.length,
+        totalUnits: buildings.reduce((sum, b) => sum + (b.unit_count || 0), 0)
+      };
+      
+    } catch (error) {
+      console.error('Error in getBuildingsList:', error);
+      return {
+        success: false,
+        error: 'Failed to retrieve buildings list',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
 }
 
 class ResponseGenerator {
   generateLeaseholderResponse(contextData: any, originalQuery: string): string {
     if (!contextData.success) {
-      return `I couldn't find the information you're looking for. ${contextData.error}${contextData.suggestion ? ' ' + contextData.suggestion : ''}`;
+      return `I couldn't find the information you're looking for. ${contextData.error}${contextData.suggestion ? '\n\n' + contextData.suggestion : ''}`;
     }
     
-    const { building, units } = contextData;
+    const { building, units, searchedFor } = contextData;
+    const query = originalQuery.toLowerCase();
     
-    if (units.length === 1) {
-      const unit = units[0];
-      const leaseholders = unit.leaseholders;
+    // Check if this is an access codes query
+    if (query.includes('access code') || query.includes('entry code') || query.includes('door code')) {
+      return this.generateAccessCodesResponse(building);
+    }
+    
+    // Format comprehensive leaseholder response
+    let response = `# 🏠 **Building Information: ${building.name}**\n\n`;
+    
+    // Building details section
+    response += `## 📍 **Property Details**\n`;
+    response += `**Address:** ${building.address}${building.postcode ? ', ' + building.postcode : ''}\n`;
+    response += `**Total Units:** ${building.totalUnits || 'Not specified'}\n`;
+    
+    if (building.building_manager_name) {
+      response += `**Building Manager:** ${building.building_manager_name}\n`;
+      if (building.building_manager_email) {
+        response += `**Manager Email:** ${building.building_manager_email}\n`;
+      }
+      if (building.building_manager_phone) {
+        response += `**Manager Phone:** ${building.building_manager_phone}\n`;
+      }
+    }
+    
+    if (building.emergency_contact_name) {
+      response += `**Emergency Contact:** ${building.emergency_contact_name}`;
+      if (building.emergency_contact_phone) {
+        response += ` (${building.emergency_contact_phone})`;
+      }
+      response += '\n';
+    }
+    
+    // Property specifications
+    if (building.building_age || building.construction_type || building.total_floors || building.lift_available) {
+      response += `\n## 🏗️ **Building Specifications**\n`;
+      if (building.building_age) response += `**Age:** ${building.building_age}\n`;
+      if (building.construction_type) response += `**Construction:** ${building.construction_type}\n`;
+      if (building.total_floors) response += `**Floors:** ${building.total_floors}\n`;
+      if (building.lift_available) response += `**Lift Available:** ${building.lift_available}\n`;
+    }
+    
+    // Leaseholder information section
+    if (units && units.length > 0) {
+      response += `\n## 👥 **Leaseholder Information**\n\n`;
       
-      if (!leaseholders || leaseholders.length === 0) {
-        return `Unit ${unit.unit_number || unit.unit_label} at ${building.name} (${building.address}) currently has no registered leaseholder.`;
+      const unitsWithLeaseholders = units.filter((unit: any) => unit.leaseholders && unit.leaseholders.length > 0);
+      const unitsWithoutLeaseholders = units.filter((unit: any) => !unit.leaseholders || unit.leaseholders.length === 0);
+      
+      if (searchedFor.unit) {
+        // Specific unit search
+        const targetUnit = units.find((unit: any) => 
+          unit.unit_number?.toString() === searchedFor.unit ||
+          unit.unit_number?.toString().includes(searchedFor.unit)
+        );
+        
+        if (targetUnit) {
+          response += `### **Unit ${targetUnit.unit_number}${targetUnit.floor ? ` (Floor ${targetUnit.floor})` : ''}**\n`;
+          if (targetUnit.leaseholders && targetUnit.leaseholders.length > 0) {
+            targetUnit.leaseholders.forEach((lh: any) => {
+              response += `**👤 Leaseholder:** ${lh.name || 'Name not available'}\n`;
+              if (lh.email) response += `**📧 Email:** ${lh.email}\n`;
+              if (lh.phone) response += `**📞 Phone:** ${lh.phone}\n`;
+              if (lh.created_at) response += `**📅 Registered:** ${new Date(lh.created_at).toLocaleDateString()}\n`;
+              response += `\n`;
+            });
+          } else {
+            response += `*No leaseholder currently registered for this unit*\n\n`;
+          }
+        } else {
+          response += `*Unit ${searchedFor.unit} not found in this building*\n\n`;
+        }
+      } else {
+        // All units overview
+        if (unitsWithLeaseholders.length > 0) {
+          response += `**📊 Occupied Units (${unitsWithLeaseholders.length}/${units.length}):**\n\n`;
+          unitsWithLeaseholders.slice(0, 10).forEach((unit: any) => {
+            const leaseholderNames = unit.leaseholders.map((lh: any) => lh.name || 'Name not available').join(', ');
+            response += `• **Unit ${unit.unit_number}:** ${leaseholderNames}\n`;
+            
+            // Show contact details for first leaseholder
+            const firstLH = unit.leaseholders[0];
+            if (firstLH.email || firstLH.phone) {
+              response += `  `;
+              if (firstLH.email) response += `📧 ${firstLH.email} `;
+              if (firstLH.phone) response += `📞 ${firstLH.phone}`;
+              response += `\n`;
+            }
+          });
+          
+          if (unitsWithLeaseholders.length > 10) {
+            response += `  *...and ${unitsWithLeaseholders.length - 10} more occupied units*\n`;
+          }
+        }
+        
+        if (unitsWithoutLeaseholders.length > 0) {
+          response += `\n**🏠 Vacant Units (${unitsWithoutLeaseholders.length}):**\n`;
+          const vacantNumbers = unitsWithoutLeaseholders.slice(0, 15).map((unit: any) => unit.unit_number).join(', ');
+          response += `Units: ${vacantNumbers}`;
+          if (unitsWithoutLeaseholders.length > 15) {
+            response += ` *...and ${unitsWithoutLeaseholders.length - 15} more*`;
+          }
+          response += '\n';
+        }
+      }
+    } else {
+      response += `\n*No unit information available for this building*\n`;
+    }
+    
+    // Access information
+    if (building.access_notes || building.key_access_notes || building.parking_info) {
+      response += `\n## 🔐 **Access Information**\n`;
+      if (building.access_notes) response += `**Access Notes:** ${building.access_notes}\n`;
+      if (building.key_access_notes) response += `**Key Access:** ${building.key_access_notes}\n`;
+      if (building.parking_info) response += `**Parking:** ${building.parking_info}\n`;
+    }
+    
+    return response;
+  }
+  
+  generateAccessCodesResponse(building: any): string {
+    let response = `# 🔐 **Access Codes - ${building.name}**\n\n`;
+    
+    response += `## 📍 **Property:** ${building.address}\n\n`;
+    
+    if (building.access_notes || building.key_access_notes) {
+      response += `## 🚪 **Access Information**\n`;
+      
+      if (building.access_notes) {
+        response += `**General Access:** ${building.access_notes}\n`;
       }
       
-      const leaseholderNames = leaseholders.map((lh: any) => lh.full_name || lh.name).join(', ');
-      return `The leaseholder${leaseholders.length > 1 ? 's' : ''} for unit ${unit.unit_number || unit.unit_label} at ${building.name} (${building.address}) ${leaseholders.length > 1 ? 'are' : 'is'}: ${leaseholderNames}`;
+      if (building.key_access_notes) {
+        response += `**Key Access Details:** ${building.key_access_notes}\n`;
+      }
+      
+      response += `\n`;
+    } else {
+      response += `## ⚠️ **Access Information Not Available**\n\n`;
+      response += `Access codes for ${building.name} are not currently stored in the system or may be restricted for security reasons.\n\n`;
+      response += `**For access codes, please contact:**\n`;
+      
+      if (building.building_manager_name) {
+        response += `• **Building Manager:** ${building.building_manager_name}`;
+        if (building.building_manager_phone) response += ` - ${building.building_manager_phone}`;
+        if (building.building_manager_email) response += ` - ${building.building_manager_email}`;
+        response += `\n`;
+      }
+      
+      if (building.emergency_contact_name) {
+        response += `• **Emergency Contact:** ${building.emergency_contact_name}`;
+        if (building.emergency_contact_phone) response += ` - ${building.emergency_contact_phone}`;
+        response += `\n`;
+      }
     }
     
-    // Multiple units found
-    let response = `I found ${units.length} units at ${building.name} (${building.address}):\n\n`;
+    response += `\n💡 **Security Note:** Access codes are sensitive information and may be restricted to authorized personnel only.`;
     
-    for (const unit of units) {
-      const leaseholders = unit.leaseholders;
-      const leaseholderNames = leaseholders?.length 
-        ? leaseholders.map((lh: any) => lh.full_name || lh.name).join(', ')
-        : 'No leaseholder registered';
-        
-      response += `• Unit ${unit.unit_number || unit.unit_label}: ${leaseholderNames}\n`;
+    return response;
+  }
+  
+  generateBuildingsListResponse(contextData: any): string {
+    if (!contextData.success) {
+      return `I couldn't retrieve your buildings list. ${contextData.error}${contextData.suggestion ? '\n\n' + contextData.suggestion : ''}`;
     }
+    
+    const { buildings, totalBuildings, totalUnits } = contextData;
+    
+    let response = `# 🏢 **Property Portfolio Overview**\n\n`;
+    
+    response += `## 📊 **Portfolio Summary**\n`;
+    response += `**Total Buildings:** ${totalBuildings}\n`;
+    response += `**Total Units:** ${totalUnits}\n`;
+    response += `**Average Units per Building:** ${totalBuildings > 0 ? Math.round(totalUnits / totalBuildings) : 0}\n\n`;
+    
+    response += `## 🏠 **Buildings Under Management**\n\n`;
+    
+    buildings.forEach((building: any, index: number) => {
+      response += `### **${index + 1}. ${building.name}**\n`;
+      response += `**📍 Address:** ${building.address}${building.postcode ? ', ' + building.postcode : ''}\n`;
+      response += `**🏠 Units:** ${building.unit_count || 'Not specified'}\n`;
+      
+      if (building.leaseholderCount !== undefined) {
+        response += `**👥 Leaseholders:** ${building.leaseholderCount}\n`;
+        if (building.occupancyRate !== undefined) {
+          response += `**📊 Occupancy Rate:** ${building.occupancyRate}%\n`;
+        }
+      }
+      
+      if (building.building_manager_name) {
+        response += `**👨‍💼 Property Manager:** ${building.building_manager_name}`;
+        if (building.building_manager_email) {
+          response += ` (${building.building_manager_email})`;
+        }
+        response += `\n`;
+      }
+      
+      if (building.emergency_contact_name) {
+        response += `**🚨 Emergency Contact:** ${building.emergency_contact_name}`;
+        if (building.emergency_contact_phone) {
+          response += ` (${building.emergency_contact_phone})`;
+        }
+        response += `\n`;
+      }
+      
+      if (building.created_at) {
+        const addedDate = new Date(building.created_at).toLocaleDateString();
+        response += `**📅 Added to System:** ${addedDate}\n`;
+      }
+      
+      response += `\n`;
+    });
+    
+    response += `---\n\n💡 **Quick Actions:**\n`;
+    response += `• To get detailed information about a specific building, ask: "Tell me about [building name]"\n`;
+    response += `• To find leaseholder information, ask: "Who is the leaseholder of unit [number] at [building name]"\n`;
+    response += `• To get access codes, ask: "What are the access codes for [building name]"\n`;
     
     return response;
   }
@@ -423,6 +735,11 @@ export async function POST(req: Request) {
       case 'document_query':
         contextData = await contextService.findLeaseholder(intent);
         response = responseGenerator.generateDocumentQueryResponse(contextData, userQuery);
+        break;
+        
+      case 'buildings_list':
+        contextData = await contextService.getBuildingsList();
+        response = responseGenerator.generateBuildingsListResponse(contextData);
         break;
         
       default:
