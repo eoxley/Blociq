@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, Sparkles, Upload, FileText, X, Brain } from 'lucide-react';
 import { toast } from 'sonner';
+import AIChatDisclaimer from '@/components/ui/AIChatDisclaimer';
 
 type Message = {
   id: string;
@@ -405,6 +406,7 @@ export default function PublicAskBlocIQ({ isPublic = true, isVisible = false }: 
             </div>
           )}
         </form>
+        <AIChatDisclaimer />
       </div>
     </div>
   );

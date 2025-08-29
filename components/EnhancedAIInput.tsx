@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import AIFeedback from './AIFeedback';
 // Removed ComplianceBadge import
 import MajorWorksBadge from './MajorWorksBadge';
+import AIChatDisclaimer from '@/components/ui/AIChatDisclaimer';
 
 interface EnhancedAIInputProps {
   buildingId?: string;
@@ -103,10 +104,7 @@ export default function EnhancedAIInput({
         </button>
       </form>
       
-      {/* Disclaimer */}
-      <p className="text-xs text-gray-500 italic text-center">
-        💡 Sometimes BlocIQ can get things muddled - please verify important information
-      </p>
+      <AIChatDisclaimer />
 
       {answer && (
         <div className="space-y-4">

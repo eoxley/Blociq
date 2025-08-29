@@ -31,7 +31,7 @@ export default function RootLayout({
               </main>
               <Footer />
             </div>
-            {/* Public Ask BlocIQ Widget - appears on all pages */}
+            {/* Public Ask BlocIQ Widget - only appears on landing page for unauthenticated users */}
             <PublicAskBlocIQWidget />
           </SupabaseProvider>
           <Toaster 

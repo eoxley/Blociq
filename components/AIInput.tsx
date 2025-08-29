@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, Sparkles, ArrowUp } from 'lucide-react';
 import { toast } from 'sonner';
+import AIChatDisclaimer from '@/components/ui/AIChatDisclaimer';
 
 interface AIInputProps {
   placeholder?: string;
@@ -120,10 +121,7 @@ export default function AIInput({
           </button>
         </div>
         
-        {/* Disclaimer */}
-        <p className="text-xs text-gray-500 italic text-center">
-          💡 Sometimes BlocIQ can get things muddled - please verify important information
-        </p>
+        <AIChatDisclaimer />
       </form>
       
       {isTyping && (

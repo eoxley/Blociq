@@ -3,17 +3,57 @@
 import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { Brain } from 'lucide-react';
+import { supabase } from '@/lib/supabaseClient';
 import PublicAskBlocIQ from './PublicAskBlocIQ';
 
 export default function PublicAskBlocIQWidget() {
   const pathname = usePathname();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showButton, setShowButton] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Only show widget on landing page (root path)
-  const shouldShowWidget = pathname === '/';
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
+    };
+    
+    checkAuth();
+    
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setIsAuthenticated(!!session);
+    });
 
-  // Auto-appears 1 second after page load (only on landing page)
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Define authenticated routes that should never show the widget
+  const authenticatedRoutes = [
+    '/home',
+    '/buildings',
+    '/compliance',
+    '/communications', 
+    '/major-works',
+    '/inbox',
+    '/inbox-overview',
+    '/login',
+    '/account',
+    '/templates',
+    '/documents',
+    '/assistant'
+  ];
+
+  // Check if current path is an authenticated route
+  const isAuthenticatedRoute = authenticatedRoutes.some(route => 
+    pathname.startsWith(route) || pathname.includes('/(dashboard)')
+  );
+
+  // Only show widget on exact landing page AND user is not authenticated AND not on authenticated routes
+  const shouldShowWidget = pathname === '/' && !isAuthenticated && !isAuthenticatedRoute;
+
+  // Auto-appears 1 second after page load (only on landing page for unauthenticated users)
   useEffect(() => {
     if (!shouldShowWidget) {
       setShowButton(false);
@@ -25,7 +65,7 @@ export default function PublicAskBlocIQWidget() {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [shouldShowWidget]);
+  }, [shouldShowWidget, isAuthenticated, pathname]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {

@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/select";
 import { supabase } from '@/lib/supabaseClient';
 import { Send, FileText, Building2, Calendar, User } from "lucide-react";
 import { toast } from "sonner";
+import AIChatDisclaimer from '@/components/ui/AIChatDisclaimer';
 
 interface Document {
   id: string;
@@ -365,6 +366,7 @@ export default function DocumentChat({ buildingId, onDocumentSelect }: DocumentC
             Responsible Parties
           </Button>
         </div>
+        <AIChatDisclaimer />
       </div>
     </div>
   );
