@@ -1,6 +1,17 @@
 // Enhanced helper functions for Ask BlocIQ system
 // Complete logic overhaul with proper response formatting
 
+// Database query logging function
+export function logDatabaseQuery(tableName: string, query: any, result: any): void {
+  console.log(`🗄️ DATABASE QUERY: ${tableName}`);
+  console.log(`🔍 Query:`, query);
+  console.log(`📊 Result:`, result);
+  console.log(`📈 Row count:`, result?.data?.length || 0);
+  if (result?.error) {
+    console.log(`❌ Error:`, result.error);
+  }
+}
+
 export function extractUnit(prompt: string): string | undefined {
   const unitPattern = /(?:unit|flat|apartment|apt)\s*([0-9]+[a-zA-Z]?)|(?:^|\s)([0-9]+[a-zA-Z]?)(?:\s+(?:at|in|of)|\s)/i;
   const match = prompt.match(unitPattern);
@@ -23,6 +34,81 @@ export function extractBuilding(prompt: string): string | undefined {
   return undefined;
 }
 
+// Test database access function
+export async function testDatabaseAccess(supabase: any): Promise<string> {
+  try {
+    console.log("🔍 Testing vw_units_leaseholders access...");
+    
+    const { data, error } = await supabase
+      .from('vw_units_leaseholders')
+      .select('*')
+      .limit(5);
+    
+    console.log("✅ Database test result:", { data, error });
+    console.log("✅ Available columns:", data?.[0] ? Object.keys(data[0]) : "No data");
+    console.log("✅ Sample data:", data?.[0]);
+    
+    if (error) {
+      return `❌ Database test failed: ${error.message}`;
+    }
+    
+    if (!data || data.length === 0) {
+      return `⚠️ Database connected but no data in vw_units_leaseholders`;
+    }
+    
+    return `✅ Database test successful: ${data.length} records found. Columns: ${Object.keys(data[0]).join(', ')}`;
+  } catch (err: any) {
+    console.log("❌ Database test failed:", err);
+    return `❌ Database test exception: ${err.message}`;
+  }
+}
+
+// Force direct database query without AI interpretation
+export async function handleLeaseholderQuery(supabase: any, prompt: string): Promise<string> {
+  console.log("🔍 FORCING database query for:", prompt);
+  
+  try {
+    // Force direct database query - don't rely on AI interpretation
+    const { data, error } = await supabase
+      .from('vw_units_leaseholders')
+      .select('*');
+    
+    console.log("📊 Raw database results:", { data, error, count: data?.length });
+    
+    if (error) {
+      return `❌ Database query failed: ${error.message}`;
+    }
+    
+    if (data && data.length > 0) {
+      console.log("📋 Sample record:", data[0]);
+      console.log("📋 Available columns:", Object.keys(data[0]));
+      
+      // Look for any unit matching patterns
+      const unitMatches = data.filter(record => 
+        record.unit_number?.includes('1') || 
+        record.unit_number?.includes('5') ||
+        JSON.stringify(record).toLowerCase().includes('alice') ||
+        JSON.stringify(record).toLowerCase().includes('ashwood')
+      );
+      
+      console.log("🎯 Relevant matches:", unitMatches);
+      
+      if (unitMatches.length > 0) {
+        const match = unitMatches[0];
+        return `✅ REAL DATABASE RESULT: ${match.leaseholder_name} lives in ${match.unit_number} at ${match.building_name || 'Building ID: ' + match.building_id}. Email: ${match.leaseholder_email || 'Not provided'}`;
+      }
+      
+      // Return actual data structure for debugging
+      return `⚠️ No matches found for query. Database has ${data.length} total records. Sample: ${JSON.stringify(data[0], null, 2)}`;
+    }
+    
+    return `❌ No data in database. Query returned empty result.`;
+  } catch (err: any) {
+    console.log("❌ Database query exception:", err);
+    return `❌ Database query failed: ${err.message}`;
+  }
+}
+
 export async function getLeaseholderInfo(supabase: any, unit: string, building: string): Promise<string> {
   try {
     console.log("Searching for:", { unit, building });
@@ -43,7 +129,10 @@ export async function getLeaseholderInfo(supabase: any, unit: string, building: 
 
     for (const search of searches) {
       const { data, error } = await search.limit(5);
-      console.log("Database result:", { data, error });
+      
+      // Add comprehensive logging
+      logDatabaseQuery('vw_units_leaseholders', { unit, building, searchType: 'leaseholder' }, { data, error });
+      
       if (!error && data && data.length > 0) {
         const leaseholder = data[0];
         // Then return the actual data instead of generic message

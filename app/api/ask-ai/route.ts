@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { getOpenAIClient } from '@/lib/openai-client';
 import { insertAiLog } from '@/lib/supabase/ai_logs';
-import { extractUnit, extractBuilding, getLeaseholderInfo, getAccessCodes, getServiceChargeInfo } from '@/lib/ai/enhancedHelpers';
+import { extractUnit, extractBuilding, getLeaseholderInfo, getAccessCodes, getServiceChargeInfo, testDatabaseAccess, handleLeaseholderQuery } from '@/lib/ai/enhancedHelpers';
 
 // Natural language query processing
 interface QueryIntent {
@@ -862,18 +862,16 @@ I can help with various property management documents including tenancy agreemen
     else {
       const queryLower = userQuery.toLowerCase();
       
-      // LEASEHOLDER QUERIES
+      // FORCE REAL DATABASE QUERIES - NO AI INTERPRETATION
       if (queryLower.includes('leaseholder') || queryLower.includes('who is') || 
           queryLower.includes('tenant') || queryLower.includes('resident')) {
         
-        const unit = extractUnit(userQuery);
-        const building = extractBuilding(userQuery);
-        
-        if (unit && building) {
-          response = await getLeaseholderInfo(supabase, unit, building);
-        } else {
-          response = `I need both a unit number and building name to find leaseholder information. Please try asking something like "Who is the leaseholder of unit 5 at Ashwood House?"`;
-        }
+        // FORCE database query instead of AI interpretation
+        response = await handleLeaseholderQuery(supabase, userQuery);
+      }
+      // DATABASE TEST QUERY - Add this for debugging
+      else if (queryLower.includes('test database') || queryLower.includes('database test')) {
+        response = await testDatabaseAccess(supabase);
       }
       // ACCESS CODE QUERIES (NO RESTRICTIONS)
       else if (queryLower.includes('access code') || queryLower.includes('entry code') ||
