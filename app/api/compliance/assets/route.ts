@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
       query = query.eq('status', status);
     }
 
-    const { data: assets, error: assetsError } = await query.order('category, asset_name');
+    const { data: assets, error: assetsError } = await query.order('category').order('asset_name');
 
     if (assetsError) {
       console.error('❌ Error fetching compliance assets:', assetsError);
