@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { visionClient } from '../../../ocrClient';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,98 +12,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Try API key method first, then fall back to service account
-    const apiKey = process.env.GOOGLE_VISION_API_KEY;
-    const visionCreds = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
-    
-    if (!apiKey && !visionCreds) {
-      return NextResponse.json(
-        { error: 'Google Vision API credentials not configured' },
-        { status: 500 }
-      );
-    }
-
     console.log('🔍 OCR Processing:', { 
       hasFileUrl: !!fileUrl, 
-      hasBase64Image: !!base64Image,
-      usingApiKey: !!apiKey,
-      hasServiceAccount: !!visionCreds 
+      hasBase64Image: !!base64Image
     });
 
     let result;
 
-    // Use API key method if available
-    if (apiKey) {
-      console.log('🔑 Using Google Vision API key method...');
-      
-      if (base64Image) {
-        // Use REST API with base64 image
-        const response = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            requests: [{
-              image: {
-                content: base64Image
-              },
-              features: [{
-                type: 'DOCUMENT_TEXT_DETECTION'
-              }]
-            }]
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error(`Google Vision API error: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        result = data.responses[0];
-      } else if (fileUrl) {
-        // Use REST API with image URL
-        const response = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            requests: [{
-              image: {
-                source: {
-                  imageUri: fileUrl
-                }
-              },
-              features: [{
-                type: 'DOCUMENT_TEXT_DETECTION'
-              }]
-            }]
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error(`Google Vision API error: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        result = data.responses[0];
-      }
-    } else if (visionCreds) {
-      // Fallback to service account method
-      console.log('🔧 Using Google Vision service account method...');
-      const { ImageAnnotatorClient } = await import('@google-cloud/vision');
-      const client = new ImageAnnotatorClient({
-        credentials: JSON.parse(visionCreds)
+    if (base64Image) {
+      [result] = await visionClient.documentTextDetection({
+        image: { content: base64Image }
       });
-
-      if (base64Image) {
-        [result] = await client.documentTextDetection({
-          image: { content: base64Image }
-        });
-      } else if (fileUrl) {
-        [result] = await client.documentTextDetection(fileUrl);
-      }
+    } else if (fileUrl) {
+      [result] = await visionClient.documentTextDetection(fileUrl);
     }
 
     // Extract text from the result (both API methods return similar structure)
