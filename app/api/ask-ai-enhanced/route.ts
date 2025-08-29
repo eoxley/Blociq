@@ -506,56 +506,6 @@ function calculateOverallConfidence(
   return Math.round((dbConfidence * 0.3 + avgDocConfidence * 0.7) * 100) / 100;
 }
 
-/**
- * Process query with database search first
- */
-async function processQueryDatabaseFirst(supabase: any, userQuestion: string, context: QueryContext): Promise<any> {
-  const isDbQuery = isPropertyQuery(userQuestion);
-  
-  if (isDbQuery) {
-    const databaseResults = await searchAllRelevantTables(supabase, userQuestion);
-    return {
-      ...databaseResults,
-      tables: Object.keys(databaseResults),
-      confidence: Object.keys(databaseResults).length > 0 ? 0.8 : 0.3,
-      totalRecords: Object.values(databaseResults).reduce((sum: number, arr: any) => sum + (Array.isArray(arr) ? arr.length : 0), 0)
-    };
-  }
-  
-  return {
-    tables: [],
-    confidence: 0.3,
-    totalRecords: 0
-  };
-}
-
-/**
- * Generate AI response for non-lease documents
- */
-async function generateAIResponse(
-  userQuestion: string,
-  databaseResults: any,
-  documents: any[],
-  context: QueryContext
-): Promise<string> {
-  if (databaseResults.totalRecords > 0) {
-    return formatDatabaseResponse(userQuestion, databaseResults);
-  }
-  
-  // Fallback to enhanced AI
-  const enhancedAI = new EnhancedAskAI();
-  const response = await enhancedAI.generateResponse({
-    prompt: userQuestion,
-    building_id: null,
-    contextType: 'general_query',
-    emailContext: null,
-    is_outlook_addin: false,
-    includeIndustryKnowledge: true,
-    knowledgeCategories: ['compliance', 'property_management', 'uk_regulations']
-  });
-  
-  return response.response;
-}
 
 /**
  * Enhanced main route that integrates everything
@@ -596,7 +546,59 @@ export async function POST(request: NextRequest) {
       features: ['ocr', 'database-search', 'lease-analysis', 'insights'],
     };
 
-    // MAIN PROCESSING LOGIC
+    // Check if this is a database query first (PRIORITY 1)
+    console.log('🔍 Checking if property query for:', userQuestion);
+    const isDbQuery = isPropertyQuery(userQuestion);
+    console.log('🔍 isPropertyQuery result:', isDbQuery);
+    
+    if (isDbQuery) {
+      console.log('🎯 Database query detected! Searching database first:', userQuestion);
+      
+      try {
+        console.log('🚀 Starting database search...');
+        const databaseResults = await searchAllRelevantTables(supabase, userQuestion);
+        console.log('📊 Database search completed. Result keys:', Object.keys(databaseResults));
+        
+        if (Object.keys(databaseResults).length > 0) {
+          console.log('✅ Database search successful, found data in tables:', Object.keys(databaseResults));
+          
+          // Format the database response
+          const formattedResponse = formatDatabaseResponse(userQuestion, databaseResults);
+          
+          return NextResponse.json({
+            answer: formattedResponse,
+            sources: ['database_search'],
+            confidence: 0.9,
+            suggestions: [
+              'Ask about other properties',
+              'Request specific details',
+              'Check compliance information'
+            ],
+            relatedQueries: [
+              'What are the contact details?',
+              'Show me building information',
+              'What other units are there?'
+            ],
+            metadata: {
+              processingTime: Date.now() - startTime,
+              documentsProcessed: 0,
+              databaseRecordsSearched: Object.values(databaseResults).reduce((sum: number, arr: any) => sum + (Array.isArray(arr) ? arr.length : 0), 0),
+              aiModel: 'database_search',
+              timestamp: new Date().toISOString(),
+            },
+          });
+        } else {
+          console.log('ℹ️ Database search returned no results, proceeding with AI processing');
+        }
+      } catch (dbError) {
+        console.error('❌ Database search failed:', dbError);
+        console.log('🔄 Continuing with AI processing due to database error');
+      }
+    } else {
+      console.log('ℹ️ Not a property query, proceeding with document/AI processing');
+    }
+
+    // MAIN PROCESSING LOGIC - Files (PRIORITY 2)
     if (files.length > 0) {
       console.log(`📁 Processing ${files.length} uploaded files...`);
       
@@ -622,22 +624,24 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // Fallback to database-only search if no files
-    console.log('🗄️ No files provided, performing database search...');
-    const databaseResults = await processQueryDatabaseFirst(supabase, userQuestion, context);
-    
-    const aiResponse = await generateAIResponse(
-      userQuestion,
-      databaseResults,
-      [], // No documents
-      context
-    );
+    // Fallback to enhanced AI if no database results or files
+    console.log('ℹ️ No database results or files - using enhanced AI');
+    const enhancedAI = new EnhancedAskAI();
+    const aiResponse = await enhancedAI.generateResponse({
+      prompt: userQuestion,
+      building_id: null,
+      contextType: 'general_query',
+      emailContext: null,
+      is_outlook_addin: false,
+      includeIndustryKnowledge: true,
+      knowledgeCategories: ['compliance', 'property_management', 'uk_regulations']
+    });
 
     const response: AIResponse = {
-      answer: aiResponse,
-      sources: databaseResults.tables.map((table: string) => `Database: ${table}`),
-      confidence: databaseResults.confidence,
-      suggestions: ['Upload a lease document for detailed analysis'],
+      answer: aiResponse.response,
+      sources: aiResponse.sources || ['ai_knowledge'],
+      confidence: aiResponse.confidence || 0.7,
+      suggestions: ['Upload a lease document for detailed analysis', 'Try a more specific property query'],
       relatedQueries: [
         'What properties do I have available?',
         'Show me upcoming lease renewals',
@@ -646,7 +650,7 @@ export async function POST(request: NextRequest) {
       metadata: {
         processingTime: Date.now() - startTime,
         documentsProcessed: 0,
-        databaseRecordsSearched: databaseResults.totalRecords,
+        databaseRecordsSearched: 0,
         aiModel: AI_CONFIG.model,
         timestamp: new Date().toISOString(),
       },
