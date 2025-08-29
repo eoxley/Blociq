@@ -840,7 +840,7 @@ export async function POST(request: NextRequest) {
         if (ocrResult.success && ocrResult.extractedText) {
           console.log(`✅ File processed successfully: ${ocrResult.extractedText.length} characters extracted`);
           
-          // Return the OCR result
+          // Return the OCR result in the format the frontend expects
           return NextResponse.json({
             success: true,
             analysis: "Document analysis completed",
@@ -849,7 +849,16 @@ export async function POST(request: NextRequest) {
             summary: `Document processed successfully. Extracted ${ocrResult.extractedText.length} characters of text.`,
             textLength: ocrResult.extractedText.length,
             extractedText: ocrResult.extractedText,
-            metadata: ocrResult.metadata
+            metadata: ocrResult.metadata,
+            // Add the structure the frontend expects
+            processedDocuments: [{
+              extractedText: ocrResult.extractedText,
+              textLength: ocrResult.extractedText.length,
+              method: ocrResult.metadata?.method || 'ocr',
+              success: true
+            }],
+            isLeaseSummary: true,
+            response: `Document processed successfully. Extracted ${ocrResult.extractedText.length} characters of text.`
           });
         } else {
           console.error('❌ File processing failed:', ocrResult.error);
@@ -861,7 +870,15 @@ export async function POST(request: NextRequest) {
               success: ocrResult.success,
               textLength: ocrResult.extractedText?.length || 0,
               metadata: ocrResult.metadata
-            }
+            },
+            // Add the structure the frontend expects even for failures
+            processedDocuments: [{
+              extractedText: '',
+              textLength: 0,
+              method: 'failed',
+              success: false,
+              error: ocrResult.error
+            }]
           }, { status: 400 });
         }
       } catch (error) {
