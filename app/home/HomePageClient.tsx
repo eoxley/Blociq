@@ -552,7 +552,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             // Display comprehensive lease analysis
             const leaseMessage = { 
               sender: 'ai' as const, 
-              text: data.summary || 'Lease analysis completed', 
+              text: data.analysis || data.summary || 'Lease analysis completed', 
               timestamp: new Date() 
             }
             setMessages(prev => [...prev, leaseMessage])
