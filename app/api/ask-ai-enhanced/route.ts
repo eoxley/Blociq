@@ -475,6 +475,13 @@ async function processOCRDocument(file: File): Promise<{ success: boolean; extra
       };
     }
     
+    // If we get here, all strategies failed
+    console.log('❌ All OCR strategies failed');
+    return {
+      success: false,
+      error: 'All OCR strategies failed. The document may be corrupted, password-protected, or in an unsupported format.'
+    };
+    
   } catch (error) {
     console.error('❌ OCR processing error:', error);
     return {
