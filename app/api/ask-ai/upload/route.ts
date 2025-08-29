@@ -205,7 +205,9 @@ class DocumentProcessor {
           buildingStatus: buildingId ? 'matched' : 'not_found',
           extractedAddress: leaseAnalysis.leaseDetails?.propertyAddress || null,
           extractedBuildingType: leaseAnalysis.leaseDetails?.buildingType || null
-        }
+        },
+        // ADD THIS ONE LINE:
+        analysis: await this.generateLeaseAnalysis(text)
       };
 
     } catch (error: any) {
@@ -315,6 +317,48 @@ class DocumentProcessor {
       case 'enhanced': return 'Document processed using enhanced extraction methods';
       case 'fallback': return 'Document processed using fallback methods';
       default: return 'Document processed using standard extraction methods';
+    }
+  }
+
+  private async generateLeaseAnalysis(text: string): Promise<string> {
+    try {
+      const { getOpenAIClient } = await import('@/lib/openai-client');
+      const openai = getOpenAIClient();
+      
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [{
+          role: 'system',
+          content: `You are a UK property management assistant. Analyze this lease document and return a response in this EXACT format:
+
+Got the lease—nice, clean copy. Here's the crisp "at-a-glance" you can drop into BlocIQ or an email 👇
+
+[Property Address] — key points
+* **Term:** [lease length] from **[start date]** (to [end date]).
+* **Ground rent:** £[amount] p.a., [escalation terms].
+* **Use:** [permitted use].
+* **Service charge share:** [percentages and descriptions]
+* **Insurance:** [arrangement details]
+* **Alterations:** [policy with consent requirements]
+* **Alienation:** [subletting/assignment rules]
+* **Pets:** [policy]
+* **Smoking:** [restrictions]
+
+Bottom line: [practical summary]
+
+Extract the actual information from the lease text. If information is not clearly stated, use "[not specified]" for that field.`
+        }, {
+          role: 'user',
+          content: `Analyze this lease document:\n\n${text}`
+        }],
+        temperature: 0.3,
+        max_tokens: 1500
+      });
+
+      return completion.choices[0].message?.content || 'Analysis failed - please try uploading the document again.';
+    } catch (error) {
+      console.error('Lease analysis error:', error);
+      return 'Analysis failed - please try uploading the document again.';
     }
   }
 
