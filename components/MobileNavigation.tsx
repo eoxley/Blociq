@@ -122,7 +122,7 @@ export default function MobileNavigation() {
                             <div className="flex-1 text-left">
                               <div className="flex items-center gap-2 lg:gap-3">
                                 <span className="font-medium text-sm lg:text-base">{label}</span>
-                                <BlocIQBadge variant="secondary" size="sm">Soon</BlocIQBadge>
+                                <span className="px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded-full font-medium">Soon</span>
                               </div>
                               <p className="text-xs lg:text-sm text-gray-500 mt-1">{description}</p>
                             </div>
@@ -177,9 +177,9 @@ export default function MobileNavigation() {
                     className="flex items-center gap-3 lg:gap-4 px-4 lg:px-5 py-3 rounded-lg text-base font-medium hover:bg-gray-50 transition-all text-gray-700"
                   >
                     <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                      <Settings className="h-5 w-5 text-gray-600" />
+                      <User className="h-5 w-5 text-gray-600" />
                     </div>
-                    <span className="font-medium text-sm lg:text-base">Settings</span>
+                    <span className="font-medium text-sm lg:text-base">Account</span>
                   </Link>
                   
                   <button
