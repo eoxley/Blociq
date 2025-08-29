@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { visionClient } from '../../../ocrClient';
+import { getVisionClient } from '../../../ocrClient';
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,12 +19,14 @@ export async function POST(request: NextRequest) {
 
     let result;
 
+    const client = getVisionClient();
+
     if (base64Image) {
-      [result] = await visionClient.documentTextDetection({
+      [result] = await client.documentTextDetection({
         image: { content: base64Image }
       });
     } else if (fileUrl) {
-      [result] = await visionClient.documentTextDetection(fileUrl);
+      [result] = await client.documentTextDetection(fileUrl);
     }
 
     // Extract text from the result (both API methods return similar structure)

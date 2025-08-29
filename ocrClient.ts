@@ -1,13 +1,24 @@
 import vision from "@google-cloud/vision";
 
-if (!process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY || !process.env.GOOGLE_PROJECT_ID) {
-  throw new Error("Google Vision environment variables are missing");
+let visionClient: vision.ImageAnnotatorClient | null = null;
+
+export function getVisionClient() {
+  if (!visionClient) {
+    if (!process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY || !process.env.GOOGLE_PROJECT_ID) {
+      throw new Error("Google Vision environment variables are missing");
+    }
+
+    visionClient = new vision.ImageAnnotatorClient({
+      credentials: {
+        client_email: process.env.GOOGLE_CLIENT_EMAIL,
+        private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      },
+      projectId: process.env.GOOGLE_PROJECT_ID,
+    });
+  }
+
+  return visionClient;
 }
 
-export const visionClient = new vision.ImageAnnotatorClient({
-  credentials: {
-    client_email: process.env.GOOGLE_CLIENT_EMAIL,
-    private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-  },
-  projectId: process.env.GOOGLE_PROJECT_ID,
-});
+// For backward compatibility
+export { getVisionClient as visionClient };
