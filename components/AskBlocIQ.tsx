@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Plus, Calendar, Loader2, Send, Upload, FileText, X, Check, Sparkles, File, FileText as FileTextIcon, Building2, AlertTriangle, Brain, Building, AlertCircle, CheckCircle, Clock, Copy, Mail, FileDown, Paperclip } from 'lucide-react';
 import { toast } from 'sonner';
-import CommunicationModal from './CommunicationModal';
 import AIChatDisclaimer from '@/components/ui/AIChatDisclaimer';
 import { SuggestedAction, DocumentAnalysis } from '@/types/ai';
 
@@ -130,14 +129,6 @@ export default function AskBlocIQ({
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const [usedMajorWorksData, setUsedMajorWorksData] = useState(false);
-  const [showCommunicationModal, setShowCommunicationModal] = useState(false);
-  const [communicationModalData, setCommunicationModalData] = useState<{
-    aiContent: string;
-    templateType: 'letter' | 'email' | 'notice';
-    buildingName: string;
-    leaseholderName?: string | null;
-    unitNumber?: string | null;
-  } | null>(null);
   const [processingFiles, setProcessingFiles] = useState<string[]>([]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -371,35 +362,6 @@ export default function AskBlocIQ({
 
 
 
-  const handleSaveTemplate = async (template: any) => {
-    try {
-      // Save to communication templates
-      const { data, error } = await supabase
-        .from('communication_templates')
-        .insert(template)
-        .select()
-        .single()
-
-      if (error) throw error
-
-      toast.success(`${template.template_type.charAt(0).toUpperCase() + template.template_type.slice(1)} template saved!`)
-      
-      // Log the action
-      await supabase
-        .from('communications_log')
-        .insert({
-          action_type: `create_${template.template_type}`,
-          template_id: data.id,
-          building_name: template.building_name,
-          created_from_ai: true,
-          ai_content: template.content.substring(0, 500)
-        })
-
-    } catch (error) {
-      console.error('Error saving template:', error)
-      toast.error('Failed to save template')
-    }
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -423,7 +385,6 @@ export default function AskBlocIQ({
 
     setMessages(prev => [...prev, userMessage]);
     setLoading(true);
-    setSuggestedAction(null);
     setDocumentResults([]);
     setIsDocumentSearch(false);
     
@@ -827,8 +788,8 @@ export default function AskBlocIQ({
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Area */}
-        <div className="border-t border-gray-200 p-6 bg-white">
+        {/* Input Area - Fixed positioning */}
+        <div className="border-t border-gray-200 bg-white sticky bottom-0 z-10">
           {/* Uploaded Files */}
           {uploadedFiles.length > 0 && (
             <div className="mb-4 space-y-2">
@@ -860,8 +821,9 @@ export default function AskBlocIQ({
             </div>
           )}
 
-          {/* Input Container - Aligned with chat content */}
-          <div className="flex items-end gap-3 max-w-4xl mx-auto">
+          <div className="p-6">
+            {/* Input Container - Better aligned with chat content */}
+            <div className="flex items-end gap-3 max-w-4xl mx-auto">
             {/* File Upload */}
             <button
               onClick={() => fileInputRef.current?.click()}
@@ -906,16 +868,16 @@ export default function AskBlocIQ({
               disabled={!question.trim() && uploadedFiles.filter(f => f.status === 'completed').length === 0}
               className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
                 (question.trim() || uploadedFiles.filter(f => f.status === 'completed').length > 0)
-                  ? 'bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white hover:shadow-lg transform hover:scale-105'
+                  ? 'bg-gradient-to-r from-[#14b8a6] to-[#8b5cf6] text-white hover:shadow-lg transform hover:scale-105'
                   : 'bg-gray-200 text-gray-400 cursor-not-allowed'
               }`}
             >
               <Send className="w-5 h-5" />
             </button>
-          </div>
-          
-          {/* Status Bar - Centered and aligned */}
-          <div className="flex items-center justify-between mt-4 text-xs text-gray-500 max-w-4xl mx-auto">
+            </div>
+            
+            {/* Status Bar - Centered and aligned */}
+            <div className="flex items-center justify-between mt-4 text-xs text-gray-500 max-w-4xl mx-auto">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
@@ -933,14 +895,15 @@ export default function AskBlocIQ({
               <span>•</span>
               <span>GDPR Compliant</span>
             </div>
-            <span className="text-gray-400">
-              Press Enter to send • Shift+Enter for new line
-            </span>
+              <span className="text-gray-400">
+                Press Enter to send • Shift+Enter for new line
+              </span>
+            </div>
           </div>
         </div>
-        </div>
+      </div>
 
-        {/* Document Search Results */}
+      {/* Document Search Results */}
         {isDocumentSearch && documentResults.length > 0 && (
         <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm mx-4 mb-4">
           <div className="flex items-start gap-3">
@@ -994,22 +957,6 @@ export default function AskBlocIQ({
 
 
 
-      {/* Communication Modal */}
-      {showCommunicationModal && communicationModalData && (
-        <CommunicationModal
-          isOpen={showCommunicationModal}
-          onClose={() => {
-            setShowCommunicationModal(false)
-            setCommunicationModalData(null)
-          }}
-          aiContent={communicationModalData.aiContent}
-          templateType={communicationModalData.templateType}
-          buildingName={communicationModalData.buildingName}
-          leaseholderName={communicationModalData.leaseholderName}
-          unitNumber={communicationModalData.unitNumber}
-          onSave={handleSaveTemplate}
-        />
-      )}
     </div>
   );
 } 
