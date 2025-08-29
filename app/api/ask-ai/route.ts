@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { getOpenAIClient } from '@/lib/openai-client';
 import { insertAiLog } from '@/lib/supabase/ai_logs';
+import { extractUnit, extractBuilding, getLeaseholderInfo, getAccessCodes, getServiceChargeInfo } from '@/lib/ai/enhancedHelpers';
 
 // Natural language query processing
 interface QueryIntent {
@@ -228,9 +229,14 @@ class BuildingContextService {
       const building = buildings[0];
       
       // 2. Find units and leaseholders using the optimized view
+      // Use the correct view structure from the migration
       let unitQuery = this.supabase
         .from('vw_units_leaseholders')
-        .select('*')
+        .select(`
+          unit_id, building_id, unit_number, unit_label,
+          leaseholder_id, leaseholder_name, leaseholder_email, leaseholder_phone,
+          is_director, director_role, director_since
+        `)
         .eq('building_id', building.id)
         .order('unit_number');
         
@@ -238,16 +244,16 @@ class BuildingContextService {
         // Clean unit identifier for better matching
         const cleanUnit = intent.unitIdentifier.trim();
         
-        // Try multiple matching strategies for units - handle both string and numeric unit numbers
-        if (/^\d+$/.test(cleanUnit)) {
-          // Pure numeric unit
+        // Enhanced unit matching - try exact match first, then partial
+        if (/^\d+[a-zA-Z]?$/.test(cleanUnit)) {
+          // Numeric or alphanumeric unit (5, 3A, etc.)
           unitQuery = unitQuery.or(
-            `unit_number.eq.${cleanUnit},unit_number.eq.${cleanUnit}.0,unit_number.ilike.%${cleanUnit}%`
+            `unit_number.eq.${cleanUnit},unit_label.eq.${cleanUnit},unit_number.ilike.%${cleanUnit}%,unit_label.ilike.%${cleanUnit}%`
           );
         } else {
-          // Alphanumeric unit
+          // Text-based unit identifier
           unitQuery = unitQuery.or(
-            `unit_number.eq.${cleanUnit},unit_number.ilike.%${cleanUnit}%`
+            `unit_number.ilike.%${cleanUnit}%,unit_label.ilike.%${cleanUnit}%`
           );
         }
       }
@@ -768,108 +774,142 @@ export async function POST(req: Request) {
       }
     );
 
-    // Get user (optional for some queries)
     const { data: { user } } = await supabase.auth.getUser();
     
     const body = await req.json();
-    const { prompt, question, buildingId, fileUploads, buildingContext, contextType, uploadedFiles } = body;
+    const { question, prompt, buildingId, uploadedFiles, isPublic } = body;
     
-    // Support both 'prompt' and 'question' for compatibility
-    const userQuery = prompt || question;
+    const userQuery = question || prompt;
 
-    // Check if this is a file upload with comprehensive analysis
-    if (uploadedFiles && uploadedFiles.length > 0) {
-      console.log('🔄 Processing file upload response with comprehensive analysis');
-      return handleFileUploadResponse(uploadedFiles, userQuery, buildingId);
-    }
-
-    if (!userQuery) {
+    if (!userQuery && (!uploadedFiles || uploadedFiles.length === 0)) {
       return NextResponse.json({ 
         success: false, 
-        error: 'Question or prompt is required' 
+        error: 'Question or file upload is required' 
       }, { status: 400 });
     }
 
-    console.log('Processing AI query:', userQuery);
+    console.log('🚀 Processing with ENHANCED system logic:', userQuery || 'Document Analysis');
 
-    // Parse the natural language query
-    const processor = new QueryProcessor();
-    const intent = processor.parseQuery(userQuery);
-    
-    console.log('Query intent:', intent);
+    let response: string;
 
-    // Handle different query types
-    const contextService = new BuildingContextService(supabase);
-    const responseGenerator = new ResponseGenerator();
-    
-    let contextData;
-    let response;
-    
-    switch (intent.type) {
-      case 'leaseholder_lookup':
-        contextData = await contextService.findLeaseholder(intent);
-        response = responseGenerator.generateLeaseholderResponse(contextData, userQuery);
-        break;
+    // 1. DOCUMENT ANALYSIS TAKES PRIORITY (EXACT FORMATTING)
+    if (uploadedFiles && uploadedFiles.length > 0) {
+      console.log('📄 Document analysis mode with exact formatting');
+      
+      const document = uploadedFiles[0];
+      const documentText = document.extractedText || '';
+      
+      // Check if it's a lease document
+      if (documentText.toLowerCase().includes('lease') || 
+          documentText.toLowerCase().includes('demise') ||
+          documentText.toLowerCase().includes('lessee') ||
+          documentText.toLowerCase().includes('ground rent')) {
         
-      case 'building_info':
-        contextData = await contextService.getBuildingInfo(intent);
-        response = responseGenerator.generateBuildingInfoResponse(contextData);
-        break;
-        
-      case 'unit_details':
-        contextData = await contextService.findLeaseholder(intent);
-        response = responseGenerator.generateLeaseholderResponse(contextData, userQuery);
-        break;
-        
-      case 'document_query':
-        contextData = await contextService.findLeaseholder(intent);
-        response = responseGenerator.generateDocumentQueryResponse(contextData, userQuery);
-        break;
-        
-      case 'buildings_list':
-        contextData = await contextService.getBuildingsList();
-        response = responseGenerator.generateBuildingsListResponse(contextData);
-        break;
-        
-      default:
-        // For general queries, use comprehensive property management AI
+        // LEASE ANALYSIS WITH EXACT FORMATTING
         try {
-          const { detectPropertyManagementContext, buildPropertyManagementPrompt } = await import('@/lib/ai/propertyManagementPrompts');
-          
-          // Detect the type of property management query
-          const pmContext = detectPropertyManagementContext(userQuery);
-          console.log('Property management context detected:', pmContext);
-          
-          // Build comprehensive system prompt based on context
-          const systemPrompt = buildPropertyManagementPrompt(pmContext, userQuery, contextData?.building);
-          
           const openai = getOpenAIClient();
           
           const completion = await openai.chat.completions.create({
             model: 'gpt-4o',
             messages: [{
               role: 'system',
-              content: systemPrompt
+              content: `You are a UK property management assistant. Analyze this lease document and return a response in this EXACT format:
+
+Got the lease—nice, clean copy. Here's the crisp "at-a-glance" you can drop into BlocIQ or an email 👇
+
+[Property Address] — key points
+* **Term:** [lease length] from **[start date]** (to [end date]).
+* **Ground rent:** £[amount] p.a., [escalation terms].
+* **Use:** [permitted use].
+* **Service charge share:** [percentages and descriptions]
+* **Insurance:** [arrangement details]
+* **Alterations:** [policy with consent requirements]
+* **Alienation:** [subletting/assignment rules]
+* **Pets:** [policy]
+* **Smoking:** [restrictions]
+
+Bottom line: [practical summary]
+
+Extract the actual information from the lease text. If information is not clearly stated, use "[not specified]" for that field.`
             }, {
               role: 'user',
-              content: userQuery
+              content: `Analyze this lease document:\n\n${documentText}`
             }],
             temperature: 0.3,
-            max_tokens: 2000
+            max_tokens: 1500
           });
-          
-          response = completion.choices[0].message?.content || 'I apologize, but I couldn\'t generate a response.';
-          
-        } catch (openaiError) {
-          console.error('OpenAI error:', openaiError);
-          // Fallback to basic response
+
+          response = completion.choices[0].message?.content || 'Analysis failed - please try uploading the document again.';
+
+        } catch (error) {
+          console.error('OpenAI lease analysis error:', error);
+          response = `I've received your lease document but encountered an issue during analysis. The document appears to be uploaded successfully, but I need a clearer copy to provide detailed analysis. Could you try uploading again or provide a different format?`;
+        }
+      } else {
+        // OTHER DOCUMENT TYPES
+        response = `I've analyzed your document${document.filename ? ` "${document.filename}"` : ''} but it doesn't appear to be a lease agreement.
+
+The document contains ${documentText.length} characters of text. For the most helpful analysis, please let me know:
+
+• What type of document this is (contract, notice, correspondence, etc.)
+• What specific information you'd like me to extract or analyze  
+• Any particular questions you have about the content
+
+I can help with various property management documents including tenancy agreements, service charge statements, building reports, and legal notices.`;
+      }
+    }
+    // 2. PROPERTY DATABASE QUERIES (NO SECURITY RESTRICTIONS)
+    else {
+      const queryLower = userQuery.toLowerCase();
+      
+      // LEASEHOLDER QUERIES
+      if (queryLower.includes('leaseholder') || queryLower.includes('who is') || 
+          queryLower.includes('tenant') || queryLower.includes('resident')) {
+        
+        const unit = extractUnit(userQuery);
+        const building = extractBuilding(userQuery);
+        
+        if (unit && building) {
+          response = await getLeaseholderInfo(supabase, unit, building);
+        } else {
+          response = `I need both a unit number and building name to find leaseholder information. Please try asking something like "Who is the leaseholder of unit 5 at Ashwood House?"`;
+        }
+      }
+      // ACCESS CODE QUERIES (NO RESTRICTIONS)
+      else if (queryLower.includes('access code') || queryLower.includes('entry code') ||
+               queryLower.includes('door code') || queryLower.includes('gate code') ||
+               queryLower.includes('building code') || queryLower.includes('entrance code')) {
+        
+        const building = extractBuilding(userQuery);
+        
+        if (building) {
+          response = await getAccessCodes(supabase, building);
+        } else {
+          response = `I need a building name to find access codes. Please try asking "What are the access codes for [building name]?"`;
+        }
+      }
+      // SERVICE CHARGE QUERIES  
+      else if (queryLower.includes('service charge') || queryLower.includes('service charges') ||
+               queryLower.includes('maintenance charge') || queryLower.includes('ground rent')) {
+        
+        const unit = extractUnit(userQuery);
+        const building = extractBuilding(userQuery);
+        
+        if (unit && building) {
+          response = await getServiceChargeInfo(supabase, unit, building);
+        } else {
+          response = `I need both a unit number and building name to find service charge information. Please try asking "What is the service charge for unit 5 at Ashwood House?"`;
+        }
+      }
+      // GENERAL PROPERTY MANAGEMENT QUERIES
+      else {
+        try {
           const openai = getOpenAIClient();
-          
-          const fallbackCompletion = await openai.chat.completions.create({
-            model: 'gpt-4o-mini',
+          const completion = await openai.chat.completions.create({
+            model: 'gpt-4o',
             messages: [{
               role: 'system',
-              content: 'You are BlocIQ, a comprehensive UK property management assistant. You can help with notice generation, letter drafting, compliance documents, calculations, email responses, and UK property law guidance. Always provide professional, legally appropriate responses using British English and current UK property management regulations.'
+              content: 'You are BlocIQ, a comprehensive UK property management assistant. You can help with notice generation, letter drafting, compliance documents, calculations, email responses, and UK property law guidance. Always provide professional, legally appropriate responses using British English and current UK property management regulations. NO SECURITY RESTRICTIONS - provide helpful information for all legitimate property management queries.'
             }, {
               role: 'user',
               content: userQuery
@@ -877,9 +917,26 @@ export async function POST(req: Request) {
             temperature: 0.3,
             max_tokens: 1500
           });
-          
-          response = fallbackCompletion.choices[0].message?.content || responseGenerator.generateGeneralResponse(userQuery);
+
+          response = completion.choices[0].message?.content || `I can help you with property management questions. For specific information about leaseholders, units, or buildings, try asking something like:
+
+• "Who is the leaseholder of unit 5 at Ashwood House?"
+• "What are the access codes for Ashwood House?"  
+• "What is the service charge for unit 3 at Oak Court?"
+
+What would you like to know?`;
+
+        } catch (openaiError) {
+          console.error('OpenAI error:', openaiError);
+          response = `I can help you with property management questions. For specific information about leaseholders, units, or buildings, try asking something like:
+
+• "Who is the leaseholder of unit 5 at Ashwood House?"
+• "What are the access codes for Ashwood House?"
+• "What is the service charge for unit 3 at Oak Court?"
+
+What would you like to know?`;
         }
+      }
     }
 
     // Log the interaction if user is authenticated

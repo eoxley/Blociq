@@ -290,10 +290,16 @@ export async function POST(req: Request) {
     const { buildingId } = body;
 
     if (!buildingId) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Building ID is required' 
-      }, { status: 400 });
+      // Return empty context when buildingId is not provided (for public mode or general queries)
+      return NextResponse.json({
+        success: true,
+        building: null,
+        metadata: {
+          totalUnits: 0,
+          complianceAssets: 0
+        },
+        message: 'No building context available'
+      });
     }
 
     console.log('Fetching building context for building ID:', buildingId);
@@ -317,10 +323,17 @@ export async function POST(req: Request) {
         .single();
 
       if (buildingError || !building) {
+        // Return empty context gracefully instead of 404 error
+        console.log('Building not found, returning empty context');
         return NextResponse.json({
-          success: false,
-          error: 'Building not found'
-        }, { status: 404 });
+          success: true,
+          building: null,
+          metadata: {
+            totalUnits: 0,
+            complianceAssets: 0
+          },
+          message: `Building with ID ${buildingId} not found`
+        });
       }
 
       const contextData = {

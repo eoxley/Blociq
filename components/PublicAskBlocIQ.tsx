@@ -41,6 +41,20 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
     }
   }, [isOpen, hasSubmittedEmail]);
 
+  // Handle ESC key to close modal
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+  }, [isOpen, onClose]);
+
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || isSubmittingEmail) return;
@@ -185,24 +199,37 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md h-[600px] flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-pink-500 via-teal-500 via-purple-500 to-blue-500 p-4 text-white relative">
+    <div 
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={(e) => {
+        // Close modal when clicking backdrop
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div 
+        className="bg-white rounded-xl shadow-2xl w-full max-w-4xl lg:max-w-5xl xl:max-w-6xl h-[90vh] lg:h-[85vh] flex flex-col overflow-hidden animate-in fade-in-0 zoom-in-95 duration-300"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header with Enhanced Close Button */}
+        <div className="bg-gradient-to-r from-pink-500 via-teal-500 via-purple-500 to-blue-500 p-6 text-white relative">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-1 hover:bg-white/20 rounded-full transition-colors"
-            aria-label="Close"
+            className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-full transition-all duration-200 hover:scale-110 group"
+            aria-label="Close Chat"
+            title="Close Chat"
           >
-            <X className="h-5 w-5" />
+            <X className="h-6 w-6 group-hover:rotate-90 transition-transform duration-200" />
           </button>
           
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-full flex items-center justify-center">
-              <Brain className="h-6 w-6 text-white" />
+          <div className="flex items-center gap-4 pr-12">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-full flex items-center justify-center">
+              <Brain className="h-7 w-7 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-bold">Ask BlocIQ – Your AI Property Assistant</h2>
+              <h2 className="text-xl font-bold">Ask BlocIQ – Your AI Property Assistant</h2>
+              <p className="text-white/80 text-sm mt-1">Professional UK Property Management AI</p>
             </div>
           </div>
         </div>
@@ -210,54 +237,60 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
         {/* Content Area */}
         <div className="flex-1 flex flex-col">
           {!hasSubmittedEmail ? (
-            /* Email Capture Form */
-            <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-              <div className="p-6">
-              <div className="text-center mb-6">
-                <div className="w-12 h-12 bg-gradient-to-r from-pink-500 via-teal-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Mail className="h-6 w-6 text-white" />
+            /* Email Capture Form - Enhanced Layout for Larger Modal */
+            <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 relative">
+              <div className="p-8 lg:p-12 max-w-3xl mx-auto">
+              <div className="text-center mb-8">
+                <div className="w-16 h-16 bg-gradient-to-r from-pink-500 via-teal-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Mail className="h-8 w-8 text-white" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Ask BlocIQ – Your AI Property Assistant</h3>
-                <div className="text-gray-600 text-sm space-y-3 mb-6">
+                <h3 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-4">Welcome to Ask BlocIQ</h3>
+                <p className="text-lg text-gray-600 mb-6">Your professional AI property management assistant</p>
+                <div className="text-gray-600 text-base space-y-4 mb-8 text-left max-w-2xl mx-auto">
                   <p>You are welcome to try our Ask BlocIQ AI. This is BlocIQ's own secure, ring-fenced AI service — designed specifically for UK leasehold property management.</p>
                   <p>All information you input and receive is GDPR-safe, confidential, and never shared with third parties. Your chats stay private, and the service runs on a secure UK-based server.</p>
-                  <div className="flex items-center gap-2">
-                    <span>👉</span>
-                    <div className="flex-1">
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="Enter your email to get started"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
-                        disabled={isSubmittingEmail}
-                        required
-                      />
-                    </div>
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-3">
+                      Enter your email address to start chatting
+                    </label>
+                    <input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="your.email@example.com"
+                      className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
+                      disabled={isSubmittingEmail}
+                      required
+                    />
                   </div>
                   <p className="text-xs text-gray-500 mt-2">This will not be used for marketing or shared with anyone — it's simply to give you access.</p>
-                  <div>
-                    <p className="font-medium text-gray-700 mb-2">💡 Try asking about:</p>
-                    <ul className="space-y-1 ml-4">
-                      <li>• Legislation and compliance requirements</li>
-                      <li>• Drafting an email or letter to your leaseholders or clients</li>
-                      <li>• Maintenance schedules and best practice advice</li>
+                  <div className="bg-blue-50 rounded-lg p-6">
+                    <p className="font-semibold text-blue-900 mb-3">💡 Try asking about:</p>
+                    <ul className="space-y-2 text-blue-800">
+                      <li>• UK leasehold legislation and compliance requirements</li>
+                      <li>• Drafting professional emails or letters to leaseholders</li>
+                      <li>• Property maintenance schedules and best practices</li>
+                      <li>• Service charge calculations and explanations</li>
+                      <li>• Section 20 notices and consultation processes</li>
                     </ul>
                   </div>
                 </div>
               </div>
 
-              <form onSubmit={handleEmailSubmit} className="space-y-4">
-                
+              <form onSubmit={handleEmailSubmit} className="space-y-6">
                 <button
                   type="submit"
                   disabled={isSubmittingEmail || !email.trim()}
-                  className="w-full py-3 bg-gradient-to-r from-pink-500 via-teal-500 to-blue-500 hover:from-pink-600 hover:via-teal-600 hover:to-blue-600 disabled:from-gray-300 disabled:to-gray-400 text-white rounded-lg font-medium transition-all disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full py-4 text-lg bg-gradient-to-r from-pink-500 via-teal-500 to-blue-500 hover:from-pink-600 hover:via-teal-600 hover:to-blue-600 disabled:from-gray-300 disabled:to-gray-400 text-white rounded-lg font-semibold transition-all disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none"
                 >
                   {isSubmittingEmail ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <Loader2 className="h-6 w-6 animate-spin" />
                   ) : (
-                    'Start Using Ask BlocIQ'
+                    <>
+                      <Brain className="h-6 w-6" />
+                      Start Using Ask BlocIQ
+                    </>
                   )}
                 </button>
               </form>
@@ -280,22 +313,33 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
               </div>
             </div>
           ) : (
-            /* Chat Interface */
+            /* Enhanced Chat Interface with Better Scrolling */
             <>
-              {/* Chat Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* Chat Messages Area with Enhanced Scrolling and Scroll Indicator */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400 scrollbar-track-gray-100 scrollbar-corner-gray-100 relative">
+                {/* Scroll indicator when messages overflow */}
+                {messages.length > 3 && (
+                  <div className="absolute top-2 right-4 z-10 bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-medium shadow-sm animate-pulse">
+                    Scroll for more messages ↕️
+                  </div>
+                )}
                 {messages.map((message) => (
                   <div
                     key={message.id}
                     className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                    <div className={`max-w-[75%] rounded-lg px-6 py-4 shadow-sm ${
                       message.role === 'user' 
                         ? 'bg-gradient-to-r from-pink-500 via-teal-500 to-blue-500 text-white' 
-                        : 'bg-gray-100 text-gray-900'
+                        : 'bg-gray-50 text-gray-900 border border-gray-200'
                     }`}>
-                      <div className="whitespace-pre-wrap text-sm">
+                      <div className="whitespace-pre-wrap text-base leading-relaxed">
                         {message.content}
+                      </div>
+                      <div className={`text-xs mt-2 ${
+                        message.role === 'user' ? 'text-white/70' : 'text-gray-500'
+                      }`}>
+                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
                   </div>
@@ -320,23 +364,24 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input Area */}
-              <div className="border-t border-gray-200 p-4">
-                <form onSubmit={handleSubmit} className="flex gap-2">
+              {/* Enhanced Input Area */}
+              <div className="border-t border-gray-200 bg-gray-50/50 p-6">
+                <form onSubmit={handleSubmit} className="flex gap-3 mb-4">
                   <input
                     ref={inputRef}
                     type="text"
                     value={question}
                     onChange={(e) => setQuestion(e.target.value)}
-                    placeholder="Ask about property management, compliance, or leasehold matters..."
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Ask about property management, compliance, leasehold matters, or upload documents..."
+                    className="flex-1 px-5 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
                     disabled={loading}
                   />
                   
                   <button
                     type="submit"
                     disabled={loading || !question.trim()}
-                    className="px-4 py-2 bg-gradient-to-r from-pink-500 via-teal-500 to-blue-500 hover:from-pink-600 hover:via-teal-600 hover:to-blue-600 disabled:from-gray-300 disabled:to-gray-400 text-white rounded-lg transition-all disabled:cursor-not-allowed"
+                    className="px-6 py-3 bg-gradient-to-r from-pink-500 via-teal-500 to-blue-500 hover:from-pink-600 hover:via-teal-600 hover:to-blue-600 disabled:from-gray-300 disabled:to-gray-400 text-white rounded-lg font-medium transition-all disabled:cursor-not-allowed hover:shadow-lg"
+                    title="Send message"
                   >
                     {loading ? (
                       <Loader2 className="h-5 w-5 animate-spin" />
@@ -351,6 +396,50 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
           )}
         </div>
       </div>
+      
+      {/* Enhanced Custom Scrollbar Styles */}
+      <style jsx>{`
+        .scrollbar-thin {
+          scrollbar-width: thin;
+          scrollbar-color: #d1d5db #f3f4f6;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar {
+          width: 8px;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar-track {
+          background: #f3f4f6;
+          border-radius: 4px;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+          background: #d1d5db;
+          border-radius: 4px;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+          background: #9ca3af;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar-corner {
+          background: #f3f4f6;
+        }
+        
+        /* Smooth scrolling */
+        .scrollbar-thin {
+          scroll-behavior: smooth;
+        }
+        
+        /* Focus styles for accessibility */
+        .scrollbar-thin:focus-within {
+          scrollbar-color: #3b82f6 #f3f4f6;
+        }
+        
+        .scrollbar-thin:focus-within::-webkit-scrollbar-thumb {
+          background: #3b82f6;
+        }
+      `}</style>
     </div>
   );
 }

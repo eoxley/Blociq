@@ -459,8 +459,8 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
 
       // Now send the enhanced prompt to the main ask-ai endpoint
       const requestBody = JSON.stringify({
-        question: finalPrompt, // Fixed: API expects 'question' not 'prompt'
-        buildingId: isPublic ? undefined : buildingId, // Fixed: API expects 'buildingId' not 'building_id'
+        question: finalPrompt, // API expects 'question'
+        buildingId: buildingId, // Always pass buildingId - let backend handle gracefully
         contextType: isPublic ? 'public' : (isMajorWorksContext ? 'major_works' : 'general'),
         projectId: isPublic ? undefined : (isMajorWorksContext ? projectId : undefined),
         uploadedFiles: uploadedFileResults,
