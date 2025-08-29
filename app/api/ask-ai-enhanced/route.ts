@@ -3,12 +3,14 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { EnhancedAskAI } from '@/lib/ai/enhanced-ask-ai';
 import { analyzeDocument } from '@/lib/document-analysis-orchestrator';
+import { searchAllRelevantTables, isPropertyQuery, processQueryDatabaseFirst } from '@/lib/ai/database-search';
+import { SupabaseClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 
 export async function POST(request: NextRequest) {
   try {
     // 1. Check authentication
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createRouteHandlerClient({ cookies }) as any;
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
@@ -36,6 +38,37 @@ export async function POST(request: NextRequest) {
 
     if (!userQuestion && files.length === 0) {
       return NextResponse.json({ error: 'User question or files are required' }, { status: 400 });
+    }
+
+    // Check if this is a database query first
+    if (isPropertyQuery(userQuestion)) {
+      console.log('🔍 Database query detected, searching database first:', userQuestion);
+      
+      try {
+        const databaseResults = await searchAllRelevantTables(supabase, userQuestion);
+        
+        if (Object.keys(databaseResults).length > 0) {
+          console.log('✅ Database search successful, found data in tables:', Object.keys(databaseResults));
+          
+          // Format the database response
+          const formattedResponse = processQueryDatabaseFirst(userQuestion, databaseResults);
+          
+          return NextResponse.json({
+            response: formattedResponse,
+            sources: ['database_search'],
+            confidence: 0.9,
+            knowledgeUsed: false,
+            databaseResults: databaseResults,
+            timestamp: new Date().toISOString(),
+            isDatabaseQuery: true
+          });
+        } else {
+          console.log('ℹ️ Database search returned no results, proceeding with AI processing');
+        }
+      } catch (dbError) {
+        console.error('❌ Database search failed:', dbError);
+        console.log('🔄 Continuing with AI processing due to database error');
+      }
     }
 
     let enhancedPrompt = userQuestion;
