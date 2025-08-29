@@ -3,7 +3,7 @@ import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import { processDocumentOCR } from '@/lib/ocr';
 import { analyzeDocument } from '@/lib/document-analysis-orchestrator';
-import { analyzeLeaseDocument } from '@/lib/lease-analyzer';
+import { analyzeLeaseDocument } from '@/lib/document-analyzers/lease-analyzer';
 import { classifyDocument } from '@/lib/document-classifier';
 
 export async function POST(req: NextRequest) {
@@ -21,19 +21,23 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { file, fileName, buildingId } = body;
+    const { file, fileName, buildingId, base64Image, filename, documentType } = body;
 
-    if (!file || !fileName) {
+    // Handle both parameter formats for backward compatibility
+    const actualFile = file || base64Image;
+    const actualFileName = fileName || filename;
+
+    if (!actualFile || !actualFileName) {
       return NextResponse.json({ 
-        error: "Missing required fields: file and fileName are required" 
+        error: "Missing required fields: file/base64Image and fileName/filename are required" 
       }, { status: 400 });
     }
 
-    console.log("✅ Analyzing document:", fileName);
+    console.log("✅ Analyzing document:", actualFileName);
 
     try {
       // Step 1: Process document through OCR
-      const ocrResult = await processDocumentOCR(file);
+      const ocrResult = await processDocumentOCR(actualFile);
       
       if (!ocrResult.text) {
         return NextResponse.json({
@@ -44,14 +48,15 @@ export async function POST(req: NextRequest) {
       }
 
       // Step 1.5: Use improved document classifier to detect document type
-      const classification = classifyDocument(ocrResult.text, fileName);
-      const isLease = classification.type === 'lease';
+      const classification = classifyDocument(ocrResult.text, actualFileName);
+      const isLease = classification.type === 'lease' || documentType === 'lease';
       
       console.log("📋 Document classification result:", {
         type: classification.type,
         confidence: classification.confidence,
         keywords: classification.keywords,
-        reasoning: classification.reasoning
+        reasoning: classification.reasoning,
+        forcedType: documentType
       });
 
       let comprehensiveAnalysis;
@@ -59,11 +64,11 @@ export async function POST(req: NextRequest) {
       if (isLease) {
         console.log("🏠 Lease document detected, using specialized lease analyzer");
         // Use specialized lease analyzer
-        comprehensiveAnalysis = await analyzeLeaseDocument(ocrResult.text, fileName, buildingId || '');
+        comprehensiveAnalysis = await analyzeLeaseDocument(ocrResult.text, actualFileName);
       } else {
         console.log("📋 Using general document analyzer");
         // Use existing general analysis
-        comprehensiveAnalysis = await analyzeDocument(ocrResult.text, fileName, `Analyze document: ${fileName}`);
+        comprehensiveAnalysis = await analyzeDocument(ocrResult.text, actualFileName, `Analyze document: ${actualFileName}`);
       }
       
       console.log("📋 Document analyzed comprehensively:", comprehensiveAnalysis.documentType);
@@ -73,20 +78,31 @@ export async function POST(req: NextRequest) {
 
       console.log("✅ Comprehensive document analysis completed successfully");
 
-      return NextResponse.json({
-        success: true,
-        documentType: classification.type,
-        classification: {
-          type: classification.type,
-          confidence: classification.confidence,
-          keywords: classification.keywords,
-          reasoning: classification.reasoning
-        },
-        analysis: comprehensiveAnalysis,
-        suggestedActions,
-        extractedText: ocrResult.text,
-        filename: fileName
-      });
+      // Return the analysis result in the format the UI expects
+      if (isLease && comprehensiveAnalysis.documentType === 'lease') {
+        // For lease documents, return the structured analysis directly
+        return NextResponse.json({
+          ...comprehensiveAnalysis,
+          success: true,
+          extractedText: ocrResult.text
+        });
+      } else {
+        // For other documents, return the general format
+        return NextResponse.json({
+          success: true,
+          documentType: classification.type,
+          classification: {
+            type: classification.type,
+            confidence: classification.confidence,
+            keywords: classification.keywords,
+            reasoning: classification.reasoning
+          },
+          analysis: comprehensiveAnalysis,
+          suggestedActions,
+          extractedText: ocrResult.text,
+          filename: actualFileName
+        });
+      }
 
     } catch (analysisError) {
       console.error("❌ Document analysis error:", analysisError);
