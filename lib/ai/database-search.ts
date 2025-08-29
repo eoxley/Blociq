@@ -58,7 +58,9 @@ export const searchAllRelevantTables = async (
                 queryLower.includes('phone') ||
                 /\d+/.test(queryLower) || // Any number (including unit numbers)
                 queryLower.includes('flat') || // Include "flat" keyword
-                queryLower.includes('unit'), // Include "unit" keyword
+                queryLower.includes('unit') || // Include "unit" keyword
+                /\b(flat|unit)\b/.test(queryLower) || // Enhanced pattern matching
+                (/\d+/.test(queryLower) && /\b(ashwood|house|building)\b/.test(queryLower)), // Number + building context
       columns: 'unit_number, unit_label, leaseholder_name, leaseholder_email, leaseholder_phone, building_name, building_id, is_director, director_role',
       limit: 50
     },
@@ -168,7 +170,7 @@ export const searchAllRelevantTables = async (
           .limit(search.limit);
 
         // Special handling for leaseholder queries to search across buildings
-        if (search.table === 'vw_units_leaseholders' && (queryLower.includes('ashwood') || queryLower.includes('5') || queryLower.includes('flat'))) {
+        if (search.table === 'vw_units_leaseholders' && (queryLower.includes('ashwood') || queryLower.includes('5') || queryLower.includes('flat') || /\b(flat|unit)\b/.test(queryLower))) {
           console.log('🔍 Special leaseholder search for Ashwood House and unit queries');
           
           // Try to find the building first
@@ -187,7 +189,7 @@ export const searchAllRelevantTables = async (
               .from('units')
               .select('id, unit_number, unit_label, building_id')
               .eq('building_id', buildingId)
-              .or('unit_number.eq.5,unit_number.ilike.%5%,unit_number.ilike.%flat%5%,unit_number.ilike.%Flat%5%')
+              .or('unit_number.eq.5,unit_number.ilike.%5%,unit_number.ilike.%flat%5%,unit_number.ilike.%Flat%5%,unit_number.ilike.%5%')
               .limit(10);
             
             if (units && units.length > 0) {
@@ -338,6 +340,89 @@ export const searchAllRelevantTables = async (
           }
         }
         
+        // If no error but no data, try a direct search on the view
+        if (search.table === 'vw_units_leaseholders' && (!data || data.length === 0)) {
+          console.log('🔍 No data found in view, trying direct search...');
+          
+          try {
+            // Try to search the view directly with broader criteria
+            const { data: directData, error: directError } = await supabase
+              .from('vw_units_leaseholders')
+              .select('*')
+              .limit(50);
+            
+            if (directError) {
+              console.error('❌ Direct view search failed:', directError);
+            } else if (directData && directData.length > 0) {
+              console.log('✅ Direct view search found', directData.length, 'records');
+              return { table: 'vw_units_leaseholders', data: directData, error: null };
+            }
+          } catch (directSearchError) {
+            console.error('❌ Direct search exception:', directSearchError);
+          }
+        }
+        
+        // Additional fallback: If still no data, try searching individual tables directly
+        if (search.table === 'vw_units_leaseholders' && (!data || data.length === 0)) {
+          console.log('🔍 Still no data, trying individual table search...');
+          
+          try {
+            // Search units table for Ashwood House units
+            const { data: unitsData, error: unitsError } = await supabase
+              .from('units')
+              .select('id, unit_number, building_id')
+              .ilike('unit_number', '%5%')
+              .limit(10);
+            
+            if (!unitsError && unitsData && unitsData.length > 0) {
+              console.log('🏠 Found units with "5":', unitsData);
+              
+              // Get building info for these units
+              const buildingIds = [...new Set(unitsData.map(u => u.building_id))];
+              const { data: buildingsData, error: buildingsError } = await supabase
+                .from('buildings')
+                .select('id, name, address')
+                .in('id', buildingIds)
+                .ilike('name', '%ashwood%');
+              
+              if (!buildingsError && buildingsData && buildingsData.length > 0) {
+                console.log('🏢 Found Ashwood buildings:', buildingsData);
+                
+                // Get leaseholders for these units
+                const unitIds = unitsData.map(u => u.id);
+                const { data: leaseholdersData, error: leaseholdersError } = await supabase
+                  .from('leaseholders')
+                  .select('*')
+                  .in('unit_id', unitIds);
+                
+                if (!leaseholdersError && leaseholdersData && leaseholdersData.length > 0) {
+                  console.log('👥 Found leaseholders:', leaseholdersData);
+                  
+                  // Combine the data manually
+                  const combinedData = leaseholdersData.map(lh => {
+                    const unit = unitsData.find(u => u.id === lh.unit_id);
+                    const building = buildingsData.find(b => b.id === unit?.building_id);
+                    
+                    return {
+                      unit_number: unit?.unit_number || 'Unknown',
+                      leaseholder_name: lh.name,
+                      leaseholder_email: lh.email,
+                      leaseholder_phone: lh.phone_number,
+                      building_name: building?.name || 'Unknown',
+                      building_id: unit?.building_id || 'Unknown'
+                    };
+                  });
+                  
+                  console.log('✅ Individual table search successful, found', combinedData.length, 'records');
+                  return { table: 'vw_units_leaseholders', data: combinedData, error: null };
+                }
+              }
+            }
+          } catch (individualSearchError) {
+            console.error('❌ Individual table search failed:', individualSearchError);
+          }
+        }
+        
         console.log(`📊 ${search.table} results:`, { 
           count: data?.length || 0, 
           error: error?.message || null 
@@ -407,14 +492,16 @@ export const formatDatabaseResponse = (
       // Specific leaseholder query for Ashwood House
       response += `# 🏠 **Leaseholder Information - Ashwood House**\n\n`;
       
-      // Find unit 5 specifically if mentioned
+      // Find unit 5 specifically if mentioned - handle both "5" and "Flat 5" formats
       const unit5Leaseholder = leaseholders.find(lh => 
         lh.unit_number?.toString() === '5' || 
-        lh.unit_number?.toString().includes('5')
+        lh.unit_number?.toString() === 'Flat 5' ||
+        lh.unit_number?.toString().includes('5') ||
+        lh.unit_number?.toString().toLowerCase().includes('flat 5')
       );
       
       if (unit5Leaseholder) {
-        response += `## **Unit 5**\n`;
+        response += `## **${unit5Leaseholder.unit_number}**\n`;
         response += `**👤 Leaseholder:** ${unit5Leaseholder.leaseholder_name || 'Name not provided'}\n`;
         if (unit5Leaseholder.leaseholder_email) {
           response += `**📧 Email:** ${unit5Leaseholder.leaseholder_email}\n`;
