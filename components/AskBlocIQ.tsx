@@ -1021,6 +1021,8 @@ export default function AskBlocIQ({
           <div ref={messagesEndRef} />
         </div>
 
+        {/* Input Area */}
+        <div className="border-t p-6">
           {/* Uploaded Files */}
           {uploadedFiles.length > 0 && (
             <div className="mb-4 space-y-2">
@@ -1129,10 +1131,10 @@ export default function AskBlocIQ({
             </span>
           </div>
         </div>
-      </div>
-      
-      {/* Document Search Results */}
-      {isDocumentSearch && documentResults.length > 0 && (
+        </div>
+
+        {/* Document Search Results */}
+        {isDocumentSearch && documentResults.length > 0 && (
         <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm mx-4 mb-4">
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -1248,7 +1250,6 @@ export default function AskBlocIQ({
           onSave={handleSaveTemplate}
         />
       )}
-      </div>
     </div>
   );
 } 
