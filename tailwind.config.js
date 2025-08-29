@@ -78,6 +78,8 @@ module.exports = {
         brand: ['Inter', 'system-ui', 'sans-serif']
       },
       borderRadius: {
+        DEFAULT: "12px", // Increased default border radius
+        lg: "16px", // Increased from 12px
         xl: "1rem",
         "2xl": "1.25rem"
       },

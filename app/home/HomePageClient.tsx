@@ -1171,16 +1171,16 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   return (
     <div className="min-h-screen bg-secondary-bg">
       {/* Enhanced Hero Banner - BlocIQ Landing Page Style */}
-      <section className="relative overflow-hidden py-16" style={{ background: 'var(--brand-gradient)' }}>
+      <section className="hero-banner relative overflow-hidden py-16 mx-6" style={{ background: 'var(--brand-gradient)' }}>
         <div className="max-w-none mx-auto px-6">
           <div className="text-center">
             <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
               <BlocIQLogo className="h-10 w-10 text-white" />
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
+            <h1 className="hero-title text-4xl md:text-5xl font-bold text-white mb-6">
               {getTimeBasedGreeting(userFirstName || userData.name)}
             </h1>
-            <p className="text-xl text-white/90 max-w-3xl mx-auto leading-relaxed">
+            <p className="hero-subtitle text-xl text-white/90 max-w-3xl mx-auto leading-relaxed">
               {currentWelcomeMessage}
             </p>
           </div>
@@ -1198,15 +1198,15 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         {/* 🧠 Enhanced Circular Ask BlocIQ Widget */}
         <div className="flex justify-center">
           <div 
-            className={`relative transition-all duration-500 ${showChat ? 'w-[600px] h-[600px] md:w-[700px] md:h-[700px]' : 'w-[400px] h-[400px] md:w-[500px] md:h-[500px]'} rounded-full md:rounded-full rounded-3xl shadow-2xl hover:shadow-3xl flex items-center justify-center p-12 group`}
+            className={`ask-blociq-circle relative transition-all duration-500 ${showChat ? 'w-[600px] h-[600px] md:w-[700px] md:h-[700px]' : 'w-[400px] h-[400px] md:w-[500px] md:h-[500px]'} rounded-full md:rounded-full rounded-3xl shadow-2xl hover:shadow-3xl flex items-center justify-center p-12 group`}
             style={{ background: 'var(--ai-gradient)' }}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            {/* Enhanced Radial Glow Effect */}
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-400/20 to-indigo-400/20 blur-xl group-hover:blur-2xl transition-all duration-500"></div>
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-300/10 to-pink-300/10 blur-2xl group-hover:blur-3xl transition-all duration-700"></div>
+            {/* Enhanced Radial Glow Effect - Updated to use original brand colors */}
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-teal-400/20 to-blue-400/20 blur-xl group-hover:blur-2xl transition-all duration-500"></div>
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-300/10 to-purple-300/10 blur-2xl group-hover:blur-3xl transition-all duration-700"></div>
             
             {/* Content */}
             <div className="text-center text-white max-w-sm relative z-10">
@@ -1626,8 +1626,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         {/* Today's Tasks Section */}
         <div className="space-y-6">
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Today's Tasks</h2>
-            <p className="text-gray-600">Manage your property events and building tasks</p>
+            <h2 className="page-title text-2xl font-bold text-gray-900 mb-2">Today's Tasks</h2>
+            <p className="body-text text-gray-600">Manage your property events and building tasks</p>
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[600px] mb-8">
@@ -1641,7 +1641,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                         <Calendar className="h-6 w-6 text-white" />
                       </div>
                       <div>
-                        <h2 className="text-xl font-bold">Property Events</h2>
+                        <h2 className="section-title text-xl font-bold text-white">Property Events</h2>
                         <p className="text-sm text-white/80">Manage your property events</p>
                       </div>
                     </div>
