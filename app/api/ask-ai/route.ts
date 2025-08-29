@@ -19,12 +19,12 @@ class QueryProcessor {
     
     // Enhanced building identifiers with better pattern matching (NO 'g' flags - added by extractBestMatch)
     const buildingPatterns = [
-      /(\d+\s+\w+(?:\s+\w+)*?)(?:\s+building|$|\s+house|\s+court|\s+place)/, // "5 ashwood", "123 main street"
+      /([a-zA-Z]+(?:\s+[a-zA-Z]+)*)\s+(?:house|court|place|tower|manor|lodge|building)\b/i, // "ashwood house", "oak court"
       /building\s+([a-zA-Z0-9\s]+?)(?:\s|$|,|\?)/,       // "building ashwood"
       /([a-zA-Z]+(?:\s+[a-zA-Z]+)*)\s+building/,         // "ashwood building"
       /at\s+([a-zA-Z0-9\s]+?)(?:\s|$|,|\?)/,             // "at ashwood"
       /property\s+([a-zA-Z0-9\s]+?)(?:\s|$|,|\?)/,       // "property name"
-      /([a-zA-Z]+(?:\s+[a-zA-Z]+)*)\s+(?:house|court|place|tower|manor|lodge)/i // Common building types
+      /(\d+\s+\w+(?:\s+\w+)*?)(?:\s+building|$|\s+house|\s+court|\s+place)/ // "5 ashwood", "123 main street" - moved to lower priority
     ];
     
     // Enhanced unit identifiers with better extraction (NO 'g' flags - added by extractBestMatch)
@@ -163,9 +163,9 @@ class BuildingContextService {
         // Clean building identifier for better matching
         const cleanIdentifier = intent.buildingIdentifier.trim().toLowerCase();
         
-        // Enhanced search with fuzzy matching
+        // Enhanced search with fuzzy matching - try exact name first, then partial matches
         buildingQuery = buildingQuery.or(
-          `address.ilike.%${cleanIdentifier}%,name.ilike.%${cleanIdentifier}%,postcode.ilike.%${cleanIdentifier}%`
+          `name.ilike.%${cleanIdentifier}%,address.ilike.%${cleanIdentifier}%,postcode.ilike.%${cleanIdentifier}%`
         );
       }
       
@@ -180,20 +180,48 @@ class BuildingContextService {
         };
       }
 
-      if (!buildings?.length) {
-        // Try to find similar building names for suggestions
-        const suggestionQuery = await this.supabase
-          .from('buildings')
-          .select('name, address')
-          .limit(5);
-          
-        const suggestions = suggestionQuery.data?.map(b => `${b.name} (${b.address})`).join(', ') || '';
+      if (!buildings?.length && intent.buildingIdentifier) {
+        // Try alternative search strategies for better matching
+        console.log(`Primary search for "${intent.buildingIdentifier}" failed, trying alternatives...`);
         
-        return { 
-          success: false,
-          error: `Building "${intent.buildingIdentifier}" not found`,
-          suggestion: suggestions ? `Try one of these buildings: ${suggestions}` : 'Please check the building name or address'
-        };
+        // Extract just the building name without unit number (e.g., "ashwood" from "5 ashwood")
+        const buildingNameOnly = intent.buildingIdentifier.replace(/^\d+\s+/, '').trim();
+        
+        if (buildingNameOnly !== intent.buildingIdentifier) {
+          console.log(`Trying building name only: "${buildingNameOnly}"`);
+          const alternativeQuery = await this.supabase
+            .from('buildings')
+            .select(`
+              id, name, address, postcode, unit_count,
+              building_manager_name, building_manager_email, building_manager_phone,
+              emergency_contact_name, emergency_contact_phone,
+              access_notes, key_access_notes, parking_info,
+              building_age, construction_type, total_floors, lift_available
+            `)
+            .or(`name.ilike.%${buildingNameOnly}%,address.ilike.%${buildingNameOnly}%`)
+            .limit(10);
+            
+          if (alternativeQuery.data && alternativeQuery.data.length > 0) {
+            buildings = alternativeQuery.data;
+            console.log(`Found ${buildings.length} buildings with alternative search`);
+          }
+        }
+        
+        if (!buildings?.length) {
+          // Still no results - provide suggestions
+          const suggestionQuery = await this.supabase
+            .from('buildings')
+            .select('name, address')
+            .limit(5);
+            
+          const suggestions = suggestionQuery.data?.map(b => `${b.name} (${b.address})`).join(', ') || '';
+          
+          return { 
+            success: false,
+            error: `Building "${intent.buildingIdentifier}" not found`,
+            suggestion: suggestions ? `Try one of these buildings: ${suggestions}` : 'Please check the building name or address'
+          };
+        }
       }
       
       // Use first building match for comprehensive data
@@ -210,10 +238,18 @@ class BuildingContextService {
         // Clean unit identifier for better matching
         const cleanUnit = intent.unitIdentifier.trim();
         
-        // Try multiple matching strategies for units
-        unitQuery = unitQuery.or(
-          `unit_number.eq.${cleanUnit},unit_number.ilike.%${cleanUnit}%`
-        );
+        // Try multiple matching strategies for units - handle both string and numeric unit numbers
+        if (/^\d+$/.test(cleanUnit)) {
+          // Pure numeric unit
+          unitQuery = unitQuery.or(
+            `unit_number.eq.${cleanUnit},unit_number.eq.${cleanUnit}.0,unit_number.ilike.%${cleanUnit}%`
+          );
+        } else {
+          // Alphanumeric unit
+          unitQuery = unitQuery.or(
+            `unit_number.eq.${cleanUnit},unit_number.ilike.%${cleanUnit}%`
+          );
+        }
       }
       
       const { data: units, error: unitError } = await unitQuery;

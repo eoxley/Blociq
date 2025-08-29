@@ -332,6 +332,8 @@ export async function POST(req: Request) {
         }
       };
 
+      return NextResponse.json(contextData);
+
     } catch (error: any) {
       console.error('Building context error:', error);
       return NextResponse.json({
@@ -340,8 +342,6 @@ export async function POST(req: Request) {
         details: error.message
       }, { status: 500 });
     }
-
-    return NextResponse.json(contextData);
 
   } catch (error: any) {
     console.error('AI route error:', error);
