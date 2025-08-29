@@ -1382,7 +1382,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             {/* Chat Interface */}
             {showChat && messages.length > 0 && (
               <div 
-                className="fixed bg-white z-50 flex flex-col rounded-lg shadow-2xl border border-gray-200"
+                className="fixed bg-white z-50 flex flex-col rounded-2xl shadow-2xl border border-gray-200"
                 style={{
                   width: `${chatSize.width}px`,
                   height: `${chatSize.height}px`,
@@ -1392,7 +1392,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               >
                 {/* Chat Header - Draggable */}
                 <div 
-                  className="flex items-center justify-between p-4 border-b border-gray-200 bg-white shadow-sm rounded-t-lg cursor-move hover:bg-gray-50 transition-colors"
+                  className="flex items-center justify-between p-4 border-b border-gray-200 bg-white shadow-sm rounded-t-2xl cursor-move hover:bg-gray-50 transition-colors"
                   onMouseDown={(e) => handleMouseDown(e, 'drag')}
                   onDoubleClick={() => {
                     const centerX = (window.innerWidth - 600) / 2
@@ -1907,8 +1907,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                                   {/* Location */}
                                   {event.location && (
                                     <div className="flex items-start gap-3">
-                                      <div className="w-6 h-6 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                                        <MapPin className="h-3 w-3 text-purple-600" />
+                                      <div className="w-6 h-6 bg-gradient-to-r from-[#8b5cf6]/20 to-[#ec4899]/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 border border-[#8b5cf6]/30">
+                                        <MapPin className="h-3 w-3 text-[#8b5cf6]" />
                                       </div>
                                       <div>
                                         <p className="text-sm font-semibold text-gray-700 mb-2">Location</p>
@@ -1920,8 +1920,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                                   {/* Organizer */}
                                   {event.organiser_name && (
                                     <div className="flex items-start gap-3">
-                                      <div className="w-6 h-6 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                                        <User className="h-3 w-3 text-orange-600" />
+                                      <div className="w-6 h-6 bg-gradient-to-r from-[#f59e0b]/20 to-[#f97316]/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 border border-[#f59e0b]/30">
+                                        <User className="h-3 w-3 text-[#f59e0b]" />
                                       </div>
                                       <div>
                                         <p className="text-sm font-semibold text-gray-700 mb-2">Organizer</p>
@@ -1933,7 +1933,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                                   {/* Online Meeting */}
                                   {event.online_meeting && (
                                     <div className="flex items-start gap-3">
-                                      <div className="w-6 h-6 bg-[#4f46e5] rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                                      <div className="w-6 h-6 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 shadow-lg border border-white/20">
                                         <MessageCircle className="h-3 w-3 text-white" />
                                       </div>
                                       <div>
@@ -1951,8 +1951,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                     </div>
                   ) : (
                     <div className="text-center py-12">
-                      <div className="w-20 h-20 bg-gradient-to-r from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                        <Calendar className="h-10 w-10 text-gray-400" />
+                      <div className="w-20 h-20 bg-gradient-to-r from-[#4f46e5]/10 to-[#a855f7]/10 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl border border-[#4f46e5]/20">
+                        <Calendar className="h-10 w-10 text-[#4f46e5]" />
                       </div>
                       <h3 className="text-xl font-bold text-gray-900 mb-3">No events yet</h3>
                       <p className="text-gray-600 mb-6 max-w-md mx-auto leading-relaxed">
@@ -1980,8 +1980,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             <div className="h-full">
               {todosEmpty ? (
                 <div className="text-center py-8 flex-1 flex items-center justify-center">
-                  <div className="w-16 h-16 bg-gradient-to-r from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                    <CheckCircle className="h-8 w-8 text-gray-400" />
+                  <div className="w-16 h-16 bg-gradient-to-r from-[#14b8a6]/10 to-[#3b82f6]/10 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl border border-[#14b8a6]/20">
+                    <CheckCircle className="h-8 w-8 text-[#14b8a6]" />
                   </div>
                   <h3 className="text-xl font-bold text-gray-900 mb-3">All caught up!</h3>
                 </div>
