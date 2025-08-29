@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import SupabaseProvider from '@/components/SupabaseProvider';
 import { BlocIQProvider } from '@/components/BlocIQContext';
 import Footer from '@/components/Footer';
+import PublicAskBlocIQWidget from '@/components/PublicAskBlocIQWidget';
 import { Toaster } from 'sonner';
 
 
@@ -30,6 +31,8 @@ export default function RootLayout({
               </main>
               <Footer />
             </div>
+            {/* Public Ask BlocIQ Widget - appears on all pages */}
+            <PublicAskBlocIQWidget />
           </SupabaseProvider>
           <Toaster 
             position="top-right" 

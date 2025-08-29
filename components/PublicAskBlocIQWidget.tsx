@@ -4,29 +4,18 @@ import React, { useState, useEffect } from 'react';
 import { Brain } from 'lucide-react';
 import PublicAskBlocIQ from './PublicAskBlocIQ';
 
-interface PublicAskBlocIQWidgetProps {
-  autoShow?: boolean;
-  autoShowDelay?: number;
-}
-
-export default function PublicAskBlocIQWidget({ 
-  autoShow = true, 
-  autoShowDelay = 3000 
-}: PublicAskBlocIQWidgetProps) {
+export default function PublicAskBlocIQWidget() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [hasAutoShown, setHasAutoShown] = useState(false);
+  const [showButton, setShowButton] = useState(false);
 
-  // Auto-show modal after delay on page load
+  // Auto-appears 1 second after page load
   useEffect(() => {
-    if (autoShow && !hasAutoShown) {
-      const timer = setTimeout(() => {
-        setIsModalOpen(true);
-        setHasAutoShown(true);
-      }, autoShowDelay);
+    const timer = setTimeout(() => {
+      setShowButton(true);
+    }, 1000);
 
-      return () => clearTimeout(timer);
-    }
-  }, [autoShow, autoShowDelay, hasAutoShown]);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -41,28 +30,31 @@ export default function PublicAskBlocIQWidget({
     };
   }, [isModalOpen]);
 
+  if (!showButton) return null;
+
   return (
     <>
-      {/* Floating Widget */}
+      {/* Floating Button - Fixed bottom-6 right-6, 64x64px circular */}
       <div className="fixed bottom-6 right-6 z-40">
-        {/* Pulsating Gradient Background */}
         <div className="relative">
-          {/* Pulsating Rings */}
-          <div className="absolute inset-0 rounded-full bg-gradient-to-r from-pink-500 via-teal-500 via-purple-500 to-blue-500 opacity-75 animate-ping"></div>
-          <div className="absolute inset-0 rounded-full bg-gradient-to-r from-pink-500 via-teal-500 via-purple-500 to-blue-500 opacity-50 animate-pulse"></div>
+          {/* Pulsating animation */}
+          <div className="absolute inset-0 w-16 h-16 rounded-full bg-gradient-to-r from-pink-500 via-teal-500 via-purple-500 to-blue-500 opacity-75 animate-ping"></div>
+          <div className="absolute inset-0 w-16 h-16 rounded-full bg-gradient-to-r from-pink-500 via-teal-500 via-purple-500 to-blue-500 opacity-50 animate-pulse"></div>
           
-          {/* Main Widget Button */}
+          {/* Main Button - 64x64px */}
           <button
             onClick={() => setIsModalOpen(true)}
-            className="relative w-16 h-16 bg-gradient-to-r from-pink-500 via-teal-500 via-purple-500 to-blue-500 rounded-full shadow-2xl hover:shadow-3xl transform hover:scale-110 transition-all duration-300 flex items-center justify-center group"
+            className="relative w-16 h-16 bg-gradient-to-r from-pink-500 via-teal-500 via-purple-500 to-blue-500 rounded-full shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300 flex items-center justify-center group"
+            aria-label="Ask BlocIQ AI Assistant"
           >
-            <Brain className="h-8 w-8 text-white group-hover:scale-110 transition-transform duration-300" />
+            {/* Brain icon - h-10 w-10 text-white */}
+            <Brain className="h-10 w-10 text-white group-hover:scale-110 transition-transform duration-300" />
             
             {/* Tooltip */}
             <div className="absolute bottom-full right-0 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-              <div className="bg-black text-white px-3 py-2 rounded-lg text-sm whitespace-nowrap">
+              <div className="bg-gray-900 text-white px-3 py-2 rounded-lg text-sm whitespace-nowrap shadow-lg">
                 Ask BlocIQ AI Assistant
-                <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-black"></div>
+                <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
               </div>
             </div>
           </button>
@@ -75,40 +67,21 @@ export default function PublicAskBlocIQWidget({
         onClose={() => setIsModalOpen(false)} 
       />
 
-      {/* Custom Styles */}
+      {/* Custom pulsating gradient animation */}
       <style jsx>{`
         @keyframes pulse-gradient {
           0%, 100% {
-            background: linear-gradient(45deg, #ec4899, #14b8a6, #a855f7, #3b82f6);
+            background: linear-gradient(45deg, #ec4899, #06b6d4, #8b5cf6, #3b82f6);
           }
           25% {
-            background: linear-gradient(45deg, #14b8a6, #a855f7, #3b82f6, #ec4899);
+            background: linear-gradient(45deg, #06b6d4, #8b5cf6, #3b82f6, #ec4899);
           }
           50% {
-            background: linear-gradient(45deg, #a855f7, #3b82f6, #ec4899, #14b8a6);
+            background: linear-gradient(45deg, #8b5cf6, #3b82f6, #ec4899, #06b6d4);
           }
           75% {
-            background: linear-gradient(45deg, #3b82f6, #ec4899, #14b8a6, #a855f7);
+            background: linear-gradient(45deg, #3b82f6, #ec4899, #06b6d4, #8b5cf6);
           }
-        }
-        
-        @keyframes breathe {
-          0%, 100% {
-            transform: scale(1);
-            opacity: 0.7;
-          }
-          50% {
-            transform: scale(1.1);
-            opacity: 0.9;
-          }
-        }
-        
-        .animate-breathe {
-          animation: breathe 3s ease-in-out infinite;
-        }
-        
-        .animate-pulse-gradient {
-          animation: pulse-gradient 4s ease-in-out infinite;
         }
       `}</style>
     </>
