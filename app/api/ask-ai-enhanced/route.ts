@@ -343,18 +343,30 @@ async function processOCRDocument(file: File): Promise<{ success: boolean; extra
   try {
     console.log(`📄 Starting enhanced OCR processing for: ${file.name} (${file.size} bytes)`);
     
-    // Strategy 1: Try local PDF parsing first for PDF files (fastest, most reliable)
-    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+    // Strategy 1: Try direct PDF extraction first (fastest)
+    if (file.type === 'application/pdf') {
       try {
-        console.log('📋 Attempting direct PDF text extraction...');
+        console.log('📄 Attempting direct PDF extraction...');
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
+        
+        console.log('📊 PDF buffer analysis:', {
+          size: buffer.length,
+          isPDF: buffer.slice(0, 4).toString() === '%PDF',
+          firstBytes: buffer.slice(0, 20).toString('hex')
+        });
         
         // Import the local text extraction service
         const { extractText } = await import('@/lib/extractTextFromPdf');
         const result = await extractText(new Uint8Array(buffer), file.name);
         
-        if (result.text && result.text.length > 50) {
+        console.log('📊 Direct PDF extraction result:', {
+          success: !!result,
+          textLength: result?.text?.length || 0,
+          textPreview: result?.text?.substring(0, 100) || 'No text'
+        });
+        
+        if (result?.text && result.text.length > 50) {
           console.log(`✅ Direct PDF extraction successful: ${result.text.length} characters`);
           return {
             success: true,
