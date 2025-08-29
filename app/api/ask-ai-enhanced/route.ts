@@ -789,7 +789,11 @@ export async function POST(request: NextRequest) {
     // Check if it's a property query using the proper function
     const isPropertyQueryResult = isPropertyQuery(userQuestion);
     
-    console.log(`🏠 Property query detected: ${isPropertyQueryResult}`);
+    console.log(`🏠 Property query detection:`, {
+      query: userQuestion,
+      isPropertyQuery: isPropertyQueryResult,
+      queryLower: userQuestion.toLowerCase()
+    });
     
     if (isPropertyQueryResult) {
       console.log('🗄️ SEARCHING DATABASE WITH PROPER FUNCTION...');
@@ -798,22 +802,42 @@ export async function POST(request: NextRequest) {
         // Use the proper database search function we created
         const databaseResponse = await searchAllRelevantTables(supabase, userQuestion);
         
-        if (databaseResponse && databaseResponse.trim().length > 0) {
-          console.log('✅ DATABASE SEARCH SUCCESSFUL!');
-          console.log('Database response:', databaseResponse);
-          
-          // Format the database response properly
-          const formattedResponse = formatDatabaseResponse(databaseResponse, userQuestion);
-          databaseResults.data = [{ response: formattedResponse }];
-          databaseResults.totalRecords = 1;
-          
-          console.log(`✅ DATABASE FOUND DATA: ${formattedResponse.substring(0, 100)}...`);
+        console.log('📊 Database search response:', databaseResponse);
+        console.log('📊 Response type:', typeof databaseResponse);
+        console.log('📊 Response keys:', Object.keys(databaseResponse || {}));
+        
+        // Check if we got any data from the search
+        if (databaseResponse && Object.keys(databaseResponse).length > 0) {
+          // Check if we have leaseholder data
+          if (databaseResponse.leaseholders && databaseResponse.leaseholders.length > 0) {
+            console.log('✅ DATABASE SEARCH SUCCESSFUL! Found leaseholders:', databaseResponse.leaseholders.length);
+            
+            // Format the database response properly
+            const formattedResponse = formatDatabaseResponse(databaseResponse, userQuestion);
+            databaseResults.data = [{ response: formattedResponse }];
+            databaseResults.totalRecords = 1;
+            
+            console.log(`✅ DATABASE FOUND DATA: ${formattedResponse.substring(0, 100)}...`);
+          } else if (databaseResponse.buildings && databaseResponse.buildings.length > 0) {
+            console.log('✅ DATABASE SEARCH SUCCESSFUL! Found buildings:', databaseResponse.buildings.length);
+            
+            // Format the database response properly
+            const formattedResponse = formatDatabaseResponse(databaseResponse, userQuestion);
+            databaseResults.data = [{ response: formattedResponse }];
+            databaseResults.totalRecords = 1;
+            
+            console.log(`✅ DATABASE FOUND DATA: ${formattedResponse.substring(0, 100)}...`);
+          } else {
+            console.log('❌ Database search returned empty results');
+          }
         } else {
           console.log('❌ No database data found');
         }
       } catch (error) {
         console.error('❌ Database search error:', error);
       }
+    } else {
+      console.log('❌ Query NOT detected as property query - will use AI response');
     }
     
     // Generate response WITH DATABASE DATA
