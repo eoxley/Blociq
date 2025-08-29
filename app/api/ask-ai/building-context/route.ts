@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
-import OpenAI from 'openai';
+import { getOpenAIClient } from '@/lib/openai-client';
 import { insertAiLog } from '@/lib/supabase/ai_logs';
 
 // Natural language query processing
@@ -287,108 +287,61 @@ export async function POST(req: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     
     const body = await req.json();
-    const { question, buildingId, fileUploads } = body;
+    const { buildingId } = body;
 
-    if (!question) {
+    if (!buildingId) {
       return NextResponse.json({ 
         success: false, 
-        error: 'Question is required' 
+        error: 'Building ID is required' 
       }, { status: 400 });
     }
 
-    console.log('Processing AI query:', question);
+    console.log('Fetching building context for building ID:', buildingId);
 
-    // Parse the natural language query
-    const processor = new QueryProcessor();
-    const intent = processor.parseQuery(question);
-    
-    console.log('Query intent:', intent);
+    // Get building context by ID
+    try {
+      const { data: building, error: buildingError } = await supabase
+        .from('buildings')
+        .select(`
+          id, name, address, postcode, building_type,
+          units(
+            id, unit_number, unit_label, floor,
+            leaseholders(id, name, full_name, email, phone)
+          ),
+          building_compliance_assets(
+            id, status,
+            compliance_assets(category, title)
+          )
+        `)
+        .eq('id', buildingId)
+        .single();
 
-    // Handle different query types
-    const contextService = new BuildingContextService(supabase);
-    const responseGenerator = new ResponseGenerator();
-    
-    let contextData;
-    let response;
-    
-    switch (intent.type) {
-      case 'leaseholder_lookup':
-        contextData = await contextService.findLeaseholder(intent);
-        response = responseGenerator.generateLeaseholderResponse(contextData, question);
-        break;
-        
-      case 'building_info':
-        contextData = await contextService.getBuildingInfo(intent);
-        response = responseGenerator.generateBuildingInfoResponse(contextData);
-        break;
-        
-      case 'unit_details':
-        contextData = await contextService.findLeaseholder(intent);
-        response = responseGenerator.generateLeaseholderResponse(contextData, question);
-        break;
-        
-      default:
-        // For general queries, use OpenAI
-        try {
-          const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-          
-          const completion = await openai.chat.completions.create({
-            model: 'gpt-4o-mini',
-            messages: [{
-              role: 'system',
-              content: 'You are BlocIQ, a UK property management assistant. Help with leasehold property questions, compliance, and building management.'
-            }, {
-              role: 'user',
-              content: question
-            }],
-            temperature: 0.3,
-            max_tokens: 1000
-          });
-          
-          response = completion.choices[0].message?.content || 'I apologize, but I couldn\'t generate a response.';
-          
-        } catch (openaiError) {
-          console.error('OpenAI error:', openaiError);
-          response = responseGenerator.generateGeneralResponse(question);
+      if (buildingError || !building) {
+        return NextResponse.json({
+          success: false,
+          error: 'Building not found'
+        }, { status: 404 });
+      }
+
+      contextData = {
+        success: true,
+        building,
+        metadata: {
+          totalUnits: building.units?.length || 0,
+          complianceAssets: building.building_compliance_assets?.length || 0
         }
+      };
+
+    } catch (error: any) {
+      console.error('Building context error:', error);
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to fetch building context',
+        details: error.message
+      }, { status: 500 });
     }
 
-    // Log the interaction if user is authenticated
-    let logId = null;
-    if (user) {
-      try {
-        logId = await insertAiLog({
-          user_id: user.id,
-          question,
-          response,
-          context_type: 'main_assistant',
-          building_id: buildingId || (contextData?.building?.id),
-          document_ids: [],
-        });
-      } catch (logError) {
-        console.error('Failed to log AI interaction:', logError);
-      }
-    }
-
-    return NextResponse.json({
-      success: true,
-      answer: response,
-      intent: {
-        type: intent.type,
-        confidence: intent.confidence,
-        extracted: {
-          building: intent.buildingIdentifier,
-          unit: intent.unitIdentifier
-        }
-      },
-      contextData: intent.type !== 'general' ? contextData : undefined,
-      ai_log_id: logId,
-      metadata: {
-        queryType: intent.type,
-        processingTime: Date.now(),
-        hasUser: !!user
-      }
-    });
+    return NextResponse.json(contextData);
 
   } catch (error: any) {
     console.error('AI route error:', error);
