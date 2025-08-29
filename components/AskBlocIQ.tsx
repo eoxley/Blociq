@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Calendar, Loader2, Send, Upload, FileText, X, Check, Sparkles, File, FileText as FileTextIcon, Building2, AlertTriangle } from 'lucide-react';
+import { Plus, Calendar, Loader2, Send, Upload, FileText, X, Check, Sparkles, File, FileText as FileTextIcon, Building2, AlertTriangle, Brain, Building, AlertCircle, CheckCircle, Clock, Copy, Mail, FileDown, Paperclip } from 'lucide-react';
 import { toast } from 'sonner';
 import CommunicationModal from './CommunicationModal';
 import AIChatDisclaimer from '@/components/ui/AIChatDisclaimer';
@@ -140,11 +140,13 @@ export default function AskBlocIQ({
     leaseholderName?: string | null;
     unitNumber?: string | null;
   } | null>(null);
+  const [processingFiles, setProcessingFiles] = useState<string[]>([]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // File handling
   const acceptedFileTypes = [
@@ -240,22 +242,25 @@ export default function AskBlocIQ({
     return true;
   };
 
-  const handleFileSelect = (files: FileList | null) => {
+  const handleFileSelect = async (files: FileList | null) => {
     if (!files) return;
     
-    Array.from(files).forEach(file => {
+    const fileArray = Array.from(files).slice(0, 5);
+    
+    for (const file of fileArray) {
       if (validateFile(file)) {
-        const fileId = Math.random().toString(36).substr(2, 9);
-        const uploadedFile: UploadedFile = {
+        const fileData: UploadedFile = {
+          id: Date.now() + Math.random(),
           file,
-          id: fileId,
           name: file.name,
+          type: file.type,
           size: file.size,
-          type: file.type
+          extractionMethod: 'standard'
         };
         
-        setUploadedFiles(prev => [...prev, uploadedFile]);
-        
+        setUploadedFiles(prev => [...prev, { ...fileData, status: 'processing' } as any]);
+        setProcessingFiles(prev => [...prev, fileData.id]);
+
         // Show appropriate message based on file type
         const isImage = file.type.startsWith('image/');
         const isPDF = file.type === 'application/pdf';
@@ -276,8 +281,16 @@ export default function AskBlocIQ({
             duration: 4000,
           });
         }
+
+        // Simulate processing completion after 2 seconds
+        setTimeout(() => {
+          setUploadedFiles(prev => prev.map(f => 
+            f.id === fileData.id ? { ...f, status: 'completed' } : f
+          ));
+          setProcessingFiles(prev => prev.filter(id => id !== fileData.id));
+        }, 2000);
       }
-    });
+    }
   };
 
   const removeFile = (fileId: string) => {
@@ -738,434 +751,328 @@ export default function AskBlocIQ({
 
   const suggestedPrompts = getSuggestedPrompts(buildingName, !!isMajorWorksContext, projectId || undefined);
 
+  // Helper function to format time
+  const formatTime = (timestamp: Date) => {
+    return timestamp.toLocaleTimeString('en-US', { 
+      hour12: true, 
+      hour: 'numeric', 
+      minute: '2-digit' 
+    });
+  };
+
+  // Helper function to copy message content
+  const copyMessage = (content: string) => {
+    navigator.clipboard.writeText(content);
+    toast.success('Copied to clipboard');
+  };
+
+  // Helper function to get building context display
+  const getBuildingContext = () => {
+    if (buildingName) {
+      return {
+        name: buildingName,
+        type: "Property"
+      };
+    }
+    return null;
+  };
+
+  const buildingContext = getBuildingContext();
+
   return (
-    <div className={`flex flex-col h-full ${className}`}>
+    <div style={{fontFamily: 'Inter, system-ui, sans-serif'}} className={`h-full flex flex-col bg-white ${className}`}>
+      
       {/* Header */}
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          Ask BlocIQ
-        </h2>
-        <p className="text-sm text-gray-500 italic">
-          💡 Sometimes BlocIQ can get things muddled - please verify important information
-        </p>
+      <div className="border-b p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-teal-500 via-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                <Brain className="w-5 h-5 text-white" />
+              </div>
+              Ask BlocIQ
+            </h2>
+            <p className="text-sm text-gray-500 italic flex items-center gap-2">
+              <AlertCircle className="w-4 h-4" />
+              Sometimes BlocIQ can get things muddled - please verify important information
+            </p>
+          </div>
+          
+          {buildingContext && (
+            <div className="text-right">
+              <div className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <Building className="w-4 h-4" />
+                {buildingContext.name}
+              </div>
+              <div className="text-xs text-gray-500">{buildingContext.type}</div>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Chat Messages */}
-      <div 
-        ref={chatContainerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-4"
-      >
-        {messages.length === 0 ? (
-          <div className="text-center py-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Sparkles className="h-8 w-8 text-white" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Welcome to BlocIQ Assistant</h3>
-            <p className="text-gray-600 mb-6">Ask me anything about your properties, compliance, or upload documents for analysis.</p>
-            
-            {/* Suggested Prompts */}
-            <div className="space-y-3">
-              <p className="text-sm font-medium text-gray-700">Try asking:</p>
-              <div className="flex flex-wrap gap-2 justify-center">
-                {suggestedPrompts.slice(0, 3).map((prompt, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleSuggestedPrompt(prompt)}
-                    className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm border border-blue-200"
-                  >
-                    {prompt}
-                  </button>
-                ))}
-                {uploadedFiles.length > 0 && (
-                  <button
-                    onClick={() => setQuestion("What are the key points in the uploaded documents?")}
-                    className="px-3 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm border border-green-200"
-                  >
-                    📄 Analyze Documents
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        ) : (
-          messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} transition-all duration-300 ease-in-out`}
-            >
-              <div className={`max-w-[80%] ${message.role === 'user' ? 'order-2' : 'order-1'}`}>
-                <div className={`rounded-2xl px-4 py-3 ${
-                  message.role === 'user' 
-                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white' 
-                    : 'bg-gray-100 text-gray-900'
-                }`}>
-                  <div className="whitespace-pre-wrap leading-relaxed">
-                    {message.content}
-                  </div>
-                  
-                  {/* Major Works Badge */}
-                  {message.role === 'assistant' && usedMajorWorksData && (
-                    <div className="mt-3 flex items-center gap-2">
-                      <div className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium border border-blue-200">
-                        <Building2 className="w-3 h-3" />
-                        <span>Live major works data used</span>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Files */}
-                  {message.files && message.files.length > 0 && (
-                    <div className="mt-3 space-y-2">
-                      <p className="text-xs text-gray-500 font-medium">📎 Analyzed Documents:</p>
-                      {message.files.map((file) => (
-                        <div key={file.id} className="flex items-center gap-2 text-sm bg-blue-50 p-2 rounded-lg">
-                          <span>{getFileIcon(file.type)}</span>
-                          <span className="truncate font-medium">{file.name}</span>
-                          <span className="text-xs opacity-70">({formatFileSize(file.size)})</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+      <div className="flex-1 flex flex-col min-h-0">
 
-                  {/* Action Buttons for AI Responses */}
-                  {message.role === 'assistant' && (
-                    <div className="flex gap-2 mt-3 pt-3 border-t border-gray-200">
-                      <button
-                        onClick={() => handleCreateLetter(message.content)}
-                        className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
-                      >
-                        📝 Create Letter
-                      </button>
-                      <button
-                        onClick={() => handleSendEmail(message.content)}
-                        className="flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
-                      >
-                        📨 Send Email
-                      </button>
-                      <button
-                        onClick={() => handleSaveAsNotice(message.content)}
-                        className="flex items-center gap-1 px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors"
-                      >
-                        📄 Save as Notice
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Document Analysis Results - Enhanced Display */}
-                  {message.documentAnalysis?.map((doc, docIndex) => (
-                    <div key={docIndex} className="mt-4 p-4 bg-gray-50 rounded-lg border">
-                      <div className="flex items-center gap-2 mb-3">
-                        <FileText className="h-5 w-5 text-gray-600" />
-                        <h4 className="font-semibold text-gray-900">{doc.filename}</h4>
-                        {doc.documentType && (
-                          <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                            {doc.documentType}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Document Summary */}
-                      <div className="mb-4">
-                        <p className="text-gray-700 leading-relaxed">{doc.summary}</p>
-                      </div>
-
-                      {/* Lease-specific display */}
-                      {doc.documentType === 'lease' && 'leaseDetails' in doc && (
-                        <div className="mt-4 space-y-3">
-                          {/* Property Details */}
-                          {doc.leaseDetails && Object.keys(doc.leaseDetails).length > 0 && (
-                            <div className="bg-white p-3 rounded border">
-                              <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Property Details</h5>
-                              <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
-                                {(doc.leaseDetails as any).propertyAddress && (
-                                  <div><span className="font-medium">Address:</span> {(doc.leaseDetails as any).propertyAddress}</div>
-                                )}
-                                {(doc.leaseDetails as any).leaseTerm && (
-                                  <div><span className="font-medium">Term:</span> {(doc.leaseDetails as any).leaseTerm}</div>
-                                )}
-                                {(doc.leaseDetails as any).premium && (
-                                  <div><span className="font-medium">Premium:</span> {(doc.leaseDetails as any).premium}</div>
-                                )}
-                                {(doc.leaseDetails as any).initialRent && (
-                                  <div><span className="font-medium">Rent:</span> {(doc.leaseDetails as any).initialRent}</div>
-                                )}
-                                {(doc.leaseDetails as any).landlord && (
-                                  <div><span className="font-medium">Landlord:</span> {(doc.leaseDetails as any).landlord}</div>
-                                )}
-                                {(doc.leaseDetails as any).tenant && (
-                                  <div><span className="font-medium">Tenant:</span> {(doc.leaseDetails as any).tenant}</div>
-                                )}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Compliance Checklist */}
-                          {'complianceChecklist' in doc && doc.complianceChecklist && doc.complianceChecklist.length > 0 && (
-                            <div className="bg-white p-3 rounded border">
-                              <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Compliance Checklist</h5>
-                              <div className="mt-2 space-y-1">
-                                {doc.complianceChecklist.map((item: any, idx: number) => (
-                                  <div key={idx} className="flex items-center justify-between text-sm">
-                                    <span>{item.item}</span>
-                                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                      item.status === 'Y' ? 'bg-green-100 text-green-800' :
-                                      item.status === 'N' ? 'bg-red-100 text-red-800' :
-                                      'bg-gray-100 text-gray-600'
-                                    }`}>
-                                      {item.status === 'Y' ? '✓' : item.status === 'N' ? '✗' : '?'}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Financial Obligations */}
-                          {'financialObligations' in doc && doc.financialObligations && doc.financialObligations.length > 0 && (
-                            <div className="bg-white p-3 rounded border">
-                              <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Financial Obligations</h5>
-                              <ul className="mt-2 space-y-1 text-sm">
-                                {doc.financialObligations.map((obligation: string, idx: number) => (
-                                  <li key={idx} className="flex items-center gap-2">
-                                    <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                                    {obligation}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-
-                          {/* Key Rights */}
-                          {'keyRights' in doc && doc.keyRights && doc.keyRights.length > 0 && (
-                            <div className="bg-white p-3 rounded border">
-                              <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Key Rights</h5>
-                              <ul className="mt-2 space-y-1 text-sm">
-                                {doc.keyRights.map((right: string, idx: number) => (
-                                  <li key={idx} className="flex items-center gap-2">
-                                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                                    {right}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-
-                          {/* Restrictions */}
-                          {'restrictions' in doc && doc.restrictions && doc.restrictions.length > 0 && (
-                            <div className="bg-white p-3 rounded border">
-                              <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide">Restrictions</h5>
-                              <ul className="mt-2 space-y-1 text-sm">
-                                {doc.restrictions.map((restriction: string, idx: number) => (
-                                  <li key={idx} className="flex items-center gap-2">
-                                    <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                                    {restriction}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Building Context Information */}
-                      {doc.buildingContext && (
-                        <div className="mb-3">
-                          <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide mb-2">
-                            Building Context
-                          </h5>
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-700">Status:</span>
-                              <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                doc.buildingContext.buildingStatus === 'matched' ? 'bg-green-100 text-green-800' :
-                                doc.buildingContext.buildingStatus === 'not_found' ? 'bg-orange-100 text-orange-800' :
-                                'bg-gray-100 text-gray-600'
-                              }`}>
-                                {doc.buildingContext.buildingStatus === 'matched' ? '✓ Building Found' :
-                                 doc.buildingContext.buildingStatus === 'not_found' ? '⚠ Building Not Found' :
-                                 '? Unknown Status'}
-                              </span>
-                            </div>
-                            
-                            {doc.buildingContext.extractedAddress && (
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-700">Extracted Address:</span>
-                                <span className="text-sm text-gray-900 font-medium">
-                                  {doc.buildingContext.extractedAddress}
-                                </span>
-                              </div>
-                            )}
-                            
-                            {doc.buildingContext.extractedBuildingType && (
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-700">Building Type:</span>
-                                <span className="text-sm text-gray-900 font-medium">
-                                  {doc.buildingContext.extractedBuildingType}
-                                </span>
-                              </div>
-                            )}
-                            
-                            {doc.buildingContext.buildingStatus === 'not_found' && (
-                              <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                                <p className="text-sm text-orange-800 mb-2">
-                                  This lease appears to be for a building not currently in your portfolio.
-                                </p>
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => handleSuggestedAction({
-                                      key: 'add_building',
-                                      label: 'Add New Building',
-                                      action: 'add_building',
-                                      icon: 'Plus'
-                                    })}
-                                    className="px-3 py-1.5 bg-orange-100 text-orange-800 rounded text-sm hover:bg-orange-200 transition-colors"
-                                  >
-                                    + Add Building
-                                  </button>
-                                  <button
-                                    onClick={() => handleSuggestedAction({
-                                      key: 'analyze_only',
-                                      label: 'Analyze Lease Only',
-                                      action: 'analyze_only',
-                                      icon: 'FileText'
-                                    })}
-                                    className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded text-sm hover:bg-gray-200 transition-colors"
-                                  >
-                                    Analyze Only
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Compliance Status */}
-                      {doc.complianceStatus && (
-                        <div className="mb-3">
-                          <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide mb-1">
-                            Compliance Status
-                          </h5>
-                          <p className="text-sm text-gray-700">{doc.complianceStatus}</p>
-                        </div>
-                      )}
-
-                      {/* Key Dates */}
-                      {doc.keyDates && doc.keyDates.length > 0 && (
-                        <div className="mb-3">
-                          <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide mb-2">
-                            Key Dates
-                          </h5>
-                          <div className="space-y-1">
-                            {doc.keyDates.map((date, dateIndex) => (
-                              <div key={dateIndex} className="flex justify-between items-center text-sm py-1">
-                                <span className="text-gray-700">{date.description}</span>
-                                <span className="font-mono text-gray-900 bg-white px-2 py-1 rounded">
-                                  {date.date}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Action Items */}
-                      {doc.actionItems && doc.actionItems.length > 0 && (
-                        <div className="mb-3">
-                          <h5 className="font-medium text-sm text-gray-600 uppercase tracking-wide mb-2">
-                            Action Items
-                          </h5>
-                          <div className="space-y-2">
-                            {doc.actionItems.map((item, itemIndex) => (
-                              <div key={itemIndex} className="flex items-start gap-2 text-sm">
-                                <span className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                                  item.priority === 'high' ? 'bg-red-500' :
-                                  item.priority === 'medium' ? 'bg-yellow-500' :
-                                  'bg-green-500'
-                                }`}></span>
-                                <div className="flex-1">
-                                  <span className="text-gray-700">{item.description}</span>
-                                  {item.priority && (
-                                    <span className={`ml-2 px-2 py-0.5 text-xs rounded ${
-                                      item.priority === 'high' ? 'bg-red-100 text-red-700' :
-                                      item.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                                      'bg-green-100 text-green-700'
-                                    }`}>
-                                      {item.priority.toUpperCase()}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Extraction Method & Confidence */}
-                      {(doc.extractionMethod || doc.confidence) && (
-                        <div className="mt-3 pt-3 border-t border-gray-200">
-                          <div className="flex items-center gap-4 text-xs text-gray-500">
-                            {doc.extractionMethod && (
-                              <span>Method: {doc.extractionMethod}</span>
-                            )}
-                            {doc.confidence && (
-                              <span>Confidence: {Math.round(doc.confidence * 100)}%</span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {messages.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center max-w-xl">
+                <div className="w-20 h-20 bg-gradient-to-br from-teal-500 via-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-8">
+                  <Brain className="w-10 h-10 text-white" />
                 </div>
-              </div>
-            </div>
-          ))
-        )}
-
-        {/* Loading Message */}
-        {loading && (
-          <div className="flex justify-start transition-all duration-300 ease-in-out">
-            <div className="max-w-[80%]">
-              <div className="bg-gray-100 rounded-2xl px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                    <Sparkles className="h-3 w-3 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-1 mb-2">
-                      <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-                      <span className="text-sm text-gray-600">
-                        {uploadedFiles.length > 0 
-                          ? `Processing ${uploadedFiles.length} file(s) and analyzing with BlocIQ...`
-                          : 'BlocIQ is thinking...'
-                        }
-                      </span>
-                    </div>
-                    
-                    {/* Progress Bar for File Processing */}
+                
+                <h3 className="text-2xl font-semibold text-gray-800 mb-4">
+                  {buildingContext ? `Ready to help with ${buildingContext.name}` : 'How can I help you today?'}
+                </h3>
+                <p className="text-gray-600 mb-8">
+                  Upload documents for analysis, ask about compliance requirements, or get insights about your property portfolio.
+                </p>
+                
+                {/* Suggested Prompts */}
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-gray-700">Try asking:</p>
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {suggestedPrompts.slice(0, 3).map((prompt, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleSuggestedPrompt(prompt)}
+                        className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm border border-blue-200"
+                      >
+                        {prompt}
+                      </button>
+                    ))}
                     {uploadedFiles.length > 0 && (
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300 animate-pulse"></div>
-                      </div>
+                      <button
+                        onClick={() => setQuestion("What are the key points in the uploaded documents?")}
+                        className="px-3 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm border border-green-200"
+                      >
+                        📄 Analyze Documents
+                      </button>
                     )}
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          ) : (
+            messages.map((message) => {
+              const isUser = message.role === 'user';
+              const isAI = message.role === 'assistant';
+              
+              return (
+                <div key={message.id} className={`flex items-start gap-4 ${isUser ? 'flex-row-reverse' : ''} group`}>
+                  {/* Avatar */}
+                  <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${
+                    isUser 
+                      ? 'bg-gradient-to-br from-blue-500 to-purple-600 text-white' 
+                      : 'bg-gradient-to-br from-teal-500 via-blue-500 to-purple-600'
+                  }`}>
+                    {isUser ? (
+                      <div className="w-5 h-5 bg-white bg-opacity-30 rounded-full"></div>
+                    ) : (
+                      <Brain className="w-5 h-5 text-white" />
+                    )}
+                  </div>
 
-        <div ref={messagesEndRef} />
-      </div>
+                  <div className={`flex-1 max-w-[85%] ${isUser ? 'text-right' : 'text-left'}`}>
+                    {/* Building Context */}
+                    {buildingContext && isUser && (
+                      <div className="mb-2 inline-flex items-center gap-2 text-xs bg-blue-50 text-blue-700 px-3 py-1 rounded-full">
+                        <Building className="w-3 h-3" />
+                        {buildingContext.name}
+                      </div>
+                    )}
 
-      {/* Input Area */}
-      <div className="border-t border-gray-200 bg-gradient-to-b from-gray-50 to-white">
-        <div className="p-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Main Input */}
-            <div className="relative group">
+                    {/* Message Bubble */}
+                    <div className={`relative inline-block px-5 py-3 rounded-2xl ${
+                      isUser 
+                        ? 'bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-tr-md' 
+                        : 'bg-gray-100 text-gray-900 rounded-tl-md'
+                    }`}>
+                      
+                      {/* Content with formatting */}
+                      <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                        {message.content.split('\n').map((line, index) => {
+                          if (line.startsWith('**') && line.endsWith('**')) {
+                            return (
+                              <h4 key={index} className={`font-semibold mt-3 mb-2 first:mt-0 ${
+                                isUser ? 'text-white' : 'text-gray-800'
+                              }`}>
+                                {line.replace(/\*\*/g, '')}
+                              </h4>
+                            );
+                          }
+                          
+                          if (line.startsWith('• ')) {
+                            return (
+                              <div key={index} className="ml-4 mb-1">
+                                {line}
+                              </div>
+                            );
+                          }
+                          
+                          const processedLine = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                          
+                          return (
+                            <div key={index} className={index > 0 ? 'mt-2' : ''} dangerouslySetInnerHTML={{ __html: processedLine }} />
+                          );
+                        })}
+                      </div>
+
+                      {/* File attachments */}
+                      {message.files && message.files.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                          <p className="text-xs font-medium">📎 Analyzed Documents:</p>
+                          {message.files.map(file => (
+                            <div key={file.id} className={`flex items-center gap-2 p-2 rounded-lg ${
+                              isUser ? 'bg-white bg-opacity-20' : 'bg-white border'
+                            }`}>
+                              <FileText className="w-4 h-4" />
+                              <span className="text-xs font-medium">{file.name}</span>
+                              <CheckCircle className="w-4 h-4 text-green-500 ml-auto" />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Major Works Badge */}
+                      {isAI && usedMajorWorksData && (
+                        <div className="mt-3 flex items-center gap-2">
+                          <div className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium border border-blue-200">
+                            <Building2 className="w-3 h-3" />
+                            <span>Live major works data used</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action Buttons */}
+                    {isAI && (
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        <button
+                          onClick={() => handleCreateLetter(message.content)}
+                          className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1"
+                        >
+                          <FileText className="w-3 h-3" />
+                          Create Letter
+                        </button>
+                        <button
+                          onClick={() => handleSendEmail(message.content)}
+                          className="text-xs bg-teal-50 hover:bg-teal-100 text-teal-700 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1"
+                        >
+                          <Mail className="w-3 h-3" />
+                          Send Email
+                        </button>
+                        <button
+                          onClick={() => handleSaveAsNotice(message.content)}
+                          className="text-xs bg-purple-50 hover:bg-purple-100 text-purple-700 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1"
+                        >
+                          <FileDown className="w-3 h-3" />
+                          Save as Notice
+                        </button>
+                        <button
+                          onClick={() => copyMessage(message.content)}
+                          className="text-xs bg-gray-50 hover:bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1"
+                        >
+                          <Copy className="w-3 h-3" />
+                          Copy
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Timestamp */}
+                    <div className={`mt-2 text-xs text-gray-500 ${isUser ? 'text-right' : 'text-left'}`}>
+                      {formatTime(message.timestamp)}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+
+          {/* Typing Indicator */}
+          {loading && (
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 bg-gradient-to-br from-teal-500 via-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                <Brain className="w-5 h-5 text-white" />
+              </div>
+              <div className="bg-gray-100 rounded-2xl rounded-tl-md px-5 py-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-teal-400 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                    <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                  </div>
+                  <span className="text-sm text-gray-600">Analyzing...</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* File Processing */}
+          {processingFiles.length > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <div className="flex items-center gap-3 mb-2">
+                <Clock className="w-4 h-4 text-blue-600 animate-spin" />
+                <span className="font-medium text-blue-700 text-sm">Processing {processingFiles.length} file(s)...</span>
+              </div>
+            </div>
+          )}
+          
+          <div ref={messagesEndRef} />
+        </div>
+
+          {/* Uploaded Files */}
+          {uploadedFiles.length > 0 && (
+            <div className="mb-4 space-y-2">
+              {uploadedFiles.map(file => {
+                const processingFile = processingFiles.find(pf => pf.id === file.id);
+                return (
+                  <div key={file.id} className={`flex items-center justify-between p-3 rounded-xl border ${
+                    file.status === 'completed' ? 'border-green-200 bg-green-50' : 'border-yellow-200 bg-yellow-50'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <FileText className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm font-medium">{file.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {file.status === 'completed' ? 
+                        <CheckCircle className="w-4 h-4 text-green-600" /> : 
+                        <Clock className="w-4 h-4 text-yellow-600 animate-spin" />
+                      }
+                      <button
+                        onClick={() => setUploadedFiles(prev => prev.filter(f => f.id !== file.id))}
+                        className="p-1 hover:bg-gray-200 rounded-full"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="flex items-end gap-3">
+            {/* File Upload */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex-shrink-0 w-12 h-12 bg-gray-100 hover:bg-gray-200 rounded-xl flex items-center justify-center transition-colors"
+            >
+              <Paperclip className="w-5 h-5 text-gray-600" />
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".pdf,.docx,.txt,.png,.jpg,.jpeg"
+              onChange={(e) => handleFileSelect(e.target.files)}
+              className="hidden"
+            />
+            
+            {/* Text Input */}
+            <div className="flex-1 relative">
               <textarea
-                ref={inputRef}
+                ref={textareaRef}
                 value={question}
                 onChange={handleInputChange}
                 onKeyDown={(e) => {
@@ -1174,134 +1081,56 @@ export default function AskBlocIQ({
                     handleSubmit(e as any);
                   }
                 }}
-                placeholder={placeholder || "Ask BlocIQ anything about your building, compliance, or upload documents..."}
-                className="w-full px-5 py-4 pr-24 bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-3 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 text-gray-900 placeholder-gray-400 resize-none overflow-hidden shadow-sm hover:border-gray-300 group-hover:shadow-md"
-                rows={1}
-                disabled={loading}
+                placeholder={buildingContext ? 
+                  `Ask about ${buildingContext.name}, upload documents, or request analysis...` :
+                  placeholder || "Ask me anything about your properties, leases, or compliance..."
+                }
+                className="w-full px-5 py-4 pr-16 bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-3 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 resize-none"
                 style={{ minHeight: '56px', maxHeight: '200px' }}
+                rows={1}
               />
-              
-              {/* Send Button */}
-              <button
-                type="submit"
-                disabled={loading || (!question.trim() && uploadedFiles.length === 0)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 p-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 text-white rounded-xl transition-all duration-200 disabled:cursor-not-allowed shadow-sm hover:shadow-md active:scale-95"
-                title="Send with BlocIQ"
-              >
-                {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </button>
             </div>
-
-            {/* Enhanced Upload Area */}
-            <div className="space-y-3">
-              {/* Upload Guidance */}
-              <div className="text-center">
-                <p className="text-sm text-gray-600 mb-2">
-                  📄 Upload documents to get AI-powered analysis and insights
-                </p>
-                <p className="text-xs text-gray-500">
-                  BlocIQ will read, summarize, and answer questions about your documents
-                </p>
+            
+            {/* Send Button */}
+            <button
+              onClick={handleSubmit}
+              disabled={!question.trim() && uploadedFiles.filter(f => f.status === 'completed').length === 0}
+              className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
+                (question.trim() || uploadedFiles.filter(f => f.status === 'completed').length > 0)
+                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-lg transform hover:scale-105'
+                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              <Send className="w-5 h-5" />
+            </button>
+          </div>
+          
+          {/* Status Bar */}
+          <div className="flex items-center justify-between mt-4 text-xs text-gray-500">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
+                <span>AI Ready</span>
               </div>
-
-              {/* Upload Button */}
-              <div className="flex items-center justify-center">
-                <div className="relative group">
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-blue-600 transition-all duration-200 rounded-xl hover:bg-blue-50 border border-gray-200 hover:border-blue-200"
-                    title="Upload document to Ask BlocIQ"
-                  >
-                    <Upload className="w-5 h-5" />
-                    <span className="text-sm font-medium">Upload Document</span>
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept=".pdf,.docx,.txt,.doc"
-                    onChange={(e) => handleFileSelect(e.target.files)}
-                    className="hidden"
-                  />
-                </div>
-              </div>
-
-              {/* Drag and Drop Area */}
-              <div
-                className={`border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 ${
-                  isDragOver 
-                    ? 'border-blue-400 bg-blue-50' 
-                    : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
-                }`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                <Upload className={`h-8 w-8 mx-auto mb-2 ${
-                  isDragOver ? 'text-blue-500' : 'text-gray-400'
-                }`} />
-                <p className={`text-sm font-medium ${
-                  isDragOver ? 'text-blue-600' : 'text-gray-600'
-                }`}>
-                  {isDragOver ? 'Drop files here' : 'Drag and drop files here'}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Supports PDF, DOCX, DOC, TXT (max 10MB each)
-                </p>
-              </div>
-
-              {/* Uploaded Files Display */}
-              {uploadedFiles.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-gray-700">Uploaded Files:</p>
-                  {uploadedFiles.map((file) => (
-                    <div key={file.id} className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                          {getFileIconComponent(file.type)}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{file.name}</p>
-                          <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
-                          <p className="text-xs text-blue-600 font-medium">Ready for analysis</p>
-                          {file.extractionMethod && (
-                            <p className={`text-xs ${
-                              file.extractionMethod === 'ocr' ? 'text-orange-600' : 
-                              file.extractionMethod === 'enhanced' ? 'text-purple-600' : 
-                              'text-blue-600'
-                            } font-medium`}>
-                              {file.extractionMethod === 'ocr' ? '🔍 OCR Processing' :
-                               file.extractionMethod === 'enhanced' ? '⚡ Enhanced Extraction' :
-                               '📄 Standard Extraction'}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => removeFile(file.id)}
-                        className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
-                        title="Remove file"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                  <p className="text-xs text-gray-500 text-center">
-                    Files will be analyzed when you send your message
-                  </p>
-                </div>
+              {buildingContext && (
+                <>
+                  <span>•</span>
+                  <div className="flex items-center gap-2">
+                    <Building className="w-3 h-3" />
+                    <span>Building context active</span>
+                  </div>
+                </>
               )}
+              <span>•</span>
+              <span>GDPR Compliant</span>
             </div>
-          </form>
-          <AIChatDisclaimer />
+            <span className="text-gray-400">
+              Press Enter to send • Shift+Enter for new line
+            </span>
+          </div>
         </div>
       </div>
-
+      
       {/* Document Search Results */}
       {isDocumentSearch && documentResults.length > 0 && (
         <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm mx-4 mb-4">
@@ -1419,6 +1248,7 @@ export default function AskBlocIQ({
           onSave={handleSaveTemplate}
         />
       )}
+      </div>
     </div>
   );
 } 

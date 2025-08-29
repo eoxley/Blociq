@@ -124,29 +124,34 @@
 }
 
 :root {
-  --radius: 0.75rem; /* Modern rounded corners */
+  --radius: 1rem; /* Increased rounded corners for modern look */
   
   /* BlocIQ Design System Colors */
   --background: #ffffff;
-  --foreground: #1e293b;
+  --foreground: #374151; /* Updated to use consistent dark gray */
   --card: #ffffff;
-  --card-foreground: #1e293b;
+  --card-foreground: #374151;
   --popover: #ffffff;
-  --popover-foreground: #1e293b;
+  --popover-foreground: #374151;
   
-  /* AI-Powered Gradient (for all AI sections) */
-  --ai-gradient: linear-gradient(135deg, #ec4899 0%, #14b8a6 50%, #3b82f6 100%);
-  /* Pink → Teal → Blue (as seen in "Ask BlocIQ" modal) */
-
-  /* Primary Brand Gradient (for general branding) */
+  /* Original Brand Gradient - Restored (removing pink) */
   --brand-gradient: linear-gradient(135deg, #14b8a6 0%, #3b82f6 50%, #8b5cf6 100%);
-  /* Teal → Blue → Purple */
+  /* Teal → Blue → Purple (original brand gradient) */
+  
+  /* AI sections use the same original brand gradient */
+  --ai-gradient: linear-gradient(135deg, #14b8a6 0%, #3b82f6 50%, #8b5cf6 100%);
 
-  /* Brand Colors */
+  /* Brand Colors - Original palette only */
   --brand-teal: #0d9488;
   --brand-blue: #2563eb;
   --brand-purple: #7c3aed;
-  --brand-pink: #ec4899;
+  
+  /* UI Colors */
+  --white: #ffffff;
+  --light-gray: #f8fafc;
+  --medium-gray: #6b7280;
+  --dark-gray: #374151;
+  --border-gray: #e2e8f0;
 
   /* Primary Colors */
   --primary: #0d9488; /* Brand Teal */
@@ -253,6 +258,11 @@
   body {
     @apply font-sans;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  }
+  
+  /* Apply Inter font family consistently throughout */
+  h1, h2, h3, h4, h5, h6, p, span, div, button, input, textarea {
+    font-family: 'Inter', system-ui, sans-serif;
   }
 
   a {
@@ -1375,4 +1385,96 @@
 
 .shadow-strong {
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+}
+
+/* ===== BlocIQ Visual Improvements ===== */
+
+/* 1. Hero Banner Styling */
+.hero-banner {
+  background: linear-gradient(135deg, #14b8a6, #3b82f6, #8b5cf6);
+  border-radius: 16px;
+  padding: 48px;
+  color: white;
+}
+
+.hero-title {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 2rem;
+  color: white;
+}
+
+.hero-subtitle {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 400;
+  opacity: 0.9;
+  color: white;
+}
+
+/* 2. Object Shape Improvements */
+.card, .feature-card {
+  border-radius: 16px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #f1f5f9;
+}
+
+.btn-primary, .btn-secondary, .button {
+  border-radius: 12px !important;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.nav-item, .nav-active {
+  border-radius: 12px !important;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Ask BlocIQ circular widget - restore original gradient */
+.ask-blociq-circle {
+  background: linear-gradient(135deg, #14b8a6, #3b82f6, #8b5cf6);
+}
+
+/* 3. Typography Formatting */
+.page-title {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 600;
+  color: #374151;
+}
+
+.section-title {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.body-text {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 400;
+  color: #6b7280;
+}
+
+/* 4. Improved Border Radius System */
+.rounded-modern {
+  border-radius: 16px;
+}
+
+.rounded-button {
+  border-radius: 12px;
+}
+
+.rounded-input {
+  border-radius: 12px;
+}
+
+/* 5. Enhanced Card Styling */
+.blociq-card {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #f1f5f9;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.blociq-card:hover {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border-color: #e2e8f0;
 }
