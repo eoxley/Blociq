@@ -11,6 +11,7 @@ type Message = {
   content: string;
   timestamp: Date;
   files?: UploadedFile[];
+  isStructured?: boolean; // Flag for special formatting
 };
 
 type UploadedFile = {
@@ -131,6 +132,38 @@ export default function PublicAskBlocIQ({ isPublic = true, isVisible = false }: 
     return '📎';
   };
 
+  // Handle response display logic
+  const displayMessage = (responseData: any): string => {
+    console.log("📤 Processing response data:", responseData);
+    
+    // Handle file upload responses - look for lease analysis first
+    if (responseData.analysis) {
+      console.log("✅ Found lease analysis in response");
+      return responseData.analysis; // Show the formatted lease analysis
+    }
+    
+    // Handle regular text responses  
+    if (responseData.response) {
+      console.log("✅ Found regular response");
+      return responseData.response;
+    }
+    
+    // Handle file processing summary
+    if (responseData.summary) {
+      console.log("✅ Found summary response");
+      return responseData.summary;
+    }
+    
+    // Fallback to message
+    if (responseData.message) {
+      console.log("✅ Found message response");
+      return responseData.message;
+    }
+    
+    console.log("❌ No response content found");
+    return "No response available";
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!question.trim() && uploadedFiles.length === 0) {
@@ -191,16 +224,35 @@ export default function PublicAskBlocIQ({ isPublic = true, isVisible = false }: 
 
       const data: AIResponse = await response.json();
       
-      if (data.success && data.response) {
-        // Add assistant message to history
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: data.response,
-          timestamp: new Date()
-        };
+      // 🔍 Add detailed logging
+      console.log("🔍 Full API Response:", data);
+      console.log("🔍 Response type:", typeof data);
+      console.log("🔍 Response keys:", Object.keys(data));
+      
+      // Check for different possible response formats:
+      console.log("📄 Analysis field:", (data as any).analysis);
+      console.log("📄 Response field:", data.response);
+      console.log("📄 Summary field:", (data as any).summary);
+      console.log("📄 Message field:", (data as any).message);
+      
+      if (data.success) {
+        // Handle structured lease analysis or regular responses
+        const displayContent = displayMessage(data);
+        
+        if (displayContent) {
+          // Add assistant message to history with structured flag for lease analysis
+          const assistantMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: displayContent,
+            timestamp: new Date(),
+            isStructured: displayContent.includes('Got the lease') && displayContent.includes('key points')
+          };
 
-        setMessages(prev => [...prev, assistantMessage]);
+          setMessages(prev => [...prev, assistantMessage]);
+        } else {
+          toast.error('Error: No response content available');
+        }
       } else {
         toast.error('Error: No response from AI service');
       }
@@ -276,9 +328,18 @@ export default function PublicAskBlocIQ({ isPublic = true, isVisible = false }: 
                     ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white' 
                     : 'bg-gray-100 text-gray-900'
                 }`}>
-                  <div className="whitespace-pre-wrap leading-relaxed">
-                    {message.content}
-                  </div>
+                  {/* Handle structured lease analysis formatting */}
+                  {message.isStructured && message.content.includes('key points') ? (
+                    <div className="lease-analysis">
+                      <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: 'inherit', lineHeight: 'inherit' }}>
+                        {message.content}
+                      </pre>
+                    </div>
+                  ) : (
+                    <div className="whitespace-pre-wrap leading-relaxed">
+                      {message.content}
+                    </div>
+                  )}
                   
                   {/* Files */}
                   {message.files && message.files.length > 0 && (
