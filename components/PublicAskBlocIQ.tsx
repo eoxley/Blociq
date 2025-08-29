@@ -210,8 +210,8 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
         <div className="flex-1 flex flex-col">
           {!hasSubmittedEmail ? (
             /* Email Capture Form */
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="flex flex-col min-h-full">
+            <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+              <div className="p-6">
               <div className="text-center mb-6">
                 <div className="w-12 h-12 bg-gradient-to-r from-pink-500 via-teal-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Mail className="h-6 w-6 text-white" />
