@@ -111,11 +111,14 @@ export async function handleLeaseholderQuery(supabase: any, prompt: string): Pro
 
 export async function getLeaseholderInfo(supabase: any, unit: string, building: string): Promise<string> {
   try {
-    console.log("Searching for:", { unit, building });
+    console.log("🔍 Searching for leaseholder:", { unit, building });
     
-    // Try to use the optimized view first
-    let viewResult;
+    // Try to use the optimized view first with comprehensive error handling
+    let viewResult = null;
+    let viewError = null;
+    
     try {
+      console.log('📊 Attempting vw_units_leaseholders view query...');
       const searches = [
         supabase
           .from('vw_units_leaseholders')
@@ -131,24 +134,51 @@ export async function getLeaseholderInfo(supabase: any, unit: string, building: 
       ];
       
       viewResult = await Promise.allSettled(searches);
-    } catch (viewError) {
-      console.log('⚠️ View vw_units_leaseholders not available, using fallback approach');
+      
+      // Check for view-not-found errors specifically
+      const hasViewErrors = viewResult.some(result => 
+        result.status === 'rejected' || 
+        (result.status === 'fulfilled' && result.value?.error && 
+         (result.value.error.message?.includes('relation') || 
+          result.value.error.message?.includes('does not exist') ||
+          result.value.error.message?.includes('view')))
+      );
+      
+      if (hasViewErrors) {
+        console.log('⚠️ View vw_units_leaseholders not available or has errors, using fallback approach');
+        viewResult = null;
+        viewError = hasViewErrors;
+      }
+      
+    } catch (viewException) {
+      console.log('⚠️ Exception accessing vw_units_leaseholders view:', viewException);
       viewResult = null;
+      viewError = viewException;
     }
     
-    // Check if view queries were successful
+    // Check if view queries were successful and have data
     let hasViewData = false;
-    if (viewResult) {
+    let viewDataExists = false;
+    
+    if (viewResult && !viewError) {
       for (const result of viewResult) {
-        if (result.status === 'fulfilled' && result.value?.data?.length > 0) {
-          hasViewData = true;
-          break;
+        if (result.status === 'fulfilled' && result.value && !result.value.error) {
+          viewDataExists = true;
+          if (result.value.data?.length > 0) {
+            hasViewData = true;
+            break;
+          }
         }
       }
     }
     
-    // If view doesn't exist or has no data, use fallback approach
-    if (!hasViewData) {
+    // If view doesn't exist, has errors, or has no data, use fallback approach
+    if (!viewDataExists || !hasViewData) {
+      if (viewError) {
+        console.log('🔄 View unavailable, using table joins fallback');
+      } else if (viewDataExists && !hasViewData) {
+        console.log('🔄 View exists but no matching data, using table joins fallback');
+      }
       console.log('🔄 Using fallback: joining units, leaseholders, and buildings tables');
       
       try {
@@ -224,35 +254,49 @@ export async function getLeaseholderInfo(supabase: any, unit: string, building: 
         
       } catch (fallbackError) {
         console.error('❌ Fallback approach failed:', fallbackError);
-        return `❌ Database search failed (both view and fallback): ${fallbackError.message}`;
+        // Ensure we return a helpful message even if both approaches fail
+        return `❌ Database search failed for unit ${unit} at ${building}. This could be due to:
+
+• Database connectivity issues
+• Missing required database tables or views
+• Unit or building not yet added to the system
+
+Please contact support if this persists. Error details: ${fallbackError.message}`;
       }
     }
     
     // If we reach here, process the successful view results
-    for (const result of viewResult) {
-      if (result.status === 'fulfilled' && result.value?.data) {
-        const { data, error } = result.value;
-        
-        // Add comprehensive logging
-        logDatabaseQuery('vw_units_leaseholders', { unit, building, searchType: 'leaseholder' }, { data, error });
-        
-        if (!error && data && data.length > 0) {
-          const leaseholder = data[0];
-          let response = `The leaseholder of unit ${leaseholder.unit_number}, ${leaseholder.building_name} is: **${leaseholder.leaseholder_name}**`;
+    if (viewResult) {
+      for (const result of viewResult) {
+        if (result.status === 'fulfilled' && result.value?.data) {
+          const { data, error } = result.value;
           
-          if (leaseholder.leaseholder_email) {
-            response += `\n📧 Email: ${leaseholder.leaseholder_email}`;
-          }
+          // Add comprehensive logging
+          logDatabaseQuery('vw_units_leaseholders', { unit, building, searchType: 'leaseholder' }, { data, error });
           
-          if (leaseholder.leaseholder_phone) {
-            response += `\n📞 Phone: ${leaseholder.leaseholder_phone}`;
-          }
+          if (!error && data && data.length > 0) {
+            const leaseholder = data[0];
+            console.log('✅ Found leaseholder via view:', leaseholder);
+            
+            let response = `📋 **Leaseholder Information (from database view)**\n`;
+            response += `**Building:** ${leaseholder.building_name}\n`;
+            response += `**Unit:** ${leaseholder.unit_number}\n`;
+            response += `**Leaseholder:** ${leaseholder.leaseholder_name}\n`;
+            
+            if (leaseholder.leaseholder_email) {
+              response += `**Email:** ${leaseholder.leaseholder_email}\n`;
+            }
+            
+            if (leaseholder.leaseholder_phone) {
+              response += `**Phone:** ${leaseholder.leaseholder_phone}\n`;
+            }
 
-          if (leaseholder.is_director) {
-            response += `\n👔 Role: ${leaseholder.director_role || 'Director'}`;
-          }
+            if (leaseholder.is_director) {
+              response += `**Role:** ${leaseholder.director_role || 'Company Director'}\n`;
+            }
 
-          return response;
+            return response;
+          }
         }
       }
     }
