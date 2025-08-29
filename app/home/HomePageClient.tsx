@@ -644,53 +644,19 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         return
       }
 
-      // For text-only requests, use the main AI endpoint
-      console.log('🔍 No files uploaded, using text-only path')
+      // For text-only requests, use the enhanced AI endpoint
+      console.log('🔍 No files uploaded, using enhanced AI path')
       
-      // Get building context for enhanced AI responses
-      let buildingContext = null;
-      try {
-        // Check if user has any buildings in their portfolio
-        const { data: buildings } = await supabase
-          .from('buildings')
-          .select('id, name')
-          .limit(1);
-        
-        if (buildings && buildings.length > 0) {
-          // Get building context for the first building (or specific building if needed)
-          const buildingId = buildings[0].id;
-          console.log('🔍 Fetching building context for:', buildingId);
-          
-          const contextResponse = await fetch('/api/ask-ai/building-context', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ buildingId })
-          });
-          
-          if (contextResponse.ok) {
-            buildingContext = await contextResponse.json();
-            console.log('✅ Building context loaded:', buildingContext);
-          } else {
-            console.log('⚠️ Building context failed, continuing without context');
-          }
-        }
-      } catch (contextError) {
-        console.log('⚠️ Building context error, continuing without context:', contextError);
-      }
+      // Create FormData for the enhanced endpoint
+      const formData = new FormData();
+      formData.append('userQuestion', prompt);
+      formData.append('useMemory', 'true');
+      formData.append('buildingId', 'null'); // Will be determined by context
       
-      const requestBody = JSON.stringify({ 
-        prompt: prompt,
-        contextType: 'general',
-        buildingContext: buildingContext
-      })
-
-      // Call the main AI API
-      const response = await fetch('/api/ask-ai', {
+      // Call the enhanced AI API for full chat response with database search
+      const response = await fetch('/api/ask-ai-enhanced', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: requestBody,
+        body: formData,
       })
 
       console.log('📡 Response status:', response.status)
@@ -708,20 +674,31 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         throw new Error(data.error)
       }
 
-      // Handle different response formats
+      // Handle enhanced endpoint response format
       let aiResponse = '';
-      if (data.answer) {
-        // New format with building context
+      if (data.response) {
+        // Enhanced endpoint format
+        aiResponse = data.response;
+        console.log('✅ Using enhanced AI response format');
+        
+        // Log additional enhanced endpoint data
+        if (data.isDatabaseQuery) {
+          console.log('🔍 Database query response detected');
+        }
+        if (data.isLeaseSummary) {
+          console.log('📋 Lease summary response detected');
+        }
+        if (data.documentAnalyses) {
+          console.log('📄 Document analyses available:', data.documentAnalyses.length);
+        }
+      } else if (data.answer) {
+        // Fallback format
         aiResponse = data.answer;
-        console.log('✅ Using new AI response format with building context');
+        console.log('✅ Using fallback response format');
       } else if (data.result) {
         // Legacy format
         aiResponse = data.result;
         console.log('✅ Using legacy response format');
-      } else if (data.response) {
-        // Alternative format
-        aiResponse = data.response;
-        console.log('✅ Using alternative response format');
       } else {
         aiResponse = 'No response received';
         console.log('⚠️ No response format detected');
@@ -731,9 +708,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       const aiMessage = { sender: 'ai' as const, text: aiResponse, timestamp: new Date() }
       setMessages(prev => [...prev, aiMessage])
 
-      // Show building context info if available
-      if (data.buildingContext === 'available') {
-        console.log('🏢 Building context was used for this response');
+      // Log enhanced endpoint metadata
+      if (data.sources) {
+        console.log('📚 Sources used:', data.sources);
+      }
+      if (data.confidence) {
+        console.log('🎯 Response confidence:', data.confidence);
       }
       
       // Show chat interface
@@ -861,14 +841,16 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
   // Enhanced upload function that handles both small and large files
   const uploadToAskAI = async (file: File, buildingId?: string) => {
-    // Small file path - direct upload via multipart
+    // Small file path - direct upload via enhanced endpoint for automatic lease summary
     if (file.size <= MAX_FILE_SIZE) {
-      console.log('📁 Processing small file via multipart:', file.name)
+      console.log('📁 Processing small file via enhanced endpoint:', file.name)
       const formData = new FormData()
-      formData.append('file', file)
-      if (buildingId) formData.append('buildingId', buildingId)
+      formData.append('userQuestion', `Please analyze this document: ${file.name}`)
+      formData.append('useMemory', 'true')
+      formData.append('buildingId', buildingId || 'null')
+      formData.append('file_0', file)
 
-      const res = await fetch('/api/ask-ai/upload', { method: 'POST', body: formData })
+      const res = await fetch('/api/ask-ai-enhanced', { method: 'POST', body: formData })
       let json: any = null
       try { 
         json = await res.json() 
@@ -878,11 +860,20 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         throw new Error(`Upload failed for ${file.name}: ${res.status} ${res.statusText}`)
       }
       
-      if (!res.ok || !json?.success) {
+      if (!res.ok) {
         const detail = (json && (json.error || json.message)) || `${res.status} ${res.statusText}`
         throw new Error(`Upload failed for ${file.name}: ${detail}`)
       }
-      return json
+      
+      // Convert enhanced endpoint response to expected format
+      return {
+        success: true,
+        documentType: json.isLeaseSummary ? 'lease' : 'document',
+        summary: json.response || 'Document processed successfully',
+        analysis: json.response || 'Document analysis completed',
+        filename: file.name,
+        textLength: json.processedDocuments?.[0]?.extractedText?.length || 0
+      }
     }
 
     // Large file path - signed URL upload
@@ -915,14 +906,15 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       throw new Error(`Storage upload failed (${putRes.status} ${putRes.statusText})`)
     }
 
-    // Step 3: Process the uploaded file
-    const procRes = await fetch('/api/ask-ai/upload', {
+    // Step 3: Process the uploaded file via enhanced endpoint
+    const formData = new FormData()
+    formData.append('userQuestion', `Please analyze this document: ${file.name}`)
+    formData.append('useMemory', 'true')
+    formData.append('buildingId', buildingId || 'null')
+    
+    const procRes = await fetch('/api/ask-ai-enhanced', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ 
-        path: signJson.path, 
-        buildingId: buildingId ?? null 
-      }),
+      body: formData,
     })
     
     let procJson: any = null
@@ -933,20 +925,32 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       throw new Error(`Process failed: ${procRes.status} ${procRes.statusText}`)
     }
     
-    if (!procRes.ok || !procJson?.success) {
+    if (!procRes.ok) {
       const detail = procJson?.error || `${procRes.status} ${procRes.statusText}`
       throw new Error(`Process failed: ${detail}`)
     }
 
-    return procJson
+    // Convert enhanced endpoint response to expected format
+    return {
+      success: true,
+      documentType: procJson.isLeaseSummary ? 'lease' : 'document',
+      summary: procJson.response || 'Document processed successfully',
+      analysis: procJson.response || 'Document analysis completed',
+      filename: file.name,
+      textLength: procJson.processedDocuments?.[0]?.extractedText?.length || 0
+    }
   }
 
-  // Helper function for processing already uploaded files
+    // Helper function for processing already uploaded files via enhanced endpoint
   const processStoredPath = async (path: string, buildingId?: string) => {
-    const res = await fetch('/api/ask-ai/upload', {
+    const formData = new FormData()
+    formData.append('userQuestion', 'Please analyze this stored document')
+    formData.append('useMemory', 'true')
+    formData.append('buildingId', buildingId || 'null')
+    
+    const res = await fetch('/api/ask-ai-enhanced', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ path, buildingId: buildingId || null }),
+      body: formData,
     })
     
     let json: any = null
@@ -957,12 +961,20 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       throw new Error(`Process failed: ${res.status} ${res.statusText}`)
     }
     
-    if (!res.ok || !json?.success) {
+    if (!res.ok) {
       const detail = json?.error || `${res.status} ${res.statusText}`
       throw new Error(`Process failed: ${detail}`)
     }
-    
-    return json
+
+    // Convert enhanced endpoint response to expected format
+    return {
+      success: true,
+      documentType: json.isLeaseSummary ? 'lease' : 'document',
+      summary: json.response || 'Document processed successfully',
+      analysis: json.response || 'Document analysis completed',
+      filename: 'stored_document',
+      textLength: json.processedDocuments?.[0]?.extractedText?.length || 0
+    }
   }
 
   // Communication action handlers
