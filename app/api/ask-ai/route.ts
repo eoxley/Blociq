@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
-import OpenAI from 'openai';
+import { getOpenAIClient } from '@/lib/openai-client';
 import { insertAiLog } from '@/lib/supabase/ai_logs';
 
 // Natural language query processing
@@ -371,20 +371,23 @@ export async function POST(req: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     
     const body = await req.json();
-    const { question, buildingId, fileUploads } = body;
+    const { prompt, question, buildingId, fileUploads, buildingContext, contextType } = body;
+    
+    // Support both 'prompt' and 'question' for compatibility
+    const userQuery = prompt || question;
 
-    if (!question) {
+    if (!userQuery) {
       return NextResponse.json({ 
         success: false, 
-        error: 'Question is required' 
+        error: 'Question or prompt is required' 
       }, { status: 400 });
     }
 
-    console.log('Processing AI query:', question);
+    console.log('Processing AI query:', userQuery);
 
     // Parse the natural language query
     const processor = new QueryProcessor();
-    const intent = processor.parseQuery(question);
+    const intent = processor.parseQuery(userQuery);
     
     console.log('Query intent:', intent);
 
@@ -398,7 +401,7 @@ export async function POST(req: Request) {
     switch (intent.type) {
       case 'leaseholder_lookup':
         contextData = await contextService.findLeaseholder(intent);
-        response = responseGenerator.generateLeaseholderResponse(contextData, question);
+        response = responseGenerator.generateLeaseholderResponse(contextData, userQuery);
         break;
         
       case 'building_info':
@@ -408,18 +411,18 @@ export async function POST(req: Request) {
         
       case 'unit_details':
         contextData = await contextService.findLeaseholder(intent);
-        response = responseGenerator.generateLeaseholderResponse(contextData, question);
+        response = responseGenerator.generateLeaseholderResponse(contextData, userQuery);
         break;
         
       case 'document_query':
         contextData = await contextService.findLeaseholder(intent);
-        response = responseGenerator.generateDocumentQueryResponse(contextData, question);
+        response = responseGenerator.generateDocumentQueryResponse(contextData, userQuery);
         break;
         
       default:
         // For general queries, use OpenAI
         try {
-          const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+          const openai = getOpenAIClient();
           
           const completion = await openai.chat.completions.create({
             model: 'gpt-4o-mini',
@@ -428,7 +431,7 @@ export async function POST(req: Request) {
               content: 'You are BlocIQ, a UK property management assistant. Help with leasehold property questions, compliance, and building management.'
             }, {
               role: 'user',
-              content: question
+              content: userQuery
             }],
             temperature: 0.3,
             max_tokens: 1000
@@ -438,7 +441,7 @@ export async function POST(req: Request) {
           
         } catch (openaiError) {
           console.error('OpenAI error:', openaiError);
-          response = responseGenerator.generateGeneralResponse(question);
+          response = responseGenerator.generateGeneralResponse(userQuery);
         }
     }
 
@@ -448,7 +451,7 @@ export async function POST(req: Request) {
       try {
         logId = await insertAiLog({
           user_id: user.id,
-          question,
+          question: userQuery,
           response,
           context_type: 'main_assistant',
           building_id: buildingId || (contextData?.building?.id),
@@ -461,7 +464,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      answer: response,
+      response: response, // Fixed: frontend expects 'response' not 'answer'
       intent: {
         type: intent.type,
         confidence: intent.confidence,
