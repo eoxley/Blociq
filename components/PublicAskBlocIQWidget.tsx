@@ -3,31 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { Brain } from 'lucide-react';
-import { supabase } from '@/lib/supabaseClient';
 import PublicAskBlocIQ from './PublicAskBlocIQ';
 
 export default function PublicAskBlocIQWidget() {
   const pathname = usePathname();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showButton, setShowButton] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  // Check authentication status
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setIsAuthenticated(!!session);
-    };
-    
-    checkAuth();
-    
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setIsAuthenticated(!!session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   // Define authenticated routes that should never show the widget
   const authenticatedRoutes = [
@@ -45,15 +26,15 @@ export default function PublicAskBlocIQWidget() {
     '/assistant'
   ];
 
-  // Check if current path is an authenticated route
-  const isAuthenticatedRoute = authenticatedRoutes.some(route => 
-    pathname.startsWith(route) || pathname.includes('/(dashboard)')
-  );
+  // Check if current path is an authenticated route or dashboard route
+  const isRestrictedRoute = authenticatedRoutes.some(route => 
+    pathname.startsWith(route)
+  ) || pathname.includes('/(dashboard)');
 
-  // Only show widget on exact landing page AND user is not authenticated AND not on authenticated routes
-  const shouldShowWidget = pathname === '/' && !isAuthenticated && !isAuthenticatedRoute;
+  // Show widget ONLY on landing page AND not on restricted routes
+  const shouldShowWidget = pathname === '/' && !isRestrictedRoute;
 
-  // Auto-appears 1 second after page load (only on landing page for unauthenticated users)
+  // Auto-appears 1 second after page load (only on landing page)
   useEffect(() => {
     if (!shouldShowWidget) {
       setShowButton(false);
@@ -65,7 +46,7 @@ export default function PublicAskBlocIQWidget() {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [shouldShowWidget, isAuthenticated, pathname]);
+  }, [shouldShowWidget, pathname]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
