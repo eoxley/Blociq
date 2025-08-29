@@ -3,6 +3,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { EnhancedAskAI } from '@/lib/ai/enhanced-ask-ai';
 import { analyzeDocument } from '@/lib/document-analysis-orchestrator';
+import OpenAI from 'openai';
 
 export async function POST(request: NextRequest) {
   try {
@@ -111,11 +112,20 @@ export async function POST(request: NextRequest) {
 
             // Perform document analysis using our system
             try {
+              console.log('🔍 Starting document analysis for:', file.name);
               const analysis = await analyzeDocument(
                 ocrResult.text, 
                 file.name, 
                 userQuestion || 'Analyze this document'
               );
+              
+              console.log('📊 Document analysis completed:', {
+                filename: file.name,
+                documentType: analysis.documentType,
+                summary: analysis.summary?.substring(0, 100) + '...',
+                hasExtractedText: !!analysis.extractedText,
+                extractedTextLength: analysis.extractedText?.length || 0
+              });
               
               documentAnalyses.push(analysis);
               
@@ -156,17 +166,106 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 4. Use enhanced Ask AI with industry knowledge
-    const enhancedAI = new EnhancedAskAI();
-    const response = await enhancedAI.generateResponse({
-      prompt: enhancedPrompt,
-      building_id: buildingId,
-      contextType: 'document_analysis',
-      emailContext: null,
-      is_outlook_addin: false,
-      includeIndustryKnowledge: true,
-      knowledgeCategories: ['compliance', 'property_management', 'uk_regulations']
+    // 4. Use enhanced Ask AI with industry knowledge OR generate automatic lease summary
+    let response: any;
+    
+    // Check if this is a lease document and generate automatic summary
+    const isLeaseDocument = documentAnalyses.some(analysis => 
+      analysis.documentType?.toLowerCase().includes('lease')
+    ) || processedDocuments.some(doc => 
+      doc.filename?.toLowerCase().includes('lease') || 
+      doc.type?.toLowerCase().includes('lease')
+    );
+    
+    console.log('🔍 Document analysis results:', {
+      documentCount: documentAnalyses.length,
+      documentTypes: documentAnalyses.map(a => a.documentType),
+      isLeaseDocument,
+      processedDocumentsCount: processedDocuments.length,
+      filenames: processedDocuments.map(d => d.filename),
+      types: processedDocuments.map(d => d.type)
     });
+    
+    if (isLeaseDocument && processedDocuments.length > 0) {
+      console.log('📄 Lease document detected - generating automatic summary');
+      
+      try {
+        // Get the lease document text
+        const leaseDocument = processedDocuments[0];
+        const leaseText = leaseDocument.extractedText;
+        
+        // Generate lease summary using OpenAI with specific formatting
+        const openaiClient = new OpenAI({
+          apiKey: process.env.OPENAI_API_KEY,
+        });
+        
+        const completion = await openaiClient.chat.completions.create({
+          model: 'gpt-4o',
+          messages: [{
+            role: 'system',
+            content: `You are a UK property management assistant. Analyze this lease document and return a response in this EXACT format:
+
+Got the lease—nice, clean copy. Here's the crisp "at-a-glance" you can drop into BlocIQ or an email 👇
+
+[Property Address] — key points
+* **Term:** [lease length] from **[start date]** (to [end date]).
+* **Ground rent:** £[amount] p.a., [escalation terms].
+* **Use:** [permitted use].
+* **Service charge share:** [percentages and descriptions]
+* **Insurance:** [arrangement details]
+* **Alterations:** [policy with consent requirements]
+* **Alienation:** [subletting/assignment rules]
+* **Pets:** [policy]
+* **Smoking:** [restrictions]
+
+Bottom line: [practical summary]
+
+Extract the actual information from the lease text. If information is not clearly stated, use "[not specified]" for that field.`
+          }, {
+            role: 'user',
+            content: `Analyze this lease document:\n\n${leaseText}`
+          }],
+          temperature: 0.3,
+          max_tokens: 1500
+        });
+
+        response = {
+          response: completion.choices[0].message?.content || 'Lease analysis completed but summary generation failed.',
+          sources: ['lease_document_analysis'],
+          confidence: 0.9,
+          knowledgeUsed: ['lease_analysis'],
+          documentAnalyses: documentAnalyses,
+          processedDocuments: processedDocuments,
+          timestamp: new Date().toISOString(),
+        };
+        
+      } catch (openaiError) {
+        console.error('OpenAI lease analysis error:', openaiError);
+        // Fall back to enhanced AI
+        const enhancedAI = new EnhancedAskAI();
+        response = await enhancedAI.generateResponse({
+          prompt: enhancedPrompt,
+          building_id: buildingId,
+          contextType: 'document_analysis',
+          emailContext: null,
+          is_outlook_addin: false,
+          includeIndustryKnowledge: true,
+          knowledgeCategories: ['compliance', 'property_management', 'uk_regulations']
+        });
+      }
+    } else {
+      // Use enhanced Ask AI with industry knowledge for non-lease documents
+      const enhancedAI = new EnhancedAskAI();
+      response = await enhancedAI.generateResponse({
+        prompt: enhancedPrompt,
+        building_id: buildingId,
+        contextType: 'document_analysis',
+        emailContext: null,
+        is_outlook_addin: false,
+        includeIndustryKnowledge: true,
+        knowledgeCategories: ['compliance', 'property_management', 'uk_regulations']
+      });
+    }
 
     // 5. Return enhanced response with document analysis
     return NextResponse.json({

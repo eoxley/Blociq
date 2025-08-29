@@ -895,13 +895,21 @@ I can help with various property management documents including tenancy agreemen
       console.log("🎯 IMPLEMENTING COMPREHENSIVE DATABASE-FIRST APPROACH");
       
       // CORE REQUIREMENT: Every single request must check database first
+      console.log("🔍 Calling processQueryDatabaseFirst with query:", userQuery);
       const databaseResponse = await processQueryDatabaseFirst(supabase, userQuery);
+      console.log("📊 Database response received:", {
+        hasResponse: !!databaseResponse,
+        responseType: typeof databaseResponse,
+        responseLength: databaseResponse ? databaseResponse.length : 0,
+        responsePreview: databaseResponse ? databaseResponse.substring(0, 100) + '...' : 'null'
+      });
       
-      if (databaseResponse && databaseResponse.length > 0) {
+      if (databaseResponse && databaseResponse.trim().length > 0) {
         // Database found relevant data - return it
         console.log("✅ DATABASE DATA FOUND - returning database response");
         response = databaseResponse;
       } else {
+        console.log("❌ NO DATABASE DATA FOUND - falling back to AI response");
         // No database data found - determine if this is a property query or general query
         const queryLower = userQuery.toLowerCase();
         
@@ -969,8 +977,7 @@ What would you like to know?`;
 
 **Database-First Queries:**
 • "Who is the leaseholder of unit 5 at Ashwood House?"
-• "What are the access codes for Ashwood House?"
-• "What is the service charge for unit 3 at Oak Court?"
+• "What are the service charge for unit 3 at Oak Court?"
 • "What buildings do we manage?"
 
 **General Property Management:**
