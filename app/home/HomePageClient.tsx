@@ -1216,14 +1216,14 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            {/* Enhanced Radial Glow Effect - Updated to use original brand colors */}
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-teal-400/20 to-blue-400/20 blur-xl group-hover:blur-2xl transition-all duration-500"></div>
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-300/10 to-purple-300/10 blur-2xl group-hover:blur-3xl transition-all duration-700"></div>
+            {/* Enhanced Radial Glow Effect - Using brand kit colors */}
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#14b8a6]/25 to-[#3b82f6]/25 blur-xl group-hover:blur-2xl transition-all duration-500"></div>
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#3b82f6]/15 to-[#8b5cf6]/15 blur-2xl group-hover:blur-3xl transition-all duration-700"></div>
             
             {/* Content */}
             <div className="text-center text-white max-w-sm relative z-10">
               {/* Brain Icon with Pulse Animation - No Border */}
-              <div className="w-20 h-20 flex items-center justify-center mx-auto mb-8 animate-pulse">
+              <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-8 animate-pulse shadow-2xl">
                 <Brain className={`h-12 w-12 text-white drop-shadow-lg ${isSubmitting ? 'animate-bounce' : ''}`} />
               </div>
               
@@ -1241,7 +1241,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               {!showChat && (
                 <div className="flex flex-col items-center mb-6">
                   <div 
-                    className="cursor-pointer hover:opacity-80 transition-opacity p-2 rounded-full hover:bg-white/10 transition-all duration-200" 
+                    className="cursor-pointer hover:opacity-80 transition-all duration-200 p-3 rounded-xl hover:bg-white/20 backdrop-blur-sm shadow-lg" 
                     title="Upload documents to Ask BlocIQ (PDF, DOCX, TXT)"
                     onClick={() => fileInputRef.current?.click()}
                   >
@@ -1250,7 +1250,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                   
                   {/* File count indicator */}
                   {uploadedFiles.length > 0 && (
-                    <div className="mt-2 text-xs text-white/80 bg-white/20 px-2 py-1 rounded-full">
+                    <div className="mt-3 text-xs text-white/90 bg-white/25 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-white/30 shadow-lg">
                       {uploadedFiles.length} file{uploadedFiles.length !== 1 ? 's' : ''} ready
                     </div>
                   )}
@@ -1267,7 +1267,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                        value={askInput}
                        onChange={(e) => setAskInput(e.target.value)}
                      placeholder="Ask me anything..."
-                       className="w-full px-5 py-4 bg-white text-text-primary border border-border rounded-xl placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-brand-teal transition-all duration-200 text-base pr-16 shadow-lg"
+                       className="w-full px-5 py-4 bg-white text-gray-900 border border-gray-300 rounded-xl placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] transition-all duration-200 text-base pr-16 shadow-lg"
                        onKeyPress={handleKeyPress}
                      />
                      
@@ -1317,7 +1317,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                            {uploadedFiles.map((file) => (
                              <div
                                key={file.id}
-                               className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer group"
+                               className="flex items-center gap-2 px-3 py-1.5 bg-white/90 backdrop-blur-sm border border-white/30 rounded-xl text-sm text-white shadow-lg hover:bg-white/95 transition-all duration-200 cursor-pointer group"
                                title={`${file.name} (${formatFileSize(file.size)})`}
                              >
                                <span>{getFileIcon(file.type)}</span>
@@ -1530,7 +1530,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                         {uploadedFiles.map((file) => (
                           <div
                             key={file.id}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer group"
+                                                           className="flex items-center gap-2 px-3 py-1.5 bg-white/90 backdrop-blur-sm border border-white/30 rounded-xl text-sm text-white shadow-lg hover:bg-white/95 transition-all duration-200 cursor-pointer group"
                             title={`${file.name} (${formatFileSize(file.size)})`}
                           >
                             <span>{getFileIcon(file.type)}</span>
@@ -1649,7 +1649,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 <div className="p-6 text-white bg-gradient-to-r from-[#4f46e5] to-[#a855f7]">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                      <div className="w-12 h-12 bg-white/25 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-lg border border-white/30">
                         <Calendar className="h-6 w-6 text-white" />
                       </div>
                       <div>
@@ -1662,14 +1662,14 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                     <div className="flex items-center gap-2">
                       {outlookConnected ? (
                         <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-1 text-xs bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
+                          <div className="flex items-center gap-1 text-xs bg-white/25 backdrop-blur-sm px-3 py-1 rounded-xl border border-white/30 shadow-lg">
                             <div className="w-2 h-2 bg-green-400 rounded-full"></div>
                             <span>Outlook Connected</span>
                           </div>
                           <button
                             onClick={handleSyncOutlook}
                             disabled={syncingOutlook}
-                            className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-3 py-1 rounded-full text-xs transition-all duration-200"
+                            className="bg-white/25 backdrop-blur-sm hover:bg-white/35 text-white px-3 py-1 rounded-xl text-xs transition-all duration-200 border border-white/30 shadow-lg"
                           >
                             {syncingOutlook ? (
                               <Loader2 className="h-3 w-3 animate-spin" />
@@ -1681,7 +1681,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                       ) : (
                         <button
                           onClick={handleConnectOutlook}
-                          className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-3 py-1 rounded-full text-xs transition-all duration-200"
+                          className="bg-white/25 backdrop-blur-sm hover:bg-white/35 text-white px-3 py-1 rounded-xl text-xs transition-all duration-200 border border-white/30 shadow-lg"
                         >
                           <ExternalLink className="h-3 w-3 mr-1" />
                           Connect Outlook
@@ -1832,10 +1832,10 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                         }
 
                         return (
-                          <div key={index} className="bg-white rounded-xl p-5 border border-gray-200 hover:shadow-xl transition-all duration-300 hover:scale-[1.01] shadow-md">
+                          <div key={index} className="bg-white rounded-xl p-5 border border-gray-200 hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] shadow-lg">
                             <div className="flex items-start gap-4">
                               {/* Event Icon */}
-                              <div className="w-10 h-10 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-xl flex items-center justify-center text-white flex-shrink-0 shadow-lg">
+                              <div className="w-10 h-10 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-xl flex items-center justify-center text-white flex-shrink-0 shadow-xl border border-white/20">
                                 <Calendar className="h-5 w-5" />
                               </div>
                               
@@ -1882,8 +1882,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                                 <div className="grid grid-cols-1 gap-4 mt-4">
                                   {/* Date & Time */}
                                   <div className="flex items-start gap-3">
-                                    <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                                      <Clock className="h-3 w-3 text-blue-600" />
+                                    <div className="w-6 h-6 bg-gradient-to-r from-[#4f46e5]/20 to-[#a855f7]/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 border border-[#4f46e5]/30">
+                                      <Clock className="h-3 w-3 text-[#4f46e5]" />
                                     </div>
                                     <div>
                                       <p className="text-sm font-semibold text-gray-700 mb-2">Date & Time</p>
@@ -1895,8 +1895,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
                                   {/* Building */}
                                   <div className="flex items-start gap-3">
-                                    <div className="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                                      <Building className="h-3 w-3 text-green-600" />
+                                    <div className="w-6 h-6 bg-gradient-to-r from-[#14b8a6]/20 to-[#3b82f6]/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 border border-[#14b8a6]/30">
+                                      <Building className="h-3 w-3 text-[#14b8a6]" />
                                     </div>
                                     <div>
                                       <p className="text-sm font-semibold text-gray-700 mb-2">Building</p>
