@@ -8,7 +8,7 @@ export default function PricingPage() {
   const tiers = [
     {
       name: "Starter (Trial)",
-      price: "£104",
+      price: "£104*",
       period: "/month",
       badge: "Best to try now",
       description:
@@ -26,7 +26,7 @@ export default function PricingPage() {
     },
     {
       name: "Growth",
-      price: "£1,575",
+      price: "£1,575*",
       period: "/month",
       badge: "Most popular",
       description:
@@ -45,7 +45,7 @@ export default function PricingPage() {
     },
     {
       name: "Enterprise",
-      price: "Custom",
+      price: "Custom*",
       period: "",
       badge: "Housing associations",
       description:
@@ -64,9 +64,9 @@ export default function PricingPage() {
   ];
 
   const extras = [
-    { name: "Lease Reader (OCR + AI)", detail: "Extract clauses, dates, parties from scanned or digital leases.", price: "£0.11–£0.26 per page or £52/building/month pack" },
-    { name: "Outlook Add-in", detail: "AI reply drafts, summarise, file to building/unit, link emails to records.", price: "£5.25/user/month (min 10)" },
-    { name: "Compliance Pro", detail: "Automated reminders, calendar sync, PDF ingestion to compliance items.", price: "£209/building/month" },
+    { name: "Lease Reader (OCR + AI)", detail: "Extract clauses, dates, parties from scanned or digital leases.", price: "£0.11–£0.26* per page or £52*/building/month pack" },
+    { name: "Outlook Add-in", detail: "AI reply drafts, summarise, file to building/unit, link emails to records.", price: "£5.25*/user/month (min 10)" },
+    { name: "Compliance Pro", detail: "Automated reminders, calendar sync, PDF ingestion to compliance items.", price: "£209*/building/month" },
     { name: "Custom Integrations", detail: "Qube/MRI/third-party connectors, single sign-on, procurement exports.", price: "POA" },
   ];
 
@@ -78,6 +78,14 @@ export default function PricingPage() {
           <p className="mt-3 text-slate-600">
             Simple subscription with an optional one-off implementation fee. Start small, scale easily.
           </p>
+          
+          {/* Example Pricing Notice */}
+          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4 max-w-2xl mx-auto">
+            <p className="text-blue-800 text-sm font-medium">
+              Example Pricing Structure - The pricing shown below are examples only. Contact us for current rates and personalized quotes.
+            </p>
+          </div>
+          
           <div className="mt-4 flex items-center justify-center gap-3 text-sm">
             <Link href="/onboarding" className="underline">See onboarding</Link>
             <span className="text-slate-400">•</span>
@@ -106,7 +114,7 @@ export default function PricingPage() {
                   <p className="text-slate-600">From £5,250 – integrations & custom setup</p>
                 </div>
               </div>
-              <p className="mt-2 text-xs text-slate-500">Pricing excludes VAT. Annual discounts available.</p>
+              <p className="mt-2 text-xs text-slate-500">*Example pricing excludes VAT. Annual discounts available. Contact us for current rates.</p>
               <div className="mt-4">
                 <Link href="/onboarding">
                   <Button className="rounded-xl">
@@ -174,10 +182,10 @@ export default function PricingPage() {
 
         <div className="mt-12 text-center text-sm text-slate-600">
           <p>
-            <strong>Note:</strong> Solo property managers can sign up online soon. For now, start with{" "}
+            <strong>Note:</strong> Pricing shown are examples only. Solo property managers can sign up online soon. For now, start with{" "}
             <Link href="/onboarding" className="underline">Onboarding</Link> or email{" "}
-            <a className="underline" href="mailto:hello@blociq.co.uk">hello@blociq.co.uk</a>.
-            Larger firms and housing associations should contact us directly for Enterprise pricing.
+            <a className="underline" href="mailto:hello@blociq.co.uk">hello@blociq.co.uk</a>{" "}
+            for current pricing. Larger firms and housing associations should contact us directly for Enterprise quotes.
           </p>
         </div>
       </section>
