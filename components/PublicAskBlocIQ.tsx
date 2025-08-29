@@ -5,6 +5,14 @@ import { Send, Loader2, X, Brain, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import AIChatDisclaimer from '@/components/ui/AIChatDisclaimer';
 
+// Centralized hero banner text constants
+const HERO_BANNER_CONFIG = {
+  title: "Ask BlocIQ – Your AI Property Assistant",
+  subtitle: "Professional UK Property Management AI",
+  welcomeTitle: "Welcome to Ask BlocIQ",
+  welcomeSubtitle: "Your professional AI property management assistant"
+} as const;
+
 type Message = {
   id: string;
   role: 'user' | 'assistant';
@@ -228,8 +236,8 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
               <Brain className="h-7 w-7 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold">Ask BlocIQ – Your AI Property Assistant</h2>
-              <p className="text-white/80 text-sm mt-1">Professional UK Property Management AI</p>
+              <h2 className="text-xl font-bold">{HERO_BANNER_CONFIG.title}</h2>
+              <p className="text-white/80 text-sm mt-1">{HERO_BANNER_CONFIG.subtitle}</p>
             </div>
           </div>
         </div>
@@ -238,14 +246,18 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
         <div className="flex-1 flex flex-col">
           {!hasSubmittedEmail ? (
             /* Email Capture Form - Enhanced Layout for Larger Modal */
-            <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 relative">
+            <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 hover:scrollbar-thumb-gray-500 scrollbar-track-gray-100 relative scroll-smooth">
+              {/* Scroll indicator */}
+              <div className="absolute top-2 right-4 z-10 bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-medium shadow-sm animate-pulse">
+                Scroll for more info ↕️
+              </div>
               <div className="p-8 lg:p-12 max-w-3xl mx-auto">
               <div className="text-center mb-8">
                 <div className="w-16 h-16 bg-gradient-to-r from-pink-500 via-teal-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-6">
                   <Mail className="h-8 w-8 text-white" />
                 </div>
-                <h3 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-4">Welcome to Ask BlocIQ</h3>
-                <p className="text-lg text-gray-600 mb-6">Your professional AI property management assistant</p>
+                <h3 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-4">{HERO_BANNER_CONFIG.welcomeTitle}</h3>
+                <p className="text-lg text-gray-600 mb-6">{HERO_BANNER_CONFIG.welcomeSubtitle}</p>
                 <div className="text-gray-600 text-base space-y-6 mb-8 text-center max-w-4xl mx-auto">
                   <p className="text-center leading-relaxed">You are welcome to try our Ask BlocIQ AI. This is BlocIQ's own secure, ring-fenced AI service — designed specifically for UK leasehold property management.</p>
                   <p className="text-center leading-relaxed">All information you input and receive is GDPR-safe, confidential, and never shared with third parties. Your chats stay private, and the service runs on a secure UK-based server.</p>
@@ -270,14 +282,18 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
                     <button
                       type="submit"
                       disabled={isSubmittingEmail || !email.trim()}
-                      className="w-full py-4 text-lg bg-gradient-to-r from-pink-500 via-teal-500 to-blue-500 hover:from-pink-600 hover:via-teal-600 hover:to-blue-600 disabled:from-gray-300 disabled:to-gray-400 text-white rounded-lg font-semibold transition-all disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none max-w-md mx-auto"
+                      className="w-full py-4 px-6 text-lg bg-gradient-to-r from-pink-500 via-teal-500 to-blue-500 hover:from-pink-600 hover:via-teal-600 hover:to-blue-600 disabled:from-gray-300 disabled:to-gray-400 text-white rounded-lg font-semibold transition-all disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none max-w-md mx-auto focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                      aria-label="Submit email to start using Ask BlocIQ"
                     >
                       {isSubmittingEmail ? (
-                        <Loader2 className="h-6 w-6 animate-spin" />
+                        <>
+                          <Loader2 className="h-6 w-6 animate-spin" />
+                          <span>Starting...</span>
+                        </>
                       ) : (
                         <>
                           <Brain className="h-6 w-6" />
-                          Start Using Ask BlocIQ
+                          <span>Start Using Ask BlocIQ</span>
                         </>
                       )}
                     </button>
@@ -413,21 +429,28 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
         }
         
         .scrollbar-thin::-webkit-scrollbar {
-          width: 8px;
+          width: 12px;
         }
         
         .scrollbar-thin::-webkit-scrollbar-track {
           background: #f3f4f6;
-          border-radius: 4px;
+          border-radius: 6px;
+          border: 1px solid #e5e7eb;
         }
         
         .scrollbar-thin::-webkit-scrollbar-thumb {
-          background: #d1d5db;
-          border-radius: 4px;
+          background: #9ca3af;
+          border-radius: 6px;
+          border: 1px solid #6b7280;
         }
         
         .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-          background: #9ca3af;
+          background: #6b7280;
+          border-color: #374151;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar-thumb:active {
+          background: #4b5563;
         }
         
         .scrollbar-thin::-webkit-scrollbar-corner {

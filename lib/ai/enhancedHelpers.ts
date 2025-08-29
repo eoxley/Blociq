@@ -31,7 +31,7 @@ export async function getLeaseholderInfo(supabase: any, unit: string, building: 
       supabase
         .from('vw_units_leaseholders')
         .select('*')
-        .eq('unit_number', unit)
+        .or(`unit_number.eq.${unit},unit_number.eq.Flat ${unit}`)
         .ilike('building_name', `%${building}%`),
       
       supabase
@@ -183,7 +183,7 @@ export async function getServiceChargeInfo(supabase: any, unit: string, building
     const { data, error } = await supabase
       .from('vw_units_leaseholders')
       .select('*')
-      .eq('unit_number', unit)
+      .or(`unit_number.eq.${unit},unit_number.eq.Flat ${unit}`)
       .ilike('building_name', `%${building}%`)
       .single();
 
