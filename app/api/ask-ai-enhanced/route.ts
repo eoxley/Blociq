@@ -36,11 +36,28 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if this is a database query first
-    if (isPropertyQuery(userQuestion)) {
-      console.log('🔍 Database query detected, searching database first:', userQuestion);
+    console.log('🔍 Checking if property query for:', userQuestion);
+    const isDbQuery = isPropertyQuery(userQuestion);
+    console.log('🔍 isPropertyQuery result:', isDbQuery);
+    
+    if (isDbQuery) {
+      console.log('🎯 Database query detected! Searching database first:', userQuestion);
+      console.log('🔍 Query details:', {
+        query: userQuestion,
+        isProperty: isDbQuery,
+        length: userQuestion?.length,
+        type: typeof userQuestion
+      });
       
       try {
+        console.log('🚀 Starting database search...');
         const databaseResults = await searchAllRelevantTables(supabase, userQuestion);
+        console.log('📊 Database search completed. Result keys:', Object.keys(databaseResults));
+        console.log('📊 Database results summary:', {
+          totalTables: Object.keys(databaseResults).length,
+          tablesWithData: Object.keys(databaseResults).filter(table => databaseResults[table].length > 0),
+          totalRecords: Object.values(databaseResults).reduce((sum, arr) => sum + arr.length, 0)
+        });
         
         if (Object.keys(databaseResults).length > 0) {
           console.log('✅ Database search successful, found data in tables:', Object.keys(databaseResults));
@@ -59,11 +76,14 @@ export async function POST(request: NextRequest) {
           });
         } else {
           console.log('ℹ️ Database search returned no results, proceeding with AI processing');
+          console.log('🔍 Empty database results details:', JSON.stringify(databaseResults, null, 2));
         }
       } catch (dbError) {
         console.error('❌ Database search failed:', dbError);
         console.log('🔄 Continuing with AI processing due to database error');
       }
+    } else {
+      console.log('ℹ️ Not a property query, proceeding with standard AI processing');
     }
 
     let enhancedPrompt = userQuestion;

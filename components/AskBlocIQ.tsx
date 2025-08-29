@@ -26,6 +26,7 @@ type UploadedFile = {
   name: string;
   size: number;
   type: string;
+  status: 'uploading' | 'completed' | 'error';
   extractionMethod?: 'ocr' | 'enhanced' | 'standard'; // Added for extraction method
 };
 
@@ -250,11 +251,12 @@ export default function AskBlocIQ({
     for (const file of fileArray) {
       if (validateFile(file)) {
         const fileData: UploadedFile = {
-          id: Date.now() + Math.random(),
+          id: (Date.now() + Math.random()).toString(),
           file,
           name: file.name,
           type: file.type,
           size: file.size,
+          status: 'uploading',
           extractionMethod: 'standard'
         };
         
@@ -1021,12 +1023,12 @@ export default function AskBlocIQ({
         </div>
 
         {/* Input Area */}
-        <div className="border-t p-6">
+        <div className="border-t border-gray-200 p-6 bg-white">
           {/* Uploaded Files */}
           {uploadedFiles.length > 0 && (
             <div className="mb-4 space-y-2">
               {uploadedFiles.map(file => {
-                const processingFile = processingFiles.find(pf => pf.id === file.id);
+                const processingFile = processingFiles.find(pf => pf === file.id);
                 return (
                   <div key={file.id} className={`flex items-center justify-between p-3 rounded-xl border ${
                     file.status === 'completed' ? 'border-green-200 bg-green-50' : 'border-yellow-200 bg-yellow-50'
@@ -1053,7 +1055,8 @@ export default function AskBlocIQ({
             </div>
           )}
 
-          <div className="flex items-end gap-3">
+          {/* Input Container - Aligned with chat content */}
+          <div className="flex items-end gap-3 max-w-4xl mx-auto">
             {/* File Upload */}
             <button
               onClick={() => fileInputRef.current?.click()}
@@ -1070,7 +1073,7 @@ export default function AskBlocIQ({
               className="hidden"
             />
             
-            {/* Text Input */}
+            {/* Text Input - Centered and aligned with chat content */}
             <div className="flex-1 relative">
               <textarea
                 ref={textareaRef}
@@ -1086,7 +1089,7 @@ export default function AskBlocIQ({
                   `Ask about ${buildingContext.name}, upload documents, or request analysis...` :
                   placeholder || "Ask me anything about your properties, leases, or compliance..."
                 }
-                className="w-full px-5 py-4 pr-16 bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-3 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 resize-none"
+                className="w-full px-5 py-4 pr-16 bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-3 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 resize-none shadow-sm"
                 style={{ minHeight: '56px', maxHeight: '200px' }}
                 rows={1}
               />
@@ -1098,7 +1101,7 @@ export default function AskBlocIQ({
               disabled={!question.trim() && uploadedFiles.filter(f => f.status === 'completed').length === 0}
               className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
                 (question.trim() || uploadedFiles.filter(f => f.status === 'completed').length > 0)
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-lg transform hover:scale-105'
+                  ? 'bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white hover:shadow-lg transform hover:scale-105'
                   : 'bg-gray-200 text-gray-400 cursor-not-allowed'
               }`}
             >
@@ -1106,8 +1109,8 @@ export default function AskBlocIQ({
             </button>
           </div>
           
-          {/* Status Bar */}
-          <div className="flex items-center justify-between mt-4 text-xs text-gray-500">
+          {/* Status Bar - Centered and aligned */}
+          <div className="flex items-center justify-between mt-4 text-xs text-gray-500 max-w-4xl mx-auto">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
