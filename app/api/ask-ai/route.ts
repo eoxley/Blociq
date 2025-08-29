@@ -775,28 +775,53 @@ export async function POST(req: Request) {
         break;
         
       default:
-        // For general queries, use OpenAI
+        // For general queries, use comprehensive property management AI
         try {
+          const { detectPropertyManagementContext, buildPropertyManagementPrompt } = await import('@/lib/ai/propertyManagementPrompts');
+          
+          // Detect the type of property management query
+          const pmContext = detectPropertyManagementContext(userQuery);
+          console.log('Property management context detected:', pmContext);
+          
+          // Build comprehensive system prompt based on context
+          const systemPrompt = buildPropertyManagementPrompt(pmContext, userQuery, contextData?.building);
+          
           const openai = getOpenAIClient();
           
           const completion = await openai.chat.completions.create({
-            model: 'gpt-4o-mini',
+            model: 'gpt-4o',
             messages: [{
               role: 'system',
-              content: 'You are BlocIQ, a UK property management assistant. Help with leasehold property questions, compliance, and building management.'
+              content: systemPrompt
             }, {
               role: 'user',
               content: userQuery
             }],
             temperature: 0.3,
-            max_tokens: 1000
+            max_tokens: 2000
           });
           
           response = completion.choices[0].message?.content || 'I apologize, but I couldn\'t generate a response.';
           
         } catch (openaiError) {
           console.error('OpenAI error:', openaiError);
-          response = responseGenerator.generateGeneralResponse(userQuery);
+          // Fallback to basic response
+          const openai = getOpenAIClient();
+          
+          const fallbackCompletion = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [{
+              role: 'system',
+              content: 'You are BlocIQ, a comprehensive UK property management assistant. You can help with notice generation, letter drafting, compliance documents, calculations, email responses, and UK property law guidance. Always provide professional, legally appropriate responses using British English and current UK property management regulations.'
+            }, {
+              role: 'user',
+              content: userQuery
+            }],
+            temperature: 0.3,
+            max_tokens: 1500
+          });
+          
+          response = fallbackCompletion.choices[0].message?.content || responseGenerator.generateGeneralResponse(userQuery);
         }
     }
 
