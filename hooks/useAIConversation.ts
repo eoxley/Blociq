@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
+import { processFileWithOCR } from '@/lib/utils/processFileWithOCR';
 import { analyzeDocument, ComprehensiveDocumentAnalysis } from '../lib/document-analysis-orchestrator';
-import { processFileWithOCR, batchProcessOCR } from '../lib/ocr-integration';
 
 interface Message {
   id: string;
@@ -93,10 +93,10 @@ export function useAIConversation(): UseAIConversationReturn {
         
         // Build enhanced content from OCR results and document analysis
         for (let i = 0; i < files.length; i++) {
-          const file = files[i];
+          const file = files.length > 0 ? files[i] : null;
           const ocrResult = ocrResults[i];
           
-          if (ocrResult.success) {
+          if (file && ocrResult.success) {
             allOcrText += `\n\n--- ${file.name} ---\n${ocrResult.text}\n`;
             
             // Perform comprehensive document analysis
@@ -104,20 +104,20 @@ export function useAIConversation(): UseAIConversationReturn {
               const analysis = await analyzeDocument(ocrResult.text, file.name, content.trim());
               documentAnalyses.push(analysis);
               
-                          // Use the AI prompt from document analysis
-            enhancedContent = analysis.aiPrompt;
-            console.log('🔍 Document analysis AI prompt:', {
-              filename: file.name,
-              promptLength: analysis.aiPrompt?.length || 0,
-              hasExtractedText: !!analysis.extractedText,
-              extractedTextLength: analysis.extractedText?.length || 0
-            });
+              // Use the AI prompt from document analysis
+              enhancedContent = analysis.aiPrompt;
+              console.log('🔍 Document analysis AI prompt:', {
+                filename: file.name,
+                promptLength: analysis.aiPrompt?.length || 0,
+                hasExtractedText: !!analysis.extractedText,
+                extractedTextLength: analysis.extractedText?.length || 0
+              });
             } catch (analysisError) {
               console.error('Document analysis failed:', analysisError);
               // Fallback to basic OCR text
               enhancedContent += `\n\nDocument: ${file.name}\nExtracted Text: ${ocrResult.text.substring(0, 2000)}${ocrResult.text.length > 2000 ? '...' : ''}`;
             }
-          } else {
+          } else if (file) {
             enhancedContent += `\n\nDocument: ${file.name}\nOCR Processing Failed: ${ocrResult.error}`;
           }
         }
@@ -173,15 +173,16 @@ export function useAIConversation(): UseAIConversationReturn {
           setConversationId(data.conversationId);
         }
       } else {
-        // Use enhanced assistant-query endpoint for text-only queries
-        const response = await fetch('/api/assistant-query', {
+        // Use the new document-aware AI endpoint for text-only queries
+        const response = await fetch('/api/ask-ai-document-aware', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            userQuestion: content.trim(),
-            useMemory,
+            question: content.trim(),
+            buildingId: null, // Will be determined by context
+            documentIds: [], // Will search for relevant documents
             conversationId: conversationId || undefined
           })
         });
@@ -195,7 +196,7 @@ export function useAIConversation(): UseAIConversationReturn {
         const aiMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: data.answer || 'No response received',
+          content: data.response || 'No response received',
           timestamp: new Date()
         };
         setMessages(prev => [...prev, aiMessage]);
@@ -203,34 +204,21 @@ export function useAIConversation(): UseAIConversationReturn {
         if (data.conversationId && !conversationId) {
           setConversationId(data.conversationId);
         }
-
-        if (data.memoryContext) {
-          setMemoryContext(data.memoryContext);
-        }
       }
     } catch (error) {
       console.error('Error sending message:', error);
       
-      // Update OCR status to failed if there was an error
-      if (files.length > 0) {
-        setMessages(prev => prev.map(msg => 
-          msg.id === userMessage.id 
-            ? { ...msg, ocrStatus: 'failed' }
-            : msg
-        ));
-      }
-      
-      setIsProcessingOCR(false);
-      
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'Sorry, I encountered an error. Please try again.',
+        content: "I'm sorry, I encountered an error while processing your message. Please try again.",
         timestamp: new Date()
       };
+      
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+      setIsProcessingOCR(false);
     }
   }, [conversationId, useMemory]);
 

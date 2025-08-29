@@ -204,7 +204,7 @@ class BuildingContextService {
             .limit(10);
             
           if (alternativeQuery.data && alternativeQuery.data.length > 0) {
-            buildings = alternativeQuery.data;
+            let buildings = alternativeQuery.data;
             console.log(`Found ${buildings.length} buildings with alternative search`);
           }
         }
@@ -216,7 +216,7 @@ class BuildingContextService {
             .select('name, address')
             .limit(5);
             
-          const suggestions = suggestionQuery.data?.map(b => `${b.name} (${b.address})`).join(', ') || '';
+          const suggestions = suggestionQuery.data?.map((b: any) => `${b.name} (${b.address})`).join(', ') || '';
           
           return { 
             success: false,
@@ -279,7 +279,7 @@ class BuildingContextService {
         },
         units: units || [],
         totalUnits: units?.length || 0,
-        hasLeaseholders: units?.some(unit => 
+        hasLeaseholders: units?.some((unit: any) => 
           // Handle both view structure and old nested structure
           unit.leaseholder_name || unit.leaseholder_id || 
           (unit.leaseholders && unit.leaseholders.length > 0)
@@ -377,7 +377,7 @@ class BuildingContextService {
       
       // Get additional stats for each building
       const buildingsWithStats = await Promise.all(
-        buildings.map(async (building) => {
+        buildings.map(async (building: any) => {
           try {
             // Get leaseholder count
             const leaseholdersQuery = await this.supabase
@@ -407,7 +407,7 @@ class BuildingContextService {
         success: true,
         buildings: buildingsWithStats,
         totalBuildings: buildings.length,
-        totalUnits: buildings.reduce((sum, b) => sum + (b.unit_count || 0), 0)
+        totalUnits: buildings.reduce((sum: number, b: any) => sum + (b.unit_count || 0), 0)
       };
       
     } catch (error) {
@@ -859,7 +859,38 @@ The document contains ${documentText.length} characters of text. For the most he
 I can help with various property management documents including tenancy agreements, service charge statements, building reports, and legal notices.`;
       }
     }
-    // 2. COMPREHENSIVE DATABASE-FIRST APPROACH - FORCE ALL QUERIES TO CHECK DATABASE FIRST
+    // 2. CHECK FOR DOCUMENT-RELATED QUERIES AND REDIRECT TO DOCUMENT-AWARE ENDPOINT
+    else if (isDocumentQuery(userQuery)) {
+      console.log("📄 Document query detected - redirecting to document-aware endpoint");
+      
+      try {
+        // Call the document-aware endpoint
+        const docResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ask-ai-document-aware`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            question: userQuery,
+            buildingId,
+            documentIds: [],
+            conversationId: null
+          }),
+        });
+
+        if (docResponse.ok) {
+          const docData = await docResponse.json();
+          response = docData.response || 'Document analysis completed.';
+        } else {
+          throw new Error('Document-aware endpoint failed');
+        }
+      } catch (docError) {
+        console.error('Document-aware endpoint error:', docError);
+        // Fall back to regular processing
+        response = await processRegularQuery(supabase, userQuery, buildingId);
+      }
+    }
+    // 3. COMPREHENSIVE DATABASE-FIRST APPROACH - FORCE ALL QUERIES TO CHECK DATABASE FIRST
     else {
       console.log("🎯 IMPLEMENTING COMPREHENSIVE DATABASE-FIRST APPROACH");
       
@@ -999,6 +1030,44 @@ What would you like to know?`;
       details: error.message
     }, { status: 500 });
   }
+}
+
+/**
+ * Check if the query is document-related
+ */
+function isDocumentQuery(query: string): boolean {
+  const queryLower = query.toLowerCase();
+  const documentKeywords = [
+    'document', 'lease', 'contract', 'agreement', 'report', 'certificate',
+    'assessment', 'survey', 'inspection', 'compliance', 'policy', 'notice',
+    'letter', 'correspondence', 'file', 'upload', 'scan', 'pdf', 'text',
+    'content', 'summary', 'extract', 'analyze', 'review', 'read'
+  ];
+  
+  return documentKeywords.some(keyword => queryLower.includes(keyword));
+}
+
+/**
+ * Process regular query when document-aware endpoint fails
+ */
+async function processRegularQuery(supabase: any, userQuery: string, buildingId?: string): Promise<string> {
+  // Fallback to regular processing logic
+  // This would contain the existing database-first logic
+  return `I can help you with property management questions. For specific information about leaseholders, units, or buildings, I'll search the database first.
+
+**Database-First Queries:**
+• "Who is the leaseholder of unit 5 at Ashwood House?"
+• "What are the access codes for Ashwood House?"
+• "What is the service charge for unit 3 at Oak Court?"
+• "What buildings do we manage?"
+
+**General Property Management:**
+• Section 20 notices and procedures
+• Leasehold law and regulations
+• Service charge calculations
+• Letter templates and notices
+
+What would you like to know?`;
 }
 
 // Handle file upload response with comprehensive lease analysis

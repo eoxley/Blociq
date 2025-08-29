@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
 
     let enhancedPrompt = userQuestion;
     const documentAnalyses: any[] = [];
+    const processedDocuments: any[] = [];
 
     // 3. Process files through OCR and store in database
     if (files.length > 0) {
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
           const ocrResult = await ocrResponse.json();
           
           if (ocrResult.text) {
-            // Store document in building_documents table
+            // Store document in building_documents table with full text content
             const { data: document, error: docError } = await supabase
               .from('building_documents')
               .insert({
@@ -67,6 +68,8 @@ export async function POST(request: NextRequest) {
                 file_name: file.name,
                 file_url: `ocr_processed_${Date.now()}_${file.name}`, // Placeholder URL
                 type: 'ocr_processed',
+                full_text: ocrResult.text, // Store the full OCR text
+                content_summary: ocrResult.text.substring(0, 500) + '...', // Basic summary
                 created_at: new Date().toISOString()
               })
               .select()
@@ -77,7 +80,7 @@ export async function POST(request: NextRequest) {
               continue;
             }
 
-            // Store OCR text in document_chunks table
+            // Store OCR text in document_chunks table for searchability
             await supabase
               .from('document_chunks')
               .insert({
@@ -119,10 +122,28 @@ export async function POST(request: NextRequest) {
               // Use the AI prompt from document analysis
               enhancedPrompt = analysis.aiPrompt;
               
+              // Store the processed document info
+              processedDocuments.push({
+                id: document.id,
+                filename: file.name,
+                type: analysis.documentType,
+                summary: analysis.summary,
+                extractedText: ocrResult.text
+              });
+              
             } catch (analysisError) {
               console.error('Document analysis failed:', analysisError);
               // Fallback to basic OCR text
               enhancedPrompt += `\n\nDocument: ${file.name}\nExtracted Text: ${ocrResult.text.substring(0, 2000)}${ocrResult.text.length > 2000 ? '...' : ''}`;
+              
+              // Store basic document info
+              processedDocuments.push({
+                id: document.id,
+                filename: file.name,
+                type: 'unknown',
+                summary: 'OCR processing completed',
+                extractedText: ocrResult.text
+              });
             }
 
           } else {
@@ -154,6 +175,7 @@ export async function POST(request: NextRequest) {
       confidence: response.confidence,
       knowledgeUsed: response.knowledgeUsed,
       documentAnalyses: documentAnalyses,
+      processedDocuments: processedDocuments, // Include processed document info
       timestamp: new Date().toISOString(),
     });
 
