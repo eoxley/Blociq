@@ -371,10 +371,16 @@ export async function POST(req: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     
     const body = await req.json();
-    const { prompt, question, buildingId, fileUploads, buildingContext, contextType } = body;
+    const { prompt, question, buildingId, fileUploads, buildingContext, contextType, uploadedFiles } = body;
     
     // Support both 'prompt' and 'question' for compatibility
     const userQuery = prompt || question;
+
+    // Check if this is a file upload with comprehensive analysis
+    if (uploadedFiles && uploadedFiles.length > 0) {
+      console.log('🔄 Processing file upload response with comprehensive analysis');
+      return handleFileUploadResponse(uploadedFiles, userQuery, buildingId);
+    }
 
     if (!userQuery) {
       return NextResponse.json({ 
@@ -490,4 +496,199 @@ export async function POST(req: Request) {
       details: error.message
     }, { status: 500 });
   }
+}
+
+// Handle file upload response with comprehensive lease analysis
+async function handleFileUploadResponse(uploadedFiles: any[], userQuery: string, buildingId?: string) {
+  try {
+    console.log('📋 Generating comprehensive file analysis response for', uploadedFiles.length, 'files');
+    
+    let response = '';
+    
+    for (const fileAnalysis of uploadedFiles) {
+      const filename = fileAnalysis.filename || 'Document';
+      const documentType = fileAnalysis.documentType || 'unknown';
+      
+      if (documentType === 'lease' && fileAnalysis.leaseDetails) {
+        // Generate comprehensive lease analysis response
+        response += generateLeaseAnalysisResponse(fileAnalysis, filename);
+      } else {
+        // Generate general document analysis response
+        response += generateDocumentAnalysisResponse(fileAnalysis, filename);
+      }
+      
+      response += '\n\n---\n\n';
+    }
+    
+    // Add closing message
+    response += '💬 **What would you like to know?**\n\nI can answer specific questions about any details from the documents above, help you understand specific clauses, or provide guidance on property management matters.';
+    
+    console.log('✅ Generated comprehensive analysis response');
+    
+    return NextResponse.json({
+      success: true,
+      response: response.trim(),
+      documentAnalysis: true,
+      filesProcessed: uploadedFiles.length
+    });
+    
+  } catch (error) {
+    console.error('❌ Error generating file upload response:', error);
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to generate analysis response',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
+  }
+}
+
+// Generate comprehensive lease analysis response
+function generateLeaseAnalysisResponse(analysis: any, filename: string): string {
+  const details = analysis.leaseDetails || {};
+  const compliance = analysis.complianceChecklist || [];
+  const rights = analysis.keyRights || [];
+  const restrictions = analysis.restrictions || [];
+  const actions = analysis.suggestedActions || [];
+  
+  let response = `# 📋 **Comprehensive Lease Analysis - ${filename}**\n\n`;
+  
+  if (analysis.summary) {
+    response += `**📄 Document Summary:**\n${analysis.summary}\n\n`;
+  }
+  
+  // 1. LEASE SUMMARY SECTION
+  response += `## 🏠 **Lease Summary**\n\n`;
+  
+  if (details.propertyAddress) {
+    response += `**🏢 Property Address:** ${details.propertyAddress}\n`;
+  }
+  
+  if (details.leaseStartDate || details.leaseEndDate) {
+    if (details.leaseStartDate) {
+      response += `**📅 Lease Start Date:** ${details.leaseStartDate}\n`;
+    }
+    if (details.leaseEndDate) {
+      response += `**📅 Lease End Date:** ${details.leaseEndDate}\n`;
+    }
+  }
+  
+  if (details.initialRent) {
+    response += `**💰 Annual Rent:** ${details.initialRent}\n`;
+  }
+  
+  if (details.serviceCharge) {
+    response += `**🔧 Service Charge:** ${details.serviceCharge}\n`;
+  }
+  
+  if (details.premium) {
+    response += `**💎 Premium/Ground Rent:** ${details.premium}\n`;
+  }
+  
+  if (details.landlord || details.tenant) {
+    if (details.landlord) {
+      response += `**👤 Landlord/Lessor:** ${details.landlord}\n`;
+    }
+    if (details.tenant) {
+      response += `**🏠 Tenant/Lessee:** ${details.tenant}\n`;
+    }
+  }
+  
+  // 2. KEY TERMS SECTION
+  response += `\n## 📋 **Key Terms**\n\n`;
+  
+  if (details.leaseTerm) {
+    response += `**⏳ Lease Length:** ${details.leaseTerm}\n`;
+  }
+  
+  if (details.buildingType) {
+    response += `**🏗️ Property Type:** ${details.buildingType}\n`;
+  }
+  
+  // Show key rights if found
+  if (rights.length > 0) {
+    response += `**✅ Key Rights Found:**\n`;
+    rights.slice(0, 5).forEach((right: string) => {
+      response += `  • ${right}\n`;
+    });
+    if (rights.length > 5) {
+      response += `  • *...and ${rights.length - 5} more rights*\n`;
+    }
+  }
+  
+  // Show restrictions if found  
+  if (restrictions.length > 0) {
+    response += `**⚠️ Key Restrictions:**\n`;
+    restrictions.slice(0, 5).forEach((restriction: string) => {
+      response += `  • ${restriction}\n`;
+    });
+    if (restrictions.length > 5) {
+      response += `  • *...and ${restrictions.length - 5} more restrictions*\n`;
+    }
+  }
+  
+  // 3. COMPLIANCE NOTES SECTION
+  if (compliance.length > 0) {
+    response += `\n## ⚖️ **Compliance Notes**\n\n`;
+    
+    const importantCompliance = compliance.filter((item: any) => 
+      item.status === 'Y' || item.status === 'N' || 
+      item.item.toLowerCase().includes('section 20') ||
+      item.item.toLowerCase().includes('right to manage') ||
+      item.item.toLowerCase().includes('enfranchisement') ||
+      item.item.toLowerCase().includes('building safety')
+    );
+    
+    if (importantCompliance.length > 0) {
+      importantCompliance.slice(0, 8).forEach((item: any) => {
+        const status = item.status === 'Y' ? '✅' : item.status === 'N' ? '❌' : '❓';
+        response += `**${status} ${item.item}:** ${item.status}`;
+        if (item.details && item.details !== 'Analysis failed') {
+          response += ` - ${item.details}`;
+        }
+        response += '\n';
+      });
+    } else {
+      response += '*Compliance analysis in progress - specific clauses being reviewed*\n';
+    }
+  }
+  
+  // 4. SUGGESTED ACTIONS
+  if (actions.length > 0) {
+    response += `\n## 🎯 **Recommended Actions**\n\n`;
+    actions.slice(0, 6).forEach((action: any) => {
+      const label = typeof action === 'string' ? action : action.label || action.title || 'Review required';
+      response += `• ${label}\n`;
+    });
+  }
+  
+  // Add confidence indicator
+  if (analysis.confidence) {
+    const confidenceLevel = analysis.confidence > 0.7 ? 'High' : analysis.confidence > 0.4 ? 'Medium' : 'Low';
+    response += `\n*Analysis Confidence: ${confidenceLevel} (${Math.round(analysis.confidence * 100)}%)*\n`;
+  }
+  
+  return response;
+}
+
+// Generate general document analysis response
+function generateDocumentAnalysisResponse(analysis: any, filename: string): string {
+  let response = `# 📄 **Document Analysis - ${filename}**\n\n`;
+  
+  if (analysis.summary) {
+    response += `**Summary:** ${analysis.summary}\n\n`;
+  }
+  
+  if (analysis.documentType) {
+    response += `**Document Type:** ${analysis.documentType}\n\n`;
+  }
+  
+  if (analysis.suggestedActions && analysis.suggestedActions.length > 0) {
+    response += `**Recommended Actions:**\n`;
+    analysis.suggestedActions.slice(0, 5).forEach((action: any) => {
+      const label = typeof action === 'string' ? action : action.label || action.title || 'Review required';
+      response += `• ${label}\n`;
+    });
+  }
+  
+  return response;
 }
