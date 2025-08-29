@@ -420,7 +420,7 @@ export default function PublicAskBlocIQ({ isPublic = true, isVisible = false }: 
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+            <Upload className="mx-auto h-8 w-8 text-gray-500 mb-2" />
             <p className="text-sm text-gray-600 mb-2">
               Drag and drop files here, or{' '}
               <button

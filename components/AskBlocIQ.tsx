@@ -827,9 +827,10 @@ export default function AskBlocIQ({
             {/* File Upload */}
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex-shrink-0 w-12 h-12 bg-gray-100 hover:bg-gray-200 rounded-xl flex items-center justify-center transition-colors"
+              className="flex-shrink-0 w-12 h-12 bg-purple-50 hover:bg-purple-100 border-2 border-purple-200 hover:border-purple-300 rounded-xl flex items-center justify-center transition-all duration-200 hover:shadow-md"
+              title="Upload documents (PDF, DOCX, TXT, images)"
             >
-              <Paperclip className="w-5 h-5 text-gray-600" />
+              <Upload className="w-5 h-5 text-purple-600 hover:text-purple-700 transition-colors" />
             </button>
             <input
               ref={fileInputRef}
