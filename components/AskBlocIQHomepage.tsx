@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import { Send, Loader2, Sparkles, MessageCircle, Upload, FileText, X, Plus, Copy, Check, Search } from 'lucide-react'
+import { Send, Loader2, Sparkles, MessageCircle, Upload, FileText, X, Plus, Search } from 'lucide-react'
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
 import { BlocIQBadge } from '@/components/ui/blociq-badge'
@@ -411,22 +411,6 @@ export default function AskBlocIQHomepage() {
                 </div>
               </div>
               
-              {/* Copy Button for Assistant Messages */}
-              {message.role === 'assistant' && (
-                <div className="flex justify-end mt-2">
-                  <button
-                    onClick={() => copyToClipboard(message.content, message.id)}
-                    className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                    title="Copy to clipboard"
-                  >
-                    {copiedMessageId === message.id ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-              )}
             </div>
           </div>
         ))}

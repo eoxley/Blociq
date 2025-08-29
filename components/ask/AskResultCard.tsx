@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { FileText, Mail, Calendar, CheckSquare, Users, Tag, Plus } from 'lucide-react';
+import { FileText } from 'lucide-react';
 
 interface SuggestedAction {
   key: string;
@@ -46,30 +46,11 @@ interface UploadResult {
 
 interface AskResultCardProps {
   data: UploadResult;
-  onActionClick?: (action: SuggestedAction) => void;
 }
 
-export function AskResultCard({ data, onActionClick }: AskResultCardProps) {
+export function AskResultCard({ data }: AskResultCardProps) {
   const unassigned = !data?.context?.buildingId || data?.context?.buildingStatus !== 'matched';
   
-  const getIcon = (iconName?: string) => {
-    switch (iconName?.toLowerCase()) {
-      case 'mail':
-        return <Mail className="w-4 h-4" />;
-      case 'calendar':
-        return <Calendar className="w-4 h-4" />;
-      case 'check-square':
-        return <CheckSquare className="w-4 h-4" />;
-      case 'users':
-        return <Users className="w-4 h-4" />;
-      case 'tag':
-        return <Tag className="w-4 h-4" />;
-      case 'plus':
-        return <Plus className="w-4 h-4" />;
-      default:
-        return <FileText className="w-4 h-4" />;
-    }
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -97,16 +78,6 @@ export function AskResultCard({ data, onActionClick }: AskResultCardProps) {
     }
   };
 
-  const handleActionClick = (action: SuggestedAction) => {
-    if (onActionClick) {
-      onActionClick(action);
-    } else {
-      // Default handling - log to console and show toast
-      console.log('Action clicked:', action);
-      // You can add toast notification here if you have a toast system
-      alert(`Action: ${action.label} - Coming soon!`);
-    }
-  };
 
   if (!data?.success) {
     return null;
@@ -317,33 +288,6 @@ export function AskResultCard({ data, onActionClick }: AskResultCardProps) {
         </>
       )}
 
-      {/* Suggested Actions */}
-      {Array.isArray(data.suggestedActions) && data.suggestedActions.length > 0 && (
-        <div>
-          <h4 className="text-sm font-medium text-gray-700 mb-3">Suggested Actions</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {data.suggestedActions.map((action, index) => (
-              <button
-                key={index}
-                onClick={() => handleActionClick(action)}
-                className="flex items-center space-x-3 p-3 rounded-xl border border-gray-200 shadow-sm text-left hover:border-blue-300 hover:shadow-md transition-all bg-white hover:bg-blue-50"
-              >
-                <div className="text-blue-600">
-                  {getIcon(action.icon)}
-                </div>
-                <div>
-                  <div className="font-medium text-gray-900 text-sm">
-                    {action.label}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {action.key.replace('_', ' ')}
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Context info */}
       <div className="mt-6 pt-4 border-t border-gray-200">

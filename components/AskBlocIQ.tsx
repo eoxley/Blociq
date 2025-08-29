@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Calendar, Loader2, Send, Upload, FileText, X, Check, Sparkles, File, FileText as FileTextIcon, Building2, AlertTriangle, Brain, Building, AlertCircle, CheckCircle, Clock, Copy, Mail, FileDown, Paperclip } from 'lucide-react';
+import { Plus, Calendar, Loader2, Send, Upload, FileText, X, Check, Sparkles, File, FileText as FileTextIcon, Building2, AlertTriangle, Brain, Building, AlertCircle, CheckCircle, Clock, Paperclip } from 'lucide-react';
 import { toast } from 'sonner';
 import AIChatDisclaimer from '@/components/ui/AIChatDisclaimer';
 import { SuggestedAction, DocumentAnalysis } from '@/types/ai';
@@ -608,10 +608,10 @@ export default function AskBlocIQ({
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex-1 flex flex-col min-h-0 relative">
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 pb-32">
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center max-w-xl">
@@ -788,8 +788,8 @@ export default function AskBlocIQ({
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Area - Fixed positioning */}
-        <div className="border-t border-gray-200 bg-white sticky bottom-0 z-10">
+        {/* Input Area - Fixed at bottom of container */}
+        <div className="border-t border-gray-200 bg-white absolute bottom-0 left-0 right-0 z-10">
           {/* Uploaded Files */}
           {uploadedFiles.length > 0 && (
             <div className="mb-4 space-y-2">
