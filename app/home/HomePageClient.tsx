@@ -501,9 +501,11 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     
     setIsSubmitting(true)
     
-    // Add user message to chat
-    const userMessage = { sender: 'user' as const, text: prompt, timestamp: new Date() }
-    setMessages(prev => [...prev, userMessage])
+    // Add user message to chat only if there's a prompt
+    if (prompt.trim()) {
+      const userMessage = { sender: 'user' as const, text: prompt, timestamp: new Date() }
+      setMessages(prev => [...prev, userMessage])
+    }
     
     try {
       console.log('🤖 Sending request to /api/ask-ai:', { prompt, contextType: 'general' })
@@ -632,13 +634,14 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         // Show chat interface
         setShowChat(true)
         
-        // Clear input and files after submission
+        // Clear input and files after successful processing
         setAskInput('')
         setUploadedFiles([])
         setUploadStatus('')
         
-        console.log('🔍 File processing complete')
-        // Note: Removed early return to allow proper response display
+        console.log('🔍 File processing complete, displaying results')
+        // Return early since file processing is complete and results are displayed
+        return
       }
 
       // For text-only requests, use the main AI endpoint
