@@ -1,42 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { requireAuth } from '@/lib/auth/server';
 import { getOpenAIClient } from '@/lib/openai-client';
-
-interface AIEmailRequest {
-  action: 'draft' | 'summary' | 'analyse' | 'categorise' | 'suggest-reply' | 'extract-info';
-  emailId?: string;
-  emailContent?: {
-    subject: string;
-    body: string;
-    from: string;
-    receivedAt: string;
-  };
-  context?: {
-    buildingId?: string;
-    buildingName?: string;
-    previousEmails?: any[];
-    userRole?: string;
-  };
-  options?: {
-    tone?: 'professional' | 'friendly' | 'formal' | 'casual';
-    length?: 'brief' | 'standard' | 'detailed';
-    includeLegal?: boolean;
-    includeNextSteps?: boolean;
-  };
-}
+import { EmailAIRequest, EmailAIResponse, LegacyEmailRequest } from '@/lib/ai/email/types';
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
-    
-    // Get authenticated user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // Use consolidated authentication
+    const { supabase, user } = await requireAuth();
 
-    const { action, emailId, emailContent, context, options }: AIEmailRequest = await req.json();
+    const requestBody = await req.json();
+    
+    // Support both new unified format and legacy format
+    const { action, emailId, emailContent, context, options } = requestBody as EmailAIRequest | LegacyEmailRequest;
 
     if (!action) {
       return NextResponse.json({ error: 'Action is required' }, { status: 400 });
@@ -219,18 +194,38 @@ export async function POST(req: NextRequest) {
       console.error('Failed to log AI interaction:', logError);
     }
 
-    return NextResponse.json({
+    // Create unified response format
+    const response: EmailAIResponse = {
       success: true,
       action,
-      result,
-      timestamp: new Date().toISOString()
-    });
+      content: result,
+      metadata: {
+        processingTime: Date.now() - Date.now(), // TODO: track actual processing time
+        timestamp: new Date().toISOString(),
+        confidence: 0.85, // Default confidence
+        userId: user.id,
+        emailId: emailId,
+        tokensUsed: completion.usage?.total_tokens,
+        model: 'gpt-4'
+      }
+    };
+
+    return NextResponse.json(response);
 
   } catch (error) {
     console.error('AI Email Assistant error:', error);
-    return NextResponse.json({
-      error: 'Failed to process AI request',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    
+    const errorResponse: EmailAIResponse = {
+      success: false,
+      action: 'analyze', // fallback action
+      error: error instanceof Error ? error.message : 'Unknown error',
+      metadata: {
+        processingTime: 0,
+        timestamp: new Date().toISOString(),
+        confidence: 0
+      }
+    };
+    
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 } 

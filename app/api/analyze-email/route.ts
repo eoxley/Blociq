@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { requireAuth } from '@/lib/auth/server';
 import { getOpenAIClient } from '@/lib/openai-client';
 
 interface AnalyseEmailRequest {
@@ -19,13 +18,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const supabase = createRouteHandlerClient({ cookies });
-
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // Use consolidated authentication
+    const { supabase, user } = await requireAuth();
 
     // Get all buildings for matching
     const { data: buildings } = await supabase
