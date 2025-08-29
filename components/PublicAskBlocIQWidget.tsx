@@ -35,7 +35,7 @@ export default function PublicAskBlocIQWidget() {
   return (
     <>
       {/* Floating Button - Fixed bottom-6 right-6, 64x64px circular */}
-      <div className="fixed bottom-6 right-6 z-40">
+      <div className="fixed bottom-6 right-6 z-[60]">
         <div className="relative">
           {/* Pulsating animation */}
           <div className="absolute inset-0 w-16 h-16 rounded-full bg-gradient-to-r from-pink-500 via-teal-500 via-purple-500 to-blue-500 opacity-75 animate-ping"></div>
