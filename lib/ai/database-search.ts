@@ -56,7 +56,9 @@ export const searchAllRelevantTables = async (
                 queryLower.includes('contact') ||
                 queryLower.includes('email') ||
                 queryLower.includes('phone') ||
-                /unit\s*\d+/.test(queryLower),
+                /\d+/.test(queryLower) || // Any number (including unit numbers)
+                queryLower.includes('flat') || // Include "flat" keyword
+                queryLower.includes('unit'), // Include "unit" keyword
       columns: 'unit_number, unit_label, leaseholder_name, leaseholder_email, leaseholder_phone, building_name, building_id, is_director, director_role',
       limit: 50
     },
@@ -166,8 +168,8 @@ export const searchAllRelevantTables = async (
           .limit(search.limit);
 
         // Special handling for leaseholder queries to search across buildings
-        if (search.table === 'vw_units_leaseholders' && (queryLower.includes('ashwood') || queryLower.includes('5'))) {
-          console.log('🔍 Special leaseholder search for Ashwood House unit 5');
+        if (search.table === 'vw_units_leaseholders' && (queryLower.includes('ashwood') || queryLower.includes('5') || queryLower.includes('flat'))) {
+          console.log('🔍 Special leaseholder search for Ashwood House and unit queries');
           
           // Try to find the building first
           const { data: buildings } = await supabase
@@ -180,12 +182,12 @@ export const searchAllRelevantTables = async (
             const buildingId = buildings[0].id;
             console.log('🏢 Found building:', buildings[0].name, 'ID:', buildingId);
             
-            // Search for units in this building
+            // Search for units in this building - handle both "5" and "Flat 5" formats
             const { data: units } = await supabase
               .from('units')
               .select('id, unit_number, unit_label, building_id')
               .eq('building_id', buildingId)
-              .or('unit_number.eq.5,unit_number.ilike.%5%')
+              .or('unit_number.eq.5,unit_number.ilike.%5%,unit_number.ilike.%flat%5%,unit_number.ilike.%Flat%5%')
               .limit(10);
             
             if (units && units.length > 0) {
@@ -204,21 +206,35 @@ export const searchAllRelevantTables = async (
                 // Return combined data
                 return { 
                   table: 'vw_units_leaseholders', 
-                  data: leaseholders.map(lh => ({
-                    unit_number: units.find(u => u.id === lh.unit_id)?.unit_number || 'Unknown',
-                    unit_label: units.find(u => u.id === lh.unit_id)?.unit_label || 'Unknown',
-                    leaseholder_name: lh.name,
-                    leaseholder_email: lh.email,
-                    leaseholder_phone: lh.phone_number,
-                    building_name: buildings[0].name,
-                    building_id: buildingId,
-                    is_director: lh.is_director,
-                    director_role: lh.director_role
-                  })),
+                  data: leaseholders.map(lh => {
+                    const unit = units.find(u => u.id === lh.unit_id);
+                    const building = buildings[0];
+                    
+                    return {
+                      unit_number: unit?.unit_number || 'Unknown',
+                      unit_label: unit?.unit_label || 'Unknown',
+                      leaseholder_name: lh.name,
+                      leaseholder_email: lh.email,
+                      leaseholder_phone: lh.phone_number,
+                      building_name: building.name,
+                      building_id: buildingId,
+                      is_director: lh.is_director,
+                      director_role: lh.director_role
+                    };
+                  }),
                   error: null 
                 };
+              } else {
+                console.log('ℹ️ No leaseholders found for these units');
+                return { table: 'vw_units_leaseholders', data: [], error: null };
               }
+            } else {
+              console.log('ℹ️ No units found for this building');
+              return { table: 'vw_units_leaseholders', data: [], error: null };
             }
+          } else {
+            console.log('ℹ️ No Ashwood building found');
+            return { table: 'vw_units_leaseholders', data: [], error: null };
           }
         }
 
@@ -241,32 +257,52 @@ export const searchAllRelevantTables = async (
         const { data, error } = await query;
         
         // If the view doesn't exist, try fallback searches for leaseholder data
-        if (search.table === 'vw_units_leaseholders' && error && error.message.includes('relation') && error.message.includes('does not exist')) {
+        if (search.table === 'vw_units_leaseholders' && error && (error.message.includes('relation') || error.message.includes('does not exist') || error.message.includes('view'))) {
           console.log('🔄 View vw_units_leaseholders not found, trying fallback search...');
+          console.log('❌ View error details:', error.message);
           
           try {
             // Try to search units and leaseholders separately
-            const { data: units } = await supabase
+            console.log('🔍 Fallback: Searching units table...');
+            const { data: units, error: unitsError } = await supabase
               .from('units')
               .select('id, unit_number, unit_label, building_id')
               .limit(50);
             
+            if (unitsError) {
+              console.error('❌ Units table search failed:', unitsError);
+              return { table: 'vw_units_leaseholders', data: [], error: unitsError };
+            }
+            
             if (units && units.length > 0) {
+              console.log('✅ Found', units.length, 'units, searching for leaseholders...');
               const unitIds = units.map(u => u.id);
               
-              const { data: leaseholders } = await supabase
+              const { data: leaseholders, error: leaseholdersError } = await supabase
                 .from('leaseholders')
                 .select('id, name, email, phone_number, unit_id, is_director, director_role')
                 .in('unit_id', unitIds)
                 .limit(50);
               
+              if (leaseholdersError) {
+                console.error('❌ Leaseholders table search failed:', leaseholdersError);
+                return { table: 'vw_units_leaseholders', data: [], error: leaseholdersError };
+              }
+              
               if (leaseholders && leaseholders.length > 0) {
+                console.log('✅ Found', leaseholders.length, 'leaseholders, getting building names...');
+                
                 // Get building names for the units
                 const buildingIds = [...new Set(units.map(u => u.building_id))];
-                const { data: buildings } = await supabase
+                const { data: buildings, error: buildingsError } = await supabase
                   .from('buildings')
                   .select('id, name')
                   .in('id', buildingIds);
+                
+                if (buildingsError) {
+                  console.error('❌ Buildings table search failed:', buildingsError);
+                  return { table: 'vw_units_leaseholders', data: [], error: buildingsError };
+                }
                 
                 // Combine the data
                 const combinedData = leaseholders.map(lh => {
@@ -288,10 +324,17 @@ export const searchAllRelevantTables = async (
                 
                 console.log('✅ Fallback search successful, found', combinedData.length, 'leaseholders');
                 return { table: 'vw_units_leaseholders', data: combinedData, error: null };
+              } else {
+                console.log('ℹ️ No leaseholders found in fallback search');
+                return { table: 'vw_units_leaseholders', data: [], error: null };
               }
+            } else {
+              console.log('ℹ️ No units found in fallback search');
+              return { table: 'vw_units_leaseholders', data: [], error: null };
             }
           } catch (fallbackError) {
             console.error('❌ Fallback search failed:', fallbackError);
+            return { table: 'vw_units_leaseholders', data: [], error: fallbackError };
           }
         }
         

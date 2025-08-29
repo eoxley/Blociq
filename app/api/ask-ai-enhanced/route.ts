@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
     let response: any;
     
     // Check if this is a lease document and generate automatic summary
-    const isLeaseDocument = documentAnalyses.some(analysis => 
+    let isLeaseDocument = documentAnalyses.some(analysis => 
       analysis.documentType?.toLowerCase().includes('lease')
     ) || processedDocuments.some(doc => 
       doc.filename?.toLowerCase().includes('lease') || 
@@ -183,16 +183,61 @@ export async function POST(request: NextRequest) {
       isLeaseDocument,
       processedDocumentsCount: processedDocuments.length,
       filenames: processedDocuments.map(d => d.filename),
-      types: processedDocuments.map(d => d.type)
+      types: processedDocuments.map(d => d.type),
+      // Add more detailed analysis info
+      analysisDetails: documentAnalyses.map(a => ({
+        type: a.documentType,
+        hasType: !!a.documentType,
+        typeLength: a.documentType?.length || 0
+      }))
+    });
+    
+    // Additional check: if filename contains 'lease' but analysis didn't catch it
+    const hasLeaseInFilename = processedDocuments.some(doc => 
+      doc.filename?.toLowerCase().includes('lease')
+    );
+    
+    if (hasLeaseInFilename && !isLeaseDocument) {
+      console.log('🔍 Filename contains "lease" but analysis didn\'t detect it - forcing lease detection');
+      isLeaseDocument = true;
+    }
+    
+    // Additional check: if the document text contains lease-related keywords
+    const hasLeaseKeywords = processedDocuments.some(doc => {
+      if (!doc.extractedText) return false;
+      const text = doc.extractedText.toLowerCase();
+      const leaseKeywords = ['lease', 'agreement', 'lessor', 'lessee', 'demise', 'term', 'ground rent', 'service charge'];
+      return leaseKeywords.some(keyword => text.includes(keyword));
+    });
+    
+    if (hasLeaseKeywords && !isLeaseDocument) {
+      console.log('🔍 Document text contains lease keywords but analysis didn\'t detect it - forcing lease detection');
+      isLeaseDocument = true;
+    }
+    
+    console.log('🔍 Final lease detection result:', {
+      isLeaseDocument,
+      hasLeaseInFilename,
+      hasLeaseKeywords,
+      willGenerateSummary: isLeaseDocument && processedDocuments.length > 0
     });
     
     if (isLeaseDocument && processedDocuments.length > 0) {
       console.log('📄 Lease document detected - generating automatic summary');
+      console.log('📊 Lease document details:', {
+        filename: processedDocuments[0].filename,
+        type: processedDocuments[0].type,
+        extractedTextLength: processedDocuments[0].extractedText?.length || 0,
+        hasExtractedText: !!processedDocuments[0].extractedText
+      });
       
       try {
         // Get the lease document text
         const leaseDocument = processedDocuments[0];
         const leaseText = leaseDocument.extractedText;
+        
+        console.log('🔍 About to call OpenAI for lease summary generation');
+        console.log('📝 Lease text preview:', leaseText?.substring(0, 200) + '...');
         
         // Generate lease summary using OpenAI with specific formatting
         const openaiClient = new OpenAI({
@@ -229,6 +274,9 @@ Extract the actual information from the lease text. If information is not clearl
           max_tokens: 1500
         });
 
+        console.log('✅ OpenAI lease summary generated successfully');
+        console.log('📝 Generated summary length:', completion.choices[0].message?.content?.length || 0);
+
         response = {
           response: completion.choices[0].message?.content || 'Lease analysis completed but summary generation failed.',
           sources: ['lease_document_analysis'],
@@ -240,7 +288,8 @@ Extract the actual information from the lease text. If information is not clearl
         };
         
       } catch (openaiError) {
-        console.error('OpenAI lease analysis error:', openaiError);
+        console.error('❌ OpenAI lease analysis error:', openaiError);
+        console.log('🔄 Falling back to enhanced AI due to OpenAI error');
         // Fall back to enhanced AI
         const enhancedAI = new EnhancedAskAI();
         response = await enhancedAI.generateResponse({
@@ -254,6 +303,7 @@ Extract the actual information from the lease text. If information is not clearl
         });
       }
     } else {
+      console.log('ℹ️ Not a lease document or no processed documents - using enhanced AI');
       // Use enhanced Ask AI with industry knowledge for non-lease documents
       const enhancedAI = new EnhancedAskAI();
       response = await enhancedAI.generateResponse({
