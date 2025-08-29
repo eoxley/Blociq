@@ -46,7 +46,7 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-r from-[#6A00F5] via-[#7A2BE2] to-[#8A2BE2] py-24">
+      <section className="hero-banner relative overflow-hidden py-16 mx-6" style={{ background: 'linear-gradient(135deg, #6A00F5 0%, #7A2BE2 50%, #8A2BE2 100%)' }}>
         {/* Abstract background shapes */}
         <div className="absolute inset-0">
           <div className="absolute top-20 left-10 w-72 h-72 bg-white/5 rounded-full blur-3xl"></div>
@@ -54,7 +54,7 @@ export default function LandingPage() {
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-white/3 rounded-full blur-2xl"></div>
         </div>
         
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-none mx-auto px-6">
           <div className="text-center text-white">
             <div className="mb-8">
               <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-6 backdrop-blur-sm">
@@ -89,7 +89,7 @@ export default function LandingPage() {
       </section>
 
       {/* Section 1: Vision & Why BlocIQ */}
-      <section className="py-20 bg-gradient-to-br from-gray-50 to-gray-100">
+      <section className="hero-banner py-16 mx-6" style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Our Vision */}
           <div className="text-center mb-16">
@@ -336,7 +336,7 @@ export default function LandingPage() {
       </section>
 
       {/* Section 3: How We Work */}
-      <section className="py-20 bg-gradient-to-br from-gray-50 to-gray-100">
+      <section className="hero-banner py-16 mx-6" style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-6">
@@ -489,7 +489,7 @@ export default function LandingPage() {
       </section>
 
       {/* Section 5: CTA */}
-      <section className="py-20 bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2]">
+      <section className="hero-banner py-16 mx-6" style={{ background: 'linear-gradient(135deg, #6A00F5 0%, #8A2BE2 100%)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-white">
           <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-8 backdrop-blur-sm shadow-lg">
             <Zap className="h-10 w-10 text-white" />
