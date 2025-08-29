@@ -140,6 +140,9 @@
   
   /* AI sections use the same original brand gradient */
   --ai-gradient: linear-gradient(135deg, #14b8a6 0%, #3b82f6 50%, #8b5cf6 100%);
+  
+  /* Hero gradient for navigation - using purple theme */
+  --hero-gradient: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
 
   /* Brand Colors - Original palette only */
   --brand-teal: #0d9488;
@@ -154,7 +157,7 @@
   --border-gray: #e2e8f0;
 
   /* Primary Colors */
-  --primary: #0d9488; /* Brand Teal */
+  --primary: #8b5cf6; /* Brand Purple */
   --primary-foreground: #ffffff;
   --secondary: #f8fafc; /* Secondary Background */
   --secondary-foreground: #1e293b;
@@ -194,12 +197,12 @@
   /* Sidebar Colors */
   --sidebar: #ffffff;
   --sidebar-foreground: #1e293b;
-  --sidebar-primary: #0d9488;
+  --sidebar-primary: #8b5cf6;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f0fdfa;
-  --sidebar-accent-foreground: #0d9488;
+  --sidebar-accent: #f3f4f6;
+  --sidebar-accent-foreground: #8b5cf6;
   --sidebar-border: #e2e8f0;
-  --sidebar-ring: #0d9488;
+  --sidebar-ring: #8b5cf6;
 }
 
 .dark {
@@ -1259,7 +1262,7 @@
   background: var(--hero-gradient);
   color: white;
   font-weight: 600;
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
 }
 
 /* Icon Containers */
