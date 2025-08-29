@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { createServerClient } from '@supabase/ssr';
+import { getAuthenticatedUser } from '@/lib/auth/server';
 import { getOpenAIClient } from '@/lib/openai-client';
 import { insertAiLog } from '@/lib/supabase/ai_logs';
 import { extractUnit, extractBuilding, getLeaseholderInfo, getAccessCodes, getServiceChargeInfo, testDatabaseAccess, handleLeaseholderQuery } from '@/lib/ai/enhancedHelpers';
@@ -762,20 +761,7 @@ What would you like to know?`;
 
 export async function POST(req: Request) {
   try {
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value;
-          },
-        },
-      }
-    );
-
-    const { data: { user } } = await supabase.auth.getUser();
+    const { supabase, user, isAuthenticated } = await getAuthenticatedUser();
     
     const body = await req.json();
     const { question, prompt, buildingId, uploadedFiles, isPublic } = body;

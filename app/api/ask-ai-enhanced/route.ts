@@ -1,21 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { requireAuth } from '@/lib/auth/server';
 import { EnhancedAskAI } from '@/lib/ai/enhanced-ask-ai';
 import { analyzeDocument } from '@/lib/document-analysis-orchestrator';
-import { searchAllRelevantTables, isPropertyQuery, processQueryDatabaseFirst } from '@/lib/ai/database-search';
+import { searchAllRelevantTables, isPropertyQuery, formatDatabaseResponse } from '@/lib/ai/database-search';
+import { processFileWithOCR, getOCRConfig, formatOCRError } from '@/lib/ai/ocrClient';
 import { SupabaseClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 
 export async function POST(request: NextRequest) {
   try {
     // 1. Check authentication
-    const supabase = createRouteHandlerClient({ cookies }) as any;
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { supabase, user } = await requireAuth();
 
     // 2. Parse multipart form data
     const formData = await request.formData();
@@ -51,7 +46,7 @@ export async function POST(request: NextRequest) {
           console.log('✅ Database search successful, found data in tables:', Object.keys(databaseResults));
           
           // Format the database response
-          const formattedResponse = processQueryDatabaseFirst(userQuestion, databaseResults);
+          const formattedResponse = formatDatabaseResponse(userQuestion, databaseResults);
           
           return NextResponse.json({
             response: formattedResponse,
@@ -75,24 +70,34 @@ export async function POST(request: NextRequest) {
     const documentAnalyses: any[] = [];
     const processedDocuments: any[] = [];
 
-    // 3. Process files through OCR and store in database
+    // 3. Process files through hardened OCR and store in database
+    const ocrConfig = getOCRConfig();
     if (files.length > 0) {
       for (const file of files) {
         try {
-          // Process file through OCR microservice
-          const ocrFormData = new FormData();
-          ocrFormData.append('file', file);
+          console.log(`🔍 Processing file: ${file.name} (${file.size} bytes)`);
           
-          const ocrResponse = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
-            method: 'POST',
-            body: ocrFormData
-          });
-
-          if (!ocrResponse.ok) {
-            throw new Error(`OCR service error: ${ocrResponse.status}`);
+          // Process file through hardened OCR client
+          const ocrResult = await processFileWithOCR(file, ocrConfig);
+          
+          if (!ocrResult.success) {
+            console.error('❌ OCR processing failed:', ocrResult.error);
+            const errorMessage = formatOCRError(ocrResult.error!, file.name);
+            
+            // Store error information for user feedback
+            processedDocuments.push({
+              id: null,
+              filename: file.name,
+              type: 'ocr_failed',
+              summary: errorMessage,
+              extractedText: null,
+              error: ocrResult.error
+            });
+            
+            continue; // Continue with other files
           }
-
-          const ocrResult = await ocrResponse.json();
+          
+          console.log(`✅ OCR successful for ${file.name}: ${ocrResult.text!.length} characters extracted`);
           
           if (ocrResult.text) {
             // Store document in building_documents table with full text content
@@ -105,7 +110,8 @@ export async function POST(request: NextRequest) {
                 type: 'ocr_processed',
                 full_text: ocrResult.text, // Store the full OCR text
                 content_summary: ocrResult.text.substring(0, 500) + '...', // Basic summary
-                created_at: new Date().toISOString()
+                created_at: new Date().toISOString(),
+                metadata: ocrResult.metadata || {}
               })
               .select()
               .single();
@@ -124,9 +130,11 @@ export async function POST(request: NextRequest) {
                 content: ocrResult.text,
                 metadata: { 
                   confidence: ocrResult.confidence || 'medium',
-                  source: 'ocr_microservice',
+                  source: 'ocr_microservice_hardened',
                   file_size: file.size,
-                  file_type: file.type
+                  file_type: file.type,
+                  processing_time: ocrResult.metadata?.processingTime,
+                  attempts: ocrResult.metadata?.attempts
                 }
               });
 
@@ -136,11 +144,14 @@ export async function POST(request: NextRequest) {
               .insert({
                 document_id: document.id,
                 status: 'completed',
-                processing_type: 'ocr_extraction',
+                processing_type: 'ocr_extraction_hardened',
                 metadata: { 
                   ocr_confidence: ocrResult.confidence,
                   text_length: ocrResult.text.length,
-                  processing_time: new Date().toISOString()
+                  processing_time: ocrResult.metadata?.processingTime || 0,
+                  attempts: ocrResult.metadata?.attempts || 1,
+                  file_size: ocrResult.metadata?.fileSize || file.size,
+                  completed_at: new Date().toISOString()
                 }
               });
 
@@ -216,10 +227,27 @@ export async function POST(request: NextRequest) {
             }
 
           } else {
-            console.error('OCR failed to extract text from file:', file.name);
+            console.error('OCR extracted empty text for file:', file.name);
+            // This case shouldn't happen with the hardened client, but handle gracefully
+            processedDocuments.push({
+              id: null,
+              filename: file.name,
+              type: 'ocr_empty',
+              summary: 'OCR processing completed but no text was extracted',
+              extractedText: null
+            });
           }
         } catch (ocrError) {
-          console.error('OCR processing failed for file:', file.name, ocrError);
+          console.error('Unexpected error during OCR processing for file:', file.name, ocrError);
+          // Store error information
+          processedDocuments.push({
+            id: null,
+            filename: file.name,
+            type: 'ocr_failed',
+            summary: `OCR processing failed: ${ocrError instanceof Error ? ocrError.message : 'Unknown error'}`,
+            extractedText: null,
+            error: ocrError
+          });
           // Continue with other files
         }
       }
@@ -509,12 +537,7 @@ Extract the actual information from the lease text. If information is not clearl
 
 export async function GET() {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { supabase, user } = await requireAuth();
 
     // Return knowledge base statistics for admin users
     const { data: profile } = await supabase

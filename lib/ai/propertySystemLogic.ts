@@ -1,6 +1,9 @@
 // Property Management System Logic
 // Complete overhaul of Ask BlocIQ response understanding and formatting
 
+import { parseQueryIntent, isPropertyQuery, isDocumentQuery, type QueryIntent } from './queryParser';
+
+// Legacy interface for backward compatibility
 interface ProcessedQuery {
   type: 'leaseholder' | 'access_codes' | 'service_charge' | 'building_info' | 'document_analysis' | 'general';
   unit?: string;
@@ -145,65 +148,41 @@ Bottom line: ${this.generateBottomLine(analysis)}`;
   }
 
   /**
-   * Parse property queries with enhanced understanding
+   * Parse property queries using unified parser
    */
   static parsePropertyQuery(prompt: string): ProcessedQuery {
-    const promptLower = prompt.toLowerCase();
+    const intent = parseQueryIntent(prompt);
     
-    // Enhanced pattern matching for different query types
+    // Convert unified intent to legacy format for backward compatibility
+    let legacyType: ProcessedQuery['type'] = 'general';
     
-    // Leaseholder queries
-    if (promptLower.includes('leaseholder') || promptLower.includes('who is') || 
-        promptLower.includes('tenant') || promptLower.includes('resident')) {
-      const unit = this.extractUnit(prompt);
-      const building = this.extractBuilding(prompt);
-      return {
-        type: 'leaseholder',
-        unit,
-        building,
-        confidence: 0.9
-      };
-    }
-    
-    // Access code queries - NO SECURITY RESTRICTIONS
-    if (promptLower.includes('access code') || promptLower.includes('entry code') ||
-        promptLower.includes('door code') || promptLower.includes('gate code') ||
-        promptLower.includes('building code') || promptLower.includes('entrance code')) {
-      const building = this.extractBuilding(prompt);
-      return {
-        type: 'access_codes',
-        building,
-        confidence: 0.9
-      };
-    }
-    
-    // Service charge queries
-    if (promptLower.includes('service charge') || promptLower.includes('service charges') ||
-        promptLower.includes('maintenance charge') || promptLower.includes('ground rent')) {
-      const unit = this.extractUnit(prompt);
-      const building = this.extractBuilding(prompt);
-      return {
-        type: 'service_charge',
-        unit,
-        building,
-        confidence: 0.8
-      };
-    }
-    
-    // Building information queries
-    if (promptLower.includes('building') || promptLower.includes('property') ||
-        promptLower.includes('address') || promptLower.includes('information about')) {
-      const building = this.extractBuilding(prompt);
-      return {
-        type: 'building_info',
-        building,
-        confidence: 0.7
-      };
+    switch (intent.type) {
+      case 'leaseholder_lookup':
+        legacyType = 'leaseholder';
+        break;
+      case 'access_codes':
+        legacyType = 'access_codes';
+        break;
+      case 'building_info':
+        legacyType = 'building_info';
+        break;
+      case 'document_query':
+        legacyType = 'document_analysis';
+        break;
+      default:
+        // Check for service charge queries specifically
+        const promptLower = prompt.toLowerCase();
+        if (promptLower.includes('service charge') || promptLower.includes('ground rent')) {
+          legacyType = 'service_charge';
+        }
+        break;
     }
     
     return {
-      type: 'general',
-      confidence: 0.3
+      type: legacyType,
+      unit: intent.unitIdentifier,
+      building: intent.buildingIdentifier,
+      confidence: intent.confidence
     };
   }
 

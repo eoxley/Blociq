@@ -11,8 +11,7 @@
 // File: app/api/ask-assistant/route.ts
 
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { createServerClient } from '@supabase/ssr';
+import { getAuthenticatedUser } from '@/lib/auth/server';
 import { getOpenAIClient } from '@/lib/openai-client';
 
 export async function POST(req: Request) {
@@ -55,26 +54,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No message or attachments provided' }, { status: 400 });
     }
 
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value;
-          },
-        },
-      }
-    );
+    const { supabase, user, isAuthenticated } = await getAuthenticatedUser();
 
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
-
-    if (sessionError) {
-      console.warn("⚠️ Supabase session error:", sessionError.message);
+    if (!isAuthenticated) {
+      console.warn("⚠️ User not authenticated");
     }
 
     console.log("📩 User message:", message);
@@ -163,11 +146,11 @@ Provide accurate, detailed answers based on the data provided. If information is
     console.log("🧠 Assistant reply:", answer);
 
     // Log the interaction
-    if (session?.user?.id) {
+    if (user?.id) {
       await supabase
         .from('ai_logs')
         .insert({
-          user_id: session.user.id,
+          user_id: user.id,
           question: message,
           response: answer,
           timestamp: new Date().toISOString(),

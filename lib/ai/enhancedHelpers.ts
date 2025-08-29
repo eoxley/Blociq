@@ -113,50 +113,151 @@ export async function getLeaseholderInfo(supabase: any, unit: string, building: 
   try {
     console.log("Searching for:", { unit, building });
     
-    const searches = [
-      supabase
-        .from('vw_units_leaseholders')
-        .select('*')
-        .or(`unit_number.eq.${unit},unit_number.eq.Flat ${unit}`)
-        .ilike('building_name', `%${building}%`),
-      
-      supabase
-        .from('vw_units_leaseholders')
-        .select('*')
-        .in('unit_number', [unit, `Flat ${unit}`, `Unit ${unit}`, `Apartment ${unit}`])
-        .ilike('building_name', `%${building}%`)
-    ];
-
-    for (const search of searches) {
-      const { data, error } = await search.limit(5);
-      
-      // Add comprehensive logging
-      logDatabaseQuery('vw_units_leaseholders', { unit, building, searchType: 'leaseholder' }, { data, error });
-      
-      if (!error && data && data.length > 0) {
-        const leaseholder = data[0];
-        // Then return the actual data instead of generic message
-        if (data && data.length > 0) {
-          return `The leaseholder of ${unit} ${building} is: ${data[0].leaseholder_name}`;
-        }
-        let response = `The leaseholder of unit ${leaseholder.unit_number}, ${leaseholder.building_name} is: **${leaseholder.leaseholder_name}**`;
+    // Try to use the optimized view first
+    let viewResult;
+    try {
+      const searches = [
+        supabase
+          .from('vw_units_leaseholders')
+          .select('*')
+          .or(`unit_number.eq.${unit},unit_number.eq.Flat ${unit}`)
+          .ilike('building_name', `%${building}%`),
         
-        if (leaseholder.leaseholder_email) {
-          response += `\n📧 Email: ${leaseholder.leaseholder_email}`;
+        supabase
+          .from('vw_units_leaseholders')
+          .select('*')
+          .in('unit_number', [unit, `Flat ${unit}`, `Unit ${unit}`, `Apartment ${unit}`])
+          .ilike('building_name', `%${building}%`)
+      ];
+      
+      viewResult = await Promise.allSettled(searches);
+    } catch (viewError) {
+      console.log('⚠️ View vw_units_leaseholders not available, using fallback approach');
+      viewResult = null;
+    }
+    
+    // Check if view queries were successful
+    let hasViewData = false;
+    if (viewResult) {
+      for (const result of viewResult) {
+        if (result.status === 'fulfilled' && result.value?.data?.length > 0) {
+          hasViewData = true;
+          break;
+        }
+      }
+    }
+    
+    // If view doesn't exist or has no data, use fallback approach
+    if (!hasViewData) {
+      console.log('🔄 Using fallback: joining units, leaseholders, and buildings tables');
+      
+      try {
+        // Step 1: Find the building
+        const { data: buildings, error: buildingError } = await supabase
+          .from('buildings')
+          .select('id, name, address')
+          .ilike('name', `%${building}%`)
+          .limit(5);
+        
+        if (buildingError) {
+          console.error('Fallback building search error:', buildingError);
+          return `❌ Database error searching for building: ${buildingError.message}`;
         }
         
-        if (leaseholder.leaseholder_phone) {
-          response += `\n📞 Phone: ${leaseholder.leaseholder_phone}`;
+        if (!buildings || buildings.length === 0) {
+          return `❌ Building "${building}" not found in database`;
         }
-
+        
+        const targetBuilding = buildings[0];
+        console.log('🏢 Found building:', targetBuilding);
+        
+        // Step 2: Find the unit in this building
+        const { data: units, error: unitError } = await supabase
+          .from('units')
+          .select('id, unit_number, unit_label, building_id')
+          .eq('building_id', targetBuilding.id)
+          .or(`unit_number.eq.${unit},unit_number.ilike.%${unit}%,unit_label.eq.${unit},unit_label.ilike.%${unit}%`);
+        
+        if (unitError) {
+          console.error('Fallback unit search error:', unitError);
+          return `❌ Database error searching for unit: ${unitError.message}`;
+        }
+        
+        if (!units || units.length === 0) {
+          return `❌ Unit "${unit}" not found in ${targetBuilding.name}`;
+        }
+        
+        const targetUnit = units[0];
+        console.log('🏠 Found unit:', targetUnit);
+        
+        // Step 3: Find leaseholders for this unit
+        const { data: leaseholders, error: leaseholderError } = await supabase
+          .from('leaseholders')
+          .select('id, name, email, phone_number, is_director, director_role, director_since')
+          .eq('unit_id', targetUnit.id);
+        
+        if (leaseholderError) {
+          console.error('Fallback leaseholder search error:', leaseholderError);
+          return `❌ Database error searching for leaseholders: ${leaseholderError.message}`;
+        }
+        
+        if (!leaseholders || leaseholders.length === 0) {
+          return `📋 Unit ${targetUnit.unit_number} at ${targetBuilding.name} (${targetBuilding.address}) currently has no registered leaseholder.`;
+        }
+        
+        // Format response with fallback data
+        const leaseholder = leaseholders[0];
+        let response = `📋 **Leaseholder Information**\n`;
+        response += `**Building:** ${targetBuilding.name}\n`;
+        response += `**Address:** ${targetBuilding.address}\n`;
+        response += `**Unit:** ${targetUnit.unit_number || targetUnit.unit_label}\n`;
+        response += `**Leaseholder:** ${leaseholder.name}\n`;
+        if (leaseholder.email) response += `**Email:** ${leaseholder.email}\n`;
+        if (leaseholder.phone_number) response += `**Phone:** ${leaseholder.phone_number}\n`;
         if (leaseholder.is_director) {
-          response += `\n👔 Role: ${leaseholder.director_role || 'Director'}`;
+          response += `**Role:** Company Director`;
+          if (leaseholder.director_role) response += ` (${leaseholder.director_role})`;
+          response += '\n';
         }
-
+        
         return response;
+        
+      } catch (fallbackError) {
+        console.error('❌ Fallback approach failed:', fallbackError);
+        return `❌ Database search failed (both view and fallback): ${fallbackError.message}`;
+      }
+    }
+    
+    // If we reach here, process the successful view results
+    for (const result of viewResult) {
+      if (result.status === 'fulfilled' && result.value?.data) {
+        const { data, error } = result.value;
+        
+        // Add comprehensive logging
+        logDatabaseQuery('vw_units_leaseholders', { unit, building, searchType: 'leaseholder' }, { data, error });
+        
+        if (!error && data && data.length > 0) {
+          const leaseholder = data[0];
+          let response = `The leaseholder of unit ${leaseholder.unit_number}, ${leaseholder.building_name} is: **${leaseholder.leaseholder_name}**`;
+          
+          if (leaseholder.leaseholder_email) {
+            response += `\n📧 Email: ${leaseholder.leaseholder_email}`;
+          }
+          
+          if (leaseholder.leaseholder_phone) {
+            response += `\n📞 Phone: ${leaseholder.leaseholder_phone}`;
+          }
+
+          if (leaseholder.is_director) {
+            response += `\n👔 Role: ${leaseholder.director_role || 'Director'}`;
+          }
+
+          return response;
+        }
       }
     }
 
+    // If view searches didn't find anything, try broader search
     const { data: buildingMatches } = await supabase
       .from('vw_units_leaseholders')
       .select('unit_number, building_name')
@@ -175,7 +276,7 @@ export async function getLeaseholderInfo(supabase: any, unit: string, building: 
 
 Would you like me to search for all units in buildings matching '${building}'?`;
     }
-    
+
     return `I couldn't find unit ${unit} in ${building} in our records. This could mean:
 
 • The unit number might be listed differently (e.g., 'Flat ${unit}')
