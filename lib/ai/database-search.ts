@@ -1,4 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js';
+import { getActiveSearchRules, getSpecialSearch, getFallbackConfig, type SearchRule } from './searchConfig';
 
 export interface DatabaseSearchResults {
   [tableName: string]: any[];
@@ -17,149 +18,44 @@ export const searchAllRelevantTables = async (
   const searchResults: DatabaseSearchResults = {};
   const queryLower = query.toLowerCase();
   
-  // Special case: "what buildings" or "buildings list" queries
-  if (queryLower.includes('what buildings') || 
-      queryLower.includes('list buildings') || 
-      queryLower.includes('show buildings') ||
-      queryLower.includes('all buildings')) {
-    console.log("🏢 BUILDINGS LIST QUERY DETECTED");
+  // Check for special search configurations
+  const specialSearch = getSpecialSearch(query);
+  if (specialSearch) {
+    console.log(`🎯 SPECIAL SEARCH DETECTED: ${specialSearch.name}`);
     
-    try {
-      const { data: buildings, error } = await supabase
-        .from('buildings')
-        .select('id, name, address, postcode, unit_count, building_manager_name, building_manager_email, emergency_contact_name, emergency_contact_phone')
-        .order('name');
-      
-      if (error) {
-        console.error('Buildings list query error:', error);
+    switch (specialSearch.searchLogic) {
+      case 'buildings_list':
+        try {
+          const { data: buildings, error } = await supabase
+            .from('buildings')
+            .select('id, name, address, postcode, unit_count, building_manager_name, building_manager_email, emergency_contact_name, emergency_contact_phone')
+            .order('name');
+          
+          if (error) {
+            console.error('Buildings list query error:', error);
+            return {};
+          }
+          
+          if (buildings && buildings.length > 0) {
+            return { buildings };
+          }
+        } catch (error) {
+          console.error('Exception in buildings list query:', error);
+        }
         return {};
-      }
-      
-      if (buildings && buildings.length > 0) {
-        return { buildings };
-      }
-    } catch (error) {
-      console.error('Exception in buildings list query:', error);
     }
-    
-    return {};
   }
 
-  // Define all possible searches based on query content
-  const searches = [
-    // Leaseholder data - highest priority
-    {
-      table: 'vw_units_leaseholders',
-      condition: queryLower.includes('leaseholder') || 
-                queryLower.includes('tenant') || 
-                queryLower.includes('who') ||
-                queryLower.includes('contact') ||
-                queryLower.includes('email') ||
-                queryLower.includes('phone') ||
-                /\d+/.test(queryLower) || // Any number (including unit numbers)
-                queryLower.includes('flat') || // Include "flat" keyword
-                queryLower.includes('unit') || // Include "unit" keyword
-                /\b(flat|unit)\b/.test(queryLower) || // Enhanced pattern matching
-                (/\d+/.test(queryLower) && /\b(ashwood|house|building)\b/.test(queryLower)), // Number + building context
-      columns: 'unit_number, unit_label, leaseholder_name, leaseholder_email, leaseholder_phone, building_name, building_id, is_director, director_role',
-      limit: 50
-    },
-    
-    // Building data
-    {
-      table: 'buildings', 
-      condition: queryLower.includes('building') || 
-                queryLower.includes('house') || 
-                queryLower.includes('property') ||
-                queryLower.includes('ashwood') ||
-                queryLower.includes('oak') ||
-                queryLower.includes('address'),
-      columns: 'id, name, address, postcode, unit_count, building_manager_name, building_manager_email, building_manager_phone, emergency_contact_name, emergency_contact_phone, access_notes, key_access_notes, entry_code, parking_info',
-      limit: 20
-    },
-    
-    // Unit data
-    {
-      table: 'units',
-      condition: queryLower.includes('unit') || 
-                queryLower.includes('flat') || 
-                /\d+/.test(queryLower) ||
-                queryLower.includes('apartment'),
-      columns: 'id, unit_number, unit_label, building_id, floor, unit_type, square_footage, bedrooms, bathrooms',
-      limit: 50
-    },
-    
-    // Access/security data from compliance assets
-    {
-      table: 'compliance_assets',
-      condition: queryLower.includes('access') || 
-                queryLower.includes('code') || 
-                queryLower.includes('security') ||
-                queryLower.includes('entry') ||
-                queryLower.includes('door') ||
-                queryLower.includes('gate'),
-      columns: 'id, asset_name, asset_value, description, category, building_id',
-      limit: 30
-    },
-    
-    // Communications log
-    {
-      table: 'communications_log',
-      condition: queryLower.includes('email') || 
-                queryLower.includes('letter') || 
-                queryLower.includes('communication') ||
-                queryLower.includes('correspondence') ||
-                queryLower.includes('notice'),
-      columns: 'id, communication_type, subject, recipient_name, recipient_email, sent_date, building_id, unit_id',
-      limit: 20
-    },
-    
-    // Major works projects
-    {
-      table: 'major_works_projects',
-      condition: queryLower.includes('works') || 
-                queryLower.includes('section 20') || 
-                queryLower.includes('project') ||
-                queryLower.includes('maintenance') ||
-                queryLower.includes('repair'),
-      columns: 'id, project_name, description, status, estimated_cost, start_date, completion_date, building_id',
-      limit: 15
-    },
-    
-    // Service charges
-    {
-      table: 'service_charges',
-      condition: queryLower.includes('service charge') ||
-                queryLower.includes('maintenance charge') ||
-                queryLower.includes('ground rent') ||
-                queryLower.includes('charge'),
-      columns: 'id, charge_type, amount, frequency, due_date, unit_id, building_id, description',
-      limit: 30
-    },
+  // Get search rules based on query content
+  const searches = getActiveSearchRules(query);
 
-    // Directors (company directors/board members)
-    {
-      table: 'leaseholders',
-      condition: queryLower.includes('director') ||
-                queryLower.includes('board') ||
-                queryLower.includes('management company'),
-      columns: 'id, name, email, phone_number, unit_id, is_director, director_role, director_since',
-      limit: 20
-    }
-  ];
-
-  console.log("🔍 Search conditions for query:", queryLower);
+  console.log("🔍 Active search rules for query:", queryLower);
   searches.forEach((search, index) => {
-    if (search.condition) {
-      console.log(`  ${index + 1}. ${search.table}: ${search.condition} ✅`);
-    } else {
-      console.log(`  ${index + 1}. ${search.table}: ${search.condition} ❌`);
-    }
+    console.log(`  ${index + 1}. ${search.table}: ${search.description || 'No description'} ✅`);
   });
 
   // Execute all relevant searches in parallel for better performance
   const searchPromises = searches
-    .filter(search => search.condition)
     .map(async (search) => {
       try {
         console.log(`🔍 Searching ${search.table}...`);
@@ -456,7 +352,7 @@ export const searchAllRelevantTables = async (
   }
   
   console.log("📊 DATABASE SEARCH COMPLETE:", {
-    tablesSearched: searches.filter(s => s.condition).length,
+    tablesSearched: searches.length,
     tablesWithResults: Object.keys(searchResults).length,
     totalRecords: Object.values(searchResults).reduce((sum, arr) => sum + arr.length, 0),
     resultTables: Object.keys(searchResults)
@@ -765,22 +661,8 @@ export const formatDatabaseResponse = (
   return response;
 };
 
-/**
- * Determine if a query requires database search based on property-related keywords
- */
-export const isPropertyQuery = (query: string): boolean => {
-  const queryLower = query.toLowerCase();
-  
-  const propertyKeywords = [
-    'leaseholder', 'tenant', 'unit', 'flat', 'building', 'house',
-    'access', 'code', 'security', 'email', 'phone', 'contact',
-    'works', 'compliance', 'maintenance', 'service charge',
-    'director', 'ground rent', 'property', 'address',
-    'ashwood', 'oak court', 'communication', 'notice'
-  ];
-  
-  return propertyKeywords.some(keyword => queryLower.includes(keyword));
-};
+// Re-export from unified parser for backward compatibility
+export { isPropertyQuery } from './queryParser';
 
 /**
  * Process any query with database-first approach

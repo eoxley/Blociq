@@ -7,8 +7,7 @@
 // - Document-aware functionality with proper validation
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { getAuthenticatedUser } from '@/lib/auth/server';
 import { getOpenAIClient } from '@/lib/openai-client';
 import { buildPrompt } from '@/lib/buildPrompt';
 import { insertAiLog } from '@/lib/supabase/ai_logs';
@@ -25,12 +24,10 @@ export async function POST(req: NextRequest) {
 
     const openai = getOpenAIClient();
 
-    const supabase = createRouteHandlerClient({ cookies });
+    const { supabase, user, isAuthenticated } = await getAuthenticatedUser();
     
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!isAuthenticated) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     const body = await req.json();
