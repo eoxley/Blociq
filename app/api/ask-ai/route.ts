@@ -155,7 +155,7 @@ class BuildingContextService {
           id, name, address, postcode, unit_count,
           building_manager_name, building_manager_email, building_manager_phone,
           emergency_contact_name, emergency_contact_phone,
-          access_notes, key_access_notes, parking_info,
+          access_notes, key_access_notes, entry_code, parking_info,
           building_age, construction_type, total_floors, lift_available
         `);
         
@@ -195,7 +195,7 @@ class BuildingContextService {
               id, name, address, postcode, unit_count,
               building_manager_name, building_manager_email, building_manager_phone,
               emergency_contact_name, emergency_contact_phone,
-              access_notes, key_access_notes, parking_info,
+              access_notes, key_access_notes, entry_code, parking_info,
               building_age, construction_type, total_floors, lift_available
             `)
             .or(`name.ilike.%${buildingNameOnly}%,address.ilike.%${buildingNameOnly}%`)
@@ -424,7 +424,10 @@ class ResponseGenerator {
     const query = originalQuery.toLowerCase();
     
     // Check if this is an access codes query
-    if (query.includes('access code') || query.includes('entry code') || query.includes('door code')) {
+    if (query.includes('access code') || query.includes('entry code') || query.includes('door code') || 
+        query.includes('gate code') || query.includes('building code') || query.includes('entrance code') ||
+        query.includes('access codes') || query.includes('entry codes') || query.includes('door codes') ||
+        (query.includes('code') && (query.includes('access') || query.includes('entry') || query.includes('door')))) {
       return this.generateAccessCodesResponse(building);
     }
     
@@ -579,11 +582,20 @@ class ResponseGenerator {
     
     response += `## 📍 **Property:** ${building.address}\n\n`;
     
+    // Show available access codes and information
+    let hasAccessInfo = false;
+    
+    if (building.entry_code) {
+      response += `## 🚪 **Entry Codes**\n`;
+      response += `**Main Entry Code:** ${building.entry_code}\n\n`;
+      hasAccessInfo = true;
+    }
+    
     if (building.access_notes || building.key_access_notes) {
-      response += `## 🚪 **Access Information**\n`;
+      response += `## 📋 **Access Information**\n`;
       
       if (building.access_notes) {
-        response += `**General Access:** ${building.access_notes}\n`;
+        response += `**General Access Notes:** ${building.access_notes}\n`;
       }
       
       if (building.key_access_notes) {
@@ -591,10 +603,12 @@ class ResponseGenerator {
       }
       
       response += `\n`;
-    } else {
-      response += `## ⚠️ **Access Information Not Available**\n\n`;
-      response += `Access codes for ${building.name} are not currently stored in the system or may be restricted for security reasons.\n\n`;
-      response += `**For access codes, please contact:**\n`;
+      hasAccessInfo = true;
+    }
+    
+    // Show building management contacts for additional access information
+    if (building.building_manager_name || building.emergency_contact_name) {
+      response += `## 👤 **Contacts for Access Queries**\n`;
       
       if (building.building_manager_name) {
         response += `• **Building Manager:** ${building.building_manager_name}`;
@@ -610,7 +624,14 @@ class ResponseGenerator {
       }
     }
     
-    response += `\n💡 **Security Note:** Access codes are sensitive information and may be restricted to authorized personnel only.`;
+    if (!hasAccessInfo && !building.entry_code) {
+      response += `## ℹ️ **Access Information Status**\n\n`;
+      response += `No access codes are currently stored in the database for ${building.name}.\n\n`;
+      response += `You may need to:\n`;
+      response += `• Add access codes to the building record in your system\n`;
+      response += `• Update the property information with current entry codes\n`;
+      response += `• Contact your building management team for the latest codes\n\n`;
+    }
     
     return response;
   }
