@@ -250,21 +250,38 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
                   <p className="text-center leading-relaxed">You are welcome to try our Ask BlocIQ AI. This is BlocIQ's own secure, ring-fenced AI service — designed specifically for UK leasehold property management.</p>
                   <p className="text-center leading-relaxed">All information you input and receive is GDPR-safe, confidential, and never shared with third parties. Your chats stay private, and the service runs on a secure UK-based server.</p>
                   
-                  <div className="bg-gray-50 rounded-lg p-6 max-w-md mx-auto">
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-3 text-center">
-                      Enter your email address to start chatting
-                    </label>
-                    <input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="your.email@example.com"
-                      className="w-full px-4 py-3 text-base text-center border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
-                      disabled={isSubmittingEmail}
-                      required
-                    />
-                  </div>
+                  <form onSubmit={handleEmailSubmit} className="space-y-6">
+                    <div className="bg-gray-50 rounded-lg p-6 max-w-md mx-auto">
+                      <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-3 text-center">
+                        Enter your email address to start chatting
+                      </label>
+                      <input
+                        id="email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="your.email@example.com"
+                        className="w-full px-4 py-3 text-base text-center border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
+                        disabled={isSubmittingEmail}
+                        required
+                      />
+                    </div>
+                    
+                    <button
+                      type="submit"
+                      disabled={isSubmittingEmail || !email.trim()}
+                      className="w-full py-4 text-lg bg-gradient-to-r from-pink-500 via-teal-500 to-blue-500 hover:from-pink-600 hover:via-teal-600 hover:to-blue-600 disabled:from-gray-300 disabled:to-gray-400 text-white rounded-lg font-semibold transition-all disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none max-w-md mx-auto"
+                    >
+                      {isSubmittingEmail ? (
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                      ) : (
+                        <>
+                          <Brain className="h-6 w-6" />
+                          Start Using Ask BlocIQ
+                        </>
+                      )}
+                    </button>
+                  </form>
                   
                   <p className="text-xs text-gray-500 text-center">This will not be used for marketing or shared with anyone — it's simply to give you access.</p>
                   
@@ -281,22 +298,6 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
                 </div>
               </div>
 
-              <form onSubmit={handleEmailSubmit} className="space-y-6">
-                <button
-                  type="submit"
-                  disabled={isSubmittingEmail || !email.trim()}
-                  className="w-full py-4 text-lg bg-gradient-to-r from-pink-500 via-teal-500 to-blue-500 hover:from-pink-600 hover:via-teal-600 hover:to-blue-600 disabled:from-gray-300 disabled:to-gray-400 text-white rounded-lg font-semibold transition-all disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none"
-                >
-                  {isSubmittingEmail ? (
-                    <Loader2 className="h-6 w-6 animate-spin" />
-                  ) : (
-                    <>
-                      <Brain className="h-6 w-6" />
-                      Start Using Ask BlocIQ
-                    </>
-                  )}
-                </button>
-              </form>
 
               <div className="mt-8 bg-blue-50 rounded-lg p-6 max-w-2xl mx-auto text-center">
                 <h4 className="font-semibold text-blue-900 mb-4 text-center">BlocIQ clients benefit from the full power of Ask BlocIQ, including:</h4>
