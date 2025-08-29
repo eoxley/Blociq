@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, Sparkles, X, Brain, Mail, ArrowRight } from 'lucide-react';
+import { Send, Loader2, X, Brain, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Message = {
@@ -9,12 +9,6 @@ type Message = {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
-};
-
-type AIResponse = {
-  success: boolean;
-  response: string;
-  result?: string;
 };
 
 interface PublicAskBlocIQProps {
@@ -29,24 +23,22 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
   const [email, setEmail] = useState('');
   const [hasSubmittedEmail, setHasSubmittedEmail] = useState(false);
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const emailInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-focus email input on mount
-  useEffect(() => {
-    if (isOpen && !hasSubmittedEmail) {
-      emailInputRef.current?.focus();
-    } else if (isOpen && hasSubmittedEmail) {
-      inputRef.current?.focus();
-    }
-  }, [isOpen, hasSubmittedEmail]);
-
-  // Scroll to bottom when new messages are added
+  // Auto-scroll to bottom when new messages are added
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Auto-focus input when chat opens
+  useEffect(() => {
+    if (isOpen && hasSubmittedEmail && inputRef.current) {
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [isOpen, hasSubmittedEmail]);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,7 +54,6 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
     setIsSubmittingEmail(true);
     
     try {
-      // Store email in leads table using existing API
       const response = await fetch('/api/public-chat/start', {
         method: 'POST',
         headers: {
@@ -70,21 +61,22 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
         },
         body: JSON.stringify({
           email: email.trim(),
-          marketingConsent: false // Optional, user can opt-in later
+          marketingConsent: false
         }),
       });
 
       const data = await response.json();
 
       if (response.ok && data.sessionId) {
+        setSessionId(data.sessionId);
         setHasSubmittedEmail(true);
-        toast.success('Thank you! You can now chat with BlocIQ');
+        toast.success('Welcome! You can now chat with BlocIQ');
         
-        // Add welcome message with security notice
+        // Add welcome message
         const welcomeMessage: Message = {
           id: Date.now().toString(),
           role: 'assistant',
-          content: "Welcome to BlocIQ! I'm your AI-powered property management assistant. I can help you with:\n\n🏢 General property management advice\n📋 UK compliance guidance\n🔧 Maintenance best practices\n💬 Leaseholder communication tips\n⚖️ Legal framework questions\n\n💡 Note: This is a public demo with general guidance only. For specific building data and full features, consider signing up for BlocIQ.\n\nWhat would you like to know about property management?",
+          content: "Hello! I'm BlocIQ, your AI property management assistant. I can help you with general property management questions, UK compliance guidance, and industry best practices.\n\nPlease note: This is a public demo with general guidance only. For specific building data and full BlocIQ features, consider signing up.\n\nWhat would you like to know about property management?",
           timestamp: new Date()
         };
         setMessages([welcomeMessage]);
@@ -101,7 +93,7 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!question.trim() || loading) return;
+    if (!question.trim() || loading || !sessionId) return;
 
     // Add user message to history
     const userMessage: Message = {
@@ -113,8 +105,21 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
 
     setMessages(prev => [...prev, userMessage]);
     setLoading(true);
+    setQuestion('');
     
     try {
+      // Log user message
+      await fetch('/api/public-chat/message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          role: 'user',
+          content: question.trim()
+        }),
+      });
+
+      // Get AI response
       const response = await fetch('/api/ask-ai-public', {
         method: 'POST',
         headers: {
@@ -122,7 +127,8 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
         },
         body: JSON.stringify({
           prompt: question.trim(),
-          is_public: true
+          is_public: true,
+          sessionId
         }),
       });
 
@@ -130,24 +136,37 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
         throw new Error('Failed to get AI response');
       }
 
-      const data: AIResponse = await response.json();
+      const data = await response.json();
       
       if (data.success && (data.response || data.result)) {
+        const assistantResponse = data.result || data.response;
+        
         // Add assistant message to history
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: data.result || data.response,
+          content: assistantResponse,
           timestamp: new Date()
         };
 
         setMessages(prev => [...prev, assistantMessage]);
+
+        // Log assistant message
+        await fetch('/api/public-chat/message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId,
+            role: 'assistant',
+            content: assistantResponse
+          }),
+        });
       } else {
-        toast.error('Error: No response from AI service');
+        throw new Error('No response from AI service');
       }
     } catch (error) {
       console.error('Error asking AI:', error);
-      toast.error('Error: Failed to connect to AI service. Please try again.');
+      toast.error('Sorry, I encountered an error. Please try again.');
       
       // Add error message to chat
       const errorMessage: Message = {
@@ -159,7 +178,6 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setLoading(false);
-      setQuestion('');
     }
   };
 
@@ -167,23 +185,23 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md h-[600px] flex flex-col overflow-hidden">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md h-[600px] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-pink-500 via-teal-500 via-purple-500 to-blue-500 p-6 text-white relative">
+        <div className="bg-gradient-to-r from-pink-500 via-teal-500 via-purple-500 to-blue-500 p-4 text-white relative">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-full transition-colors"
+            className="absolute top-4 right-4 p-1 hover:bg-white/20 rounded-full transition-colors"
+            aria-label="Close"
           >
             <X className="h-5 w-5" />
           </button>
           
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-full flex items-center justify-center">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-full flex items-center justify-center">
               <Brain className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold">Ask BlocIQ</h2>
-              <p className="text-sm text-white/90">AI Property Management Assistant</p>
+              <h2 className="text-lg font-bold">Ask BlocIQ – Your AI Property Assistant</h2>
             </div>
           </div>
         </div>
@@ -194,27 +212,27 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
             /* Email Capture Form */
             <div className="flex-1 flex flex-col justify-center p-6">
               <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-gradient-to-r from-pink-500 via-teal-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Mail className="h-8 w-8 text-white" />
+                <div className="w-12 h-12 bg-gradient-to-r from-pink-500 via-teal-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Mail className="h-6 w-6 text-white" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Get Started</h3>
-                <p className="text-gray-600 text-sm mb-4">
-                  Enter your email to start chatting with BlocIQ, our AI-powered property management assistant.
-                </p>
-                <p className="text-xs text-gray-500">
-                  ✨ Free to try • No commitment required
-                </p>
+                <h3 className="text-xl font-bold text-gray-900 mb-3">Ask BlocIQ – Your AI Property Assistant</h3>
+                <div className="text-gray-600 text-sm space-y-2 mb-6">
+                  <p>Get instant answers to your property management questions with our secure, GDPR-compliant AI assistant.</p>
+                  <p>🔒 Your data is secure and stored on UK servers</p>
+                  <p>🎯 Specialized in UK property management and compliance</p>
+                  <p>⚡ Instant responses to complex property questions</p>
+                </div>
               </div>
 
               <form onSubmit={handleEmailSubmit} className="space-y-4">
-                <div>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <input
-                    ref={emailInputRef}
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter your email address"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     disabled={isSubmittingEmail}
                     required
                   />
@@ -223,22 +241,29 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
                 <button
                   type="submit"
                   disabled={isSubmittingEmail || !email.trim()}
-                  className="w-full py-3 bg-gradient-to-r from-pink-500 via-teal-500 to-blue-500 hover:from-pink-600 hover:via-teal-600 hover:to-blue-600 disabled:from-gray-300 disabled:to-gray-400 text-white rounded-2xl font-medium transition-all duration-200 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-gradient-to-r from-pink-500 via-teal-500 to-blue-500 hover:from-pink-600 hover:via-teal-600 hover:to-blue-600 disabled:from-gray-300 disabled:to-gray-400 text-white rounded-lg font-medium transition-all disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isSubmittingEmail ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
-                    <>
-                      Start Chatting
-                      <ArrowRight className="h-5 w-5" />
-                    </>
+                    'Start Using Ask BlocIQ'
                   )}
                 </button>
               </form>
 
-              <div className="mt-6 text-center">
+              <div className="mt-6 bg-blue-50 rounded-lg p-4">
+                <h4 className="font-semibold text-blue-900 mb-2">Benefits for BlocIQ Clients:</h4>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• Access to your building data and leaseholder information</li>
+                  <li>• Document analysis and OCR capabilities</li>
+                  <li>• Compliance tracking and reminders</li>
+                  <li>• Advanced AI features and integrations</li>
+                </ul>
+              </div>
+
+              <div className="mt-4 text-center">
                 <p className="text-xs text-gray-500">
-                  By continuing, you agree to our terms of service and privacy policy
+                  By continuing, you agree to our privacy policy. We respect your privacy and comply with GDPR regulations.
                 </p>
               </div>
             </div>
@@ -252,30 +277,29 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
                     key={message.id}
                     className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div className={`max-w-[80%] ${
+                    <div className={`max-w-[80%] rounded-lg px-4 py-2 ${
                       message.role === 'user' 
                         ? 'bg-gradient-to-r from-pink-500 via-teal-500 to-blue-500 text-white' 
                         : 'bg-gray-100 text-gray-900'
-                    } rounded-2xl px-4 py-3`}>
-                      <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                    }`}>
+                      <div className="whitespace-pre-wrap text-sm">
                         {message.content}
                       </div>
                     </div>
                   </div>
                 ))}
 
-                {/* Loading Message */}
+                {/* Loading Animation */}
                 {loading && (
                   <div className="flex justify-start">
-                    <div className="bg-gray-100 rounded-2xl px-4 py-3">
+                    <div className="bg-gray-100 rounded-lg px-4 py-2">
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-gradient-to-r from-pink-500 to-blue-500 rounded-lg flex items-center justify-center">
-                          <Sparkles className="h-3 w-3 text-white" />
+                        <div className="flex space-x-1">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-                          <span className="text-sm text-gray-600">BlocIQ is thinking...</span>
-                        </div>
+                        <span className="text-sm text-gray-600">BlocIQ is thinking...</span>
                       </div>
                     </div>
                   </div>
@@ -292,15 +316,15 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
                     type="text"
                     value={question}
                     onChange={(e) => setQuestion(e.target.value)}
-                    placeholder="Ask me anything about property management..."
-                    className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm"
+                    placeholder="Ask about property management, compliance, or leasehold matters..."
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     disabled={loading}
                   />
                   
                   <button
                     type="submit"
                     disabled={loading || !question.trim()}
-                    className="p-2 bg-gradient-to-r from-pink-500 via-teal-500 to-blue-500 hover:from-pink-600 hover:via-teal-600 hover:to-blue-600 disabled:from-gray-300 disabled:to-gray-400 text-white rounded-full transition-all duration-200 disabled:cursor-not-allowed"
+                    className="px-4 py-2 bg-gradient-to-r from-pink-500 via-teal-500 to-blue-500 hover:from-pink-600 hover:via-teal-600 hover:to-blue-600 disabled:from-gray-300 disabled:to-gray-400 text-white rounded-lg transition-all disabled:cursor-not-allowed"
                   >
                     {loading ? (
                       <Loader2 className="h-5 w-5 animate-spin" />
@@ -309,10 +333,6 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
                     )}
                   </button>
                 </form>
-                
-                <p className="text-xs text-gray-500 text-center mt-2">
-                  🔒 Your data is secure • Chat history is private
-                </p>
               </div>
             </>
           )}
