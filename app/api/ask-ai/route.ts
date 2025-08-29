@@ -948,7 +948,7 @@ What would you like to know?`;
           question: userQuery,
           response,
           context_type: 'main_assistant',
-          building_id: buildingId || (contextData?.building?.id),
+          building_id: buildingId,
           document_ids: [],
         });
       } catch (logError) {
@@ -960,17 +960,17 @@ What would you like to know?`;
       success: true,
       response: response, // Fixed: frontend expects 'response' not 'answer'
       intent: {
-        type: intent.type,
-        confidence: intent.confidence,
+        type: 'general',
+        confidence: 0.5,
         extracted: {
-          building: intent.buildingIdentifier,
-          unit: intent.unitIdentifier
+          building: undefined,
+          unit: undefined
         }
       },
-      contextData: intent.type !== 'general' ? contextData : undefined,
+      contextData: undefined,
       ai_log_id: logId,
       metadata: {
-        queryType: intent.type,
+        queryType: 'general',
         processingTime: Date.now(),
         hasUser: !!user
       }
