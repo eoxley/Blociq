@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import OpenAI from 'openai';
+import { getOpenAIClient } from '@/lib/openai-client';
 
 interface ClassifyEmailRequest {
   emailId: string;
@@ -26,9 +26,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Initialize OpenAI client
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    const openai = getOpenAIClient();
 
     // Create the prompt for email classification
     const systemPrompt = `You are a professional property management assistant. Your task is to classify emails into appropriate categories for property management and leasehold administration.

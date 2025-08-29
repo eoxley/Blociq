@@ -255,10 +255,8 @@ class LeaseAIAnalyzer {
     const prompt = this.buildPrompt(extractedText, parsedData);
     
     try {
-      const { OpenAI } = await import('openai');
-      const openai = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
-      });
+      const { getOpenAIClient } = await import('@/lib/openai-client');
+      const openai = getOpenAIClient();
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",

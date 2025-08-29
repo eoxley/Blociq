@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import OpenAI from 'openai';
+import { getOpenAIClient } from '@/lib/openai-client';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 interface TemplateDiscoveryRequest {
   query: string;
@@ -66,6 +63,7 @@ export async function POST(req: NextRequest) {
 }
 
 async function analyzeQuery(query: string) {
+    const openai = getOpenAIClient();
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
@@ -163,6 +161,7 @@ async function rankTemplatesByRelevance(templates: any[], queryAnalysis: any) {
   [2, 0, 1, 3, ...]`;
 
   try {
+    const openai = getOpenAIClient();
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
@@ -214,6 +213,7 @@ async function generateAIRecommendations(
   }`;
 
   try {
+    const openai = getOpenAIClient();
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
@@ -272,6 +272,7 @@ async function suggestTemplateImprovements(
   ]`;
 
   try {
+    const openai = getOpenAIClient();
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [

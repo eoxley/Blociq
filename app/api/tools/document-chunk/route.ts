@@ -4,11 +4,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import OpenAI from 'openai';
+import { getOpenAIClient } from '@/lib/openai-client';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 export async function POST(req: NextRequest) {
   try {
@@ -196,6 +193,7 @@ function splitIntoChunks(text: string, targetWords: number): string[] {
 // Helper function to generate OpenAI embeddings
 async function generateEmbedding(text: string): Promise<number[]> {
   try {
+    const openai = getOpenAIClient();
     const response = await openai.embeddings.create({
       model: 'text-embedding-3-small',
       input: text,

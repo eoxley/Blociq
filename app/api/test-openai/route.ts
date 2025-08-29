@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { getOpenAIClient } from '@/lib/openai-client';
 
 export async function GET() {
   try {
@@ -14,7 +14,7 @@ export async function GET() {
 
     console.log('🔑 Testing OpenAI API key:', `${apiKey.substring(0, 10)}...`);
 
-    const openai = new OpenAI({ apiKey });
+    const openai = getOpenAIClient();
 
     // Simple test call
     const completion = await openai.chat.completions.create({
