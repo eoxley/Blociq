@@ -217,11 +217,18 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
                   <Mail className="h-6 w-6 text-white" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-3">Ask BlocIQ – Your AI Property Assistant</h3>
-                <div className="text-gray-600 text-sm space-y-2 mb-6">
-                  <p>Get instant answers to your property management questions with our secure, GDPR-compliant AI assistant.</p>
-                  <p>🔒 Your data is secure and stored on UK servers</p>
-                  <p>🎯 Specialized in UK property management and compliance</p>
-                  <p>⚡ Instant responses to complex property questions</p>
+                <div className="text-gray-600 text-sm space-y-3 mb-6">
+                  <p>You are welcome to try our Ask BlocIQ AI. This is BlocIQ's own secure, ring-fenced AI service — designed specifically for UK leasehold property management.</p>
+                  <p>All information you input and receive is GDPR-safe, confidential, and never shared with third parties. Your chats stay private, and the service runs on a secure UK-based server.</p>
+                  <p>👉 All we ask is your email to get started. This will not be used for marketing or shared with anyone — it's simply to give you access.</p>
+                  <div>
+                    <p className="font-medium text-gray-700 mb-2">💡 Try asking about:</p>
+                    <ul className="space-y-1 ml-4">
+                      <li>• Legislation and compliance requirements</li>
+                      <li>• Drafting an email or letter to your leaseholders or clients</li>
+                      <li>• Maintenance schedules and best practice advice</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
 
@@ -253,12 +260,12 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
               </form>
 
               <div className="mt-6 bg-blue-50 rounded-lg p-4">
-                <h4 className="font-semibold text-blue-900 mb-2">Benefits for BlocIQ Clients:</h4>
+                <h4 className="font-semibold text-blue-900 mb-2">BlocIQ clients benefit from the full power of Ask BlocIQ, including:</h4>
                 <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• Access to your building data and leaseholder information</li>
-                  <li>• Document analysis and OCR capabilities</li>
-                  <li>• Compliance tracking and reminders</li>
-                  <li>• Advanced AI features and integrations</li>
+                  <li>• Contextual answers based on their specific buildings and portfolio</li>
+                  <li>• Instant document retrieval and AI-generated notices</li>
+                  <li>• Lease reviews and summaries in seconds</li>
+                  <li>• LPE1 packs produced instantly</li>
                 </ul>
               </div>
 
