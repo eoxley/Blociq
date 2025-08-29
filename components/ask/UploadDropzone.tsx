@@ -1,6 +1,7 @@
 'use client';
 import React, { useRef, useState } from 'react';
 import { Upload, FileText, X, AlertCircle } from 'lucide-react';
+import AIChatDisclaimer from '@/components/ui/AIChatDisclaimer';
 
 interface UploadDropzoneProps {
   onResult: (data: any) => void;
@@ -137,6 +138,8 @@ export function UploadDropzone({ onResult, defaultBuildingId = null, className =
           </div>
         </div>
       )}
+      
+      <AIChatDisclaimer />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Plus, Calendar, Loader2, Send, Upload, FileText, X, Check, Sparkles, File, FileText as FileTextIcon, Building2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import CommunicationModal from './CommunicationModal';
+import AIChatDisclaimer from '@/components/ui/AIChatDisclaimer';
 import { SuggestedAction, DocumentAnalysis } from '@/types/ai';
 
 type Message = {
@@ -1297,6 +1298,7 @@ export default function AskBlocIQ({
               )}
             </div>
           </form>
+          <AIChatDisclaimer />
         </div>
       </div>
 
