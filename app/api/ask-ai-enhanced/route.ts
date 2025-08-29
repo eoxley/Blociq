@@ -774,62 +774,46 @@ export async function POST(request: NextRequest) {
     // ✅ FORCE DATABASE SEARCH FOR PROPERTY QUERIES
     let databaseResults = { data: [], totalRecords: 0 };
     
-    // Check if it's a property query
-    const isPropertyQuery = userQuestion.toLowerCase().includes('leaseholder') || 
-                           userQuestion.toLowerCase().includes('tenant') ||
-                           userQuestion.toLowerCase().includes('ashwood') ||
-                           userQuestion.toLowerCase().includes('house');
+    // Check if it's a property query using the proper function
+    const isPropertyQueryResult = isPropertyQuery(userQuestion);
     
-    console.log(`🏠 Property query detected: ${isPropertyQuery}`);
+    console.log(`🏠 Property query detected: ${isPropertyQueryResult}`);
     
-    if (isPropertyQuery) {
-      console.log('🗄️ SEARCHING DATABASE...');
+    if (isPropertyQueryResult) {
+      console.log('🗄️ SEARCHING DATABASE WITH PROPER FUNCTION...');
       
-      // DIRECT SUPABASE SEARCH - NO MORE EMPTY RESULTS!
-      const { data, error } = await supabase
-        .from('vw_units_leaseholders')
-        .select('*')
-        .or([
-          'property_name.ilike.%ashwood%',
-          'address.ilike.%ashwood%',
-          'unit_number.ilike.%5%',
-          'property_name.ilike.%house%'
-        ].join(','))
-        .limit(10);
-      
-      if (error) {
-        console.error('Database error:', error);
-      } else {
-        databaseResults.data = data || [];
-        databaseResults.totalRecords = data?.length || 0;
-        console.log(`✅ DATABASE FOUND ${databaseResults.totalRecords} RECORDS!`);
+      try {
+        // Use the proper database search function we created
+        const databaseResponse = await searchAllRelevantTables(supabase, userQuestion);
+        
+        if (databaseResponse && databaseResponse.trim().length > 0) {
+          console.log('✅ DATABASE SEARCH SUCCESSFUL!');
+          console.log('Database response:', databaseResponse);
+          
+          // Format the database response properly
+          const formattedResponse = formatDatabaseResponse(databaseResponse, userQuestion);
+          databaseResults.data = [{ response: formattedResponse }];
+          databaseResults.totalRecords = 1;
+          
+          console.log(`✅ DATABASE FOUND DATA: ${formattedResponse.substring(0, 100)}...`);
+        } else {
+          console.log('❌ No database data found');
+        }
+      } catch (error) {
+        console.error('❌ Database search error:', error);
       }
     }
     
     // Generate response WITH DATABASE DATA
     let answer = '';
     
-    if (databaseResults.totalRecords > 0) {
-      // BUILD REAL RESPONSE FROM DATABASE
-      const property = databaseResults.data[0];
-      answer = `## 🏠 Property Information Found
-
-**Property:** ${property.property_name || '5 Ashwood House'}
-**Address:** ${property.address || 'Address on file'}
-**Unit:** ${property.unit_number || 'N/A'}
-
-**Current Leaseholder:** ${property.tenant_name || 'No current tenant'}
-
-${property.monthly_rent ? `**Monthly Rent:** ${property.monthly_rent.toLocaleString()}` : ''}
-${property.lease_start_date ? `**Lease Start:** ${property.lease_start_date}` : ''}
-${property.lease_end_date ? `**Lease End:** ${property.lease_end_date}` : ''}
-${property.lease_status ? `**Status:** ${property.lease_status}` : ''}
-
-${property.phone ? `**Contact:** ${property.phone}` : ''}
-${property.email ? `**Email:** ${property.email}` : ''}`;
+    if (databaseResults.totalRecords > 0 && databaseResults.data[0]?.response) {
+      // USE THE REAL DATABASE RESPONSE
+      answer = databaseResults.data[0].response;
+      console.log('✅ Using real database response:', answer.substring(0, 200));
       
     } else {
-      answer = `I searched for "5 Ashwood House" in your property database but didn't find any records. 
+      answer = `I searched for "${userQuestion}" in your property database but didn't find any records. 
 
 This could mean:
 • The property isn't in your system yet
