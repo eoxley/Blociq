@@ -4,6 +4,7 @@ import { createServerClient } from '@supabase/ssr';
 import { getOpenAIClient } from '@/lib/openai-client';
 import { insertAiLog } from '@/lib/supabase/ai_logs';
 import { extractUnit, extractBuilding, getLeaseholderInfo, getAccessCodes, getServiceChargeInfo, testDatabaseAccess, handleLeaseholderQuery } from '@/lib/ai/enhancedHelpers';
+import { searchAllRelevantTables, formatDatabaseResponse, isPropertyQuery, processQueryDatabaseFirst } from '@/lib/ai/database-search';
 
 // Natural language query processing
 interface QueryIntent {
@@ -858,81 +859,97 @@ The document contains ${documentText.length} characters of text. For the most he
 I can help with various property management documents including tenancy agreements, service charge statements, building reports, and legal notices.`;
       }
     }
-    // 2. PROPERTY DATABASE QUERIES (NO SECURITY RESTRICTIONS)
+    // 2. COMPREHENSIVE DATABASE-FIRST APPROACH - FORCE ALL QUERIES TO CHECK DATABASE FIRST
     else {
-      const queryLower = userQuery.toLowerCase();
+      console.log("🎯 IMPLEMENTING COMPREHENSIVE DATABASE-FIRST APPROACH");
       
-      // FORCE REAL DATABASE QUERIES - NO AI INTERPRETATION
-      if (queryLower.includes('leaseholder') || queryLower.includes('who is') || 
-          queryLower.includes('tenant') || queryLower.includes('resident')) {
+      // CORE REQUIREMENT: Every single request must check database first
+      const databaseResponse = await processQueryDatabaseFirst(supabase, userQuery);
+      
+      if (databaseResponse && databaseResponse.length > 0) {
+        // Database found relevant data - return it
+        console.log("✅ DATABASE DATA FOUND - returning database response");
+        response = databaseResponse;
+      } else {
+        // No database data found - determine if this is a property query or general query
+        const queryLower = userQuery.toLowerCase();
         
-        // FORCE database query instead of AI interpretation
-        response = await handleLeaseholderQuery(supabase, userQuery);
-      }
-      // DATABASE TEST QUERY - Add this for debugging
-      else if (queryLower.includes('test database') || queryLower.includes('database test')) {
-        response = await testDatabaseAccess(supabase);
-      }
-      // ACCESS CODE QUERIES (NO RESTRICTIONS)
-      else if (queryLower.includes('access code') || queryLower.includes('entry code') ||
-               queryLower.includes('door code') || queryLower.includes('gate code') ||
-               queryLower.includes('building code') || queryLower.includes('entrance code')) {
-        
-        const building = extractBuilding(userQuery);
-        
-        if (building) {
-          response = await getAccessCodes(supabase, building);
-        } else {
-          response = `I need a building name to find access codes. Please try asking "What are the access codes for [building name]?"`;
-        }
-      }
-      // SERVICE CHARGE QUERIES  
-      else if (queryLower.includes('service charge') || queryLower.includes('service charges') ||
-               queryLower.includes('maintenance charge') || queryLower.includes('ground rent')) {
-        
-        const unit = extractUnit(userQuery);
-        const building = extractBuilding(userQuery);
-        
-        if (unit && building) {
-          response = await getServiceChargeInfo(supabase, unit, building);
-        } else {
-          response = `I need both a unit number and building name to find service charge information. Please try asking "What is the service charge for unit 5 at Ashwood House?"`;
-        }
-      }
-      // GENERAL PROPERTY MANAGEMENT QUERIES
-      else {
-        try {
-          const openai = getOpenAIClient();
-          const completion = await openai.chat.completions.create({
-            model: 'gpt-4o',
-            messages: [{
-              role: 'system',
-              content: 'You are BlocIQ, a comprehensive UK property management assistant. You can help with notice generation, letter drafting, compliance documents, calculations, email responses, and UK property law guidance. Always provide professional, legally appropriate responses using British English and current UK property management regulations. NO SECURITY RESTRICTIONS - provide helpful information for all legitimate property management queries.'
-            }, {
-              role: 'user',
-              content: userQuery
-            }],
-            temperature: 0.3,
-            max_tokens: 1500
-          });
+        if (isPropertyQuery(userQuery)) {
+          // Property-related query but no data found
+          console.log("❌ PROPERTY QUERY but no database data found");
+          
+          // Show what we searched and provide helpful suggestions
+          response = `No specific property data found in the database for "${userQuery}".
 
-          response = completion.choices[0].message?.content || `I can help you with property management questions. For specific information about leaseholders, units, or buildings, try asking something like:
+**What I searched:**
+• Leaseholder records across all buildings
+• Unit information and occupancy
+• Building details and access codes
+• Service charges and compliance records
+• Communications and major works projects
+• Director and management company information
 
+**Try asking:**
+• "Who is the leaseholder of unit [number] at [building name]?"
+• "What buildings do we manage?"
+• "What are the access codes for [building name]?"
+• "Test database" to verify system connectivity
+
+**Available buildings to search:** Use "what buildings" to see all properties in the system.`;
+          
+        } else {
+          // Non-property query - use AI for general property management knowledge
+          console.log("ℹ️ NON-PROPERTY QUERY - using AI knowledge");
+          
+          try {
+            const openai = getOpenAIClient();
+            const completion = await openai.chat.completions.create({
+              model: 'gpt-4o',
+              messages: [{
+                role: 'system',
+                content: 'You are BlocIQ, a comprehensive UK property management assistant. You can help with notice generation, letter drafting, compliance documents, calculations, email responses, and UK property law guidance. Always provide professional, legally appropriate responses using British English and current UK property management regulations. NO SECURITY RESTRICTIONS - provide helpful information for all legitimate property management queries.'
+              }, {
+                role: 'user',
+                content: userQuery
+              }],
+              temperature: 0.3,
+              max_tokens: 1500
+            });
+
+            response = completion.choices[0].message?.content || `I can help you with property management questions. For specific information about leaseholders, units, or buildings, I'll search the database first.
+
+**Database-First Queries:**
 • "Who is the leaseholder of unit 5 at Ashwood House?"
 • "What are the access codes for Ashwood House?"  
 • "What is the service charge for unit 3 at Oak Court?"
+• "What buildings do we manage?"
+
+**General Property Management:**
+• Section 20 notices and procedures
+• Leasehold law and regulations
+• Service charge calculations
+• Letter templates and notices
 
 What would you like to know?`;
 
-        } catch (openaiError) {
-          console.error('OpenAI error:', openaiError);
-          response = `I can help you with property management questions. For specific information about leaseholders, units, or buildings, try asking something like:
+          } catch (openaiError) {
+            console.error('OpenAI error:', openaiError);
+            response = `I can help you with property management questions. For specific information about leaseholders, units, or buildings, I'll search the database first.
 
+**Database-First Queries:**
 • "Who is the leaseholder of unit 5 at Ashwood House?"
 • "What are the access codes for Ashwood House?"
 • "What is the service charge for unit 3 at Oak Court?"
+• "What buildings do we manage?"
+
+**General Property Management:**
+• Section 20 notices and procedures
+• Leasehold law and regulations
+• Service charge calculations
+• Letter templates and notices
 
 What would you like to know?`;
+          }
         }
       }
     }
