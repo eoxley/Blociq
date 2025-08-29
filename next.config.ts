@@ -18,14 +18,11 @@ const nextConfig: NextConfig = {
   // },
   // Configure webpack to handle chunk loading better
   webpack: (config, { dev, isServer }) => {
+    // EMERGENCY FIX: Disable minification to bypass WebpackError constructor bug
     if (!dev && !isServer) {
-      // Fix for Next.js 15.4.2 WebpackError constructor issue in minify-webpack-plugin
-      const webpack = config.plugins[0].constructor;
-      if (webpack && !webpack.WebpackError) {
-        webpack.WebpackError = Error;
-      }
+      config.optimization.minimize = false;
       
-      // Optimize chunk splitting for production
+      // Keep chunk splitting for performance
       config.optimization.splitChunks = {
         chunks: 'all',
         cacheGroups: {
