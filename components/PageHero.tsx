@@ -26,7 +26,7 @@ export default function PageHero({
 }: PageHeroProps) {
   return (
     <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16">
-      <div className="max-w-none mx-auto px-6">
+      <div className="max-w-7xl mx-auto px-6">
         <div className="text-center">
           {/* Icon */}
           {icon && (

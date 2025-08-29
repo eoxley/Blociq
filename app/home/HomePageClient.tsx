@@ -1182,17 +1182,17 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
   return (
     <div className="min-h-screen bg-secondary-bg">
-      {/* Enhanced Hero Banner - BlocIQ Landing Page Style */}
-      <section className="hero-banner relative overflow-hidden py-16 mx-6" style={{ background: 'var(--brand-gradient)' }}>
-        <div className="max-w-none mx-auto px-6">
+      {/* Enhanced Hero Banner - Communications Hub Style */}
+      <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16 mx-6">
+        <div className="max-w-7xl mx-auto px-6">
           <div className="text-center">
             <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
               <BlocIQLogo className="h-10 w-10 text-white" />
             </div>
-            <h1 className="hero-title text-4xl md:text-5xl font-bold text-white mb-6">
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
               {getTimeBasedGreeting(userFirstName || userData.name)}
             </h1>
-            <p className="hero-subtitle text-xl text-white/90 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-xl text-white/90 max-w-3xl mx-auto leading-relaxed">
               {currentWelcomeMessage}
             </p>
           </div>
@@ -1206,12 +1206,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         </div>
       </section>
 
-      <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
+      <div className="max-w-7xl mx-auto px-6 py-16 space-y-12">
         {/* 🧠 Enhanced Circular Ask BlocIQ Widget */}
         <div className="flex justify-center">
           <div 
             className={`ask-blociq-circle relative transition-all duration-500 ${showChat ? 'w-[600px] h-[600px] md:w-[700px] md:h-[700px]' : 'w-[400px] h-[400px] md:w-[500px] md:h-[500px]'} rounded-full md:rounded-full rounded-3xl shadow-2xl hover:shadow-3xl flex items-center justify-center p-12 group`}
-            style={{ background: 'var(--ai-gradient)' }}
+            style={{ background: 'linear-gradient(135deg, #14b8a6, #3b82f6, #8b5cf6)' }}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
@@ -1295,7 +1295,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                      <button 
                        onClick={() => handleAskSubmit(askInput)}
                        disabled={(!askInput.trim() && uploadedFiles.length === 0) || isSubmitting}
-                       className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2.5 ai-button hover:brightness-110 text-white rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                       className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2.5 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                      >
                        {isSubmitting ? (
                          <Loader2 className="h-5 w-5 animate-spin" />
@@ -1371,7 +1371,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               {messages.length > 0 && !showChat && (
                 <button
                   onClick={() => setShowChat(true)}
-                  className="flex items-center gap-2 mx-auto px-4 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl text-sm font-medium transition-all duration-200 border border-white/30 hover:border-white/50 shadow-lg hover:shadow-xl"
+                  className="flex items-center gap-2 mx-auto px-6 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl text-sm font-medium transition-all duration-200 border border-white/30 hover:border-white/50 shadow-lg hover:shadow-xl"
                 >
                   <ChevronDown className="h-4 w-4" />
                   View Chat ({messages.length} message{messages.length !== 1 ? 's' : ''})
@@ -1403,7 +1403,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                   title="Drag to move chat window, double-click to reset size and position"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 icon-brain rounded-full flex items-center justify-center">
+                    <div className="w-10 h-10 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full flex items-center justify-center shadow-lg">
                       <Brain className="h-5 w-5 text-white" />
                     </div>
                     <div>
@@ -1450,11 +1450,11 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                         animation: `fadeIn 0.3s ease-in-out ${index * 0.1}s forwards`
                       }}
                     >
-                      <div className={`max-w-[70%] rounded-xl p-3 shadow-sm ${
-                        message.sender === 'user' 
-                          ? 'ai-button text-white' 
-                          : 'bg-white text-text-primary border border-border shadow-sm'
-                      }`}>
+                                              <div className={`max-w-[70%] rounded-xl p-3 shadow-sm ${
+                          message.sender === 'user' 
+                            ? 'bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white' 
+                            : 'bg-white text-gray-900 border border-gray-200 shadow-sm'
+                        }`}>
                         {/* Message Content */}
                         <div className="text-sm whitespace-pre-line leading-relaxed mb-2">
                           {message.text}
@@ -1465,23 +1465,23 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                           <div className="flex gap-3 mt-3 pt-3 border-t border-gray-100 bg-gradient-to-r from-gray-50/50 to-white/50 rounded-lg p-2 -mx-2">
                             <button
                               onClick={() => handleCreateLetter(message.text)}
-                              className="group relative btn-icon bg-brand-teal hover:bg-teal-700 text-white transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-95"
+                              className="group relative p-2 bg-[#14b8a6] hover:bg-[#0d9488] text-white rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-95"
                               title="Create Letter"
                             >
                               <FileTextIcon className="h-4 w-4" />
-                              <div className="absolute -top-2 -right-2 w-2 h-2 bg-brand-pink rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                              <div className="absolute -top-2 -right-2 w-2 h-2 bg-[#ec4899] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
                             </button>
                             <button
                               onClick={() => handleSendEmail(message.text)}
-                              className="group relative btn-icon bg-brand-pink hover:bg-pink-600 text-white transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-95"
+                              className="group relative p-2 bg-[#ec4899] hover:bg-[#db2777] text-white rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-95"
                               title="Send Email"
                             >
                               <Mail className="h-4 w-4" />
-                              <div className="absolute -top-2 -right-2 w-2 h-2 bg-brand-teal rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                              <div className="absolute -top-2 -right-2 w-2 h-2 bg-[#14b8a6] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
                             </button>
                             <button
                               onClick={() => handleSaveAsNotice(message.text)}
-                              className="group relative btn-icon ai-button text-white transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-95"
+                              className="group relative p-2 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-95"
                               title="Save as Notice"
                             >
                               <Bell className="h-4 w-4" />
@@ -1505,11 +1505,11 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                     <div className="flex justify-start">
                       <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm max-w-[70%]">
                         <div className="flex items-center gap-3">
-                          <div className="w-6 h-6 bg-gradient-to-r from-teal-500 to-pink-500 rounded-full flex items-center justify-center animate-pulse">
+                          <div className="w-6 h-6 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full flex items-center justify-center animate-pulse shadow-lg">
                             <Brain className="h-4 w-4 text-white" />
                           </div>
                           <div className="flex items-center gap-2 text-gray-600">
-                            <Loader2 className="animate-spin h-4 w-4 text-teal-600" />
+                            <Loader2 className="animate-spin h-4 w-4 text-[#4f46e5]" />
                             <span className="text-sm font-medium">Thinking...</span>
                           </div>
                         </div>
@@ -1636,24 +1636,24 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
 
         {/* Today's Tasks Section */}
-        <div className="space-y-6">
+        <div className="space-y-8">
           <div className="text-center">
-            <h2 className="page-title text-2xl font-bold text-gray-900 mb-2">Today's Tasks</h2>
-            <p className="body-text text-gray-600">Manage your property events and building tasks</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-3">Today's Tasks</h2>
+            <p className="text-lg text-gray-600 leading-relaxed">Manage your property events and building tasks</p>
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[600px] mb-8">
             {/* Property Events Widget */}
             <div className="h-full">
               <div className="feature-card shadow-lg border-0 overflow-hidden h-full flex flex-col">
-                <div className="p-6 text-white" style={{ background: 'var(--brand-gradient)' }}>
+                <div className="p-6 text-white bg-gradient-to-r from-[#4f46e5] to-[#a855f7]">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
                         <Calendar className="h-6 w-6 text-white" />
                       </div>
                       <div>
-                        <h2 className="section-title text-xl font-bold text-white">Property Events</h2>
+                        <h2 className="text-xl font-bold text-white">Property Events</h2>
                         <p className="text-sm text-white/80">Manage your property events</p>
                       </div>
                     </div>
@@ -1697,7 +1697,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                     <div className="text-center mb-6">
                       <button
                         onClick={() => setShowAddEventForm(true)}
-                        className="btn-primary hover:brightness-110 shadow-lg transition-all duration-200"
+                        className="bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] hover:brightness-110 text-white px-6 py-2 rounded-xl font-medium shadow-lg transition-all duration-200"
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         Add New Event
@@ -1707,9 +1707,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
                   {/* Manual Event Input Form */}
                   {showAddEventForm && (
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
+                    <div className="bg-gradient-to-r from-[#4f46e5]/5 to-[#a855f7]/5 rounded-xl p-6 border border-[#4f46e5]/20 shadow-lg">
                       <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold text-gray-900">Add New Event</h3>
+                        <h3 className="text-lg font-semibold text-gray-900">Add New Event</h3>
                         <button
                           type="button"
                           onClick={() => setShowAddEventForm(false)}
@@ -1718,20 +1718,20 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                           <X className="h-5 w-5" />
                         </button>
                       </div>
-                      <form onSubmit={handleAddEvent} className="space-y-3">
+                      <form onSubmit={handleAddEvent} className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-sm font-medium text-text-primary mb-1">Event Title</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Event Title</label>
                             <input
                               type="text"
                               name="title"
                               required
-                              className="w-full px-3 py-2 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent transition-all duration-200"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#14b8a6] focus:border-transparent transition-all duration-200"
                               placeholder="Enter event title"
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Building</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Building</label>
                             <select
                               name="building"
                               required
@@ -1749,7 +1749,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
                             <input
                               type="date"
                               name="date"
@@ -1758,7 +1758,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
                             <input
                               type="time"
                               name="time"
@@ -1769,7 +1769,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                         </div>
                         
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
                           <textarea
                             name="description"
                             rows={3}
@@ -1778,7 +1778,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                           />
                         </div>
                         
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-4 pt-2">
                           <button
                             type="submit"
                             disabled={isAddingEvent}
@@ -1832,10 +1832,10 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                         }
 
                         return (
-                          <div key={index} className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-lg transition-all duration-200 hover:scale-[1.02]">
+                          <div key={index} className="bg-white rounded-xl p-5 border border-gray-200 hover:shadow-xl transition-all duration-300 hover:scale-[1.01] shadow-md">
                             <div className="flex items-start gap-4">
                               {/* Event Icon */}
-                              <div className="w-10 h-10 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-xl flex items-center justify-center text-white flex-shrink-0">
+                              <div className="w-10 h-10 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-xl flex items-center justify-center text-white flex-shrink-0 shadow-lg">
                                 <Calendar className="h-5 w-5" />
                               </div>
                               
@@ -1845,7 +1845,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                                 <div className="flex items-start justify-between mb-3">
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-3 mb-2">
-                                      <h4 className="text-lg font-semibold text-gray-900 truncate">{event.title}</h4>
+                                      <h4 className="text-xl font-bold text-gray-900 truncate">{event.title}</h4>
                                       {(isToday || isTomorrow) && (
                                         <span className={`px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
                                           isToday 
@@ -1879,14 +1879,14 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                                 </div>
                                 
                                 {/* Event Details Grid */}
-                                <div className="grid grid-cols-1 gap-3">
+                                <div className="grid grid-cols-1 gap-4 mt-4">
                                   {/* Date & Time */}
                                   <div className="flex items-start gap-3">
                                     <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
                                       <Clock className="h-3 w-3 text-blue-600" />
                                     </div>
                                     <div>
-                                      <p className="text-sm font-medium text-gray-700 mb-1">Date & Time</p>
+                                      <p className="text-sm font-semibold text-gray-700 mb-2">Date & Time</p>
                                       <p className="text-gray-900 font-semibold">
                                         {date} at {timeDisplay}
                                       </p>
@@ -1899,7 +1899,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                                       <Building className="h-3 w-3 text-green-600" />
                                     </div>
                                     <div>
-                                      <p className="text-sm font-medium text-gray-700 mb-1">Building</p>
+                                      <p className="text-sm font-semibold text-gray-700 mb-2">Building</p>
                                       <p className="text-gray-900 font-semibold">{event.building || 'General'}</p>
                                     </div>
                                   </div>
@@ -1911,7 +1911,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                                         <MapPin className="h-3 w-3 text-purple-600" />
                                       </div>
                                       <div>
-                                        <p className="text-sm font-medium text-gray-700 mb-1">Location</p>
+                                        <p className="text-sm font-semibold text-gray-700 mb-2">Location</p>
                                         <p className="text-gray-900 font-semibold">{event.location}</p>
                                       </div>
                                     </div>
@@ -1924,7 +1924,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                                         <User className="h-3 w-3 text-orange-600" />
                                       </div>
                                       <div>
-                                        <p className="text-sm font-medium text-gray-700 mb-1">Organizer</p>
+                                        <p className="text-sm font-semibold text-gray-700 mb-2">Organizer</p>
                                         <p className="text-gray-900 font-semibold">{event.organiser_name}</p>
                                       </div>
                                     </div>
@@ -1937,7 +1937,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                                         <MessageCircle className="h-3 w-3 text-white" />
                                       </div>
                                       <div>
-                                        <p className="text-sm font-medium text-gray-700 mb-1">Meeting Type</p>
+                                        <p className="text-sm font-semibold text-gray-700 mb-2">Meeting Type</p>
                                         <p className="text-[#4f46e5] font-semibold">🎥 Online meeting available</p>
                                       </div>
                                     </div>
@@ -1951,11 +1951,11 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                     </div>
                   ) : (
                     <div className="text-center py-12">
-                      <div className="w-20 h-20 bg-gradient-to-r from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <div className="w-20 h-20 bg-gradient-to-r from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                         <Calendar className="h-10 w-10 text-gray-400" />
                       </div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">No events yet</h3>
-                      <p className="text-gray-500 mb-4 max-w-sm mx-auto">
+                      <h3 className="text-xl font-bold text-gray-900 mb-3">No events yet</h3>
+                      <p className="text-gray-600 mb-6 max-w-md mx-auto leading-relaxed">
                         {outlookConnected 
                           ? 'Add property events or sync your Outlook calendar to get started.'
                           : 'Add property events or connect your Outlook calendar to get started.'
@@ -1964,7 +1964,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                       {!outlookConnected && (
                         <button
                           onClick={handleConnectOutlook}
-                          className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-4 py-2 rounded-xl font-medium shadow-lg transition-all duration-200"
+                          className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white px-6 py-3 rounded-xl font-medium shadow-lg transition-all duration-200"
                         >
                           <ExternalLink className="h-3 w-3 mr-2" />
                           Connect Outlook Calendar
@@ -1980,10 +1980,10 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             <div className="h-full">
               {todosEmpty ? (
                 <div className="text-center py-8 flex-1 flex items-center justify-center">
-                  <div className="w-16 h-16 bg-gradient-to-r from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <div className="w-16 h-16 bg-gradient-to-r from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                     <CheckCircle className="h-8 w-8 text-gray-400" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">All caught up!</h3>
+                  <h3 className="text-xl font-bold text-gray-900 mb-3">All caught up!</h3>
                 </div>
               ) : (
                 <BuildingTodoList 
