@@ -385,6 +385,8 @@ async function processOCRDocument(file: File): Promise<{ success: boolean; extra
       } catch (pdfError) {
         console.log('⚠️ Direct PDF extraction failed, trying OCR fallbacks...', pdfError);
       }
+    } else {
+      console.log('⚠️ File is not PDF type, skipping direct PDF extraction');
     }
     
     // Strategy 2: Try OCR fallback system with OpenAI Vision
@@ -392,6 +394,14 @@ async function processOCRDocument(file: File): Promise<{ success: boolean; extra
       console.log('🔄 Using OCR fallback system with OpenAI Vision...');
       const { processDocumentWithFallback } = await import('@/lib/ocr-fallback');
       const fallbackResult = await processDocumentWithFallback(file);
+      
+      console.log('📊 OCR fallback result:', {
+        success: !!fallbackResult,
+        textLength: fallbackResult?.text?.length || 0,
+        method: fallbackResult?.method,
+        attempts: fallbackResult?.attempts,
+        fallbackReasons: fallbackResult?.fallbackReasons
+      });
       
       if (fallbackResult.text && fallbackResult.text.length > 50) {
         console.log(`✅ Fallback OCR successful: ${fallbackResult.text.length} characters via ${fallbackResult.method}`);
@@ -419,6 +429,13 @@ async function processOCRDocument(file: File): Promise<{ success: boolean; extra
       console.log('🌐 Attempting external OCR service...');
       const ocrConfig = getOCRConfig();
       const result = await processFileWithOCR(file, ocrConfig);
+      
+      console.log('📊 External OCR result:', {
+        success: result.success,
+        textLength: result.text?.length || 0,
+        confidence: result.confidence,
+        error: result.error
+      });
       
       if (result.success && result.text && result.text.length > 50) {
         console.log(`✅ External OCR successful: ${result.text.length} characters`);
@@ -793,9 +810,25 @@ export async function POST(request: NextRequest) {
       console.log('📁 Processing uploaded files...');
       const file = files[0] as File;
       
+      console.log('📊 File details:', {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: file.lastModified
+      });
+      
       try {
         // Process the file through the OCR system
+        console.log('🔍 Starting OCR processing...');
         const ocrResult = await processOCRDocument(file);
+        
+        console.log('📊 OCR processing result:', {
+          success: ocrResult.success,
+          extractedText: ocrResult.extractedText ? ocrResult.extractedText.substring(0, 100) : 'No text',
+          textLength: ocrResult.extractedText?.length || 0,
+          metadata: ocrResult.metadata,
+          error: ocrResult.error
+        });
         
         if (ocrResult.success && ocrResult.extractedText) {
           console.log(`✅ File processed successfully: ${ocrResult.extractedText.length} characters extracted`);
@@ -816,7 +849,12 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({
             success: false,
             error: ocrResult.error || 'File processing failed',
-            filename: file.name
+            filename: file.name,
+            debug: {
+              success: ocrResult.success,
+              textLength: ocrResult.extractedText?.length || 0,
+              metadata: ocrResult.metadata
+            }
           }, { status: 400 });
         }
       } catch (error) {
