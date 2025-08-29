@@ -17,17 +17,17 @@ class QueryProcessor {
   parseQuery(query: string): QueryIntent {
     const queryLower = query.toLowerCase();
     
-    // Extract building identifiers
+    // Extract building identifiers (NO 'g' flags to prevent RegExp constructor errors)
     const buildingPatterns = [
-      /(\d+\s+\w+(?:\s+\w+)*)/g, // "5 ashwood", "123 main street"
-      /building\s+(\w+)/g,       // "building ashwood"
-      /(\w+\s+building)/g        // "ashwood building"
+      /(\d+\s+\w+(?:\s+\w+)*)/, // "5 ashwood", "123 main street"
+      /building\s+(\w+)/,       // "building ashwood"
+      /(\w+\s+building)/        // "ashwood building"
     ];
     
-    // Extract unit identifiers  
+    // Extract unit identifiers (NO 'g' flags to prevent RegExp constructor errors)
     const unitPatterns = [
-      /(?:unit|flat|apartment|apt)\s*(\d+[a-z]?)/gi,
-      /(?:^|\s)(\d+[a-z]?)(?:\s|$)/g // standalone numbers like "5", "3A"
+      /(?:unit|flat|apartment|apt)\s*(\d+[a-z]?)/i,
+      /(?:^|\s)(\d+[a-z]?)(?:\s|$)/ // standalone numbers like "5", "3A"
     ];
     
     // Extract person names
@@ -323,7 +323,7 @@ export async function POST(req: Request) {
         }, { status: 404 });
       }
 
-      contextData = {
+      const contextData = {
         success: true,
         building,
         metadata: {

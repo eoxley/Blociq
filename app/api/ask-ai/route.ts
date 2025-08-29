@@ -17,22 +17,22 @@ class QueryProcessor {
   parseQuery(query: string): QueryIntent {
     const queryLower = query.toLowerCase();
     
-    // Enhanced building identifiers with better pattern matching
+    // Enhanced building identifiers with better pattern matching (NO 'g' flags - added by extractBestMatch)
     const buildingPatterns = [
-      /(\d+\s+\w+(?:\s+\w+)*?)(?:\s+building|$|\s+house|\s+court|\s+place)/g, // "5 ashwood", "123 main street"
-      /building\s+([a-zA-Z0-9\s]+?)(?:\s|$|,|\?)/g,       // "building ashwood"
-      /([a-zA-Z]+(?:\s+[a-zA-Z]+)*)\s+building/g,         // "ashwood building"
-      /at\s+([a-zA-Z0-9\s]+?)(?:\s|$|,|\?)/g,             // "at ashwood"
-      /property\s+([a-zA-Z0-9\s]+?)(?:\s|$|,|\?)/g,       // "property name"
-      /([a-zA-Z]+(?:\s+[a-zA-Z]+)*)\s+(?:house|court|place|tower|manor|lodge)/gi // Common building types
+      /(\d+\s+\w+(?:\s+\w+)*?)(?:\s+building|$|\s+house|\s+court|\s+place)/, // "5 ashwood", "123 main street"
+      /building\s+([a-zA-Z0-9\s]+?)(?:\s|$|,|\?)/,       // "building ashwood"
+      /([a-zA-Z]+(?:\s+[a-zA-Z]+)*)\s+building/,         // "ashwood building"
+      /at\s+([a-zA-Z0-9\s]+?)(?:\s|$|,|\?)/,             // "at ashwood"
+      /property\s+([a-zA-Z0-9\s]+?)(?:\s|$|,|\?)/,       // "property name"
+      /([a-zA-Z]+(?:\s+[a-zA-Z]+)*)\s+(?:house|court|place|tower|manor|lodge)/i // Common building types
     ];
     
-    // Enhanced unit identifiers with better extraction
+    // Enhanced unit identifiers with better extraction (NO 'g' flags - added by extractBestMatch)
     const unitPatterns = [
-      /(?:unit|flat|apartment|apt)\s*([0-9]+[a-zA-Z]?)/gi,
-      /(?:^|\s|of\s+|in\s+)([0-9]+[a-zA-Z]?)(?:\s+(?:ashwood|at|building)|$|\s)/g, // "5 ashwood", "3A"
-      /number\s+([0-9]+[a-zA-Z]?)/gi,                     // "number 5"
-      /([0-9]+[a-zA-Z]?)\s+(?:ashwood|at)/gi              // "5 ashwood"
+      /(?:unit|flat|apartment|apt)\s*([0-9]+[a-zA-Z]?)/i,
+      /(?:^|\s|of\s+|in\s+)([0-9]+[a-zA-Z]?)(?:\s+(?:ashwood|at|building)|$|\s)/, // "5 ashwood", "3A"
+      /number\s+([0-9]+[a-zA-Z]?)/i,                     // "number 5"
+      /([0-9]+[a-zA-Z]?)\s+(?:ashwood|at)/i              // "5 ashwood"
     ];
     
     // Enhanced person name patterns
@@ -103,7 +103,8 @@ class QueryProcessor {
     for (const pattern of patterns) {
       try {
         // FIX: Prevent duplicate 'g' flags that cause RegExp constructor error
-        const flags = pattern.global ? pattern.flags.replace(/g/g, '') + 'g' : pattern.flags + 'g';
+        const existingFlags = pattern.flags || '';
+        const flags = existingFlags.includes('g') ? existingFlags : existingFlags + 'g';
         const regex = new RegExp(pattern.source, flags);
         const regexMatches = [...text.matchAll(regex)];
         
