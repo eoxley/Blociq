@@ -775,11 +775,62 @@ export async function POST(request: NextRequest) {
                         (formData.get('userQuestion') as string) || 
                         (formData.get('question') as string);
     
-    console.log(`🔍 Query received: "${userQuestion}"`);
+    // Check if files are uploaded
+    const files = formData.getAll('file_0') || formData.getAll('file') || [];
+    const hasFiles = files.length > 0;
     
-    if (!userQuestion) {
-      console.error('❌ NO QUERY FOUND');
+    console.log(`🔍 Query received: "${userQuestion}"`);
+    console.log(`📁 Files uploaded: ${hasFiles ? files.length : 0}`);
+    
+    if (!userQuestion && !hasFiles) {
+      console.error('❌ NO QUERY OR FILES FOUND');
       console.error('Available fields:', Array.from(formData.keys()));
+      return NextResponse.json({ error: 'No query or files provided' }, { status: 400 });
+    }
+    
+    // If files are uploaded, process them first
+    if (hasFiles) {
+      console.log('📁 Processing uploaded files...');
+      const file = files[0] as File;
+      
+      try {
+        // Process the file through the OCR system
+        const ocrResult = await processOCRDocument(file);
+        
+        if (ocrResult.success && ocrResult.extractedText) {
+          console.log(`✅ File processed successfully: ${ocrResult.extractedText.length} characters extracted`);
+          
+          // Return the OCR result
+          return NextResponse.json({
+            success: true,
+            analysis: "Document analysis completed",
+            documentType: "lease",
+            filename: file.name,
+            summary: `Document processed successfully. Extracted ${ocrResult.extractedText.length} characters of text.`,
+            textLength: ocrResult.extractedText.length,
+            extractedText: ocrResult.extractedText,
+            metadata: ocrResult.metadata
+          });
+        } else {
+          console.error('❌ File processing failed:', ocrResult.error);
+          return NextResponse.json({
+            success: false,
+            error: ocrResult.error || 'File processing failed',
+            filename: file.name
+          }, { status: 400 });
+        }
+      } catch (error) {
+        console.error('❌ File processing error:', error);
+        return NextResponse.json({
+          success: false,
+          error: 'File processing failed',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        }, { status: 500 });
+      }
+    }
+    
+    // Continue with text-only processing if no files
+    if (!userQuestion) {
       return NextResponse.json({ error: 'No query provided' }, { status: 400 });
     }
     
