@@ -159,6 +159,8 @@ class TextExtractionService {
   }
 
   private async extractFromPDF(buffer: Buffer): Promise<string> {
+    // Dynamic import to avoid issues with test environments
+    const pdfParse = (await import('pdf-parse')).default;
     const result = await pdfParse(buffer);
     const text = result.text || '';
     
@@ -442,4 +444,31 @@ function guessType(name: string): string {
   if (lower.endsWith('.csv')) return 'text/csv';
   if (lower.endsWith('.html') || lower.endsWith('.htm')) return 'text/html';
   return 'application/octet-stream';
+}
+
+// Export missing functions that are imported elsewhere
+export async function extractTextWithAnalysis(buffer: Buffer, fileName: string): Promise<{ text: string; analysis?: any }> {
+  try {
+    const result = await extractTextFromPDF(buffer, fileName);
+    return {
+      text: result.text,
+      analysis: {
+        success: true,
+        method: 'pdf-parser',
+        textLength: result.text.length
+      }
+    };
+  } catch (error) {
+    throw new Error(`Text extraction with analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+export function cleanExtractedText(text: string): string {
+  const extractor = TextExtractionService.getInstance();
+  return (extractor as any).postProcessText(text);
+}
+
+export function isTextSufficientForAnalysis(text: string): boolean {
+  const extractor = TextExtractionService.getInstance();
+  return (extractor as any).isValidText(text);
 }
