@@ -25,7 +25,7 @@ export function extractBuilding(prompt: string): string | undefined {
 
 export async function getLeaseholderInfo(supabase: any, unit: string, building: string): Promise<string> {
   try {
-    console.log(`🔍 Enhanced search: Unit ${unit} at ${building}`);
+    console.log("Searching for:", { unit, building });
     
     const searches = [
       supabase
@@ -43,8 +43,13 @@ export async function getLeaseholderInfo(supabase: any, unit: string, building: 
 
     for (const search of searches) {
       const { data, error } = await search.limit(5);
+      console.log("Database result:", { data, error });
       if (!error && data && data.length > 0) {
         const leaseholder = data[0];
+        // Then return the actual data instead of generic message
+        if (data && data.length > 0) {
+          return `The leaseholder of ${unit} ${building} is: ${data[0].leaseholder_name}`;
+        }
         let response = `The leaseholder of unit ${leaseholder.unit_number}, ${leaseholder.building_name} is: **${leaseholder.leaseholder_name}**`;
         
         if (leaseholder.leaseholder_email) {
