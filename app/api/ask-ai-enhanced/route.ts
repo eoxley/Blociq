@@ -840,11 +840,39 @@ export async function POST(request: NextRequest) {
         if (ocrResult.success && ocrResult.extractedText) {
           console.log(`✅ File processed successfully: ${ocrResult.extractedText.length} characters extracted`);
           
-          // Return the OCR result in the format the frontend expects
+          // Check if this is a lease document and use structured analysis
+          const isLease = file.name.toLowerCase().includes('lease') || 
+                         ocrResult.extractedText.toLowerCase().includes('lease') ||
+                         userQuestion.toLowerCase().includes('lease');
+          
+          if (isLease) {
+            console.log('🏠 Lease document detected - running comprehensive analysis...');
+            try {
+              const leaseAnalysis = await analyzeLeaseDocument(ocrResult.extractedText, file.name);
+              console.log(`✅ Lease analysis completed: ${leaseAnalysis.complianceStatus}`);
+              
+              // Return structured lease analysis
+              return NextResponse.json({
+                success: true,
+                ...leaseAnalysis,
+                extractedText: ocrResult.extractedText,
+                textLength: ocrResult.extractedText.length,
+                metadata: ocrResult.metadata,
+                // Backward compatibility for chat interface
+                isLeaseSummary: true,
+                response: leaseAnalysis.summary
+              });
+            } catch (analysisError) {
+              console.error('❌ Lease analysis failed, falling back to basic response:', analysisError);
+              // Fall through to basic response
+            }
+          }
+          
+          // Return basic OCR result for non-lease documents or if analysis fails
           return NextResponse.json({
             success: true,
             analysis: "Document analysis completed",
-            documentType: "lease",
+            documentType: isLease ? "lease" : "document",
             filename: file.name,
             summary: `Document processed successfully. Extracted ${ocrResult.extractedText.length} characters of text.`,
             textLength: ocrResult.extractedText.length,
@@ -857,7 +885,7 @@ export async function POST(request: NextRequest) {
               method: ocrResult.metadata?.method || 'ocr',
               success: true
             }],
-            isLeaseSummary: true,
+            isLeaseSummary: isLease,
             response: `Document processed successfully. Extracted ${ocrResult.extractedText.length} characters of text.`
           });
         } else {
