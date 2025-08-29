@@ -39,28 +39,28 @@ export async function analyzeLeaseDocument(
 
     // Extract key dates from the analysis
     const keyDates = [];
-    if (leaseAnalysis.propertyDetails.startDate) {
+    if (leaseAnalysis.propertyDetails?.startDate) {
       keyDates.push({
         description: 'Lease Start Date',
         date: leaseAnalysis.propertyDetails.startDate,
         type: 'start' as const
       });
     }
-    if (leaseAnalysis.propertyDetails.endDate) {
+    if (leaseAnalysis.propertyDetails?.endDate) {
       keyDates.push({
         description: 'Lease End Date',
         date: leaseAnalysis.propertyDetails.endDate,
         type: 'end' as const
       });
     }
-    if (leaseAnalysis.financialObligations.rentReviewDate) {
+    if (leaseAnalysis.financialObligations?.rentReviewDate) {
       keyDates.push({
         description: 'Next Rent Review',
         date: leaseAnalysis.financialObligations.rentReviewDate,
         type: 'review' as const
       });
     }
-    if (leaseAnalysis.financialObligations.serviceChargeReviewDate) {
+    if (leaseAnalysis.financialObligations?.serviceChargeReviewDate) {
       keyDates.push({
         description: 'Service Charge Review',
         date: leaseAnalysis.financialObligations.serviceChargeReviewDate,
@@ -70,9 +70,10 @@ export async function analyzeLeaseDocument(
 
     // Generate action items based on compliance checklist
     const actionItems = [];
+    const checklist = leaseAnalysis.complianceChecklist || {};
     
     // High priority items
-    if (!leaseAnalysis.complianceChecklist.termConsentInFavourOfClient) {
+    if (!checklist.termConsentInFavourOfClient) {
       actionItems.push({
         description: 'Review Term Consent provisions - may need legal advice',
         priority: 'high' as const,
@@ -80,7 +81,7 @@ export async function analyzeLeaseDocument(
       });
     }
     
-    if (!leaseAnalysis.complianceChecklist.reserveFund) {
+    if (!checklist.reserveFund) {
       actionItems.push({
         description: 'Establish reserve fund provisions for major works',
         priority: 'high' as const,
@@ -88,7 +89,7 @@ export async function analyzeLeaseDocument(
       });
     }
 
-    if (!leaseAnalysis.complianceChecklist.windowsPipesHeatingProvisions) {
+    if (!checklist.windowsPipesHeatingProvisions) {
       actionItems.push({
         description: 'Clarify maintenance responsibilities for windows, pipes, and heating',
         priority: 'high' as const,
@@ -97,7 +98,7 @@ export async function analyzeLeaseDocument(
     }
 
     // Medium priority items
-    if (!leaseAnalysis.complianceChecklist.parkingRights) {
+    if (!checklist.parkingRights) {
       actionItems.push({
         description: 'Define parking rights and restrictions',
         priority: 'medium' as const,
@@ -105,7 +106,7 @@ export async function analyzeLeaseDocument(
       });
     }
 
-    if (!leaseAnalysis.complianceChecklist.rightOfAccess) {
+    if (!checklist.rightOfAccess) {
       actionItems.push({
         description: 'Establish right of access for maintenance and inspections',
         priority: 'medium' as const,
@@ -113,7 +114,7 @@ export async function analyzeLeaseDocument(
       });
     }
 
-    if (!leaseAnalysis.complianceChecklist.tvAssignmentAlterationsClauses) {
+    if (!checklist.tvAssignmentAlterationsClauses) {
       actionItems.push({
         description: 'Review TV licence, assignment, and alteration clauses',
         priority: 'medium' as const,
@@ -122,7 +123,7 @@ export async function analyzeLeaseDocument(
     }
 
     // Low priority items
-    if (!leaseAnalysis.complianceChecklist.noticeRequirements) {
+    if (!checklist.noticeRequirements) {
       actionItems.push({
         description: 'Clarify notice requirements for various actions',
         priority: 'low' as const,
@@ -130,7 +131,7 @@ export async function analyzeLeaseDocument(
       });
     }
 
-    if (!leaseAnalysis.complianceChecklist.subletPetsPermissions) {
+    if (!checklist.subletPetsPermissions) {
       actionItems.push({
         description: 'Define subletting and pet permissions',
         priority: 'low' as const,
@@ -138,7 +139,7 @@ export async function analyzeLeaseDocument(
       });
     }
 
-    if (!leaseAnalysis.complianceChecklist.debtRecoveryInterestTerms) {
+    if (!checklist.debtRecoveryInterestTerms) {
       actionItems.push({
         description: 'Establish debt recovery and interest terms',
         priority: 'low' as const,
@@ -146,7 +147,7 @@ export async function analyzeLeaseDocument(
       });
     }
 
-    if (!leaseAnalysis.complianceChecklist.exteriorInteriorRedecorationObligations) {
+    if (!checklist.exteriorInteriorRedecorationObligations) {
       actionItems.push({
         description: 'Clarify exterior and interior redecoration obligations',
         priority: 'low' as const,
@@ -163,12 +164,12 @@ export async function analyzeLeaseDocument(
       mitigation.push('Prioritize legal review and compliance updates');
     }
     
-    if (!leaseAnalysis.complianceChecklist.termConsentInFavourOfClient) {
+    if (!checklist.termConsentInFavourOfClient) {
       riskFactors.push('Term consent provisions may be insufficient');
       mitigation.push('Seek legal advice on term consent requirements');
     }
     
-    if (!leaseAnalysis.complianceChecklist.reserveFund) {
+    if (!checklist.reserveFund) {
       riskFactors.push('No reserve fund provisions for major works');
       mitigation.push('Establish reserve fund policy and contributions');
     }
@@ -178,8 +179,8 @@ export async function analyzeLeaseDocument(
 
     // Determine compliance status
     let complianceStatus: 'compliant' | 'requires_review' | 'non_compliant' | 'unknown' = 'unknown';
-    const totalChecklistItems = Object.keys(leaseAnalysis.complianceChecklist).length;
-    const compliantItems = Object.values(leaseAnalysis.complianceChecklist).filter(Boolean).length;
+    const totalChecklistItems = Object.keys(checklist).length;
+    const compliantItems = Object.values(checklist).filter(Boolean).length;
     const compliancePercentage = (compliantItems / totalChecklistItems) * 100;
 
     if (compliancePercentage >= 80) {
@@ -191,7 +192,8 @@ export async function analyzeLeaseDocument(
     }
 
     // Generate summary
-    const summary = `Lease analysis for ${filename} reveals a ${leaseAnalysis.propertyDetails.leaseTerm || 'long-term'} lease with ${compliancePercentage.toFixed(0)}% compliance coverage. ${actionItems.length} action items identified requiring attention.`;
+    const leaseTerm = leaseAnalysis.propertyDetails?.leaseTerm || 'standard';
+    const summary = `Lease analysis for ${filename} reveals a ${leaseTerm} lease with ${compliancePercentage.toFixed(0)}% compliance coverage. ${actionItems.length} action items identified requiring attention.`;
 
     return {
       documentType: 'lease',
