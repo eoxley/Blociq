@@ -1,27 +1,29 @@
-// ✅ ENHANCED PUBLIC AI ENDPOINT [2025-01-22]
-// - All main Ask AI features without Supabase data access
-// - Advanced context types and tone control
-// - Professional property management expertise
-// - Leak triage policy and specialized knowledge
-// - Suitable for landing page trials
+// ✅ COMPREHENSIVE PUBLIC AI ENDPOINT [2025-01-22]
+// - All comprehensive property management AI features without Supabase data access
+// - Complete legacy functionality: notices, letters, compliance, calculations, email responses
+// - UK property law expertise and professional document generation
+// - No access to building data, leaseholder info, or file uploads
+// - Suitable for public demos and landing page trials
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getOpenAIClient } from '@/lib/openai-client';
 
-// Enhanced system prompts for different context types (without building data)
-const SYSTEM_PROMPTS = {
-  general: `You are BlocIQ, a UK property management AI assistant. You help property managers with building management, compliance, leaseholder relations, and operational tasks. Provide expert advice based on UK property management best practices and regulations.`,
-  
-  email_reply: `You are BlocIQ, a UK property management AI assistant specializing in professional email communication. Generate clear, professional email responses that are appropriate for property management. Use British English and maintain a professional tone.`,
-  
-  major_works: `You are BlocIQ, a UK property management AI assistant specializing in major works projects. Help with project planning, cost analysis, leaseholder consultation, and Section 20 processes. Provide guidance on UK building regulations and best practices.`,
-  
-  public: `You are BlocIQ, a helpful AI assistant for UK property management. Provide general advice about property management, compliance, and best practices. Keep responses informative but not building-specific. Focus on UK regulations and industry standards.`,
-  
-  compliance: `You are BlocIQ, a UK property management AI assistant specializing in compliance and regulatory matters. Help with health and safety, fire safety, building regulations, and compliance tracking. Reference UK building regulations and safety standards.`,
-  
-  leaseholder: `You are BlocIQ, a UK property management AI assistant specializing in leaseholder relations. Help with communication, service charge queries, maintenance requests, and leaseholder support. Provide guidance on UK leasehold law and best practices.`
-};
+// Import comprehensive property management system
+import { detectPropertyManagementContext, buildPropertyManagementPrompt, PROPERTY_MANAGEMENT_SYSTEM_PROMPT } from '@/lib/ai/propertyManagementPrompts';
+
+// Enhanced system prompts for public access (no building data)
+const PUBLIC_SYSTEM_PROMPT = `${PROPERTY_MANAGEMENT_SYSTEM_PROMPT}
+
+**🔒 PUBLIC ACCESS RESTRICTIONS:**
+- NO access to specific building data, leaseholder information, or property records
+- NO file upload or document analysis capabilities  
+- NO Supabase database queries or building-specific information
+- Provide template documents with placeholders: [BUILDING NAME], [LEASEHOLDER NAME], [DATE], etc.
+- Focus on general UK property management guidance and professional templates
+- All documents and responses should be generic templates suitable for any UK leasehold property
+
+**SECURITY NOTICE:**
+This is a public demo version. For specific building data, leaseholder information, and advanced features, users should sign up for the full BlocIQ platform.`;
 
 // Leak triage policy for public users (same as main system)
 const LEAK_POLICY = `
@@ -61,62 +63,7 @@ When preparing an email to the reporting leaseholder and (if relevant) the upsta
 - Mention insurance-excess option when likely beneficial.
 `;
 
-// Enhanced context detection for public users
-function detectContextType(prompt: string): string {
-  const lowerPrompt = prompt.toLowerCase();
-  
-  if (lowerPrompt.includes('leak') || lowerPrompt.includes('water') || lowerPrompt.includes('damp') || lowerPrompt.includes('ceiling')) {
-    return 'leak_triage';
-  }
-  
-  if (lowerPrompt.includes('email') || lowerPrompt.includes('reply') || lowerPrompt.includes('response') || lowerPrompt.includes('draft')) {
-    return 'email_reply';
-  }
-  
-  if (lowerPrompt.includes('major works') || lowerPrompt.includes('section 20') || lowerPrompt.includes('project') || lowerPrompt.includes('construction')) {
-    return 'major_works';
-  }
-  
-  if (lowerPrompt.includes('compliance') || lowerPrompt.includes('safety') || lowerPrompt.includes('fire') || lowerPrompt.includes('regulation')) {
-    return 'compliance';
-  }
-  
-  if (lowerPrompt.includes('leaseholder') || lowerPrompt.includes('tenant') || lowerPrompt.includes('service charge') || lowerPrompt.includes('maintenance')) {
-    return 'leaseholder';
-  }
-  
-  return 'general';
-}
-
-// Enhanced prompt building for public users
-function buildEnhancedPrompt(userPrompt: string, contextType: string, tone: string = 'Professional'): string {
-  let enhancedPrompt = userPrompt;
-  
-  // Add context-specific enhancements
-  switch (contextType) {
-    case 'leak_triage':
-      enhancedPrompt += `\n\nPlease provide guidance following BlocIQ's leak triage policy for UK long-lease blocks.`;
-      break;
-      
-    case 'email_reply':
-      enhancedPrompt += `\n\nPlease draft a professional email response appropriate for UK property management. Use a ${tone.toLowerCase()} tone.`;
-      break;
-      
-    case 'major_works':
-      enhancedPrompt += `\n\nPlease provide guidance on UK major works projects, including Section 20 processes and best practices.`;
-      break;
-      
-    case 'compliance':
-      enhancedPrompt += `\n\nPlease provide guidance on UK building compliance, regulations, and best practices.`;
-      break;
-      
-    case 'leaseholder':
-      enhancedPrompt += `\n\nPlease provide guidance on UK leaseholder relations, service charges, and maintenance best practices.`;
-      break;
-  }
-  
-  return enhancedPrompt;
-}
+// Legacy functions removed - now using comprehensive property management system
 
 export async function POST(req: NextRequest) {
   try {
@@ -141,20 +88,23 @@ export async function POST(req: NextRequest) {
     console.log('  - Tone:', tone);
     console.log('  - Is Public:', is_public);
 
-    // Auto-detect context type if not specified
-    const detectedContextType = contextType === 'general' ? detectContextType(actualQuestion) : contextType;
+    // Use comprehensive property management context detection
+    const pmContext = detectPropertyManagementContext(actualQuestion);
+    console.log('🔍 Public AI - Property management context detected:', pmContext);
     
-    // Get appropriate system prompt
-    const systemPrompt = SYSTEM_PROMPTS[detectedContextType as keyof typeof SYSTEM_PROMPTS] || SYSTEM_PROMPTS.general;
+    // Build comprehensive system prompt for public access (no building data)
+    let finalSystemPrompt = buildPropertyManagementPrompt(pmContext, actualQuestion);
+    
+    // Replace with public-restricted version
+    finalSystemPrompt = PUBLIC_SYSTEM_PROMPT;
     
     // Add leak policy if relevant
-    let finalSystemPrompt = systemPrompt;
-    if (detectedContextType === 'leak_triage' || actualQuestion.toLowerCase().includes('leak')) {
+    if (pmContext.type === 'leak_triage' || actualQuestion.toLowerCase().includes('leak')) {
       finalSystemPrompt += `\n\n${LEAK_POLICY}`;
     }
     
-    // Build enhanced user prompt
-    const enhancedPrompt = buildEnhancedPrompt(actualQuestion, detectedContextType, tone);
+    // Use original question as enhanced prompt (comprehensive system handles context)
+    const enhancedPrompt = actualQuestion;
 
     // Initialize OpenAI client
     const openai = getOpenAIClient();
@@ -172,30 +122,36 @@ export async function POST(req: NextRequest) {
 
     const aiResponse = completion.choices[0]?.message?.content || 'No response generated';
 
-    console.log('✅ Enhanced Public AI response generated');
-    console.log('  - Context Type Used:', detectedContextType);
+    console.log('✅ Comprehensive Public AI response generated');
+    console.log('  - PM Context Type Used:', pmContext.type, pmContext.subtype);
     console.log('  - Response Length:', aiResponse.length);
 
     return NextResponse.json({ 
       success: true,
       result: aiResponse,
       response: aiResponse, // For backward compatibility
-      context_type: detectedContextType,
+      context_type: pmContext.type,
       building_id: null, // Always null for public endpoint
       document_count: 0, // No documents in public endpoint
       has_email_thread: false, // No email threads in public endpoint
       has_leaseholder: false, // No leaseholder data in public endpoint
       context: {
-        complianceUsed: detectedContextType === 'compliance',
-        majorWorksUsed: detectedContextType === 'major_works',
-        leakTriageUsed: detectedContextType === 'leak_triage',
-        emailReplyUsed: detectedContextType === 'email_reply',
+        propertyManagementType: pmContext.type,
+        propertyManagementSubtype: pmContext.subtype,
+        complianceUsed: pmContext.type === 'compliance_document',
+        majorWorksUsed: pmContext.type === 'calculation' && pmContext.subtype === 'major_works',
+        leakTriageUsed: pmContext.type === 'leak_triage',
+        emailReplyUsed: pmContext.type === 'email_response',
+        noticeGeneration: pmContext.type === 'notice_generation',
+        letterDrafting: pmContext.type === 'letter_drafting',
         publicAccess: true
       },
       metadata: {
-        contextType: detectedContextType,
+        contextType: pmContext.type,
+        contextSubtype: pmContext.subtype,
         tone: tone,
         isPublic: true,
+        isComprehensive: true,
         enhancedPrompt: enhancedPrompt
       }
     });
