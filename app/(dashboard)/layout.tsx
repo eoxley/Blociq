@@ -24,7 +24,7 @@ export default async function DashboardLayout({
 
   return (
     <NavigationProvider>
-      <div className="min-h-screen flex flex-col bg-[#FAFAFA]">
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 via-white to-gray-50">
         <div className="flex flex-1 overflow-hidden">
           {/* Desktop Sidebar */}
           <div className="hidden lg:block">
@@ -36,18 +36,18 @@ export default async function DashboardLayout({
           
           <main className="flex-1 overflow-y-auto">
             {/* Main Content */}
-            <div className="p-4 lg:p-6">
-              <div className="w-full max-w-[1800px] mx-auto px-4 lg:px-6 xl:px-8">
+            <div className="p-6 lg:p-8">
+              <div className="w-full max-w-7xl mx-auto">
                 {/* Mobile Breadcrumb Navigation */}
-                <div className="lg:hidden mb-4">
-                  <nav className="flex items-center space-x-2 text-sm text-gray-500">
-                    <a href="/home" className="hover:text-gray-700 transition-colors">Home</a>
-                    <span>/</span>
-                    <span className="text-gray-900 font-medium">Current Page</span>
+                <div className="lg:hidden mb-6">
+                  <nav className="flex items-center space-x-2 text-sm text-gray-600 bg-white/80 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-sm border border-gray-100">
+                    <a href="/home" className="hover:text-[#4f46e5] transition-colors font-medium">Home</a>
+                    <span className="text-gray-400">/</span>
+                    <span className="text-gray-900 font-semibold">Current Page</span>
                   </nav>
                 </div>
                 {/* Add top margin for mobile navigation bar */}
-                <div className="lg:hidden h-16"></div>
+                <div className="lg:hidden h-20"></div>
                 {children}
               </div>
             </div>

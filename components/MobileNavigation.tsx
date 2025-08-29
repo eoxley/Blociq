@@ -58,7 +58,7 @@ export default function MobileNavigation() {
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="lg:hidden fixed top-4 right-4 z-[60] w-12 h-12 bg-gradient-to-r from-[#008C8F] to-[#7645ED] rounded-xl flex items-center justify-center shadow-lg hover:scale-105 transition-transform"
+        className="lg:hidden fixed top-4 right-4 z-[60] w-12 h-12 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-2xl flex items-center justify-center shadow-xl hover:scale-105 transition-transform"
         aria-label={isOpen ? "Close menu" : "Open menu"}
       >
         {isOpen ? (
@@ -78,7 +78,7 @@ export default function MobileNavigation() {
             {/* Mobile Menu Content */}
             <div className="flex flex-col h-full">
               {/* Header */}
-              <div className="bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white p-6 lg:p-8">
+              <div className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white p-6 lg:p-8">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 lg:w-14 lg:h-14 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
@@ -102,7 +102,7 @@ export default function MobileNavigation() {
               {/* Navigation */}
               <div className="flex-1 overflow-y-auto p-4 lg:p-6">
                 <div className="space-y-2 lg:space-y-3">
-                  <h3 className="text-sm font-semibold text-[#64748B] uppercase tracking-wider px-2 mb-4">
+                  <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wider px-2 mb-4">
                     Navigation
                   </h3>
                   
@@ -113,10 +113,10 @@ export default function MobileNavigation() {
                       return (
                         <div key={label} className="w-full">
                           <button
-                            className="flex w-full items-center gap-3 lg:gap-4 rounded-xl px-4 lg:px-5 py-3 lg:py-4 text-base font-medium text-[#64748B] hover:bg-[#F0FDFA] transition-all"
+                            className="flex w-full items-center gap-3 lg:gap-4 rounded-xl px-4 lg:px-5 py-3 lg:py-4 text-base font-medium text-gray-500 hover:bg-gray-50 transition-all"
                             disabled
                           >
-                            <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl flex items-center justify-center bg-[#F3F4F6]">
+                                                          <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl flex items-center justify-center bg-gray-100">
                               <span className="text-lg lg:text-xl opacity-60">{icon}</span>
                             </div>
                             <div className="flex-1 text-left">
@@ -124,7 +124,7 @@ export default function MobileNavigation() {
                                 <span className="font-medium text-sm lg:text-base">{label}</span>
                                 <BlocIQBadge variant="secondary" size="sm">Soon</BlocIQBadge>
                               </div>
-                              <p className="text-xs lg:text-sm text-[#94A3B8] mt-1">{description}</p>
+                              <p className="text-xs lg:text-sm text-gray-500 mt-1">{description}</p>
                             </div>
                           </button>
                         </div>
@@ -138,12 +138,12 @@ export default function MobileNavigation() {
                         onClick={closeMenu}
                         className={`flex items-center gap-3 lg:gap-4 rounded-xl px-4 lg:px-5 py-3 lg:py-4 text-base font-medium transition-all ${
                           isActive
-                            ? 'bg-gradient-to-r from-[#008C8F] to-[#7645ED] text-white font-semibold shadow-lg'
-                            : 'hover:bg-[#F0FDFA] text-[#333333]'
+                            ? 'bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white font-semibold shadow-lg'
+                            : 'hover:bg-gray-50 text-gray-700'
                         }`}
                       >
                         <div className={`w-10 h-10 lg:w-12 lg:h-12 rounded-xl flex items-center justify-center ${
-                          isActive ? 'bg-white/20' : 'bg-[#F3F4F6]'
+                          isActive ? 'bg-white/20' : 'bg-gray-100'
                         }`}>
                           <span className="text-lg lg:text-xl">{icon}</span>
                         </div>
@@ -155,7 +155,7 @@ export default function MobileNavigation() {
                             )}
                           </div>
                           <p className={`text-xs lg:text-sm mt-1 ${
-                            isActive ? 'text-white/80' : 'text-[#94A3B8]'
+                            isActive ? 'text-white/80' : 'text-gray-500'
                           }`}>
                             {description}
                           </p>
@@ -169,12 +169,12 @@ export default function MobileNavigation() {
               </div>
 
               {/* Footer */}
-              <div className="border-t border-[#E2E8F0] p-4 lg:p-6">
+              <div className="border-t border-gray-200 p-4 lg:p-6">
                 <div className="space-y-2 lg:space-y-3">
                   <Link
                     href="/account"
                     onClick={closeMenu}
-                    className="flex items-center gap-3 lg:gap-4 px-4 lg:px-5 py-3 rounded-lg text-base font-medium hover:bg-[#F0FDFA] transition-all text-[#333333]"
+                    className="flex items-center gap-3 lg:gap-4 px-4 lg:px-5 py-3 rounded-lg text-base font-medium hover:bg-gray-50 transition-all text-gray-700"
                   >
                     <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
                       <Settings className="h-5 w-5 text-gray-600" />
@@ -184,7 +184,7 @@ export default function MobileNavigation() {
                   
                   <button
                     onClick={handleLogout}
-                    className="flex items-center gap-3 lg:gap-4 px-4 lg:px-5 py-3 rounded-lg text-base font-medium hover:bg-red-50 transition-all w-full text-left text-[#EF4444]"
+                    className="flex items-center gap-3 lg:gap-4 px-4 lg:px-5 py-3 rounded-lg text-base font-medium hover:bg-red-50 transition-all w-full text-left text-red-600"
                   >
                     <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
                       <LogOut className="h-5 w-5 text-red-600" />

@@ -1183,7 +1183,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   return (
     <div className="min-h-screen bg-secondary-bg">
       {/* Enhanced Hero Banner - Communications Hub Style */}
-      <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16 mx-6">
+      <section className="relative overflow-hidden bg-gradient-to-r from-[#4f46e5] to-[#a855f7] py-16 mx-6 rounded-3xl">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center">
             <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
@@ -1207,175 +1207,183 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       </section>
 
       <div className="max-w-7xl mx-auto px-6 py-16 space-y-12">
-        {/* 🧠 Enhanced Circular Ask BlocIQ Widget */}
+        {/* 🧠 Modern Rectangular Ask BlocIQ Widget */}
         <div className="flex justify-center">
           <div 
-            className={`ask-blociq-circle relative transition-all duration-500 ${showChat ? 'w-[600px] h-[600px] md:w-[700px] md:h-[700px]' : 'w-[400px] h-[400px] md:w-[500px] md:h-[500px]'} rounded-full md:rounded-full rounded-3xl shadow-2xl hover:shadow-3xl flex items-center justify-center p-12 group`}
-            style={{ background: 'linear-gradient(135deg, #14b8a6, #3b82f6, #8b5cf6)' }}
+            className={`relative transition-all duration-500 ${showChat ? 'w-[800px]' : 'w-full max-w-4xl'} bg-white rounded-3xl shadow-2xl hover:shadow-3xl border border-gray-100 overflow-hidden group`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            {/* Enhanced Radial Glow Effect - Using brand kit colors */}
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#14b8a6]/25 to-[#3b82f6]/25 blur-xl group-hover:blur-2xl transition-all duration-500"></div>
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#3b82f6]/15 to-[#8b5cf6]/15 blur-2xl group-hover:blur-3xl transition-all duration-700"></div>
-            
-            {/* Content */}
-            <div className="text-center text-white max-w-sm relative z-10">
-              {/* Brain Icon with Pulse Animation - No Border */}
-              <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-8 animate-pulse shadow-2xl">
-                <Brain className={`h-12 w-12 text-white drop-shadow-lg ${isSubmitting ? 'animate-bounce' : ''}`} />
+            {/* Header Section with Brand Gradient */}
+            <div className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] p-8 relative overflow-hidden">
+              {/* Decorative Background Elements */}
+              <div className="absolute inset-0">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 w-40 h-40 bg-white/5 rounded-full blur-3xl"></div>
               </div>
               
-              {/* Title */}
-              <h2 className="text-3xl font-bold mb-4 text-white drop-shadow-lg">
-                Ask BlocIQ
-              </h2>
-              
-              {/* Subtitle */}
-              <p className="text-base text-white/90 mb-10 leading-relaxed">
-                Your leasehold management assistant
-              </p>
-              
-              {/* Single White Upload Icon - Only show when chat is closed */}
-              {!showChat && (
-                <div className="flex flex-col items-center mb-6">
-                  <div 
-                    className="cursor-pointer hover:opacity-80 transition-all duration-200 p-3 rounded-xl hover:bg-white/20 backdrop-blur-sm shadow-lg" 
-                    title="Upload documents to Ask BlocIQ (PDF, DOCX, TXT)"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Upload className="text-white w-7 h-7" />
+              {/* Header Content */}
+              <div className="relative z-10 text-center">
+                {/* Icon and Title Row */}
+                <div className="flex items-center justify-center gap-4 mb-6">
+                  <div className="w-16 h-16 bg-white/25 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-xl border border-white/30">
+                    <Brain className={`h-8 w-8 text-white drop-shadow-lg ${isSubmitting ? 'animate-bounce' : ''}`} />
                   </div>
-                  
-                  {/* File count indicator */}
+                  <div>
+                    <h2 className="text-4xl font-bold text-white drop-shadow-lg">
+                      Ask BlocIQ
+                    </h2>
+                    <p className="text-lg text-white/90 mt-1">
+                      Your leasehold management assistant
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Upload Area - Only show when chat is closed */}
+                {!showChat && (
+                  <div className="flex flex-col items-center">
+                    <div 
+                      className="cursor-pointer hover:opacity-80 transition-all duration-200 p-4 rounded-2xl hover:bg-white/20 backdrop-blur-sm shadow-lg border border-white/30" 
+                      title="Upload documents to Ask BlocIQ (PDF, DOCX, TXT)"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Upload className="text-white w-8 h-8" />
+                    </div>
+                    
+                    {/* File count indicator */}
+                    {uploadedFiles.length > 0 && (
+                      <div className="mt-4 text-sm text-white/90 bg-white/25 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/30 shadow-lg">
+                        {uploadedFiles.length} file{uploadedFiles.length !== 1 ? 's' : ''} ready
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Main Content Section */}
+            <div className="p-8">
+              {/* Input Section - Only show when chat is closed */}
+              {!showChat && (
+                <div className="space-y-6">
+                  {/* Enhanced Input Field */}
+                  <div className="relative group">
+                    <input
+                      ref={askInputRef}
+                      type="text"
+                      value={askInput}
+                      onChange={(e) => setAskInput(e.target.value)}
+                      placeholder="Ask me anything about your properties, leases, or management tasks..."
+                      className="w-full px-6 py-5 bg-gray-50 text-gray-900 border border-gray-200 rounded-2xl placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] focus:bg-white transition-all duration-300 text-lg pr-24 shadow-sm hover:shadow-md"
+                      onKeyPress={handleKeyPress}
+                    />
+                    
+                    {/* Hidden file input for upload functionality */}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept=".pdf,.docx,.txt"
+                      onChange={(e) => handleFileSelect(e.target.files)}
+                      className="hidden"
+                    />
+                    
+                    {/* Clear Button */}
+                    {askInput && (
+                      <button 
+                        onClick={() => setAskInput('')}
+                        className="absolute right-16 top-1/2 transform -translate-y-1/2 p-2 bg-gray-200 hover:bg-gray-300 text-gray-600 hover:text-gray-800 rounded-xl transition-all duration-200 hover:scale-110 active:scale-95"
+                      >
+                        <XIcon className="h-4 w-4" />
+                      </button>
+                    )}
+                    
+                    {/* Submit Button */}
+                    <button 
+                      onClick={() => handleAskSubmit(askInput)}
+                      disabled={(!askInput.trim() && uploadedFiles.length === 0) || isSubmitting}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 p-3 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white rounded-xl transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                    >
+                      {isSubmitting ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        <ArrowRight className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Uploaded Files Display */}
                   {uploadedFiles.length > 0 && (
-                    <div className="mt-3 text-xs text-white/90 bg-white/25 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-white/30 shadow-lg">
-                      {uploadedFiles.length} file{uploadedFiles.length !== 1 ? 's' : ''} ready
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-gray-700">📄 Included in AI context:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-3">
+                        {uploadedFiles.map((file) => (
+                          <div
+                            key={file.id}
+                            className="flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-[#4f46e5]/10 to-[#a855f7]/10 border border-[#4f46e5]/20 rounded-xl text-sm text-[#4f46e5] shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer group"
+                            title={`${file.name} (${formatFileSize(file.size)})`}
+                          >
+                            <span className="text-lg">{getFileIcon(file.type)}</span>
+                            <span className="font-medium truncate max-w-[150px]">{file.name}</span>
+                            <span className={`text-xs ${
+                              file.size > MAX_FILE_SIZE ? 'text-orange-600' : 'text-[#4f46e5]'
+                            } opacity-80`}>
+                              ({formatFileSize(file.size)})
+                              {file.size > MAX_FILE_SIZE && ' ⚡'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => removeFile(file.id)}
+                              className="ml-1 text-[#4f46e5]/70 hover:text-[#4f46e5] transition-colors opacity-0 group-hover:opacity-100 p-1 hover:bg-[#4f46e5]/10 rounded-lg"
+                            >
+                              <XIcon className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Upload Status Display */}
+                  {uploadStatus && (
+                    <div className="p-4 bg-gray-50 border border-gray-200 rounded-2xl">
+                      <div className="flex items-center gap-3 text-sm">
+                        {uploadStatus.includes('Processing') && (
+                          <Loader2 className="h-4 w-4 animate-spin text-[#4f46e5]" />
+                        )}
+                        {uploadStatus.includes('✅') && (
+                          <span className="text-green-600 text-lg">✓</span>
+                        )}
+                        {uploadStatus.includes('❌') && (
+                          <span className="text-red-600 text-lg">✗</span>
+                        )}
+                        <span className={`text-sm ${
+                          uploadStatus.includes('❌') ? 'text-red-600' : 
+                          uploadStatus.includes('✅') ? 'text-green-600' : 
+                          'text-[#4f46e5]'
+                        }`}>
+                          {uploadStatus}
+                        </span>
+                      </div>
                     </div>
                   )}
                 </div>
               )}
-              
-                             {/* Enhanced Input Field with Clear Button - White Background - Only show when chat is closed */}
-               {!showChat && (
-               <div className="mb-6">
-                 <div className="relative group">
-                   <input
-                       ref={askInputRef}
-                     type="text"
-                       value={askInput}
-                       onChange={(e) => setAskInput(e.target.value)}
-                     placeholder="Ask me anything..."
-                       className="w-full px-5 py-4 bg-white text-gray-900 border border-gray-300 rounded-xl placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#4f46e5] focus:border-[#4f46e5] transition-all duration-200 text-base pr-16 shadow-lg"
-                       onKeyPress={handleKeyPress}
-                     />
-                     
-                     {/* Hidden file input for upload functionality */}
-                     <input
-                       ref={fileInputRef}
-                       type="file"
-                       multiple
-                       accept=".pdf,.docx,.txt"
-                       onChange={(e) => handleFileSelect(e.target.files)}
-                       className="hidden"
-                     />
-                     
-                     {/* Clear Button */}
-                     {askInput && (
-                       <button 
-                         onClick={() => setAskInput('')}
-                         className="absolute right-12 top-1/2 transform -translate-y-1/2 p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95"
-                       >
-                         <XIcon className="h-4 w-4" />
-                       </button>
-                     )}
-                     
-                     {/* Submit Button */}
-                     <button 
-                       onClick={() => handleAskSubmit(askInput)}
-                       disabled={(!askInput.trim() && uploadedFiles.length === 0) || isSubmitting}
-                       className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2.5 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-                     >
-                       {isSubmitting ? (
-                         <Loader2 className="h-5 w-5 animate-spin" />
-                       ) : (
-                         <ArrowRight className="h-5 w-5" />
-                       )}
-                   </button>
-                 </div>
-
-
-
-                                      {/* Uploaded Files Display */}
-                     {uploadedFiles.length > 0 && (
-                       <div className="mt-3">
-                         <div className="flex items-center gap-2 mb-2">
-                           <span className="text-xs font-medium text-gray-600">📄 Included in AI context:</span>
-                         </div>
-                         <div className="flex flex-wrap gap-2">
-                           {uploadedFiles.map((file) => (
-                             <div
-                               key={file.id}
-                               className="flex items-center gap-2 px-3 py-1.5 bg-white/90 backdrop-blur-sm border border-white/30 rounded-xl text-sm text-white shadow-lg hover:bg-white/95 transition-all duration-200 cursor-pointer group"
-                               title={`${file.name} (${formatFileSize(file.size)})`}
-                             >
-                               <span>{getFileIcon(file.type)}</span>
-                               <span className="font-medium truncate max-w-[120px]">{file.name}</span>
-                               <span className={`text-xs ${
-                                 file.size > MAX_FILE_SIZE ? 'text-orange-500' : 'text-blue-500'
-                               } opacity-70`}>
-                                 ({formatFileSize(file.size)})
-                                 {file.size > MAX_FILE_SIZE && ' ⚡'}
-                               </span>
-                               <button
-                                 type="button"
-                                 onClick={() => removeFile(file.id)}
-                                 className="ml-1 text-blue-400 hover:text-blue-600 transition-colors opacity-0 group-hover:opacity-100"
-                               >
-                                 <XIcon className="h-3 w-3" />
-                               </button>
-                             </div>
-                           ))}
-                         </div>
-                     
-                     {/* Upload Status Display */}
-                     {uploadStatus && (
-                       <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded-lg">
-                         <div className="flex items-center gap-2 text-xs">
-                           {uploadStatus.includes('Processing') && (
-                             <Loader2 className="h-3 w-3 animate-spin text-blue-600" />
-                           )}
-                           {uploadStatus.includes('✅') && (
-                             <span className="text-green-600">✓</span>
-                           )}
-                           {uploadStatus.includes('❌') && (
-                             <span className="text-red-600">✗</span>
-                           )}
-                           <span className={`text-xs ${
-                             uploadStatus.includes('❌') ? 'text-red-600' : 
-                             uploadStatus.includes('✅') ? 'text-green-600' : 
-                             'text-blue-600'
-                           }`}>
-                             {uploadStatus}
-                           </span>
-                         </div>
-                       </div>
-                     )}
-                   </div>
-                 )}
-               </div>
-               )}
 
               {/* Chat Toggle Button - Only show when chat is closed */}
               {messages.length > 0 && !showChat && (
-                <button
-                  onClick={() => setShowChat(true)}
-                  className="flex items-center gap-2 mx-auto px-6 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl text-sm font-medium transition-all duration-200 border border-white/30 hover:border-white/50 shadow-lg hover:shadow-xl"
-                >
-                  <ChevronDown className="h-4 w-4" />
-                  View Chat ({messages.length} message{messages.length !== 1 ? 's' : ''})
-                </button>
+                <div className="text-center pt-6">
+                  <button
+                    onClick={() => setShowChat(true)}
+                    className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:brightness-110 text-white rounded-2xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                  >
+                    <ChevronDown className="h-5 w-5" />
+                    View Chat ({messages.length} message{messages.length !== 1 ? 's' : ''})
+                  </button>
+                </div>
               )}
             </div>
 
@@ -1645,16 +1653,17 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[600px] mb-8">
             {/* Property Events Widget */}
             <div className="h-full">
-              <div className="feature-card shadow-lg border-0 overflow-hidden h-full flex flex-col">
-                <div className="p-6 text-white bg-gradient-to-r from-[#4f46e5] to-[#a855f7]">
-                  <div className="flex items-center justify-between">
+              <div className="bg-white rounded-2xl shadow-lg border-0 overflow-hidden h-full flex flex-col">
+                {/* Header */}
+                <div className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] p-6 text-white">
+                  <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-white/25 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-lg border border-white/30">
+                      <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
                         <Calendar className="h-6 w-6 text-white" />
                       </div>
                       <div>
-                        <h2 className="text-xl font-bold text-white">Property Events</h2>
-                        <p className="text-sm text-white/80">Manage your property events</p>
+                        <h2 className="text-xl font-bold">Property Events</h2>
+                        <p className="text-white/80 text-sm">Manage your property events</p>
                       </div>
                     </div>
                     
