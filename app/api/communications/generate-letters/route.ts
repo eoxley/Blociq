@@ -1,9 +1,5 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import JSZip from 'jszip'
-import { pdf } from '@react-pdf/renderer'
-import React from 'react'
-import { LetterDocument } from '../../../../components/letters/LetterDocument'
 import { Database } from '../../../../lib/database.types'
 
 const supabase = createClient<Database>(
@@ -27,53 +23,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'No leaseholders found' }, { status: 404 })
   }
 
-  const zip = new JSZip()
+  // Return letter data instead of generating PDFs for now
+  const letters = leaseholders.map(leaseholder => ({
+    recipient: leaseholder.name || 'Resident',
+    unit_id: leaseholder.unit_id,
+    subject: subject,
+    content: content,
+  }))
 
-  for (const leaseholder of leaseholders) {
-    const filename = `${leaseholder.name?.replace(/\s+/g, '_') || 'Resident'}_${Date.now()}.pdf`
-
-    const docBuffer = await pdf(
-      React.createElement(LetterDocument, {
-        recipientName: leaseholder.name || 'Resident',
-        subject: subject,
-        content: content,
-      })
-    ).toBuffer()
-
-    // Upload to Supabase Storage
-    const uploadPath = `${building_id}/${filename}`
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('building-documents')
-      .upload(uploadPath, docBuffer, {
-        contentType: 'application/pdf',
-        upsert: true,
-      })
-
-    if (!uploadError && uploadData) {
-      const { data: urlData } = supabase.storage
-        .from('building-documents')
-        .getPublicUrl(uploadPath)
-
-      await supabase.from('building_documents').insert({
-        building_id,
-        unit_id: leaseholder.unit_id,
-        leaseholder_id: leaseholder.id,
-        file_name: filename,
-        file_url: urlData.publicUrl,
-        type: 'Letter',
-      })
-    }
-
-    zip.file(filename, docBuffer)
-  }
-
-  const zipBlob = await zip.generateAsync({ type: 'nodebuffer' })
-
-  return new NextResponse(zipBlob, {
-    headers: {
-      'Content-Type': 'application/zip',
-      'Content-Disposition': `attachment; filename="letters-${Date.now()}.zip"`,
-    },
+  return NextResponse.json({ 
+    message: 'Letters prepared successfully',
+    count: letters.length,
+    letters: letters
   })
 }
 
