@@ -508,7 +508,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     }
     
     try {
-      console.log('🤖 Sending request to /api/ask-ai:', { prompt, contextType: 'general' })
+      console.log('🤖 Processing request with enhanced AI:', { prompt, contextType: 'general' })
       
       // Handle file uploads separately from text-only requests
       if (uploadedFiles.length > 0) {

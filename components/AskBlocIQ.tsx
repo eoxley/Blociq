@@ -123,12 +123,9 @@ export default function AskBlocIQ({
   const [messages, setMessages] = useState<Message[]>([]);
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
-  const [suggestedAction, setSuggestedAction] = useState<BuildingSuggestedAction | null>(null);
   const [documentResults, setDocumentResults] = useState<DocumentSearchResult[]>([]);
   const [isDocumentSearch, setIsDocumentSearch] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [addingToTodo, setAddingToTodo] = useState(false);
-  const [addingToCalendar, setAddingToCalendar] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -368,81 +365,11 @@ export default function AskBlocIQ({
     setQuestion(prompt);
   };
 
-  // Communication action handlers
-  const handleCreateLetter = (aiContent: string) => {
-    // Extract building and leaseholder context if available
-    const contextMessage = messages.find(m => 
-      m.role === 'assistant' && m.content.includes('📌 Building:')
-    )?.content || ''
-    
-    const buildingMatch = contextMessage.match(/📌 Building: (.+)/)
-    const extractedBuildingName = buildingMatch ? buildingMatch[1] : buildingName || 'General'
-    
-    const leaseholderMatch = contextMessage.match(/👤 Leaseholder: (.+)/)
-    const leaseholderName = leaseholderMatch ? leaseholderMatch[1] : null
-    
-    const unitMatch = contextMessage.match(/🏠 Unit: (.+)/)
-    const unitNumber = unitMatch ? unitMatch[1] : null
-    
-    setCommunicationModalData({
-      aiContent,
-      templateType: 'letter',
-      buildingName: extractedBuildingName,
-      leaseholderName,
-      unitNumber
-    })
-    setShowCommunicationModal(true)
-  }
 
-  const handleSendEmail = (aiContent: string) => {
-    // Extract building and leaseholder context
-    const contextMessage = messages.find(m => 
-      m.role === 'assistant' && m.content.includes('📌 Building:')
-    )?.content || ''
-    
-    const buildingMatch = contextMessage.match(/📌 Building: (.+)/)
-    const extractedBuildingName = buildingMatch ? buildingMatch[1] : buildingName || 'General'
-    
-    const leaseholderMatch = contextMessage.match(/👤 Leaseholder: (.+)/)
-    const leaseholderName = leaseholderMatch ? leaseholderMatch[1] : null
-    
-    const unitMatch = contextMessage.match(/🏠 Unit: (.+)/)
-    const unitNumber = unitMatch ? unitMatch[1] : null
-    
-    setCommunicationModalData({
-      aiContent,
-      templateType: 'email',
-      buildingName: extractedBuildingName,
-      leaseholderName,
-      unitNumber
-    })
-    setShowCommunicationModal(true)
-  }
 
-  const handleSaveAsNotice = (aiContent: string) => {
-    // Extract building and leaseholder context
-    const contextMessage = messages.find(m => 
-      m.role === 'assistant' && m.content.includes('📌 Building:')
-    )?.content || ''
-    
-    const buildingMatch = contextMessage.match(/📌 Building: (.+)/)
-    const extractedBuildingName = buildingMatch ? buildingMatch[1] : buildingName || 'General'
-    
-    const leaseholderMatch = contextMessage.match(/👤 Leaseholder: (.+)/)
-    const leaseholderName = leaseholderMatch ? leaseholderMatch[1] : null
-    
-    const unitMatch = contextMessage.match(/🏠 Unit: (.+)/)
-    const unitNumber = unitMatch ? unitMatch[1] : null
-    
-    setCommunicationModalData({
-      aiContent,
-      templateType: 'notice',
-      buildingName: extractedBuildingName,
-      leaseholderName,
-      unitNumber
-    })
-    setShowCommunicationModal(true)
-  }
+
+
+
 
   const handleSaveTemplate = async (template: any) => {
     try {
@@ -661,94 +588,7 @@ export default function AskBlocIQ({
     }
   };
 
-  const handleAddToTodo = async () => {
-    if (!suggestedAction || !buildingId) return;
-    
-    setAddingToTodo(true);
-    try {
-      const response = await fetch('/api/create-task-from-suggestion', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          suggestedAction,
-          buildingId: parseInt(buildingId)
-        }),
-      });
 
-      if (response.ok) {
-        setSuggestedAction(null);
-        toast.success('✅ Task added to your building to-do list!');
-      } else {
-        toast.error('Failed to create task');
-      }
-    } catch (error) {
-      console.error('Error creating task:', error);
-      toast.error('Failed to create task');
-    } finally {
-      setAddingToTodo(false);
-    }
-  };
-
-  const handleAddToOutlook = async () => {
-    if (!suggestedAction) return;
-    
-    setAddingToCalendar(true);
-    try {
-      const response = await fetch('/api/add-to-calendar', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: suggestedAction.title,
-          date: suggestedAction.due_date,
-          building: buildingName || 'Building'
-        }),
-      });
-
-      if (response.ok) {
-        setSuggestedAction(null);
-        toast.success('✅ Event added to Outlook calendar!');
-      } else {
-        toast.error('Failed to add to calendar');
-      }
-    } catch (error) {
-      console.error('Error adding to calendar:', error);
-      toast.error('Failed to add to calendar');
-    } finally {
-      setAddingToCalendar(false);
-    }
-  };
-
-  const handleSuggestedAction = (action: SuggestedAction) => {
-    console.log('Suggested action clicked:', action);
-    
-    // Handle different action types
-    switch (action.action) {
-      case 'review':
-        toast.info(`Review action: ${action.label}`);
-        break;
-      case 'schedule':
-        toast.info(`Schedule action: ${action.label}`);
-        break;
-      case 'contact':
-        toast.info(`Contact action: ${action.label}`);
-        break;
-      case 'add_building':
-        toast.info(`Add Building: ${action.label} - Redirecting to building setup...`);
-        // You can implement navigation to building setup page here
-        break;
-      case 'analyze_only':
-        toast.info(`Analyze Only: ${action.label} - Continuing with lease analysis...`);
-        break;
-      default:
-        toast.info(`Action: ${action.label}`);
-    }
-    
-    // You can extend this to create tasks, calendar events, etc.
-  };
 
   const suggestedPrompts = getSuggestedPrompts(buildingName, !!isMajorWorksContext, projectId || undefined);
 
@@ -761,11 +601,7 @@ export default function AskBlocIQ({
     });
   };
 
-  // Helper function to copy message content
-  const copyMessage = (content: string) => {
-    navigator.clipboard.writeText(content);
-    toast.success('Copied to clipboard');
-  };
+
 
   // Helper function to get building context display
   const getBuildingContext = () => {
@@ -947,38 +783,7 @@ export default function AskBlocIQ({
                     </div>
 
                     {/* Action Buttons */}
-                    {isAI && (
-                      <div className="flex flex-wrap gap-2 mt-3">
-                        <button
-                          onClick={() => handleCreateLetter(message.content)}
-                          className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1"
-                        >
-                          <FileText className="w-3 h-3" />
-                          Create Letter
-                        </button>
-                        <button
-                          onClick={() => handleSendEmail(message.content)}
-                          className="text-xs bg-teal-50 hover:bg-teal-100 text-teal-700 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1"
-                        >
-                          <Mail className="w-3 h-3" />
-                          Send Email
-                        </button>
-                        <button
-                          onClick={() => handleSaveAsNotice(message.content)}
-                          className="text-xs bg-purple-50 hover:bg-purple-100 text-purple-700 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1"
-                        >
-                          <FileDown className="w-3 h-3" />
-                          Save as Notice
-                        </button>
-                        <button
-                          onClick={() => copyMessage(message.content)}
-                          className="text-xs bg-gray-50 hover:bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1"
-                        >
-                          <Copy className="w-3 h-3" />
-                          Copy
-                        </button>
-                      </div>
-                    )}
+
 
                     {/* Timestamp */}
                     <div className={`mt-2 text-xs text-gray-500 ${isUser ? 'text-right' : 'text-left'}`}>
@@ -1187,54 +992,7 @@ export default function AskBlocIQ({
         </div>
       )}
 
-      {/* Suggested Action Panel */}
-      {suggestedAction && (
-        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm mx-4 mb-4">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-sm">🧠</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm text-gray-500 mb-2">BlocIQ Suggests</div>
-              <p className="text-gray-800 mb-2 font-medium">{suggestedAction.title}</p>
-              {suggestedAction.description && (
-                <p className="text-sm text-gray-600 mb-3">{suggestedAction.description}</p>
-              )}
-              {suggestedAction.due_date && (
-                <p className="text-sm text-gray-600 mb-3">
-                  📅 Due: {new Date(suggestedAction.due_date).toLocaleDateString()}
-                </p>
-              )}
-              <div className="flex gap-2">
-                <button
-                  onClick={handleAddToTodo}
-                  disabled={addingToTodo}
-                  className="px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1"
-                >
-                  {addingToTodo ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <Plus className="h-3 w-3" />
-                  )}
-                  {addingToTodo ? 'Adding...' : 'Add to To-Do'}
-                </button>
-                <button
-                  onClick={handleAddToOutlook}
-                  disabled={addingToCalendar}
-                  className="px-3 py-1 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 disabled:opacity-50 flex items-center gap-1"
-                >
-                  {addingToCalendar ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <Calendar className="h-3 w-3" />
-                  )}
-                  {addingToCalendar ? 'Adding...' : 'Add to Calendar'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* Communication Modal */}
       {showCommunicationModal && communicationModalData && (

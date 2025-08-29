@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from 'next/headers';
+import { requireAuth } from '@/lib/auth/server';
 
 export async function POST(req: NextRequest) {
   try {
+    // Use consolidated authentication
+    const { supabase, user } = await requireAuth();
     // Check if OpenAI is configured
     if (!process.env.OPENAI_API_KEY) {
       console.error('❌ OpenAI not configured');
