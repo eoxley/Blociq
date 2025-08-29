@@ -144,6 +144,15 @@ export const searchAllRelevantTables = async (
     }
   ];
 
+  console.log("🔍 Search conditions for query:", queryLower);
+  searches.forEach((search, index) => {
+    if (search.condition) {
+      console.log(`  ${index + 1}. ${search.table}: ${search.condition} ✅`);
+    } else {
+      console.log(`  ${index + 1}. ${search.table}: ${search.condition} ❌`);
+    }
+  });
+
   // Execute all relevant searches in parallel for better performance
   const searchPromises = searches
     .filter(search => search.condition)
@@ -321,7 +330,8 @@ export const searchAllRelevantTables = async (
   console.log("📊 DATABASE SEARCH COMPLETE:", {
     tablesSearched: searches.filter(s => s.condition).length,
     tablesWithResults: Object.keys(searchResults).length,
-    totalRecords: Object.values(searchResults).reduce((sum, arr) => sum + arr.length, 0)
+    totalRecords: Object.values(searchResults).reduce((sum, arr) => sum + arr.length, 0),
+    resultTables: Object.keys(searchResults)
   });
   
   return searchResults;
