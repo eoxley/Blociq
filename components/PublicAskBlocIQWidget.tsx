@@ -1,21 +1,31 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { Brain } from 'lucide-react';
 import PublicAskBlocIQ from './PublicAskBlocIQ';
 
 export default function PublicAskBlocIQWidget() {
+  const pathname = usePathname();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showButton, setShowButton] = useState(false);
 
-  // Auto-appears 1 second after page load
+  // Only show widget on landing page (root path)
+  const shouldShowWidget = pathname === '/';
+
+  // Auto-appears 1 second after page load (only on landing page)
   useEffect(() => {
+    if (!shouldShowWidget) {
+      setShowButton(false);
+      return;
+    }
+
     const timer = setTimeout(() => {
       setShowButton(true);
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [shouldShowWidget]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -30,7 +40,8 @@ export default function PublicAskBlocIQWidget() {
     };
   }, [isModalOpen]);
 
-  if (!showButton) return null;
+  // Don't render widget if not on landing page or button shouldn't show
+  if (!shouldShowWidget || !showButton) return null;
 
   return (
     <>
