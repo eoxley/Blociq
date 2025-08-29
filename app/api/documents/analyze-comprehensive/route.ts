@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { processDocumentOCR } from '@/lib/ocr';
 import { analyzeDocument } from '@/lib/document-analysis-orchestrator';
 import { analyzeLeaseDocument } from '@/lib/lease-analyzer';
+import { classifyDocument } from '@/lib/document-classifier';
 
 export async function POST(req: NextRequest) {
   try {
@@ -42,13 +43,16 @@ export async function POST(req: NextRequest) {
         }, { status: 400 });
       }
 
-      // Step 1.5: Detect if this is a lease document
-      const isLease = fileName.toLowerCase().includes('lease') || 
-                      ocrResult.text.toLowerCase().includes('lease agreement') ||
-                      ocrResult.text.toLowerCase().includes('tenancy agreement') ||
-                      ocrResult.text.toLowerCase().includes('leasehold') ||
-                      ocrResult.text.toLowerCase().includes('lessor') ||
-                      ocrResult.text.toLowerCase().includes('lessee');
+      // Step 1.5: Use improved document classifier to detect document type
+      const classification = classifyDocument(ocrResult.text, fileName);
+      const isLease = classification.type === 'lease';
+      
+      console.log("📋 Document classification result:", {
+        type: classification.type,
+        confidence: classification.confidence,
+        keywords: classification.keywords,
+        reasoning: classification.reasoning
+      });
 
       let comprehensiveAnalysis;
       
@@ -65,13 +69,19 @@ export async function POST(req: NextRequest) {
       console.log("📋 Document analyzed comprehensively:", comprehensiveAnalysis.documentType);
 
       // Step 3: Generate suggested actions based on analysis
-      const suggestedActions = generateSuggestedActions(comprehensiveAnalysis, comprehensiveAnalysis.documentType);
+      const suggestedActions = generateSuggestedActions(comprehensiveAnalysis, classification.type);
 
       console.log("✅ Comprehensive document analysis completed successfully");
 
       return NextResponse.json({
         success: true,
-        documentType: comprehensiveAnalysis.documentType,
+        documentType: classification.type,
+        classification: {
+          type: classification.type,
+          confidence: classification.confidence,
+          keywords: classification.keywords,
+          reasoning: classification.reasoning
+        },
         analysis: comprehensiveAnalysis,
         suggestedActions,
         extractedText: ocrResult.text,

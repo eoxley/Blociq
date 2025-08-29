@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import OpenAI from 'openai';
+import { getOpenAIClient } from '@/lib/openai-client';
 
 interface AIEmailRequest {
   action: 'draft' | 'summary' | 'analyse' | 'categorise' | 'suggest-reply' | 'extract-info';
@@ -43,9 +43,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Initialize OpenAI
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    const openai = getOpenAIClient();
 
     // Build context based on action
     let systemPrompt = '';

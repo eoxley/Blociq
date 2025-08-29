@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import OpenAI from 'openai';
+import { getOpenAIClient } from '@/lib/openai-client';
 
 interface EmailDraftRequest {
   emailId: string;
@@ -86,9 +86,7 @@ Manager Email: ${building.building_manager_email || 'Not specified'}`;
     }
 
     // Initialize OpenAI
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    const openai = getOpenAIClient();
 
     // Build context-aware system prompt
     const systemPrompt = `You are a professional property management assistant specialising in UK leasehold management. 

@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import OpenAI from 'openai';
+import { getOpenAIClient } from '@/lib/openai-client';
 import { extractTextFromPDF } from '@/lib/extractTextFromPdf';
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(request: NextRequest) {
   try {
@@ -182,6 +180,7 @@ Please provide a structured summary that includes:
 
 Focus on UK property management context and leasehold terminology. Be specific and actionable.`;
 
+    const openai = getOpenAIClient();
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [{ role: 'user', content: prompt }],

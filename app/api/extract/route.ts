@@ -3,12 +3,9 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 // import pdf from 'pdf-parse'; // Using dynamic import to avoid test file issues
 import { extractLeaseClausesEnhanced, isLeaseDocument } from '@/utils/leaseExtractor';
-import OpenAI from 'openai';
+import { getOpenAIClient } from '@/lib/openai-client';
 
 // Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 export async function POST(request: NextRequest) {
   try {
@@ -148,6 +145,7 @@ Please provide:
 
 Keep the summary professional but accessible, suitable for property management professionals.`;
 
+    const openai = getOpenAIClient();
             const completion = await openai.chat.completions.create({
               model: 'gpt-4o',
               messages: [{ role: 'user', content: prompt }],

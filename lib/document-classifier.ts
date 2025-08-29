@@ -30,10 +30,10 @@ const DOCUMENT_PATTERNS: Record<DocumentType, {
   };
 }> = {
   'lease': {
-    keywords: ['lease', 'agreement', 'tenancy', 'lessor', 'lessee', 'demise', 'term', 'rent', 'service charge'],
-    phrases: ['lease agreement', 'tenancy agreement', 'leasehold', 'ground rent', 'service charge', 'demised premises'],
-    required: ['lease', 'agreement'],
-    scoring: { keyword: 2, phrase: 5, required: 10 }
+    keywords: ['lease', 'agreement', 'tenancy', 'lessor', 'lessee', 'demise', 'term', 'rent', 'service charge', 'letting', 'tenant', 'landlord', 'leasehold', 'freehold', 'ground rent', 'premium', 'demised premises', 'commencement date', 'expiry', 'renewal', 'forfeiture', 'assignment', 'underletting'],
+    phrases: ['lease agreement', 'tenancy agreement', 'leasehold agreement', 'letting agreement', 'ground rent', 'service charge', 'demised premises', 'lease term', 'rent review', 'break clause', 'lease renewal', 'assignment of lease', 'underletting consent', 'forfeiture clause'],
+    required: [], // Remove strict requirements to be more flexible
+    scoring: { keyword: 3, phrase: 6, required: 0 }
   },
   'eicr': {
     keywords: ['eicr', 'electrical', 'inspection', 'condition', 'report', 'circuit', 'wiring', 'fuse', 'consumer unit'],
@@ -117,8 +117,8 @@ export function classifyDocument(extractedText: string, filename: string): Docum
     const foundKeywords: string[] = [];
     const foundPhrases: string[] = [];
     
-    // Check for required keywords
-    const hasRequired = pattern.required.every(req => 
+    // Check for required keywords (skip if no required keywords)
+    const hasRequired = pattern.required.length === 0 || pattern.required.every(req => 
       words.some(word => word.includes(req))
     );
     
@@ -140,8 +140,10 @@ export function classifyDocument(extractedText: string, filename: string): Docum
       }
     }
     
-    // Bonus for required keywords
-    score += pattern.scoring.required;
+    // Bonus for required keywords (only if there are required keywords)
+    if (pattern.required.length > 0) {
+      score += pattern.scoring.required;
+    }
     
     // Additional scoring based on document structure
     score += calculateStructureScore(docType as DocumentType, text);
@@ -172,6 +174,29 @@ function calculateStructureScore(docType: DocumentType, text: string): number {
   let score = 0;
   
   switch (docType) {
+    case 'lease':
+      // Look for lease-specific structure and terms
+      if (text.includes('demised premises') || text.includes('property hereby demised')) score += 5;
+      if (text.includes('term of years') || text.includes('lease term')) score += 4;
+      if (text.includes('rent review') || text.includes('annual rent')) score += 3;
+      if (text.includes('service charge') || text.includes('maintenance charge')) score += 3;
+      if (text.includes('forfeiture') || text.includes('re-entry')) score += 4;
+      if (text.includes('assignment') || text.includes('subletting')) score += 3;
+      if (text.includes('break clause') || text.includes('break option')) score += 3;
+      if (text.includes('lessor') && text.includes('lessee')) score += 5;
+      if (text.includes('tenant') && text.includes('landlord')) score += 4;
+      if (text.includes('commencement date') || text.includes('lease commencement')) score += 3;
+      if (text.includes('expiry date') || text.includes('term expiry')) score += 3;
+      if (text.includes('ground rent') || text.includes('ground rental')) score += 4;
+      if (text.includes('leasehold') || text.includes('lease hold')) score += 3;
+      if (text.includes('premium') && (text.includes('lease') || text.includes('tenancy'))) score += 3;
+      if (text.includes('covenant') || text.includes('covenants')) score += 2;
+      if (text.includes('demise') || text.includes('hereby demised')) score += 4;
+      // Check for legal structure
+      if (text.includes('witnesseth') || text.includes('whereas')) score += 2;
+      if (text.includes('schedule') && (text.includes('property') || text.includes('premises'))) score += 2;
+      break;
+      
     case 'eicr':
       if (text.includes('test results') || text.includes('periodic inspection')) score += 3;
       if (text.includes('bs 7671') || text.includes('iee regulations')) score += 2;

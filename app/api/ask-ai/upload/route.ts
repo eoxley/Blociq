@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// Service imports - using lazy loading with proper error handling
+// Service imports - use dynamic imports to avoid webpack issues
 // import { extractText } from '@/lib/extract-text'
 // import { analyzeLeaseDocument } from '@/lib/lease-analyzer'
 // import { classifyDocument } from '@/lib/document-classifier'
@@ -51,15 +51,10 @@ class DocumentProcessor {
 
       console.log(`Processing file: ${file.name} (${file.size} bytes)`);
 
-      // Extract text with lazy loading and error handling
-      const { extractText } = await import('@/lib/extract-text').catch(err => {
-        throw new Error(`Text extraction module failed to load: ${err.message}`);
-      });
-      
+      // Extract text using dynamic import
+      const { extractText } = await import('@/lib/extract-text');
       const arrayBuffer = await file.arrayBuffer();
-      const extractedData = await extractText(new Uint8Array(arrayBuffer), file.name).catch(err => {
-        throw new Error(`Text extraction failed: ${err.message}`);
-      });
+      const extractedData = await extractText(new Uint8Array(arrayBuffer), file.name);
       
       console.log(`Text extracted: ${extractedData.text.length} characters`);
 
@@ -67,12 +62,8 @@ class DocumentProcessor {
       const extractionMethod = this.getExtractionMethod(extractedData.text);
       const extractionNote = this.getExtractionNote(extractionMethod);
 
-      // Classify document with lazy loading
-      const { classifyDocument } = await import('@/lib/document-classifier').catch(err => {
-        console.warn(`Document classifier failed to load: ${err.message}`);
-        return { classifyDocument: (text: string, filename: string) => ({ type: 'unknown', confidence: 50 }) };
-      });
-      
+      // Classify document using dynamic import
+      const { classifyDocument } = await import('@/lib/document-classifier');
       const classification = classifyDocument(extractedData.text, file.name);
       console.log(`Document classified as: ${classification.type} (${classification.confidence}% confidence)`);
 
@@ -132,25 +123,15 @@ class DocumentProcessor {
         throw new Error(error?.message || 'File download failed');
       }
 
-      // Process as if it were an uploaded file with lazy loading
-      const { extractText } = await import('@/lib/extract-text').catch(err => {
-        throw new Error(`Text extraction module failed to load: ${err.message}`);
-      });
-      
+      // Process as if it were an uploaded file
       const arrayBuffer = await data.arrayBuffer();
-      const extractedData = await extractText(new Uint8Array(arrayBuffer), path).catch(err => {
-        throw new Error(`Text extraction failed: ${err.message}`);
-      });
+      const { extractText } = await import('@/lib/extract-text');
+      const extractedData = await extractText(new Uint8Array(arrayBuffer), path);
       
       const extractionMethod = this.getExtractionMethod(extractedData.text);
       const extractionNote = 'Document processed from storage';
       
-      // Classify document with lazy loading and fallback
-      const { classifyDocument } = await import('@/lib/document-classifier').catch(err => {
-        console.warn(`Document classifier failed to load: ${err.message}`);
-        return { classifyDocument: (text: string, filename: string) => ({ type: 'unknown', confidence: 50 }) };
-      });
-      
+      const { classifyDocument } = await import('@/lib/document-classifier');
       const classification = classifyDocument(extractedData.text, path);
       const filename = path.split('/').pop() || path;
 
@@ -200,22 +181,7 @@ class DocumentProcessor {
     try {
       console.log(`Processing as lease document: ${filename}`);
       
-      // Lazy load lease analyzer with fallback
-      const { analyzeLeaseDocument } = await import('@/lib/lease-analyzer').catch(err => {
-        console.warn(`Lease analyzer failed to load: ${err.message}`);
-        return {
-          analyzeLeaseDocument: async (text: string, filename: string, buildingId?: string) => ({
-            leaseDetails: { propertyAddress: 'Analysis failed - module not available' },
-            complianceChecklist: [],
-            financialObligations: [],
-            keyRights: [],
-            restrictions: [],
-            confidence: 0.1,
-            summary: `Lease document analysis failed: ${err.message}`
-          })
-        };
-      });
-      
+      const { analyzeLeaseDocument } = await import('@/lib/lease-analyzer');
       const leaseAnalysis = await analyzeLeaseDocument(text, filename, buildingId);
       const formattedText = this.formatLeaseAnalysis(leaseAnalysis);
       
@@ -326,7 +292,7 @@ class DocumentProcessor {
     }
 
     // Note: file.type can be empty or spoofed, so this is just a first check
-    if (file.type && !CONFIG.SUPPORTED_TYPES.includes(file.type)) {
+    if (file.type && !CONFIG.SUPPORTED_TYPES.includes(file.type as any)) {
       return { 
         isValid: false, 
         error: `File type ${file.type} not supported. Allowed types: PDF, DOCX, DOC, TXT` 

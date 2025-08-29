@@ -2,12 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { extractTextWithAnalysis, isTextSufficientForAnalysis, cleanExtractedText } from '@/lib/extractTextFromPdf';
-import OpenAI from 'openai';
+import { getOpenAIClient } from '@/lib/openai-client';
 import axios from 'axios';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 export async function POST(req: NextRequest) {
   try {
@@ -139,6 +136,7 @@ Focus on:
 - Maintenance recommendations
 `;
 
+    const openai = getOpenAIClient();
           const completion = await openai.chat.completions.create({
             model: 'gpt-4o',
             messages: [

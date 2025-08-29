@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import OpenAI from 'openai';
+import { getOpenAIClient } from '@/lib/openai-client';
 
 interface GenerateNewEmailDraftRequest {
   subject: string;
@@ -50,9 +50,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Initialize OpenAI client
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    const openai = getOpenAIClient();
 
     // Build system prompt
     const systemPrompt = `You are a professional property management assistant helping to draft new emails using British English. 

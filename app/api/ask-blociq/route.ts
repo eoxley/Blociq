@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import OpenAI from 'openai';
+import { getOpenAIClient } from '@/lib/openai-client';
 import { buildPrompt } from '@/lib/buildPrompt';
 import { insertAiLog } from '@/lib/supabase/ai_logs';
 
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       }, { status: 500 });
     }
 
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const openai = getOpenAIClient();
 
     const supabase = createRouteHandlerClient({ cookies });
     

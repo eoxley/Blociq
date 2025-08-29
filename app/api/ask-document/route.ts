@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import OpenAI from 'openai';
+import { getOpenAIClient } from '@/lib/openai-client';
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,9 +21,7 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    const openai = getOpenAIClient();
 
     const { question, buildingId, documentType, userId } = await request.json();
 

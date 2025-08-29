@@ -6,7 +6,7 @@
 // - Suitable for landing page trials
 
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { getOpenAIClient } from '@/lib/openai-client';
 
 // Enhanced system prompts for different context types (without building data)
 const SYSTEM_PROMPTS = {
@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
     const enhancedPrompt = buildEnhancedPrompt(actualQuestion, detectedContextType, tone);
 
     // Initialize OpenAI client
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const openai = getOpenAIClient();
 
     // Call OpenAI with enhanced parameters
     const completion = await openai.chat.completions.create({

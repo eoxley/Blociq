@@ -9,7 +9,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
-import OpenAI from 'openai';
+import { getOpenAIClient } from '@/lib/openai-client';
 import { insertAiLog } from '@/lib/supabase/ai_logs';
 import { 
   upsertConversation, 
@@ -21,8 +21,6 @@ import {
   getConversation
 } from '@/lib/ai/memory';
 import { buildSystemPrompt, buildChatPrompt } from '@/lib/ai/prompt';
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req: Request) {
   console.log("✅ Enhanced Assistant Query endpoint hit with memory support");
@@ -156,6 +154,7 @@ Answer:
       messages.push({ role: 'user', content: userPrompt });
     }
 
+    const openai = getOpenAIClient();
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages,

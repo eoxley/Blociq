@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
 
     // Dynamic import to prevent build-time execution
     const { default: OpenAI } = await import('openai');
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const openai = getOpenAIClient();
 
     // Build context-aware prompt
     const systemPrompt = buildEmailReplyPrompt(replyType || draftType, buildingContext, leaseholderContext, tone);

@@ -21,6 +21,20 @@ interface PDFParseResult {
 }
 
 /**
+ * Helper function to safely set environment variable
+ */
+function setEnvVar(key: string, value: string) {
+  (process.env as any)[key] = value;
+}
+
+/**
+ * Helper function to safely delete environment variable
+ */
+function deleteEnvVar(key: string) {
+  delete (process.env as any)[key];
+}
+
+/**
  * Safe PDF parsing function that prevents debug mode activation
  */
 export async function safePdfParse(buffer: Buffer, options: PDFParseOptions = {}): Promise<PDFParseResult> {
@@ -30,8 +44,8 @@ export async function safePdfParse(buffer: Buffer, options: PDFParseOptions = {}
   
   try {
     // Temporarily set environment to production to prevent debug mode
-    process.env.NODE_ENV = 'production';
-    process.env.DEBUG = '';
+    setEnvVar('NODE_ENV', 'production');
+    setEnvVar('DEBUG', '');
     
     // Dynamic import to avoid static import issues
     const pdfParse = await import('pdf-parse').then(module => module.default || module);
@@ -66,13 +80,13 @@ export async function safePdfParse(buffer: Buffer, options: PDFParseOptions = {}
   } finally {
     // Restore original environment variables
     if (originalDebug !== undefined) {
-      process.env.DEBUG = originalDebug;
+      setEnvVar('DEBUG', originalDebug);
     } else {
-      delete process.env.DEBUG;
+      deleteEnvVar('DEBUG');
     }
     
     if (originalNodeEnv !== undefined) {
-      process.env.NODE_ENV = originalNodeEnv;
+      setEnvVar('NODE_ENV', originalNodeEnv);
     }
   }
 }

@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import OpenAI from 'openai';
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+import { getOpenAIClient } from '@/lib/openai-client';
 
 export async function POST(req: NextRequest) {
   try {
@@ -63,6 +61,9 @@ export async function POST(req: NextRequest) {
     }
 
     context += `\n\nUser Question: ${prompt}\n\nPlease provide a helpful, professional response suitable for property management professionals.`;
+
+    // Initialize OpenAI client at runtime
+    const openai = getOpenAIClient();
 
     // Generate AI response
     const completion = await openai.chat.completions.create({

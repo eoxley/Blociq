@@ -1,13 +1,28 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+let adminClientInstance: any = null;
 
-if (!supabaseUrl || !serviceRoleKey) {
-  throw new Error("Missing Supabase environment variables for admin client");
+export function getSupabaseAdmin() {
+  if (!adminClientInstance) {
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceRoleKey) {
+      throw new Error("Missing Supabase environment variables for admin client");
+    }
+
+    adminClientInstance = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false },
+      db: { schema: "public" },
+    });
+  }
+  
+  return adminClientInstance;
 }
 
-export const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-  auth: { persistSession: false },
-  db: { schema: "public" },
+// Legacy export for backwards compatibility - lazy initialized
+export const supabaseAdmin = new Proxy({} as any, {
+  get(target, prop) {
+    return getSupabaseAdmin()[prop];
+  }
 });
