@@ -104,30 +104,151 @@ export async function processLeaseAndGenerateResponse(
   const startTime = Date.now();
   console.log(`🏠 Starting complete lease analysis for: ${file.name}`);
   
+  // Step 1: Extract text from PDF using enhanced OCR with individual error handling
+  console.log('📄 Step 1: Extracting text from PDF...');
+  let ocrResult: any;
   try {
-    // Step 1: Extract text from PDF using enhanced OCR
-    console.log('📄 Step 1: Extracting text from PDF...');
-    const ocrResult = await processOCRDocument(file);
+    ocrResult = await processOCRDocument(file);
     
-    if (ocrResult.extractedText.length === 0) {
-      throw new Error('No text could be extracted from the document');
+    if (!ocrResult.success) {
+      console.error('❌ OCR failed for file:', file.name, 'Error:', ocrResult.error);
+      return {
+        answer: `Failed to extract text from ${file.name}. ${ocrResult.error || 'OCR processing failed'}. Please ensure the document is readable and try again with a different file format if possible.`,
+        sources: [`Failed OCR: ${file.name}`],
+        confidence: 0,
+        suggestions: [
+          'Try uploading a clearer scan of the document',
+          'Ensure the document is not password protected',
+          'Check that the file is not corrupted'
+        ],
+        relatedQueries: [
+          'How can I improve document quality for OCR?',
+          'What file formats work best for document analysis?',
+          'Can you help with manual document review?'
+        ],
+        metadata: {
+          processingTime: Date.now() - startTime,
+          documentsProcessed: 0,
+          databaseRecordsSearched: 0,
+          aiModel: 'ocr-failure',
+          timestamp: new Date().toISOString(),
+          error: ocrResult.error
+        }
+      };
     }
+    
+    if (!ocrResult.extractedText || ocrResult.extractedText.length === 0) {
+      console.error('❌ No text extracted from file:', file.name);
+      return {
+        answer: `No text could be extracted from ${file.name}. The document may be an image-only PDF or the text may not be machine-readable. Please try uploading a text-based PDF or a clearer scan.`,
+        sources: [`Empty OCR result: ${file.name}`],
+        confidence: 0,
+        suggestions: [
+          'Upload a text-based PDF instead of a scanned image',
+          'Ensure the document scan is clear and high-resolution',
+          'Try converting the document to a different format'
+        ],
+        relatedQueries: [
+          'How to create searchable PDFs?',
+          'What makes a document OCR-friendly?',
+          'Can you analyze documents manually?'
+        ],
+        metadata: {
+          processingTime: Date.now() - startTime,
+          documentsProcessed: 0,
+          databaseRecordsSearched: 0,
+          aiModel: 'no-text-extracted',
+          timestamp: new Date().toISOString(),
+          error: 'No text extracted'
+        }
+      };
+    }
+  } catch (error) {
+    console.error('❌ OCR processing failed with exception:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown OCR error';
+    return {
+      answer: `Document processing failed for ${file.name}. ${errorMessage}. Please try uploading the document again or contact support if the issue persists.`,
+      sources: [`OCR error: ${file.name}`],
+      confidence: 0,
+      suggestions: [
+        'Try uploading the document again',
+        'Check your internet connection',
+        'Contact support if the problem persists'
+      ],
+      relatedQueries: [
+        'What are common document upload issues?',
+        'How to troubleshoot OCR problems?',
+        'Alternative ways to analyze documents?'
+      ],
+      metadata: {
+        processingTime: Date.now() - startTime,
+        documentsProcessed: 0,
+        databaseRecordsSearched: 0,
+        aiModel: 'ocr-exception',
+        timestamp: new Date().toISOString(),
+        error: errorMessage
+      }
+    };
+  }
+  
+  try {
     
     console.log(`✅ Text extracted: ${ocrResult.extractedText.length} characters`);
     
-    // Step 2: Analyze the lease document
+    // Step 2: Analyze the lease document with individual error handling
     console.log('🔍 Step 2: Analyzing lease terms...');
-    const leaseAnalysis = await analyzeLeaseDocument(ocrResult.extractedText, file.name);
+    let leaseAnalysis: any;
+    try {
+      leaseAnalysis = await analyzeLeaseDocument(ocrResult.extractedText, file.name);
+      console.log(`✅ Lease analysis completed with confidence: ${leaseAnalysis.complianceStatus}`);
+    } catch (error) {
+      console.error('❌ Lease analysis failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Lease analysis failed';
+      return {
+        answer: `Successfully extracted text from ${file.name}, but lease analysis failed. ${errorMessage}. The document text is available but detailed lease analysis could not be completed.`,
+        sources: [`Partial analysis: ${file.name}`],
+        confidence: 0.3,
+        suggestions: [
+          'Try with a different lease document format',
+          'Ensure the document is a standard lease agreement',
+          'Contact support for manual document review'
+        ],
+        relatedQueries: [
+          'What lease document formats are supported?',
+          'How to prepare documents for analysis?',
+          'Can you help with custom lease formats?'
+        ],
+        metadata: {
+          processingTime: Date.now() - startTime,
+          documentsProcessed: 1,
+          databaseRecordsSearched: 0,
+          aiModel: 'lease-analysis-failed',
+          timestamp: new Date().toISOString(),
+          error: errorMessage
+        }
+      };
+    }
     
-    console.log(`✅ Lease analysis completed with confidence: ${leaseAnalysis.complianceStatus}`);
-    
-    // Step 3: Search database for related information
+    // Step 3: Search database for related information with error handling
     console.log('🗄️ Step 3: Searching database for related data...');
-    const databaseResults = await searchRelatedLeaseData(
-      supabase, 
-      extractLeaseTerms(leaseAnalysis), 
-      userQuestion
-    );
+    let databaseResults: any;
+    try {
+      databaseResults = await searchRelatedLeaseData(
+        supabase, 
+        extractLeaseTerms(leaseAnalysis), 
+        userQuestion
+      );
+      console.log(`✅ Database search completed: ${databaseResults.totalRecords} records found`);
+    } catch (error) {
+      console.error('❌ Database search failed:', error);
+      // Continue with empty database results - this is not critical
+      databaseResults = {
+        data: [],
+        tablesSearched: [],
+        confidence: 0,
+        totalRecords: 0,
+      };
+    }
     
     // Step 4: Generate comprehensive AI response
     console.log('🧠 Step 4: Generating AI response...');
@@ -185,31 +306,66 @@ export async function processLeaseAndGenerateResponse(
     return finalResponse;
     
   } catch (error) {
-    console.error('❌ Lease processing workflow failed:', error);
-    throw error;
+    console.error('❌ Unexpected error in lease processing workflow:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown processing error';
+    return {
+      answer: `An unexpected error occurred while processing ${file.name}. ${errorMessage}. Please try again or contact support if the issue persists.`,
+      sources: [`Processing error: ${file.name}`],
+      confidence: 0,
+      suggestions: [
+        'Try uploading the document again',
+        'Check if the document is corrupted',
+        'Contact support for assistance'
+      ],
+      relatedQueries: [
+        'What could cause document processing to fail?',
+        'How to troubleshoot upload issues?',
+        'Alternative document analysis methods?'
+      ],
+      metadata: {
+        processingTime: Date.now() - startTime,
+        documentsProcessed: 0,
+        databaseRecordsSearched: 0,
+        aiModel: 'processing-error',
+        timestamp: new Date().toISOString(),
+        error: errorMessage
+      }
+    };
   }
 }
 
 /**
- * Process OCR document - wrapper for existing OCR function
+ * Process OCR document - wrapper for existing OCR function with proper error handling
  */
-async function processOCRDocument(file: File): Promise<any> {
-  const ocrConfig = getOCRConfig();
-  const result = await processFileWithOCR(file, ocrConfig);
-  
-  if (!result.success) {
-    throw new Error(result.error || 'OCR processing failed');
-  }
-  
-  return {
-    extractedText: result.text || '',
-    metadata: {
-      fileName: file.name,
-      fileSize: file.size,
-      confidence: result.confidence || 'medium',
-      processingTime: result.metadata?.processingTime
+async function processOCRDocument(file: File): Promise<{ success: boolean; extractedText?: string; metadata?: any; error?: string }> {
+  try {
+    const ocrConfig = getOCRConfig();
+    const result = await processFileWithOCR(file, ocrConfig);
+    
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error || 'OCR processing failed'
+      };
     }
-  };
+    
+    return {
+      success: true,
+      extractedText: result.text || '',
+      metadata: {
+        fileName: file.name,
+        fileSize: file.size,
+        confidence: result.confidence || 'medium',
+        processingTime: result.metadata?.processingTime
+      }
+    };
+  } catch (error) {
+    console.error('❌ OCR processing error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown OCR processing error'
+    };
+  }
 }
 
 /**
