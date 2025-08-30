@@ -120,33 +120,35 @@ export async function POST(req: Request) {
 
       const ab = await file.arrayBuffer()
       const text = await extractText(file)
-      const out = await summarizeAndSuggest(text.text, file.name)
       
-      // Determine extraction method for user feedback
-      let extractionMethod = 'standard';
-      let extractionNote = '';
+      // Determine if OCR was used
+      const usedOCR = text.text.includes('[OCR Fallback]') || 
+                     text.text.includes('[Fallback extractor]') ||
+                     text.text.includes('[Enhanced processor]');
       
-      if (text.text.includes('[OCR Fallback]')) {
-        extractionMethod = 'ocr';
-        extractionNote = 'Document processed using OCR - text accuracy may vary';
-      } else if (text.text.includes('[Enhanced processor]')) {
-        extractionMethod = 'enhanced';
-        extractionNote = 'Document processed using enhanced extraction methods';
-      } else if (text.text.includes('[Fallback extractor]')) {
-        extractionMethod = 'fallback';
-        extractionNote = 'Document processed using fallback methods';
+      // Get actual text length
+      const len = text.text?.length || 0;
+      
+      // Only return success if we have meaningful text
+      if (len < 20) {
+        return NextResponse.json({
+          success: false,
+          message: 'OCR returned too little text to analyse.',
+          textLength: len,
+          usedOCR,
+          filename: file.name
+        }, { status: 200 });
       }
       
       return NextResponse.json({
         success: true,
         filename: file.name,
         buildingId,
-        summary: out.summary,
-        suggestedActions: out.suggestions ?? [],
-        extractionMethod,
-        extractionNote,
-        textLength: text.text.length,
-        confidence: extractionMethod === 'standard' ? 'high' : 'medium'
+        usedOCR,
+        textLength: len,
+        text: text.text, // Send full OCR text to the UI
+        extractionMethod: usedOCR ? 'ocr' : 'standard',
+        extractionNote: usedOCR ? 'Document processed using OCR - text accuracy may vary' : 'Standard text extraction'
       })
     }
 
