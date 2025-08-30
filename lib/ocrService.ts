@@ -30,7 +30,7 @@ export interface OCRServiceConfig {
 const DEFAULT_CONFIG: Required<OCRServiceConfig> = {
   preferGoogleVision: true,
   fallbackToExternal: true,
-  minTextLength: 50,
+  minTextLength: 50, // Lowered from 200 in upload route
   timeout: 30000
 }
 
