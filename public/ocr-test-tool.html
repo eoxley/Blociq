@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR Proxy Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        
+        input[type="file"] {
+            margin: 10px 0;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+        
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            font-size: 12px;
+        }
+        .url-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 OCR Integration Test Tool</h1>
+        <p>Test your OCR proxy endpoints and AI integration</p>
+        
+        <div class="test-section">
+            <h3>📍 Configure Endpoints</h3>
+            <label for="ocrProxyUrl">OCR Proxy URL:</label>
+            <input type="text" id="ocrProxyUrl" class="url-input" value="/api/ocr-proxy" placeholder="/api/ocr-proxy">
+            
+            <label for="askAiUrl">Ask AI Public URL:</label>
+            <input type="text" id="askAiUrl" class="url-input" value="/api/ask-ai-public" placeholder="/api/ask-ai-public">
+        </div>
+        
+        <div class="test-section">
+            <h3>🧪 Test 1: OCR Proxy Direct Test</h3>
+            <p>Test your OCR proxy endpoint directly</p>
+            <input type="file" id="ocrFile" accept=".pdf,.jpg,.jpeg,.png,.gif,.bmp,.tiff">
+            <button onclick="testOCRProxy()">Test OCR Proxy</button>
+            <div id="ocrResult"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🤖 Test 2: Ask AI Public with File</h3>
+            <p>Test the complete flow: file upload + OCR + AI response</p>
+            <input type="file" id="aiFile" accept=".pdf,.jpg,.jpeg,.png,.gif,.bmp,.tiff">
+            <input type="text" id="aiPrompt" placeholder="Ask a question about the uploaded document..." style="width: 100%; padding: 8px; margin: 10px 0;">
+            <button onclick="testAskAIPublic()">Test Ask AI Public</button>
+            <div id="aiResult"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>📊 Test 3: Endpoint Health Check</h3>
+            <button onclick="checkEndpointHealth()">Check All Endpoints</button>
+            <div id="healthResult"></div>
+        </div>
+    </div>
+
+    <script>
+        function displayResult(elementId, title, result, isError = false) {
+            const element = document.getElementById(elementId);
+            const statusClass = isError ? 'error' : 'success';
+            const timestamp = new Date().toLocaleTimeString();
+            
+            element.innerHTML = `
+                <div class="status ${statusClass}">
+                    ${title} - ${timestamp}
+                </div>
+                <pre>${JSON.stringify(result, null, 2)}</pre>
+            `;
+        }
+        
+        function displayWarning(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="status warning">${message}</div>`;
+        }
+        
+        function displayInfo(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="status info">${message}</div>`;
+        }
+
+        async function testOCRProxy() {
+            const fileInput = document.getElementById('ocrFile');
+            const ocrUrl = document.getElementById('ocrProxyUrl').value;
+            
+            if (!fileInput.files[0]) {
+                displayWarning('ocrResult', 'Please select a file first');
+                return;
+            }
+            
+            displayInfo('ocrResult', 'Processing OCR... This may take a few seconds');
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                
+                console.log('Sending OCR request to:', ocrUrl);
+                console.log('File details:', {
+                    name: fileInput.files[0].name,
+                    size: fileInput.files[0].size,
+                    type: fileInput.files[0].type
+                });
+                
+                const response = await fetch(ocrUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                console.log('OCR Response status:', response.status);
+                console.log('OCR Response headers:', Object.fromEntries(response.headers.entries()));
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
+                const result = await response.json();
+                console.log('OCR Result:', result);
+                
+                displayResult('ocrResult', '✅ OCR Proxy Test Successful', {
+                    status: response.status,
+                    success: result.success,
+                    textLength: result.text?.length || 0,
+                    textPreview: result.text?.substring(0, 200) + (result.text?.length > 200 ? '...' : ''),
+                    fullResponse: result
+                });
+                
+            } catch (error) {
+                console.error('OCR Test failed:', error);
+                displayResult('ocrResult', '❌ OCR Proxy Test Failed', {
+                    error: error.message,
+                    stack: error.stack
+                }, true);
+            }
+        }
+
+        async function testAskAIPublic() {
+            const fileInput = document.getElementById('aiFile');
+            const promptInput = document.getElementById('aiPrompt');
+            const askAiUrl = document.getElementById('askAiUrl').value;
+            
+            const prompt = promptInput.value.trim();
+            if (!prompt) {
+                displayWarning('aiResult', 'Please enter a prompt');
+                return;
+            }
+            
+            displayInfo('aiResult', 'Processing AI request with file upload...');
+            
+            try {
+                const formData = new FormData();
+                formData.append('prompt', prompt);
+                
+                if (fileInput.files[0]) {
+                    formData.append('files', fileInput.files[0]);
+                    console.log('Including file in request:', fileInput.files[0].name);
+                }
+                
+                console.log('Sending Ask AI request to:', askAiUrl);
+                console.log('Prompt:', prompt);
+                
+                const response = await fetch(askAiUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                console.log('Ask AI Response status:', response.status);
+                console.log('Ask AI Response headers:', Object.fromEntries(response.headers.entries()));
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
+                const result = await response.json();
+                console.log('Ask AI Result:', result);
+                
+                displayResult('aiResult', '✅ Ask AI Public Test Successful', {
+                    status: response.status,
+                    filesProcessed: result.filesProcessed || 0,
+                    ocrResults: result.ocrResults || [],
+                    aiResponsePreview: typeof result.response === 'string' 
+                        ? result.response.substring(0, 300) + '...'
+                        : result.response,
+                    fullResponse: result
+                });
+                
+            } catch (error) {
+                console.error('Ask AI Test failed:', error);
+                displayResult('aiResult', '❌ Ask AI Public Test Failed', {
+                    error: error.message,
+                    stack: error.stack
+                }, true);
+            }
+        }
+
+        async function checkEndpointHealth() {
+            displayInfo('healthResult', 'Checking endpoint health...');
+            
+            const ocrUrl = document.getElementById('ocrProxyUrl').value;
+            const askAiUrl = document.getElementById('askAiUrl').value;
+            
+            const results = {};
+            
+            // Test OCR Proxy endpoint
+            try {
+                const ocrResponse = await fetch(ocrUrl, { method: 'POST' });
+                results.ocrProxy = {
+                    status: ocrResponse.status,
+                    accessible: true,
+                    statusText: ocrResponse.statusText
+                };
+            } catch (error) {
+                results.ocrProxy = {
+                    status: 'ERROR',
+                    accessible: false,
+                    error: error.message
+                };
+            }
+            
+            // Test Ask AI endpoint
+            try {
+                const aiResponse = await fetch(askAiUrl, { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: 'health check' })
+                });
+                results.askAiPublic = {
+                    status: aiResponse.status,
+                    accessible: true,
+                    statusText: aiResponse.statusText
+                };
+            } catch (error) {
+                results.askAiPublic = {
+                    status: 'ERROR',
+                    accessible: false,
+                    error: error.message
+                };
+            }
+            
+            // Test external OCR service
+            try {
+                const externalResponse = await fetch('https://ocr-server-2-ykmk.onrender.com/health', {
+                    method: 'GET',
+                    mode: 'no-cors' // Might be blocked by CORS, but we'll try
+                });
+                results.externalOCR = {
+                    status: 'ACCESSIBLE',
+                    note: 'External OCR service appears to be running'
+                };
+            } catch (error) {
+                results.externalOCR = {
+                    status: 'UNKNOWN',
+                    note: 'Cannot test external service due to CORS, but this is normal'
+                };
+            }
+            
+            displayResult('healthResult', '🏥 Endpoint Health Check Complete', results);
+        }
+        
+        // Auto-populate URLs based on current domain
+        document.addEventListener('DOMContentLoaded', function() {
+            const baseUrl = window.location.origin;
+            document.getElementById('ocrProxyUrl').value = `${baseUrl}/api/ocr-proxy`;
+            document.getElementById('askAiUrl').value = `${baseUrl}/api/ask-ai-public`;
+        });
+    </script>
+</body>
+</html>

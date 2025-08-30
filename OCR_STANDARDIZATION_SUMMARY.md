@@ -47,10 +47,28 @@ Your frontend is **fully standardized** and now uses a **server-side OCR proxy**
 - **`/api/ocr-proxy`** - Server-side proxy that handles all OCR requests
 - **File:** `app/api/ocr-proxy/route.ts` - Newly created proxy endpoint
 
+### **New Health Check Route:**
+- **`/api/ocr-health`** - Monitor OCR service status
+- **File:** `app/api/ocr-health/route.ts` - Newly created health endpoint
+
+### **New OCR-Enhanced AI Route:**
+- **`/api/ask-ai-public`** - AI analysis with OCR document processing
+- **File:** `app/api/ask-ai-public/route.ts` - Newly created AI route
+- **Features:** Lease document detection, enhanced prompts, file processing
+
+### **Enhanced Features:**
+- ✅ **Automatic retry logic** - Handles 502 errors with progressive backoff
+- ✅ **Service health monitoring** - Check OCR service status anytime
+- ✅ **Improved error handling** - Better error messages and status codes
+- ✅ **Debug panel integration** - Health check button in OCR debug panel
+- ✅ **OCR-enhanced AI analysis** - Document processing with intelligent prompts
+- ✅ **Lease document detection** - Specialized analysis for lease agreements
+- ✅ **Test tool integration** - HTML test tool for endpoint validation
+
 ### **Benefits:**
 - ✅ **Eliminates CORS issues** - All OCR calls happen server-side
 - ✅ **Better security** - OCR service credentials stay server-side
-- ✅ **Improved reliability** - No browser CORS restrictions
+- ✅ **Improved reliability** - No browser CORS restrictions + automatic retries
 - ✅ **Centralized logging** - All OCR requests logged server-side
 
 ## 📍 **OCR Service URLs in Use**
@@ -65,6 +83,15 @@ Your frontend is **fully standardized** and now uses a **server-side OCR proxy**
 | `app/api/upload-and-analyse/route.ts` | 156 | `/api/ocr-proxy` | OCR-Server-2 |
 | `components/debug/OCRDebugPanel.tsx` | 63 | `/api/ocr-proxy` | OCR-Server-2 |
 | `components/debug/OCRDebugPanel.tsx` | 168 | `/api/ocr-proxy` | OCR-Server-2 |
+
+## 🆕 **New OCR-Enhanced Endpoints**
+
+| Endpoint | Purpose | Features |
+|----------|---------|----------|
+| `/api/ocr-proxy` | OCR processing proxy | Retry logic, error handling, CORS elimination |
+| `/api/ocr-health` | Service health monitoring | Status checks, external service monitoring |
+| `/api/ask-ai-public` | AI analysis with OCR | Document processing, lease detection, enhanced prompts |
+| `/public/ocr-test-tool.html` | Testing interface | Endpoint validation, OCR testing, AI integration testing |
 
 ## 🚀 **Next Steps**
 

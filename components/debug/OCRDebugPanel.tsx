@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Upload, FileText, Image, CheckCircle, XCircle, Bug, Eye, Code } from 'lucide-react';
+import { Loader2, Upload, FileText, Image, CheckCircle, XCircle, Bug, Eye, Code, Activity } from 'lucide-react';
 
 export default function OCRDebugPanel() {
   const [file, setFile] = useState<File | null>(null);
@@ -193,6 +193,25 @@ export default function OCRDebugPanel() {
     }
   };
 
+  const checkOCRServiceHealth = async () => {
+    addLog('🔍 Checking OCR service health...');
+    
+    try {
+      const healthResponse = await fetch('/api/ocr-health');
+      const healthData = await healthResponse.json();
+      
+      if (healthResponse.ok) {
+        addLog(`✅ OCR Service Status: ${healthData.status}`);
+        addLog(`📊 Status Code: ${healthData.statusCode}`);
+        addLog(`🕐 Timestamp: ${healthData.timestamp}`);
+      } else {
+        addLog(`❌ OCR Service Health Check Failed: ${healthData.error}`);
+      }
+    } catch (error) {
+      addLog(`❌ Health check error: ${error}`);
+    }
+  };
+
   const getFileIcon = (fileType: string) => {
     if (fileType.startsWith('image/')) return <Image className="h-4 w-4" />;
     if (fileType === 'application/pdf') return <FileText className="h-4 w-4" />;
@@ -284,6 +303,15 @@ export default function OCRDebugPanel() {
                 >
                   <Code className="mr-2 h-4 w-4" />
                   Test APIs
+                </Button>
+
+                <Button 
+                  onClick={checkOCRServiceHealth} 
+                  variant="outline"
+                  disabled={isProcessing}
+                >
+                  <Activity className="mr-2 h-4 w-4" />
+                  Check Health
                 </Button>
 
                 <Button 
