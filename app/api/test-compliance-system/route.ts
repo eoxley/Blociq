@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
         compliance_asset_id,
         status,
         buildings!inner(name),
-        compliance_assets!inner(title, category)
+        compliance_assets!inner(name, category)
       `)
       .limit(3);
     
