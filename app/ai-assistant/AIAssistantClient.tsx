@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Brain, Send, Upload, X, MessageSquare, RotateCcw, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAIConversation } from '@/hooks/useAIConversation';
-import { UploadDropzone } from '@/components/ask/UploadDropzone';
+
 import { AskResultCard } from '@/components/ask/AskResultCard';
 
 interface UserData {
@@ -161,7 +161,7 @@ export default function AIAssistantClient({ userData }: AIAssistantClientProps) 
               Drag and drop any document to get an AI-powered summary and suggested actions
             </p>
           </div>
-          <UploadDropzone onResult={handleUploadResult} defaultBuildingId={null} />
+  
         </div>
 
         {/* Upload Results */}

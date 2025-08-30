@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Plus, Calendar, Loader2, Send, Upload, FileText, X, Check, Sparkles, File, FileText as FileTextIcon, Building2, AlertTriangle, Brain, Building, AlertCircle, CheckCircle, Clock, Paperclip } from 'lucide-react';
-import OcrUploadSimple from './OcrUploadSimple';
+
 import { toast } from 'sonner';
 import AIChatDisclaimer from '@/components/ui/AIChatDisclaimer';
 import { SuggestedAction, DocumentAnalysis } from '@/types/ai';
@@ -916,7 +916,7 @@ export default function AskBlocIQ({
             <div className="text-sm text-gray-600 mb-3">
               Test document text extraction. Upload a PDF to see the raw extracted text.
             </div>
-            <OcrUploadSimple />
+            
           </div>
         </div>
       </div>
