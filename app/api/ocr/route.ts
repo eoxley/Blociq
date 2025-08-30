@@ -4,8 +4,12 @@ export const config = { api: { bodyParser: false } }
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
+  if (req.method !== "POST") {
+    return NextResponse.json({ error: "POST only" }, { status: 405 })
+  }
+
   try {
-    // Read raw binary data
+    // Read raw PDF bytes
     const bytes = await req.arrayBuffer()
     
     if (!bytes || bytes.byteLength === 0) {
@@ -15,18 +19,24 @@ export async function POST(req: NextRequest) {
       }, { status: 400 })
     }
 
-    // Convert to Uint8Array for processing
-    const uint8Array = new Uint8Array(bytes)
+    // Proxy to external OCR as multipart
+    const fd = new FormData()
+    fd.append("file", new Blob([bytes], { type: "application/pdf" }), "upload.pdf")
+
+    const r = await fetch(process.env.OCR_SERVICE_URL || 'https://ocr-server-2-ykmk.onrender.com/upload', {
+      method: "POST",
+      headers: process.env.OCR_TOKEN ? { Authorization: `Bearer ${process.env.OCR_TOKEN}` } : undefined,
+      body: fd,
+    })
+
+    const j = await r.json().catch(() => ({}))
+    const text = j?.text ?? j?.result?.text ?? j?.data?.text ?? ""
     
-    // For now, return a simple response indicating local OCR is available
-    // In a real implementation, you would integrate with a local OCR library
-    // like Tesseract.js, pdf-parse, or similar
-    
-    return NextResponse.json({
+    return NextResponse.json({ 
       success: true,
-      text: `[Local OCR] PDF received with ${uint8Array.length} bytes. Local OCR processing not yet implemented.`,
+      text,
       source: 'local',
-      fileSize: uint8Array.length
+      fileSize: bytes.byteLength
     })
     
   } catch (error: any) {

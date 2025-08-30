@@ -122,6 +122,81 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
+    
+    // Handle bulk asset selection (from setup wizard)
+    if (body.asset_ids && Array.isArray(body.asset_ids)) {
+      const { building_id, asset_ids } = body;
+
+      if (!building_id || !asset_ids.length) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Missing required fields: building_id and asset_ids array' 
+        }, { status: 400 });
+      }
+
+      // Verify user has access to this building
+      const { data: building, error: buildingError } = await supabase
+        .from('buildings')
+        .select('id')
+        .eq('id', building_id)
+        .single();
+
+      if (buildingError || !building) {
+        return NextResponse.json({ success: false, error: 'Building not found' }, { status: 404 });
+      }
+
+      // Get existing assets to avoid duplicates
+      const { data: existingAssets, error: existingError } = await supabase
+        .from('building_compliance_assets')
+        .select('compliance_asset_id')
+        .eq('building_id', building_id)
+
+      if (existingError) {
+        console.error('Error fetching existing assets:', existingError)
+      }
+
+      const existingAssetIds = new Set(existingAssets?.map(ea => ea.compliance_asset_id) || [])
+      const newAssetIds = asset_ids.filter(id => !existingAssetIds.has(id))
+
+      if (newAssetIds.length === 0) {
+        return NextResponse.json({ 
+          success: true, 
+          message: 'No new assets to add',
+          added_count: 0
+        })
+      }
+
+      // Create building compliance asset records
+      const assetsToInsert = newAssetIds.map(asset_id => ({
+        building_id,
+        compliance_asset_id: asset_id,
+        status: 'not_applied',
+        next_due_date: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }))
+
+      const { error: insertError } = await supabase
+        .from('building_compliance_assets')
+        .insert(assetsToInsert)
+
+      if (insertError) {
+        console.error('Error inserting compliance assets:', insertError)
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Failed to add compliance assets',
+          details: insertError.message 
+        }, { status: 500 })
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Successfully added ${newAssetIds.length} compliance assets`,
+        added_count: newAssetIds.length
+      })
+    }
+
+    // Handle single asset creation (legacy functionality)
     const { building_id, asset_type, asset_name, category, description, inspection_frequency, is_required, priority, next_due_date } = body;
 
     if (!building_id || !asset_type || !asset_name || !category) {

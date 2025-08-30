@@ -267,6 +267,29 @@ export async function processBytesWithOCR(bytes: Uint8Array): Promise<string> {
 }
 
 /**
+ * Process file with OCR - updated to use multipart and handle varied responses
+ */
+export async function processFileWithOCR(bytes: Uint8Array): Promise<string> {
+  const url = process.env.OCR_SERVICE_URL || 'https://ocr-server-2-ykmk.onrender.com/upload';
+  const token = process.env.OCR_TOKEN || "";
+
+  // send as multipart/form-data
+  const fd = new FormData();
+  fd.append("file", new Blob([bytes], { type: "application/pdf" }), "upload.pdf");
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: fd,
+  });
+
+  if (!res.ok) throw new Error(`OCR HTTP ${res.status}`);
+  const j = await res.json().catch(() => ({}));
+  const text = j?.text ?? j?.result?.text ?? j?.data?.text ?? "";
+  return typeof text === "string" ? text : "";
+}
+
+/**
  * Utility function for delays
  */
 function sleep(ms: number): Promise<void> {
