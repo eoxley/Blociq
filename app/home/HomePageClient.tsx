@@ -654,7 +654,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       formData.append('buildingId', 'null'); // Will be determined by context
       
       // Call the enhanced AI API for full chat response with database search
-      const response = await fetch('/api/ask-ai-enhanced', {
+      const response = await fetch('/api/ask-ai', {
         method: 'POST',
         body: formData,
       })
@@ -850,7 +850,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       formData.append('buildingId', buildingId || 'null')
       formData.append('file_0', file)
 
-      const res = await fetch('/api/ask-ai-enhanced', { method: 'POST', body: formData })
+              const res = await fetch('/api/ask-ai', { method: 'POST', body: formData })
       let json: any = null
       try { 
         json = await res.json() 
@@ -912,7 +912,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     formData.append('useMemory', 'true')
     formData.append('buildingId', buildingId || 'null')
     
-    const procRes = await fetch('/api/ask-ai-enhanced', {
+            const procRes = await fetch('/api/ask-ai', {
       method: 'POST',
       body: formData,
     })
@@ -948,7 +948,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     formData.append('useMemory', 'true')
     formData.append('buildingId', buildingId || 'null')
     
-    const res = await fetch('/api/ask-ai-enhanced', {
+            const res = await fetch('/api/ask-ai', {
       method: 'POST',
       body: formData,
     })

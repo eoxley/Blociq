@@ -154,7 +154,7 @@ export function useAIConversation(): UseAIConversationReturn {
           formData.append(`file_${index}`, file);
         });
 
-        const response = await fetch('/api/ask-ai-enhanced', {
+        const response = await fetch('/api/ask-ai', {
           method: 'POST',
           body: formData
         });

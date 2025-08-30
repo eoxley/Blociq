@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { buildAIContext } from '../../../lib/buildAIContext';
 import OpenAI from 'openai';
 
+export const runtime = "nodejs";
+
 // Force deployment update - latest debugging changes
 export async function POST(req: Request) {
   try {
