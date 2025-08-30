@@ -516,7 +516,9 @@ export async function POST(req: Request) {
   
   try {
     const contentType = req.headers.get('content-type') || '';
-    console.log(`Upload request received: ${contentType}`);
+    
+    console.log('=== UPLOAD DEBUG START ===');
+    console.log(`📥 Upload request received: ${contentType}`);
     
     if (contentType.includes('multipart/form-data')) {
       // Handle file upload
@@ -524,14 +526,36 @@ export async function POST(req: Request) {
       const file = form.get('file') as File | null;
       const buildingId = (form.get('buildingId') || form.get('building_id')) as string || undefined;
 
+      console.log('📁 File received:', file?.name, file?.size, file?.type);
+      console.log('🏢 Building ID:', buildingId || 'none');
+
       if (!file) {
+        console.log('❌ No file in request');
         return NextResponse.json({
           success: false,
           error: 'No file received'
         }, { status: 400 });
       }
 
+      console.log('🔍 Calling processor.processFile...');
       const result = await processor.processFile(file, buildingId);
+      
+      console.log('📊 Processor result:', {
+        success: result.success,
+        textLength: result.textLength,
+        hasExtractedText: !!result.extractedText,
+        extractedTextLength: result.extractedText?.length || 0,
+        filename: result.filename
+      });
+      
+      if (result.extractedText && result.extractedText.length > 0) {
+        console.log('📝 Extracted text preview:', `"${result.extractedText.substring(0, 100)}..."`);
+      } else {
+        console.log('❌ NO TEXT EXTRACTED - extractedText is empty or null');
+      }
+      
+      console.log('=== UPLOAD DEBUG END ===');
+      
       return NextResponse.json(result);
 
     } else if (contentType.includes('application/json')) {
