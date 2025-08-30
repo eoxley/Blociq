@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import { getOpenAIClient } from '@/lib/openai-client';
+import OpenAI from 'openai';
 
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 interface EnhanceTemplateRequest {
   templateId: string;
@@ -140,7 +143,6 @@ async function enhanceTemplateWithAI(
   
   Return the enhanced template content with updated placeholders.`;
 
-    const openai = getOpenAIClient();
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [

@@ -1,305 +1,104 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { NextResponse } from "next/server";
+import { createClient } from '@/utils/supabase/server';
 import { cookies } from 'next/headers';
-import { safeQuery, ensureRequiredTables } from '@/lib/database-setup';
 
 export async function GET(
-  request: NextRequest,
+  request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const buildingId = params.id;
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createClient(cookies());
     
-    // Get the current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    // Check authentication
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Ensure required tables exist
-    await ensureRequiredTables();
-
-    // Verify user has access to this building with safe query
-    const { data: building, error: buildingError, tableExists: buildingsTableExists } = await safeQuery(
-      'buildings',
-      async () => {
-        const result = await supabase
-          .from('buildings')
-          .select('id, name, user_id')
-          .eq('id', buildingId)
-          .single();
-        return result;
-      }
-    );
-
-    // Handle case where buildings table doesn't exist
-    if (!buildingsTableExists) {
-      console.log('🏢 buildings table not found, returning empty compliance data');
-      return NextResponse.json({
-        success: true,
-        data: {
-          assets: [],
-          config: null,
-          templates: [],
-          summary: {
-            totalAssets: 0,
-            compliantAssets: 0,
-            overdueAssets: 0,
-            dueSoonAssets: 0,
-            pendingAssets: 0,
-          }
-        },
-        buildingStatus: 'database_empty',
-        message: 'No buildings table found - database may be empty'
-      });
-    }
-
-    // Handle case where building doesn't exist - return empty data instead of error
-    if (buildingError || !building) {
-      console.log(`Building ${buildingId} not found, returning empty compliance data`);
-      return NextResponse.json({
-        success: true,
-        data: {
-          assets: [],
-          config: null,
-          templates: [],
-          summary: {
-            totalAssets: 0,
-            compliantAssets: 0,
-            overdueAssets: 0,
-            dueSoonAssets: 0,
-            pendingAssets: 0,
-          }
-        },
-        buildingStatus: 'not_found'
-      });
-    }
-
-    // Check if user owns the building or is a member
-    const { data: memberCheck, error: memberError } = await supabase
-      .from('building_members')
-      .select('id')
-      .eq('building_id', buildingId)
-      .eq('user_id', user.id)
-      .single();
-
-    if (building.user_id !== user.id && (memberError || !memberCheck)) {
-      return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
-    }
-
-    // Get building compliance assets with safe query
-    const { data: assets, error: assetsError, tableExists: complianceTableExists } = await safeQuery(
-      'building_compliance_assets',
-      async () => {
-        const result = await supabase
-          .from('building_compliance_assets')
-          .select(`
-            id,
-            building_id,
-            status,
-            next_due_date,
-            last_renewed_date,
-            notes,
-            contractor,
-            compliance_assets (
-              id,
-              name,
-              category,
-              description,
-              frequency_months
-            )
-          `)
-          .eq('building_id', buildingId)
-          .order('compliance_assets.category, compliance_assets.name');
-        return result;
-      }
-    );
-
-    if (!complianceTableExists) {
-      console.log('🏢 building_compliance_assets table not found, returning empty data');
-      return NextResponse.json({
-        success: true,
-        data: {
-          assets: [],
-          config: null,
-          templates: [],
-          summary: {
-            totalAssets: 0,
-            compliantAssets: 0,
-            overdueAssets: 0,
-            dueSoonAssets: 0,
-            pendingAssets: 0,
-          }
-        },
-        buildingStatus: 'matched',
-        warning: 'Compliance table not found, returning empty data',
-        message: 'Database setup incomplete - compliance data unavailable'
-      });
-    }
-
-    if (assetsError) {
-      console.error('Error fetching compliance assets:', assetsError);
-      // Return empty assets instead of error
-      return NextResponse.json({
-        success: true,
-        data: {
-          assets: [],
-          config: null,
-          templates: [],
-          summary: {
-            totalAssets: 0,
-            compliantAssets: 0,
-            overdueAssets: 0,
-            dueSoonAssets: 0,
-            pendingAssets: 0,
-          }
-        },
-        buildingStatus: 'matched',
-        warning: 'Failed to fetch compliance assets, returning empty data'
-      });
-    }
-
-    // Get building compliance configuration
-    const { data: config, error: configError } = await supabase
-      .from('building_compliance_config')
-      .select('*')
-      .eq('building_id', buildingId)
-      .single();
-
-    // Get compliance templates for reference
-    const { data: templates, error: templatesError } = await supabase
-      .from('compliance_templates')
-      .select('*')
-      .order('category, asset_name');
-
-    if (templatesError) {
-      console.error('Error fetching compliance templates:', templatesError);
-    }
-
-    // Calculate building-specific summary
-    const summary = {
-      totalAssets: assets?.length || 0,
-      compliantAssets: assets?.filter(asset => asset.status === 'compliant').length || 0,
-      overdueAssets: assets?.filter(asset => asset.status === 'overdue').length || 0,
-      dueSoonAssets: assets?.filter(asset => asset.status === 'due_soon').length || 0,
-      pendingAssets: assets?.filter(asset => asset.status === 'pending').length || 0,
-    };
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        building: {
-          id: building.id,
-          name: building.name
-        },
-        assets: assets || [],
-        config: config || { is_hrb: false, auto_notifications_enabled: true },
-        templates: templates || [],
-        summary,
-        lastUpdated: new Date().toISOString()
-      },
-      buildingStatus: 'matched'
-    });
-
-  } catch (error) {
-    console.error('Building compliance API error:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Internal server error' 
-    }, { status: 500 });
-  }
-}
-
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
     const buildingId = params.id;
-    const supabase = createRouteHandlerClient({ cookies });
-    
-    // Get the current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+
+    if (!buildingId) {
+      return NextResponse.json({ error: "Building ID is required" }, { status: 400 });
     }
 
-    // Verify user has access to this building
-    const { data: building, error: buildingError } = await supabase
-      .from('buildings')
-      .select('id, name, user_id')
-      .eq('id', buildingId)
-      .single();
+    // First, get the building compliance assets
+    const { data: bcaData, error: bcaError } = await supabase
+      .from("building_compliance_assets")
+      .select(`
+        id as bca_id,
+        compliance_asset_id,
+        next_due_date,
+        status,
+        notes,
+        last_renewed_date,
+        contractor,
+        frequency_months
+      `)
+      .eq("building_id", buildingId);
 
-    if (buildingError || !building) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Building not found',
-        buildingStatus: 'not_found'
-      }, { status: 404 });
+    if (bcaError) {
+      console.error('Error fetching building compliance assets:', bcaError);
+      return NextResponse.json({ error: bcaError.message }, { status: 500 });
     }
 
-    // Check if user owns the building or is a member
-    const { data: memberCheck, error: memberError } = await supabase
-      .from('building_members')
-      .select('id')
-      .eq('building_id', buildingId)
-      .eq('user_id', user.id)
-      .single();
-
-    if (building.user_id !== user.id && (memberError || !memberCheck)) {
-      return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
+    if (!bcaData || bcaData.length === 0) {
+      return NextResponse.json({ data: [] });
     }
 
-    // Parse request body
-    const body = await request.json();
-    const { asset_type, asset_name, category, description, inspection_frequency, is_required, priority } = body;
-
-    if (!asset_type || !asset_name || !category) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Missing required fields: asset_type, asset_name, category' 
-      }, { status: 400 });
-    }
-
-    // Insert new compliance asset
-    const { data: newAsset, error: insertError } = await supabase
-      .from('compliance_assets')
-      .insert({
-        building_id: buildingId,
-        user_id: user.id,
-        asset_type,
-        asset_name,
+    // Get the compliance assets details
+    const assetIds = bcaData.map(row => row.compliance_asset_id);
+    const { data: assetData, error: assetError } = await supabase
+      .from("compliance_assets")
+      .select(`
+        id,
+        title,
         category,
         description,
-        inspection_frequency: inspection_frequency || 'annual',
-        is_required: is_required !== undefined ? is_required : true,
-        priority: priority || 'medium',
-        status: 'pending'
-      })
-      .select()
-      .single();
+        frequency_months
+      `)
+      .in("id", assetIds)
+      .order("category", { ascending: true })
+      .order("title", { ascending: true });
 
-    if (insertError) {
-      console.error('Error inserting compliance asset:', insertError);
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Failed to create compliance asset',
-        details: insertError.message 
-      }, { status: 500 });
+    if (assetError) {
+      console.error('Error fetching compliance assets:', assetError);
+      return NextResponse.json({ error: assetError.message }, { status: 500 });
     }
 
-    return NextResponse.json({
-      success: true,
-      data: newAsset
+    // Create a map for quick lookup
+    const assetMap = new Map(assetData?.map(asset => [asset.id, asset]) || []);
+
+    // Transform the data to combine both datasets
+    const transformedData = bcaData.map(row => {
+      const asset = assetMap.get(row.compliance_asset_id);
+      return {
+        bca_id: row.bca_id,
+        asset_id: row.compliance_asset_id,
+        asset_name: asset?.title || "Unknown",
+        category: asset?.category || "Unknown",
+        frequency_months: asset?.frequency_months || row.frequency_months,
+        last_renewed_date: row.last_renewed_date,
+        next_due_date: row.next_due_date,
+        status: row.status || "pending",
+        notes: row.notes,
+        contractor: row.contractor,
+        docs_count: 0 // TODO: Calculate this from compliance_documents table
+      };
     });
 
-  } catch (error) {
-    console.error('Building compliance POST API error:', error);
+    // Safe response format - ensure data is always an array
+    const safeData = Array.isArray(transformedData) ? transformedData : [];
+    
     return NextResponse.json({ 
-      success: false, 
-      error: 'Internal server error' 
-    }, { status: 500 });
+      data: safeData,
+      count: safeData.length,
+      success: true
+    });
+  } catch (error: any) {
+    console.error("Error fetching compliance data:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch compliance data" },
+      { status: 500 }
+    );
   }
 }

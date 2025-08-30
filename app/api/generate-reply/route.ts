@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { Database } from '@/lib/database.types';
-import { getOpenAIClient } from '@/lib/openai-client';
+import OpenAI from 'openai';
 
 interface GenerateReplyRequest {
   emailId?: string;
@@ -156,7 +156,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Initialize OpenAI client
-    const openai = getOpenAIClient();
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
 
     // Build context-aware prompt based on email tags and status
     const tagContext = buildTagContext(emailData.categories || [], emailData.flag_status || null);

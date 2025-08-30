@@ -10,19 +10,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import { getOpenAIClient } from '@/lib/openai-client';
+import OpenAI from 'openai';
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 export async function POST(request: NextRequest) {
   try {
-    // Check if OpenAI API key is configured
-    if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json({ 
-        error: 'OpenAI API key not configured. Please check environment variables.' 
-      }, { status: 500 });
-    }
-
-    const openai = getOpenAIClient();
-
     const { question, buildingId, documentType, userId } = await request.json();
 
     if (!question) {

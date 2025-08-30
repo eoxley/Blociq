@@ -8,9 +8,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import { getOpenAIClient } from '@/lib/openai-client';
+import OpenAI from 'openai';
 import { buildPrompt } from '@/lib/buildPrompt';
 import { insertAiLog } from '@/lib/supabase/ai_logs';
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req: NextRequest) {
   try {
@@ -80,7 +82,6 @@ Email Summary:
     console.log('📝 Prompt built, calling OpenAI...');
 
     // Call OpenAI
-    const openai = getOpenAIClient();
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [{ role: 'system', content: finalPrompt }],

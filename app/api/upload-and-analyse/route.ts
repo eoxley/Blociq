@@ -9,8 +9,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
-import { getOpenAIClient } from '@/lib/openai-client';
+import OpenAI from 'openai'
 
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+})
 
 export async function POST(request: NextRequest) {
   try {
@@ -128,7 +131,6 @@ async function extractTextFromPDF(file: File): Promise<string> {
     const buffer = Buffer.from(arrayBuffer)
 
     // Use OpenAI's text extraction for PDFs (primary method)
-    const openai = getOpenAIClient();
     const response = await openai.files.create({
       file: new Blob([buffer], { type: 'application/pdf' }),
       purpose: 'assistants',
@@ -197,7 +199,6 @@ Return only valid JSON.
 `
 
   try {
-    const openai = getOpenAIClient();
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [

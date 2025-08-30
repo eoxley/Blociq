@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from '@/lib/auth/server';
+import { cookies } from 'next/headers';
 
 export async function POST(req: NextRequest) {
   try {
-    // Use consolidated authentication
-    const { supabase, user } = await requireAuth();
     // Check if OpenAI is configured
     if (!process.env.OPENAI_API_KEY) {
       console.error('❌ OpenAI not configured');
@@ -41,7 +39,7 @@ export async function POST(req: NextRequest) {
 
     // Dynamic import to prevent build-time execution
     const { default: OpenAI } = await import('openai');
-    const openai = getOpenAIClient();
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
     // Build context-aware prompt
     const systemPrompt = buildEmailReplyPrompt(replyType || draftType, buildingContext, leaseholderContext, tone);

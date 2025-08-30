@@ -9,8 +9,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { cookies } from 'next/headers'
-import { getOpenAIClient } from '@/lib/openai-client';
+import OpenAI from 'openai'
 
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+})
 
 export async function GET(request: NextRequest) {
   try {
@@ -114,7 +117,6 @@ Please provide a concise, professional summary (2-3 sentences) that highlights:
 
 Make it actionable and informative for property managers.`
 
-    const openai = getOpenAIClient();
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
