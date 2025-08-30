@@ -83,7 +83,7 @@ export async function processFileWithOCRService(
     }
 
     // Method 1: Google Cloud Vision API (for images and PDFs)
-    if (finalConfig.preferGoogleVision && process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON && file.type !== 'text/plain') {
+    if (finalConfig.preferGoogleVision && process.env.GOOGLE_VISION_API_KEY && file.type !== 'text/plain') {
       attempts++
       console.log('🔍 Attempting Google Vision API...')
       

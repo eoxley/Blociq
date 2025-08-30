@@ -3,7 +3,7 @@
  * Properly configured with service account credentials
  */
 
-import { ImageAnnotatorClient } from '@google-cloud/vision'
+
 
 export interface GoogleVisionOCRResult {
   success: boolean
@@ -14,33 +14,18 @@ export interface GoogleVisionOCRResult {
 }
 
 /**
- * Initialize Google Cloud Vision client with proper credentials
+ * Initialize Google Cloud Vision client with API key
  */
 function createVisionClient() {
   try {
-    // Parse credentials from environment variable
-    const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
-    if (!credentialsJson) {
-      throw new Error('GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable not set')
+    const apiKey = process.env.GOOGLE_VISION_API_KEY
+    if (!apiKey) {
+      throw new Error('GOOGLE_VISION_API_KEY environment variable not set')
     }
 
-    let credentials
-    try {
-      credentials = JSON.parse(credentialsJson)
-    } catch (parseError) {
-      throw new Error('Invalid JSON in GOOGLE_APPLICATION_CREDENTIALS_JSON')
-    }
-
-    // Validate required fields
-    if (!credentials.project_id || !credentials.private_key || !credentials.client_email) {
-      throw new Error('Missing required fields in Google credentials (project_id, private_key, client_email)')
-    }
-
-    // Fix newlines in private key (they're often escaped in environment variables)
-    credentials.private_key = credentials.private_key.replace(/\\n/g, '\n')
-
-    // Create client with credentials
-    return new ImageAnnotatorClient({ credentials })
+    // For API key approach, we'll use direct HTTP calls instead of the client library
+    // This is simpler and more direct for API key authentication
+    return { apiKey }
   } catch (error) {
     console.error('❌ Failed to initialize Google Vision client:', error)
     throw error
@@ -88,35 +73,51 @@ export async function processFileWithGoogleVision(file: File): Promise<GoogleVis
     const buffer = Buffer.from(arrayBuffer)
 
     // Create Vision client
-    const client = createVisionClient()
+    const { apiKey } = createVisionClient()
 
-    // Prepare the request
-    const request = {
-      image: {
-        content: buffer
-      }
+    // Convert buffer to base64 for API call
+    const base64Data = buffer.toString('base64')
+
+    // Prepare the request payload
+    const requestBody = {
+      requests: [
+        {
+          image: {
+            content: base64Data
+          },
+          features: [
+            {
+              type: 'DOCUMENT_TEXT_DETECTION',
+              maxResults: 1
+            }
+          ]
+        }
+      ]
     }
 
-    // Perform text detection
+    // Perform text detection via HTTP API
     console.log('🔍 Calling Google Vision API for text detection...')
-    const [result] = await client.textDetection(request)
-    
-    const detections = result.textAnnotations
-    if (!detections || detections.length === 0) {
-      return {
-        success: false,
-        error: 'No text detected in the document',
-        processingTime: Date.now() - startTime
-      }
+    const response = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody)
+    })
+
+    if (!response.ok) {
+      throw new Error(`Google Vision API error: ${response.status} ${response.statusText}`)
     }
 
-    // The first annotation contains the full text
-    const fullText = detections[0]?.description || ''
+    const result = await response.json()
+    
+    // Extract text from the response
+    const fullText = result?.responses?.[0]?.fullTextAnnotation?.text || ''
     
     if (!fullText.trim()) {
       return {
         success: false,
-        error: 'Empty text extracted from document',
+        error: 'No text detected in the document',
         processingTime: Date.now() - startTime
       }
     }
@@ -159,34 +160,50 @@ export async function processBytesWithGoogleVision(bytes: Uint8Array, mimeType: 
     console.log(`🔍 Processing bytes with Google Vision (${mimeType}, ${bytes.length} bytes)`)
 
     // Create Vision client
-    const client = createVisionClient()
+    const { apiKey } = createVisionClient()
 
-    // Prepare the request
-    const request = {
-      image: {
-        content: Buffer.from(bytes)
-      }
+    // Convert bytes to base64 for API call
+    const base64Data = Buffer.from(bytes).toString('base64')
+
+    // Prepare the request payload
+    const requestBody = {
+      requests: [
+        {
+          image: {
+            content: base64Data
+          },
+          features: [
+            {
+              type: 'DOCUMENT_TEXT_DETECTION',
+              maxResults: 1
+            }
+          ]
+        }
+      ]
     }
 
-    // Perform text detection
-    const [result] = await client.textDetection(request)
+    // Perform text detection via HTTP API
+    const response = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody)
+    })
+
+    if (!response.ok) {
+      throw new Error(`Google Vision API error: ${response.status} ${response.statusText}`)
+    }
+
+    const result = await response.json()
     
-    const detections = result.textAnnotations
-    if (!detections || detections.length === 0) {
-      return {
-        success: false,
-        error: 'No text detected in the document',
-        processingTime: Date.now() - startTime
-      }
-    }
-
-    // The first annotation contains the full text
-    const fullText = detections[0]?.description || ''
+    // Extract text from the response
+    const fullText = result?.responses?.[0]?.fullTextAnnotation?.text || ''
     
     if (!fullText.trim()) {
       return {
         success: false,
-        error: 'Empty text extracted from document',
+        error: 'No text detected in the document',
         processingTime: Date.now() - startTime
       }
     }
