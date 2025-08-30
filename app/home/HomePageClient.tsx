@@ -534,8 +534,13 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               data: uploadData
             })
             
-            console.log(`✅ File processed successfully: ${uploadedFile.name}`)
-            setUploadStatus(`✅ ${uploadedFile.name} processed`)
+            if (uploadData.textLength > 0) {
+              console.log(`✅ File processed successfully: ${uploadedFile.name} - ${uploadData.textLength} characters extracted`)
+              setUploadStatus(`✅ ${uploadedFile.name} processed - ${uploadData.textLength} characters extracted`)
+            } else {
+              console.log(`⚠️ File processing failed - insufficient text: ${uploadedFile.name}`)
+              setUploadStatus(`⚠️ ${uploadedFile.name} - No meaningful text extracted`)
+            }
           } catch (error) {
             console.error(`❌ Failed to process file ${uploadedFile.name}:`, error)
             const errorMessage = error instanceof Error ? error.message : 'Unknown error'
@@ -839,11 +844,11 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     return '📎'
   }
 
-  // Enhanced upload function that handles both small and large files
+  // Upload function that handles both small and large files via ask-ai endpoint
   const uploadToAskAI = async (file: File, buildingId?: string) => {
-    // Small file path - direct upload via enhanced endpoint for automatic lease summary
+    // Small file path - direct upload via ask-ai endpoint for automatic document analysis
     if (file.size <= MAX_FILE_SIZE) {
-      console.log('📁 Processing small file via enhanced endpoint:', file.name)
+      console.log('📁 Processing small file via ask-ai endpoint:', file.name)
       const formData = new FormData()
       formData.append('userQuestion', `Please analyze this document: ${file.name}`)
       formData.append('useMemory', 'true')
@@ -865,14 +870,15 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         throw new Error(`Upload failed for ${file.name}: ${detail}`)
       }
       
-      // Convert enhanced endpoint response to expected format
+      // Convert new API response to expected format
       return {
         success: true,
-        documentType: json.isLeaseSummary ? 'lease' : 'document',
-        summary: json.response || 'Document processed successfully',
-        analysis: json.response || 'Document analysis completed',
+        documentType: 'document', // Default to document type
+        summary: json.text ? `Document processed successfully. Extracted ${json.textLength} characters.` : 'Document processing failed - insufficient text extracted.',
+        analysis: json.text ? `Text extracted successfully using ${json.extractionMethod}. ${json.extractionNote}` : 'No meaningful text could be extracted from this document.',
         filename: file.name,
-        textLength: json.processedDocuments?.[0]?.extractedText?.length || 0
+        textLength: json.textLength || 0,
+        extractedText: json.text || '' // Include the actual extracted text
       }
     }
 
@@ -906,7 +912,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       throw new Error(`Storage upload failed (${putRes.status} ${putRes.statusText})`)
     }
 
-    // Step 3: Process the uploaded file via enhanced endpoint
+    // Step 3: Process the uploaded file via ask-ai endpoint
     const formData = new FormData()
     formData.append('userQuestion', `Please analyze this document: ${file.name}`)
     formData.append('useMemory', 'true')
@@ -930,14 +936,15 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       throw new Error(`Process failed: ${detail}`)
     }
 
-    // Convert enhanced endpoint response to expected format
+    // Convert new API response to expected format
     return {
       success: true,
-      documentType: procJson.isLeaseSummary ? 'lease' : 'document',
-      summary: procJson.response || 'Document processed successfully',
-      analysis: procJson.response || 'Document analysis completed',
+      documentType: 'document', // Default to document type
+      summary: procJson.text ? `Document processed successfully. Extracted ${procJson.textLength} characters.` : 'Document processing failed - insufficient text extracted.',
+      analysis: procJson.text ? `Text extracted successfully using ${procJson.extractionMethod}. ${procJson.extractionNote}` : 'Document analysis completed',
       filename: file.name,
-      textLength: procJson.processedDocuments?.[0]?.extractedText?.length || 0
+      textLength: procJson.textLength || 0,
+      extractedText: procJson.text || '' // Include the actual extracted text
     }
   }
 
