@@ -1,24 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// OCR processing function (same as in ask-ai route)
+// OCR processing function
 async function processFileWithOCR(file: File): Promise<{ text: string; success: boolean; error?: string }> {
   try {
     const formData = new FormData();
     formData.append('file', file);
     
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/ocr-proxy`, {
+    // Use your existing OCR microservice
+    const response = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
       method: 'POST',
       body: formData,
     });
     
     if (!response.ok) {
-      throw new Error(`OCR service responded with status: ${response.status}`);
+      console.error(`OCR service error: ${response.status} ${response.statusText}`);
+      return {
+        text: '',
+        success: false,
+        error: `OCR service responded with status: ${response.status}`
+      };
     }
     
     const result = await response.json();
     return {
       text: result.text || '',
-      success: result.success || false,
+      success: result.success !== false, // Default to true if not specified
       error: result.error
     };
   } catch (error) {
@@ -26,7 +32,7 @@ async function processFileWithOCR(file: File): Promise<{ text: string; success: 
     return {
       text: '',
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown OCR error'
+      error: error instanceof Error ? error.message : 'OCR network error'
     };
   }
 }
@@ -52,51 +58,60 @@ function createEnhancedPrompt(originalPrompt: string, files: Array<{name: string
       const isLease = isLeaseDocument(file.name, file.ocrText);
       
       if (isLease) {
-        // Enhanced lease document analysis
+        // Enhanced lease document analysis for credibility
         const truncatedText = file.ocrText.substring(0, 8000);
         enhancedPrompt += `\n\n📋 LEASE DOCUMENT ANALYSIS FOR: ${file.name}
         
-DOCUMENT CONTENT:
+EXTRACTED DOCUMENT CONTENT:
 ${truncatedText}
 
-Please provide a comprehensive lease analysis including:
+🏠 COMPREHENSIVE LEASE ANALYSIS REQUIRED:
 
 PROPERTY DETAILS SUMMARY:
-- Property address and description
-- Lease term and dates
-- Monthly rent and additional costs
+- Extract property address and description
+- Identify lease term and dates
+- Calculate monthly rent and additional costs
 
-FINANCIAL OBLIGATIONS:
-- Security deposit amount
-- Utility responsibilities
-- Additional fees or charges
+FINANCIAL OBLIGATIONS BREAKDOWN:
+- Security deposit amount and conditions
+- Utility responsibilities (tenant vs landlord)
+- Additional fees, charges, or penalties
 
-COMPLIANCE CHECKLIST (Answer Y/N for each):
-- Term Consent: Are lease terms clearly defined?
-- Reserve Fund: Is reserve fund contribution specified?
-- Windows/Pipes/Heating: Are maintenance responsibilities clear?
-- Parking: Are parking arrangements specified?
-- Right of Access: Are landlord access rights defined?
-- TV/Assignment/Alterations: Are modification rules clear?
-- Notice Requirements: Are notice periods specified?
-- Sublet/Pets: Are subletting and pet policies clear?
-- Debt Recovery/Interest: Are late payment terms defined?
-- Exterior/Interior Decorations: Are decoration rules specified?
+LEGAL COMPLIANCE CHECKLIST (Provide Y/N answers):
+- Term Consent: Are lease terms clearly defined and legally compliant?
+- Reserve Fund: Is reserve fund contribution properly specified?
+- Windows/Pipes/Heating: Are maintenance responsibilities clearly allocated?
+- Parking: Are parking arrangements legally documented?
+- Right of Access: Are landlord access rights properly defined with notice requirements?
+- TV/Assignment/Alterations: Are modification rules compliant with local law?
+- Notice Requirements: Are notice periods specified per legal requirements?
+- Sublet/Pets: Are subletting and pet policies clearly stated?
+- Debt Recovery/Interest: Are late payment terms legally compliant?
+- Exterior/Interior Decorations: Are decoration rules reasonable and legal?
 
-KEY RISKS AND RECOMMENDATIONS:
-- Highlight any unusual or concerning clauses
-- Suggest areas requiring clarification
-- Recommend legal review if needed`;
+RISK ASSESSMENT & CREDIBLE RECOMMENDATIONS:
+- Flag any unusual, unfair, or potentially illegal clauses
+- Identify areas requiring immediate clarification
+- Recommend professional legal review for high-risk items
+- Provide specific guidance based on document content`;
       } else {
-        // Standard document processing
+        // Standard document processing with credibility focus
         const truncatedText = file.ocrText.substring(0, 2000);
-        enhancedPrompt += `\n\n📄 DOCUMENT CONTENT FROM: ${file.name}
+        enhancedPrompt += `\n\n📄 DOCUMENT ANALYSIS FOR: ${file.name}
+
+EXTRACTED CONTENT:
 ${truncatedText}
 
-Please analyze this document content in your response.`;
+Please provide a detailed analysis of this document content, including:
+- Key findings and main points
+- Important details or data extracted
+- Actionable insights based on the content
+- Any concerns or recommendations`;
       }
     } else {
-      enhancedPrompt += `\n\n📎 FILE ATTACHED: ${file.name} (OCR processing ${file.ocrSuccess ? 'completed' : 'failed'})`;
+      enhancedPrompt += `\n\n⚠️ FILE PROCESSING ISSUE: ${file.name} 
+OCR Status: ${file.ocrSuccess ? 'Completed' : 'Failed'}
+Note: Unable to extract text content for analysis. Response will be limited without document content.`;
     }
   });
   
@@ -105,15 +120,16 @@ Please analyze this document content in your response.`;
 
 export async function POST(req: NextRequest) {
   try {
-    // Check if request is FormData (from homepage) or JSON (from chat)
+    // 🚨 CRITICAL FIX: Handle both FormData and JSON
     const contentType = req.headers.get('content-type') || '';
+    console.log('Request content-type:', contentType);
     
     let prompt: string;
     let files: File[] = [];
     
     if (contentType.includes('multipart/form-data')) {
-      // Handle FormData from homepage
-      console.log('Processing FormData request from homepage');
+      // ✅ FIX: Handle FormData from homepage
+      console.log('✅ Processing FormData request from homepage');
       const formData = await req.formData();
       prompt = formData.get('prompt') as string;
       
@@ -124,34 +140,42 @@ export async function POST(req: NextRequest) {
       console.log(`Received prompt: "${prompt}"`);
       console.log(`Received ${files.length} files:`, files.map(f => `${f.name} (${f.size} bytes)`));
       
-      if (!prompt) {
-        return NextResponse.json(
-          { error: 'Prompt is required' },
-          { status: 400 }
-        );
-      }
     } else {
-      // Handle JSON from chat interface
-      console.log('Processing JSON request from chat');
+      // Handle JSON requests
+      console.log('✅ Processing JSON request');
       const body = await req.json();
       prompt = body.prompt;
       
-      if (!prompt) {
-        return NextResponse.json(
-          { error: 'Prompt is required' },
-          { status: 400 }
-        );
+      // Handle files if included in JSON (base64 format)
+      if (body.files && Array.isArray(body.files)) {
+        // Convert base64 files back to File objects
+        files = body.files.map((fileData: any) => {
+          const byteCharacters = atob(fileData.content);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          return new File([byteArray], fileData.name, { type: fileData.type });
+        });
       }
     }
     
-    // Process files with OCR if any were uploaded
+    if (!prompt) {
+      return NextResponse.json(
+        { error: 'Prompt is required' },
+        { status: 400 }
+      );
+    }
+    
+    // 🔍 CRITICAL: Process files with OCR for credibility
     const processedFiles: Array<{name: string, ocrText: string, ocrSuccess: boolean}> = [];
     
     if (files.length > 0) {
-      console.log(`Processing ${files.length} uploaded files with OCR...`);
+      console.log(`🔍 Processing ${files.length} files with OCR for credible document analysis...`);
       
       for (const file of files) {
-        console.log(`Processing file: ${file.name} (${file.size} bytes)`);
+        console.log(`🔍 OCR processing: ${file.name} (${file.size} bytes)`);
         
         const ocrResult = await processFileWithOCR(file);
         processedFiles.push({
@@ -160,65 +184,73 @@ export async function POST(req: NextRequest) {
           ocrSuccess: ocrResult.success
         });
         
-        console.log(`OCR result for ${file.name}: ${ocrResult.success ? 'Success' : 'Failed'}`);
+        console.log(`📊 OCR result for ${file.name}: ${ocrResult.success ? 'SUCCESS' : 'FAILED'}`);
         if (ocrResult.success) {
-          console.log(`Extracted ${ocrResult.text.length} characters of text`);
+          console.log(`📝 Extracted ${ocrResult.text.length} characters`);
+        } else {
+          console.log(`❌ OCR Error: ${ocrResult.error}`);
         }
       }
     }
     
-    // Create enhanced prompt with OCR content
+    // 🎯 Create enhanced prompt with OCR content for credible responses
     const finalPrompt = processedFiles.length > 0 
       ? createEnhancedPrompt(prompt, processedFiles)
       : prompt;
     
-    console.log('Final prompt length:', finalPrompt.length);
+    console.log('📏 Final prompt length:', finalPrompt.length);
+    console.log('🔍 OCR-enhanced prompt created for credible document analysis');
     
-    // Make request to your AI service
-    const aiResponse = await fetch(process.env.AI_API_ENDPOINT || 'https://your-ai-service.com/api/chat', {
+    // 🤖 Send to AI service with document content
+    const aiResponse = await fetch(process.env.AI_API_ENDPOINT || 'https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.AI_API_KEY}`,
-        // Add any other headers your AI service requires
+        'Authorization': `Bearer ${process.env.AI_API_KEY || process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
+        model: process.env.AI_MODEL || 'gpt-4',
         messages: [
+          {
+            role: 'system',
+            content: 'You are BlocIQ AI, a helpful assistant that provides detailed analysis of uploaded documents. When documents are provided, always reference their specific content in your responses for credibility.'
+          },
           {
             role: 'user',
             content: finalPrompt
           }
         ],
-        model: process.env.AI_MODEL || 'gpt-4', // Adjust based on your AI service
         max_tokens: 4000,
         temperature: 0.7,
-        // Add any other parameters your AI service requires
-      }),
     });
     
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
-      console.error('AI service error:', aiResponse.status, errorText);
-      throw new Error(`AI service responded with status: ${aiResponse.status}`);
+      console.error('🤖 AI service error:', aiResponse.status, errorText);
+      throw new Error(`AI service error: ${aiResponse.status}`);
     }
     
     const aiResult = await aiResponse.json();
     
-    // Return response with OCR processing info
+    // 📊 Return credible response with OCR processing details
     return NextResponse.json({
-      response: aiResult.choices?.[0]?.message?.content || aiResult.response || aiResult,
+      response: aiResult.choices?.[0]?.message?.content || aiResult.response || 'No response generated',
       filesProcessed: processedFiles.length,
       ocrResults: processedFiles.map(f => ({
         filename: f.name,
         ocrSuccess: f.ocrSuccess,
         hasText: f.ocrText.length > 0,
-        textLength: f.ocrText.length
+        textLength: f.ocrText.length,
+        isLeaseDocument: f.ocrSuccess ? isLeaseDocument(f.name, f.ocrText) : false
       })),
-      success: true
+      success: true,
+      credibilityNote: processedFiles.length > 0 
+        ? `✅ Document content analyzed via OCR for credible responses`
+        : 'No documents processed'
     });
     
   } catch (error) {
-    console.error('Ask AI Public API error:', error);
+    console.error('💥 Ask AI Public API error:', error);
     return NextResponse.json(
       { 
         error: 'Internal server error',
