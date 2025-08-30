@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { processFileWithOCR } from '@/lib/utils/processFileWithOCR';
-import { analyzeDocument, ComprehensiveDocumentAnalysis } from '../lib/document-analysis-orchestrator';
+import { processFileWithOCR } from '@/lib/simple-ocr';
 
 interface Message {
   id: string;
@@ -10,7 +9,6 @@ interface Message {
   files?: File[];
   ocrStatus?: 'processing' | 'completed' | 'failed';
   ocrText?: string;
-  documentAnalysis?: ComprehensiveDocumentAnalysis;
   isProcessingOCR?: boolean;
 }
 
@@ -81,78 +79,33 @@ export function useAIConversation(): UseAIConversationReturn {
       if (files.length > 0) {
         setIsProcessingOCR(true);
         
-        // Process files through OCR and document analysis
-        let enhancedContent = content.trim();
-        let allOcrText = '';
-        let documentAnalyses: ComprehensiveDocumentAnalysis[] = [];
-        
-        // Process files through OCR and document analysis using the utility module
+        // Process each file through OCR
         const ocrResults = await Promise.all(
           files.map(file => processFileWithOCR(file))
         );
         
-        // Build enhanced content from OCR results and document analysis
-        for (let i = 0; i < files.length; i++) {
-          const file = files.length > 0 ? files[i] : null;
-          const ocrResult = ocrResults[i];
-          
-          if (file && ocrResult.success) {
-            allOcrText += `\n\n--- ${file.name} ---\n${ocrResult.text}\n`;
-            
-            // Perform comprehensive document analysis
-            try {
-              const analysis = await analyzeDocument(ocrResult.text, file.name, content.trim());
-              documentAnalyses.push(analysis);
-              
-              // Use the AI prompt from document analysis
-              enhancedContent = analysis.aiPrompt;
-              console.log('🔍 Document analysis AI prompt:', {
-                filename: file.name,
-                promptLength: analysis.aiPrompt?.length || 0,
-                hasExtractedText: !!analysis.extractedText,
-                extractedTextLength: analysis.extractedText?.length || 0
-              });
-            } catch (analysisError) {
-              console.error('Document analysis failed:', analysisError);
-              // Fallback to basic OCR text
-              enhancedContent += `\n\nDocument: ${file.name}\nExtracted Text: ${ocrResult.text.substring(0, 2000)}${ocrResult.text.length > 2000 ? '...' : ''}`;
-            }
-          } else if (file) {
-            enhancedContent += `\n\nDocument: ${file.name}\nOCR Processing Failed: ${ocrResult.error}`;
-          }
-        }
-
-        // Update user message with OCR results and document analysis
+        // Add OCR text to the message
+        const ocrText = ocrResults.map(r => r.text).join('\n\n');
+        const enhancedMessage = `${content.trim()}\n\nExtracted from uploaded documents:\n${ocrText}`;
+        
+        // Update user message with OCR text
+        userMessage.ocrText = ocrText;
+        userMessage.ocrStatus = 'completed';
         setMessages(prev => prev.map(msg => 
-          msg.id === userMessage.id 
-            ? { 
-                ...msg, 
-                ocrStatus: 'completed', 
-                ocrText: allOcrText,
-                documentAnalysis: documentAnalyses.length > 0 ? documentAnalyses[0] : undefined
-              }
-            : msg
+          msg.id === userMessage.id ? userMessage : msg
         ));
+            
+
+
+
         
         setIsProcessingOCR(false);
 
-        // Handle file uploads using enhanced ask-ai endpoint with OCR integration
+        // Send enhanced message to AI
         const formData = new FormData();
-        formData.append('userQuestion', enhancedContent);
+        formData.append('userQuestion', enhancedMessage);
         formData.append('useMemory', useMemory.toString());
         if (conversationId) formData.append('conversationId', conversationId);
-        
-        // Add building ID if available (this should come from context)
-        // For now, we'll use null as the building ID will be determined by the endpoint
-        if (buildingId) {
-          formData.append('buildingId', buildingId);
-        } else {
-          formData.append('buildingId', 'null');
-        }
-        
-        files.forEach((file, index) => {
-          formData.append(`file_${index}`, file);
-        });
 
         const response = await fetch('/api/ask-ai', {
           method: 'POST',
@@ -165,13 +118,7 @@ export function useAIConversation(): UseAIConversationReturn {
 
         const data = await response.json();
         
-        console.log('📤 Received API response:', {
-          hasResponse: !!data.response,
-          responseLength: data.response?.length || 0,
-          isLeaseSummary: data.isLeaseSummary,
-          hasLeaseDocumentInfo: !!data.leaseDocumentInfo,
-          responsePreview: data.response?.substring(0, 200) + '...'
-        });
+
         
         const aiMessage: Message = {
           id: (Date.now() + 1).toString(),
@@ -185,16 +132,15 @@ export function useAIConversation(): UseAIConversationReturn {
           setConversationId(data.conversationId);
         }
       } else {
-        // Use the new document-aware AI endpoint for text-only queries
-        const response = await fetch('/api/ask-ai-document-aware', {
+        // Text-only message
+        const response = await fetch('/api/ask-ai', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            question: content.trim(),
-            buildingId: null, // Will be determined by context
-            documentIds: [], // Will search for relevant documents
+            userQuestion: content.trim(),
+            useMemory: useMemory.toString(),
             conversationId: conversationId || undefined
           })
         });
