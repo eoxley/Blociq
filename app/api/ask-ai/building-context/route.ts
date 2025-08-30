@@ -32,24 +32,71 @@ export async function POST(req: Request) {
     // Fetch units and leaseholders
     const unitsLeaseholders = await getUnitsLeaseholders(buildingId);
 
-    // Fetch compliance summary
-    const { data: complianceAssets = [], error: complianceError } = await supabaseAdmin
-      .from('building_compliance_assets')
-      .select(`
-        id,
-        status,
-        due_date,
-        priority,
-        notes,
-        compliance_assets (
+    // Fetch compliance summary (with defensive handling for missing title column)
+    let complianceAssets = [];
+    let complianceError = null;
+    
+    try {
+      // Try with title column first
+      const { data, error } = await supabaseAdmin
+        .from('building_compliance_assets')
+        .select(`
           id,
-          category,
-          title,
-          description,
-          frequency_months
-        )
-      `)
-      .eq('building_id', buildingId);
+          status,
+          due_date,
+          priority,
+          notes,
+          compliance_assets (
+            id,
+            category,
+            title,
+            description,
+            frequency_months
+          )
+        `)
+        .eq('building_id', buildingId);
+      
+      complianceAssets = data || [];
+      complianceError = error;
+    } catch (titleError) {
+      console.warn('Title column may not exist, trying fallback query:', titleError);
+      
+      // Fallback: try without title column
+      try {
+        const { data, error } = await supabaseAdmin
+          .from('building_compliance_assets')
+          .select(`
+            id,
+            status,
+            due_date,
+            priority,
+            notes,
+            compliance_assets (
+              id,
+              category,
+              name,
+              description,
+              frequency_months
+            )
+          `)
+          .eq('building_id', buildingId);
+        
+        // Map name to title for consistency
+        complianceAssets = (data || []).map(asset => ({
+          ...asset,
+          compliance_assets: asset.compliance_assets ? {
+            ...asset.compliance_assets,
+            title: asset.compliance_assets.name || asset.compliance_assets.category || 'Unknown Asset'
+          } : null
+        }));
+        
+        complianceError = error;
+      } catch (fallbackError) {
+        console.error('Both compliance queries failed:', fallbackError);
+        complianceAssets = [];
+        complianceError = fallbackError;
+      }
+    }
 
     // Calculate compliance summary
     const complianceSummary = {
