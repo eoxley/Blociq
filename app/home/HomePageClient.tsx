@@ -941,16 +941,24 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       throw new Error(`Process failed: ${detail}`)
     }
 
+    // Log OCR source for debugging
+    console.log("X-OCR-Source:", procRes.headers.get("X-OCR-Source"))
+    
+    const txt = procJson.text ?? procJson.extractedText ?? ""
+    if (!procJson.success || (procJson.textLength ?? txt.length) < 500) {
+      throw new Error(procJson.summary ?? "Couldn't extract readable text.")
+    }
+    
     // Convert OCR response to expected format
     return {
       success: procJson.success,
       documentType: 'document',
-      summary: procJson.success ? `Document processed successfully. Extracted ${procJson.textLength} characters via ${procJson.source || 'OCR'}.` : procJson.message || 'Document processing failed.',
-      analysis: procJson.success ? `Text extracted successfully using ${procJson.source || 'OCR'}. Document contains ${procJson.textLength} characters.` : 'Document analysis completed',
+      summary: `Document processed successfully via ${procJson.ocrSource || 'OCR'}. Extracted ${procJson.textLength} characters.`,
+      analysis: `Text extracted successfully using ${procJson.ocrSource || 'OCR'}. Document contains ${procJson.textLength} characters.`,
       filename: file.name,
       textLength: procJson.textLength || 0,
-      extractedText: procJson.text || '', // Include the actual extracted text
-      ocrSource: procJson.source || 'unknown' // Track OCR source for debugging
+      extractedText: txt,
+      ocrSource: procJson.ocrSource || 'unknown' // Track OCR source for debugging
     }
   }
 
@@ -979,16 +987,24 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       throw new Error(`Process failed: ${detail}`)
     }
 
+    // Log OCR source for debugging
+    console.log("X-OCR-Source:", res.headers.get("X-OCR-Source"))
+    
+    const txt = json.text ?? json.extractedText ?? ""
+    if (!json.success || (json.textLength ?? txt.length) < 500) {
+      throw new Error(json.summary ?? "Couldn't extract readable text.")
+    }
+    
     // Convert OCR response to expected format
     return {
       success: json.success,
       documentType: 'document',
-      summary: json.success ? `Document processed successfully. Extracted ${json.textLength} characters via ${json.source || 'OCR'}.` : json.message || 'Document processing failed.',
-      analysis: json.success ? `Text extracted successfully using ${json.source || 'OCR'}. Document contains ${json.textLength} characters.` : 'Document analysis completed',
+      summary: `Document processed successfully via ${json.ocrSource || 'OCR'}. Extracted ${json.textLength} characters.`,
+      analysis: `Text extracted successfully using ${json.ocrSource || 'OCR'}. Document contains ${json.textLength} characters.`,
       filename: 'stored_document',
       textLength: json.textLength || 0,
-      extractedText: json.text || '',
-      ocrSource: json.source || 'unknown' // Track OCR source for debugging
+      extractedText: txt,
+      ocrSource: json.ocrSource || 'unknown' // Track OCR source for debugging
     }
   }
 
