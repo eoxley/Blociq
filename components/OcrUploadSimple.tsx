@@ -25,12 +25,22 @@ export default function OcrUploadSimple() {
       fd.append('file', f);
       const res = await fetch('/api/ask-ai/upload', { method: 'POST', body: fd });
       const data = await res.json();
+      
+      // Log OCR source for debugging
+      console.log("X-OCR-Source:", res.headers.get("X-OCR-Source"));
+      
       if (!res.ok || !data?.success) {
         throw new Error(data?.message || 'OCR failed');
       }
-      setText(data.text || '');
-      setTextLength(data.textLength ?? (data.text?.length ?? 0));
-      setUsedOCR(!!data.usedOCR);
+      
+      const txt = data.text ?? data.extractedText ?? "";
+      if (!data.success || (data.textLength ?? txt.length) < 500) {
+        throw new Error(data.summary ?? "Couldn't extract readable text.");
+      }
+      
+      setText(txt);
+      setTextLength(data.textLength ?? txt.length);
+      setUsedOCR(!!data.ocrSource && data.ocrSource !== 'none');
     } catch (e: any) {
       setErr(e.message || 'Upload failed');
     } finally {
