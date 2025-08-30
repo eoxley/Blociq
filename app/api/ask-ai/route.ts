@@ -90,49 +90,79 @@ export async function POST(request: NextRequest) {
     if (queryType === 'property') {
       console.log('🏠 Property query - searching database...');
       
-      // ACTUAL SUPABASE CALL - Enhanced with proper column matching
-      const { data, error } = await supabase
+      // ENHANCED SUPABASE CALL with flexible search
+      const searchQuery = extractSearchTerms(userQuestion);
+      const { data: allData, error } = await supabase
         .from('vw_units_leaseholders')
         .select('*')
-        .or('building_name.ilike.%ashwood%,property_name.ilike.%ashwood%,address.ilike.%ashwood%,unit_number.ilike.%5%')
-        .limit(20);
+        .or(`unit_number.ilike.%${searchQuery}%,leaseholder_name.ilike.%${searchQuery}%,correspondence_address.ilike.%${searchQuery}%,building_name.ilike.%${searchQuery}%,property_name.ilike.%${searchQuery}%`)
+        .limit(50);
       
-      console.log(`🔍 Database query result: ${data?.length || 0} records found`);
+      console.log(`🔍 Database query result: ${allData?.length || 0} records found`);
       
       if (error) {
         console.error('❌ Supabase error:', error);
         answer = `Database search failed: ${error.message}`;
         confidence = 10;
-      } else if (data && data.length > 0) {
-        databaseRecordsSearched = data.length;
-        sources = ['vw_units_leaseholders'];
-        confidence = 90;
+      } else if (allData) {
+        // Use smart matching logic
+        const { searchWithSmartMatching } = await import('@/lib/search/smart-unit-matcher');
+        const smartResults = await searchWithSmartMatching(allData, userQuestion);
         
-        // BUILD REAL RESPONSE FROM DATA
-        const property = data[0];
-        answer = `## 🏠 Property Found: ${property.building_name || property.property_name || '5 Ashwood House'}
+        databaseRecordsSearched = allData.length;
+        sources = ['vw_units_leaseholders'];
+        
+        if (smartResults.matches.length > 0) {
+          confidence = smartResults.type === 'unit_match' ? 95 : 85;
+          
+          // Get all available units for AI context
+          const availableUnits = allData.map(d => d.unit_number).sort();
+          
+          // Enhanced AI prompt with context
+          const enhancedPrompt = `
+User asked: "${userQuestion}"
 
-**Current Leaseholder:** ${property.leaseholder_name || property.tenant_name || 'No current tenant'}
-**Address:** ${property.address || 'Address on file'}
-**Unit:** ${property.unit_number || 'N/A'}
-**Unit Type:** ${property.unit_type || 'Not specified'}
-**Monthly Rent:** ${property.monthly_rent ? `£${property.monthly_rent}` : 'Not specified'}
-**Lease Status:** ${property.lease_status || 'Active'}
+Available units in the database: ${availableUnits.join(', ')}
 
-${property.lease_end_date ? `**Lease Expires:** ${property.lease_end_date}` : ''}
-${property.leaseholder_phone ? `**Contact:** ${property.leaseholder_phone}` : ''}
-${property.leaseholder_email ? `**Email:** ${property.leaseholder_email}` : ''}
-${property.is_director ? `**Director Role:** ${property.director_role || 'Director'}` : ''}`;
+Found ${smartResults.matches.length} matching record(s):
+${JSON.stringify(smartResults.matches.map(match => ({
+  unit: match.unit_number,
+  name: match.leaseholder_name,
+  email: match.leaseholder_email,
+  phone: match.leaseholder_phone,
+  address: match.correspondence_address,
+  is_director: match.is_director,
+  director_role: match.director_role
+})), null, 2)}
+
+Please provide a helpful response with the leaseholder information requested. Format it nicely with proper headings and bullet points.`;
+
+          // Generate AI response with context
+          answer = await generatePropertyResponse(enhancedPrompt, smartResults.matches);
+          
+        } else {
+          confidence = 60;
+          
+          // No matches - provide suggestions
+          const availableUnits = allData.map(d => d.unit_number).sort();
+          const suggestions = smartResults.suggestions;
+          
+          answer = `I couldn't find an exact match for "${userQuestion}" in your property database.
+
+**Available Units:** ${availableUnits.join(', ')}
+
+${suggestions.length > 0 ? `**Did you mean:** ${suggestions.join(', ')}?` : ''}
+
+**Try searching for:**
+• A specific unit number (e.g., "Flat 1", "Unit 10")
+• A tenant name
+• Part of an address
+
+**Available properties:** ${availableUnits.length} units found in the database.`;
+        }
       } else {
-        answer = `I searched your database for "5 Ashwood House" but found no matching records.
-
-The property may be:
-• Listed under a different name
-• Not yet added to your system  
-• Using a different address format
-
-Try searching for "Ashwood" or check your property list.`;
-        confidence = 60;
+        answer = `No property database available for searching.`;
+        confidence = 10;
         databaseRecordsSearched = 0;
       }
       
@@ -197,11 +227,71 @@ function categorizeQuery(query: string): 'property' | 'legal' | 'general' {
       lower.includes('property') ||
       lower.includes('house') ||
       lower.includes('unit') ||
-      lower.includes('ashwood')) {
+      lower.includes('flat') ||
+      lower.includes('apartment') ||
+      lower.includes('ashwood') ||
+      /\b\d+\b/.test(lower)) { // Contains numbers (likely unit numbers)
     return 'property';
   }
   
   return 'general';
+}
+
+/**
+ * EXTRACT SEARCH TERMS FROM QUERY
+ */
+function extractSearchTerms(query: string): string {
+  // Remove common words and extract meaningful search terms
+  const stopWords = ['the', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'who', 'what', 'where', 'when', 'how'];
+  const words = query.toLowerCase().split(/\s+/).filter(word => 
+    word.length > 1 && !stopWords.includes(word)
+  );
+  
+  // If query contains numbers, prioritize them
+  const numbers = query.match(/\d+/g);
+  if (numbers) {
+    return numbers[0]; // Return first number found
+  }
+  
+  // Otherwise return first meaningful word
+  return words[0] || query;
+}
+
+/**
+ * GENERATE PROPERTY RESPONSE WITH AI
+ */
+async function generatePropertyResponse(prompt: string, matches: any[]): Promise<string> {
+  try {
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4-turbo-preview',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 800,
+      temperature: 0.1,
+    });
+
+    return completion.choices[0]?.message?.content || formatFallbackResponse(matches);
+  } catch (error) {
+    console.error('AI property response error:', error);
+    return formatFallbackResponse(matches);
+  }
+}
+
+/**
+ * FALLBACK RESPONSE FORMATTING
+ */
+function formatFallbackResponse(matches: any[]): string {
+  if (matches.length === 0) return 'No matching properties found.';
+  
+  const property = matches[0];
+  return `## 🏠 Property Found: ${property.unit_number}
+
+**Leaseholder:** ${property.leaseholder_name}
+**Email:** ${property.leaseholder_email}
+**Phone:** ${property.leaseholder_phone}
+**Address:** ${property.correspondence_address}
+${property.is_director ? `**Role:** ${property.director_role || 'Director'}` : ''}
+
+${matches.length > 1 ? `\n*Found ${matches.length} matching properties total.*` : ''}`;
 }
 
 /**
