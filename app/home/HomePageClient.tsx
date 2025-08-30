@@ -848,14 +848,19 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
   // Upload function that handles both small and large files
   const uploadToAskAI = async (file: File, buildingId?: string) => {
-    // Small file path - direct upload via OCR endpoint for immediate text extraction
-    if (file.size <= MAX_FILE_SIZE) {
-      console.log('📁 Processing small file via OCR endpoint:', file.name)
-      console.log('Calling OCR service via proxy: /api/ocr-proxy');
+    // 🚨 CRITICAL FIX: Use enhanced ask-ai-public route for OCR + AI processing
+    console.log('📁 Processing file via enhanced ask-ai-public route:', file.name)
+    
+    try {
       const formData = new FormData()
-      formData.append('file', file)
+      formData.append('prompt', `Analyze this document: ${file.name}`)
+      formData.append('files', file)
 
-      const res = await fetch('/api/ocr-proxy', { method: 'POST', body: formData })
+      console.log('🤖 Sending to enhanced ask-ai-public route for OCR + AI analysis...')
+      const res = await fetch('/api/ask-ai-public', { 
+        method: 'POST', 
+        body: formData 
+      })
       let json: any = null
       try { 
         json = await res.json() 
@@ -921,11 +926,11 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     }
 
     // Step 3: Process the uploaded file via OCR endpoint
-    console.log('Calling OCR service via proxy: /api/ocr-proxy');
+    console.log('Calling OCR service directly: https://ocr-server-2-ykmk.onrender.com/upload');
     const procFormData = new FormData()
     procFormData.append('file', file)
     
-    const procRes = await fetch('/api/ocr-proxy', {
+    const procRes = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
       method: 'POST',
       body: procFormData,
     })
@@ -968,11 +973,11 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const processStoredPath = async (path: string, buildingId?: string) => {
     // For stored paths, we need to download and then process via OCR
     // This is a simplified version - in practice you might want to store the OCR result
-    console.log('Calling OCR service via proxy: /api/ocr-proxy');
+    console.log('Calling OCR service directly: https://ocr-server-2-ykmk.onrender.com/upload');
     const formData = new FormData()
     formData.append('file', new File([''], 'stored_document.pdf', { type: 'application/pdf' }))
     
-    const res = await fetch('/api/ocr-proxy', {
+    const res = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
       method: 'POST',
       body: formData,
     })
