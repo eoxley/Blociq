@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Upload, FileText, Image, CheckCircle, XCircle, Bug, Eye, Code, Activity } from 'lucide-react';
+import { Loader2, Upload, FileText, Image, CheckCircle, XCircle, Bug, Eye, Code, Activity, Search } from 'lucide-react';
 
 export default function OCRDebugPanel() {
   const [file, setFile] = useState<File | null>(null);
@@ -212,6 +212,34 @@ export default function OCRDebugPanel() {
     }
   };
 
+  const checkDetailedOCRStatus = async () => {
+    addLog('🔍 Checking detailed OCR service status...');
+    
+    try {
+      const statusResponse = await fetch('/api/ocr-status');
+      const statusData = await statusResponse.json();
+      
+      if (statusResponse.ok) {
+        addLog(`✅ Detailed Status Check Complete`);
+        addLog(`🌐 External Service: ${statusData.externalService}`);
+        addLog(`📊 Connectivity: ${statusData.checks.connectivity?.status || 'unknown'}`);
+        addLog(`🏥 Health Endpoint: ${statusData.checks.healthEndpoint?.status || 'unknown'}`);
+        addLog(`🏠 Root Endpoint: ${statusData.checks.rootEndpoint?.status || 'unknown'}`);
+        addLog(`🔗 DNS: ${statusData.checks.dns?.status || 'unknown'}`);
+        
+        // Log detailed connectivity info if available
+        if (statusData.checks.connectivity?.statusCode) {
+          addLog(`📡 Status Code: ${statusData.checks.connectivity.statusCode}`);
+          addLog(`📝 Status Text: ${statusData.checks.connectivity.statusText}`);
+        }
+      } else {
+        addLog(`❌ Detailed Status Check Failed: ${statusData.error}`);
+      }
+    } catch (error) {
+      addLog(`❌ Detailed status check error: ${error}`);
+    }
+  };
+
   const getFileIcon = (fileType: string) => {
     if (fileType.startsWith('image/')) return <Image className="h-4 w-4" />;
     if (fileType === 'application/pdf') return <FileText className="h-4 w-4" />;
@@ -312,6 +340,15 @@ export default function OCRDebugPanel() {
                 >
                   <Activity className="mr-2 h-4 w-4" />
                   Check Health
+                </Button>
+
+                <Button 
+                  onClick={checkDetailedOCRStatus} 
+                  variant="outline"
+                  disabled={isProcessing}
+                >
+                  <Search className="mr-2 h-4 w-4" />
+                  Detailed Status
                 </Button>
 
                 <Button 

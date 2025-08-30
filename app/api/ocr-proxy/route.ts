@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
         if (response.status === 502 && attempt < maxRetries) {
           const waitTime = 1000 * attempt; // Progressive backoff
           console.log(`OCR service returned 502, retrying in ${waitTime}ms...`);
+          console.log(`This usually means the external OCR service is down or restarting`);
           await new Promise(resolve => setTimeout(resolve, waitTime));
           continue;
         }
@@ -41,10 +42,24 @@ export async function POST(request: NextRequest) {
         // For other errors, don't retry
         const errorText = await response.text();
         console.error('OCR service error:', errorText);
-        return NextResponse.json(
-          { error: `OCR service error: ${response.status}` }, 
-          { status: response.status }
-        );
+        
+        // Enhanced error response with diagnostics
+        const errorResponse = {
+          error: `OCR service error: ${response.status}`,
+          statusCode: response.status,
+          statusText: response.statusText,
+          externalService: 'https://ocr-server-2-ykmk.onrender.com/upload',
+          timestamp: new Date().toISOString(),
+          attempt: attempt,
+          maxRetries: maxRetries
+        };
+        
+        if (response.status === 502) {
+          errorResponse.error = 'OCR service temporarily unavailable (502 Bad Gateway)';
+          errorResponse.suggestion = 'The external OCR service may be down or restarting. Please try again later.';
+        }
+        
+        return NextResponse.json(errorResponse, { status: response.status });
         
       } catch (fetchError) {
         lastError = fetchError;
