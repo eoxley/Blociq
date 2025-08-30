@@ -51,14 +51,14 @@ export async function GET(
       .from("compliance_assets")
       .select(`
         id,
-        title,
+        name,
         category,
         description,
         frequency_months
       `)
       .in("id", assetIds)
       .order("category", { ascending: true })
-      .order("title", { ascending: true });
+      .order("name", { ascending: true });
 
     if (assetError) {
       console.error('Error fetching compliance assets:', assetError);
@@ -74,7 +74,7 @@ export async function GET(
       return {
         bca_id: row.bca_id,
         asset_id: row.compliance_asset_id,
-        asset_name: asset?.title || "Unknown",
+        asset_name: asset?.name || "Unknown",
         category: asset?.category || "Unknown",
         frequency_months: asset?.frequency_months || row.frequency_months,
         last_renewed_date: row.last_renewed_date,
