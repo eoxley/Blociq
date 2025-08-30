@@ -417,6 +417,14 @@ export default function BuildingCompliancePage() {
               </button>
               
               <button
+                onClick={() => router.push(`/buildings/${buildingId}/compliance/setup`)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#10B981] to-[#3B82F6] text-white rounded-xl hover:from-[#059669] hover:to-[#2563EB] transition-all duration-200"
+              >
+                <Sparkles className="h-4 w-4" />
+                Setup Wizard
+              </button>
+              
+              <button
                 onClick={() => setShowAssetModal(true)}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#004AAD] to-[#7209B7] text-white rounded-xl hover:from-[#003A8C] hover:to-[#5A078F] transition-all duration-200"
               >
@@ -580,13 +588,22 @@ export default function BuildingCompliancePage() {
                 }
               </p>
               {!searchQuery && filterCategory === 'all' && filterStatus === 'all' && (
-                <button
-                  onClick={() => setShowAssetModal(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#004AAD] to-[#7209B7] text-white rounded-lg hover:from-[#003A8C] hover:to-[#5A078F] transition-all duration-200"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add Compliance Assets
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => router.push(`/buildings/${buildingId}/compliance/setup`)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#10B981] to-[#3B82F6] text-white rounded-lg hover:from-[#059669] hover:to-[#2563EB] transition-all duration-200"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Setup Wizard
+                  </button>
+                  <button
+                    onClick={() => setShowAssetModal(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#004AAD] to-[#7209B7] text-white rounded-lg hover:from-[#003A8C] hover:to-[#5A078F] transition-all duration-200"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Compliance Assets
+                  </button>
+                </div>
               )}
             </div>
           ) : (
