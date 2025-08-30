@@ -22,6 +22,7 @@ import { getTimeBasedGreeting } from '@/utils/greeting'
 import { formatEventTimeUK } from '@/utils/date'
 import CommunicationModal from '@/components/CommunicationModal'
 import { getRandomWelcomeMessage } from '@/utils/messages'
+import ClientOnly from '@/components/ClientOnly'
 
 
 type PropertyEvent = {
@@ -1381,53 +1382,57 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                   ref={messagesEndRef}
                   className="flex-1 overflow-y-auto p-4 pb-24 space-y-3 bg-white"
                 >
-                  {messages.map((message, index) => (
-                    <div 
-                      key={index} 
-                      className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} transition-opacity duration-300 ease-in-out`}
-                      style={{ 
-                        opacity: 0,
-                        animation: `fadeIn 0.3s ease-in-out ${index * 0.1}s forwards`
-                      }}
-                    >
-                                              <div className={`max-w-[70%] rounded-xl p-3 shadow-sm ${
-                          message.sender === 'user' 
-                            ? 'bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white' 
-                            : 'bg-white text-gray-900 border border-gray-200 shadow-sm'
-                        }`}>
-                        {/* Message Content */}
-                        <div className="text-sm whitespace-pre-line leading-relaxed mb-2">
-                          {message.text}
-                        </div>
-                        
-
-                        
-                        {/* Timestamp */}
-                        <div className={`text-xs mt-2 ${
-                          message.sender === 'user' ? 'text-white/70' : 'text-gray-500'
-                        }`}>
-                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  <ClientOnly>
+                    {messages.map((message, index) => (
+                      <div 
+                        key={index} 
+                        className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} transition-opacity duration-300 ease-in-out`}
+                        style={{ 
+                          opacity: 0,
+                          animation: `fadeIn 0.3s ease-in-out ${index * 0.1}s forwards`
+                        }}
+                      >
+                                                <div className={`max-w-[70%] rounded-xl p-3 shadow-sm ${
+                            message.sender === 'user' 
+                              ? 'bg-gradient-to-r from-[#4f46e5] to-[#a855f7] text-white' 
+                              : 'bg-white text-gray-900 border border-gray-200 shadow-sm'
+                          }`}>
+                          {/* Message Content */}
+                          <div className="text-sm whitespace-pre-line leading-relaxed mb-2">
+                            {message.text}
+                          </div>
+                          
+                          
+                          
+                          {/* Timestamp */}
+                          <div className={`text-xs mt-2 ${
+                            message.sender === 'user' ? 'text-white/70' : 'text-gray-500'
+                          }`}>
+                            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </ClientOnly>
                   
                   {/* Loading indicator */}
-                  {isSubmitting && (
-                    <div className="flex justify-start">
-                      <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm max-w-[70%]">
-                        <div className="flex items-center gap-3">
-                          <div className="w-6 h-6 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full flex items-center justify-center animate-pulse shadow-lg">
-                            <Brain className="h-4 w-4 text-white" />
-                          </div>
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <Loader2 className="animate-spin h-4 w-4 text-[#4f46e5]" />
-                            <span className="text-sm font-medium">Thinking...</span>
+                  <ClientOnly>
+                    {isSubmitting && (
+                      <div className="flex justify-start">
+                        <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm max-w-[70%]">
+                          <div className="flex items-center gap-3">
+                            <div className="w-6 h-6 bg-gradient-to-r from-[#4f46e5] to-[#a855f7] rounded-full flex items-center justify-center animate-pulse shadow-lg">
+                              <Brain className="h-4 w-4 text-white" />
+                            </div>
+                            <div className="flex items-center gap-2 text-gray-600">
+                              <Loader2 className="animate-spin h-4 w-4 text-[#4f46e5]" />
+                              <span className="text-sm font-medium">Thinking...</span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </ClientOnly>
                 </div>
                 
                 {/* Input Bar - Positioned at bottom of chat widget */}
@@ -1717,9 +1722,10 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                   )}
 
                   {/* Events List */}
-                  {upcomingEvents.length > 0 ? (
-                    <div className="space-y-3">
-                      {upcomingEvents.map((event, index) => {
+                  <ClientOnly>
+                    {upcomingEvents.length > 0 ? (
+                      <div className="space-y-3">
+                        {upcomingEvents.map((event, index) => {
                         const eventDate = new Date(event.date)
                         const now = new Date()
                         const tomorrow = new Date(now)
@@ -1885,6 +1891,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                       )}
                     </div>
                   )}
+                    </ClientOnly>
                 </div>
               </div>
             </div>
