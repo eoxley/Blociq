@@ -33,7 +33,7 @@ const DEFAULT_CONFIG: Required<OCRConfig> = {
   timeout: 30000, // 30 seconds
   maxRetries: 2,
   retryDelay: 1000, // 1 second
-  endpoint: 'https://ocr-server-2-ykmk.onrender.com/upload'
+  endpoint: process.env.OCR_SERVICE_URL || 'https://ocr-server-2-ykmk.onrender.com/upload'
 };
 
 /**
@@ -114,11 +114,14 @@ export async function processFileWithOCR(
           break;
         }
         
+        // Handle varied JSON response shapes - accept { text }, { result: { text } }, or { data: { text } }
+        const text = ocrResult?.text ?? ocrResult?.result?.text ?? ocrResult?.data?.text ?? "";
+        
         // Validate response structure
-        if (!ocrResult || typeof ocrResult.text !== 'string') {
+        if (!ocrResult || typeof text !== 'string' || !text.trim()) {
           lastError = {
             type: 'invalid_response',
-            message: 'OCR service returned response without text field',
+            message: 'OCR service returned response without valid text field',
             details: ocrResult
           };
           
@@ -137,7 +140,7 @@ export async function processFileWithOCR(
         
         return {
           success: true,
-          text: ocrResult.text,
+          text: text,
           confidence: ocrResult.confidence || 'medium',
           metadata: {
             processingTime,
@@ -238,6 +241,29 @@ export function getOCRConfig(): OCRConfig {
     retryDelay: parseInt(process.env.OCR_RETRY_DELAY || '1000'),
     endpoint: process.env.OCR_ENDPOINT || DEFAULT_CONFIG.endpoint
   };
+}
+
+/**
+ * Process bytes through OCR - simplified version for direct byte processing
+ */
+export async function processBytesWithOCR(bytes: Uint8Array): Promise<string> {
+  const url = process.env.OCR_SERVICE_URL || 'https://ocr-server-2-ykmk.onrender.com/upload';
+  const token = process.env.OCR_TOKEN || "";
+
+  // send as multipart/form-data
+  const fd = new FormData();
+  fd.append("file", new Blob([bytes], { type: "application/pdf" }), "upload.pdf");
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: fd,
+  });
+
+  if (!res.ok) throw new Error(`OCR HTTP ${res.status}`);
+  const j = await res.json().catch(() => ({}));
+  const text = j?.text ?? j?.result?.text ?? j?.data?.text ?? "";
+  return typeof text === "string" ? text : "";
 }
 
 /**
