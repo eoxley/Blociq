@@ -984,49 +984,61 @@ export async function POST(request: NextRequest) {
           }
         }
         
-        // If no results from proper search, try direct Supabase query
+        // If no results from proper search, try ENHANCED SMART SEARCH
         if (databaseResults.totalRecords === 0) {
-          console.log('🔍 Trying direct Supabase query as fallback...');
+          console.log('🔍 Trying enhanced smart unit matching...');
           
-          // Direct query to vw_units_leaseholders
-          const { data: leaseholders, error } = await supabase
+          // Use our enhanced search with flexible queries
+          const searchQuery = extractSmartSearchTerms(userQuestion);
+          const { data: allData, error } = await supabase
             .from('vw_units_leaseholders')
             .select('*')
-            .or([
-              'property_name.ilike.%ashwood%',
-              'address.ilike.%ashwood%',
-              'unit_number.ilike.%5%'
-            ].join(','))
-            .limit(10);
+            .or(`unit_number.ilike.%${searchQuery}%,leaseholder_name.ilike.%${searchQuery}%,correspondence_address.ilike.%${searchQuery}%,building_name.ilike.%${searchQuery}%,property_name.ilike.%${searchQuery}%`)
+            .limit(50);
           
           if (error) {
-            console.error('Direct Supabase query error:', error);
-          } else if (leaseholders && leaseholders.length > 0) {
-            console.log('✅ DIRECT SUPABASE QUERY SUCCESSFUL! Found:', leaseholders.length, 'records');
+            console.error('Enhanced search error:', error);
+          } else if (allData && allData.length > 0) {
+            console.log('✅ ENHANCED SEARCH DATA FOUND! Processing with smart matching...');
             
-            // Format the direct results
-            const formattedResponse = `## 🏠 Property Information Found
-
-**Property:** ${leaseholders[0].property_name || 'Ashwood House'}
-**Address:** ${leaseholders[0].address || 'Address on file'}
-**Unit:** ${leaseholders[0].unit_number || '5'}
-
-**Current Leaseholder:** ${leaseholders[0].tenant_name || 'No current tenant'}
-
-${leaseholders[0].monthly_rent ? `**Monthly Rent:** £${leaseholders[0].monthly_rent.toLocaleString()}` : ''}
-${leaseholders[0].lease_start_date ? `**Lease Start:** ${leaseholders[0].lease_start_date}` : ''}
-${leaseholders[0].lease_end_date ? `**Lease End:** ${leaseholders[0].lease_end_date}` : ''}
-${leaseholders[0].lease_status ? `**Status:** ${leaseholders[0].lease_status}` : ''}
-
-${leaseholders[0].phone ? `**Contact:** ${leaseholders[0].phone}` : ''}
-${leaseholders[0].email ? `**Email:** ${leaseholders[0].email}` : ''}`;
+            // Use smart matching logic
+            const { searchWithSmartMatching } = await import('@/lib/search/smart-unit-matcher');
+            const smartResults = await searchWithSmartMatching(allData, userQuestion);
             
-            databaseResults.data = [{ response: formattedResponse }];
-            databaseResults.totalRecords = 1;
-            
-            console.log(`✅ DIRECT QUERY FOUND DATA: ${formattedResponse.substring(0, 100)}...`);
+            if (smartResults.matches.length > 0) {
+              console.log(`✅ SMART MATCHING SUCCESSFUL! Found ${smartResults.matches.length} matches`);
+              
+              // Format response with smart matching results
+              const formattedResponse = formatEnhancedPropertyResponse(smartResults.matches, userQuestion);
+              databaseResults.data = [{ response: formattedResponse }];
+              databaseResults.totalRecords = smartResults.matches.length;
+              
+              console.log(`✅ SMART SEARCH FOUND DATA: ${formattedResponse.substring(0, 100)}...`);
+            } else {
+              // No matches - provide enhanced suggestions
+              const availableUnits = allData.map(d => d.unit_number).sort().slice(0, 10);
+              const suggestions = smartResults.suggestions;
+              
+              const formattedResponse = `I couldn't find an exact match for "${userQuestion}" in your property database.
+
+**Available Units:** ${availableUnits.join(', ')}
+
+${suggestions.length > 0 ? `**Did you mean:** ${suggestions.join(', ')}?` : ''}
+
+**Search Tips:**
+• Try specific unit numbers (e.g., "Flat 1", "Unit 10")
+• Search by tenant names
+• Use building addresses
+
+**Available properties:** ${availableUnits.length > 0 ? availableUnits.length : allData.length} units found in the database.`;
+              
+              databaseResults.data = [{ response: formattedResponse }];
+              databaseResults.totalRecords = 0; // No exact matches but provide helpful response
+              
+              console.log(`✅ PROVIDING SUGGESTIONS: ${formattedResponse.substring(0, 100)}...`);
+            }
           } else {
-            console.log('❌ Direct Supabase query returned no results');
+            console.log('❌ Enhanced search returned no data');
           }
         }
         
@@ -1253,6 +1265,63 @@ ${record.monthly_rent ? `• Rent: £${record.monthly_rent.toLocaleString()}` : 
   }
 }
 
+/**
+ * ENHANCED HELPER FUNCTIONS FOR SMART SEARCH
+ */
+function extractSmartSearchTerms(query: string): string {
+  // Remove common words and extract meaningful search terms
+  const stopWords = ['the', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'who', 'what', 'where', 'when', 'how'];
+  const words = query.toLowerCase().split(/\s+/).filter(word => 
+    word.length > 1 && !stopWords.includes(word)
+  );
+  
+  // If query contains numbers, prioritize them (likely unit numbers)
+  const numbers = query.match(/\d+/g);
+  if (numbers) {
+    return numbers[0]; // Return first number found
+  }
+  
+  // Otherwise return first meaningful word
+  return words[0] || query;
+}
+
+function formatEnhancedPropertyResponse(matches: any[], query: string): string {
+  if (matches.length === 0) return 'No matching properties found.';
+  
+  if (matches.length === 1) {
+    const match = matches[0];
+    return `## 🏠 Property Information Found
+
+**Property:** ${match.building_name || match.property_name || 'Property'}
+**Address:** ${match.correspondence_address || match.address || 'Address on file'}
+**Unit:** ${match.unit_number || 'N/A'}
+
+**Current Leaseholder:** ${match.leaseholder_name || match.tenant_name || 'No current tenant'}
+
+${match.monthly_rent ? `**Monthly Rent:** £${match.monthly_rent.toLocaleString()}` : ''}
+${match.lease_start_date ? `**Lease Start:** ${match.lease_start_date}` : ''}
+${match.lease_end_date ? `**Lease End:** ${match.lease_end_date}` : ''}
+${match.lease_status ? `**Status:** ${match.lease_status}` : ''}
+
+${match.leaseholder_phone ? `**Phone:** ${match.leaseholder_phone}` : ''}
+${match.leaseholder_email ? `**Email:** ${match.leaseholder_email}` : ''}
+${match.is_director ? `**Role:** ${match.director_role || 'Director'}` : ''}`;
+  } else {
+    return `## 🏠 Found ${matches.length} Matching Properties
+
+${matches.slice(0, 3).map((match, index) => `
+**${index + 1}. ${match.unit_number}**
+• **Leaseholder:** ${match.leaseholder_name || match.tenant_name || 'Vacant'}
+• **Building:** ${match.building_name || match.property_name || 'Unknown'}
+• **Address:** ${match.correspondence_address || match.address || 'Not available'}
+${match.monthly_rent ? `• **Rent:** £${match.monthly_rent.toLocaleString()}` : ''}
+${match.is_director ? `• **Role:** ${match.director_role || 'Director'}` : ''}
+`).join('')}
+
+${matches.length > 3 ? `*Showing first 3 of ${matches.length} matches. All properties found in your database.*` : ''}`;
+  }
+}
+
 export async function GET() {
   try {
     const { supabase, user } = await requireAuth();
@@ -1272,12 +1341,12 @@ export async function GET() {
       return NextResponse.json({
         stats,
         categories,
-        message: 'Enhanced Ask AI endpoint is active with comprehensive lease processing workflow'
+        message: 'Enhanced Ask AI endpoint is active with comprehensive lease processing workflow and smart unit matching'
       });
     }
 
     return NextResponse.json({
-      message: 'Enhanced Ask AI endpoint is active with comprehensive lease processing workflow'
+      message: 'Enhanced Ask AI endpoint is active with comprehensive lease processing workflow and smart unit matching'
     });
 
   } catch (error) {
