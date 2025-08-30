@@ -22,7 +22,8 @@ import {
   CheckCircle,
   Clock,
   ChevronLeft,
-  Settings
+  Settings,
+  Sparkles
 } from 'lucide-react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
@@ -628,6 +629,13 @@ export default function BuildingDetailClient({
           >
             <Shield className="h-5 w-5 text-[#4f46e5] mr-3" />
             <span className="text-gray-700">Compliance</span>
+          </Link>
+          <Link
+            href={`/buildings/${buildingId}/compliance/setup`}
+            className="flex items-center p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <Sparkles className="h-5 w-5 text-green-600 mr-3" />
+            <span className="text-gray-700">Compliance Setup</span>
           </Link>
           <Link
             href={`/buildings/${buildingId}/communications`}
