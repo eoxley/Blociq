@@ -15,6 +15,7 @@ interface DocumentAnalysisResult {
   extractionMethod: string;
   extractionNote: string;
   textLength: number;
+  extractedText: string; // ✅ KEY FIX: Add this field!
   confidence: number;
   documentType?: string;
   leaseDetails?: any;
@@ -192,6 +193,12 @@ class DocumentProcessor {
       const formattedText = this.formatLeaseAnalysis(leaseAnalysis);
       console.log("✅ formatLeaseAnalysis completed successfully");
       
+      // Log the text length for debugging
+      console.log(`📄 Extracted text length: ${text.length} characters`);
+      if (text.length > 0) {
+        console.log(`📝 First 100 chars: "${text.substring(0, 100)}"`);
+      }
+      
       return {
         success: true,
         filename,
@@ -200,6 +207,7 @@ class DocumentProcessor {
         extractionMethod,
         extractionNote,
         textLength: text.length,
+        extractedText: text, // ✅ KEY FIX: Include the raw OCR text!
         confidence: leaseAnalysis.confidence || 0.8,
         documentType: 'lease',
         leaseDetails: leaseAnalysis.leaseDetails || {},
@@ -268,6 +276,7 @@ class DocumentProcessor {
         extractionMethod,
         extractionNote,
         textLength: text.length,
+        extractedText: text, // ✅ KEY FIX: Include the raw OCR text!
         confidence: extractionMethod === 'standard' ? 0.9 : 0.7,
         documentType: classification.type
       };
@@ -286,6 +295,7 @@ class DocumentProcessor {
         extractionMethod,
         extractionNote,
         textLength: text.length,
+        extractedText: text, // ✅ KEY FIX: Include the raw OCR text!
         confidence: 0.5,
         documentType: classification.type,
         warning: 'Used basic analysis due to processing error'
