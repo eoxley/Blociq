@@ -1,7 +1,7 @@
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-import { processFileWithOCR } from '@/lib/ai/ocrClient'
+import { processBytesWithOCR } from '@/lib/ai/ocrClient'
 
 const MIN = 500 // leases should crush this; forces real results
 
@@ -20,7 +20,7 @@ async function ocrWithFallback(file: File, req: Request) {
   // 1) External OCR (2 tries)
   for (let i = 0; i < 2 && (!text || text.trim().length < MIN); i++) {
     try {
-      const t = await processFileWithOCR(bytes);
+      const t = await processBytesWithOCR(bytes);
       if (t?.trim()) { 
         text = t; 
         source = "external"; 
