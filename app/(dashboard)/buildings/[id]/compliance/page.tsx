@@ -375,7 +375,7 @@ export default function BuildingCompliancePage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-6">
               <button
-                onClick={() => router.push('/compliance')}
+                onClick={() => router.push(`/buildings/${buildingId}`)}
                 className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all duration-200"
               >
                 <ChevronLeft className="h-5 w-5" />

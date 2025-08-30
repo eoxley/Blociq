@@ -296,8 +296,57 @@ export default function CompliancePage() {
   // Show empty state when no buildings or compliance data
   if (!loading && !error && (buildings.length === 0 || summary.total_assets === 0)) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 p-6">
-        <div className="max-w-7xl mx-auto">
+      <div className="min-h-screen bg-gradient-to-br from-[#f8fafc] via-white to-[#f1f5f9]">
+        {/* Hero Banner with Master Brand Kit */}
+        <section className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800 py-24 mx-6 mt-6 rounded-3xl shadow-2xl">
+          {/* Animated Background Elements */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute top-20 right-20 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-pulse"></div>
+            <div className="absolute bottom-20 left-20 w-80 h-80 bg-white/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+          </div>
+          
+          {/* Hero Content */}
+          <div className="relative z-10 max-w-7xl mx-auto px-6 text-center">
+            <div className="flex justify-center mb-8">
+              <div className="relative">
+                <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-3xl flex items-center justify-center shadow-2xl border border-white/30">
+                  <Shield className="h-10 w-10 text-white" />
+                </div>
+                <div className="absolute -top-2 -right-2 w-4 h-4 bg-yellow-400 rounded-full animate-pulse shadow-lg"></div>
+                <div className="absolute -bottom-2 -left-2 w-3 h-3 bg-cyan-400 rounded-full animate-pulse shadow-lg" style={{ animationDelay: '0.5s' }}></div>
+              </div>
+            </div>
+            
+            <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
+              Compliance Overview
+            </h1>
+            
+            <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-3xl mx-auto leading-relaxed">
+              Manage your property compliance requirements with confidence
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <div className="flex items-center gap-2 text-blue-100">
+                <Shield className="h-5 w-5" />
+                <span className="text-sm font-medium">Asset Management</span>
+              </div>
+              <div className="hidden sm:block w-1 h-1 bg-blue-300 rounded-full"></div>
+              <div className="flex items-center gap-2 text-blue-100">
+                <Calendar className="h-5 w-5" />
+                <span className="text-sm font-medium">Due Date Tracking</span>
+              </div>
+              <div className="hidden sm:block w-1 h-1 bg-blue-300 rounded-full"></div>
+              <div className="flex items-center gap-2 text-blue-100">
+                <AlertTriangle className="h-5 w-5" />
+                <span className="text-sm font-medium">Risk Monitoring</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Main Content Section */}
+        <div className="max-w-7xl mx-auto px-6 py-16">
           {/* Header */}
           <div className="bg-white border-b border-gray-200 px-6 py-6 shadow-sm rounded-2xl mb-6">
             <div className="flex items-center justify-between">
@@ -310,9 +359,9 @@ export default function CompliancePage() {
                   <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-cyan-400 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
                 </div>
                 <div>
-                  <h1 className="text-3xl font-bold bg-gradient-to-r from-[#004AAD] to-[#7209B7] bg-clip-text text-transparent">
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-[#004AAD] to-[#7209B7] bg-clip-text text-transparent">
                     Compliance Overview
-                  </h1>
+                  </h2>
                   <p className="text-sm text-gray-600 flex items-center gap-2 mt-2">
                     <Building2 className="h-4 w-4" />
                     No compliance data available
@@ -328,8 +377,6 @@ export default function CompliancePage() {
                 >
                   <RefreshCw className="h-5 w-5" />
                 </button>
-                
-
               </div>
             </div>
           </div>
@@ -337,7 +384,7 @@ export default function CompliancePage() {
           {/* Empty State */}
           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-12 text-center">
             <Shield className="h-24 w-24 text-gray-300 mx-auto mb-6" />
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">No Compliance Data Available</h2>
+            <h3 className="text-2xl font-semibold text-gray-900 mb-4">No Compliance Data Available</h3>
             <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
               {buildings.length === 0 
                 ? "You don't have any buildings set up yet, or there was an issue loading your building data. The system is working correctly but needs buildings to display compliance information."
