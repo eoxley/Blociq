@@ -40,54 +40,26 @@ export async function POST(req: NextRequest) {
       is_outlook_addin
     });
 
-    // Build context for the AI
-    let context = `You are BlocIQ Assistant, an AI-powered property management assistant. `;
+    // Instead of calling OpenAI directly, use the full Ask BlocIQ system
+    const enhancedPrompt = buildEnhancedPrompt(prompt, emailContext, building_id);
     
-    if (building_id) {
-      // Get building information if provided
-      const { data: building } = await supabase
-        .from('buildings')
-        .select('name, address, type')
-        .eq('id', building_id)
-        .single();
-      
-      if (building) {
-        context += `\n\nBuilding Context: ${building.name} - ${building.address} (${building.type})`;
-      }
-    }
+    console.log('🔄 Calling enhanced Ask BlocIQ system...');
+    
+    // Call the main Ask AI route internally to get full functionality
+    const askAIResponse = await callEnhancedAskBlocIQ(enhancedPrompt, supabase, session.user.id);
 
-    if (emailContext) {
-      context += `\n\nEmail Context:\nSubject: ${emailContext.subject}\nFrom: ${emailContext.from}\nTo: ${emailContext.to}\nBody: ${emailContext.body.substring(0, 500)}...`;
-    }
-
-    context += `\n\nUser Question: ${prompt}\n\nPlease provide a helpful, professional response suitable for property management professionals.`;
-
-    // Initialize OpenAI client at runtime
-    const openai = getOpenAIClient();
-
-    // Generate AI response
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [
-        {
-          role: 'system',
-          content: context
-        }
-      ],
-      max_tokens: 1000,
-      temperature: 0.7,
-    });
-
-    const response = completion.choices[0]?.message?.content || 'I apologize, but I couldn\'t generate a response. Please try again.';
-
-    console.log('✅ AI response generated successfully');
+    console.log('✅ Enhanced AI response generated successfully');
 
     return NextResponse.json({
       success: true,
-      response: response,
+      response: askAIResponse.answer,
+      confidence: askAIResponse.confidence,
+      sources: askAIResponse.sources,
       contextType,
       building_id,
-      timestamp: new Date().toISOString()
+      databaseRecordsSearched: askAIResponse.databaseRecordsSearched,
+      timestamp: new Date().toISOString(),
+      metadata: askAIResponse.metadata
     });
 
   } catch (error) {
@@ -112,4 +84,240 @@ export async function OPTIONS() {
       'Access-Control-Allow-Credentials': 'true',
     },
   });
+}
+
+/**
+ * BUILD ENHANCED PROMPT WITH EMAIL CONTEXT
+ */
+function buildEnhancedPrompt(prompt: string, emailContext: any, building_id?: string): string {
+  let enhancedPrompt = prompt;
+  
+  // Add email context if available
+  if (emailContext) {
+    enhancedPrompt += `\n\n[Email Context]
+Subject: ${emailContext.subject}
+From: ${emailContext.from}
+To: ${emailContext.to}
+Body: ${emailContext.body.substring(0, 1000)}...
+[End Email Context]`;
+  }
+  
+  // Add building context if available
+  if (building_id) {
+    enhancedPrompt += `\n\n[Building ID: ${building_id}]`;
+  }
+  
+  // Add add-in specific context
+  enhancedPrompt += `\n\n[Context: This query is from BlocIQ Outlook Add-in. Provide professional property management responses.]`;
+  
+  return enhancedPrompt;
+}
+
+/**
+ * CALL ENHANCED ASK BLOCIQ SYSTEM WITH FULL CAPABILITIES
+ */
+async function callEnhancedAskBlocIQ(prompt: string, supabase: any, userId: string) {
+  try {
+    console.log('🔍 Enhanced Ask BlocIQ processing:', prompt.substring(0, 100) + '...');
+    
+    // Import the enhanced ask AI system
+    const { processEnhancedAskBlocIQ } = await import('@/lib/ai/enhanced-ask-ai');
+    
+    // Use the full system with database access, smart matching, etc.
+    const result = await processEnhancedAskBlocIQ({
+      prompt,
+      userId,
+      supabase,
+      context: {
+        source: 'outlook_addin',
+        hasEmailContext: prompt.includes('[Email Context]'),
+        hasBuildingContext: prompt.includes('[Building ID:')
+      }
+    });
+    
+    return {
+      answer: result.response || result.answer || 'I apologize, but I couldn\'t generate a response.',
+      confidence: result.confidence || 75,
+      sources: result.sources || [],
+      databaseRecordsSearched: result.databaseRecordsSearched || 0,
+      metadata: {
+        processingTime: result.processingTime || 0,
+        aiModel: 'enhanced-blociq-system',
+        timestamp: new Date().toISOString(),
+        source: 'outlook_addin'
+      }
+    };
+    
+  } catch (error) {
+    console.error('❌ Enhanced Ask BlocIQ failed, using fallback:', error);
+    
+    // Fallback to the original Ask AI system
+    return await callFallbackAskBlocIQ(prompt, supabase, userId);
+  }
+}
+
+/**
+ * FALLBACK TO MAIN ASK AI SYSTEM
+ */
+async function callFallbackAskBlocIQ(prompt: string, supabase: any, userId: string) {
+  try {
+    console.log('🔄 Using fallback Ask AI system...');
+    
+    // Categorize the query
+    const queryType = categorizeQuery(prompt);
+    console.log(`🏷️ Query type: ${queryType}`);
+    
+    let answer = '';
+    let databaseRecordsSearched = 0;
+    let sources: string[] = [];
+    let confidence = 70;
+    
+    if (queryType === 'property') {
+      console.log('🏠 Property query - searching database...');
+      
+      // Enhanced Supabase search with smart matching
+      const searchQuery = extractSearchTerms(prompt);
+      const { data: allData, error } = await supabase
+        .from('vw_units_leaseholders')
+        .select('*')
+        .or(`unit_number.ilike.%${searchQuery}%,leaseholder_name.ilike.%${searchQuery}%,correspondence_address.ilike.%${searchQuery}%,building_name.ilike.%${searchQuery}%,property_name.ilike.%${searchQuery}%`)
+        .limit(50);
+      
+      if (!error && allData) {
+        // Use smart matching
+        const { searchWithSmartMatching } = await import('@/lib/search/smart-unit-matcher');
+        const smartResults = await searchWithSmartMatching(allData, prompt);
+        
+        databaseRecordsSearched = allData.length;
+        sources = ['vw_units_leaseholders'];
+        
+        if (smartResults.matches.length > 0) {
+          confidence = smartResults.type === 'unit_match' ? 95 : 85;
+          
+          // Format response for add-in
+          const matches = smartResults.matches.slice(0, 3); // Limit for add-in
+          answer = formatPropertyResponseForAddin(matches, prompt);
+          
+        } else {
+          // No matches - provide suggestions
+          const availableUnits = allData.map(d => d.unit_number).sort().slice(0, 10);
+          const suggestions = smartResults.suggestions;
+          
+          answer = `I couldn't find an exact match for "${prompt}" in your property database.
+
+**Available Units:** ${availableUnits.join(', ')}
+
+${suggestions.length > 0 ? `**Did you mean:** ${suggestions.join(', ')}?` : ''}
+
+**Tip:** Try searching for specific unit numbers, tenant names, or building addresses.`;
+          confidence = 60;
+        }
+      } else {
+        answer = 'I apologize, but I couldn\'t access the property database right now. Please try again.';
+        confidence = 20;
+      }
+      
+    } else {
+      // General or legal queries - use OpenAI with enhanced context
+      const openai = getOpenAIClient();
+      
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4-turbo-preview',
+        messages: [{
+          role: 'system',
+          content: `You are BlocIQ Assistant, an AI property management expert. Provide professional, helpful responses for property managers and landlords. Focus on UK property law and best practices.`
+        }, {
+          role: 'user',
+          content: prompt
+        }],
+        max_tokens: 800,
+        temperature: 0.3,
+      });
+
+      answer = completion.choices[0]?.message?.content || 'I apologize, but I couldn\'t generate a response.';
+      confidence = 80;
+    }
+    
+    return {
+      answer,
+      confidence,
+      sources,
+      databaseRecordsSearched,
+      metadata: {
+        processingTime: 0,
+        aiModel: 'fallback-system',
+        timestamp: new Date().toISOString(),
+        source: 'outlook_addin_fallback'
+      }
+    };
+    
+  } catch (error) {
+    console.error('❌ Fallback Ask BlocIQ failed:', error);
+    
+    return {
+      answer: 'I apologize, but I\'m experiencing technical difficulties. Please try again or check the main BlocIQ dashboard.',
+      confidence: 10,
+      sources: [],
+      databaseRecordsSearched: 0,
+      metadata: {
+        processingTime: 0,
+        aiModel: 'error-fallback',
+        timestamp: new Date().toISOString(),
+        source: 'outlook_addin_error'
+      }
+    };
+  }
+}
+
+/**
+ * HELPER FUNCTIONS
+ */
+function categorizeQuery(query: string): 'property' | 'legal' | 'general' {
+  const lower = query.toLowerCase();
+  
+  if (lower.includes('section 20') || lower.includes('section 21') || lower.includes('legal') || 
+      lower.includes('compliance') || lower.includes('regulation')) {
+    return 'legal';
+  }
+  
+  if (lower.includes('leaseholder') || lower.includes('tenant') || lower.includes('property') ||
+      lower.includes('house') || lower.includes('unit') || lower.includes('flat') ||
+      lower.includes('apartment') || /\b\d+\b/.test(lower)) {
+    return 'property';
+  }
+  
+  return 'general';
+}
+
+function extractSearchTerms(query: string): string {
+  const stopWords = ['the', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'];
+  const words = query.toLowerCase().split(/\s+/).filter(word => 
+    word.length > 1 && !stopWords.includes(word)
+  );
+  
+  const numbers = query.match(/\d+/g);
+  if (numbers) return numbers[0];
+  
+  return words[0] || query;
+}
+
+function formatPropertyResponseForAddin(matches: any[], query: string): string {
+  if (matches.length === 0) return 'No matching properties found.';
+  
+  let response = `## 🏠 Found ${matches.length} matching propert${matches.length === 1 ? 'y' : 'ies'}:\n\n`;
+  
+  matches.forEach((match, index) => {
+    response += `**${match.unit_number}**\n`;
+    response += `• **Leaseholder:** ${match.leaseholder_name}\n`;
+    response += `• **Email:** ${match.leaseholder_email}\n`;
+    response += `• **Phone:** ${match.leaseholder_phone}\n`;
+    if (match.is_director) {
+      response += `• **Role:** ${match.director_role || 'Director'}\n`;
+    }
+    response += `• **Address:** ${match.correspondence_address}\n`;
+    
+    if (index < matches.length - 1) response += '\n';
+  });
+  
+  return response;
 }
