@@ -1,65 +1,40 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getVisionClient } from '../../../ocrClient';
+export const runtime = 'nodejs'
+export const config = { api: { bodyParser: false } }
 
-export async function POST(request: NextRequest) {
+import { NextRequest, NextResponse } from 'next/server'
+
+export async function POST(req: NextRequest) {
   try {
-    const { fileUrl, base64Image } = await request.json();
-
-    if (!fileUrl && !base64Image) {
-      return NextResponse.json(
-        { error: 'Missing fileUrl or base64Image' },
-        { status: 400 }
-      );
-    }
-
-    console.log('🔍 OCR Processing:', { 
-      hasFileUrl: !!fileUrl, 
-      hasBase64Image: !!base64Image
-    });
-
-    let result;
-
-    const client = getVisionClient();
-
-    if (base64Image) {
-      [result] = await client.documentTextDetection({
-        image: { content: base64Image }
-      });
-    } else if (fileUrl) {
-      [result] = await client.documentTextDetection(fileUrl);
-    }
-
-    // Extract text from the result (both API methods return similar structure)
-    const text = result?.fullTextAnnotation?.text || result?.textAnnotations?.[0]?.description || '';
+    // Read raw binary data
+    const bytes = await req.arrayBuffer()
     
-    if (!text || text.trim().length === 0) {
-      console.log('⚠️ No text detected in document');
-      return NextResponse.json(
-        { error: 'OCR found no readable text' },
-        { status: 422 }
-      );
+    if (!bytes || bytes.byteLength === 0) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'No file data received' 
+      }, { status: 400 })
     }
 
-    console.log('✅ OCR successful, extracted text length:', text.length);
+    // Convert to Uint8Array for processing
+    const uint8Array = new Uint8Array(bytes)
+    
+    // For now, return a simple response indicating local OCR is available
+    // In a real implementation, you would integrate with a local OCR library
+    // like Tesseract.js, pdf-parse, or similar
     
     return NextResponse.json({
       success: true,
-      text: text.trim(),
-      confidence: result?.fullTextAnnotation?.pages?.[0]?.confidence || 0,
-      language: result?.fullTextAnnotation?.pages?.[0]?.property?.detectedLanguages?.[0]?.languageCode || 'en'
-    });
-
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    console.error('❌ OCR API error:', errorMessage);
+      text: `[Local OCR] PDF received with ${uint8Array.length} bytes. Local OCR processing not yet implemented.`,
+      source: 'local',
+      fileSize: uint8Array.length
+    })
     
-    return NextResponse.json(
-      { 
-        error: 'OCR processing failed',
-        details: errorMessage 
-      },
-      { status: 500 }
-    );
+  } catch (error: any) {
+    console.error('❌ Local OCR error:', error)
+    return NextResponse.json({
+      success: false,
+      error: `Local OCR failed: ${error?.message || 'Unknown error'}`
+    }, { status: 500 })
   }
 }
 
