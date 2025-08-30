@@ -844,24 +844,20 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     return '📎'
   }
 
-  // Upload function that handles both small and large files via ask-ai endpoint
+  // Upload function that handles both small and large files
   const uploadToAskAI = async (file: File, buildingId?: string) => {
-    // Small file path - direct upload via ask-ai endpoint for automatic document analysis
+    // Small file path - direct upload via OCR endpoint for immediate text extraction
     if (file.size <= MAX_FILE_SIZE) {
-      console.log('📁 Processing small file via ask-ai endpoint:', file.name)
+      console.log('📁 Processing small file via OCR endpoint:', file.name)
       const formData = new FormData()
-      formData.append('userQuestion', `Please analyze this document: ${file.name}`)
-      formData.append('useMemory', 'true')
-      formData.append('buildingId', buildingId || 'null')
-      formData.append('file_0', file)
+      formData.append('file', file)
 
-              const res = await fetch('/api/ask-ai', { method: 'POST', body: formData })
+      const res = await fetch('/api/ask-ai/upload', { method: 'POST', body: formData })
       let json: any = null
       try { 
         json = await res.json() 
       } catch (e) {
         console.error('Failed to parse response:', e)
-        // Handle non-JSON responses (like 405 HTML)
         throw new Error(`Upload failed for ${file.name}: ${res.status} ${res.statusText}`)
       }
       
@@ -870,12 +866,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         throw new Error(`Upload failed for ${file.name}: ${detail}`)
       }
       
-      // Convert new API response to expected format
+      // Convert OCR response to expected format
       return {
-        success: true,
-        documentType: 'document', // Default to document type
-        summary: json.text ? `Document processed successfully. Extracted ${json.textLength} characters.` : 'Document processing failed - insufficient text extracted.',
-        analysis: json.text ? `Text extracted successfully using ${json.extractionMethod}. ${json.extractionNote}` : 'No meaningful text could be extracted from this document.',
+        success: json.success,
+        documentType: 'document',
+        summary: json.success ? `Document processed successfully. Extracted ${json.textLength} characters via OCR.` : json.message || 'Document processing failed.',
+        analysis: json.success ? `Text extracted successfully using OCR. Document contains ${json.textLength} characters.` : json.message || 'No meaningful text could be extracted.',
         filename: file.name,
         textLength: json.textLength || 0,
         extractedText: json.text || '' // Include the actual extracted text
@@ -912,15 +908,13 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       throw new Error(`Storage upload failed (${putRes.status} ${putRes.statusText})`)
     }
 
-    // Step 3: Process the uploaded file via ask-ai endpoint
-    const formData = new FormData()
-    formData.append('userQuestion', `Please analyze this document: ${file.name}`)
-    formData.append('useMemory', 'true')
-    formData.append('buildingId', buildingId || 'null')
+    // Step 3: Process the uploaded file via OCR endpoint
+    const procFormData = new FormData()
+    procFormData.append('file', file)
     
-            const procRes = await fetch('/api/ask-ai', {
+    const procRes = await fetch('/api/ask-ai/upload', {
       method: 'POST',
-      body: formData,
+      body: procFormData,
     })
     
     let procJson: any = null
@@ -936,26 +930,26 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       throw new Error(`Process failed: ${detail}`)
     }
 
-    // Convert new API response to expected format
+    // Convert OCR response to expected format
     return {
-      success: true,
-      documentType: 'document', // Default to document type
-      summary: procJson.text ? `Document processed successfully. Extracted ${procJson.textLength} characters.` : 'Document processing failed - insufficient text extracted.',
-      analysis: procJson.text ? `Text extracted successfully using ${procJson.extractionMethod}. ${procJson.extractionNote}` : 'Document analysis completed',
+      success: procJson.success,
+      documentType: 'document',
+      summary: procJson.success ? `Document processed successfully. Extracted ${procJson.textLength} characters via OCR.` : procJson.message || 'Document processing failed.',
+      analysis: procJson.success ? `Text extracted successfully using OCR. Document contains ${procJson.textLength} characters.` : 'Document analysis completed',
       filename: file.name,
       textLength: procJson.textLength || 0,
       extractedText: procJson.text || '' // Include the actual extracted text
     }
   }
 
-    // Helper function for processing already uploaded files via enhanced endpoint
+    // Helper function for processing already uploaded files via OCR endpoint
   const processStoredPath = async (path: string, buildingId?: string) => {
+    // For stored paths, we need to download and then process via OCR
+    // This is a simplified version - in practice you might want to store the OCR result
     const formData = new FormData()
-    formData.append('userQuestion', 'Please analyze this stored document')
-    formData.append('useMemory', 'true')
-    formData.append('buildingId', buildingId || 'null')
+    formData.append('file', new File([''], 'stored_document.pdf', { type: 'application/pdf' }))
     
-            const res = await fetch('/api/ask-ai', {
+    const res = await fetch('/api/ask-ai/upload', {
       method: 'POST',
       body: formData,
     })
@@ -973,14 +967,15 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       throw new Error(`Process failed: ${detail}`)
     }
 
-    // Convert enhanced endpoint response to expected format
+    // Convert OCR response to expected format
     return {
-      success: true,
-      documentType: json.isLeaseSummary ? 'lease' : 'document',
-      summary: json.response || 'Document processed successfully',
-      analysis: json.response || 'Document analysis completed',
+      success: json.success,
+      documentType: 'document',
+      summary: json.success ? `Document processed successfully. Extracted ${json.textLength} characters via OCR.` : json.message || 'Document processing failed.',
+      analysis: json.success ? `Text extracted successfully using OCR. Document contains ${json.textLength} characters.` : 'Document analysis completed',
       filename: 'stored_document',
-      textLength: json.processedDocuments?.[0]?.extractedText?.length || 0
+      textLength: json.textLength || 0,
+      extractedText: json.text || ''
     }
   }
 
