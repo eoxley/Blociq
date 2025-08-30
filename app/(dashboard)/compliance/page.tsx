@@ -21,6 +21,9 @@ import {
   Sparkles
 } from 'lucide-react'
 import AssetManagementModal from '@/components/compliance/AssetManagementModal'
+import { BlocIQButton } from '@/components/ui/blociq-button'
+import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
+import { BlocIQBadge } from '@/components/ui/blociq-badge'
 
 // Types
 interface ComplianceAsset {
@@ -391,12 +394,12 @@ export default function CompliancePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f8fafc] via-white to-[#f1f5f9]">
       {/* Hero Banner with Master Brand Kit */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#14b8a6] via-[#3b82f6] to-[#8b5cf6] py-24 mx-6 mt-6 rounded-3xl shadow-2xl">
+      <section className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800 py-24 mx-6 mt-6 rounded-3xl shadow-2xl">
         {/* Animated Background Elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-20 right-20 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-20 left-20 w-80 h-80 bg-[#14b8a6]/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[#8b5cf6]/5 rounded-full blur-2xl animate-pulse" style={{animationDelay: '2s'}}></div>
+          <div className="absolute bottom-20 left-20 w-80 h-80 bg-blue-400/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-purple-400/5 rounded-full blur-2xl animate-pulse" style={{animationDelay: '2s'}}></div>
           
           {/* Floating Icons */}
           <div className="absolute top-32 left-32 w-8 h-8 text-white/20 animate-bounce" style={{animationDelay: '0.5s'}}>
@@ -478,7 +481,7 @@ export default function CompliancePage() {
             
             {/* Enhanced Hero Actions */}
             <div className="flex flex-col sm:flex-row gap-6 justify-center">
-              <button
+              <BlocIQButton
                 onClick={() => {
                   if (buildings.length > 0) {
                     router.push(`/buildings/${buildings[0].id}/compliance`);
@@ -486,22 +489,25 @@ export default function CompliancePage() {
                     router.push('/buildings');
                   }
                 }}
-                className="group bg-white/20 backdrop-blur-lg hover:bg-white/30 text-white px-10 py-5 rounded-2xl font-bold shadow-2xl hover:shadow-3xl transition-all duration-300 border border-white/40 hover:border-white/60 transform hover:scale-105 hover:-translate-y-1"
+                size="lg"
+                className="group bg-white/20 backdrop-blur-lg hover:bg-white/30 text-white border-white/40 hover:border-white/60 transform hover:scale-105 hover:-translate-y-1 shadow-2xl hover:shadow-3xl"
               >
                 <div className="flex items-center justify-center gap-3">
                   <Shield className="h-6 w-6 group-hover:animate-pulse" />
                   <span className="text-lg">Setup Compliance</span>
                 </div>
-              </button>
-              <button 
+              </BlocIQButton>
+              <BlocIQButton 
                 onClick={fetchComplianceData}
-                className="group bg-white/20 backdrop-blur-lg hover:bg-white/30 text-white px-10 py-5 rounded-2xl font-bold shadow-2xl hover:shadow-3xl transition-all duration-300 border border-white/40 hover:border-white/60 transform hover:scale-105 hover:-translate-y-1"
+                variant="secondary"
+                size="lg"
+                className="group bg-white/20 backdrop-blur-lg hover:bg-white/30 text-white border-white/40 hover:border-white/60 transform hover:scale-105 hover:-translate-y-1 shadow-2xl hover:shadow-3xl"
               >
                 <div className="flex items-center justify-center gap-3">
                   <RefreshCw className="h-6 w-6 group-hover:animate-spin" />
                   <span className="text-lg">Refresh Data</span>
                 </div>
-              </button>
+              </BlocIQButton>
             </div>
           </div>
         </div>
@@ -509,163 +515,15 @@ export default function CompliancePage() {
 
       {/* Main Content Section */}
       <div className="max-w-7xl mx-auto px-6 py-16">
-        {/* AI Compliance Assistant Section - Complete Redesign */}
-        <div className="relative bg-white rounded-3xl shadow-2xl border-0 overflow-hidden mb-12">
-          {/* Background Pattern */}
-          <div className="absolute inset-0 opacity-5">
-            <svg className="w-full h-full" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-                  <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#14b8a6" strokeWidth="0.5"/>
-                </pattern>
-              </defs>
-              <rect width="100" height="100" fill="url(#grid)" />
-            </svg>
-          </div>
-          
-          {/* AI Section Header */}
-          <div className="relative bg-gradient-to-br from-[#14b8a6]/10 via-[#3b82f6]/5 to-[#8b5cf6]/10 p-10">
-            <div className="text-center mb-10">
-              {/* Animated AI Icon */}
-              <div className="relative w-20 h-20 mx-auto mb-8">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#14b8a6] to-[#8b5cf6] rounded-3xl shadow-2xl animate-pulse"></div>
-                <div className="relative w-full h-full bg-gradient-to-br from-[#14b8a6] via-[#3b82f6] to-[#8b5cf6] rounded-3xl flex items-center justify-center shadow-xl">
-                  <Sparkles className="h-10 w-10 text-white animate-pulse" />
-                </div>
-                {/* Orbiting elements */}
-                <div className="absolute -top-2 -right-2 w-4 h-4 bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] rounded-full animate-bounce shadow-lg" style={{animationDelay: '0s'}}></div>
-                <div className="absolute -bottom-2 -left-2 w-3 h-3 bg-gradient-to-r from-[#3b82f6] to-[#8b5cf6] rounded-full animate-bounce shadow-lg" style={{animationDelay: '1s'}}></div>
-                <div className="absolute top-1/2 -right-3 w-2 h-2 bg-gradient-to-r from-[#8b5cf6] to-[#14b8a6] rounded-full animate-bounce shadow-lg" style={{animationDelay: '0.5s'}}></div>
-              </div>
-              
-              <h2 className="text-4xl font-black bg-gradient-to-r from-[#14b8a6] via-[#3b82f6] to-[#8b5cf6] bg-clip-text text-transparent mb-4">
-                BlocIQ AI Assistant
-              </h2>
-              <p className="text-xl text-gray-700 max-w-3xl mx-auto font-medium leading-relaxed">
-                Your intelligent compliance partner, powered by advanced AI to provide instant insights, predictive analysis, and automated guidance for your property portfolio.
-              </p>
-            </div>
-            
-            {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-              <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-white/80 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] rounded-xl flex items-center justify-center shadow-lg">
-                    <Shield className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-gray-900">24/7</p>
-                    <p className="text-sm text-gray-600 font-medium">AI Monitoring</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-white/80 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gradient-to-r from-[#3b82f6] to-[#8b5cf6] rounded-xl flex items-center justify-center shadow-lg">
-                    <TrendingUp className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-gray-900">99%</p>
-                    <p className="text-sm text-gray-600 font-medium">Accuracy Rate</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-white/80 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gradient-to-r from-[#8b5cf6] to-[#14b8a6] rounded-xl flex items-center justify-center shadow-lg">
-                    <AlertTriangle className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-gray-900">Instant</p>
-                    <p className="text-sm text-gray-600 font-medium">Risk Alerts</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* AI Content */}
-          <div className="relative p-10">
-            <div className="grid grid-cols-1 xl:grid-cols-5 gap-10">
-              {/* AI Features - Enhanced */}
-              <div className="xl:col-span-2 space-y-8">
-                <div className="text-center xl:text-left">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] rounded-lg flex items-center justify-center">
-                      <Shield className="h-4 w-4 text-white" />
-                    </div>
-                    AI-Powered Capabilities
-                  </h3>
-                </div>
-                
-                <div className="space-y-6">
-                  <div className="group relative bg-gradient-to-br from-[#14b8a6]/5 via-white to-[#3b82f6]/5 p-6 rounded-3xl border-2 border-[#14b8a6]/20 hover:border-[#14b8a6]/40 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl">
-                    <div className="flex items-start gap-5">
-                      <div className="w-14 h-14 bg-gradient-to-br from-[#14b8a6] to-[#3b82f6] rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:shadow-xl transition-all duration-300">
-                        <Shield className="h-7 w-7 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="text-lg font-bold text-gray-900 mb-2">Real-Time Monitoring</h4>
-                        <p className="text-gray-600 leading-relaxed">Continuous AI surveillance of compliance status, automatically tracking deadlines and regulatory changes across your portfolio.</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="group relative bg-gradient-to-br from-[#3b82f6]/5 via-white to-[#8b5cf6]/5 p-6 rounded-3xl border-2 border-[#3b82f6]/20 hover:border-[#3b82f6]/40 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl">
-                    <div className="flex items-start gap-5">
-                      <div className="w-14 h-14 bg-gradient-to-br from-[#3b82f6] to-[#8b5cf6] rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:shadow-xl transition-all duration-300">
-                        <AlertTriangle className="h-7 w-7 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="text-lg font-bold text-gray-900 mb-2">Predictive Risk Analysis</h4>
-                        <p className="text-gray-600 leading-relaxed">Advanced machine learning algorithms identify potential compliance risks before they become issues, keeping you ahead of problems.</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="group relative bg-gradient-to-br from-[#8b5cf6]/5 via-white to-[#14b8a6]/5 p-6 rounded-3xl border-2 border-[#8b5cf6]/20 hover:border-[#8b5cf6]/40 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl">
-                    <div className="flex items-start gap-5">
-                      <div className="w-14 h-14 bg-gradient-to-br from-[#8b5cf6] to-[#14b8a6] rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:shadow-xl transition-all duration-300">
-                        <TrendingUp className="h-7 w-7 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="text-lg font-bold text-gray-900 mb-2">Intelligent Analytics</h4>
-                        <p className="text-gray-600 leading-relaxed">Data-driven insights with comprehensive reporting, trend analysis, and performance optimization recommendations.</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* AI Chat Interface - Redesigned */}
-              <div className="xl:col-span-3 space-y-8">
-                <div className="text-center xl:text-left">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gradient-to-r from-[#3b82f6] to-[#8b5cf6] rounded-lg flex items-center justify-center">
-                      <Sparkles className="h-4 w-4 text-white" />
-                    </div>
-                    Interactive AI Chat
-                  </h3>
-                </div>
-                
-
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Enhanced Compliance Summary with Master Brand Kit */}
-        <div className="relative bg-white rounded-3xl shadow-2xl border-0 overflow-hidden mb-12">
-          {/* Decorative Background */}
-          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-[#14b8a6]/5 to-[#8b5cf6]/5 rounded-full blur-3xl transform translate-x-32 -translate-y-32"></div>
-          
-          <div className="relative p-10">
-            <div className="text-center mb-10">
+        {/* Compliance Overview Section */}
+        <BlocIQCard variant="elevated" className="mb-12">
+          <BlocIQCardHeader>
+            <div className="text-center">
               <div className="flex items-center justify-center gap-4 mb-6">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#14b8a6] to-[#8b5cf6] rounded-2xl flex items-center justify-center shadow-xl">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-xl">
                   <TrendingUp className="h-6 w-6 text-white" />
                 </div>
-                <h2 className="text-3xl font-black bg-gradient-to-r from-[#14b8a6] via-[#3b82f6] to-[#8b5cf6] bg-clip-text text-transparent">
+                <h2 className="text-3xl font-black bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 bg-clip-text text-transparent">
                   Portfolio Compliance Overview
                 </h2>
               </div>
@@ -673,7 +531,9 @@ export default function CompliancePage() {
                 Real-time monitoring and comprehensive status tracking across your entire property portfolio
               </p>
             </div>
-            
+          </BlocIQCardHeader>
+          
+          <BlocIQCardContent>
             {/* Enhanced Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
               <div className="group relative bg-gradient-to-br from-emerald-50 via-white to-green-50 border-2 border-emerald-200/60 rounded-3xl p-8 hover:shadow-2xl transition-all duration-500 hover:scale-105 hover:-translate-y-2">
@@ -729,78 +589,30 @@ export default function CompliancePage() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-slate-600 mb-2 uppercase tracking-wider">Pending Setup</p>
+                  <p className="text-sm font-bold text-slate-600 mb-2 uppercase tracking-wider">Not Applied</p>
                   <p className="text-4xl font-black text-slate-700 mb-2">{summary.not_applied_count}</p>
-                  <p className="text-xs text-slate-600/80 font-medium">Awaiting configuration</p>
+                  <p className="text-xs text-slate-600/80 font-medium">Need setup</p>
                 </div>
                 <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-slate-500 to-gray-500 rounded-b-3xl"></div>
               </div>
             </div>
-            
-            {/* Enhanced Compliance Rate Section */}
-            <div className="relative bg-gradient-to-br from-[#14b8a6]/5 via-white to-[#8b5cf6]/5 rounded-3xl p-8 border-2 border-[#14b8a6]/20">
-              <div className="text-center mb-8">
-                <div className="flex items-center justify-center gap-4 mb-4">
-                  <div className="w-14 h-14 bg-gradient-to-br from-[#14b8a6] via-[#3b82f6] to-[#8b5cf6] rounded-2xl flex items-center justify-center shadow-xl">
-                    <Shield className="h-7 w-7 text-white" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-900">Portfolio Compliance Rate</h3>
-                </div>
-              </div>
-              
-              <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
-                <div className="flex-1 max-w-2xl">
-                  {/* Enhanced Progress Bar */}
-                  <div className="relative">
-                    <div className="w-full bg-gray-200 rounded-2xl h-8 shadow-inner">
-                      <div 
-                        className="bg-gradient-to-r from-[#14b8a6] via-[#3b82f6] to-[#8b5cf6] h-8 rounded-2xl shadow-2xl transition-all duration-1000 ease-out flex items-center justify-end pr-4"
-                        style={{ width: `${summary.compliance_percentage}%` }}
-                      >
-                        <div className="w-6 h-6 bg-white rounded-full shadow-lg flex items-center justify-center">
-                          <div className="w-2 h-2 bg-gradient-to-r from-[#14b8a6] to-[#8b5cf6] rounded-full animate-pulse"></div>
-                        </div>
-                      </div>
-                    </div>
-                    {/* Percentage Labels */}
-                    <div className="flex justify-between text-xs text-gray-500 mt-2">
-                      <span>0%</span>
-                      <span>25%</span>
-                      <span>50%</span>
-                      <span>75%</span>
-                      <span>100%</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="text-center lg:text-right">
-                  <p className="text-5xl font-black bg-gradient-to-r from-[#14b8a6] via-[#3b82f6] to-[#8b5cf6] bg-clip-text text-transparent mb-2">
-                    {summary.compliance_percentage}%
-                  </p>
-                  <p className="text-gray-600 font-semibold">Overall Success Rate</p>
-                  <div className="flex items-center justify-center lg:justify-end gap-2 mt-2">
-                    {summary.compliance_percentage >= 90 ? (
-                      <><CheckCircle className="h-4 w-4 text-emerald-500" /><span className="text-sm text-emerald-600 font-semibold">Excellent</span></>
-                    ) : summary.compliance_percentage >= 70 ? (
-                      <><Clock className="h-4 w-4 text-amber-500" /><span className="text-sm text-amber-600 font-semibold">Good</span></>
-                    ) : (
-                      <><AlertTriangle className="h-4 w-4 text-red-500" /><span className="text-sm text-red-600 font-semibold">Needs Attention</span></>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+          </BlocIQCardContent>
+        </BlocIQCard>
+
+
+
 
         {/* Filters */}
-        <div className="bg-white rounded-3xl shadow-2xl border-0 overflow-hidden p-8 mb-12">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">Filter & Search</h2>
-            <p className="text-gray-600">Find specific compliance information across your portfolio</p>
-          </div>
+        <BlocIQCard variant="elevated" className="mb-12">
+          <BlocIQCardHeader>
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">Filter & Search</h2>
+              <p className="text-gray-600">Find specific compliance information across your portfolio</p>
+            </div>
+          </BlocIQCardHeader>
           
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <BlocIQCardContent>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             <div className="lg:col-span-2">
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -839,16 +651,20 @@ export default function CompliancePage() {
               <option value="not_applied">Not Applied</option>
             </select>
           </div>
-        </div>
+          </BlocIQCardContent>
+        </BlocIQCard>
 
         {/* Buildings Grid */}
-        <div className="mb-12">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">Building Compliance Overview</h2>
-            <p className="text-gray-600">Monitor compliance status across your property portfolio</p>
-          </div>
+        <BlocIQCard variant="elevated" className="mb-12">
+          <BlocIQCardHeader>
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">Building Compliance Overview</h2>
+              <p className="text-gray-600">Monitor compliance status across your property portfolio</p>
+            </div>
+          </BlocIQCardHeader>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+                      <BlocIQCardContent>
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
             {filteredBuildings.map(building => (
               <div key={building.id} className="bg-white rounded-3xl shadow-2xl border-0 overflow-hidden hover:shadow-3xl transition-all duration-300 transform hover:-translate-y-2">
                 <div className="p-8">
@@ -921,17 +737,18 @@ export default function CompliancePage() {
                 </div>
               </div>
             ))}
-          </div>
-        </div>
+              </div>
+            </BlocIQCardContent>
+          </BlocIQCard>
 
         {/* Compliance Assets List */}
         {filteredComplianceData.length > 0 && (
-          <div className="mt-8">
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900">All Compliance Assets</h2>
-              </div>
+          <BlocIQCard variant="elevated" className="mt-8">
+            <BlocIQCardHeader>
+              <h2 className="text-lg font-semibold text-gray-900">All Compliance Assets</h2>
+            </BlocIQCardHeader>
               
+                          <BlocIQCardContent>
               <div className="divide-y divide-gray-100">
                 {filteredComplianceData.map(item => (
                   <div key={item.id} className="p-6 hover:bg-gray-50 transition-colors">
@@ -996,8 +813,8 @@ export default function CompliancePage() {
                   </div>
                 ))}
               </div>
-            </div>
-          </div>
+            </BlocIQCardContent>
+          </BlocIQCard>
         )}
 
         {/* Empty State */}
