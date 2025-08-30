@@ -19,6 +19,10 @@ export async function POST(req: Request) {
     }
 
     console.log(`🔍 Processing upload: ${file.name} (${file.type}, ${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+    console.log('🔍 Environment check:');
+    console.log('  GOOGLE_VISION_API_KEY:', !!process.env.GOOGLE_VISION_API_KEY ? '✅ Set' : '❌ Missing');
+    console.log('  OCR_SERVICE_URL:', !!process.env.OCR_SERVICE_URL ? '✅ Set' : '❌ Missing');
+    console.log('  OCR_TOKEN:', !!process.env.OCR_TOKEN ? '✅ Set' : '❌ Missing');
 
     // Process ALL files through our comprehensive OCR service
     // This handles text files, images, PDFs, etc. with appropriate fallbacks
