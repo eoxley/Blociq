@@ -36,17 +36,25 @@ class TextExtractionService {
   }
 
   async extractText(buffer: Buffer, fileName: string = 'document'): Promise<string> {
+    console.log('=== TEXT EXTRACTION DEBUG START ===');
+    console.log('🔍 extractText called with:', fileName, 'buffer size:', buffer.length);
+    
     const fileInfo = this.analyzeFile(buffer, fileName);
+    console.log('📋 File analysis:', fileInfo);
     
     if (!fileInfo.isSupported) {
+      console.log('❌ File type not supported:', fileInfo.mimeType);
       throw new Error(`Unsupported file type: ${fileInfo.mimeType}`);
     }
 
     try {
       let text = '';
 
+      console.log(`🔧 Processing ${fileInfo.category} file...`);
+
       switch (fileInfo.category) {
         case 'pdf':
+          console.log('📄 Attempting PDF extraction...');
           text = await this.extractFromPDF(buffer);
           break;
         case 'word':
@@ -65,16 +73,33 @@ class TextExtractionService {
           throw new Error(`No extractor for category: ${fileInfo.category}`);
       }
 
+      console.log('📊 Primary extraction result:', {
+        textLength: text?.length || 0,
+        hasText: !!text,
+        isValid: this.isValidText(text),
+        preview: text ? `"${text.substring(0, 100)}..."` : 'NO TEXT'
+      });
+
       if (this.isValidText(text)) {
-        return this.postProcessText(text);
+        const processedText = this.postProcessText(text);
+        console.log('✅ Text extraction successful, final length:', processedText.length);
+        console.log('=== TEXT EXTRACTION DEBUG END (SUCCESS) ===');
+        return processedText;
       }
 
+      console.log('⚠️ Primary extraction invalid, trying fallback methods...');
       // Try fallback methods
-      return await this.tryFallbackExtraction(buffer, fileName);
+      const fallbackResult = await this.tryFallbackExtraction(buffer, fileName);
+      console.log('📊 Fallback result length:', fallbackResult?.length || 0);
+      console.log('=== TEXT EXTRACTION DEBUG END (FALLBACK) ===');
+      return fallbackResult;
 
     } catch (error) {
-      console.warn(`Primary extraction failed for ${fileName}:`, error);
-      return await this.tryFallbackExtraction(buffer, fileName);
+      console.error(`❌ Primary extraction failed for ${fileName}:`, error);
+      const fallbackResult = await this.tryFallbackExtraction(buffer, fileName);
+      console.log('📊 Error fallback result length:', fallbackResult?.length || 0);
+      console.log('=== TEXT EXTRACTION DEBUG END (ERROR FALLBACK) ===');
+      return fallbackResult;
     }
   }
 
@@ -381,23 +406,34 @@ class TextExtractionService {
 
 // Main export function
 export async function extractText(buf: Uint8Array, name?: string): Promise<ExtractionResult> {
+  console.log('=== MAIN EXTRACT TEXT EXPORT START ===');
+  console.log('📁 extractText called with buffer size:', buf?.length || 0, 'name:', name || 'document');
+  
   const buffer = Buffer.from(buf);
   const fileName = name || 'document';
   
+  console.log('📊 Buffer converted, size:', buffer.length);
+  
   if (!buffer || buffer.length === 0) {
+    console.log('❌ Empty buffer provided');
     throw new Error('Empty buffer provided for text extraction');
   }
 
   if (buffer.length > 50 * 1024 * 1024) {
+    console.log('❌ File too large:', buffer.length);
     throw new Error('File too large for text extraction (max 50MB)');
   }
 
+  console.log('🔧 Getting TextExtractionService instance...');
   const extractor = TextExtractionService.getInstance();
   
   try {
+    console.log('🔍 Calling extractor.extractText...');
     const text = await extractor.extractText(buffer, fileName);
     
-    return {
+    console.log('📊 Extractor returned text length:', text?.length || 0);
+    
+    const result = {
       text,
       meta: {
         name: fileName,
@@ -405,14 +441,24 @@ export async function extractText(buf: Uint8Array, name?: string): Promise<Extra
         bytes: buffer.byteLength
       }
     };
+    
+    console.log('✅ Returning successful result:', {
+      textLength: result.text?.length || 0,
+      hasText: !!result.text,
+      filename: result.meta.name,
+      type: result.meta.type
+    });
+    console.log('=== MAIN EXTRACT TEXT EXPORT END (SUCCESS) ===');
+    
+    return result;
 
   } catch (error: any) {
-    console.error(`Text extraction failed for ${fileName}:`, error);
+    console.error(`❌ Text extraction failed for ${fileName}:`, error);
     
     // Last resort: provide minimal fallback response instead of complete failure
     const fallbackText = `[Text extraction failed for ${fileName}. Error: ${error.message}. File size: ${buffer.byteLength} bytes. This document requires manual processing.]`;
     
-    return {
+    const fallbackResult = {
       text: fallbackText,
       meta: {
         name: fileName,
@@ -420,6 +466,14 @@ export async function extractText(buf: Uint8Array, name?: string): Promise<Extra
         bytes: buffer.byteLength
       }
     };
+    
+    console.log('⚠️ Returning fallback result:', {
+      textLength: fallbackResult.text.length,
+      filename: fallbackResult.meta.name
+    });
+    console.log('=== MAIN EXTRACT TEXT EXPORT END (FALLBACK) ===');
+    
+    return fallbackResult;
   }
 }
 
