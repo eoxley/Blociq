@@ -149,10 +149,14 @@ async function extractTextFromPDF(file: File): Promise<string> {
     // Fallback: Try OCR if OpenAI fails
     try {
       console.log("🔄 Trying OCR fallback...")
-      const response = await fetch('/api/ocr', {
+      
+      // Convert file to FormData for external OCR service
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileUrl: file.name }) // This would need to be a public URL
+        body: formData
       })
       
       if (response.ok) {
