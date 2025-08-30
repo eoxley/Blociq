@@ -1,10 +1,10 @@
 export async function processFileWithOCR(file: File): Promise<{text: string, source: string}> {
-  console.log('🔍 OCR calling:', 'https://ocr-server-2-ykmk.onrender.com/upload');
+  console.log('Calling OCR service via proxy: /api/ocr-proxy');
   
   const formData = new FormData();
   formData.append('file', file);
   
-  const response = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
+  const response = await fetch('/api/ocr-proxy', {
     method: 'POST',
     body: formData
   });

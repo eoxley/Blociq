@@ -58,10 +58,11 @@ export default function OCRDebugPanel() {
       // Step 2: Test OCR endpoint
       addLog('🔍 Step 2: Testing OCR endpoint...');
       
+      console.log('Calling OCR service via proxy: /api/ocr-proxy');
       const formData = new FormData();
       formData.append('file', file);
       
-      const ocrResponse = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
+      const ocrResponse = await fetch('/api/ocr-proxy', {
         method: 'POST',
         body: formData
       });
@@ -166,7 +167,8 @@ export default function OCRDebugPanel() {
     try {
       // Test OCR endpoint
       addLog('📡 Testing OCR endpoint...');
-      const ocrTest = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
+      console.log('Calling OCR service via proxy: /api/ocr-proxy');
+      const ocrTest = await fetch('/api/ocr-proxy', {
         method: 'POST',
         body: new FormData() // Empty form data for health check
       });

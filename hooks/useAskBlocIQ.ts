@@ -343,11 +343,12 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
             if (isPublic) {
               // Public mode: Use external OCR service
               console.log('🔒 Public mode: Using external OCR service');
+              console.log('Calling OCR service via proxy: /api/ocr-proxy');
               
               const formData = new FormData();
               formData.append('file', uploadedFile.file);
               
-              const ocrResponse = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
+              const ocrResponse = await fetch('/api/ocr-proxy', {
                 method: 'POST',
                 body: formData,
               });
