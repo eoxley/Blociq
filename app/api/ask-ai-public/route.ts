@@ -221,7 +221,8 @@ export async function POST(req: NextRequest) {
           }
         ],
         max_tokens: 4000,
-        temperature: 0.7,
+        temperature: 0.7
+      })
     });
     
     if (!aiResponse.ok) {
