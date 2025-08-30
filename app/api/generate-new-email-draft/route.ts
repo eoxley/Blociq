@@ -11,6 +11,8 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import OpenAI from 'openai';
 
+export const runtime = "nodejs";
+
 interface GenerateNewEmailDraftRequest {
   subject: string;
   recipient?: string | null;

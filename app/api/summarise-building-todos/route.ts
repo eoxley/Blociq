@@ -11,6 +11,8 @@ import { createClient } from '@/utils/supabase/server'
 import { cookies } from 'next/headers'
 import OpenAI from 'openai'
 
+export const runtime = "nodejs";
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })

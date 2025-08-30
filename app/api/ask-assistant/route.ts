@@ -17,6 +17,8 @@ import OpenAI from 'openai';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+export const runtime = "nodejs";
+
 export async function POST(req: Request) {
   console.log("✅ BlocIQ Assistant endpoint hit");
 

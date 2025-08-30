@@ -18,6 +18,18 @@ import { insertAiLog } from '../../../lib/supabase/ai_logs';
 
 export const runtime = "nodejs";
 
+// Pinned FAQs for common UK property management questions
+const FAQS = [
+  { 
+    test: /(what\s+is\s+)?section\s*20\b/i,
+    answer: "Section 20 is the statutory consultation under the Landlord and Tenant Act 1985 (as amended) for qualifying works and long-term agreements. It requires landlords to consult with leaseholders before carrying out works that will cost any one leaseholder more than £250 in a year, or entering into agreements for works or services that will cost any one leaseholder more than £100 in a year. The consultation process involves serving notices, obtaining estimates, and allowing leaseholders to make observations. Failure to comply can result in the landlord being unable to recover the full cost from leaseholders."
+  },
+  { 
+    test: /\basbestos\s+(test|survey)\b/i,
+    answer: "An asbestos 'test' typically refers to an asbestos survey. There are two main types under the Control of Asbestos Regulations 2012: Management Surveys (to identify asbestos-containing materials during normal occupation) and Refurbishment & Demolition Surveys (before any construction work). Asbestos surveys are legally required for most commercial properties and residential blocks built before 2000. The survey must be carried out by a qualified surveyor and results documented in an asbestos register. If asbestos is found, a management plan must be implemented to monitor and control the risk."
+  }
+];
+
 // Enhanced system prompts for different context types
 const SYSTEM_PROMPTS = {
   general: `You are BlocIQ, a UK property management AI assistant. You help property managers with building management, compliance, leaseholder relations, and operational tasks.`,
@@ -114,17 +126,53 @@ export async function POST(req: NextRequest) {
       isPublicAccess = true;
     }
 
-    // Handle JSON request only
-    const body = await req.json();
-    const prompt = body.message || body.prompt || body.question || '';
-    let building_id = body.building_id || body.buildingId || '';
-    const contextType = body.context_type || body.contextType || 'general';
-    const tone = body.tone || 'Professional';
-    const isPublic = body.is_public || isPublicAccess;
-    const documentIds = body.document_ids || body.documentIds || [];
-    const leaseholderId = body.leaseholder_id || body.leaseholderId || '';
-    const emailThreadId = body.email_thread_id || body.emailThreadId || '';
-    const manualContext = body.manual_context || body.manualContext || '';
+    // Handle both JSON and FormData requests
+    let body: any;
+    let prompt = '';
+    let building_id = '';
+    let contextType = 'general';
+    let tone = 'Professional';
+    let isPublic = isPublicAccess;
+    let documentIds: string[] = [];
+    let leaseholderId = '';
+    let emailThreadId = '';
+    let manualContext = '';
+    let uploadedFiles: File[] = [];
+
+    const contentType = req.headers.get('content-type') || '';
+    
+    if (contentType.includes('multipart/form-data')) {
+      // Handle FormData request
+      const formData = await req.formData();
+      prompt = formData.get('message') as string || formData.get('prompt') as string || formData.get('question') as string || formData.get('userQuestion') as string || '';
+      building_id = formData.get('building_id') as string || formData.get('buildingId') as string || '';
+      contextType = formData.get('context_type') as string || formData.get('contextType') as string || 'general';
+      tone = formData.get('tone') as string || 'Professional';
+      isPublic = formData.get('is_public') === 'true' || isPublicAccess;
+      
+      // Extract uploaded files
+      for (const [key, value] of formData.entries()) {
+        if (key.startsWith('file_') && value instanceof File) {
+          uploadedFiles.push(value);
+        } else if (key === 'file' && value instanceof File) {
+          uploadedFiles.push(value);
+        }
+      }
+      
+      console.log(`📎 Found ${uploadedFiles.length} uploaded files`);
+    } else {
+      // Handle JSON request
+      body = await req.json();
+      prompt = body.message || body.prompt || body.question || '';
+      building_id = body.building_id || body.buildingId || '';
+      contextType = body.context_type || body.contextType || 'general';
+      tone = body.tone || 'Professional';
+      isPublic = body.is_public || isPublicAccess;
+      documentIds = body.document_ids || body.documentIds || [];
+      leaseholderId = body.leaseholder_id || body.leaseholderId || '';
+      emailThreadId = body.email_thread_id || body.emailThreadId || '';
+      manualContext = body.manual_context || body.manualContext || '';
+    }
     
     // 🔍 NEW: Auto-detect building from request context
     const referer = req.headers.get('referer') || '';
@@ -154,6 +202,20 @@ export async function POST(req: NextRequest) {
         urlBuildingName = decodeURIComponent(buildingNameMatch[1]);
         console.log('🔍 URL building context:', urlBuildingName);
       }
+    }
+
+    // 🔍 Check pinned FAQs first
+    const hit = FAQS.find(f => f.test.test(prompt));
+    if (hit) {
+      console.log('✅ FAQ hit:', hit.test.source);
+      return NextResponse.json({ 
+        success: true, 
+        answer: hit.answer, 
+        confidence: 95, 
+        route: "pinned_faq",
+        result: hit.answer,
+        response: hit.answer
+      });
     }
 
     // 🔍 Smart Building Detection from Prompt
@@ -257,19 +319,19 @@ Notes: ${buildingData.notes || 'No notes'}
 
 Units and Leaseholders:
 ${units.map(unit => {
-  const leaseholder = unit.leaseholders;
+  const leaseholder = unit.leaseholders && unit.leaseholders.length > 0 ? unit.leaseholders[0] : null;
   return `- Flat ${unit.unit_number}: ${leaseholder ? `${leaseholder.name} (${leaseholder.email})` : 'No leaseholder'}`
 }).join('\n')}
 
 Access Information:
-Gate Code: ${buildingData.building_setup?.operational_notes || 'Not set'}
+Gate Code: ${buildingData.building_setup && buildingData.building_setup.length > 0 ? buildingData.building_setup[0].operational_notes : 'Not set'}
 Fire Panel Code: ${buildingData.notes || 'Not set'}
 Keys Location: Not set
 Emergency Access: Not set
 
 Contacts:
-Managing Agent: ${buildingData.building_setup?.client_contact || 'Not set'}
-Agent Email: ${buildingData.building_setup?.client_email || 'Not set'}
+Managing Agent: ${buildingData.building_setup && buildingData.building_setup.length > 0 ? buildingData.building_setup[0].client_contact : 'Not set'}
+Agent Email: ${buildingData.building_setup && buildingData.building_setup.length > 0 ? buildingData.building_setup[0].client_email : 'Not set'}
 Insurance Contact: Not set
 Cleaners: Not set
 Contractors: Not set
@@ -714,7 +776,7 @@ Phone: ${searchResults.leaseholders[0]?.phone || 'Not provided'}`;
           console.log('✅ Found document chunks:', chunks.length);
           
           const documentChunkContext = chunks.map(chunk => 
-            `📄 ${chunk.building_documents.file_name} (Chunk ${chunk.chunk_index + 1}):
+            `📄 ${chunk.building_documents && chunk.building_documents.length > 0 ? chunk.building_documents[0].file_name : 'Unknown Document'} (Chunk ${chunk.chunk_index + 1}):
 ${chunk.content.substring(0, 400)}...`
           ).join('\n\n');
           
