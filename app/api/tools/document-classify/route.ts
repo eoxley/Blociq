@@ -4,8 +4,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import { getOpenAIClient } from '@/lib/openai-client';
+import OpenAI from 'openai';
 
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 export async function POST(req: NextRequest) {
   try {
@@ -36,7 +39,6 @@ Content preview: ${content ? content.substring(0, 1000) : 'No content available'
 
 Return only the category name, nothing else.`;
 
-    const openai = getOpenAIClient();
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [{

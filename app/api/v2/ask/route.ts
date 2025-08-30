@@ -1,5 +1,6 @@
+import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth/server';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import type { Database } from '@/types/supabase'; // if you have it; else remove and type as any
 import { AI_ENABLED, OPENAI_API_KEY } from '@/lib/ai/config';
 
@@ -14,7 +15,9 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const { question = '', context = {} } = body as { question?: string; context?: any };
 
-  const { supabase, user } = await requireAuth();
+  const supabase = createRouteHandlerClient<Database>({ cookies });
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return json({ status:'forbidden', answer:'Sign in required.' }, 401);
 
   const qRaw = String(question || '').trim();
   const q = qRaw.toLowerCase();
@@ -109,7 +112,7 @@ export async function POST(req: NextRequest) {
 
   // --- DRAFT/SUMMARY (fallback) ---
   if (/(reply|respond|draft|summary|summaris)/i.test(qRaw)) {
-    const enriched = await enrichContext(supabase, user.id, context);
+    const enriched = await enrichContext(supabase, session.user.id, context);
     const prompt = buildPromptFromContext(qRaw, enriched);
     const answer = await generateDraft(prompt);
     return ok(answer, 'ok', { usedContext: true });

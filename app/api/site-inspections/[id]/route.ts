@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getOpenAIClient } from '@/lib/openai-client';
+import OpenAI from 'openai';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 
 interface RouteParams {
   params: Promise<{
@@ -112,7 +115,6 @@ Please provide a professional summary in 2-3 sentences highlighting:
 
 Format as a clear, actionable summary for property management.`;
 
-    const openai = getOpenAIClient();
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [

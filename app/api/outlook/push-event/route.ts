@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Fetch tokens
-    const { data: tokens, error: tokenError } = await supabase
+    let { data: tokens, error: tokenError } = await supabase
       .from('outlook_tokens')
       .select('*')
       .eq('user_id', session.user.id)

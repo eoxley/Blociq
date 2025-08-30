@@ -8,12 +8,16 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getOpenAIClient } from '@/lib/openai-client';
+import OpenAI from 'openai';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 
 export async function POST(req: NextRequest) {
   try {
@@ -45,7 +49,6 @@ export async function POST(req: NextRequest) {
     console.log("📋 Template loaded:", template.name);
 
     // 2. Generate embedding using OpenAI
-    const openai = getOpenAIClient();
     const embeddingResponse = await openai.embeddings.create({
       model: "text-embedding-3-small",
       input: template.content_text,
@@ -119,7 +122,6 @@ export async function GET(req: NextRequest) {
       try {
         console.log(`🧠 Generating embedding for: ${template.name}`);
 
-        const openai = getOpenAIClient();
         const embeddingResponse = await openai.embeddings.create({
           model: "text-embedding-3-small",
           input: template.content_text,

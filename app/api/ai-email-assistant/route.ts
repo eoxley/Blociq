@@ -1,24 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth/server';
-import { getOpenAIClient } from '@/lib/openai-client';
-import { EmailAIRequest, EmailAIResponse, LegacyEmailRequest } from '@/lib/ai/email/types';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
+import OpenAI from 'openai';
+
+interface AIEmailRequest {
+  action: 'draft' | 'summary' | 'analyse' | 'categorise' | 'suggest-reply' | 'extract-info';
+  emailId?: string;
+  emailContent?: {
+    subject: string;
+    body: string;
+    from: string;
+    receivedAt: string;
+  };
+  context?: {
+    buildingId?: string;
+    buildingName?: string;
+    previousEmails?: any[];
+    userRole?: string;
+  };
+  options?: {
+    tone?: 'professional' | 'friendly' | 'formal' | 'casual';
+    length?: 'brief' | 'standard' | 'detailed';
+    includeLegal?: boolean;
+    includeNextSteps?: boolean;
+  };
+}
 
 export async function POST(req: NextRequest) {
   try {
-    // Use consolidated authentication
-    const { supabase, user } = await requireAuth();
-
-    const requestBody = await req.json();
+    const supabase = createRouteHandlerClient({ cookies });
     
-    // Support both new unified format and legacy format
-    const { action, emailId, emailContent, context, options } = requestBody as EmailAIRequest | LegacyEmailRequest;
+    // Get authenticated user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { action, emailId, emailContent, context, options }: AIEmailRequest = await req.json();
 
     if (!action) {
       return NextResponse.json({ error: 'Action is required' }, { status: 400 });
     }
 
     // Initialize OpenAI
-    const openai = getOpenAIClient();
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
 
     // Build context based on action
     let systemPrompt = '';
@@ -194,38 +221,18 @@ export async function POST(req: NextRequest) {
       console.error('Failed to log AI interaction:', logError);
     }
 
-    // Create unified response format
-    const response: EmailAIResponse = {
+    return NextResponse.json({
       success: true,
       action,
-      content: result,
-      metadata: {
-        processingTime: Date.now() - Date.now(), // TODO: track actual processing time
-        timestamp: new Date().toISOString(),
-        confidence: 0.85, // Default confidence
-        userId: user.id,
-        emailId: emailId,
-        tokensUsed: completion.usage?.total_tokens,
-        model: 'gpt-4'
-      }
-    };
-
-    return NextResponse.json(response);
+      result,
+      timestamp: new Date().toISOString()
+    });
 
   } catch (error) {
     console.error('AI Email Assistant error:', error);
-    
-    const errorResponse: EmailAIResponse = {
-      success: false,
-      action: 'analyze', // fallback action
-      error: error instanceof Error ? error.message : 'Unknown error',
-      metadata: {
-        processingTime: 0,
-        timestamp: new Date().toISOString(),
-        confidence: 0
-      }
-    };
-    
-    return NextResponse.json(errorResponse, { status: 500 });
+    return NextResponse.json({
+      error: 'Failed to process AI request',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 } 

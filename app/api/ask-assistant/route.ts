@@ -11,8 +11,11 @@
 // File: app/api/ask-assistant/route.ts
 
 import { NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/auth/server';
-import { getOpenAIClient } from '@/lib/openai-client';
+import { cookies } from 'next/headers';
+import { createServerClient } from '@supabase/ssr';
+import OpenAI from 'openai';
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req: Request) {
   console.log("✅ BlocIQ Assistant endpoint hit");
@@ -54,10 +57,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No message or attachments provided' }, { status: 400 });
     }
 
-    const { supabase, user, isAuthenticated } = await getAuthenticatedUser();
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+        },
+      }
+    );
 
-    if (!isAuthenticated) {
-      console.warn("⚠️ User not authenticated");
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError) {
+      console.warn("⚠️ Supabase session error:", sessionError.message);
     }
 
     console.log("📩 User message:", message);
@@ -98,7 +117,6 @@ export async function POST(req: Request) {
 
     const aiPrompt = createComprehensivePrompt(message, comprehensiveContext, documentContext, attachments);
 
-    const openai = getOpenAIClient();
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
@@ -146,11 +164,11 @@ Provide accurate, detailed answers based on the data provided. If information is
     console.log("🧠 Assistant reply:", answer);
 
     // Log the interaction
-    if (user?.id) {
+    if (session?.user?.id) {
       await supabase
         .from('ai_logs')
         .insert({
-          user_id: user.id,
+          user_id: session.user.id,
           question: message,
           response: answer,
           timestamp: new Date().toISOString(),

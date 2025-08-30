@@ -1,354 +1,323 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
-// import pdf from 'pdf-parse'; // Using dynamic import to avoid test file issues
-import { extractLeaseClausesEnhanced, isLeaseDocument } from '@/utils/leaseExtractor';
-import { getOpenAIClient } from '@/lib/openai-client';
+import { NextRequest, NextResponse } from 'next/server'
+import OpenAI from 'openai'
 
 // Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+})
+
+interface ExtractRequest {
+  fileUrl: string
+  assetName: string
+  buildingId?: string
+}
+
+interface ExtractedData {
+  title: string
+  summary: string
+  last_renewed_date: string
+  next_due_date: string | null
+}
+
+// Asset-specific prompts for better extraction
+const getAssetSpecificPrompt = (assetName: string): string => {
+  const assetNameLower = assetName.toLowerCase()
+  
+  if (assetNameLower.includes('fire') || assetNameLower.includes('fra')) {
+    return `This is a Fire Risk Assessment document. Look for:
+- Fire safety certificate or assessment title
+- Assessment date and renewal dates
+- Fire safety measures and recommendations
+- Next assessment due date (typically 1 year from assessment)`
+  }
+  
+  if (assetNameLower.includes('gas') || assetNameLower.includes('gas safety')) {
+    return `This is a Gas Safety Certificate document. Look for:
+- Gas safety certificate title and number
+- Certificate issue date and expiry date
+- Gas engineer details and signature
+- Next inspection due date (typically 1 year from issue)`
+  }
+  
+  if (assetNameLower.includes('electrical') || assetNameLower.includes('eicr')) {
+    return `This is an Electrical Installation Condition Report (EICR). Look for:
+- EICR certificate title and reference number
+- Inspection date and next inspection due date
+- Electrical safety assessment results
+- Recommendations and remedial work required`
+  }
+  
+  if (assetNameLower.includes('asbestos')) {
+    return `This is an Asbestos Management document. Look for:
+- Asbestos survey or management plan title
+- Survey date and review date
+- Asbestos locations and conditions
+- Next review due date (typically 2 years)`
+  }
+  
+  if (assetNameLower.includes('lift') || assetNameLower.includes('elevator')) {
+    return `This is a Lift/Elevator maintenance document. Look for:
+- Lift maintenance certificate or report title
+- Maintenance date and next maintenance due
+- Lift engineer details and findings
+- Next inspection due date (typically 6 months)`
+  }
+  
+  if (assetNameLower.includes('insurance')) {
+    return `This is an Insurance document. Look for:
+- Insurance policy title and number
+- Policy start date and end date
+- Coverage details and limits
+- Renewal date and premium information`
+  }
+  
+  if (assetNameLower.includes('energy') || assetNameLower.includes('epc')) {
+    return `This is an Energy Performance Certificate (EPC). Look for:
+- EPC certificate title and reference
+- Assessment date and validity period
+- Energy rating and recommendations
+- Next assessment due date (typically 10 years)`
+  }
+  
+  return `This is a compliance document for ${assetName}. Look for:
+- Document title and reference number
+- Issue date, renewal date, or expiry date
+- Key compliance information and requirements
+- Next review or renewal due date`
+}
+
+// Date extraction helper
+const extractDates = (text: string): { last_renewed_date: string; next_due_date: string | null } => {
+  const datePatterns = [
+    // UK date formats
+    /\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/g, // DD/MM/YYYY
+    /\b(\d{1,2})-(\d{1,2})-(\d{4})\b/g,   // DD-MM-YYYY
+    /\b(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{4})\b/gi, // DD Month YYYY
+    /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{1,2}),?\s+(\d{4})\b/gi, // Month DD, YYYY
+    
+    // ISO date format
+    /\b(\d{4})-(\d{2})-(\d{2})\b/g, // YYYY-MM-DD
+  ]
+
+  const dates: Date[] = []
+  
+  datePatterns.forEach(pattern => {
+    const matches = text.matchAll(pattern)
+    for (const match of matches) {
+      try {
+        let date: Date
+        
+        if (pattern.source.includes('YYYY-MM-DD')) {
+          // ISO format
+          date = new Date(match[0])
+        } else if (pattern.source.includes('DD/MM/YYYY') || pattern.source.includes('DD-MM-YYYY')) {
+          // DD/MM/YYYY or DD-MM-YYYY
+          const [, day, month, year] = match
+          date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+        } else if (pattern.source.includes('DD.*Month.*YYYY')) {
+          // DD Month YYYY
+          const [, day, month, year] = match
+          const monthIndex = new Date(`${month} 1, 2000`).getMonth()
+          date = new Date(parseInt(year), monthIndex, parseInt(day))
+        } else {
+          // Month DD, YYYY
+          const [, month, day, year] = match
+          const monthIndex = new Date(`${month} 1, 2000`).getMonth()
+          date = new Date(parseInt(year), monthIndex, parseInt(day))
+        }
+        
+        if (!isNaN(date.getTime())) {
+          dates.push(date)
+        }
+      } catch (error) {
+        // Skip invalid dates
+      }
+    }
+  })
+
+  // Sort dates chronologically
+  dates.sort((a, b) => a.getTime() - b.getTime())
+  
+  if (dates.length === 0) {
+    return { last_renewed_date: '', next_due_date: null }
+  }
+  
+  // Use the most recent date as last_renewed_date
+  const lastRenewed = dates[dates.length - 1]
+  
+  // Try to find next due date based on asset type
+  const assetNameLower = assetName.toLowerCase()
+  let nextDue: Date | null = null
+  
+  if (assetNameLower.includes('fire') || assetNameLower.includes('fra') || 
+      assetNameLower.includes('gas') || assetNameLower.includes('insurance')) {
+    // 1 year from last renewed
+    nextDue = new Date(lastRenewed.getTime() + 365 * 24 * 60 * 60 * 1000)
+  } else if (assetNameLower.includes('electrical') || assetNameLower.includes('eicr')) {
+    // 5 years from last renewed
+    nextDue = new Date(lastRenewed.getTime() + 5 * 365 * 24 * 60 * 60 * 1000)
+  } else if (assetNameLower.includes('asbestos')) {
+    // 2 years from last renewed
+    nextDue = new Date(lastRenewed.getTime() + 2 * 365 * 24 * 60 * 60 * 1000)
+  } else if (assetNameLower.includes('lift')) {
+    // 6 months from last renewed
+    nextDue = new Date(lastRenewed.getTime() + 6 * 30 * 24 * 60 * 60 * 1000)
+  } else if (assetNameLower.includes('energy') || assetNameLower.includes('epc')) {
+    // 10 years from last renewed
+    nextDue = new Date(lastRenewed.getTime() + 10 * 365 * 24 * 60 * 60 * 1000)
+  }
+  
+  return {
+    last_renewed_date: lastRenewed.toISOString().split('T')[0],
+    next_due_date: nextDue ? nextDue.toISOString().split('T')[0] : null
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication
-    const supabase = createRouteHandlerClient({ cookies });
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    // Validate request
+    const body: ExtractRequest = await request.json()
+    
+    if (!body.fileUrl || !body.assetName) {
+      return NextResponse.json(
+        { error: 'Missing required fields: fileUrl and assetName' },
+        { status: 400 }
+      )
     }
 
-    // Parse form data
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
-    const building_id = formData.get('building_id') as string;
-    const document_type = formData.get('document_type') as string || 'unknown';
-
-    if (!file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        { error: 'OpenAI API key not configured' },
+        { status: 500 }
+      )
     }
 
-    // Validate file type
-    if (file.type !== 'application/pdf') {
-      return NextResponse.json({ error: 'Only PDF files are supported' }, { status: 400 });
+    console.log('🔍 Starting AI extraction for:', body.assetName)
+
+    // Download and process the document
+    const response = await fetch(body.fileUrl)
+    if (!response.ok) {
+      throw new Error(`Failed to fetch document: ${response.statusText}`)
     }
 
-    // Convert file to buffer
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const buffer = await response.arrayBuffer()
+    const base64 = Buffer.from(buffer).toString('base64')
 
-    // Extract text using multiple methods with fallback
-    let extractedText = '';
-    let extractionMethod = 'pdf_parser';
-    let confidence = 'high';
-    let ocrSource = null;
+    // Determine file type
+    const fileExtension = body.fileUrl.split('.').pop()?.toLowerCase()
+    const mimeType = fileExtension === 'pdf' ? 'application/pdf' : 'image/jpeg'
 
-    // Method 1: Try pdf-parse (fastest, works for text-based PDFs)
-    try {
-      // Use safe PDF parser wrapper to prevent debug mode issues
-      const { safePdfParse } = await import('@/lib/pdf-parse-wrapper');
-      
-      const pdfData = await safePdfParse(buffer, {
-        normalizeWhitespace: false,
-        disableFontFace: true,
-        disableEmbeddedFonts: true,
-        max: 0
-      });
-      
-      extractedText = pdfData.text;
-      console.log(`Extracted ${extractedText.length} characters from PDF using pdf-parse`);
-      
-      // Check if we have sufficient text
-      if (extractedText && extractedText.trim().length >= 100) {
-        extractionMethod = 'pdf_parser';
-        confidence = 'high';
-      } else {
-        console.log('⚠️ pdf-parse yielded insufficient text, trying OCR fallback...');
-        throw new Error('Insufficient text from pdf-parse');
-      }
-    } catch (pdfError) {
-      console.log('⚠️ pdf-parse failed or yielded insufficient text, trying OCR...');
-      
-             // Method 2: Try OCR microservice with comprehensive fallback
-       try {
-         console.log('🔄 Attempting OCR processing with comprehensive fallback...');
-         const { processDocumentWithFallback } = await import('@/lib/ocr-fallback');
-         
-         // Create a temporary file object for OCR processing
-         const tempFile = new File([buffer], file.name, { type: file.type });
-         const ocrResult = await processDocumentWithFallback(tempFile);
-         
-         if (ocrResult.text && ocrResult.text.trim().length > 50) {
-           extractedText = ocrResult.text;
-           extractionMethod = `ocr_${ocrResult.method}`;
-           confidence = ocrResult.quality || 'medium';
-           ocrSource = ocrResult.source;
-           
-           // Log fallback information
-           if (ocrResult.attempts > 1) {
-             console.log(`🔄 OCR required ${ocrResult.attempts} attempts: ${ocrResult.fallbackReasons.join(', ')}`);
-           }
-           
-           // Log warnings if any
-           if (ocrResult.warnings && ocrResult.warnings.length > 0) {
-             console.log('⚠️ OCR warnings:', ocrResult.warnings);
-           }
-           
-           console.log(`✅ OCR successful: ${extractedText.length} characters extracted (quality: ${ocrResult.quality}, method: ${ocrResult.method})`);
-         } else {
-           throw new Error('OCR yielded insufficient text');
-         }
-       } catch (ocrError) {
-        console.log('⚠️ OCR microservice failed, trying Google Vision...');
-        
-        // Method 3: Try Google Vision API (if available) - Note: Requires PDF to image conversion
-        // For now, we'll skip this as it requires additional setup
-        // TODO: Implement PDF to image conversion for Google Vision fallback
-        
-        // If all methods failed, return error
-        if (!extractedText || extractedText.trim().length < 50) {
-          return NextResponse.json({ 
-            error: 'Unable to extract text from PDF',
-            details: 'All extraction methods failed. The PDF may be corrupted, password-protected, or of very low quality.',
-            extractionMethods: ['pdf-parse', 'ocr_microservice', 'google_vision'],
-            extractedLength: extractedText?.length || 0
-          }, { status: 400 });
-        }
-      }
-    }
+    // Create OpenAI vision prompt
+    const assetSpecificPrompt = getAssetSpecificPrompt(body.assetName)
+    
+    const prompt = `You are an expert compliance document analyzer. Analyze this ${body.assetName} document and extract the following information:
 
-    // Check if this is a lease document
-    const isLease = isLeaseDocument(file.name, extractedText);
-    console.log(`Document identified as lease: ${isLease}`);
+${assetSpecificPrompt}
 
-    // Extract lease clauses if it's a lease document
-    let leaseExtraction = null;
-    let summary = null;
+Please extract and return ONLY the following information in JSON format:
+1. title: The official title of the document
+2. summary: A brief summary of the document's key points (max 200 words)
+3. last_renewed_date: The date when this document was last issued/renewed (YYYY-MM-DD format)
+4. next_due_date: The date when this document needs to be renewed next (YYYY-MM-DD format, or null if not specified)
 
-    if (isLease) {
-      try {
-        // Extract structured clauses
-        const clauses = extractLeaseClausesEnhanced(extractedText);
-        console.log(`Extracted ${Object.keys(clauses).length} lease clauses`);
+Focus on finding:
+- Document titles and reference numbers
+- Issue dates, renewal dates, and expiry dates
+- Key compliance requirements and findings
+- Next review or renewal deadlines
 
-        // Generate AI summary using OpenAI
-        if (process.env.OPENAI_API_KEY) {
-          try {
-            const prompt = `Based on the following lease clauses extracted from a property lease document, provide a clear, concise summary in plain English. Focus on the key terms and conditions that would be most important for property managers and leaseholders to understand.
+Return ONLY valid JSON with these exact field names.`
 
-Lease Clauses:
-${Object.entries(clauses).map(([term, clause]) => `${term}: ${clause.text || 'Not found'}`).join('\n')}
-
-Please provide:
-1. A brief overview of the lease type and key terms
-2. Important clauses that were found and their significance
-3. Any notable conditions or restrictions
-4. A confidence assessment of the extraction quality
-
-Keep the summary professional but accessible, suitable for property management professionals.`;
-
-    const openai = getOpenAIClient();
-            const completion = await openai.chat.completions.create({
-              model: 'gpt-4o',
-              messages: [{ role: 'user', content: prompt }],
-              max_tokens: 500,
-              temperature: 0.3,
-            });
-
-            summary = completion.choices[0]?.message?.content || 'Summary generation failed';
-            console.log('AI summary generated successfully');
-          } catch (aiError) {
-            console.error('AI summary generation failed:', aiError);
-            summary = 'AI summary generation failed - using extracted clauses only';
-          }
-        } else {
-          summary = 'AI summary not available - OpenAI API key not configured';
-        }
-
-        leaseExtraction = {
-          isLease: true,
-          confidence: 0.8, // Base confidence for text-based extraction
-          keyTermsFound: Object.keys(clauses).length,
-          totalTerms: 18, // Total terms we look for
-          extractionMethod: 'pdf_parser',
-          summary: summary
-        };
-
-      } catch (extractionError) {
-        console.error('Lease extraction failed:', extractionError);
-        leaseExtraction = {
-          isLease: true,
-          confidence: 0.3,
-          error: 'Extraction failed',
-          extractionMethod: 'pdf_parser'
-        };
-      }
-    }
-
-    // Store document in Supabase
-    const { data: document, error: documentError } = await supabase
-      .from('documents')
-      .insert({
-        filename: file.name,
-        file_size: file.size,
-        file_type: file.type,
-        building_id: building_id || null,
-        document_type: document_type,
-        uploaded_by: user.id,
-        extraction_status: 'completed',
-        extracted_text: extractedText,
-        lease_extraction: leaseExtraction,
-        metadata: {
-          isLease: isLease,
-          extractionMethod: extractionMethod,
-          confidence: confidence,
-          ocrSource: ocrSource,
-          extractedLength: extractedText.length,
-          originalFilename: file.name
-        }
-      })
-      .select()
-      .single();
-
-    if (documentError) {
-      console.error('Failed to store document:', documentError);
-      return NextResponse.json({ error: 'Failed to store document' }, { status: 500 });
-    }
-
-    // If it's a lease, store detailed extraction data
-    if (isLease && leaseExtraction && Object.keys(extractLeaseClausesEnhanced(extractedText)).length > 0) {
-      try {
-        const clauses = extractLeaseClausesEnhanced(extractedText);
-        
-        const { error: extractionError } = await supabase
-          .from('lease_extractions')
-          .insert({
-            document_id: document.id,
-            building_id: building_id || null,
-                         extracted_clauses: Object.entries(clauses).map(([term, clause]) => ({
-               term: term,
-               text: clause.text || 'Not found',
-               page: clause.page || null,
-               found: clause.found || false
-             })),
-            summary: summary,
-            confidence: leaseExtraction.confidence || 0.8,
-            metadata: {
-              keyTermsFound: Object.keys(clauses).length,
-              totalTerms: 18,
-              extractionMethod: 'pdf_parser',
-              processingTime: Date.now()
+    // Call OpenAI Vision API
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4-vision-preview",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: prompt
             },
-            extracted_by: user.id
-          });
-
-        if (extractionError) {
-          console.error('Failed to store lease extraction:', extractionError);
-          // Don't fail the entire request, just log the error
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:${mimeType};base64,${base64}`,
+                detail: "high"
+              }
+            }
+          ]
         }
-      } catch (extractionError) {
-        console.error('Failed to store lease extraction:', extractionError);
-        // Don't fail the entire request, just log the error
+      ],
+      max_tokens: 1000,
+      temperature: 0.1
+    })
+
+    const aiResponse = completion.choices[0]?.message?.content
+    if (!aiResponse) {
+      throw new Error('No response from OpenAI')
+    }
+
+    console.log('🤖 AI Response:', aiResponse)
+
+    // Parse AI response
+    let extractedData: ExtractedData
+    
+    try {
+      // Try to extract JSON from the response
+      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        extractedData = JSON.parse(jsonMatch[0])
+      } else {
+        throw new Error('No JSON found in AI response')
+      }
+    } catch (parseError) {
+      console.error('Failed to parse AI response as JSON:', parseError)
+      
+      // Fallback: extract dates from text and create structured response
+      const dates = extractDates(aiResponse)
+      
+      extractedData = {
+        title: aiResponse.match(/title[:\s]+([^\n\r,}]+)/i)?.[1]?.trim() || body.assetName,
+        summary: aiResponse.match(/summary[:\s]+([^\n\r}]+)/i)?.[1]?.trim() || 
+                aiResponse.substring(0, 200) + (aiResponse.length > 200 ? '...' : ''),
+        last_renewed_date: dates.last_renewed_date,
+        next_due_date: dates.next_due_date
       }
     }
 
-    // Return success response
-    return NextResponse.json({
-      success: true,
-      document_id: document.id,
-      filename: file.name,
-      isLease: isLease,
-      extractedTextLength: extractedText.length,
-      extractionMethod: extractionMethod,
-      confidence: confidence,
-      ocrSource: ocrSource,
-      leaseExtraction: leaseExtraction,
-      summary: summary,
-      fallbackInfo: extractionMethod.startsWith('ocr_') ? {
-        method: extractionMethod,
-        confidence: confidence,
-        source: ocrSource
-      } : null,
-      message: isLease 
-        ? 'Lease document processed successfully with clause extraction'
-        : 'Document processed successfully (not identified as lease)'
-    });
+    // Validate and clean extracted data
+    const cleanedData: ExtractedData = {
+      title: extractedData.title?.trim() || body.assetName,
+      summary: extractedData.summary?.trim() || 'Document processed successfully',
+      last_renewed_date: extractedData.last_renewed_date || '',
+      next_due_date: extractedData.next_due_date || null
+    }
+
+    // Additional date extraction if AI didn't find dates
+    if (!cleanedData.last_renewed_date || !cleanedData.next_due_date) {
+      const fallbackDates = extractDates(aiResponse)
+      if (!cleanedData.last_renewed_date && fallbackDates.last_renewed_date) {
+        cleanedData.last_renewed_date = fallbackDates.last_renewed_date
+      }
+      if (!cleanedData.next_due_date && fallbackDates.next_due_date) {
+        cleanedData.next_due_date = fallbackDates.next_due_date
+      }
+    }
+
+    console.log('✅ Extraction completed successfully')
+
+    return NextResponse.json(cleanedData)
 
   } catch (error) {
-    console.error('Extract API error:', error);
-    return NextResponse.json({ 
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    console.error('❌ Extraction error:', error)
+    
+    return NextResponse.json(
+      { 
+        error: 'Failed to extract document metadata',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    )
   }
-}
-
-export async function GET(request: NextRequest) {
-  try {
-    // Check authentication
-    const supabase = createRouteHandlerClient({ cookies });
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-
-    // Get query parameters
-    const { searchParams } = new URL(request.url);
-    const building_id = searchParams.get('building_id');
-
-    // Build query
-    let query = supabase
-      .from('documents')
-      .select(`
-        id,
-        filename,
-        file_size,
-        file_type,
-        building_id,
-        document_type,
-        extraction_status,
-        extracted_text,
-        lease_extraction,
-        metadata,
-        created_at,
-        updated_at
-      `)
-      .eq('uploaded_by', user.id)
-      .order('created_at', { ascending: false });
-
-    if (building_id) {
-      query = query.eq('building_id', building_id);
-    }
-
-    const { data: documents, error } = await query;
-
-    if (error) {
-      console.error('Failed to fetch documents:', error);
-      return NextResponse.json({ error: 'Failed to fetch documents' }, { status: 500 });
-    }
-
-    return NextResponse.json({
-      success: true,
-      documents: documents || [],
-      count: documents?.length || 0
-    });
-
-  } catch (error) {
-    console.error('Extract API GET error:', error);
-    return NextResponse.json({ 
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
-  }
-}
-
-export async function OPTIONS() {
-  // Handle preflight request for CORS
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
 }

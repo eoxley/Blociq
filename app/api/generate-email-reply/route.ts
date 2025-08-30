@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import { getOpenAIClient } from '@/lib/openai-client';
+import OpenAI from 'openai';
 
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 export async function POST(req: NextRequest) {
   const supabase = createRouteHandlerClient({ cookies: () => cookies() });
@@ -114,7 +117,6 @@ Please create a reply that:
 Return only the reply content, formatted as a proper email response.`;
 
     // Call OpenAI for reply generation
-    const openai = getOpenAIClient();
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [

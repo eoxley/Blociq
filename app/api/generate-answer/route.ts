@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { buildAIContext } from '../../../lib/buildAIContext';
-import { getOpenAIClient } from '@/lib/openai-client';
+import OpenAI from 'openai';
 
 // Force deployment update - latest debugging changes
 export async function POST(req: Request) {
@@ -15,7 +15,7 @@ export async function POST(req: Request) {
 
     console.log("✅ OpenAI API key found");
 
-    const openai = getOpenAIClient();
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     
     const body = await req.json();
     console.log("📨 Request body:", body);

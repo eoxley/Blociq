@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth/server';
-import { getOpenAIClient } from '@/lib/openai-client';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
+import OpenAI from 'openai';
 
 interface EmailSummaryRequest {
   emailIds: string[];
@@ -11,8 +12,13 @@ interface EmailSummaryRequest {
 
 export async function POST(req: NextRequest) {
   try {
-    // Use consolidated authentication
-    const { supabase, user } = await requireAuth();
+    const supabase = createRouteHandlerClient({ cookies });
+    
+    // Get authenticated user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     const { emailIds, summaryType, includeContext = true, maxLength = 'standard' }: EmailSummaryRequest = await req.json();
 
@@ -39,7 +45,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Initialize OpenAI
-    const openai = getOpenAIClient();
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
 
     // Build email content for AI analysis
     const emailContent = emails.map((email, index) => `

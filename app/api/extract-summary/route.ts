@@ -24,13 +24,15 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getOpenAIClient } from '@/lib/openai-client';
+import OpenAI from 'openai';
 import PDFParser from 'pdf2json';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 // Extract text from PDF using pdf2json
 function extractTextFromPDF(buffer: Buffer): Promise<string> {
@@ -111,7 +113,6 @@ ${fullText.substring(0, 8000)}${fullText.length > 8000 ? '...' : ''}
 Please provide a clear, concise summary that includes the document type using British English spelling and terminology.`;
 
     // Get AI analysis
-    const openai = getOpenAIClient();
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [{ role: 'user', content: summaryPrompt }],

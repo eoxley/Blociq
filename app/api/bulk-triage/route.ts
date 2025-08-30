@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import { getOpenAIClient } from '@/lib/openai-client';
+import OpenAI from 'openai';
 
 interface BulkTriageRequest {
   emails: Array<{
@@ -51,7 +51,9 @@ export async function POST(req: NextRequest) {
     console.log(`🔄 Starting bulk triage for ${emails.length} emails. Perform actions: ${performActions}`);
 
     // Initialize OpenAI
-    const openai = getOpenAIClient();
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
 
     const results: TriageResult[] = [];
 
@@ -114,7 +116,7 @@ export async function POST(req: NextRequest) {
           const parsedResult = parseTriageResult(result);
 
           // Perform actions on the email if requested
-          const actionsPerformed = {
+          let actionsPerformed = {
             markedAsRead: false,
             categorized: false,
             tagged: false,

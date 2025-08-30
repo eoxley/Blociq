@@ -32,7 +32,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     
     // Validate that the compliance assets exist
     const { data: assets, error: assetsError } = await supabaseAdmin
-      .from('building_compliance_assets')
+      .from('compliance_assets')
       .select('id, title, category')
       .in('id', asset_ids);
     
