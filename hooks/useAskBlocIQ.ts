@@ -341,13 +341,13 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
             console.log('🔄 Processing file:', uploadedFile.name, 'Type:', uploadedFile.file.type);
             
             if (isPublic) {
-              // Public mode: Use Google Vision OCR fallback
-              console.log('🔒 Public mode: Using Google Vision OCR fallback');
+              // Public mode: Use external OCR service
+              console.log('🔒 Public mode: Using external OCR service');
               
               const formData = new FormData();
               formData.append('file', uploadedFile.file);
               
-              const ocrResponse = await fetch('/api/ocr', {
+              const ocrResponse = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
                 method: 'POST',
                 body: formData,
               });
@@ -357,14 +357,14 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
               }
 
               const ocrResult = await ocrResponse.json();
-              console.log('✅ Google Vision OCR successful');
+              console.log('✅ External OCR successful');
               
               // Create basic document analysis result for public mode
               const documentAnalysis: DocumentAnalysis = {
                 filename: uploadedFile.name,
                 summary: ocrResult.text ? `Document processed via OCR. Extracted ${ocrResult.text.length} characters.` : 'Document processed via OCR.',
                 suggestedActions: [],
-                extractionMethod: 'google_vision_ocr',
+                extractionMethod: 'external_ocr',
                 extractedText: ocrResult.text || '',
                 documentType: 'other'
               };
@@ -381,7 +381,7 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
               const analysisMessage: Message = {
                 id: Date.now().toString(),
                 role: 'assistant',
-                content: `📄 **${uploadedFile.name}** processed via OCR!\n\n**Extraction Method:** Google Vision OCR\n**Text Length:** ${ocrResult.text ? ocrResult.text.length : 0} characters`,
+                content: `📄 **${uploadedFile.name}** processed via OCR!\n\n**Extraction Method:** External OCR\n**Text Length:** ${ocrResult.text ? ocrResult.text.length : 0} characters`,
                 timestamp: new Date(),
                 documentAnalysis: [documentAnalysis]
               };
