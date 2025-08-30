@@ -4,7 +4,7 @@
  */
 
 import { processFileWithGoogleVision, processBytesWithGoogleVision, GoogleVisionOCRResult } from './googleVisionOCR'
-import { processFileWithOCR as processFileWithExternal } from './ai/ocrClient'
+import { processFileWithOCR as processFileWithExternal, processBytesWithOCR } from './ai/ocrClient'
 
 export interface OCRServiceResult {
   success: boolean
@@ -83,31 +83,36 @@ export async function processFileWithOCRService(
     }
 
     // Method 1: Google Cloud Vision API (for images and PDFs)
-    if (finalConfig.preferGoogleVision && process.env.GOOGLE_VISION_API_KEY && file.type !== 'text/plain') {
+    if (finalConfig.preferGoogleVision && file.type !== 'text/plain') {
       attempts++
       console.log('🔍 Attempting Google Vision API...')
+      console.log('🔍 GOOGLE_VISION_API_KEY exists:', !!process.env.GOOGLE_VISION_API_KEY)
       
-      try {
-        const result = await processFileWithGoogleVision(file)
-        if (result.success && result.text && isValidText(result.text)) {
-          console.log(`✅ Google Vision successful: ${result.text.length} characters extracted`)
-          return {
-            success: true,
-            text: result.text,
-            source: 'google-vision',
-            confidence: result.confidence,
-            processingTime: Date.now() - startTime,
-            metadata: {
-              attempts,
-              fileName: file.name,
-              fileSize: file.size
+      if (!process.env.GOOGLE_VISION_API_KEY) {
+        console.log('⚠️ GOOGLE_VISION_API_KEY not set, skipping Google Vision')
+      } else {
+        try {
+          const result = await processFileWithGoogleVision(file)
+          if (result.success && result.text && isValidText(result.text)) {
+            console.log(`✅ Google Vision successful: ${result.text.length} characters extracted`)
+            return {
+              success: true,
+              text: result.text,
+              source: 'google-vision',
+              confidence: result.confidence,
+              processingTime: Date.now() - startTime,
+              metadata: {
+                attempts,
+                fileName: file.name,
+                fileSize: file.size
+              }
             }
+          } else {
+            console.log(`⚠️ Google Vision returned insufficient text (${result.text?.length || 0} chars)`)
           }
-        } else {
-          console.log(`⚠️ Google Vision returned insufficient text (${result.text?.length || 0} chars)`)
+        } catch (error) {
+          console.log(`⚠️ Google Vision failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
         }
-      } catch (error) {
-        console.log(`⚠️ Google Vision failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
       }
     }
 
@@ -115,20 +120,57 @@ export async function processFileWithOCRService(
     if (finalConfig.fallbackToExternal) {
       attempts++
       console.log('🔍 Attempting external OCR service...')
+      console.log('🔍 OCR_SERVICE_URL exists:', !!process.env.OCR_SERVICE_URL)
+      
+      if (!process.env.OCR_SERVICE_URL) {
+        console.log('⚠️ OCR_SERVICE_URL not set, skipping external OCR')
+      } else {
+        try {
+          const result = await processFileWithExternal(file, { 
+            timeout: finalConfig.timeout,
+            maxRetries: 1
+          })
+          
+          if (result.success && result.text && isValidText(result.text)) {
+            console.log(`✅ External OCR successful: ${result.text.length} characters extracted`)
+            return {
+              success: true,
+              text: result.text,
+              source: 'external',
+              confidence: result.confidence,
+              processingTime: Date.now() - startTime,
+              metadata: {
+                attempts,
+                fileName: file.name,
+                fileSize: file.size
+              }
+            }
+          } else {
+            console.log(`⚠️ External OCR returned insufficient text (${result.text?.length || 0} chars)`)
+          }
+        } catch (error) {
+          console.log(`⚠️ External OCR failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        }
+      }
+    }
+
+    // Method 3: Local PDF processing fallback (basic text extraction)
+    if (file.type === 'application/pdf') {
+      attempts++
+      console.log('🔍 Attempting local PDF processing...')
       
       try {
-        const result = await processFileWithExternal(file, { 
-          timeout: finalConfig.timeout,
-          maxRetries: 1
-        })
+        // Basic PDF text extraction using the existing OCR client
+        const bytes = new Uint8Array(await file.arrayBuffer())
+        const result = await processBytesWithOCR(bytes)
         
-        if (result.success && result.text && isValidText(result.text)) {
-          console.log(`✅ External OCR successful: ${result.text.length} characters extracted`)
+        if (result && result.trim() && isValidText(result)) {
+          console.log(`✅ Local PDF processing successful: ${result.length} characters extracted`)
           return {
             success: true,
-            text: result.text,
-            source: 'external',
-            confidence: result.confidence,
+            text: result,
+            source: 'local',
+            confidence: 0.7,
             processingTime: Date.now() - startTime,
             metadata: {
               attempts,
@@ -137,10 +179,10 @@ export async function processFileWithOCRService(
             }
           }
         } else {
-          console.log(`⚠️ External OCR returned insufficient text (${result.text?.length || 0} chars)`)
+          console.log(`⚠️ Local PDF processing returned insufficient text (${result?.length || 0} chars)`)
         }
       } catch (error) {
-        console.log(`⚠️ External OCR failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        console.log(`⚠️ Local PDF processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
       }
     }
 
