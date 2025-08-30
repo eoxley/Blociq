@@ -536,8 +536,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
             })
             
             if (uploadData.textLength > 0) {
-              console.log(`✅ File processed successfully: ${uploadedFile.name} - ${uploadData.textLength} characters extracted`)
-              setUploadStatus(`✅ ${uploadedFile.name} processed - ${uploadData.textLength} characters extracted`)
+              const source = uploadData.ocrSource || 'OCR'
+              console.log(`✅ File processed successfully via ${source}: ${uploadedFile.name} - ${uploadData.textLength} characters extracted`)
+              setUploadStatus(`✅ ${uploadedFile.name} processed via ${source} - ${uploadData.textLength} characters extracted`)
             } else {
               console.log(`⚠️ File processing failed - insufficient text: ${uploadedFile.name}`)
               setUploadStatus(`⚠️ ${uploadedFile.name} - No meaningful text extracted`)
@@ -871,11 +872,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       return {
         success: json.success,
         documentType: 'document',
-        summary: json.success ? `Document processed successfully. Extracted ${json.textLength} characters via OCR.` : json.message || 'Document processing failed.',
-        analysis: json.success ? `Text extracted successfully using OCR. Document contains ${json.textLength} characters.` : json.message || 'No meaningful text could be extracted.',
+        summary: json.success ? `Document processed successfully. Extracted ${json.textLength} characters via ${json.source || 'OCR'}.` : json.message || 'Document processing failed.',
+        analysis: json.success ? `Text extracted successfully using ${json.source || 'OCR'}. Document contains ${json.textLength} characters.` : 'Document analysis completed',
         filename: file.name,
         textLength: json.textLength || 0,
-        extractedText: json.text || '' // Include the actual extracted text
+        extractedText: json.text || '', // Include the actual extracted text
+        ocrSource: json.source || 'unknown' // Track OCR source for debugging
       }
     }
 
@@ -935,11 +937,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     return {
       success: procJson.success,
       documentType: 'document',
-      summary: procJson.success ? `Document processed successfully. Extracted ${procJson.textLength} characters via OCR.` : procJson.message || 'Document processing failed.',
-      analysis: procJson.success ? `Text extracted successfully using OCR. Document contains ${procJson.textLength} characters.` : 'Document analysis completed',
+      summary: procJson.success ? `Document processed successfully. Extracted ${procJson.textLength} characters via ${procJson.source || 'OCR'}.` : procJson.message || 'Document processing failed.',
+      analysis: procJson.success ? `Text extracted successfully using ${procJson.source || 'OCR'}. Document contains ${procJson.textLength} characters.` : 'Document analysis completed',
       filename: file.name,
       textLength: procJson.textLength || 0,
-      extractedText: procJson.text || '' // Include the actual extracted text
+      extractedText: procJson.text || '', // Include the actual extracted text
+      ocrSource: procJson.source || 'unknown' // Track OCR source for debugging
     }
   }
 
@@ -972,11 +975,12 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     return {
       success: json.success,
       documentType: 'document',
-      summary: json.success ? `Document processed successfully. Extracted ${json.textLength} characters via OCR.` : json.message || 'Document processing failed.',
-      analysis: json.success ? `Text extracted successfully using OCR. Document contains ${json.textLength} characters.` : 'Document analysis completed',
+      summary: json.success ? `Document processed successfully. Extracted ${json.textLength} characters via ${json.source || 'OCR'}.` : json.message || 'Document processing failed.',
+      analysis: json.success ? `Text extracted successfully using ${json.source || 'OCR'}. Document contains ${json.textLength} characters.` : 'Document analysis completed',
       filename: 'stored_document',
       textLength: json.textLength || 0,
-      extractedText: json.text || ''
+      extractedText: json.text || '',
+      ocrSource: json.source || 'unknown' // Track OCR source for debugging
     }
   }
 
