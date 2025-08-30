@@ -57,20 +57,13 @@ export default function OCRDebugPanel() {
 
       // Step 2: Test OCR endpoint
       addLog('🔍 Step 2: Testing OCR endpoint...');
-      const ocrResponse = await fetch('/api/ocr', {
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const ocrResponse = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          base64Image: base64Data,
-          mimeType: file.type,
-          filename: file.name,
-          processWithOCR: true,
-          extractText: true,
-          enableOCR: true,
-          useGoogleVision: true
-        })
+        body: formData
       });
 
       addLog(`📡 OCR API Response Status: ${ocrResponse.status} ${ocrResponse.statusText}`);
@@ -172,13 +165,16 @@ export default function OCRDebugPanel() {
     
     try {
       // Test OCR endpoint
-      addLog('📡 Testing /api/ocr endpoint...');
-      const ocrTest = await fetch('/api/ocr-test');
+      addLog('📡 Testing OCR endpoint...');
+      const ocrTest = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
+        method: 'POST',
+        body: new FormData() // Empty form data for health check
+      });
+      
       if (ocrTest.ok) {
-        const ocrTestResult = await ocrTest.json();
-        addLog(`✅ /api/ocr-test: ${JSON.stringify(ocrTestResult, null, 2)}`);
+        addLog(`✅ External OCR service: Available`);
       } else {
-        addLog(`❌ /api/ocr-test failed: ${ocrTest.status}`);
+        addLog(`❌ External OCR service failed: ${ocrTest.status}`);
       }
 
       // Test compliance endpoints
@@ -310,16 +306,12 @@ export default function OCRDebugPanel() {
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="text-sm font-medium">OCR API (/api/ocr)</span>
-                  <Badge variant="outline" className="bg-green-100 text-green-800">
-                    Available
-                  </Badge>
+                  <span className="text-sm font-medium">OCR API (External)</span>
+                  <span className="text-sm text-gray-500">https://ocr-server-2-ykmk.onrender.com/upload</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="text-sm font-medium">OCR Test (/api/ocr-test)</span>
-                  <Badge variant="outline" className="bg-green-100 text-green-800">
-                    Available
-                  </Badge>
+                  <span className="text-sm font-medium">OCR Test (External)</span>
+                  <span className="text-sm text-gray-500">External OCR service health check</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <span className="text-sm font-medium">Compliance Templates</span>

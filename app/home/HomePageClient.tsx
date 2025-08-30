@@ -854,7 +854,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       const formData = new FormData()
       formData.append('file', file)
 
-      const res = await fetch('/api/ask-ai/upload', { method: 'POST', body: formData })
+      const res = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', { method: 'POST', body: formData })
       let json: any = null
       try { 
         json = await res.json() 
@@ -923,7 +923,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     const procFormData = new FormData()
     procFormData.append('file', file)
     
-    const procRes = await fetch('/api/ask-ai/upload', {
+    const procRes = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
       method: 'POST',
       body: procFormData,
     })
@@ -958,7 +958,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       filename: file.name,
       textLength: procJson.textLength || 0,
       extractedText: txt,
-      ocrSource: procJson.ocrSource || 'unknown' // Track OCR source for debugging
+      ocrSource: procJson.ocrSource || 'external-ocr' // Track OCR source for debugging
     }
   }
 
@@ -969,7 +969,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     const formData = new FormData()
     formData.append('file', new File([''], 'stored_document.pdf', { type: 'application/pdf' }))
     
-    const res = await fetch('/api/ask-ai/upload', {
+    const res = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
       method: 'POST',
       body: formData,
     })
