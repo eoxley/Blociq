@@ -848,55 +848,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
   // Upload function that handles both small and large files
   const uploadToAskAI = async (file: File, buildingId?: string) => {
-    // 🚨 CRITICAL FIX: Use enhanced ask-ai-public route for OCR + AI processing
-    console.log('📁 Processing file via enhanced ask-ai-public route:', file.name)
-    
-    try {
-      const formData = new FormData()
-      formData.append('prompt', `Analyze this document: ${file.name}`)
-      formData.append('files', file)
-
-      console.log('🤖 Sending to enhanced ask-ai-public route for OCR + AI analysis...')
-      const res = await fetch('/api/ask-ai-public', { 
-        method: 'POST', 
-        body: formData 
-      })
-      let json: any = null
-      try { 
-        json = await res.json() 
-      } catch (e) {
-        console.error('Failed to parse response:', e)
-        throw new Error(`Upload failed for ${file.name}: ${res.status} ${res.statusText}`)
-      }
-      
-      // Log OCR source for debugging
-      console.log("X-OCR-Source:", res.headers.get("X-OCR-Source"))
-      
-      if (!res.ok) {
-        const detail = (json && (json.error || json.message)) || `${res.status} ${res.statusText}`
-        throw new Error(`Upload failed for ${file.name}: ${detail}`)
-      }
-      
-      const txt = json.text ?? json.extractedText ?? ""
-      if (!json.success || (json.textLength ?? txt.length) < 500) {
-        throw new Error(json.summary ?? "Couldn't extract readable text.")
-      }
-      
-      // Convert OCR response to expected format
-      return {
-        success: json.success,
-        documentType: 'document',
-        summary: `Document processed successfully via ${json.ocrSource || 'OCR'}. Extracted ${json.textLength} characters.`,
-        analysis: `Text extracted successfully using ${json.ocrSource || 'OCR'}. Document contains ${json.textLength} characters.`,
-        filename: file.name,
-        textLength: json.textLength || 0,
-        extractedText: txt, // Include the actual extracted text
-        ocrSource: json.ocrSource || 'unknown' // Track OCR source for debugging
-      }
-    }
-
-    // Large file path - signed URL upload
-    console.log('📁 Processing large file via signed URL:', file.name)
+    // Large file path - signed URL upload  
+    console.log('📁 Processing large file via signed URL:', file.name);
     
     // Step 1: Get signed upload URL
     const signRes = await fetch('/api/ask-ai/upload/sign', {
