@@ -14,6 +14,9 @@ export function UploadDropzone({ onResult, defaultBuildingId = null, className =
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [extractedText, setExtractedText] = useState<string>('');
+  const [textCount, setTextCount] = useState<number>(0);
+  const [showText, setShowText] = useState<boolean>(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const onFiles = async (files: FileList | null) => {
@@ -51,13 +54,29 @@ export function UploadDropzone({ onResult, defaultBuildingId = null, className =
       if (defaultBuildingId) fd.set('building_id', defaultBuildingId);
       
       const res = await fetch('/api/ask-ai/upload', { method: 'POST', body: fd });
-      const json = await res.json();
+      const result = await res.json();
       
-      if (!res.ok || !json?.success) {
-        throw new Error(json?.error || 'Upload failed');
+      if (!res.ok || !result?.success) {
+        throw new Error(result?.error || 'Upload failed');
       }
       
-      onResult(json);
+      // ✅ Log the extracted text info
+      console.log('🔍 Upload response data:', result);
+      console.log(`📊 Text Length: ${result.textLength}`);
+      console.log(`📄 Has extractedText: ${!!result.extractedText}`);
+      
+      if (result.extractedText && result.extractedText.length > 0) {
+        console.log(`📝 First 200 characters:`);
+        console.log(`"${result.extractedText.substring(0, 200)}..."`);
+        
+        // Show in UI
+        setExtractedText(result.extractedText);
+        setTextCount(result.textLength);
+      } else {
+        console.log('❌ No extracted text received');
+      }
+      
+      onResult(result);
       setUploadedFile(null);
     } catch (e: any) {
       setErr(e.message || 'Upload failed');
@@ -69,6 +88,9 @@ export function UploadDropzone({ onResult, defaultBuildingId = null, className =
   const removeFile = () => {
     setUploadedFile(null);
     setErr(null);
+    setExtractedText('');
+    setTextCount(0);
+    setShowText(false);
     if (inputRef.current) {
       inputRef.current.value = '';
     }
@@ -127,6 +149,37 @@ export function UploadDropzone({ onResult, defaultBuildingId = null, className =
               Remove file
             </button>
           )}
+        </div>
+      )}
+      
+      {/* Extracted Text Display */}
+      {textCount > 0 && (
+        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="text-info text-center">
+            <div className="text-green-700 font-medium mb-2">
+              ✅ Text extracted: {textCount.toLocaleString()} characters
+            </div>
+            <button 
+              onClick={() => setShowText(!showText)}
+              className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              {showText ? 'Hide' : 'Show'} Extracted Text
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showText && extractedText && (
+        <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+          <h3 className="text-sm font-medium text-gray-700 mb-2">Extracted Text Content:</h3>
+          <div className="extracted-text">
+            <pre 
+              className="text-xs text-gray-600 whitespace-pre-wrap overflow-auto max-h-80 p-3 bg-white rounded border"
+              style={{fontFamily: 'ui-monospace, SFMono-Regular, monospace'}}
+            >
+              {extractedText}
+            </pre>
+          </div>
         </div>
       )}
       
