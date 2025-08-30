@@ -29,12 +29,16 @@ export async function POST(req: NextRequest) {
       body: fd,
     })
 
-    const j = await r.json().catch(() => ({}))
-    const text = j?.text ?? j?.result?.text ?? j?.data?.text ?? ""
+    const j = await r.json().catch(() => ({} as any))
+    
+    // Accept a bunch of likely shapes
+    const text = 
+      j?.text ?? j?.result?.text ?? j?.data?.text ??
+      j?.fullTextAnnotation?.text ?? j?.ParsedResults?.[0]?.ParsedText ?? "";
     
     return NextResponse.json({ 
       success: true,
-      text,
+      text: typeof text === "string" ? text : "",
       source: 'local',
       fileSize: bytes.byteLength
     })

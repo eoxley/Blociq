@@ -1,110 +1,112 @@
-export const runtime = 'nodejs'
-export const dynamic = 'force-dynamic'
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-import { processBytesWithOCR } from '@/lib/ai/ocrClient'
-
-const MIN = 500 // leases should crush this; forces real results
+// Minimal, explicit uploader that *always* calls your external OCR via multipart
+const MIN = 200; // allow modest docs; raise later if you like
 
 function getOrigin(req: Request) {
   const h = (k: string) => req.headers.get(k) || "";
-  const xfProto = h("x-forwarded-proto");
+  const proto = h("x-forwarded-proto");
   const host = h("x-forwarded-host") || h("host");
-  return process.env.NEXT_PUBLIC_BASE_URL || (xfProto && host ? `${xfProto}://${host}` : new URL(req.url).origin);
+  return process.env.NEXT_PUBLIC_BASE_URL || (proto && host ? `${proto}://${host}` : new URL(req.url).origin);
 }
 
-async function ocrWithFallback(file: File, req: Request) {
-  const bytes = new Uint8Array(await file.arrayBuffer())
-  const started = Date.now();
-  let text = "", source: "external" | "local" | "none" = "none";
-  
-  // 1) External OCR (2 tries)
-  for (let i = 0; i < 2 && (!text || text.trim().length < MIN); i++) {
-    try {
-      const t = await processBytesWithOCR(bytes);
-      if (t?.trim()) { 
-        text = t; 
-        source = "external"; 
-      }
-    } catch (e: any) {
-      console.log(`⚠️ External OCR attempt ${i + 1} failed:`, e?.message || 'unknown error')
-    }
-  }
-  
-  // 2) Local fallback (/api/ocr) — must not return a placeholder!
-  if (!text || text.trim().length < MIN) {
-    try {
-      const res = await fetch(`${getOrigin(req)}/api/ocr`, {
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/pdf' }, 
-        body: bytes,
-      });
-      if (res.ok) {
-        const j = await res.json().catch(() => ({}));
-        const t = j?.text ?? j?.result?.text ?? j?.data?.text ?? "";
-        if (t?.trim()) { 
-          text = t; 
-          source = 'local'; 
-        }
-      }
-    } catch (e: any) {
-      console.log('⚠️ Local OCR fallback failed:', e?.message || 'unknown error')
-    }
-  }
-  
-  const ms = Date.now() - started;
-  console.info("[upload] file=%s len=%d src=%s ms=%d", file.name, (text||"").length, source, ms);
-  
-  return { text, used: source, duration: ms }
+async function callExternalOCR(bytes: Uint8Array, engine?: string) {
+  const urlBase = process.env.OCR_SERVICE_URL!; // e.g. https://ocr-server.../upload
+  const url = engine ? `${urlBase}?engine=${encodeURIComponent(engine)}` : urlBase;
+  const token = process.env.OCR_TOKEN || "";
+
+  const fd = new FormData();
+  fd.append("file", new Blob([bytes], { type: "application/pdf" }), "upload.pdf");
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: fd,
+  });
+
+  const meta = { status: res.status, url, ok: res.ok };
+  if (!res.ok) return { text: "", meta };
+
+  const j = await res.json().catch(() => ({} as any));
+
+  // Accept a bunch of likely shapes
+  const cands = [
+    j?.text, j?.result?.text, j?.data?.text,
+    j?.fullTextAnnotation?.text, j?.result?.fullTextAnnotation?.text,
+    j?.ParsedResults?.[0]?.ParsedText, j?.ocr?.text,
+  ].filter((s: any) => typeof s === "string");
+
+  const text = (cands[0] as string) || "";
+  return { text, meta };
 }
 
 export async function POST(req: Request) {
-  try {
-    const form = await req.formData().catch(() => null)
-    const file = form?.get('file')
-    
-    if (!(file instanceof File)) {
-      return Response.json({ 
-        success: false, 
-        message: 'No file uploaded.' 
-      }, { status: 400 })
-    }
+  // ---- parse file ----
+  const form = await req.formData().catch(() => null);
+  const file = form?.get("file");
+  if (!(file instanceof File)) return Response.json({ success:false, message:"No file" }, { status:400 });
+  const bytes = new Uint8Array(await file.arrayBuffer());
 
-    const { text, used, duration } = await ocrWithFallback(file, req)
-    const textLength = (text || '').trim().length
+  const started = Date.now();
+  let source: "external" | "external-vision" | "local" | "none" = "none";
 
-    // Add response headers for instrumentation
-    const headers = new Headers({ 
-      "X-OCR-Source": used, 
-      "X-OCR-Duration": String(duration) 
-    });
+  // ---- 1) External OCR (default engine) ----
+  let { text, meta } = await callExternalOCR(bytes);
+  if ((text || "").trim().length >= MIN) source = "external";
 
-    if (textLength < MIN) {
-      return new Response(JSON.stringify({
-        success: false,
-        filename: file.name,
-        ocrSource: used,
-        textLength: (text || "").length,
-        summary: "Document processing failed - insufficient text extracted.",
-        extractedText: "",
-      }), { status: 200, headers });
-    }
-
-    return new Response(JSON.stringify({
-      success: true,
-      filename: file.name,
-      ocrSource: used,
-      textLength: text.length,
-      text,               // raw OCR text for UI
-      extractedText: text // keep both keys to satisfy existing UI
-    }), { status: 200, headers });
-  } catch (error: any) {
-    console.error('❌ OCR upload error:', error)
-    return Response.json({
-      success: false,
-      message: `Upload failed: ${error?.message || 'Unknown error'}`,
-      textLength: 0,
-      usedOCR: false,
-      source: 'none'
-    }, { status: 500 })
+  // ---- 2) If short, try explicit Vision engine (if your server supports it) ----
+  if (source === "none") {
+    const r2 = await callExternalOCR(bytes, "vision");
+    if ((r2.text || "").trim().length >= MIN) { text = r2.text; meta = r2.meta; source = "external-vision"; }
   }
+
+  // ---- 3) Local fallback (/api/ocr proxy) ----
+  if (source === "none") {
+    try {
+      const res = await fetch(`${getOrigin(req)}/api/ocr`, {
+        method: "POST",
+        headers: { "Content-Type": "application/pdf" },
+        body: bytes,
+      });
+      if (res.ok) {
+        const j = await res.json().catch(() => ({} as any));
+        const cands = [
+          j?.text, j?.result?.text, j?.data?.text,
+          j?.fullTextAnnotation?.text, j?.ParsedResults?.[0]?.ParsedText,
+        ].filter((s: any) => typeof s === "string");
+        const t = (cands[0] as string) || "";
+        if (t.trim().length >= MIN) { text = t; source = "local"; }
+      }
+    } catch {}
+  }
+
+  const ms = Date.now() - started;
+  const len = (text || "").trim().length;
+  const headers = new Headers({
+    "X-OCR-Source": source,
+    "X-OCR-Duration": String(ms),
+    "X-OCR-URL": meta?.url ?? "",
+    "X-OCR-HTTP": String(meta?.status ?? ""),
+  });
+
+  if (len < MIN) {
+    return new Response(JSON.stringify({
+      success: false,
+      filename: file.name,
+      ocrSource: source,
+      textLength: len,
+      summary: "Document processing failed - insufficient text extracted.",
+      extractedText: "",
+    }), { status: 200, headers });
+  }
+
+  return new Response(JSON.stringify({
+    success: true,
+    filename: file.name,
+    ocrSource: source,
+    textLength: len,
+    text,
+    extractedText: text,
+  }), { status: 200, headers });
 }
