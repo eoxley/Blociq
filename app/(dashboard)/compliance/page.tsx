@@ -21,7 +21,6 @@ import {
   Sparkles
 } from 'lucide-react'
 import AssetManagementModal from '@/components/compliance/AssetManagementModal'
-import AskBlocIQ from '@/components/AskBlocIQ'
 
 // Types
 interface ComplianceAsset {
@@ -327,13 +326,7 @@ export default function CompliancePage() {
                   <RefreshCw className="h-5 w-5" />
                 </button>
                 
-                <AskBlocIQ
-                  buildingId={undefined}
-                  buildingName="Compliance System"
-                  context="compliance"
-                  placeholder="Ask about compliance requirements..."
-                  className="bg-gradient-to-r from-[#004AAD] to-[#7209B7] hover:from-[#003A8C] hover:to-[#5A078F]"
-                />
+
               </div>
             </div>
           </div>
@@ -655,70 +648,7 @@ export default function CompliancePage() {
                   </h3>
                 </div>
                 
-                {/* Enhanced Chat Container */}
-                <div className="relative">
-                  {/* Chat Background */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-[#14b8a6]/10 via-[#3b82f6]/5 to-[#8b5cf6]/10 rounded-3xl"></div>
-                  
-                  <div className="relative bg-white/80 backdrop-blur-sm rounded-3xl p-8 border-2 border-white/60 shadow-2xl">
-                    {/* Chat Header */}
-                    <div className="flex items-center gap-4 mb-6 pb-4 border-b border-gray-200">
-                      <div className="w-12 h-12 bg-gradient-to-br from-[#14b8a6] to-[#8b5cf6] rounded-2xl flex items-center justify-center shadow-lg">
-                        <Sparkles className="h-6 w-6 text-white animate-pulse" />
-                      </div>
-                      <div>
-                        <h4 className="text-lg font-bold text-gray-900">BlocIQ AI Assistant</h4>
-                        <p className="text-sm text-gray-600">● Online • Compliance Expert Mode</p>
-                      </div>
-                    </div>
-                    
-                    {/* AI Chat Interface */}
-                    <div className="space-y-6">
-                      <AskBlocIQ
-                        buildingId={undefined}
-                        buildingName="Compliance System"
-                        context="compliance"
-                        placeholder="Ask me about regulations, deadlines, risk assessments, or any compliance questions..."
-                        className="bg-gradient-to-br from-[#14b8a6] via-[#3b82f6] to-[#8b5cf6] hover:brightness-110 text-white shadow-xl hover:shadow-2xl border-2 border-white/20 backdrop-blur-sm"
-                      />
-                      
-                      {/* Suggested Prompts */}
-                      <div className="space-y-4">
-                        <p className="text-sm font-semibold text-gray-700 text-center">✨ Try asking about:</p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <button className="text-left p-4 bg-gradient-to-r from-[#14b8a6]/10 to-[#3b82f6]/10 border-2 border-[#14b8a6]/20 hover:border-[#14b8a6]/40 text-gray-700 rounded-2xl hover:bg-[#14b8a6]/20 transition-all duration-300 hover:scale-[1.02] shadow-sm hover:shadow-md">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Shield className="h-4 w-4 text-[#14b8a6]" />
-                              <span className="font-semibold text-sm">Fire Safety Requirements</span>
-                            </div>
-                            <p className="text-xs text-gray-600">"What fire safety compliance is required for my HRB?"</p>
-                          </button>
-                          <button className="text-left p-4 bg-gradient-to-r from-[#3b82f6]/10 to-[#8b5cf6]/10 border-2 border-[#3b82f6]/20 hover:border-[#3b82f6]/40 text-gray-700 rounded-2xl hover:bg-[#3b82f6]/20 transition-all duration-300 hover:scale-[1.02] shadow-sm hover:shadow-md">
-                            <div className="flex items-center gap-2 mb-1">
-                              <AlertTriangle className="h-4 w-4 text-[#3b82f6]" />
-                              <span className="font-semibold text-sm">Risk Assessment</span>
-                            </div>
-                            <p className="text-xs text-gray-600">"Analyze compliance risks for my portfolio"</p>
-                          </button>
-                          <button className="text-left p-4 bg-gradient-to-r from-[#8b5cf6]/10 to-[#14b8a6]/10 border-2 border-[#8b5cf6]/20 hover:border-[#8b5cf6]/40 text-gray-700 rounded-2xl hover:bg-[#8b5cf6]/20 transition-all duration-300 hover:scale-[1.02] shadow-sm hover:shadow-md">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Calendar className="h-4 w-4 text-[#8b5cf6]" />
-                              <span className="font-semibold text-sm">Upcoming Inspections</span>
-                            </div>
-                            <p className="text-xs text-gray-600">"Show me all upcoming compliance deadlines"</p>
-                          </button>
-                          <button className="text-left p-4 bg-gradient-to-r from-[#14b8a6]/10 to-[#8b5cf6]/10 border-2 border-[#14b8a6]/20 hover:border-[#8b5cf6]/40 text-gray-700 rounded-2xl hover:bg-gradient-to-r hover:from-[#14b8a6]/20 hover:to-[#8b5cf6]/20 transition-all duration-300 hover:scale-[1.02] shadow-sm hover:shadow-md">
-                            <div className="flex items-center gap-2 mb-1">
-                              <TrendingUp className="h-4 w-4 text-[#8b5cf6]" />
-                              <span className="font-semibold text-sm">Performance Report</span>
-                            </div>
-                            <p className="text-xs text-gray-600">"Generate a compliance performance summary"</p>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+
               </div>
             </div>
           </div>
