@@ -886,8 +886,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       const formData = new FormData();
       formData.append('file', file);
       
-      // Call our OCR API endpoint instead of importing Google Vision directly
-      const response = await fetch('/api/ocr-proxy', {
+      // Call the working external OCR server directly (Production System A)
+      const response = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
         method: 'POST',
         body: formData,
       });

@@ -349,8 +349,8 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
                 const formData = new FormData();
                 formData.append('file', uploadedFile.file);
                 
-                // Call our OCR API endpoint instead of importing Google Vision directly
-                const ocrResponse = await fetch('/api/ocr-proxy', {
+                // Call the working external OCR server directly (Production System A)
+                const ocrResponse = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
                   method: 'POST',
                   body: formData,
                 });
