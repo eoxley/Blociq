@@ -103,9 +103,14 @@ export async function ocrFallback(filename: string, buf: Buffer): Promise<string
                console.log('✅ Direct PDF processing successful!');
              } else {
                console.log('⚠️ Direct PDF processing yielded poor results, trying text detection...');
-               const [fallbackResult] = await client.textDetection(requestPayload);
-               ocrResult = fallbackResult.textAnnotations?.[0]?.description || '';
-               console.log('📊 Text detection result length:', ocrResult.length);
+               try {
+                 const [fallbackResult] = await client.textDetection(requestPayload);
+                 ocrResult = fallbackResult.textAnnotations?.[0]?.description || '';
+                 console.log('📊 Text detection result length:', ocrResult.length);
+               } catch (textDetectionError) {
+                 console.log('⚠️ Text detection also failed, keeping document detection result');
+                 // Keep the original ocrResult from document detection
+               }
              }
              
            } catch (directPdfError) {
@@ -146,9 +151,14 @@ export async function ocrFallback(filename: string, buf: Buffer): Promise<string
                // If document detection didn't work well, fallback to regular text detection
                if (ocrResult.length < 50) {
                  console.log('⚠️ Image document detection yielded poor results, trying text detection fallback');
-                 const [fallbackResult] = await client.textDetection(imageRequestPayload);
-                 ocrResult = fallbackResult.textAnnotations?.[0]?.description || '';
-                 console.log('📊 Fallback text detection result length:', ocrResult.length);
+                 try {
+                   const [fallbackResult] = await client.textDetection(imageRequestPayload);
+                   ocrResult = fallbackResult.textAnnotations?.[0]?.description || '';
+                   console.log('📊 Fallback text detection result length:', ocrResult.length);
+                 } catch (textDetectionError) {
+                   console.log('⚠️ Text detection fallback also failed, keeping document detection result');
+                   // Keep the original ocrResult from document detection
+                 }
                }
                
              } catch (pdfImageError) {
