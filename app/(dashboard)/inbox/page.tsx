@@ -1,7 +1,15 @@
-import InboxV2 from './InboxV2'
+import InboxDashboard from '@/components/inbox_v2/InboxDashboard'
 
 export const dynamic = 'force-dynamic'
 
 export default function InboxPage() {
-  return <InboxV2 />
+  return (
+    <div className="min-h-screen">
+      <InboxDashboard 
+        onRefresh={() => window.location.reload()}
+        onNavigateToInbox={() => {}}
+        onNavigateToEmail={() => {}}
+      />
+    </div>
+  )
 }
