@@ -17,7 +17,8 @@
       "Bash(npm run lint)",
       "Bash(git pull:*)",
       "Bash(npm run typecheck:*)",
-      "WebFetch(domain:ocr-server-2-ykmk.onrender.com)"
+      "WebFetch(domain:ocr-server-2-ykmk.onrender.com)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []
