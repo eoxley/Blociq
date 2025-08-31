@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
       const buffer = Buffer.from(arrayBuffer);
       
       // Use Google Vision OCR directly on server-side
-      const { ocrFallback } = await import('../../src/lib/compliance/docExtract');
+      const { ocrFallback } = await import('../../../src/lib/compliance/docExtract');
       const ocrText = await ocrFallback(file.name, buffer);
       
       if (ocrText && ocrText.trim().length > 0) {
