@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -117,10 +118,27 @@ const EnhancedInboxOverview: React.FC = () => {
       setRefreshing(!showLoader);
       setError(null);
 
-      const response = await fetch(`/api/inbox/dashboard?timeRange=${timeRange}`);
+      // Check if user is authenticated before making the request
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        throw new Error('Please log in to view the inbox dashboard');
+      }
+
+      const response = await fetch(`/api/inbox/dashboard?timeRange=${timeRange}`, {
+        method: 'GET',
+        credentials: 'include', // This ensures cookies are sent
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
       
       if (!response.ok) {
-        throw new Error(`Failed to fetch dashboard data: ${response.status}`);
+        if (response.status === 401) {
+          throw new Error('Authentication required - please log in again');
+        }
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch dashboard data: ${response.status}`);
       }
 
       const result = await response.json();
@@ -133,6 +151,11 @@ const EnhancedInboxOverview: React.FC = () => {
     } catch (error) {
       console.error('Dashboard fetch error:', error);
       setError(error instanceof Error ? error.message : 'Unknown error');
+      
+      // If authentication error, redirect to login
+      if (error instanceof Error && error.message.includes('log in')) {
+        router.push('/login');
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
