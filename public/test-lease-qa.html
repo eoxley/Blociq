@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lease Document Q&A - Professional Legal Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .legal-response { font-family: 'Georgia', serif; line-height: 1.6; }
+        .citation { background: #fef3cd; padding: 2px 4px; border-radius: 3px; }
+        .conclusion { background: #e7f3ff; border-left: 4px solid #0066cc; padding: 12px; margin: 8px 0; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen py-6">
+    <div class="container mx-auto max-w-7xl px-4">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Lease Document Q&A System</h1>
+            <p class="text-gray-600">Professional legal analysis for "5 260 certified copy lease - 17.02.2017.pdf"</p>
+            <div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 class="font-semibold text-blue-900 mb-2">Document Details:</h3>
+                <div class="text-sm text-blue-800 grid grid-cols-2 gap-2">
+                    <div><strong>Property:</strong> Flat 5, 260 Holloway Road, London N7 8PE</div>
+                    <div><strong>Parties:</strong> Kensington & Edinburgh Estates Ltd ↔ Robert Jonathan Phipps</div>
+                    <div><strong>Term:</strong> 125 years (2015-2140)</div>
+                    <div><strong>Premium:</strong> £636,000 | <strong>Rent:</strong> £450/year</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left Panel: Upload & Questions -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Document Upload -->
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">📄 Upload Lease Document</h2>
+                    
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center mb-4">
+                        <input type="file" id="fileInput" class="hidden" accept=".pdf,.png,.jpg,.jpeg">
+                        <button onclick="document.getElementById('fileInput').click()" 
+                                class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
+                            Choose PDF/Image
+                        </button>
+                        <p class="mt-2 text-sm text-gray-600">Upload lease document for analysis</p>
+                    </div>
+
+                    <div id="uploadStatus" class="hidden text-sm">
+                        <div class="bg-green-50 border border-green-200 rounded p-3">
+                            <div id="uploadDetails" class="text-green-800"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Professional Legal Questions -->
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">⚖️ Professional Legal Questions</h2>
+                    
+                    <div class="space-y-3">
+                        <!-- Core Questions -->
+                        <div>
+                            <h3 class="font-medium text-gray-800 mb-2">Core Lease Terms</h3>
+                            <div class="space-y-1">
+                                <button onclick="askProfessionalQuestion('Who are the parties to this lease and what are their roles?')" 
+                                        class="w-full text-left text-sm bg-blue-50 hover:bg-blue-100 text-blue-800 px-3 py-2 rounded">
+                                    Parties & Roles
+                                </button>
+                                <button onclick="askProfessionalQuestion('What is the lease term, commencement date, and rent review schedule?')" 
+                                        class="w-full text-left text-sm bg-blue-50 hover:bg-blue-100 text-blue-800 px-3 py-2 rounded">
+                                    Term & Reviews
+                                </button>
+                                <button onclick="askProfessionalQuestion('What are the current rent obligations and payment terms?')" 
+                                        class="w-full text-left text-sm bg-blue-50 hover:bg-blue-100 text-blue-800 px-3 py-2 rounded">
+                                    Rent & Payment
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Obligations Questions -->
+                        <div>
+                            <h3 class="font-medium text-gray-800 mb-2">Obligations & Responsibilities</h3>
+                            <div class="space-y-1">
+                                <button onclick="askProfessionalQuestion('Who is responsible for window repairs and maintenance?')" 
+                                        class="w-full text-left text-sm bg-green-50 hover:bg-green-100 text-green-800 px-3 py-2 rounded">
+                                    Window Repairs
+                                </button>
+                                <button onclick="askProfessionalQuestion('What are the restrictions on alterations and what consent is required?')" 
+                                        class="w-full text-left text-sm bg-green-50 hover:bg-green-100 text-green-800 px-3 py-2 rounded">
+                                    Alteration Rights
+                                </button>
+                                <button onclick="askProfessionalQuestion('What are the repair and maintenance obligations of each party?')" 
+                                        class="w-full text-left text-sm bg-green-50 hover:bg-green-100 text-green-800 px-3 py-2 rounded">
+                                    Repair Obligations
+                                </button>
+                                <button onclick="askProfessionalQuestion('What are the service charge provisions and tenant proportion?')" 
+                                        class="w-full text-left text-sm bg-green-50 hover:bg-green-100 text-green-800 px-3 py-2 rounded">
+                                    Service Charges
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Legal Rights -->
+                        <div>
+                            <h3 class="font-medium text-gray-800 mb-2">Legal Rights & Restrictions</h3>
+                            <div class="space-y-1">
+                                <button onclick="askProfessionalQuestion('What are the assignment and subletting provisions?')" 
+                                        class="w-full text-left text-sm bg-purple-50 hover:bg-purple-100 text-purple-800 px-3 py-2 rounded">
+                                    Assignment Rights
+                                </button>
+                                <button onclick="askProfessionalQuestion('What are the insurance obligations and who pays premiums?')" 
+                                        class="w-full text-left text-sm bg-purple-50 hover:bg-purple-100 text-purple-800 px-3 py-2 rounded">
+                                    Insurance Terms
+                                </button>
+                                <button onclick="askProfessionalQuestion('What are the termination and forfeiture provisions?')" 
+                                        class="w-full text-left text-sm bg-purple-50 hover:bg-purple-100 text-purple-800 px-3 py-2 rounded">
+                                    Termination Rights
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Custom Question -->
+                    <div class="mt-4 pt-4 border-t">
+                        <h3 class="font-medium text-gray-800 mb-2">Custom Legal Question</h3>
+                        <div class="flex gap-2">
+                            <input type="text" id="customQuestion" 
+                                   placeholder="Enter specific legal question..." 
+                                   class="flex-1 text-sm border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+                            <button onclick="askCustomQuestion()" 
+                                    class="bg-indigo-600 text-white px-4 py-2 text-sm rounded hover:bg-indigo-700">
+                                Ask
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Results -->
+            <div class="lg:col-span-2">
+                <!-- Legal Analysis Results -->
+                <div id="analysisResults" class="space-y-6">
+                    <!-- Welcome Message -->
+                    <div class="bg-white rounded-lg shadow-sm p-6">
+                        <h2 class="text-xl font-semibold text-gray-900 mb-4">📋 Legal Analysis Results</h2>
+                        <div class="text-gray-600">
+                            <p>Upload your lease document and select questions to receive professional legal analysis.</p>
+                            <div class="mt-4 text-sm bg-amber-50 border border-amber-200 rounded p-3">
+                                <strong>Note:</strong> This system provides detailed analysis of lease provisions but should not replace professional legal advice for specific situations.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading -->
+                <div id="loading" class="hidden bg-white rounded-lg shadow-sm p-8 text-center">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                    <p class="mt-2 text-gray-600" id="loadingText">Analyzing document...</p>
+                </div>
+
+                <!-- Error -->
+                <div id="error" class="hidden bg-white rounded-lg shadow-sm p-6">
+                    <div class="bg-red-50 border border-red-200 rounded p-4">
+                        <h3 class="font-semibold text-red-800">Analysis Error</h3>
+                        <div id="errorContent" class="mt-2 text-sm text-red-700"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let extractedData = null;
+
+        document.getElementById('fileInput').addEventListener('change', handleFile);
+        document.getElementById('customQuestion').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') askCustomQuestion();
+        });
+
+        async function handleFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            showLoading('Extracting text from lease document...');
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const response = await fetch('/api/ask-ai/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                hideLoading();
+                
+                if (response.ok && data.success) {
+                    extractedData = data;
+                    showUploadSuccess(data);
+                } else {
+                    showError(`Document extraction failed: ${data.error || 'Unknown error'}`);
+                }
+
+            } catch (err) {
+                hideLoading();
+                showError('Upload error: ' + err.message);
+            }
+        }
+
+        function showUploadSuccess(data) {
+            document.getElementById('uploadStatus').classList.remove('hidden');
+            document.getElementById('uploadDetails').innerHTML = `
+                ✅ <strong>Document processed successfully</strong><br>
+                📄 File: ${data.filename}<br>
+                🔍 Method: ${data.ocrSource}<br>
+                📊 Text extracted: ${data.textLength.toLocaleString()} characters<br>
+                📋 Type: ${data.documentType}
+            `;
+        }
+
+        function askProfessionalQuestion(question) {
+            if (!extractedData) {
+                showError('Please upload a lease document first');
+                return;
+            }
+            processLegalQuestion(question);
+        }
+
+        function askCustomQuestion() {
+            const question = document.getElementById('customQuestion').value.trim();
+            if (!question) return;
+            if (!extractedData) {
+                showError('Please upload a lease document first');
+                return;
+            }
+            processLegalQuestion(question);
+            document.getElementById('customQuestion').value = '';
+        }
+
+        async function processLegalQuestion(question) {
+            showLoading('Performing professional legal analysis...');
+
+            try {
+                const response = await fetch('/api/ask-ai/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        question: question,
+                        documentText: extractedData.extractedText,
+                        documentMetadata: {
+                            filename: extractedData.filename,
+                            documentType: 'lease_agreement',
+                            ocrSource: extractedData.ocrSource,
+                            parties: ['Kensington & Edinburgh Estates Ltd', 'Robert Jonathan Phipps'],
+                            property: 'Flat 5, 260 Holloway Road, London N7 8PE',
+                            premium: '£636,000',
+                            term: '125 years (2015-2140)'
+                        }
+                    })
+                });
+
+                const result = await response.json();
+                hideLoading();
+
+                if (response.ok && result.success) {
+                    showLegalAnalysis(result);
+                } else {
+                    showError(`Legal analysis failed: ${result.error || 'Unknown error'}`);
+                }
+
+            } catch (err) {
+                hideLoading();
+                showError('Analysis error: ' + err.message);
+            }
+        }
+
+        function showLegalAnalysis(result) {
+            const analysisResults = document.getElementById('analysisResults');
+            
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'bg-white rounded-lg shadow-sm overflow-hidden';
+            
+            resultDiv.innerHTML = `
+                <div class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-4">
+                    <h3 class="text-lg font-semibold">Legal Analysis</h3>
+                    <p class="text-indigo-100 text-sm">${result.question}</p>
+                </div>
+                
+                <div class="p-6">
+                    <div class="legal-response">
+                        <div class="prose max-w-none">
+                            <pre class="whitespace-pre-wrap text-gray-800 leading-relaxed">${result.answer}</pre>
+                        </div>
+                    </div>
+                    
+                    ${result.relevantSections && result.relevantSections.length > 0 ? `
+                        <div class="mt-6 border-t pt-6">
+                            <h4 class="font-semibold text-gray-900 mb-3">📚 Document References</h4>
+                            <div class="space-y-3">
+                                ${result.relevantSections.map((section, index) => `
+                                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r">
+                                        <h5 class="font-medium text-yellow-900 capitalize">${section.section.replace(/_/g, ' ')}</h5>
+                                        <p class="text-sm text-yellow-800 mt-1 font-mono">${section.text}</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="mt-6 flex justify-between items-center text-sm text-gray-500 border-t pt-4">
+                        <div class="flex items-center gap-4">
+                            <span class="flex items-center gap-1">
+                                <div class="w-3 h-3 rounded-full ${result.confidence > 0.8 ? 'bg-green-400' : result.confidence > 0.6 ? 'bg-yellow-400' : 'bg-red-400'}"></div>
+                                Confidence: ${Math.round(result.confidence * 100)}%
+                            </span>
+                            <span>Document: ${result.documentType}</span>
+                            <span>References: ${result.relevantSections?.length || 0}</span>
+                        </div>
+                        <span>${new Date().toLocaleTimeString()}</span>
+                    </div>
+                </div>
+            `;
+            
+            // Clear welcome message if it's the first result
+            if (analysisResults.children.length === 1 && analysisResults.children[0].querySelector('h2')?.textContent?.includes('Legal Analysis Results')) {
+                analysisResults.innerHTML = '';
+            }
+            
+            analysisResults.appendChild(resultDiv);
+            resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function showLoading(text = 'Processing...') {
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('loadingText').textContent = text;
+            document.getElementById('error').classList.add('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').classList.add('hidden');
+        }
+
+        function showError(message) {
+            document.getElementById('error').classList.remove('hidden');
+            document.getElementById('errorContent').textContent = message;
+            document.getElementById('loading').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
