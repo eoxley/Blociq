@@ -49,21 +49,22 @@ export async function POST(req: NextRequest) {
       }, { status: 500 });
     }
 
-    // Also store in building_documents for consistency
-    const { data: buildingDoc, error: buildingDocError } = await supabase
-      .from("building_documents")
+    // Also store in compliance_documents for consistency
+    const { data: complianceDoc, error: complianceDocError } = await supabase
+      .from("compliance_documents")
       .insert({
         building_id: updatedDocument.building_id,
-        file_name: `Compliance - ${doc_type}`,
-        file_url: updatedDocument.doc_url,
-        type: doc_type,
+        compliance_asset_id: updatedDocument.compliance_item_id,
+        document_url: updatedDocument.doc_url,
+        title: `Compliance - ${doc_type}`,
+        doc_type: doc_type,
         created_at: new Date().toISOString()
       })
       .select()
       .single();
 
-    if (buildingDocError) {
-      console.warn("⚠️ Could not create building document record:", buildingDocError);
+    if (complianceDocError) {
+      console.warn("⚠️ Could not create compliance document record:", complianceDocError);
     }
 
     // Update the building asset's last_checked date if this is a certificate/report
@@ -92,7 +93,7 @@ export async function POST(req: NextRequest) {
         classified_by_ai: classified_by_ai || false,
         created_at: updatedDocument.created_at
       },
-      building_document: buildingDoc,
+      building_document: complianceDoc,
       debug_info: {
         user_id: user.id,
         timestamp: new Date().toISOString(),

@@ -31,20 +31,15 @@ export async function POST(req: NextRequest) {
     for (const r of body.rows) {
       // a) Insert document
       const { data: docIns, error: docErr } = await sb
-        .from("building_documents")
+        .from("compliance_documents")
         .insert({
           building_id: body.buildingId,
+          compliance_asset_id: r.matched_asset_id || null,
+          document_url: r.storagePath,
           title: r.filename,
-          storage_path: r.storagePath,
-          mime_type: r.mime,
-          doc_type: r.doc_type,
           summary: r.summary_markdown,
-          ai_extracted: {
-            provider: r.provider, reference: r.reference,
-            last_completed_date: r.last_completed_date,
-            next_due_date: r.next_due_date,
-            confidence: r.confidence
-          }
+          doc_type: r.doc_type,
+          extracted_date: new Date().toISOString()
         })
         .select("id").single();
       if (docErr) throw new Error(`document insert failed: ${docErr.message}`);
