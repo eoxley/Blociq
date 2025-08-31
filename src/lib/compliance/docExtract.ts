@@ -72,18 +72,26 @@ export async function ocrFallback(filename: string, buf: Buffer): Promise<string
     let ocrResult: string = '';
     
     if (isPDF) {
-      // For PDFs, use DOCUMENT_TEXT_DETECTION for better layout preservation
-      console.log('📄 Using DOCUMENT_TEXT_DETECTION for PDF');
+      // For PDFs, convert to image first, then use OCR
+      console.log('📄 Processing PDF - converting to image first...');
       
       try {
+        // Convert PDF to image
+        const { convertPdfToSingleImage } = await import('../../../lib/pdf-to-image');
+        const imageBuffer = await convertPdfToSingleImage(buf);
+        
+        console.log('🖼️ PDF converted to image, size:', imageBuffer.length, 'bytes');
+        
+        // Now use Google Vision OCR on the image
+        console.log('🔍 Using Google Vision OCR on converted image...');
+        
         const requestPayload = {
           image: {
-            content: buf.toString('base64')
+            content: imageBuffer.toString('base64')
           }
         };
         
-        console.log('📤 Sending DOCUMENT_TEXT_DETECTION request...');
-        console.log('📊 Request payload size:', JSON.stringify(requestPayload).length, 'chars');
+        console.log('📤 Sending DOCUMENT_TEXT_DETECTION request for converted image...');
         
         const [result] = await client.documentTextDetection(requestPayload);
         
@@ -103,6 +111,7 @@ export async function ocrFallback(filename: string, buf: Buffer): Promise<string
           ocrResult = fallbackResult.textAnnotations?.[0]?.description || '';
           console.log('📊 Fallback text detection result length:', ocrResult.length);
         }
+        
       } catch (pdfError) {
         console.error('❌ PDF processing failed:', pdfError);
         
@@ -115,18 +124,18 @@ export async function ocrFallback(filename: string, buf: Buffer): Promise<string
           });
         }
         
-        // Fallback to regular text detection
+        // Fallback: try to process the PDF buffer directly (in case it's actually an image)
         try {
-          console.log('🔄 Falling back to regular text detection...');
+          console.log('🔄 Falling back to direct buffer processing...');
           const [fallbackResult] = await client.textDetection({
             image: {
               content: buf.toString('base64')
             }
           });
           ocrResult = fallbackResult.textAnnotations?.[0]?.description || '';
-          console.log('📊 Fallback result length:', ocrResult.length);
+          console.log('📊 Direct buffer fallback result length:', ocrResult.length);
         } catch (fallbackError) {
-          console.error('❌ Fallback text detection also failed:', fallbackError);
+          console.error('❌ Direct buffer fallback also failed:', fallbackError);
           throw fallbackError;
         }
       }
