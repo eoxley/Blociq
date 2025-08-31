@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, createContext, useContext, useEffect, useCallback } from 'react'
-import { MessageSquare, Plus, Search, Filter, RefreshCw, Settings, MoreVertical, FileText, Sparkles, Zap, TrendingUp, Users, Clock, Brain } from 'lucide-react'
+import { MessageSquare, Plus, Search, Filter, RefreshCw, Settings, MoreVertical, FileText, Sparkles, Zap, TrendingUp, Users, Clock, Brain, BarChart3, Mail, CheckCircle } from 'lucide-react'
 import FolderSidebar from '@/components/inbox_v2/FolderSidebar'
 import MessageList from '@/components/inbox_v2/MessageList'
 import MessagePreview from '@/components/inbox_v2/MessagePreview'
@@ -9,6 +9,7 @@ import ReplyModal from '@/components/inbox_v2/ReplyModal'
 import NewEmailModal from '@/components/inbox_v2/NewEmailModal'
 import TriageButton from '@/components/inbox_v2/TriageButton'
 import DraftsPanel from '@/components/inbox_v2/DraftsPanel'
+import InboxDashboard from '@/components/inbox_v2/InboxDashboard'
 import { useMessages, useFolders } from '@/hooks/inbox_v2'
 import { mutate } from 'swr'
 import { cn } from '@/lib/utils'
@@ -49,6 +50,7 @@ export default function InboxV2() {
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set())
   const [draftsPanelOpen, setDraftsPanelOpen] = useState(false)
   const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date())
+  const [currentView, setCurrentView] = useState<'inbox' | 'dashboard'>('inbox')
 
   // Get folders and messages with enhanced data fetching
   const { folders, isLoading: foldersLoading, isFallback } = useFolders()
@@ -68,6 +70,31 @@ export default function InboxV2() {
     setLastRefreshTime(new Date())
     await refreshMessages()
   }, [refreshMessages])
+
+  // Enhanced navigation functions for message handling
+  const navigateToMessage = useCallback((messageId: string) => {
+    const message = messages.find((msg: any) => msg.id === messageId)
+    if (message) {
+      setSelectedMessage(message)
+      setSelectedId(messageId)
+      setCurrentView('inbox') // Switch to inbox view when navigating to specific message
+    }
+  }, [messages, setSelectedId])
+
+  // Enhanced filtering integration with MessageList
+  const handleFilteredNavigation = useCallback((filter: any) => {
+    // Apply the filter to message list and select first result
+    if (filter && Object.keys(filter).length > 0) {
+      setCurrentView('inbox') // Switch to inbox view when applying filters
+      // TODO: Implement actual filtering logic here
+      console.log('Applied filter:', filter)
+    }
+  }, [])
+
+  // Dashboard integration callbacks
+  const handleDashboardRefresh = useCallback(() => {
+    handleRefresh()
+  }, [handleRefresh])
 
   // Set the inbox folder as default when folders are loaded
   useEffect(() => {
@@ -491,7 +518,10 @@ export default function InboxV2() {
                   <p className="text-xs text-white/70">Smart email assistance</p>
                 </div>
                 <button
-                  onClick={() => document.querySelector('[data-askblociq-button]')?.click()}
+                  onClick={() => {
+                    const button = document.querySelector('[data-askblociq-button]') as HTMLElement;
+                    if (button) button.click();
+                  }}
                   className="px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white text-xs rounded-lg transition-all duration-200 hover:scale-105 border border-white/30"
                 >
                   Ask Now
@@ -514,30 +544,69 @@ export default function InboxV2() {
         </div>
       </div>
 
-      {/* 📊 QUICK STATS SECTION - Visual metrics and insights */}
+      {/* 📊 QUICK STATS SECTION with Dashboard Toggle */}
       <div className="bg-white/90 backdrop-blur-sm border-b border-gray-200/50 px-8 py-4">
-        <div className="grid grid-cols-4 gap-6">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-gray-900">{totalMessages}</div>
-            <div className="text-sm text-gray-600">Total Messages</div>
+        <div className="flex items-center justify-between">
+          <div className="grid grid-cols-4 gap-6">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-gray-900">{totalMessages}</div>
+              <div className="text-sm text-gray-600">Total Messages</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">{unreadCount}</div>
+              <div className="text-sm text-gray-600">Unread</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-red-600">{urgentMessages}</div>
+              <div className="text-sm text-gray-600">Urgent</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-600">{selectedFolder ? selectedFolder.displayName : 'Inbox'}</div>
+              <div className="text-sm text-gray-600">Current Folder</div>
+            </div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">{unreadCount}</div>
-            <div className="text-sm text-gray-600">Unread</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-red-600">{urgentMessages}</div>
-            <div className="text-sm text-gray-600">Urgent</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-purple-600">{selectedFolder ? selectedFolder.displayName : 'Inbox'}</div>
-            <div className="text-sm text-gray-600">Current Folder</div>
+          
+          {/* View Toggle */}
+          <div className="flex items-center gap-2 bg-white rounded-xl p-1 shadow-lg border border-gray-200">
+            <button
+              onClick={() => setCurrentView('inbox')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                currentView === 'inbox' 
+                  ? 'bg-blue-500 text-white shadow-md' 
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <Mail className="h-4 w-4" />
+              Inbox
+            </button>
+            <button
+              onClick={() => setCurrentView('dashboard')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                currentView === 'dashboard' 
+                  ? 'bg-purple-500 text-white shadow-md' 
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <BarChart3 className="h-4 w-4" />
+              Analytics
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Enhanced Main Email Client Layout with Full BlocIQ Design Magic */}
-      <div className="flex h-[calc(100vh-400px)] bg-gradient-to-br from-gray-50 via-blue-50/20 to-purple-50/20">
+      {/* Conditional View Rendering */}
+      {currentView === 'dashboard' ? (
+        <div className="flex-1 p-8 bg-gradient-to-br from-gray-50 via-blue-50/20 to-purple-50/20 overflow-auto">
+          <InboxDashboard 
+            onRefresh={handleDashboardRefresh}
+            onNavigateToInbox={handleFilteredNavigation}
+            onNavigateToEmail={navigateToMessage}
+          />
+        </div>
+      ) : (
+        <>
+          {/* Enhanced Main Email Client Layout with Full BlocIQ Design Magic */}
+          <div className="flex h-[calc(100vh-400px)] bg-gradient-to-br from-gray-50 via-blue-50/20 to-purple-50/20">
         {/* Left Column: Enhanced Folder Sidebar */}
         <div className="w-80 bg-white/80 backdrop-blur-sm border-r border-gray-200/50 flex flex-col shadow-xl">
           <div className="p-6 border-b border-gray-200/50 bg-gradient-to-b from-white/90 via-blue-50/30 to-purple-50/30">

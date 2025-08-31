@@ -17,6 +17,18 @@ interface EmailItem {
   status?: string;
   suggestedAction?: string;
   building?: string | null;
+  urgencyScore?: number;
+  aiTag?: string;
+  triageCategory?: string;
+  mentionedProperties?: string[];
+  urgencyLevel?: string;
+  aiInsights?: Array<{
+    type: string;
+    message: string;
+    action: string;
+    priority: string;
+  }>;
+  suggestedActions?: string[];
 }
 
 interface InboxSummary {
@@ -27,6 +39,7 @@ interface InboxSummary {
   lastUpdated: string;
   fallback?: boolean;
   error?: string;
+  enhancedTriageEnabled?: boolean;
 }
 
 export default function InboxOverviewPage() {
@@ -236,21 +249,39 @@ export default function InboxOverviewPage() {
             ) : (
               <div className="space-y-3">
                 {summary.urgent.map((email) => (
-                  <div key={email.id} className="border-l-4 border-red-500 pl-4 py-2">
-                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2">
+                  <div key={email.id} className="border-l-4 border-red-500 pl-4 py-2 bg-red-50 rounded-r-lg">
+                    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-2">
                       <div className="flex-1">
                         <h3 className="font-medium text-gray-900">{email.subject}</h3>
                         <p className="text-sm text-gray-600">From: {email.sender}</p>
                         {email.building && (
-                          <p className="text-xs text-gray-500">Building: {email.building}</p>
+                          <p className="text-xs text-gray-500 mb-1">Building: {email.building}</p>
+                        )}
+                        {email.mentionedProperties && email.mentionedProperties.length > 0 && (
+                          <p className="text-xs text-blue-600 mb-1">
+                            Properties: {email.mentionedProperties.slice(0, 2).join(', ')}
+                            {email.mentionedProperties.length > 2 && ` +${email.mentionedProperties.length - 2} more`}
+                          </p>
+                        )}
+                        {email.aiTag && (
+                          <div className="flex items-center gap-1 mt-1">
+                            <Badge variant="outline" className="text-xs bg-purple-100 text-purple-700 border-purple-300">
+                              🤖 {email.aiTag.replace('_', ' ')}
+                            </Badge>
+                            {email.urgencyScore && email.urgencyScore >= 8 && (
+                              <Badge variant="destructive" className="text-xs">
+                                🔥 Score: {email.urgencyScore}
+                              </Badge>
+                            )}
+                          </div>
                         )}
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col items-end gap-1">
                         <Badge variant="outline" className="text-xs">
                           {new Date(email.sent_at).toLocaleDateString()}
                         </Badge>
                         {email.priority && (
-                          <Badge variant="destructive" className="text-xs">
+                          <Badge variant="destructive" className="text-xs capitalize">
                             {email.priority}
                           </Badge>
                         )}
@@ -278,22 +309,61 @@ export default function InboxOverviewPage() {
             ) : (
               <div className="space-y-3">
                 {summary.needsAction.map((email) => (
-                  <div key={email.id} className="border-l-4 border-blue-500 pl-4 py-2">
+                  <div key={email.id} className="border-l-4 border-blue-500 pl-4 py-2 bg-blue-50 rounded-r-lg">
                     <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-2">
                       <div className="flex-1">
                         <h3 className="font-medium text-gray-900">{email.subject}</h3>
                         <p className="text-sm text-gray-600">From: {email.sender}</p>
                         {email.building && (
-                          <p className="text-xs text-gray-500">Building: {email.building}</p>
+                          <p className="text-xs text-gray-500 mb-1">Building: {email.building}</p>
                         )}
+                        
+                        {/* Enhanced AI insights */}
+                        {email.aiInsights && email.aiInsights.length > 0 && (
+                          <div className="mt-2 mb-2">
+                            {email.aiInsights.slice(0, 2).map((insight, idx) => (
+                              <div key={idx} className={`text-xs p-2 rounded mb-1 ${
+                                insight.priority === 'critical' ? 'bg-red-100 text-red-800' :
+                                insight.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                                'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                <strong>{insight.type}:</strong> {insight.message}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {/* Primary suggested action */}
                         <p className="text-sm text-blue-700 mt-1">
-                          <strong>Suggested:</strong> {email.suggestedAction}
+                          <strong>Action:</strong> {email.suggestedAction}
                         </p>
+                        
+                        {/* Additional AI-suggested actions */}
+                        {email.suggestedActions && email.suggestedActions.length > 1 && (
+                          <div className="mt-1">
+                            <p className="text-xs text-gray-600">Also consider:</p>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {email.suggestedActions.slice(1, 4).map((action, idx) => (
+                                <Badge key={idx} variant="outline" className="text-xs bg-gray-100">
+                                  {action}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col items-end gap-1">
                         <Badge variant="outline" className="text-xs">
                           {new Date(email.sent_at).toLocaleDateString()}
                         </Badge>
+                        {email.urgencyLevel && (
+                          <Badge 
+                            variant={email.urgencyLevel === 'high' ? 'destructive' : 'outline'} 
+                            className="text-xs capitalize"
+                          >
+                            {email.urgencyLevel}
+                          </Badge>
+                        )}
                         {email.status && (
                           <Badge variant="outline" className="text-xs">
                             {email.status}

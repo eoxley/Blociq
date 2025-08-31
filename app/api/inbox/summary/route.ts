@@ -20,39 +20,43 @@ export async function GET(req: NextRequest) {
 
     console.log('✅ User authenticated:', session.user.id);
 
-    // Get recent emails from the communications system
+    // Get recent emails with enhanced triage data from incoming_emails table
     let emails = [];
     let emailsError = null;
     
     try {
       const { data: emailsData, error: emailsErrorData } = await supabase
-        .from('communications')
+        .from('incoming_emails')
         .select(`
           id,
           subject,
-          content,
           from_email,
-          to_email,
-          sent_at,
-          type,
-          status,
-          priority,
+          body_preview,
+          received_at,
+          unread,
+          handled,
+          urgency_level,
+          urgency_score,
+          mentioned_properties,
+          ai_insights,
+          suggested_actions,
+          ai_tag,
+          triage_category,
           building_id,
-          unit_id,
-          leaseholder_id
+          tag
         `)
-        .eq('user_email', session.user.email)
-        .order('sent_at', { ascending: false })
-        .limit(50);
+        .order('received_at', { ascending: false })
+        .limit(100);
 
       if (emailsErrorData) {
         console.error('❌ Error fetching emails:', emailsErrorData);
         emailsError = emailsErrorData;
       } else {
         emails = emailsData || [];
+        console.log(`✅ Fetched ${emails.length} emails with enhanced triage data`);
       }
     } catch (error) {
-      console.error('❌ Communications table access error:', error);
+      console.error('❌ Incoming emails table access error:', error);
       // Fallback to empty emails array if table doesn't exist or has RLS issues
       emails = [];
     }
@@ -82,59 +86,81 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Process emails into summary categories
+    // Process emails into summary categories using enhanced triage data
     const urgent = emails?.filter(email => 
-      email.priority === 'high' || 
-      email.subject?.toLowerCase().includes('urgent') ||
-      email.subject?.toLowerCase().includes('emergency') ||
-      email.subject?.toLowerCase().includes('asap')
+      email.urgency_level === 'critical' || 
+      email.urgency_level === 'high' ||
+      email.ai_tag === 'urgent' ||
+      email.urgency_score >= 7
     ) || [];
 
     const needsAction = emails?.filter(email => 
-      email.status === 'pending' || 
-      email.status === 'needs_response' ||
-      email.subject?.toLowerCase().includes('action') ||
-      email.subject?.toLowerCase().includes('required') ||
-      email.subject?.toLowerCase().includes('please')
+      !email.handled && (
+        email.ai_tag === 'follow_up' ||
+        email.triage_category === 'complaint' ||
+        email.triage_category === 'maintenance' ||
+        email.urgency_level === 'medium' ||
+        (email.suggested_actions && email.suggested_actions.length > 0)
+      )
     ) || [];
 
-    // Generate AI suggestions based on email content
+    // Generate enhanced AI suggestions based on triage insights
     const aiSuggestions = [];
     
     if (emails && emails.length > 0) {
-      // Check for compliance-related emails
+      // Aggregate insights from AI triage
+      const allInsights = emails.flatMap(email => email.ai_insights || []);
+      const criticalInsights = allInsights.filter(insight => insight.priority === 'critical');
+      const highInsights = allInsights.filter(insight => insight.priority === 'high');
+      
+      if (criticalInsights.length > 0) {
+        aiSuggestions.push(`⚠️ ${criticalInsights.length} critical compliance/legal matters need immediate attention`);
+      }
+      
+      if (highInsights.length > 0) {
+        aiSuggestions.push(`🔥 ${highInsights.length} recurring issues detected - review for systemic problems`);
+      }
+      
+      // Check for compliance-related emails by AI tag
       const complianceEmails = emails.filter(email => 
-        email.subject?.toLowerCase().includes('compliance') ||
-        email.subject?.toLowerCase().includes('section 20') ||
-        email.subject?.toLowerCase().includes('fire safety') ||
-        email.subject?.toLowerCase().includes('gas safety')
+        email.ai_tag === 'fire_safety' ||
+        email.ai_tag === 'compliance' ||
+        email.triage_category === 'legal'
       );
       
       if (complianceEmails.length > 0) {
-        aiSuggestions.push(`Review ${complianceEmails.length} compliance-related emails for urgent actions`);
+        aiSuggestions.push(`📋 ${complianceEmails.length} compliance/safety emails require immediate action`);
       }
 
-      // Check for building-specific emails
-      const buildingEmails = emails.filter(email => email.building_id);
-      if (buildingEmails.length > 0) {
-        aiSuggestions.push(`Process ${buildingEmails.length} building-specific communications`);
+      // Check for maintenance clusters
+      const maintenanceEmails = emails.filter(email => 
+        email.ai_tag === 'maintenance' || email.triage_category === 'maintenance'
+      );
+      if (maintenanceEmails.length > 3) {
+        aiSuggestions.push(`🔧 ${maintenanceEmails.length} maintenance requests - consider batch processing`);
       }
 
-      // Check for leaseholder inquiries
-      const leaseholderEmails = emails.filter(email => email.leaseholder_id);
-      if (leaseholderEmails.length > 0) {
-        aiSuggestions.push(`Address ${leaseholderEmails.length} leaseholder inquiries`);
+      // Check for property-specific patterns
+      const propertiesWithIssues = new Set();
+      emails.forEach(email => {
+        if (email.mentioned_properties && email.mentioned_properties.length > 0) {
+          email.mentioned_properties.forEach(prop => propertiesWithIssues.add(prop));
+        }
+      });
+      
+      if (propertiesWithIssues.size > 0) {
+        aiSuggestions.push(`🏢 Issues detected across ${propertiesWithIssues.size} properties - review for patterns`);
       }
 
-      // Check for overdue responses
+      // Check for overdue responses using enhanced data
       const overdueEmails = emails.filter(email => {
-        const emailDate = new Date(email.sent_at);
+        const emailDate = new Date(email.received_at);
         const daysSince = (Date.now() - emailDate.getTime()) / (1000 * 60 * 60 * 24);
-        return daysSince > 3 && email.status !== 'handled';
+        return daysSince > 2 && !email.handled && email.urgency_level !== 'low';
       });
       
       if (overdueEmails.length > 0) {
-        aiSuggestions.push(`Follow up on ${overdueEmails.length} emails that may need attention`);
+        aiSuggestions.push(`⏰ ${overdueEmails.length} emails overdue for response (>2 days)`);
       }
     }
 
@@ -172,22 +198,30 @@ export async function GET(req: NextRequest) {
         id: email.id,
         subject: email.subject || 'No subject',
         sender: email.from_email || 'Unknown sender',
-        sent_at: email.sent_at,
-        priority: email.priority,
-        building: buildings[email.building_id]?.name || null
+        sent_at: email.received_at,
+        priority: email.urgency_level,
+        urgencyScore: email.urgency_score,
+        building: buildings[email.building_id]?.name || null,
+        aiTag: email.ai_tag,
+        triageCategory: email.triage_category,
+        mentionedProperties: email.mentioned_properties || []
       })),
       needsAction: needsAction.map(email => ({
         id: email.id,
         subject: email.subject || 'No subject',
         sender: email.from_email || 'Unknown sender',
-        sent_at: email.sent_at,
-        status: email.status,
-        suggestedAction: getSuggestedAction(email),
-        building: buildings[email.building_id]?.name || null
+        sent_at: email.received_at,
+        status: email.handled ? 'handled' : 'pending',
+        suggestedAction: getEnhancedSuggestedAction(email),
+        building: buildings[email.building_id]?.name || null,
+        urgencyLevel: email.urgency_level,
+        aiInsights: email.ai_insights || [],
+        suggestedActions: email.suggested_actions || []
       })),
       aiSuggestions,
       totalEmails: emails?.length || 0,
-      lastUpdated: new Date().toISOString()
+      lastUpdated: new Date().toISOString(),
+      enhancedTriageEnabled: true
     };
 
     console.log('✅ Inbox summary generated:', {
@@ -213,38 +247,42 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// Helper function to suggest actions based on email content
+// Enhanced helper function using AI triage data
+function getEnhancedSuggestedAction(email: any): string {
+  // Use AI-generated suggested actions if available
+  if (email.suggested_actions && email.suggested_actions.length > 0) {
+    return email.suggested_actions[0]; // Return the first/most important action
+  }
+  
+  // Fallback to AI insights
+  if (email.ai_insights && email.ai_insights.length > 0) {
+    const highPriorityInsight = email.ai_insights.find(insight => insight.priority === 'critical' || insight.priority === 'high');
+    if (highPriorityInsight) {
+      return highPriorityInsight.action;
+    }
+    return email.ai_insights[0].action;
+  }
+  
+  // Fallback to AI tag-based suggestions
+  switch (email.ai_tag) {
+    case 'urgent':
+      return 'PRIORITY: Handle immediately';
+    case 'fire_safety':
+      return 'Schedule fire safety assessment and update compliance records';
+    case 'maintenance':
+      return 'Create work order and assign contractor';
+    case 'complaint':
+      return 'Acknowledge receipt and schedule investigation';
+    case 'compliance':
+      return 'Review compliance requirements and escalate if needed';
+    case 'legal':
+      return 'Review with legal team and prepare formal response';
+    default:
+      return 'Review and respond within 24 hours';
+  }
+}
+
+// Legacy function kept for backwards compatibility
 function getSuggestedAction(email: any): string {
-  const subject = email.subject?.toLowerCase() || '';
-  const content = email.content?.toLowerCase() || '';
-  
-  if (subject.includes('compliance') || content.includes('compliance')) {
-    return 'Review compliance requirements and schedule inspections';
-  }
-  
-  if (subject.includes('section 20') || content.includes('section 20')) {
-    return 'Process Section 20 consultation and notify leaseholders';
-  }
-  
-  if (subject.includes('fire safety') || content.includes('fire safety')) {
-    return 'Schedule fire safety assessment and update records';
-  }
-  
-  if (subject.includes('gas safety') || content.includes('gas safety')) {
-    return 'Arrange gas safety inspection and certificate renewal';
-  }
-  
-  if (subject.includes('maintenance') || content.includes('maintenance')) {
-    return 'Assess maintenance request and assign contractor';
-  }
-  
-  if (subject.includes('complaint') || content.includes('complaint')) {
-    return 'Investigate complaint and respond within 24 hours';
-  }
-  
-  if (subject.includes('payment') || content.includes('payment')) {
-    return 'Review payment details and update accounts';
-  }
-  
-  return 'Review and respond appropriately';
+  return getEnhancedSuggestedAction(email);
 }

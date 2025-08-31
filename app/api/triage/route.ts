@@ -148,13 +148,59 @@ async function performSingleTriage(messageId: string) {
       throw new Error("AI triage failed to return a result");
     }
 
+    // NEW: Enhanced categorization with urgency and property detection
+    const enhancedTriage = {
+      // Keep existing AI categorization
+      ...triageResult,
+      
+      // Add urgency detection
+      urgency: detectUrgency(rawEmail, message),
+      
+      // Add property extraction
+      properties: extractProperties(rawEmail),
+      
+      // Add actionable insights
+      insights: generateEmailInsights(rawEmail),
+      
+      // Add suggested actions
+      suggestedActions: getSuggestedActions(rawEmail, triageResult)
+    };
+
+    // Store enhanced data in incoming_emails table
+    try {
+      await supabaseAdmin
+        .from('incoming_emails')
+        .upsert({
+          message_id: messageId,
+          subject: rawEmail.subject,
+          from_email: rawEmail.from,
+          body_preview: rawEmail.plainText,
+          received_at: rawEmail.date,
+          ai_tag: enhancedTriage.label,
+          triage_category: enhancedTriage.subcategory || enhancedTriage.label,
+          urgency_level: enhancedTriage.urgency.level,
+          urgency_score: enhancedTriage.urgency.score,
+          mentioned_properties: enhancedTriage.properties,
+          ai_insights: enhancedTriage.insights,
+          suggested_actions: enhancedTriage.suggestedActions,
+          unread: true,
+          handled: false
+        }, {
+          onConflict: 'message_id'
+        });
+      console.log('Enhanced triage data saved to database');
+    } catch (dbError) {
+      console.error('Failed to save enhanced triage data:', dbError);
+      // Don't fail the entire operation if database save fails
+    }
+
     // Perform triage actions
-    const actions = await performTriageActions(messageId, triageResult, message);
+    const actions = await performTriageActions(messageId, enhancedTriage, message);
     console.log('Triage actions performed:', actions)
 
     return NextResponse.json({
-      message: "Triage completed successfully",
-      triage: triageResult,
+      message: "Enhanced triage completed successfully",
+      triage: enhancedTriage,
       actions
     });
 
@@ -562,4 +608,208 @@ async function moveToArchive(messageId: string) {
     console.error("Error moving to archive:", error);
     throw error;
   }
+}
+
+// NEW: Enhanced triage helper functions
+
+// Urgency detection function
+function detectUrgency(email: IncomingEmail, originalMessage?: any) {
+  const text = `${email.subject} ${email.body}`.toLowerCase();
+  
+  const urgencyKeywords = {
+    critical: ['emergency', 'urgent', 'asap', 'immediate', 'critical', 'fire', 'flood', 'gas leak', 'water leak', 'electrical fault'],
+    high: ['important', 'priority', 'soon', 'today', 'leak', 'broken', 'not working', 'dangerous', 'safety'],
+    medium: ['maintenance', 'repair', 'issue', 'problem', 'concern', 'noise', 'heating'],
+    low: ['inquiry', 'question', 'request', 'information', 'general']
+  };
+
+  let level = 'low';
+  let score = 0;
+
+  // Check Microsoft importance flag first
+  if (originalMessage?.importance === 'high') {
+    score += 5;
+  }
+
+  // Keyword scoring
+  for (const [urgencyLevel, keywords] of Object.entries(urgencyKeywords)) {
+    const matches = keywords.filter(keyword => text.includes(keyword));
+    if (matches.length > 0) {
+      const levelScore = {
+        critical: 10,
+        high: 7,
+        medium: 4,
+        low: 1
+      }[urgencyLevel];
+      
+      score = Math.max(score, levelScore + matches.length);
+      
+      if (levelScore >= 7) level = urgencyLevel;
+    }
+  }
+
+  // Time-based urgency (recent emails mentioning deadlines)
+  const timeUrgent = /\b(today|tomorrow|deadline|due|expires?|urgent|asap)\b/i.test(text);
+  if (timeUrgent) score += 3;
+
+  // Fire safety and legal urgency
+  const legalUrgent = /\b(fire safety|compliance|legal|court|enforcement|notice)\b/i.test(text);
+  if (legalUrgent) score += 4;
+
+  // Final level determination
+  if (score >= 8) level = 'critical';
+  else if (score >= 5) level = 'high';
+  else if (score >= 2) level = 'medium';
+
+  return { level, score };
+}
+
+// Property extraction function
+function extractProperties(email: IncomingEmail) {
+  const text = `${email.subject} ${email.body}`;
+  
+  // Common property naming patterns for UK properties
+  const propertyPatterns = [
+    /\b([A-Z][a-z]+\s+(House|Manor|Gardens|Lodge|Court|Place|Tower|Heights|Apartments?|Building))\b/g,
+    /\b(Building\s+[A-Z]|\d+\s+[A-Z][a-z]+\s+(Street|Road|Avenue|Close|Drive|Lane))\b/g,
+    /\b([A-Z][a-z]+\s+Apartments?)\b/g,
+    /\b(\d+\s+[A-Z][a-z]+\s+(Street|Road|Avenue|Close|Drive|Lane))\b/g,
+    /\b([A-Z][a-z]+\s+(Estate|Development|Complex))\b/g
+  ];
+
+  const found = new Set();
+
+  propertyPatterns.forEach(pattern => {
+    const matches = text.match(pattern);
+    if (matches) {
+      matches.forEach(match => found.add(match.trim()));
+    }
+  });
+
+  return Array.from(found);
+}
+
+// Generate actionable insights
+function generateEmailInsights(email: IncomingEmail) {
+  const insights = [];
+  const text = `${email.subject} ${email.body}`.toLowerCase();
+
+  // Detect follow-up needs
+  if (text.includes('follow up') || text.includes('following up') || text.includes('chasing')) {
+    insights.push({
+      type: 'follow_up',
+      message: 'This appears to be a follow-up email',
+      action: 'Check if previous issue was resolved',
+      priority: 'medium'
+    });
+  }
+
+  // Detect recurring issues
+  if (text.includes('again') || text.includes('still') || text.includes('repeatedly') || text.includes('ongoing')) {
+    insights.push({
+      type: 'recurring',
+      message: 'This may be a recurring issue',
+      action: 'Review previous emails from this sender',
+      priority: 'high'
+    });
+  }
+
+  // Detect batch processable items
+  if (text.includes('service charge') || text.includes('payment') || text.includes('invoice') || text.includes('statement')) {
+    insights.push({
+      type: 'batch_processable',
+      message: 'This email may be batch processable',
+      action: 'Group with similar service charge emails',
+      priority: 'low'
+    });
+  }
+
+  // Detect compliance/legal matters
+  if (text.includes('compliance') || text.includes('legal') || text.includes('enforcement') || text.includes('notice')) {
+    insights.push({
+      type: 'compliance',
+      message: 'This email contains compliance or legal matters',
+      action: 'Escalate to compliance team immediately',
+      priority: 'critical'
+    });
+  }
+
+  // Detect maintenance requests
+  if (text.includes('repair') || text.includes('fix') || text.includes('broken') || text.includes('maintenance')) {
+    insights.push({
+      type: 'maintenance',
+      message: 'Maintenance request detected',
+      action: 'Create work order and assign contractor',
+      priority: 'medium'
+    });
+  }
+
+  // Detect potential complaints
+  if (text.includes('complaint') || text.includes('unhappy') || text.includes('dissatisfied') || text.includes('poor service')) {
+    insights.push({
+      type: 'complaint',
+      message: 'Potential complaint detected',
+      action: 'Acknowledge receipt and schedule investigation',
+      priority: 'high'
+    });
+  }
+
+  return insights;
+}
+
+// Get suggested actions based on category and content
+function getSuggestedActions(email: IncomingEmail, triageResult: any) {
+  const actions = [];
+  const text = `${email.subject} ${email.body}`.toLowerCase();
+  
+  // Category-based actions
+  switch (triageResult.label || triageResult.category) {
+    case 'maintenance':
+    case 'MAINT':
+      actions.push('Create work order', 'Schedule inspection', 'Assign to contractor', 'Update resident');
+      break;
+      
+    case 'complaint':
+    case 'COMP':
+      actions.push('Acknowledge receipt', 'Schedule investigation', 'Set follow-up reminder', 'Escalate if needed');
+      break;
+      
+    case 'service_charge':
+    case 'SC':
+      actions.push('Send payment details', 'Update account', 'Schedule payment plan', 'Provide breakdown');
+      break;
+      
+    case 'fire_safety':
+    case 'FS':
+      actions.push('Urgent: Schedule inspection', 'Contact fire safety team', 'Update compliance log', 'Document evidence');
+      break;
+      
+    case 'urgent':
+      actions.push('Immediate response required', 'Escalate to senior team', 'Call resident if needed');
+      break;
+      
+    case 'legal':
+    case 'LEG':
+      actions.push('Review with legal team', 'Document everything', 'Prepare formal response', 'Escalate to management');
+      break;
+      
+    default:
+      actions.push('Reply within 24 hours', 'File appropriately', 'Forward to relevant team');
+  }
+
+  // Content-based additional actions
+  if (text.includes('emergency') || text.includes('urgent')) {
+    actions.unshift('PRIORITY: Handle immediately');
+  }
+  
+  if (text.includes('payment') || text.includes('money') || text.includes('invoice')) {
+    actions.push('Check payment status', 'Send receipt if applicable');
+  }
+  
+  if (text.includes('noise') || text.includes('disturbance')) {
+    actions.push('Log noise complaint', 'Contact other residents if needed');
+  }
+
+  // Remove duplicates and limit to 6 actions
+  return [...new Set(actions)].slice(0, 6);
 }
