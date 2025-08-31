@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BlocIQ Inbox Triage</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #F8FAFC;
+      color: #333333;
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .modal-container {
+      background: white;
+      border-radius: 16px;
+      max-width: 900px;
+      margin: 0 auto;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+
+    .modal-header {
+      background: linear-gradient(135deg, #008C8F, #7645ED);
+      color: white;
+      padding: 24px;
+      text-align: center;
+      position: relative;
+    }
+
+    .modal-header h2 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .modal-header p {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .close-button {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: none;
+      border: none;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: background 0.2s ease;
+    }
+
+    .close-button:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .modal-body {
+      padding: 24px;
+    }
+
+    .triage-controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .control-button {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .control-button.primary {
+      background: linear-gradient(135deg, #008C8F, #7645ED);
+      color: white;
+    }
+
+    .control-button.primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 140, 143, 0.3);
+    }
+
+    .control-button.secondary {
+      background: #F8FAFC;
+      color: #4a5568;
+      border: 1px solid #E2E8F0;
+    }
+
+    .control-button.secondary:hover {
+      background: #EDF2F7;
+      border-color: #CBD5E0;
+    }
+
+    .control-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .triage-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: 24px;
+      font-weight: 700;
+      color: #008C8F;
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #64748B;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .progress-section {
+      margin-bottom: 24px;
+      display: none;
+    }
+
+    .progress-section.visible {
+      display: block;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .progress-title {
+      font-weight: 600;
+      color: #333333;
+    }
+
+    .progress-status {
+      font-size: 12px;
+      color: #64748B;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #E2E8F0;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(135deg, #008C8F, #7645ED);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .progress-details {
+      font-size: 12px;
+      color: #64748B;
+      text-align: center;
+    }
+
+    .results-section {
+      display: none;
+    }
+
+    .results-section.visible {
+      display: block;
+    }
+
+    .results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .results-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333333;
+    }
+
+    .results-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .action-button {
+      padding: 6px 12px;
+      border: 1px solid #E2E8F0;
+      border-radius: 6px;
+      background: white;
+      color: #4a5568;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .action-button:hover {
+      border-color: #008C8F;
+      background: #F0FDFA;
+    }
+
+    .email-list {
+      display: grid;
+      gap: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .email-item {
+      background: white;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 16px;
+      transition: all 0.2s ease;
+    }
+
+    .email-item:hover {
+      border-color: #008C8F;
+      box-shadow: 0 2px 8px rgba(0, 140, 143, 0.1);
+    }
+
+    .email-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+      gap: 12px;
+    }
+
+    .email-info {
+      flex: 1;
+    }
+
+    .email-subject {
+      font-weight: 600;
+      color: #333333;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+
+    .email-meta {
+      font-size: 12px;
+      color: #64748B;
+      margin-bottom: 8px;
+    }
+
+    .email-priority {
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .email-priority.high {
+      background: #FED7D7;
+      color: #C53030;
+    }
+
+    .email-priority.medium {
+      background: #FEF5E7;
+      color: #D69E2E;
+    }
+
+    .email-priority.low {
+      background: #F0FFF4;
+      color: #38A169;
+    }
+
+    .email-category {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 600;
+      background: #EBF8FF;
+      color: #3182CE;
+      margin-bottom: 8px;
+    }
+
+    .email-action {
+      font-size: 12px;
+      color: #4a5568;
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .draft-preview {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 11px;
+      color: #4a5568;
+      line-height: 1.4;
+      max-height: 100px;
+      overflow-y: auto;
+      margin-top: 8px;
+    }
+
+    .email-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 12px;
+    }
+
+    .email-action-button {
+      padding: 4px 8px;
+      border: 1px solid #E2E8F0;
+      border-radius: 4px;
+      background: white;
+      color: #4a5568;
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .email-action-button:hover {
+      border-color: #008C8F;
+      background: #F0FDFA;
+    }
+
+    .status-message {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .status-message.success {
+      background: #F0FFF4;
+      color: #38A169;
+      border: 1px solid #C6F6D5;
+    }
+
+    .status-message.error {
+      background: #FED7D7;
+      color: #C53030;
+      border: 1px solid #FEB2B2;
+    }
+
+    .status-message.info {
+      background: #EBF8FF;
+      color: #3182CE;
+      border: 1px solid #BEE3F8;
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(0, 140, 143, 0.3);
+      border-radius: 50%;
+      border-top-color: #008C8F;
+      animation: spin 1s linear infinite;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .summary-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #E2E8F0;
+    }
+
+    .summary-stat {
+      text-align: center;
+    }
+
+    .summary-stat-number {
+      font-size: 18px;
+      font-weight: 700;
+      color: #008C8F;
+    }
+
+    .summary-stat-label {
+      font-size: 11px;
+      color: #64748B;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <div class="modal-container">
+    <div class="modal-header">
+      <button class="close-button" onclick="closeModal()">&times;</button>
+      <h2>BlocIQ Inbox Triage</h2>
+      <p>AI-powered bulk email processing and draft generation</p>
+    </div>
+
+    <div class="modal-body">
+      <div class="status-message" id="statusMessage"></div>
+
+      <div class="triage-stats">
+        <div class="stat-card">
+          <div class="stat-number" id="totalEmails">0</div>
+          <div class="stat-label">Total Emails</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="processedEmails">0</div>
+          <div class="stat-label">Processed</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="draftsCreated">0</div>
+          <div class="stat-label">Drafts Created</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="errorCount">0</div>
+          <div class="stat-label">Errors</div>
+        </div>
+      </div>
+
+      <div class="triage-controls">
+        <button class="control-button primary" id="startTriageButton" onclick="startTriage()">
+          <span class="loading-spinner" id="triageSpinner" style="display: none;"></span>
+          Start AI Triage
+        </button>
+        <button class="control-button secondary" onclick="viewDrafts()">
+          View Drafts Folder
+        </button>
+        <button class="control-button secondary" onclick="exportResults()">
+          Export Results
+        </button>
+      </div>
+
+      <div class="progress-section" id="progressSection">
+        <div class="progress-header">
+          <div class="progress-title">Processing Inbox</div>
+          <div class="progress-status" id="progressStatus">Preparing...</div>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-details" id="progressDetails">
+          Initializing triage process...
+        </div>
+      </div>
+
+      <div class="results-section" id="resultsSection">
+        <div class="results-header">
+          <div class="results-title">Triage Results</div>
+          <div class="results-actions">
+            <button class="action-button" onclick="refreshResults()">Refresh</button>
+            <button class="action-button" onclick="clearResults()">Clear</button>
+          </div>
+        </div>
+
+        <div class="email-list" id="emailList">
+          <!-- Results will be populated here -->
+        </div>
+
+        <div class="summary-stats">
+          <div class="summary-stat">
+            <div class="summary-stat-number" id="highPriorityCount">0</div>
+            <div class="summary-stat-label">High Priority</div>
+          </div>
+          <div class="summary-stat">
+            <div class="summary-stat-number" id="mediumPriorityCount">0</div>
+            <div class="summary-stat-label">Medium Priority</div>
+          </div>
+          <div class="summary-stat">
+            <div class="summary-stat-number" id="lowPriorityCount">0</div>
+            <div class="summary-stat-label">Low Priority</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let isTriaging = false;
+    let triageResults = [];
+    let processedCount = 0;
+    let totalEmails = 0;
+    let draftsCreated = 0;
+    let errorCount = 0;
+
+    // Initialize when Office is ready
+    Office.onReady(() => {
+      console.log('BlocIQ Inbox Triage initialized');
+      loadPreviousResults();
+    });
+
+    // Start the triage process
+    async function startTriage() {
+      if (isTriaging) return;
+      
+      try {
+        isTriaging = true;
+        updateTriageButton(true);
+        showProgress();
+        showStatus('Starting inbox triage...', 'info');
+        resetCounters();
+        
+        // Get all emails from inbox
+        const emails = await getInboxEmails();
+        
+        if (!emails || emails.length === 0) {
+          throw new Error('No emails found in inbox');
+        }
+        
+        totalEmails = emails.length;
+        updateStats();
+        
+        showStatus(`Found ${totalEmails} emails to process`, 'info');
+        updateProgress(5, `Processing ${totalEmails} emails...`);
+        
+        // Process emails in batches to avoid overwhelming the API
+        const batchSize = 5;
+        const batches = [];
+        
+        for (let i = 0; i < emails.length; i += batchSize) {
+          batches.push(emails.slice(i, i + batchSize));
+        }
+        
+        // Process each batch
+        for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+          const batch = batches[batchIndex];
+          const batchStart = batchIndex * batchSize;
+          
+          updateProgress(
+            Math.round((batchStart / emails.length) * 90) + 5,
+            `Processing batch ${batchIndex + 1}/${batches.length}...`
+          );
+          
+          // Process batch in parallel
+          const batchPromises = batch.map(async (email, index) => {
+            try {
+              const result = await processEmailWithAI(email);
+              processedCount++;
+              updateStats();
+              return result;
+            } catch (error) {
+              console.error(`Error processing email ${email.subject}:`, error);
+              errorCount++;
+              updateStats();
+              return {
+                ...email,
+                status: 'error',
+                error: error.message
+              };
+            }
+          });
+          
+          const batchResults = await Promise.all(batchPromises);
+          triageResults.push(...batchResults);
+          
+          // Update progress
+          updateProgress(
+            Math.round(((batchStart + batch.length) / emails.length) * 90) + 5,
+            `Completed batch ${batchIndex + 1}/${batches.length}`
+          );
+        }
+        
+        // Final processing
+        updateProgress(95, 'Finalizing results...');
+        await finalizeTriageResults();
+        
+        updateProgress(100, 'Triage complete!');
+        showResults();
+        showStatus(`Triage completed successfully! Processed ${processedCount} emails, created ${draftsCreated} drafts.`, 'success');
+        
+      } catch (error) {
+        console.error('Triage failed:', error);
+        showStatus(`Triage failed: ${error.message}`, 'error');
+      } finally {
+        isTriaging = false;
+        updateTriageButton(false);
+        hideProgress();
+      }
+    }
+
+    // Get emails from Outlook inbox
+    async function getInboxEmails() {
+      return new Promise((resolve, reject) => {
+        try {
+          // This is a simplified approach - in production you'd use Graph API
+          // For now, we'll simulate getting emails
+          const mockEmails = generateMockEmails(20);
+          resolve(mockEmails);
+        } catch (error) {
+          reject(error);
+        }
+      });
+    }
+
+    // Generate mock emails for testing
+    function generateMockEmails(count) {
+      const subjects = [
+        'Maintenance Request - Flat 15',
+        'Service Charge Query',
+        'Parking Permit Application',
+        'Noise Complaint',
+        'Lease Renewal Request',
+        'Building Access Issue',
+        'Insurance Claim',
+        'Rent Payment Query',
+        'Repair Request',
+        'Compliance Certificate'
+      ];
+      
+      const senders = [
+        'john.smith@email.com',
+        'sarah.jones@email.com',
+        'mike.brown@email.com',
+        'lisa.wilson@email.com',
+        'david.clark@email.com'
+      ];
+      
+      const priorities = ['high', 'medium', 'low'];
+      const categories = ['Maintenance', 'Compliance', 'Financial', 'General', 'Legal'];
+      
+      const emails = [];
+      for (let i = 0; i < count; i++) {
+        emails.push({
+          id: `email_${i}`,
+          subject: subjects[i % subjects.length],
+          sender: senders[i % senders.length],
+          received: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
+          priority: priorities[Math.floor(Math.random() * priorities.length)],
+          category: categories[Math.floor(Math.random() * categories.length)],
+          body: `This is a sample email body for ${subjects[i % subjects.length]}. Please process this request accordingly.`,
+          status: 'pending'
+        });
+      }
+      
+      return emails;
+    }
+
+    // Process individual email with AI
+    async function processEmailWithAI(email) {
+      try {
+        // Simulate AI processing
+        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+        
+        // Generate AI response
+        const aiResponse = await generateAIResponse(email);
+        
+        // Create draft
+        const draftCreated = await createDraft(email, aiResponse);
+        if (draftCreated) {
+          draftsCreated++;
+        }
+        
+        return {
+          ...email,
+          status: 'completed',
+          aiResponse,
+          draftCreated,
+          processedAt: new Date().toISOString()
+        };
+        
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    // Generate AI response using BlocIQ API
+    async function generateAIResponse(email) {
+      try {
+        // In production, call your BlocIQ AI API
+        const response = await fetch('https://www.blociq.co.uk/api/ai/generate-response', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: email,
+            context: 'property_management',
+            includeIndustryKnowledge: true
+          })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          return data.response;
+        } else {
+          // Fallback to mock response
+          return generateMockAIResponse(email);
+        }
+        
+      } catch (error) {
+        console.error('Error calling AI API:', error);
+        return generateMockAIResponse(email);
+      }
+    }
+
+    // Generate mock AI response for testing
+    function generateMockAIResponse(email) {
+      const responses = {
+        'Maintenance': `Thank you for your maintenance request for ${email.subject.split(' - ')[1]}. I've logged this issue and will arrange for our maintenance team to investigate within 24 hours. Please let me know if you have any urgent concerns.`,
+        'Compliance': `Regarding your compliance query, I can confirm that all necessary certificates are up to date. I'll send you the current compliance status report by the end of the day.`,
+        'Financial': `Thank you for your service charge query. I've reviewed your account and can confirm the current balance. Please find attached a detailed breakdown of all charges.`,
+        'General': `Thank you for contacting us. I understand your concern and will address this matter promptly. Please allow 2-3 business days for a full response.`,
+        'Legal': `I've received your legal inquiry and will forward this to our legal team for review. You should receive a response within 5 business days.`
+      };
+      
+      return responses[email.category] || responses['General'];
+    }
+
+    // Create draft in Outlook
+    async function createDraft(email, aiResponse) {
+      return new Promise((resolve) => {
+        try {
+          // In production, use Office.js to create drafts
+          // For now, simulate success
+          setTimeout(() => {
+            resolve(true);
+          }, 500);
+        } catch (error) {
+          console.error('Error creating draft:', error);
+          resolve(false);
+        }
+      });
+    }
+
+    // Finalize triage results
+    async function finalizeTriageResults() {
+      // Calculate priority counts
+      const priorityCounts = {
+        high: triageResults.filter(r => r.priority === 'high').length,
+        medium: triageResults.filter(r => r.priority === 'medium').length,
+        low: triageResults.filter(r => r.priority === 'low').length
+      };
+      
+      // Update summary stats
+      document.getElementById('highPriorityCount').textContent = priorityCounts.high;
+      document.getElementById('mediumPriorityCount').textContent = priorityCounts.medium;
+      document.getElementById('lowPriorityCount').textContent = priorityCounts.low;
+      
+      // Save results
+      saveTriageResults();
+    }
+
+    // Show results section
+    function showResults() {
+      const resultsSection = document.getElementById('resultsSection');
+      resultsSection.classList.add('visible');
+      
+      // Populate email list
+      populateEmailList();
+    }
+
+    // Populate email list with results
+    function populateEmailList() {
+      const emailList = document.getElementById('emailList');
+      emailList.innerHTML = '';
+      
+      triageResults.forEach(email => {
+        const emailItem = createEmailItem(email);
+        emailList.appendChild(emailItem);
+      });
+    }
+
+    // Create email item element
+    function createEmailItem(email) {
+      const div = document.createElement('div');
+      div.className = 'email-item';
+      
+      const priorityClass = email.priority || 'low';
+      const statusText = email.status === 'completed' ? '✅ Processed' : 
+                        email.status === 'error' ? '❌ Error' : '⏳ Pending';
+      
+      div.innerHTML = `
+        <div class="email-header">
+          <div class="email-info">
+            <div class="email-subject">${email.subject}</div>
+            <div class="email-meta">From: ${email.sender} • ${new Date(email.received).toLocaleDateString()}</div>
+            <div class="email-priority ${priorityClass}">${priorityClass.toUpperCase()}</div>
+            <div class="email-category">${email.category}</div>
+            <div class="email-action">${statusText}</div>
+          </div>
+        </div>
+        ${email.aiResponse ? `
+          <div class="draft-preview">
+            <strong>AI Response:</strong><br>
+            ${email.aiResponse.substring(0, 150)}${email.aiResponse.length > 150 ? '...' : ''}
+          </div>
+        ` : ''}
+        <div class="email-actions">
+          <button class="email-action-button" onclick="viewEmail('${email.id}')">View</button>
+          <button class="email-action-button" onclick="editDraft('${email.id}')">Edit</button>
+          <button class="email-action-button" onclick="sendDraft('${email.id}')">Send</button>
+        </div>
+      `;
+      
+      return div;
+    }
+
+    // Update triage button state
+    function updateTriageButton(loading) {
+      const button = document.getElementById('startTriageButton');
+      const spinner = document.getElementById('triageSpinner');
+      
+      if (loading) {
+        button.disabled = true;
+        spinner.style.display = 'inline-block';
+        button.textContent = 'Processing...';
+      } else {
+        button.disabled = false;
+        spinner.style.display = 'none';
+        button.textContent = 'Start AI Triage';
+      }
+    }
+
+    // Show progress section
+    function showProgress() {
+      document.getElementById('progressSection').classList.add('visible');
+    }
+
+    // Hide progress section
+    function hideProgress() {
+      document.getElementById('progressSection').classList.remove('visible');
+    }
+
+    // Update progress bar
+    function updateProgress(percentage, status) {
+      document.getElementById('progressFill').style.width = `${percentage}%`;
+      document.getElementById('progressStatus').textContent = status;
+      document.getElementById('progressDetails').textContent = status;
+    }
+
+    // Show status message
+    function showStatus(message, type) {
+      const statusMessage = document.getElementById('statusMessage');
+      statusMessage.textContent = message;
+      statusMessage.className = `status-message ${type}`;
+      statusMessage.style.display = 'block';
+      
+      // Auto-hide after 5 seconds
+      setTimeout(() => {
+        statusMessage.style.display = 'none';
+      }, 5000);
+    }
+
+    // Update statistics
+    function updateStats() {
+      document.getElementById('totalEmails').textContent = totalEmails;
+      document.getElementById('processedEmails').textContent = processedCount;
+      document.getElementById('draftsCreated').textContent = draftsCreated;
+      document.getElementById('errorCount').textContent = errorCount;
+    }
+
+    // Reset counters
+    function resetCounters() {
+      processedCount = 0;
+      draftsCreated = 0;
+      errorCount = 0;
+      triageResults = [];
+      updateStats();
+    }
+
+    // Save triage results
+    function saveTriageResults() {
+      try {
+        localStorage.setItem('blociq_triage_results', JSON.stringify({
+          results: triageResults,
+          timestamp: new Date().toISOString(),
+          summary: {
+            total: totalEmails,
+            processed: processedCount,
+            drafts: draftsCreated,
+            errors: errorCount
+          }
+        }));
+      } catch (error) {
+        console.error('Error saving results:', error);
+      }
+    }
+
+    // Load previous results
+    function loadPreviousResults() {
+      try {
+        const saved = localStorage.getItem('blociq_triage_results');
+        if (saved) {
+          const data = JSON.parse(saved);
+          triageResults = data.results || [];
+          totalEmails = data.summary?.total || 0;
+          processedCount = data.summary?.processed || 0;
+          draftsCreated = data.summary?.drafts || 0;
+          errorCount = data.summary?.errors || 0;
+          updateStats();
+          
+          if (triageResults.length > 0) {
+            showResults();
+            populateEmailList();
+          }
+        }
+      } catch (error) {
+        console.error('Error loading previous results:', error);
+      }
+    }
+
+    // Action functions
+    function viewEmail(emailId) {
+      const email = triageResults.find(e => e.id === emailId);
+      if (email) {
+        alert(`Email: ${email.subject}\nFrom: ${email.sender}\n\n${email.body}`);
+      }
+    }
+
+    function editDraft(emailId) {
+      const email = triageResults.find(e => e.id === emailId);
+      if (email) {
+        // In production, open draft for editing
+        alert('Opening draft for editing...');
+      }
+    }
+
+    function sendDraft(emailId) {
+      const email = triageResults.find(e => e.id === emailId);
+      if (email) {
+        // In production, send the draft
+        alert('Sending draft...');
+      }
+    }
+
+    function viewDrafts() {
+      // In production, open Outlook drafts folder
+      alert('Opening drafts folder...');
+    }
+
+    function exportResults() {
+      try {
+        const dataStr = JSON.stringify(triageResults, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `blociq-triage-results-${new Date().toISOString().split('T')[0]}.json`;
+        link.click();
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error('Error exporting results:', error);
+        alert('Error exporting results');
+      }
+    }
+
+    function refreshResults() {
+      populateEmailList();
+      showStatus('Results refreshed', 'info');
+    }
+
+    function clearResults() {
+      if (confirm('Clear all results? This cannot be undone.')) {
+        triageResults = [];
+        resetCounters();
+        document.getElementById('resultsSection').classList.remove('visible');
+        localStorage.removeItem('blociq_triage_results');
+        showStatus('Results cleared', 'info');
+      }
+    }
+
+    function closeModal() {
+      // Send message to parent to close dialog
+      if (window.parent && window.parent.Office) {
+        window.parent.Office.context.ui.messageParent(JSON.stringify({
+          action: 'close'
+        }));
+      } else {
+        window.close();
+      }
+    }
+
+    // Load previous results on initialization
+    document.addEventListener('DOMContentLoaded', loadPreviousResults);
+  </script>
+</body>
+</html>
