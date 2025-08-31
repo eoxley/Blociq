@@ -341,27 +341,34 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
             console.log('🔄 Processing file:', uploadedFile.name, 'Type:', uploadedFile.file.type);
             
             if (isPublic) {
-              // Public mode: Use Google Vision OCR instead of external service
-              console.log('🔒 Public mode: Using Google Vision OCR service');
+              // Public mode: Use Google Vision OCR via API endpoint
+              console.log('🔒 Public mode: Using Google Vision OCR service via API');
               
               try {
-                // Convert file to buffer for Google Vision OCR
-                const arrayBuffer = await uploadedFile.file.arrayBuffer();
-                const buffer = Buffer.from(arrayBuffer);
+                // Convert file to FormData for OCR API
+                const formData = new FormData();
+                formData.append('file', uploadedFile.file);
                 
-                // Use Google Vision OCR directly
-                const { ocrFallback } = await import('@/lib/compliance/docExtract');
-                const ocrText = await ocrFallback(uploadedFile.name, buffer);
-                
-                console.log('✅ Google Vision OCR successful');
+                // Call our OCR API endpoint instead of importing Google Vision directly
+                const ocrResponse = await fetch('/api/ocr-proxy', {
+                  method: 'POST',
+                  body: formData,
+                });
+
+                if (!ocrResponse.ok) {
+                  throw new Error(`OCR API failed: ${ocrResponse.status}`);
+                }
+
+                const ocrResult = await ocrResponse.json();
+                console.log('✅ Google Vision OCR successful via API');
                 
                 // Create basic document analysis result for public mode
                 const documentAnalysis: DocumentAnalysis = {
                   filename: uploadedFile.name,
-                  summary: ocrText ? `Document processed via Google Vision OCR. Extracted ${ocrText.length} characters.` : 'Document processed via Google Vision OCR.',
+                  summary: ocrResult.text ? `Document processed via Google Vision OCR. Extracted ${ocrResult.text.length} characters.` : 'Document processed via Google Vision OCR.',
                   suggestedActions: [],
                   extractionMethod: 'google_vision_ocr',
-                  extractedText: ocrText || '',
+                  extractedText: ocrResult.text || '',
                   documentType: 'other'
                 };
                 
@@ -371,13 +378,13 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
                 if (!finalPrompt) {
                   finalPrompt = `Please analyze the uploaded document: ${uploadedFile.name}`;
                 }
-                finalPrompt += `\n\nDocument: ${uploadedFile.name}\nOCR Text: ${ocrText ? ocrText.substring(0, 500) + '...' : 'No text extracted'}\n\nPlease provide insights based on the OCR content.`;
+                finalPrompt += `\n\nDocument: ${uploadedFile.name}\nOCR Text: ${ocrResult.text ? ocrResult.text.substring(0, 500) + '...' : 'No text extracted'}\n\nPlease provide insights based on the OCR content.`;
                 
                 // Add document analysis to messages for display
                 const analysisMessage: Message = {
                   id: Date.now().toString(),
                   role: 'assistant',
-                  content: `📄 **${uploadedFile.name}** processed via Google Vision OCR!\n\n**Extraction Method:** Google Vision OCR\n**Text Length:** ${ocrText ? ocrText.length : 0} characters`,
+                  content: `📄 **${uploadedFile.name}** processed via Google Vision OCR!\n\n**Extraction Method:** Google Vision OCR\n**Text Length:** ${ocrResult.text ? ocrResult.text.length : 0} characters`,
                   timestamp: new Date(),
                   documentAnalysis: [documentAnalysis]
                 };

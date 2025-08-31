@@ -1,19 +1,26 @@
 export async function processFileWithOCR(file: File): Promise<{text: string, source: string}> {
-  console.log('🔄 Processing file with Google Vision OCR:', file.name);
+  console.log('🔄 Processing file with Google Vision OCR via API:', file.name);
   
   try {
-    // Convert file to buffer for Google Vision OCR
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    // Convert file to FormData for OCR API
+    const formData = new FormData();
+    formData.append('file', file);
     
-    // Use Google Vision OCR directly
-    const { ocrFallback } = await import('@/lib/compliance/docExtract');
-    const ocrText = await ocrFallback(file.name, buffer);
+    // Call our OCR API endpoint instead of importing Google Vision directly
+    const response = await fetch('/api/ocr-proxy', {
+      method: 'POST',
+      body: formData,
+    });
     
-    console.log('✅ Google Vision OCR successful');
+    if (!response.ok) {
+      throw new Error(`OCR API failed: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    console.log('✅ Google Vision OCR successful via API');
     
     return {
-      text: ocrText || '',
+      text: result.text || '',
       source: 'google_vision_ocr'
     };
   } catch (error) {

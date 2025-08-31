@@ -878,33 +878,41 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       throw new Error(`Storage upload failed (${putRes.status} ${putRes.statusText})`)
     }
 
-    // Step 3: Process the uploaded file via Google Vision OCR
-    console.log('🔄 Processing file with Google Vision OCR:', file.name);
+    // Step 3: Process the uploaded file via Google Vision OCR API
+    console.log('🔄 Processing file with Google Vision OCR via API:', file.name);
     
     try {
-      // Convert file to buffer for Google Vision OCR
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
+      // Convert file to FormData for OCR API
+      const formData = new FormData();
+      formData.append('file', file);
       
-      // Use Google Vision OCR directly
-      const { ocrFallback } = await import('../../src/lib/compliance/docExtract');
-      const ocrText = await ocrFallback(file.name, buffer);
+      // Call our OCR API endpoint instead of importing Google Vision directly
+      const response = await fetch('/api/ocr-proxy', {
+        method: 'POST',
+        body: formData,
+      });
       
-      if (!ocrText || ocrText.trim().length < 500) {
+      if (!response.ok) {
+        throw new Error(`OCR API failed: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (!result.text || result.text.trim().length < 500) {
         throw new Error("Couldn't extract readable text via Google Vision OCR.");
       }
       
-      console.log('✅ Google Vision OCR successful for:', file.name);
+      console.log('✅ Google Vision OCR successful via API for:', file.name);
       
       // Convert OCR response to expected format
       return {
         success: true,
         documentType: 'document',
-        summary: `Document processed successfully via Google Vision OCR. Extracted ${ocrText.length} characters.`,
-        analysis: `Text extracted successfully using Google Vision OCR. Document contains ${ocrText.length} characters.`,
+        summary: `Document processed successfully via Google Vision OCR. Extracted ${result.text.length} characters.`,
+        analysis: `Text extracted successfully using Google Vision OCR. Document contains ${result.text.length} characters.`,
         filename: file.name,
-        textLength: ocrText.length,
-        extractedText: ocrText,
+        textLength: result.text.length,
+        extractedText: result.text,
         ocrSource: 'google_vision_ocr'
       }
     } catch (ocrError) {
