@@ -391,13 +391,23 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
                 
                 setMessages(prev => [...prev, analysisMessage]);
               } catch (ocrError) {
-                console.error('❌ Google Vision OCR failed:', ocrError);
-                // Fallback to basic file info if OCR fails
+                console.error('❌ OCR processing failed:', ocrError);
+                
+                // Try to extract useful information from the error response
+                let errorMessage = 'OCR processing failed. Please try again or contact support.';
+                let extractionMethod = 'failed';
+                
+                // If it's a fetch error with response, try to get more details
+                if (ocrError instanceof Error && ocrError.message.includes('OCR API failed')) {
+                  errorMessage = 'OCR service temporarily unavailable. The file was uploaded but text extraction failed.';
+                  extractionMethod = 'service_unavailable';
+                }
+                
                 const documentAnalysis: DocumentAnalysis = {
                   filename: uploadedFile.name,
-                  summary: 'Document uploaded but OCR processing failed. Please try again or contact support.',
+                  summary: `Document uploaded but ${errorMessage}`,
                   suggestedActions: [],
-                  extractionMethod: 'failed',
+                  extractionMethod,
                   extractedText: '',
                   documentType: 'other'
                 };
@@ -407,7 +417,7 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
                 const analysisMessage: Message = {
                   id: Date.now().toString(),
                   role: 'assistant',
-                  content: `📄 **${uploadedFile.name}** uploaded but OCR processing failed.\n\nPlease try again or contact support for assistance.`,
+                  content: `📄 **${uploadedFile.name}** uploaded but OCR processing encountered an issue.\n\n**Status:** ${errorMessage}\n**File Type:** ${uploadedFile.file.type}\n**File Size:** ${(uploadedFile.file.size / 1024).toFixed(1)} KB\n\nThe file was received successfully, but text extraction failed. You can still ask questions about the document type or try uploading again.`,
                   timestamp: new Date(),
                   documentAnalysis: [documentAnalysis]
                 };

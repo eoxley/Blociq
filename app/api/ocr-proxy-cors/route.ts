@@ -58,13 +58,19 @@ export async function POST(req: NextRequest) {
     }
 
     // Fallback to OpenAI Vision API
-    if (process.env.OPENAI_API_KEY) {
+    if (process.env.OPENAI_API_KEY && (file.type.startsWith('image/') || file.type === 'application/pdf')) {
       try {
         console.log('🤖 CORS Proxy: Using OpenAI Vision API fallback...');
+        console.log(`📄 File type: ${file.type}, Size: ${file.size} bytes`);
         
         // Convert file to base64
         const arrayBuffer = await file.arrayBuffer();
         const base64 = Buffer.from(arrayBuffer).toString('base64');
+        
+        // Enhanced prompt for better text extraction
+        const extractionPrompt = file.type === 'application/pdf' 
+          ? 'Extract all text from this PDF document. Focus on any dates, names, addresses, numbers, and important information. Return only the text content, preserving structure when possible.'
+          : 'Extract all text from this image/document. Focus on any dates, names, addresses, numbers, and important information. Return only the text content, preserving structure when possible.';
         
         const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
@@ -80,7 +86,7 @@ export async function POST(req: NextRequest) {
                 content: [
                   {
                     type: 'text',
-                    text: 'Extract all text from this image. Return only the text content, no explanations or formatting.'
+                    text: extractionPrompt
                   },
                   {
                     type: 'image_url',
@@ -101,12 +107,17 @@ export async function POST(req: NextRequest) {
           const openAIResult = await openAIResponse.json();
           const extractedText = openAIResult.choices?.[0]?.message?.content || '';
           
-          console.log('✅ CORS Proxy: OpenAI Vision API successful');
+          console.log(`✅ CORS Proxy: OpenAI Vision API successful - extracted ${extractedText.length} characters`);
           
           return NextResponse.json({
             text: extractedText,
             source: 'openai_vision',
-            success: true
+            success: true,
+            metadata: {
+              fileType: file.type,
+              fileSize: file.size,
+              extractedLength: extractedText.length
+            }
           }, {
             status: 200,
             headers: {
@@ -116,17 +127,42 @@ export async function POST(req: NextRequest) {
             }
           });
         } else {
-          console.error('❌ CORS Proxy: OpenAI Vision failed:', await openAIResponse.text());
+          const errorText = await openAIResponse.text();
+          console.error(`❌ CORS Proxy: OpenAI Vision failed (${openAIResponse.status}):`, errorText);
+          throw new Error(`OpenAI Vision API failed: ${openAIResponse.status} - ${errorText}`);
         }
       } catch (openAIError) {
         console.error('❌ CORS Proxy: OpenAI Vision error:', openAIError);
       }
     } else {
-      console.warn('⚠️ CORS Proxy: OpenAI API key not configured, skipping OpenAI Vision fallback');
+      console.warn('⚠️ CORS Proxy: OpenAI API key not configured or unsupported file type, skipping OpenAI Vision fallback');
+      console.log(`📄 File type: ${file.type}, OpenAI key configured: ${!!process.env.OPENAI_API_KEY}`);
     }
 
-    // If both methods fail
-    throw new Error('All OCR methods failed');
+    // If both methods fail, return partial success with metadata
+    console.warn('⚠️ All OCR methods failed, returning fallback response');
+    return NextResponse.json({
+      success: false,
+      text: '',
+      source: 'failed',
+      error: 'OCR processing failed',
+      metadata: {
+        fileType: file.type,
+        fileSize: file.size,
+        fileName: file.name,
+        availableMethods: [
+          `External OCR: ${process.env.OPENAI_API_KEY ? 'Available' : 'Unavailable'}`,
+          `OpenAI Vision: ${process.env.OPENAI_API_KEY ? 'Available' : 'Unavailable'} (supports images and PDFs)`
+        ]
+      }
+    }, {
+      status: 422, // Unprocessable Entity instead of 500
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      }
+    });
 
   } catch (error) {
     console.error('❌ CORS Proxy: Error processing OCR request:', error);
