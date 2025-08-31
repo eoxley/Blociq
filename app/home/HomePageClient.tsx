@@ -878,46 +878,67 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       throw new Error(`Storage upload failed (${putRes.status} ${putRes.statusText})`)
     }
 
-    // Step 3: Process the uploaded file via Google Vision OCR API
-    console.log('🔄 Processing file with Google Vision OCR via API:', file.name);
+    // Step 3: Process the uploaded file via OCR API
+    console.log('🔄 Processing file with OCR API:', file.name);
     
     try {
       // Convert file to FormData for OCR API
       const formData = new FormData();
       formData.append('file', file);
       
-      // Call OCR server via CORS proxy to avoid CORS issues
-      const response = await fetch('/api/ocr-proxy-cors', {
+      // Call the enhanced Ask AI upload endpoint
+      const response = await fetch('/api/ask-ai/upload', {
         method: 'POST',
         body: formData,
       });
       
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ OCR API failed (${response.status}):`, errorText);
         throw new Error(`OCR API failed: ${response.status}`);
       }
       
       const result = await response.json();
       
-      if (!result.text || result.text.trim().length < 500) {
-        throw new Error("Couldn't extract readable text via Google Vision OCR.");
+      if (!result.success || !result.extractedText || result.textLength === 0) {
+        console.warn('⚠️ OCR processing incomplete:', result);
+        // Still return the result since it might have useful fallback data
       }
       
-      console.log('✅ Google Vision OCR successful via API for:', file.name);
+      console.log('✅ OCR processing completed via API for:', file.name);
+      console.log('📊 OCR Results:', {
+        textLength: result.textLength || 0,
+        source: result.ocrSource || 'unknown',
+        success: result.success || false
+      });
       
-      // Convert OCR response to expected format
+      // Return the standardized response format
       return {
-        success: true,
-        documentType: 'document',
-        summary: `Document processed successfully via Google Vision OCR. Extracted ${result.text.length} characters.`,
-        analysis: `Text extracted successfully using Google Vision OCR. Document contains ${result.text.length} characters.`,
-        filename: file.name,
-        textLength: result.text.length,
-        extractedText: result.text,
-        ocrSource: 'google_vision_ocr'
+        success: result.success || false,
+        documentType: result.documentType || 'document',
+        summary: result.summary || 'Document processing completed',
+        analysis: result.analysis || 'Document has been processed for analysis',
+        filename: result.filename || file.name,
+        textLength: result.textLength || 0,
+        extractedText: result.extractedText || '',
+        ocrSource: result.ocrSource || 'unknown',
+        metadata: result.metadata || {}
       }
     } catch (ocrError) {
-      console.error('❌ Google Vision OCR failed:', ocrError);
-      throw new Error(`Google Vision OCR processing failed: ${ocrError}`);
+      console.error('❌ OCR processing failed:', ocrError);
+      
+      // Return a fallback response instead of throwing
+      return {
+        success: false,
+        documentType: 'document',
+        summary: 'Document processing failed',
+        analysis: `Failed to process ${file.name}. Error: ${ocrError instanceof Error ? ocrError.message : 'Unknown error'}`,
+        filename: file.name,
+        textLength: 0,
+        extractedText: '',
+        ocrSource: 'failed',
+        error: ocrError instanceof Error ? ocrError.message : 'Unknown error'
+      }
     }
   }
 

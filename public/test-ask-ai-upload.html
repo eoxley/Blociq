@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ask AI Upload OCR Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen py-8">
+    <div class="container mx-auto max-w-4xl px-4">
+        <div class="bg-white rounded-lg shadow-lg p-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-6">Ask AI Upload OCR Test</h1>
+            
+            <!-- Upload Section -->
+            <div class="mb-8">
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                    <input type="file" id="fileInput" class="hidden" accept=".pdf,.png,.jpg,.jpeg,.txt">
+                    <button onclick="document.getElementById('fileInput').click()" 
+                            class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700">
+                        Choose File to Test
+                    </button>
+                    <p class="mt-2 text-gray-600">Select a PDF, image, or text file to test OCR extraction</p>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results" class="hidden">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Results</h2>
+                
+                <div id="uploadInfo" class="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h3 class="font-semibold text-blue-800">File Information</h3>
+                    <div id="fileInfo" class="mt-2 text-sm text-blue-700"></div>
+                </div>
+
+                <div id="extractionResults" class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <h3 class="font-semibold text-green-800">OCR Extraction Results</h3>
+                    <div id="ocrInfo" class="mt-2 text-sm text-green-700"></div>
+                </div>
+
+                <div id="extractedText" class="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                    <h3 class="font-semibold text-gray-800">Extracted Text</h3>
+                    <pre id="textContent" class="mt-2 text-sm text-gray-700 whitespace-pre-wrap max-h-96 overflow-y-auto"></pre>
+                </div>
+
+                <div id="rawResponse" class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <h3 class="font-semibold text-yellow-800">Raw API Response</h3>
+                    <pre id="responseContent" class="mt-2 text-xs text-yellow-700 whitespace-pre-wrap max-h-64 overflow-y-auto"></pre>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading" class="hidden text-center py-8">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <p class="mt-2 text-gray-600">Processing file with OCR...</p>
+            </div>
+
+            <!-- Error -->
+            <div id="error" class="hidden p-4 bg-red-50 border border-red-200 rounded-lg">
+                <h3 class="font-semibold text-red-800">Error</h3>
+                <div id="errorContent" class="mt-2 text-sm text-red-700"></div>
+            </div>
+        </div>
+
+        <!-- Test Quick Actions -->
+        <div class="mt-8 bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Quick Tests</h2>
+            <div class="flex gap-4 flex-wrap">
+                <button onclick="testPipeline()" 
+                        class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                    Test Pipeline Status
+                </button>
+                <button onclick="createTestFile()" 
+                        class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
+                    Create Test Text File
+                </button>
+                <button onclick="clearResults()" 
+                        class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">
+                    Clear Results
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const results = document.getElementById('results');
+        const loading = document.getElementById('loading');
+        const error = document.getElementById('error');
+
+        fileInput.addEventListener('change', handleFile);
+
+        async function handleFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            clearResults();
+            showLoading();
+
+            try {
+                // Show file info immediately
+                showFileInfo(file);
+
+                // Create form data
+                const formData = new FormData();
+                formData.append('file', file);
+
+                // Call Ask AI upload endpoint
+                console.log('🔄 Uploading file to /api/ask-ai/upload');
+                const response = await fetch('/api/ask-ai/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                hideLoading();
+                
+                if (response.ok) {
+                    showResults(data);
+                } else {
+                    showError(`Upload failed: ${response.status} ${response.statusText}`, data);
+                }
+
+            } catch (err) {
+                hideLoading();
+                showError('Upload error: ' + err.message);
+            }
+        }
+
+        function showFileInfo(file) {
+            document.getElementById('fileInfo').innerHTML = `
+                <strong>Name:</strong> ${file.name}<br>
+                <strong>Size:</strong> ${(file.size / (1024 * 1024)).toFixed(2)} MB<br>
+                <strong>Type:</strong> ${file.type}<br>
+                <strong>Last Modified:</strong> ${new Date(file.lastModified).toLocaleString()}
+            `;
+        }
+
+        function showResults(data) {
+            results.classList.remove('hidden');
+            
+            // OCR Information
+            document.getElementById('ocrInfo').innerHTML = `
+                <strong>Success:</strong> ${data.success ? '✅ Yes' : '❌ No'}<br>
+                <strong>OCR Source:</strong> ${data.ocrSource || 'Unknown'}<br>
+                <strong>Text Length:</strong> ${data.textLength || 0} characters<br>
+                <strong>Document Type:</strong> ${data.documentType || 'Unknown'}<br>
+                <strong>Processing Time:</strong> ${data.metadata?.timestamp ? new Date(data.metadata.timestamp).toLocaleTimeString() : 'Unknown'}
+            `;
+
+            // Extracted Text
+            const textContent = data.extractedText || 'No text extracted';
+            document.getElementById('textContent').textContent = textContent;
+
+            // Raw Response
+            document.getElementById('responseContent').textContent = JSON.stringify(data, null, 2);
+
+            // Color code based on success
+            const extractionResults = document.getElementById('extractionResults');
+            if (data.success && data.textLength > 0) {
+                extractionResults.className = 'mb-4 p-4 bg-green-50 border border-green-200 rounded-lg';
+                extractionResults.querySelector('h3').className = 'font-semibold text-green-800';
+                extractionResults.querySelector('#ocrInfo').className = 'mt-2 text-sm text-green-700';
+            } else {
+                extractionResults.className = 'mb-4 p-4 bg-red-50 border border-red-200 rounded-lg';
+                extractionResults.querySelector('h3').className = 'font-semibold text-red-800';
+                extractionResults.querySelector('#ocrInfo').className = 'mt-2 text-sm text-red-700';
+            }
+        }
+
+        function showError(message, data = null) {
+            error.classList.remove('hidden');
+            let errorHtml = `<strong>Error:</strong> ${message}`;
+            if (data) {
+                errorHtml += `<br><br><strong>Response:</strong><br><pre class="text-xs">${JSON.stringify(data, null, 2)}</pre>`;
+            }
+            document.getElementById('errorContent').innerHTML = errorHtml;
+        }
+
+        function showLoading() {
+            loading.classList.remove('hidden');
+            results.classList.add('hidden');
+            error.classList.add('hidden');
+        }
+
+        function hideLoading() {
+            loading.classList.add('hidden');
+        }
+
+        function clearResults() {
+            results.classList.add('hidden');
+            error.classList.add('hidden');
+            loading.classList.add('hidden');
+        }
+
+        async function testPipeline() {
+            showLoading();
+            try {
+                const response = await fetch('/api/test-ocr-pipeline');
+                const data = await response.json();
+                hideLoading();
+                
+                // Show pipeline test results in the raw response area
+                document.getElementById('responseContent').textContent = JSON.stringify(data, null, 2);
+                document.getElementById('rawResponse').querySelector('h3').textContent = 'Pipeline Test Results';
+                results.classList.remove('hidden');
+                
+                // Hide other sections for pipeline test
+                document.getElementById('uploadInfo').classList.add('hidden');
+                document.getElementById('extractionResults').classList.add('hidden');
+                document.getElementById('extractedText').classList.add('hidden');
+                
+            } catch (err) {
+                hideLoading();
+                showError('Pipeline test error: ' + err.message);
+            }
+        }
+
+        function createTestFile() {
+            const testContent = `
+TEST DOCUMENT FOR OCR PROCESSING
+
+This is a test document created to verify the OCR extraction functionality.
+
+Document Details:
+- Created: ${new Date().toLocaleString()}
+- Purpose: OCR Testing
+- Reference: TEST-${Math.random().toString(36).substring(7).toUpperCase()}
+
+Sample Content:
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.
+
+Key Information:
+- Amount: £1,234.56
+- Date: ${new Date().toLocaleDateString()}
+- Status: ACTIVE
+- Priority: HIGH
+
+This test file should be successfully processed by the OCR system and return this exact text content.
+            `.trim();
+
+            const blob = new Blob([testContent], { type: 'text/plain' });
+            const file = new File([blob], 'test-document.txt', { type: 'text/plain' });
+            
+            // Simulate file selection
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            fileInput.files = dt.files;
+            
+            // Trigger the upload
+            handleFile({ target: { files: [file] } });
+        }
+    </script>
+</body>
+</html>
