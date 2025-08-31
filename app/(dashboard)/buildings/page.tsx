@@ -320,12 +320,7 @@ function BuildingsList() {
                   </div>
                 )}
 
-                {/* Status Badge */}
-                <div className="absolute top-4 left-4 z-10">
-                  <div className="bg-gradient-to-r from-indigo-200 to-indigo-300 text-indigo-800 text-xs font-bold px-3 py-1 rounded-full border-2 border-indigo-300 shadow-lg">
-                    Real Building
-                  </div>
-                </div>
+
 
                 {/* Building Icon */}
                 <div className="w-24 h-24 bg-gradient-to-br from-[#4f46e5] to-[#a855f7] rounded-3xl flex items-center justify-center mb-8 shadow-2xl mx-auto group-hover:scale-110 transition-transform duration-500 group-hover:shadow-blue-500/40">
@@ -376,12 +371,7 @@ function BuildingsList() {
                   </div>
                 )}
 
-                {/* Status Badge */}
-                <div className="absolute top-4 left-4 z-10">
-                  <div className="bg-gradient-to-r from-gray-200 to-gray-300 text-gray-800 text-xs font-bold px-3 py-1 rounded-full border-2 border-gray-300 shadow-lg">
-                    Demo Building
-                  </div>
-                </div>
+
 
                 {/* Building Icon */}
                 <div className="w-20 h-20 bg-gradient-to-br from-gray-400 to-gray-500 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
