@@ -1,23 +1,23 @@
 export async function processFileWithOCR(file: File): Promise<{text: string, source: string}> {
-  console.log('Calling OCR service directly: https://ocr-server-2-ykmk.onrender.com/upload');
+  console.log('🔄 Processing file with Google Vision OCR:', file.name);
   
-  const formData = new FormData();
-  formData.append('file', file);
-  
-  const response = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
-    method: 'POST',
-    body: formData
-  });
-  
-  console.log('📡 OCR response status:', response.status);
-  
-  if (!response.ok) {
-    throw new Error(`OCR failed: ${response.status}`);
+  try {
+    // Convert file to buffer for Google Vision OCR
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    
+    // Use Google Vision OCR directly
+    const { ocrFallback } = await import('@/lib/compliance/docExtract');
+    const ocrText = await ocrFallback(file.name, buffer);
+    
+    console.log('✅ Google Vision OCR successful');
+    
+    return {
+      text: ocrText || '',
+      source: 'google_vision_ocr'
+    };
+  } catch (error) {
+    console.error('❌ Google Vision OCR failed:', error);
+    throw new Error(`Google Vision OCR failed: ${error}`);
   }
-  
-  const result = await response.json();
-  return {
-    text: result.text || '',
-    source: result.source || 'unknown'
-  };
 }

@@ -148,24 +148,22 @@ async function extractTextFromPDF(file: File): Promise<string> {
     
     // Fallback: Try OCR if OpenAI fails
     try {
-      console.log("🔄 Trying OCR fallback...")
-      console.log('Calling OCR service directly: https://ocr-server-2-ykmk.onrender.com/upload');
+      console.log("🔄 Trying Google Vision OCR fallback...")
       
-      // Convert file to FormData for external OCR service
-      const formData = new FormData();
-      formData.append('file', file);
+      // Convert file to buffer for Google Vision OCR
+      const arrayBuffer = await file.arrayBuffer()
+      const buffer = Buffer.from(arrayBuffer)
       
-      const response = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
-        method: 'POST',
-        body: formData
-      })
+      // Use Google Vision OCR directly
+      const { ocrFallback } = await import('@/lib/compliance/docExtract');
+      const ocrText = await ocrFallback(file.name, buffer);
       
-      if (response.ok) {
-        const { text } = await response.json()
-        return text
+      if (ocrText && ocrText.trim().length > 0) {
+        console.log('✅ Google Vision OCR successful, extracted text length:', ocrText.length);
+        return ocrText;
       }
     } catch (ocrError) {
-      console.error('❌ OCR fallback also failed:', ocrError)
+      console.error('❌ Google Vision OCR fallback also failed:', ocrError)
     }
     
     throw new Error('Failed to extract text from PDF')

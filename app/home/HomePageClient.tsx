@@ -878,94 +878,64 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       throw new Error(`Storage upload failed (${putRes.status} ${putRes.statusText})`)
     }
 
-    // Step 3: Process the uploaded file via OCR endpoint
-    console.log('Calling OCR service directly: https://ocr-server-2-ykmk.onrender.com/upload');
-    const procFormData = new FormData()
-    procFormData.append('file', file)
+    // Step 3: Process the uploaded file via Google Vision OCR
+    console.log('🔄 Processing file with Google Vision OCR:', file.name);
     
-    const procRes = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
-      method: 'POST',
-      body: procFormData,
-    })
-    
-    let procJson: any = null
     try {
-      procJson = await procRes.json()
-    } catch (e) {
-      console.error('Failed to parse processing response:', e)
-      throw new Error(`Process failed: ${procRes.status} ${procRes.statusText}`)
-    }
-    
-    if (!procRes.ok) {
-      const detail = procJson?.error || `${procRes.status} ${procRes.statusText}`
-      throw new Error(`Process failed: ${detail}`)
-    }
-
-    // Log OCR source for debugging
-    console.log("X-OCR-Source:", procRes.headers.get("X-OCR-Source"))
-    
-    const txt = procJson.text ?? procJson.extractedText ?? ""
-    if (!procJson.success || (procJson.textLength ?? txt.length) < 500) {
-      throw new Error(procJson.summary ?? "Couldn't extract readable text.")
-    }
-    
-    // Convert OCR response to expected format
-    return {
-      success: procJson.success,
-      documentType: 'document',
-      summary: `Document processed successfully via ${procJson.ocrSource || 'OCR'}. Extracted ${procJson.textLength} characters.`,
-      analysis: `Text extracted successfully using ${procJson.ocrSource || 'OCR'}. Document contains ${procJson.textLength} characters.`,
-      filename: file.name,
-      textLength: procJson.textLength || 0,
-      extractedText: txt,
-      ocrSource: procJson.ocrSource || 'external-ocr' // Track OCR source for debugging
+      // Convert file to buffer for Google Vision OCR
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      
+      // Use Google Vision OCR directly
+      const { ocrFallback } = await import('../../src/lib/compliance/docExtract');
+      const ocrText = await ocrFallback(file.name, buffer);
+      
+      if (!ocrText || ocrText.trim().length < 500) {
+        throw new Error("Couldn't extract readable text via Google Vision OCR.");
+      }
+      
+      console.log('✅ Google Vision OCR successful for:', file.name);
+      
+      // Convert OCR response to expected format
+      return {
+        success: true,
+        documentType: 'document',
+        summary: `Document processed successfully via Google Vision OCR. Extracted ${ocrText.length} characters.`,
+        analysis: `Text extracted successfully using Google Vision OCR. Document contains ${ocrText.length} characters.`,
+        filename: file.name,
+        textLength: ocrText.length,
+        extractedText: ocrText,
+        ocrSource: 'google_vision_ocr'
+      }
+    } catch (ocrError) {
+      console.error('❌ Google Vision OCR failed:', ocrError);
+      throw new Error(`Google Vision OCR processing failed: ${ocrError}`);
     }
   }
 
     // Helper function for processing already uploaded files via OCR endpoint
   const processStoredPath = async (path: string, buildingId?: string) => {
-    // For stored paths, we need to download and then process via OCR
-    // This is a simplified version - in practice you might want to store the OCR result
-    console.log('Calling OCR service directly: https://ocr-server-2-ykmk.onrender.com/upload');
-    const formData = new FormData()
-    formData.append('file', new File([''], 'stored_document.pdf', { type: 'application/pdf' }))
+    // For stored paths, we need to download and then process via Google Vision OCR
+    console.log('🔄 Processing stored document with Google Vision OCR');
     
-    const res = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
-      method: 'POST',
-      body: formData,
-    })
-    
-    let json: any = null
-    try { 
-      json = await res.json() 
-    } catch (e) {
-      console.error('Failed to parse response:', e)
-      throw new Error(`Process failed: ${res.status} ${res.statusText}`)
-    }
-    
-    if (!res.ok) {
-      const detail = json?.error || `${res.status} ${res.statusText}`
-      throw new Error(`Process failed: ${detail}`)
-    }
-
-    // Log OCR source for debugging
-    console.log("X-OCR-Source:", res.headers.get("X-OCR-Source"))
-    
-    const txt = json.text ?? json.extractedText ?? ""
-    if (!json.success || (json.textLength ?? txt.length) < 500) {
-      throw new Error(json.summary ?? "Couldn't extract readable text.")
-    }
-    
-    // Convert OCR response to expected format
-    return {
-      success: json.success,
-      documentType: 'document',
-      summary: `Document processed successfully via ${json.ocrSource || 'OCR'}. Extracted ${json.textLength} characters.`,
-      analysis: `Text extracted successfully using ${json.ocrSource || 'OCR'}. Document contains ${json.textLength} characters.`,
-      filename: 'stored_document',
-      textLength: json.textLength || 0,
-      extractedText: txt,
-      ocrSource: json.ocrSource || 'unknown' // Track OCR source for debugging
+    try {
+      // Since we don't have the actual file content, we'll return a placeholder
+      // In practice, you would download the file from storage first
+      console.log('⚠️ Stored path processing requires file download - returning placeholder');
+      
+      return {
+        success: false,
+        documentType: 'document',
+        summary: 'Stored document processing requires file download first',
+        analysis: 'Please download the file before processing with Google Vision OCR',
+        filename: 'stored_document',
+        textLength: 0,
+        extractedText: '',
+        ocrSource: 'google_vision_ocr'
+      }
+    } catch (error) {
+      console.error('❌ Stored document processing failed:', error);
+      throw new Error(`Stored document processing failed: ${error}`);
     }
   }
 

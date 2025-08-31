@@ -341,53 +341,72 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
             console.log('🔄 Processing file:', uploadedFile.name, 'Type:', uploadedFile.file.type);
             
             if (isPublic) {
-              // Public mode: Use external OCR service
-              console.log('🔒 Public mode: Using external OCR service');
-              console.log('Calling OCR service directly: https://ocr-server-2-ykmk.onrender.com/upload');
+              // Public mode: Use Google Vision OCR instead of external service
+              console.log('🔒 Public mode: Using Google Vision OCR service');
               
-              const formData = new FormData();
-              formData.append('file', uploadedFile.file);
-              
-              const ocrResponse = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
-                method: 'POST',
-                body: formData,
-              });
+              try {
+                // Convert file to buffer for Google Vision OCR
+                const arrayBuffer = await uploadedFile.file.arrayBuffer();
+                const buffer = Buffer.from(arrayBuffer);
+                
+                // Use Google Vision OCR directly
+                const { ocrFallback } = await import('@/lib/compliance/docExtract');
+                const ocrText = await ocrFallback(uploadedFile.name, buffer);
+                
+                console.log('✅ Google Vision OCR successful');
+                
+                // Create basic document analysis result for public mode
+                const documentAnalysis: DocumentAnalysis = {
+                  filename: uploadedFile.name,
+                  summary: ocrText ? `Document processed via Google Vision OCR. Extracted ${ocrText.length} characters.` : 'Document processed via Google Vision OCR.',
+                  suggestedActions: [],
+                  extractionMethod: 'google_vision_ocr',
+                  extractedText: ocrText || '',
+                  documentType: 'other'
+                };
+                
+                uploadedFileResults.push(documentAnalysis);
 
-              if (!ocrResponse.ok) {
-                throw new Error(`OCR failed: ${ocrResponse.status}`);
+                // Add OCR analysis to the prompt
+                if (!finalPrompt) {
+                  finalPrompt = `Please analyze the uploaded document: ${uploadedFile.name}`;
+                }
+                finalPrompt += `\n\nDocument: ${uploadedFile.name}\nOCR Text: ${ocrText ? ocrText.substring(0, 500) + '...' : 'No text extracted'}\n\nPlease provide insights based on the OCR content.`;
+                
+                // Add document analysis to messages for display
+                const analysisMessage: Message = {
+                  id: Date.now().toString(),
+                  role: 'assistant',
+                  content: `📄 **${uploadedFile.name}** processed via Google Vision OCR!\n\n**Extraction Method:** Google Vision OCR\n**Text Length:** ${ocrText ? ocrText.length : 0} characters`,
+                  timestamp: new Date(),
+                  documentAnalysis: [documentAnalysis]
+                };
+                
+                setMessages(prev => [...prev, analysisMessage]);
+              } catch (ocrError) {
+                console.error('❌ Google Vision OCR failed:', ocrError);
+                // Fallback to basic file info if OCR fails
+                const documentAnalysis: DocumentAnalysis = {
+                  filename: uploadedFile.name,
+                  summary: 'Document uploaded but OCR processing failed. Please try again or contact support.',
+                  suggestedActions: [],
+                  extractionMethod: 'failed',
+                  extractedText: '',
+                  documentType: 'other'
+                };
+                
+                uploadedFileResults.push(documentAnalysis);
+                
+                const analysisMessage: Message = {
+                  id: Date.now().toString(),
+                  role: 'assistant',
+                  content: `📄 **${uploadedFile.name}** uploaded but OCR processing failed.\n\nPlease try again or contact support for assistance.`,
+                  timestamp: new Date(),
+                  documentAnalysis: [documentAnalysis]
+                };
+                
+                setMessages(prev => [...prev, analysisMessage]);
               }
-
-              const ocrResult = await ocrResponse.json();
-              console.log('✅ External OCR successful');
-              
-              // Create basic document analysis result for public mode
-              const documentAnalysis: DocumentAnalysis = {
-                filename: uploadedFile.name,
-                summary: ocrResult.text ? `Document processed via OCR. Extracted ${ocrResult.text.length} characters.` : 'Document processed via OCR.',
-                suggestedActions: [],
-                extractionMethod: 'external_ocr',
-                extractedText: ocrResult.text || '',
-                documentType: 'other'
-              };
-              
-              uploadedFileResults.push(documentAnalysis);
-
-              // Add OCR analysis to the prompt
-              if (!finalPrompt) {
-                finalPrompt = `Please analyze the uploaded document: ${uploadedFile.name}`;
-              }
-              finalPrompt += `\n\nDocument: ${uploadedFile.name}\nOCR Text: ${ocrResult.text ? ocrResult.text.substring(0, 500) + '...' : 'No text extracted'}\n\nPlease provide insights based on the OCR content.`;
-              
-              // Add document analysis to messages for display
-              const analysisMessage: Message = {
-                id: Date.now().toString(),
-                role: 'assistant',
-                content: `📄 **${uploadedFile.name}** processed via OCR!\n\n**Extraction Method:** External OCR\n**Text Length:** ${ocrResult.text ? ocrResult.text.length : 0} characters`,
-                timestamp: new Date(),
-                documentAnalysis: [documentAnalysis]
-              };
-              
-              setMessages(prev => [...prev, analysisMessage]);
             } else {
               // Full mode: Use comprehensive document analysis
               console.log('🔄 Processing file through comprehensive analysis:', uploadedFile.name, 'Type:', uploadedFile.file.type);
