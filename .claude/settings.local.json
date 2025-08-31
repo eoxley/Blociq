@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(node:*)",
+      "Bash(vercel:*)",
+      "Bash(npm run dev:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git add:*)",
+      "Bash(npm run build:*)",
+      "Bash(of this AI tool is limited to the maximum extent permitted by law. We are)",
+      "Bash(env)",
+      "Bash(npx vercel:*)",
+      "Bash(npx tsc:*)",
+      "Bash(git stash:*)",
+      "Bash(npm run lint)",
+      "Bash(git pull:*)",
+      "Bash(npm run typecheck:*)",
+      "WebFetch(domain:ocr-server-2-ykmk.onrender.com)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
