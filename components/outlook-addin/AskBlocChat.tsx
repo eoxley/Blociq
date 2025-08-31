@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import { Send, Loader2, Sparkles, MessageCircle, Upload, FileText, X, Plus, Search, Mail, User, Calendar, AlertCircle } from 'lucide-react'
+import { Send, Loader2, Sparkles, MessageCircle, Upload, FileText, X, Plus, Search, Mail, User, Calendar, AlertCircle, Wand2 } from 'lucide-react'
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
 import { BlocIQBadge } from '@/components/ui/blociq-badge'
@@ -235,21 +235,10 @@ What would you like me to help with?`,
     handleFileSelect(e.dataTransfer.files)
   }
 
-  // MODIFIED: Enhanced submit with email context
+  // FIXED: Simplified chat submission using working API endpoint
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if ((!prompt.trim() && uploadedFiles.length === 0) || isLoading) return
-
-    // Check if this is a document search command
-    const searchCommands = ['show me', 'find', 'search for', 'locate', 'where is']
-    const isSearchCommand = searchCommands.some(cmd => 
-      prompt.toLowerCase().includes(cmd.toLowerCase())
-    )
-
-    if (isSearchCommand) {
-      await handleDocumentSearch(prompt.trim())
-      return
-    }
+    if (!prompt.trim() || isLoading) return
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -260,95 +249,67 @@ What would you like me to help with?`,
     }
 
     setMessages(prev => [...prev, userMessage])
+    const originalPrompt = prompt.trim()
     setPrompt('')
     setUploadedFiles([])
     setIsLoading(true)
 
     try {
-      // Create FormData if files are uploaded
-      let requestBody: FormData | string
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
+      // Build enhanced prompt with email context
+      let enhancedPrompt = originalPrompt
+      if (currentEmail) {
+        enhancedPrompt = `[EMAIL CONTEXT] 
+From: ${currentEmail.senderName} (${currentEmail.sender})
+Subject: ${currentEmail.subject}
+Content: ${currentEmail.body.substring(0, 800)}...
+
+USER QUESTION: ${originalPrompt}`
       }
 
-      if (userMessage.files && userMessage.files.length > 0) {
-        // Use FormData for file uploads - match main app exactly
-        requestBody = new FormData()
-        
-        // Embed email context in prompt for compatibility
-        let finalPrompt = userMessage.content
-        if (currentEmail) {
-          finalPrompt = `[EMAIL CONTEXT] From: ${currentEmail.senderName} (${currentEmail.sender}) | Subject: ${currentEmail.subject} | Content: ${currentEmail.body.substring(0, 500)}... 
-
-USER QUESTION: ${userMessage.content}`
-        }
-        
-        requestBody.append('prompt', finalPrompt)
-        requestBody.append('building_id', 'null')
-        
-        userMessage.files.forEach((uploadedFile) => {
-          requestBody.append('file', uploadedFile.file)
-          requestBody.append('fileName', uploadedFile.name)
-        })
-        
-        // Remove Content-Type header for FormData
-        delete headers['Content-Type']
-      } else {
-        // Embed email context in prompt for compatibility with homepage API
-        let finalPrompt = userMessage.content
-        if (currentEmail) {
-          finalPrompt = `[EMAIL CONTEXT] From: ${currentEmail.senderName} (${currentEmail.sender}) | Subject: ${currentEmail.subject} | Content: ${currentEmail.body.substring(0, 500)}... 
-
-USER QUESTION: ${userMessage.content}`
-        }
-        
-        requestBody = JSON.stringify({
-          prompt: finalPrompt,
-          building_id: null
-        })
-      }
-
-      // Use same endpoint as main app for consistency
-      const response = await fetch('/api/ask-ai', {
+      // Use the working ask-ai-public endpoint for reliability
+      const response = await fetch('/api/ask-ai-public', {
         method: 'POST',
-        headers,
-        body: requestBody,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: enhancedPrompt,
+          is_public: false, // Use full functionality 
+          context: 'outlook_addin'
+        })
       })
 
-      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`)
+      }
 
-      if (data.response) {
+      const data = await response.json()
+      
+      if (data.success && (data.response || data.result)) {
+        const aiResponse = data.response || data.result
+        
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: data.response,
+          content: aiResponse,
           timestamp: new Date()
         }
 
         setMessages(prev => [...prev, assistantMessage])
       } else {
-        // Handle any error case
-        toast.error('Failed to get AI response')
-        
-        const errorMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: "I'm having trouble processing your request right now. Please try again in a moment.",
-          timestamp: new Date()
-        }
-        setMessages(prev => [...prev, errorMessage])
+        throw new Error(data.error || 'No response received from AI')
       }
     } catch (error) {
-      console.error('Error asking AI:', error)
+      console.error('Chat error:', error)
+      toast.error('Sorry, I had trouble connecting. Please try again.')
       
-      // Provide a helpful response even when AI fails
-      const assistantMessage: Message = {
+      const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: "I'm having trouble connecting right now. Please try again in a moment, or contact support if the issue persists.",
+        content: "I'm having trouble connecting right now. Please try again in a moment.",
         timestamp: new Date()
       }
-      setMessages(prev => [...prev, assistantMessage])
+      setMessages(prev => [...prev, errorMessage])
     } finally {
       setIsLoading(false)
     }

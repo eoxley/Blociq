@@ -2,13 +2,16 @@
 
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
+import { Wand2 } from 'lucide-react'
 import AskBlocChat from '../../components/outlook-addin/AskBlocChat'
+import GenerateReplyModal from '../../components/outlook-addin/GenerateReplyModal'
 
 export default function OutlookAddin() {
   const [isOfficeReady, setIsOfficeReady] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(true) // Default to guest mode
   const [authError, setAuthError] = useState<string | null>(null)
   const [showLogin, setShowLogin] = useState(false)
+  const [showReplyModal, setShowReplyModal] = useState(false)
 
   useEffect(() => {
     // Initialize Office.js
@@ -16,6 +19,11 @@ export default function OutlookAddin() {
       Office.onReady((info) => {
         console.log('Office.js ready:', info)
         setIsOfficeReady(true)
+        
+        // Auto-detect if this is a reply context
+        if (window.location.href.includes('reply') || window.location.href.includes('compose')) {
+          setShowReplyModal(true)
+        }
         
         // Skip auth check for now - work in guest mode
         setIsAuthenticated(true)
@@ -220,6 +228,17 @@ export default function OutlookAddin() {
           </div>
         )}
 
+        {/* Quick Actions Header */}
+        <div className="flex-shrink-0 p-4 border-b bg-gray-50">
+          <button 
+            onClick={() => setShowReplyModal(true)}
+            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 transition-colors"
+          >
+            <Wand2 className="w-4 h-4" />
+            Generate AI Reply
+          </button>
+        </div>
+
         {/* Main Chat Interface */}
         <div className="flex-1 overflow-hidden">
           <AskBlocChat />
@@ -231,6 +250,13 @@ export default function OutlookAddin() {
             Powered by BlocIQ • AI-driven property management
           </p>
         </div>
+
+        {/* Generate Reply Modal */}
+        <GenerateReplyModal 
+          isOpen={showReplyModal}
+          onClose={() => setShowReplyModal(false)}
+          autoTrigger={window.location.href.includes('reply') || window.location.href.includes('compose')}
+        />
       </div>
     </>
   )
