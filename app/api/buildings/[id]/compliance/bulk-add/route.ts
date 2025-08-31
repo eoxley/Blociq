@@ -33,7 +33,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     // Validate that the compliance assets exist
     const { data: assets, error: assetsError } = await supabaseAdmin
       .from('compliance_assets')
-      .select('id, title, category')
+      .select('id, name, category')
       .in('id', asset_ids);
     
     if (assetsError) {
@@ -49,7 +49,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       return NextResponse.json({ error: 'Some compliance assets not found' }, { status: 400 });
     }
     
-    console.log('✅ All compliance assets validated:', assets.map(a => `${a.title} (${a.category})`));
+    console.log('✅ All compliance assets validated:', assets.map(a => `${a.name} (${a.category})`));
     
     // Create rows with correct column names based on the actual database schema
     const rows = asset_ids.map((assetId: string) => ({ 

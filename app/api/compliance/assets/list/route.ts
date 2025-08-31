@@ -5,17 +5,17 @@ import { canonicaliseCategory, canonicaliseTitle, deriveFrequencyLabel } from "@
 export async function GET() {
   const { data, error } = await supabaseAdmin
     .from("compliance_assets")
-    .select("id, title, category, description, frequency_months, frequency")
+    .select("id, name, category, description, frequency_months, frequency")
     .order("category", { ascending: true })
-    .order("title", { ascending: true });
+    .order("name", { ascending: true });
   
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   
   // Apply normalisation and derive frequency labels
   const rows = (data || []).map((r: any) => ({
     ...r,
-    name: r.title, // Keep for backward compatibility
-    canonicalTitle: canonicaliseTitle(r.title),
+    title: r.name, // Keep for backward compatibility
+    canonicalTitle: canonicaliseTitle(r.name),
     canonicalCategory: canonicaliseCategory(r.category),
     derivedFrequency: deriveFrequencyLabel(r.frequency_months, r.frequency)
   }));
