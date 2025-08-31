@@ -76,3 +76,6 @@ config-*.json
 # Logs that might contain sensitive info
 *.log
 logs/
+.env*.local
+.env.local
+.env*
