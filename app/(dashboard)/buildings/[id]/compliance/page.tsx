@@ -26,8 +26,12 @@ import {
   ToggleRight,
   Upload,
   X,
-  ChevronLeft
+  ChevronLeft,
+  MapPin,
+  Layers,
+  Construction
 } from 'lucide-react'
+import { toast } from 'sonner'
 import AssetManagementModal from '@/components/compliance/AssetManagementModal'
 
 // Types
@@ -159,7 +163,7 @@ export default function BuildingCompliancePage() {
         .from('compliance_assets')
         .select('*')
         .order('category')
-        .order('title')
+        .order('name')
 
       if (error) throw error
       setAllComplianceAssets(data || [])
@@ -199,33 +203,25 @@ export default function BuildingCompliancePage() {
         asset.name.toLowerCase().includes('safety case')
       )
 
-      // Get current applied assets
-      const currentAssetIds = complianceData.map(item => item.compliance_asset_id)
-      
-      // Add missing HRB assets
-      const assetsToAdd = hrbAssets.filter(asset => !currentAssetIds.includes(asset.id))
-      
-      if (assetsToAdd.length > 0) {
+      // Add HRB assets to building
+      for (const asset of hrbAssets) {
         const { error } = await supabase
           .from('building_compliance_assets')
-          .insert(
-            assetsToAdd.map(asset => ({
-              building_id: buildingId,
-              compliance_asset_id: asset.id,
-              status: 'not_applied',
-              next_due_date: null
-            }))
-          )
+          .upsert({
+            building_id: buildingId,
+            compliance_asset_id: asset.id,
+            status: 'not_applied',
+            next_due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+          })
 
-        if (error) throw error
+        if (error) console.error(`Error adding HRB asset ${asset.name}:`, error)
       }
 
-      // Refresh data
-      await fetchComplianceData()
-      alert(`Auto-added ${assetsToAdd.length} HRB-related compliance assets`)
+      toast.success('HRB compliance assets added successfully')
+      fetchComplianceData()
     } catch (err) {
-      console.error('Error auto-toggling HRB assets:', err)
-      alert('Failed to auto-add HRB assets. Please try again.')
+      console.error('Error adding HRB assets:', err)
+      toast.error('Failed to add HRB assets')
     } finally {
       setUpdatingAssets(false)
     }
@@ -235,14 +231,14 @@ export default function BuildingCompliancePage() {
     switch (status) {
       case 'compliant':
         return <CheckCircle className="h-5 w-5 text-green-500" />
-      case 'upcoming':
-        return <Clock className="h-5 w-5 text-yellow-500" />
       case 'overdue':
         return <AlertTriangle className="h-5 w-5 text-red-500" />
+      case 'upcoming':
+        return <Clock className="h-5 w-5 text-yellow-500" />
       case 'not_applied':
         return <AlertCircle className="h-5 w-5 text-gray-500" />
       default:
-        return <AlertCircle className="h-5 w-5 text-gray-500" />
+        return <Shield className="h-5 w-5 text-blue-500" />
     }
   }
 
@@ -251,49 +247,52 @@ export default function BuildingCompliancePage() {
     
     switch (status) {
       case 'compliant':
-        return <span className={`${baseClasses} bg-green-100 text-green-800`}>✅ Compliant</span>
-      case 'upcoming':
-        return <span className={`${baseClasses} bg-yellow-100 text-yellow-800`}>⏳ Upcoming</span>
+        return <span className={`${baseClasses} bg-green-100 text-green-800`}>Compliant</span>
       case 'overdue':
-        return <span className={`${baseClasses} bg-red-100 text-red-800`}>❌ Overdue</span>
+        return <span className={`${baseClasses} bg-red-100 text-red-800`}>Overdue</span>
+      case 'upcoming':
+        return <span className={`${baseClasses} bg-yellow-100 text-yellow-800`}>Upcoming</span>
       case 'not_applied':
-        return <span className={`${baseClasses} bg-gray-100 text-gray-800`}>🚫 Not Applied</span>
+        return <span className={`${baseClasses} bg-gray-100 text-gray-800`}>Not Applied</span>
       default:
-        return <span className={`${baseClasses} bg-gray-100 text-gray-800`}>❓ Unknown</span>
+        return <span className={`${baseClasses} bg-blue-100 text-blue-800`}>Unknown</span>
     }
   }
 
   const getCategoryColor = (category: string | undefined) => {
-    if (!category) return 'bg-gray-100 text-gray-800'
+    if (!category) return 'bg-gray-100 text-gray-800 border-gray-200'
     
-    const colors: Record<string, string> = {
-      'Fire Safety': 'bg-red-100 text-red-800',
-      'Electrical Safety': 'bg-yellow-100 text-yellow-800',
-      'Gas Safety': 'bg-orange-100 text-orange-800',
-      'Water Safety': 'bg-blue-100 text-blue-800',
-      'Structural Safety': 'bg-purple-100 text-purple-800',
-      'Accessibility': 'bg-green-100 text-green-800',
-      'Environmental': 'bg-teal-100 text-teal-800'
+    const colors: { [key: string]: string } = {
+      'Fire Safety': 'bg-red-100 text-red-800 border-red-200',
+      'Electrical Safety': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      'Gas Safety': 'bg-orange-100 text-orange-800 border-orange-200',
+      'Water Safety': 'bg-blue-100 text-blue-800 border-blue-200',
+      'Structural Safety': 'bg-gray-100 text-gray-800 border-gray-200',
+      'Accessibility': 'bg-purple-100 text-purple-800 border-purple-200',
+      'Environmental': 'bg-green-100 text-green-800 border-green-200'
     }
-    
-    return colors[category] || 'bg-gray-100 text-gray-800'
+    return colors[category] || 'bg-gray-100 text-gray-800 border-gray-200'
   }
 
   const filteredComplianceData = complianceData.filter(item => {
-    const matchesCategory = filterCategory === 'all' || item.compliance_assets?.category === filterCategory
-    const matchesStatus = filterStatus === 'all' || item.status === filterStatus
-    const matchesSearch = searchQuery === '' || 
+    const matchesSearch = !searchQuery || 
       item.compliance_assets?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.compliance_assets?.description?.toLowerCase().includes(searchQuery.toLowerCase())
     
-    return matchesCategory && matchesStatus && matchesSearch
+    const matchesCategory = filterCategory === 'all' || 
+      item.compliance_assets?.category === filterCategory
+    
+    const matchesStatus = filterStatus === 'all' || 
+      item.status === filterStatus
+    
+    return matchesSearch && matchesCategory && matchesStatus
   })
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
-          <RefreshCw className="h-12 w-12 text-blue-500 animate-spin mx-auto mb-4" />
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading compliance data...</p>
         </div>
       </div>
@@ -304,12 +303,12 @@ export default function BuildingCompliancePage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <p className="text-red-600 mb-4">Error loading compliance data</p>
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Compliance Data</h2>
           <p className="text-gray-600 mb-4">{error}</p>
           <button
             onClick={fetchComplianceData}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             Try Again
           </button>
@@ -320,138 +319,184 @@ export default function BuildingCompliancePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => router.back()}
-                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  {building?.name || 'Building'} Compliance
-                </h1>
-                <p className="text-gray-600">
-                  Manage compliance assets and track inspection schedules
-                </p>
-                {building?.is_hrb && (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200 mt-2">
-                    🏢 High-Risk Building (HRB)
-                  </span>
-                )}
-              </div>
-            </div>
+      {/* Hero Banner */}
+      <div className="relative bg-gradient-to-r from-[#004AAD] via-[#7209B7] to-[#004AAD] overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0" style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          }}></div>
+        </div>
+        
+        <div className="relative max-w-7xl mx-auto px-6 py-12">
+          {/* Navigation */}
+          <div className="flex items-center justify-between mb-8">
+            <button
+              onClick={() => router.back()}
+              className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200"
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </button>
             
             <div className="flex items-center gap-3">
-              {/* Refresh Button */}
               <button
                 onClick={fetchComplianceData}
-                className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-3 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
                 title="Refresh compliance data"
               >
                 <RefreshCw className="h-5 w-5" />
               </button>
               
-              {/* Set Up Compliance Button - Links to Setup Wizard */}
               <button
                 onClick={() => router.push(`/buildings/${buildingId}/compliance/setup`)}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#004AAD] to-[#7209B7] text-white rounded-lg hover:from-[#003A8C] hover:to-[#5A078F] transition-all duration-200 shadow-lg hover:shadow-xl"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-white/20 backdrop-blur-sm text-white rounded-lg hover:bg-white/30 transition-all duration-200 border border-white/30"
               >
                 <Plus className="h-5 w-5" />
                 Set Up Compliance
               </button>
+            </div>
+          </div>
+
+          {/* Hero Content */}
+          <div className="text-center text-white">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <Shield className="h-12 w-12 text-white/90" />
+              <h1 className="text-4xl font-bold">
+                {building?.name || 'Building'} Compliance
+              </h1>
+            </div>
+            
+            <p className="text-xl text-white/90 mb-6 max-w-2xl mx-auto">
+              Comprehensive compliance management and monitoring for your property
+            </p>
+
+            {/* Building Details */}
+            <div className="flex items-center justify-center gap-6 text-white/80 text-sm">
+              {building?.address && (
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  <span>{building.address}</span>
+                </div>
+              )}
               
-              {/* HRB Auto-Asset Button */}
-              {building?.is_hrb && (
-                <button
-                  onClick={autoToggleHRBAssets}
-                  disabled={updatingAssets}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-                  title="Automatically add required HRB compliance assets"
-                >
-                  {updatingAssets ? (
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Shield className="h-4 w-4" />
-                  )}
-                  Auto-Add HRB Assets
-                </button>
+              {building?.total_floors && (
+                <div className="flex items-center gap-2">
+                  <Layers className="h-4 w-4" />
+                  <span>{building.total_floors} floors</span>
+                </div>
+              )}
+              
+              {building?.construction_type && (
+                <div className="flex items-center gap-2">
+                  <Construction className="h-4 w-4" />
+                  <span>{building.construction_type}</span>
+                </div>
               )}
             </div>
+
+            {/* HRB Badge */}
+            {building?.is_hrb && (
+              <div className="mt-6">
+                <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-red-500/20 text-red-100 border border-red-400/30 backdrop-blur-sm">
+                  🏢 High-Risk Building (HRB) - Enhanced Compliance Required
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-6">
-        {/* Compliance Summary Bar */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-blue-500" />
-            Building Compliance Status
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-green-600">Compliant</p>
-                  <p className="text-2xl font-bold text-green-700">{summary.compliant_count}</p>
-                </div>
+      {/* Compliance Overview Section */}
+      <div className="max-w-7xl mx-auto px-6 -mt-8 relative z-10">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Compliance Overview for {building?.name}
+            </h2>
+            <p className="text-gray-600">
+              Track your building's compliance status and manage inspection schedules
+            </p>
+          </div>
+
+          {/* Compliance Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6 text-center">
+              <div className="flex items-center justify-center mb-3">
                 <CheckCircle className="h-8 w-8 text-green-500" />
               </div>
+              <p className="text-sm font-medium text-green-600 mb-1">Compliant</p>
+              <p className="text-3xl font-bold text-green-700">{summary.compliant_count}</p>
             </div>
             
-            <div className="bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-red-600">Overdue</p>
-                  <p className="text-2xl font-bold text-red-700">{summary.overdue_count}</p>
-                </div>
+            <div className="bg-gradient-to-br from-red-50 to-rose-50 border border-red-200 rounded-xl p-6 text-center">
+              <div className="flex items-center justify-center mb-3">
                 <AlertTriangle className="h-8 w-8 text-red-500" />
               </div>
+              <p className="text-sm font-medium text-red-600 mb-1">Overdue</p>
+              <p className="text-3xl font-bold text-red-700">{summary.overdue_count}</p>
             </div>
             
-            <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-yellow-600">Upcoming</p>
-                  <p className="text-2xl font-bold text-yellow-700">{summary.upcoming_count}</p>
-                </div>
+            <div className="bg-gradient-to-br from-yellow-50 to-amber-50 border border-yellow-200 rounded-xl p-6 text-center">
+              <div className="flex items-center justify-center mb-3">
                 <Clock className="h-8 w-8 text-yellow-500" />
               </div>
+              <p className="text-sm font-medium text-yellow-600 mb-1">Upcoming</p>
+              <p className="text-3xl font-bold text-yellow-700">{summary.upcoming_count}</p>
             </div>
             
-            <div className="bg-gradient-to-r from-gray-50 to-slate-50 border border-gray-200 rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Not Applied</p>
-                  <p className="text-2xl font-bold text-gray-700">{summary.not_applied_count}</p>
-                </div>
+            <div className="bg-gradient-to-br from-gray-50 to-slate-50 border border-gray-200 rounded-xl p-6 text-center">
+              <div className="flex items-center justify-center mb-3">
                 <AlertCircle className="h-8 w-8 text-gray-500" />
               </div>
+              <p className="text-sm font-medium text-gray-600 mb-1">Not Applied</p>
+              <p className="text-3xl font-bold text-gray-700">{summary.not_applied_count}</p>
             </div>
           </div>
-          
-          <div className="mt-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">Overall Compliance</span>
-              <span className="text-sm font-medium text-gray-700">{summary.compliance_percentage}%</span>
+
+          {/* Overall Compliance Progress */}
+          <div className="bg-gray-50 rounded-xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Overall Compliance</h3>
+              <span className="text-2xl font-bold text-gray-900">{summary.compliance_percentage}%</span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="w-full bg-gray-200 rounded-full h-3">
               <div 
-                className="bg-gradient-to-r from-green-500 to-blue-500 h-2 rounded-full transition-all duration-300"
+                className="bg-gradient-to-r from-green-500 to-blue-500 h-3 rounded-full transition-all duration-500"
                 style={{ width: `${summary.compliance_percentage}%` }}
               ></div>
             </div>
+            <p className="text-sm text-gray-600 mt-2">
+              {summary.total_assets} total compliance assets • {summary.compliant_count} compliant
+            </p>
           </div>
-        </div>
 
-        {/* Filters and Search */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-8">
+          {/* HRB Auto-Setup Button */}
+          {building?.is_hrb && (
+            <div className="mt-6 text-center">
+              <button
+                onClick={autoToggleHRBAssets}
+                disabled={updatingAssets}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 shadow-lg"
+                title="Automatically add required HRB compliance assets"
+              >
+                {updatingAssets ? (
+                  <RefreshCw className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Shield className="h-5 w-5" />
+                )}
+                Auto-Add HRB Assets
+              </button>
+              <p className="text-sm text-gray-600 mt-2">
+                Automatically configure required compliance assets for High-Risk Building regulations
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Filters and Search */}
+      <div className="max-w-7xl mx-auto px-6 mt-8">
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
           <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
             <div className="flex flex-col sm:flex-row gap-4 flex-1">
               {/* Category Filter */}
@@ -503,8 +548,10 @@ export default function BuildingCompliancePage() {
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Compliance Assets List */}
+      {/* Compliance Assets List */}
+      <div className="max-w-7xl mx-auto px-6 mt-8 mb-12">
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
@@ -516,31 +563,34 @@ export default function BuildingCompliancePage() {
           <div className="divide-y divide-gray-100">
             {filteredComplianceData.length === 0 ? (
               <div className="p-12 text-center">
-                <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No compliance assets found</h3>
+                <Shield className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-xl font-medium text-gray-900 mb-2">No compliance assets found</h3>
                 <p className="text-gray-600 mb-6">
                   {searchQuery || filterCategory !== 'all' || filterStatus !== 'all' 
                     ? 'Try adjusting your filters or search terms.'
-                    : 'This building has no compliance assets configured yet.'
+                    : `${building?.name || 'This building'} has no compliance assets configured yet.`
                   }
                 </p>
-                <button
-                  onClick={() => router.push(`/buildings/${buildingId}/compliance/setup`)}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#004AAD] to-[#7209B7] text-white rounded-lg hover:from-[#003A8C] hover:to-[#5A078F] transition-all duration-200 shadow-lg hover:shadow-xl"
-                >
-                  <Plus className="h-5 w-5" />
-                  Set Up Compliance
-                </button>
                 
-                <div className="text-sm text-gray-500">or</div>
-                
-                <button
-                  onClick={() => setShowAssetModal(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                >
-                  <Plus className="h-4 w-4" />
-                  Quick Add Assets
-                </button>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <button
+                    onClick={() => router.push(`/buildings/${buildingId}/compliance/setup`)}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#004AAD] to-[#7209B7] text-white rounded-lg hover:from-[#003A8C] hover:to-[#5A078F] transition-all duration-200 shadow-lg hover:shadow-xl"
+                  >
+                    <Plus className="h-5 w-5" />
+                    Set Up Compliance
+                  </button>
+                  
+                  <div className="text-sm text-gray-500 self-center">or</div>
+                  
+                  <button
+                    onClick={() => setShowAssetModal(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Quick Add Assets
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
@@ -550,9 +600,9 @@ export default function BuildingCompliancePage() {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           {getStatusIcon(item.status)}
-                                                  <h3 className="text-lg font-medium text-gray-900">
-                          {item.compliance_assets?.name || 'Unknown Asset'}
-                        </h3>
+                          <h3 className="text-lg font-medium text-gray-900">
+                            {item.compliance_assets?.name || 'Unknown Asset'}
+                          </h3>
                           {getStatusBadge(item.status)}
                         </div>
                         
