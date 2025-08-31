@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, createContext, useContext, useEffect, useCallback } from 'react'
+import React, { useState, createContext, useContext, useEffect, useCallback } from 'react'
 import { MessageSquare, Plus, Search, Filter, RefreshCw, Settings, MoreVertical, FileText, Sparkles, Zap, TrendingUp, Users, Clock, Brain, BarChart3, Mail, CheckCircle } from 'lucide-react'
 import FolderSidebar from '@/components/inbox_v2/FolderSidebar'
 import MessageList from '@/components/inbox_v2/MessageList'
@@ -366,8 +366,10 @@ export default function InboxV2() {
     message.subject?.toLowerCase().includes('asap')
   ).length
 
+  const Provider = InboxContext.Provider
+
   return (
-    <InboxContext.Provider value={contextValue}>
+    <Provider value={contextValue}>
       {/* Enhanced Modern Email Client Header with Full BlocIQ Design Magic */}
       <div className="bg-gradient-to-r from-white via-blue-50/30 to-purple-50/30 border-b border-gray-200 px-8 py-8 shadow-lg backdrop-blur-sm">
         <div className="flex items-center justify-between">
@@ -604,8 +606,6 @@ export default function InboxV2() {
           />
         </div>
       ) : (
-        <>
-          {/* Enhanced Main Email Client Layout with Full BlocIQ Design Magic */}
           <div className="flex h-[calc(100vh-400px)] bg-gradient-to-br from-gray-50 via-blue-50/20 to-purple-50/20">
         {/* Left Column: Enhanced Folder Sidebar */}
         <div className="w-80 bg-white/80 backdrop-blur-sm border-r border-gray-200/50 flex flex-col shadow-xl">
@@ -791,6 +791,6 @@ export default function InboxV2() {
           setDraftsPanelOpen(false)
         }}
       />
-    </InboxContext.Provider>
+    </Provider>
   )
 }

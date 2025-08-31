@@ -1919,22 +1919,13 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
             {/* Building To-Do Widget */}
             <div className="h-full">
-              {todosEmpty ? (
-                <div className="text-center py-8 flex-1 flex items-center justify-center">
-                  <div className="w-16 h-16 bg-gradient-to-r from-[#14b8a6]/10 to-[#3b82f6]/10 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl border border-[#14b8a6]/20">
-                    <CheckCircle className="h-8 w-8 text-[#14b8a6]" />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-3">All caught up!</h3>
-                </div>
-              ) : (
-                <BuildingTodoList 
-                  maxItems={5} 
-                  showBuildingName={true} 
-                  className="h-full" 
-                  onEmptyState={setTodosEmpty}
-                  includeCompliance={true}
-                />
-              )}
+              <BuildingTodoList 
+                maxItems={5} 
+                showBuildingName={true} 
+                className="h-full" 
+                onEmptyState={setTodosEmpty}
+                includeCompliance={true}
+              />
             </div>
           </div>
 
