@@ -37,7 +37,7 @@ interface BuildingSetup {
 
 interface ComplianceAsset {
   id: string
-  title: string
+  name: string
   category: string
   description: string
   frequency_months: number
@@ -396,7 +396,7 @@ export default function ComplianceSetupWizard({
                                   onChange={() => toggleAsset(asset.id)}
                                   className="h-4 w-4 text-blue-600"
                                 />
-                                <h5 className="font-medium">{asset.title}</h5>
+                                <h5 className="font-medium">{asset.name}</h5>
                                 {isRequired && (
                                   <BlocIQBadge variant="secondary" className="bg-red-100 text-red-800">
                                     Required
@@ -492,7 +492,7 @@ export default function ComplianceSetupWizard({
                     {categoryAssets.map(asset => (
                       <div key={asset.id} className="flex items-center gap-2 text-sm">
                         <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-                        <span>{asset.title}</span>
+                        <span>{asset.name}</span>
                         {asset.is_required && (
                           <BlocIQBadge variant="secondary" className="bg-red-100 text-red-800 text-xs">
                             Required

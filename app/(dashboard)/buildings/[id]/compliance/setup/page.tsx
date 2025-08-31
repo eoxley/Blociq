@@ -78,7 +78,7 @@ export default async function ComplianceSetupPage({ params }: ComplianceSetupPag
       .from('compliance_assets')
       .select('*')
       .order('category')
-      .order('title')
+      .order('name')
 
     if (allAssetsError) {
       console.error('Error fetching all assets:', allAssetsError)
