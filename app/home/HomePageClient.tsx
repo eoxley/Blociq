@@ -1642,18 +1642,7 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 </div>
                 
                 <div className="p-6 flex-1 overflow-y-auto">
-                  {/* Add Event Button */}
-                  {!showAddEventForm && (
-                    <div className="text-center mb-6">
-                      <button
-                        onClick={() => setShowAddEventForm(true)}
-                        className="bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] hover:brightness-110 text-white px-6 py-2 rounded-xl font-medium shadow-lg transition-all duration-200"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add New Event
-                      </button>
-                    </div>
-                  )}
+
 
                   {/* Manual Event Input Form */}
                   {showAddEventForm && (
