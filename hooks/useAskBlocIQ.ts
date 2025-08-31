@@ -349,8 +349,8 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
                 const formData = new FormData();
                 formData.append('file', uploadedFile.file);
                 
-                // Call the working external OCR server directly (Production System A)
-                const ocrResponse = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
+                // Call OCR server via CORS proxy to avoid CORS issues
+                const ocrResponse = await fetch('/api/ocr-proxy-cors', {
                   method: 'POST',
                   body: formData,
                 });
