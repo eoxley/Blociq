@@ -1,5 +1,6 @@
 'use client'
 
+// Trigger Vercel build - compliance page updated
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
