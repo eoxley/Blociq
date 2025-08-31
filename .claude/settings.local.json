@@ -20,7 +20,9 @@
       "WebFetch(domain:ocr-server-2-ykmk.onrender.com)",
       "Bash(curl:*)",
       "Bash(ls:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(chmod:*)",
+      "Bash(npm install)"
     ],
     "deny": [],
     "ask": []
