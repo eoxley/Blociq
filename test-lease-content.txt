@@ -1,0 +1,11 @@
+This is a test lease document.
+
+LEASE AGREEMENT
+
+Property: 123 Test Street, London
+Tenant: John Smith
+Landlord: Property Management Ltd
+Rent: £1,200 per month
+Duration: 12 months
+
+This lease agreement contains important terms and conditions.

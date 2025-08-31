@@ -32,15 +32,27 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Validate file type
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/bmp'];
-    if (!allowedTypes.includes(file.type) && !file.name.toLowerCase().endsWith('.pdf')) {
-      console.log('❌ Unsupported file type:', file.type);
-      return NextResponse.json(
-        { error: 'Unsupported file type. Please use PDF, JPEG, PNG, GIF, or BMP.' },
-        { status: 400 }
-      );
-    }
+             // Validate file type with more robust checking
+         const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/jpg'];
+         const fileExtension = file.name.toLowerCase().split('.').pop();
+         const allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'bmp'];
+         
+         const isValidType = allowedTypes.includes(file.type) || allowedExtensions.includes(fileExtension || '');
+         
+         if (!isValidType) {
+           console.log('❌ Unsupported file type:', { type: file.type, extension: fileExtension });
+           return NextResponse.json(
+             { 
+               error: 'Unsupported file type. Please use PDF, JPEG, PNG, GIF, or BMP.',
+               supportedTypes: allowedTypes,
+               detectedType: file.type,
+               detectedExtension: fileExtension
+             },
+             { status: 400 }
+           );
+         }
+         
+         console.log('✅ File type validation passed:', { type: file.type, extension: fileExtension });
     
     try {
       // Convert file to buffer for Google Vision OCR
@@ -67,24 +79,52 @@ export async function POST(request: NextRequest) {
         textPreview: ocrText?.substring(0, 100) || 'No text'
       });
       
-      if (ocrText && ocrText.trim().length > 0) {
-        console.log('✅ Google Vision OCR successful for:', file.name);
-        return NextResponse.json({
-          text: ocrText,
-          filename: file.name,
-          source: 'google_vision_ocr',
-          timestamp: new Date().toISOString(),
-          textLength: ocrText.length
-        });
-      } else {
-        console.log('⚠️ Google Vision OCR returned empty text for:', file.name);
-        return NextResponse.json({
-          error: 'OCR processing returned no text',
-          filename: file.name,
-          timestamp: new Date().toISOString(),
-          suggestion: 'The document may not contain readable text or may be corrupted.'
-        }, { status: 400 });
-      }
+                 if (ocrText && ocrText.trim().length > 0) {
+             console.log('✅ Google Vision OCR successful for:', file.name);
+             
+             // Assess text quality
+             const wordCount = ocrText.trim().split(/\s+/).length;
+             const avgWordLength = wordCount > 0 ? ocrText.replace(/\s+/g, '').length / wordCount : 0;
+             const hasStructure = /[.!?]\s*[A-Z]/.test(ocrText); // Check for sentence structure
+             
+             console.log('📊 OCR Quality Metrics:', {
+               textLength: ocrText.length,
+               wordCount,
+               avgWordLength: avgWordLength.toFixed(2),
+               hasStructure,
+               startsWithText: /^[A-Za-z0-9]/.test(ocrText.trim())
+             });
+             
+             return NextResponse.json({
+               text: ocrText,
+               filename: file.name,
+               source: 'google_vision_ocr',
+               timestamp: new Date().toISOString(),
+               textLength: ocrText.length,
+               qualityMetrics: {
+                 wordCount,
+                 avgWordLength: parseFloat(avgWordLength.toFixed(2)),
+                 hasStructure,
+                 confidence: wordCount > 10 && avgWordLength > 2 ? 'high' : wordCount > 5 ? 'medium' : 'low'
+               }
+             });
+           } else {
+             console.log('⚠️ Google Vision OCR returned empty text for:', file.name);
+             return NextResponse.json({
+               error: 'OCR processing returned no text',
+               filename: file.name,
+               timestamp: new Date().toISOString(),
+               suggestion: 'The document may not contain readable text, may be an image without text, or may be corrupted. Try uploading a clearer image or a different file format.',
+               troubleshooting: {
+                 tips: [
+                   'Ensure the document contains actual text (not just images)',
+                   'Try a higher resolution scan if using a scanned document',
+                   'Verify the file is not corrupted',
+                   'For PDFs, ensure they contain selectable text'
+                 ]
+               }
+             }, { status: 400 });
+           }
       
     } catch (ocrError) {
       console.error('❌ Google Vision OCR failed:', ocrError);

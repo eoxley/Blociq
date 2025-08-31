@@ -71,74 +71,114 @@ export async function ocrFallback(filename: string, buf: Buffer): Promise<string
     
     let ocrResult: string = '';
     
-    if (isPDF) {
-      // For PDFs, convert to image first, then use OCR
-      console.log('📄 Processing PDF - converting to image first...');
-      
-      try {
-        // Convert PDF to image
-        const { convertPdfToSingleImage } = await import('../../../lib/pdf-to-image');
-        const imageBuffer = await convertPdfToSingleImage(buf);
-        
-        console.log('🖼️ PDF converted to image, size:', imageBuffer.length, 'bytes');
-        
-        // Now use Google Vision OCR on the image
-        console.log('🔍 Using Google Vision OCR on converted image...');
-        
-        const requestPayload = {
-          image: {
-            content: imageBuffer.toString('base64')
-          }
-        };
-        
-        console.log('📤 Sending DOCUMENT_TEXT_DETECTION request for converted image...');
-        
-        const [result] = await client.documentTextDetection(requestPayload);
-        
-        console.log('📥 DOCUMENT_TEXT_DETECTION response received');
-        console.log('📊 Response details:', {
-          hasFullText: !!result.fullTextAnnotation,
-          textLength: result.fullTextAnnotation?.text?.length || 0,
-          pages: result.fullTextAnnotation?.pages?.length || 0
-        });
-        
-        ocrResult = result.fullTextAnnotation?.text || '';
-        
-        // If document detection didn't work well, fallback to regular text detection
-        if (ocrResult.length < 50) {
-          console.log('⚠️ Document detection yielded poor results, trying text detection fallback');
-          const [fallbackResult] = await client.textDetection(requestPayload);
-          ocrResult = fallbackResult.textAnnotations?.[0]?.description || '';
-          console.log('📊 Fallback text detection result length:', ocrResult.length);
-        }
-        
-      } catch (pdfError) {
-        console.error('❌ PDF processing failed:', pdfError);
-        
-        // Try to get more details about the error
-        if (pdfError instanceof Error) {
-          console.error('📋 Error details:', {
-            name: pdfError.name,
-            message: pdfError.message,
-            stack: pdfError.stack
-          });
-        }
-        
-        // Fallback: try to process the PDF buffer directly (in case it's actually an image)
-        try {
-          console.log('🔄 Falling back to direct buffer processing...');
-          const [fallbackResult] = await client.textDetection({
-            image: {
-              content: buf.toString('base64')
-            }
-          });
-          ocrResult = fallbackResult.textAnnotations?.[0]?.description || '';
-          console.log('📊 Direct buffer fallback result length:', ocrResult.length);
-        } catch (fallbackError) {
-          console.error('❌ Direct buffer fallback also failed:', fallbackError);
-          throw fallbackError;
-        }
-      }
+             if (isPDF) {
+           // For PDFs, try multiple approaches in order of preference
+           console.log('📄 Processing PDF - trying multiple OCR approaches...');
+           
+           // Approach 1: Try Google Vision API directly on PDF (it supports PDF input)
+           try {
+             console.log('🔍 Approach 1: Direct PDF processing with Google Vision...');
+             
+             const requestPayload = {
+               image: {
+                 content: buf.toString('base64')
+               }
+             };
+             
+             console.log('📤 Sending DOCUMENT_TEXT_DETECTION request for PDF...');
+             
+             const [result] = await client.documentTextDetection(requestPayload);
+             
+             console.log('📥 DOCUMENT_TEXT_DETECTION response received');
+             console.log('📊 Response details:', {
+               hasFullText: !!result.fullTextAnnotation,
+               textLength: result.fullTextAnnotation?.text?.length || 0,
+               pages: result.fullTextAnnotation?.pages?.length || 0
+             });
+             
+             ocrResult = result.fullTextAnnotation?.text || '';
+             
+             // If document detection worked well, we're done
+             if (ocrResult.length > 50) {
+               console.log('✅ Direct PDF processing successful!');
+             } else {
+               console.log('⚠️ Direct PDF processing yielded poor results, trying text detection...');
+               const [fallbackResult] = await client.textDetection(requestPayload);
+               ocrResult = fallbackResult.textAnnotations?.[0]?.description || '';
+               console.log('📊 Text detection result length:', ocrResult.length);
+             }
+             
+           } catch (directPdfError) {
+             console.error('❌ Direct PDF processing failed:', directPdfError);
+             
+             // Approach 2: Try converting PDF to image first
+             try {
+               console.log('🔍 Approach 2: Converting PDF to image first...');
+               
+               // Convert PDF to image
+               const { convertPdfToSingleImage } = await import('../../../lib/pdf-to-image');
+               const imageBuffer = await convertPdfToSingleImage(buf);
+               
+               console.log('🖼️ PDF converted to image, size:', imageBuffer.length, 'bytes');
+               
+               // Now use Google Vision OCR on the image
+               console.log('🔍 Using Google Vision OCR on converted image...');
+               
+               const imageRequestPayload = {
+                 image: {
+                   content: imageBuffer.toString('base64')
+                 }
+               };
+               
+               console.log('📤 Sending DOCUMENT_TEXT_DETECTION request for converted image...');
+               
+               const [imageResult] = await client.documentTextDetection(imageRequestPayload);
+               
+               console.log('📥 DOCUMENT_TEXT_DETECTION response received');
+               console.log('📊 Response details:', {
+                 hasFullText: !!imageResult.fullTextAnnotation,
+                 textLength: imageResult.fullTextAnnotation?.text?.length || 0,
+                 pages: imageResult.fullTextAnnotation?.pages?.length || 0
+               });
+               
+               ocrResult = imageResult.fullTextAnnotation?.text || '';
+               
+               // If document detection didn't work well, fallback to regular text detection
+               if (ocrResult.length < 50) {
+                 console.log('⚠️ Image document detection yielded poor results, trying text detection fallback');
+                 const [fallbackResult] = await client.textDetection(imageRequestPayload);
+                 ocrResult = fallbackResult.textAnnotations?.[0]?.description || '';
+                 console.log('📊 Fallback text detection result length:', ocrResult.length);
+               }
+               
+             } catch (pdfImageError) {
+               console.error('❌ PDF to image conversion failed:', pdfImageError);
+               
+               // Try to get more details about the error
+               if (pdfImageError instanceof Error) {
+                 console.error('📋 Error details:', {
+                   name: pdfImageError.name,
+                   message: pdfImageError.message,
+                   stack: pdfImageError.stack
+                 });
+               }
+               
+               // Approach 3: Last resort - try processing raw buffer as image
+               try {
+                 console.log('🔄 Approach 3: Last resort - processing raw buffer as image...');
+                 const [lastResortResult] = await client.textDetection({
+                   image: {
+                     content: buf.toString('base64')
+                   }
+                 });
+                 ocrResult = lastResortResult.textAnnotations?.[0]?.description || '';
+                 console.log('📊 Last resort result length:', ocrResult.length);
+               } catch (lastResortError) {
+                 console.error('❌ All PDF processing approaches failed:', lastResortError);
+                 throw lastResortError;
+               }
+             }
+           }
     } else {
       // For images, use regular TEXT_DETECTION
       console.log('🖼️ Using TEXT_DETECTION for image file');
