@@ -16,7 +16,8 @@ import {
   Eye,
   Clock,
   Star,
-  Plus
+  Plus,
+  Target
 } from 'lucide-react'
 import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
 import { BlocIQButton } from '@/components/ui/blociq-button'
@@ -75,16 +76,24 @@ const CATEGORY_ICONS: Record<string, any> = {
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
-  'Safety': 'bg-red-100 text-red-800 border-red-200',
-  'Legal': 'bg-blue-100 text-blue-800 border-blue-200',
-  'Operational': 'bg-green-100 text-green-800 border-green-200',
-  'Structural': 'bg-purple-100 text-purple-800 border-purple-200',
-  'Electrical': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  'Fire Safety': 'bg-red-100 text-red-800 border-red-200',
-  'Gas Safety': 'bg-orange-100 text-orange-800 border-orange-200',
-  'Building Safety': 'bg-blue-100 text-blue-800 border-blue-200',
-  'Insurance': 'bg-gray-100 text-gray-800 border-gray-200',
-  'Documentation': 'bg-indigo-100 text-indigo-800 border-indigo-200'
+  'Building Safety Act (BSA / HRB)': 'bg-gradient-to-r from-red-500 to-red-600 text-white border-red-600',
+  'Fire & Life Safety': 'bg-gradient-to-r from-orange-500 to-red-500 text-white border-orange-600',
+  'Structural, Access & Systems': 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-blue-600',
+  'Electrical & Mechanical': 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white border-yellow-600',
+  'Water Hygiene & Drainage': 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white border-cyan-600',
+  'Insurance & Risk': 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-600',
+  'Documentation & Regulatory': 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white border-indigo-600',
+  'Leasehold / Governance': 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-emerald-600',
+  'Safety': 'bg-gradient-to-r from-red-400 to-red-500 text-white border-red-500',
+  'Legal': 'bg-gradient-to-r from-blue-400 to-blue-500 text-white border-blue-500',
+  'Operational': 'bg-gradient-to-r from-green-400 to-green-500 text-white border-green-500',
+  'Structural': 'bg-gradient-to-r from-purple-400 to-purple-500 text-white border-purple-500',
+  'Electrical': 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white border-yellow-500',
+  'Fire Safety': 'bg-gradient-to-r from-red-400 to-red-500 text-white border-red-500',
+  'Gas Safety': 'bg-gradient-to-r from-orange-400 to-orange-500 text-white border-orange-500',
+  'Building Safety': 'bg-gradient-to-r from-blue-400 to-blue-500 text-white border-blue-500',
+  'Insurance': 'bg-gradient-to-r from-gray-400 to-gray-500 text-white border-gray-500',
+  'Documentation': 'bg-gradient-to-r from-indigo-400 to-indigo-500 text-white border-indigo-500'
 }
 
 export default function ComplianceSetupWizard({ 
@@ -539,32 +548,40 @@ export default function ComplianceSetupWizard({
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-6 shadow-sm">
+      <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 border-b border-white/20 px-6 py-8 shadow-2xl">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-6">
               <button
                 onClick={() => router.push(`/buildings/${buildingId}`)}
-                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all duration-200"
+                className="p-3 text-white hover:text-white hover:bg-white/20 rounded-2xl transition-all duration-200 backdrop-blur-sm border border-white/20"
               >
                 <ChevronLeft className="h-5 w-5" />
               </button>
               
               <div className="relative">
-                <div className="w-12 h-12 bg-gradient-to-r from-[#004AAD] via-[#3B82F6] to-[#7209B7] rounded-2xl flex items-center justify-center shadow-lg">
-                  <Shield className="h-6 w-6 text-white" />
+                <div className="w-16 h-16 bg-gradient-to-r from-white/20 to-white/30 backdrop-blur-sm rounded-3xl flex items-center justify-center shadow-2xl border border-white/30">
+                  <Shield className="h-8 w-8 text-white" />
                 </div>
               </div>
               
               <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-[#004AAD] to-[#7209B7] bg-clip-text text-transparent">
+                <h1 className="text-4xl font-bold text-white mb-2">
                   Compliance Setup Wizard
                 </h1>
-                <p className="text-sm text-gray-600 flex items-center gap-2 mt-1">
-                  <Building2 className="h-4 w-4" />
+                <p className="text-lg text-white/90 flex items-center gap-2">
+                  <Building2 className="h-5 w-5" />
                   {building.name}
                 </p>
               </div>
+            </div>
+            
+            {/* Progress Badge */}
+            <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-2xl border border-white/20">
+              <Target className="h-5 w-5 text-white" />
+              <span className="text-white font-medium">
+                Step {currentStep + 1} of {steps.length}
+              </span>
             </div>
           </div>
         </div>
@@ -573,23 +590,23 @@ export default function ComplianceSetupWizard({
       <div className="max-w-6xl mx-auto p-6">
         {/* Progress Steps */}
         <div className="mb-8">
-          <div className="flex items-center justify-center mb-6">
+          <div className="flex items-center justify-center mb-8">
             {steps.map((step, index) => (
               <div key={step.id} className="flex items-center">
-                <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-200 ${
+                <div className={`flex items-center justify-center w-14 h-14 rounded-2xl border-2 transition-all duration-300 shadow-lg ${
                   index <= currentStep 
-                    ? 'bg-blue-600 border-blue-600 text-white' 
-                    : 'border-gray-300 text-gray-400'
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 border-blue-600 text-white transform scale-110' 
+                    : 'border-gray-200 text-gray-400 bg-gray-50'
                 }`}>
                   {index < currentStep ? (
-                    <CheckCircle className="h-5 w-5" />
+                    <CheckCircle className="h-6 w-6" />
                   ) : (
-                    <span className="text-sm font-medium">{index + 1}</span>
+                    <span className="text-lg font-bold">{index + 1}</span>
                   )}
                 </div>
                 {index < steps.length - 1 && (
-                  <div className={`w-20 h-0.5 mx-4 ${
-                    index < currentStep ? 'bg-blue-600' : 'bg-gray-300'
+                  <div className={`w-24 h-1 mx-6 rounded-full transition-all duration-300 ${
+                    index < currentStep ? 'bg-gradient-to-r from-blue-500 to-purple-600' : 'bg-gray-200'
                   }`} />
                 )}
               </div>
@@ -597,10 +614,10 @@ export default function ComplianceSetupWizard({
           </div>
           
           <div className="text-center">
-            <h2 className="text-xl font-semibold text-gray-900">
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
               {steps[currentStep].title}
             </h2>
-            <p className="text-gray-600 mt-1">
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
               {steps[currentStep].description}
             </p>
           </div>
@@ -616,15 +633,15 @@ export default function ComplianceSetupWizard({
           <button
             onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
             disabled={currentStep === 0}
-            className="inline-flex items-center gap-2 px-6 py-3 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="inline-flex items-center gap-3 px-8 py-4 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 bg-gray-50 hover:bg-gray-100 rounded-2xl font-medium"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-5 w-5" />
             Previous
           </button>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             {!canProceed && (
-              <div className="flex items-center gap-2 text-amber-600 text-sm">
+              <div className="flex items-center gap-2 text-amber-600 text-sm bg-amber-50 px-4 py-2 rounded-xl border border-amber-200">
                 <AlertTriangle className="h-4 w-4" />
                 Please select at least one asset
               </div>
@@ -634,16 +651,16 @@ export default function ComplianceSetupWizard({
               <BlocIQButton
                 onClick={handleComplete}
                 disabled={!canProceed || saving}
-                className="bg-gradient-to-r from-[#004AAD] to-[#7209B7] hover:from-[#003A8C] hover:to-[#5A078F]"
+                className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200"
               >
                 {saving ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-3" />
                     Completing Setup...
                   </>
                 ) : (
                   <>
-                    <CheckCircle className="h-4 w-4 mr-2" />
+                    <CheckCircle className="h-5 w-5 mr-3" />
                     Complete Setup
                   </>
                 )}
@@ -652,10 +669,10 @@ export default function ComplianceSetupWizard({
               <button
                 onClick={() => setCurrentStep(Math.min(steps.length - 1, currentStep + 1))}
                 disabled={!canProceed}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-2xl hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-bold text-lg shadow-xl hover:shadow-2xl transform hover:scale-105"
               >
                 Next
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-5 w-5" />
               </button>
             )}
           </div>
