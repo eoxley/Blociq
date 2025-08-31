@@ -351,15 +351,7 @@ export default function CompliancePage() {
                   <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
                   <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-cyan-400 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
                 </div>
-                <div>
-                  <h2 className="text-2xl font-bold bg-gradient-to-r from-[#004AAD] to-[#7209B7] bg-clip-text text-transparent">
-                    Compliance Overview
-                  </h2>
-                  <p className="text-sm text-gray-600 flex items-center gap-2 mt-2">
-                    <Building2 className="h-4 w-4" />
-                    No compliance data available
-                  </p>
-                </div>
+
               </div>
               
               <div className="flex items-center gap-3">
