@@ -194,26 +194,30 @@ export default function ComplianceSetupWizard({
         .filter(ea => !selectedAssets.has(ea.compliance_asset_id))
         .map(ea => ea.id)
 
-      // Add new assets
+      // Add new assets using the correct bulk-add endpoint
       if (assetsToAdd.length > 0) {
-        const response = await fetch('/api/compliance/assets', {
+        const response = await fetch(`/api/buildings/${buildingId}/compliance/bulk-add`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            building_id: buildingId,
             asset_ids: assetsToAdd
           })
         })
 
         if (!response.ok) {
-          throw new Error('Failed to add compliance assets')
+          const errorData = await response.json()
+          console.error('Bulk add error:', errorData)
+          throw new Error(`Failed to add compliance assets: ${errorData.error || 'Unknown error'}`)
         }
+
+        const result = await response.json()
+        console.log('✅ Successfully added assets:', result)
       }
 
-      // Remove unselected assets
+      // Remove unselected assets using the building compliance assets endpoint
       if (assetsToRemove.length > 0) {
         for (const assetId of assetsToRemove) {
-          const response = await fetch(`/api/compliance/assets/${assetId}`, {
+          const response = await fetch(`/api/building_compliance_assets?id=${assetId}`, {
             method: 'DELETE'
           })
           
@@ -227,7 +231,7 @@ export default function ComplianceSetupWizard({
       router.push(`/buildings/${buildingId}/compliance`)
     } catch (error) {
       console.error('Error completing setup:', error)
-      toast.error('Failed to complete setup. Please try again.')
+      toast.error(`Failed to complete setup: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setSaving(false)
     }
