@@ -74,7 +74,7 @@ export default function LoginPageInner() {
             <h2 className="text-xl font-semibold text-gray-900 mb-2">You're already signed in!</h2>
             <p className="text-gray-600 mb-4">Welcome back to BlocIQ</p>
             <Button 
-              onClick={() => window.location.href = '/dashboard/inbox'}
+              onClick={() => window.location.href = '/inbox-overview'}
               className="w-full"
             >
               Go to Dashboard

@@ -1,16 +1,8 @@
-import InboxDashboard from '@/components/inbox_v2/InboxDashboard'
+import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
-// Force Vercel build trigger
 
 export default function InboxPage() {
-  return (
-    <div className="min-h-screen">
-      <InboxDashboard 
-        onRefresh={() => window.location.reload()}
-        onNavigateToInbox={() => {}}
-        onNavigateToEmail={() => {}}
-      />
-    </div>
-  )
+  // Redirect to the new inbox overview
+  redirect('/inbox-overview')
 }
