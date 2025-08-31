@@ -1,5 +1,6 @@
 'use client'
 
+// Trigger Vercel build - compliance routing and setup modal placement verified
 import React, { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
