@@ -51,7 +51,7 @@ type ComplianceItem = {
     name: string
   }
   compliance_assets: {
-    title: string
+    name: string
     category: string
     description?: string
   }
@@ -151,7 +151,7 @@ export default function BuildingTodoList({
         .select(`
           *,
           building:buildings(name),
-          compliance_assets(title, category, description)
+          compliance_assets(name, category, description)
         `)
         .not('next_due_date', 'is', null)
         .lte('next_due_date', thirtyDaysFromNow.toISOString().split('T')[0])
@@ -403,7 +403,7 @@ export default function BuildingTodoList({
       notes: 'Fire risk assessment overdue',
       building: { name: 'Ashwood House' },
       compliance_assets: {
-        title: 'Fire Risk Assessment',
+        name: 'Fire Risk Assessment',
         category: 'Fire Safety',
         description: 'Annual fire safety assessment required by law'
       }
@@ -417,7 +417,7 @@ export default function BuildingTodoList({
       notes: 'Gas safety certificate due soon',
       building: { name: 'Ashwood House' },
       compliance_assets: {
-        title: 'Gas Safety Certificate',
+        name: 'Gas Safety Certificate',
         category: 'Gas Safety',
         description: 'Annual gas safety inspection certificate'
       }
@@ -431,7 +431,7 @@ export default function BuildingTodoList({
       notes: 'Electrical installation certificate',
       building: { name: 'Riverside Court' },
       compliance_assets: {
-        title: 'Electrical Installation Certificate',
+        name: 'Electrical Installation Certificate',
         category: 'Electrical',
         description: 'EICR certificate every 5 years'
       }
@@ -736,7 +736,7 @@ export default function BuildingTodoList({
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2">
                               <h3 className="font-medium text-gray-900">
-                                {item.compliance_assets.title}
+                                {item.compliance_assets.name}
                               </h3>
                               <BlocIQBadge className={`text-xs ${getComplianceStatusColor(item.status)}`}>
                                 {item.status.replace('_', ' ')}

@@ -62,9 +62,8 @@ ${unit.is_director ? `- Director Notes: ${safe(unit.director_notes)}` : ''}
 COMPLIANCE ASSETS:
 `;
     complianceAssets.forEach(asset => {
-      // Defensive handling for missing title/name columns
-      const title = asset.compliance_assets?.title || 
-                   asset.compliance_assets?.name || 
+      // Defensive handling for missing name column
+      const title = asset.compliance_assets?.name || 
                    asset.compliance_assets?.category || 
                    'Unknown Asset';
       context += `- ${title}: ${asset.status} (Due: ${asset.due_date || 'Not set'})

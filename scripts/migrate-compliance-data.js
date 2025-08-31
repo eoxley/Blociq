@@ -97,7 +97,7 @@ async function migrateComplianceData() {
         status,
         next_due_date,
         buildings!inner(name),
-        compliance_assets!inner(title, category)
+        compliance_assets!inner(name, category)
       `)
       .limit(10);
     
@@ -108,7 +108,7 @@ async function migrateComplianceData() {
       if (integrityCheck && integrityCheck.length > 0) {
         console.log('📋 Sample valid record:', {
           building: integrityCheck[0].buildings.name,
-          asset: integrityCheck[0].compliance_assets.title,
+          asset: integrityCheck[0].compliance_assets.name,
           category: integrityCheck[0].compliance_assets.category,
           status: integrityCheck[0].status,
           next_due: integrityCheck[0].next_due_date
@@ -134,7 +134,7 @@ async function migrateComplianceData() {
         .from('building_compliance_assets')
         .select(`
           *,
-          compliance_assets(title, category, description)
+          compliance_assets(name, category, description)
         `)
         .eq('building_id', ashwoodBuilding.id);
       
@@ -144,7 +144,7 @@ async function migrateComplianceData() {
         console.log(`📋 Ashwood House has ${ashwoodCompliance?.length || 0} compliance assets`);
         if (ashwoodCompliance && ashwoodCompliance.length > 0) {
           ashwoodCompliance.forEach((asset, index) => {
-            console.log(`  ${index + 1}. ${asset.compliance_assets.title} (${asset.compliance_assets.category}) - Status: ${asset.status}`);
+            console.log(`  ${index + 1}. ${asset.compliance_assets.name} (${asset.compliance_assets.category}) - Status: ${asset.status}`);
           });
         }
       }

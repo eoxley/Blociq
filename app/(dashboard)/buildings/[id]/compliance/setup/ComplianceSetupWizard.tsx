@@ -165,8 +165,8 @@ export default function ComplianceSetupWizard({
     
     const hrbAssets = allAssets.filter(asset => 
       asset.is_hrb_related ||
-      asset.title.toLowerCase().includes('fire') ||
-      asset.title.toLowerCase().includes('safety') ||
+      asset.name.toLowerCase().includes('fire') ||
+      asset.name.toLowerCase().includes('safety') ||
       asset.category.toLowerCase().includes('safety')
     )
     
