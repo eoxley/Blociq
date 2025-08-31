@@ -21,7 +21,7 @@ export async function GET(
       return NextResponse.json({ error: "Building ID is required" }, { status: 400 });
     }
 
-    // First, get the building compliance assets
+    // First, get the building compliance assets with document counts
     const { data: bcaData, error: bcaError } = await supabase
       .from("building_compliance_assets")
       .select(`
@@ -31,8 +31,13 @@ export async function GET(
         status,
         notes,
         last_renewed_date,
+        last_carried_out,
+        inspector_provider,
+        certificate_reference,
         contractor,
-        frequency_months
+        frequency_months,
+        document_count,
+        latest_upload_date
       `)
       .eq("building_id", buildingId);
 
@@ -78,11 +83,15 @@ export async function GET(
         category: asset?.category || "Unknown",
         frequency_months: asset?.frequency_months || row.frequency_months,
         last_renewed_date: row.last_renewed_date,
+        last_carried_out: row.last_carried_out,
         next_due_date: row.next_due_date,
         status: row.status || "pending",
         notes: row.notes,
         contractor: row.contractor,
-        docs_count: 0 // TODO: Calculate this from compliance_documents table
+        inspector_provider: row.inspector_provider,
+        certificate_reference: row.certificate_reference,
+        docs_count: row.document_count || 0,
+        latest_upload_date: row.latest_upload_date
       };
     });
 

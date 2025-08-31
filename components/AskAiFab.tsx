@@ -47,4 +47,3 @@ export default function AskAiFab({ href = '/ai-assistant' }: { href?: string }) 
     </Link>
   )
 }
-*/
