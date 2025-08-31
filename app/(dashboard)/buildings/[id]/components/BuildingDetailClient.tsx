@@ -572,10 +572,10 @@ export default function BuildingDetailClient({
               <h3 className="font-semibold">Compliance Overview</h3>
             </div>
             <Link
-              href="/compliance"
+              href={`/buildings/${buildingId}/compliance`}
               className="text-white/90 hover:text-white text-sm font-medium transition-colors"
             >
-              View All
+              View Building Compliance
             </Link>
           </div>
           {/* Decorative elements */}

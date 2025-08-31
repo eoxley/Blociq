@@ -20,7 +20,7 @@ import {
   Users,
   Sparkles
 } from 'lucide-react'
-import AssetManagementModal from '@/components/compliance/AssetManagementModal'
+
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
 import { BlocIQBadge } from '@/components/ui/blociq-badge'
@@ -103,8 +103,8 @@ export default function CompliancePage() {
   const [filterCategory, setFilterCategory] = useState<string>('all')
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
-  const [assetManagementOpen, setAssetManagementOpen] = useState(false)
-  const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null)
+
+
 
   useEffect(() => {
     fetchComplianceData()
@@ -175,14 +175,7 @@ export default function CompliancePage() {
     }
   }
 
-  const openAssetManagement = (building: Building) => {
-    setSelectedBuilding(building)
-    setAssetManagementOpen(true)
-  }
 
-  const handleAssetsUpdated = () => {
-    fetchComplianceData()
-  }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -402,20 +395,9 @@ export default function CompliancePage() {
                   Set Up Buildings
                 </button>
               ) : (
-                <button
-                  onClick={() => {
-                    // Navigate to first building's compliance page for setup
-                    if (buildings.length > 0) {
-                      router.push(`/buildings/${buildings[0].id}/compliance`);
-                    } else {
-                      router.push('/buildings');
-                    }
-                  }}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#004AAD] to-[#7209B7] text-white rounded-lg hover:from-[#003A8C] hover:to-[#5A078F] transition-all duration-200"
-                >
-                  <Shield className="h-5 w-5" />
-                  Setup Compliance
-                </button>
+                <div className="text-sm text-gray-600 text-center">
+                  Navigate to individual building pages to set up compliance assets
+                </div>
               )}
               
               <button
@@ -766,11 +748,11 @@ export default function CompliancePage() {
                   {/* Quick Actions */}
                   <div className="flex items-center gap-3">
                     <button
-                      onClick={() => openAssetManagement(building)}
+                      onClick={() => router.push(`/buildings/${building.id}/compliance`)}
                       className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] hover:brightness-110 text-white text-sm rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
                     >
-                      <Plus className="h-4 w-4" />
-                      Manage Assets
+                      <Shield className="h-4 w-4" />
+                      View Compliance
                     </button>
                     
                     <button
@@ -876,36 +858,14 @@ export default function CompliancePage() {
               }
             </p>
             {!searchQuery && filterBuilding === 'all' && filterCategory === 'all' && filterStatus === 'all' && (
-              <button
-                onClick={() => {
-                  // Navigate to first building's compliance page for setup
-                  if (buildings.length > 0) {
-                    router.push(`/buildings/${buildings[0].id}/compliance`);
-                  } else {
-                    router.push('/buildings');
-                  }
-                }}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#004AAD] to-[#7209B7] text-white rounded-lg hover:from-[#003A8C] hover:to-[#5A078F] transition-all duration-200"
-              >
-                <Plus className="h-4 w-4" />
-                Setup Compliance
-              </button>
+              <div className="text-sm text-gray-500">
+                Navigate to individual building pages to set up compliance assets
+              </div>
             )}
           </div>
         )}
 
-        {/* Asset Management Modal */}
-        {selectedBuilding && (
-          <AssetManagementModal
-            building={selectedBuilding}
-            isOpen={assetManagementOpen}
-            onClose={() => {
-              setAssetManagementOpen(false)
-              setSelectedBuilding(null)
-            }}
-            onAssetsUpdated={handleAssetsUpdated}
-          />
-        )}
+
       </div>
     </div>
   )
