@@ -511,19 +511,6 @@ export default function BuildingTodoList({
 
         {/* Content */}
         <div className="p-6 flex-1 overflow-y-auto">
-          {/* Demo Notice */}
-          {(displayTodos === fakeTodos || displayComplianceItems === fakeComplianceItems) && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex items-center gap-2 text-blue-800">
-                <AlertTriangle className="h-4 w-4" />
-                <span className="text-sm font-medium">Demo Mode</span>
-              </div>
-              <p className="text-xs text-blue-700 mt-1">
-                Showing placeholder data for demonstration. Real data will appear when the database connection is restored.
-              </p>
-            </div>
-          )}
-
           {/* Add Task Form */}
           {showAddTaskForm && (
             <div className="mb-6 p-4 bg-gray-50 rounded-lg">
