@@ -28,7 +28,6 @@ import {
   X,
   ChevronLeft
 } from 'lucide-react'
-import AskBlocIQ from '@/components/AskBlocIQ'
 import AssetManagementModal from '@/components/compliance/AssetManagementModal'
 
 // Types
@@ -365,15 +364,6 @@ export default function BuildingCompliancePage() {
                 <Plus className="h-5 w-5" />
                 Set Up Compliance
               </button>
-              
-              {/* AI Assistant Button */}
-              <AskBlocIQ
-                buildingId={buildingId}
-                buildingName={building?.name || 'Building'}
-                context="compliance"
-                placeholder="Ask about compliance requirements, inspection schedules, or regulatory updates..."
-                className="inline-flex items-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              />
               
               {/* HRB Auto-Asset Button */}
               {building?.is_hrb && (
