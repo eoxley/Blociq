@@ -39,4 +39,40 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Google Cloud & OCR credentials
 gcloud-key.json
+*.json
+service-account*.json
+google-credentials*.json
+vision-api*.json
+
+# Microsoft OAuth & other secrets
+client-secret*
+oauth-credentials*
+microsoft-credentials*
+
+# General secrets directories and files
+credentials/
+secrets/
+.secrets/
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Backup files that might contain secrets
+*.bak
+*.backup
+*-backup
+config-*.json
+
+# IDE and editor files that might store secrets
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# Logs that might contain sensitive info
+*.log
+logs/

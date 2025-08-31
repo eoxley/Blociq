@@ -39,10 +39,33 @@ CRON_SECRET=your_cron_secret_key_for_vercel_cron_jobs
 NEXT_PUBLIC_SITE_URL=https://your-domain.com
 ```
 
-#### Google Cloud Configuration (Optional - for OCR)
+#### OCR Configuration (Optional - for document text extraction)
+
+**Option 1: Google Vision API (Recommended - supports PDFs and images)**
+
+Method A - Using service account file:
 ```bash
 GOOGLE_APPLICATION_CREDENTIALS=path_to_your_service_account_key.json
 ```
+
+Method B - Using JSON credentials (recommended for Vercel deployment):
+```bash
+GOOGLE_APPLICATION_CREDENTIALS_JSON='{"type":"service_account","project_id":"your-project","private_key_id":"...","private_key":"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----","client_email":"your-service@project.iam.gserviceaccount.com","client_id":"...","auth_uri":"...","token_uri":"...","auth_provider_x509_cert_url":"...","client_x509_cert_url":"..."}'
+```
+
+Method C - Using individual environment variables:
+```bash
+GOOGLE_CLIENT_EMAIL=your-service-account@project.iam.gserviceaccount.com
+GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour_Private_Key_Here\n-----END PRIVATE KEY-----"
+GOOGLE_PROJECT_ID=your-google-cloud-project-id
+```
+
+**Option 2: OpenAI Vision API (Images only - fallback)**
+```bash
+OPENAI_API_KEY=your_openai_api_key  # (already required above)
+```
+
+**Note**: The system will automatically use Google Vision as primary OCR service and fall back to OpenAI Vision for images if Google Vision fails or isn't configured.
 
 ### Removed Variables
 
@@ -100,6 +123,7 @@ CREATE TABLE outlook_tokens (
 
 Before deploying, ensure all these environment variables are set in your Vercel project:
 
+**Required Variables:**
 - [ ] `NEXT_PUBLIC_SUPABASE_URL`
 - [ ] `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - [ ] `SUPABASE_SERVICE_ROLE_KEY`
@@ -112,4 +136,11 @@ Before deploying, ensure all these environment variables are set in your Vercel 
 - [ ] `OPENAI_API_KEY`
 - [ ] `CRON_SECRET`
 - [ ] `NEXT_PUBLIC_SITE_URL`
-- [ ] `GOOGLE_APPLICATION_CREDENTIALS` (optional) 
+
+**Optional OCR Variables (choose one method):**
+- [ ] `GOOGLE_APPLICATION_CREDENTIALS` (Method A - file path)
+- [ ] `GOOGLE_APPLICATION_CREDENTIALS_JSON` (Method B - JSON string)
+- [ ] `GOOGLE_CLIENT_EMAIL` + `GOOGLE_PRIVATE_KEY` + `GOOGLE_PROJECT_ID` (Method C - individual vars)
+
+**OCR Configuration Test:**
+After deployment, visit `/api/test-ocr-config` to verify your OCR setup status. 

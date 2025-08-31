@@ -2,16 +2,40 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🔄 Processing OCR request with Google Vision directly');
+    console.log('🔄 Processing OCR request with improved error handling');
     console.log('📊 Request headers:', Object.fromEntries(request.headers.entries()));
     
-    // EMERGENCY DEBUG: Check environment variables
+    // Check environment variables with comprehensive logging
     console.log("🔧 Environment variables check:");
-    console.log("GOOGLE_APPLICATION_CREDENTIALS:", process.env.GOOGLE_APPLICATION_CREDENTIALS ? "SET" : "NOT SET");
-    console.log("GOOGLE_CLIENT_EMAIL:", process.env.GOOGLE_CLIENT_EMAIL ? "SET" : "NOT SET");
-    console.log("GOOGLE_PRIVATE_KEY:", process.env.GOOGLE_PRIVATE_KEY ? "SET (length: " + process.env.GOOGLE_PRIVATE_KEY.length + ")" : "NOT SET");
-    console.log("GOOGLE_PROJECT_ID:", process.env.GOOGLE_PROJECT_ID ? "SET" : "NOT SET");
-    console.log("GOOGLE_APPLICATION_CREDENTIALS_JSON:", process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON ? "SET (length: " + process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON.length + ")" : "NOT SET");
+    const googleEnvVars = {
+      GOOGLE_APPLICATION_CREDENTIALS: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+      GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL,
+      GOOGLE_PRIVATE_KEY: process.env.GOOGLE_PRIVATE_KEY,
+      GOOGLE_PROJECT_ID: process.env.GOOGLE_PROJECT_ID,
+      GOOGLE_APPLICATION_CREDENTIALS_JSON: process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
+    };
+    
+    Object.entries(googleEnvVars).forEach(([key, value]) => {
+      if (value) {
+        console.log(`${key}: SET (length: ${value.length})`);
+      } else {
+        console.log(`${key}: NOT SET`);
+      }
+    });
+    
+    // Check if ANY Google Vision configuration is available
+    const hasAnyGoogleConfig = Object.values(googleEnvVars).some(value => !!value);
+    
+    if (!hasAnyGoogleConfig) {
+      console.log('❌ No Google Vision API configuration found');
+      return NextResponse.json({
+        error: 'OCR service not configured',
+        details: 'Google Vision API credentials are not set in environment variables',
+        suggestion: 'Please configure Google Vision API credentials in your deployment environment',
+        availableServices: ['OpenAI Vision (fallback)'],
+        timestamp: new Date().toISOString()
+      }, { status: 503 });
+    }
     
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -343,12 +367,27 @@ export async function POST(request: NextRequest) {
         }, { status: statusCode });
       }
       
+      // Try OpenAI Vision as fallback
+      console.log('🔄 Trying OpenAI Vision as fallback...');
+      try {
+        const openaiResult = await tryOpenAIVisionFallback(file, buffer);
+        if (openaiResult) {
+          return NextResponse.json({
+            ...openaiResult,
+            source: 'openai_vision_fallback',
+            fallbackReason: 'Google Vision failed'
+          });
+        }
+      } catch (openaiError) {
+        console.error('❌ OpenAI Vision fallback also failed:', openaiError);
+      }
+
       return NextResponse.json({
-        error: 'Google Vision OCR processing failed',
+        error: 'All OCR processing methods failed',
         details: ocrError instanceof Error ? ocrError.message : 'Unknown error',
         filename: file.name,
         timestamp: new Date().toISOString(),
-        suggestion: 'Please check the file format and try again. If the issue persists, contact support.'
+        suggestion: 'Both Google Vision and OpenAI Vision failed. Please check the file format and try again.'
       }, { status: 500 });
     }
     
@@ -372,5 +411,93 @@ export async function POST(request: NextRequest) {
       }, 
       { status: 500 }
     );
+  }
+}
+
+// OpenAI Vision fallback function
+async function tryOpenAIVisionFallback(file: File, buffer: Buffer) {
+  try {
+    console.log('🤖 Attempting OpenAI Vision fallback...');
+    
+    // Check if OpenAI is configured
+    if (!process.env.OPENAI_API_KEY) {
+      console.log('❌ OpenAI API key not configured');
+      return null;
+    }
+    
+    const { default: OpenAI } = await import('openai');
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    
+    // Determine file type and prepare image
+    const fileExtension = file.name.toLowerCase().split('.').pop();
+    let mimeType = file.type;
+    
+    // Fallback mime types for common formats
+    if (!mimeType || mimeType === 'application/octet-stream') {
+      if (fileExtension === 'jpg' || fileExtension === 'jpeg') {
+        mimeType = 'image/jpeg';
+      } else if (fileExtension === 'png') {
+        mimeType = 'image/png';
+      } else if (fileExtension === 'pdf') {
+        mimeType = 'application/pdf';
+      }
+    }
+    
+    console.log(`📊 OpenAI Vision processing: ${file.name} (${mimeType})`);
+    
+    // For PDFs, we'll need to convert to image first or use a different approach
+    if (mimeType === 'application/pdf' || fileExtension === 'pdf') {
+      console.log('📄 PDF detected - OpenAI Vision requires images, skipping...');
+      return null;
+    }
+    
+    // For images, use OpenAI Vision
+    if (mimeType?.startsWith('image/')) {
+      const base64Image = buffer.toString('base64');
+      
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4-vision-preview",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "Please extract all text from this image. Return only the extracted text, maintaining the original structure and formatting as much as possible."
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:${mimeType};base64,${base64Image}`,
+                  detail: "high"
+                }
+              }
+            ]
+          }
+        ],
+        max_tokens: 4000,
+        temperature: 0.1
+      });
+      
+      const extractedText = completion.choices[0]?.message?.content || '';
+      
+      if (extractedText.length > 0) {
+        console.log('✅ OpenAI Vision extraction successful');
+        return {
+          text: extractedText,
+          filename: file.name,
+          source: 'openai_vision',
+          timestamp: new Date().toISOString(),
+          textLength: extractedText.length
+        };
+      }
+    }
+    
+    console.log('⚠️ OpenAI Vision could not process this file type');
+    return null;
+    
+  } catch (error) {
+    console.error('❌ OpenAI Vision fallback failed:', error);
+    throw error;
   }
 }
