@@ -1543,37 +1543,102 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                       </div>
                     </div>
                     
-                    {/* Outlook Integration Status */}
-                    <div className="flex items-center gap-2">
-                      {outlookConnected ? (
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-1 text-xs bg-white/25 backdrop-blur-sm px-3 py-1 rounded-xl border border-white/30 shadow-lg">
-                            <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                            <span>Outlook Connected</span>
+                    {/* Add Event Button in Hero Banner */}
+                    {!showAddEventForm && (
+                      <button
+                        onClick={() => setShowAddEventForm(true)}
+                        className="bg-white/25 backdrop-blur-sm hover:bg-white/35 text-white px-4 py-2 rounded-xl text-sm transition-all duration-200 border border-white/30 shadow-lg flex items-center gap-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add Event
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Manual Event Input Form in Hero Banner */}
+                  {showAddEventForm && (
+                    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 shadow-lg mt-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-lg font-semibold text-white">Add New Event</h3>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddEventForm(false)}
+                          className="text-white/80 hover:text-white transition-colors"
+                        >
+                          <X className="h-5 w-5" />
+                        </button>
+                      </div>
+                      <form onSubmit={handleAddEvent} className="space-y-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-sm font-medium text-white/90 mb-1">Event Title</label>
+                            <input
+                              type="text"
+                              name="title"
+                              required
+                              className="w-full px-3 py-2 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all duration-200 bg-white/20 text-white placeholder-white/60"
+                              placeholder="Enter event title"
+                            />
                           </div>
+                          <div>
+                            <label className="block text-sm font-medium text-white/90 mb-1">Building</label>
+                            <select
+                              name="building"
+                              required
+                              className="w-full px-3 py-2 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent bg-white/20 text-white"
+                            >
+                              <option value="" className="text-gray-800">Select building</option>
+                              {buildings.map(building => (
+                                <option key={building.id} value={building.name} className="text-gray-800">
+                                  {building.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-white/90 mb-1">Date</label>
+                            <input
+                              type="date"
+                              name="date"
+                              required
+                              className="w-full px-3 py-2 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all duration-200 bg-white/20 text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-white/90 mb-1">Category</label>
+                            <select
+                              name="category"
+                              required
+                              className="w-full px-3 py-2 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent bg-white/20 text-white"
+                            >
+                              <option value="" className="text-gray-800">Select category</option>
+                              <option value="Meeting" className="text-gray-800">Meeting</option>
+                              <option value="Inspection" className="text-gray-800">Inspection</option>
+                              <option value="Maintenance" className="text-gray-800">Maintenance</option>
+                              <option value="Event" className="text-gray-800">Event</option>
+                              <option value="Other" className="text-gray-800">Other</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div className="flex gap-3">
                           <button
-                            onClick={handleSyncOutlook}
-                            disabled={syncingOutlook}
-                            className="bg-white/25 backdrop-blur-sm hover:bg-white/35 text-white px-3 py-1 rounded-xl text-xs transition-all duration-200 border border-white/30 shadow-lg"
+                            type="submit"
+                            className="bg-white text-[#4f46e5] hover:bg-gray-100 px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2"
                           >
-                            {syncingOutlook ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <RefreshCw className="h-3 w-3" />
-                            )}
+                            <Plus className="h-4 w-4" />
+                            Add Event
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowAddEventForm(false)}
+                            className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200"
+                          >
+                            Cancel
                           </button>
                         </div>
-                      ) : (
-                        <button
-                          onClick={handleConnectOutlook}
-                          className="bg-white/25 backdrop-blur-sm hover:bg-white/35 text-white px-3 py-1 rounded-xl text-xs transition-all duration-200 border border-white/30 shadow-lg"
-                        >
-                          <ExternalLink className="h-3 w-3 mr-1" />
-                          Connect Outlook
-                        </button>
-                      )}
+                      </form>
                     </div>
-                  </div>
+                  )}
                 </div>
                 
                 <div className="p-6 flex-1 overflow-y-auto">
