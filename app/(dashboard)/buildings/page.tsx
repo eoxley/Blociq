@@ -249,17 +249,7 @@ function BuildingsList() {
             />
           </div>
           
-          {/* Create New Building Button */}
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="bg-gradient-to-r from-[#4f46e5] to-[#a855f7] hover:from-[#4f46e5]/90 hover:to-[#a855f7]/90 text-white border-0 shadow-2xl hover:shadow-3xl hover:shadow-[#4f46e5]/40 transition-all duration-300 rounded-2xl transform hover:-translate-y-1 hover:scale-[1.02] font-bold px-8 py-4 text-lg"
-          >
-            <Plus className="h-5 w-5 mr-2 inline" />
-            Create New Building
-            <div className="ml-3 inline-flex items-center px-3 py-1 bg-white/20 rounded-full text-sm">
-              Coming Soon
-            </div>
-          </button>
+
         </div>
       </div>
 
