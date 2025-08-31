@@ -379,25 +379,18 @@ export default function CompliancePage() {
             <h3 className="text-2xl font-semibold text-gray-900 mb-4">No Compliance Data Available</h3>
             <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
               {buildings.length === 0 
-                ? "You don't have any buildings set up yet, or there was an issue loading your building data. The system is working correctly but needs buildings to display compliance information."
-                : "No compliance assets have been added to your buildings yet. This is normal for new accounts or when compliance tracking hasn't been set up."
+                ? "Navigate to the Buildings page to set up your properties"
+                : "Navigate to individual building pages to set up compliance assets"
               }
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              {buildings.length === 0 ? (
-                <button
-                  onClick={() => router.push('/buildings')}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#004AAD] to-[#7209B7] text-white rounded-lg hover:from-[#003A8C] hover:to-[#5A078F] transition-all duration-200"
-                >
-                  <Building2 className="h-5 w-5" />
-                  Set Up Buildings
-                </button>
-              ) : (
-                <div className="text-sm text-gray-600 text-center">
-                  Navigate to individual building pages to set up compliance assets
-                </div>
-              )}
+              <div className="text-sm text-gray-600 text-center">
+                {buildings.length === 0 
+                  ? "Navigate to the Buildings page to set up your properties"
+                  : "Navigate to individual building pages to set up compliance assets"
+                }
+              </div>
               
               <button
                 onClick={fetchComplianceData}
@@ -410,7 +403,7 @@ export default function CompliancePage() {
             
             <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg max-w-2xl mx-auto">
               <p className="text-sm text-blue-800">
-                <strong>Note:</strong> The compliance system is working correctly. If you're seeing this message, it means either no buildings are set up yet, or no compliance assets have been added to your buildings.
+                <strong>Note:</strong> Compliance setup is managed at the individual building level. Use the Buildings page to manage your properties.
               </p>
             </div>
           </div>
