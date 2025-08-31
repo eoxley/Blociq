@@ -467,12 +467,13 @@ function NewProjectModal({
 }) {
   const [form, setForm] = useState<any>({
     title: "",
+    description: "",
     building_id: "",
-    stage: "planning",
-    s20_required: false,
-    budget_estimate: "",
-    next_milestone: "",
-    next_milestone_date: "",
+    project_type: "general",
+    priority: "medium",
+    start_date: "",
+    estimated_cost: "",
+    expected_duration: "",
     notes: ""
   });
   const [submitting, setSubmitting] = useState(false);
@@ -488,219 +489,224 @@ function NewProjectModal({
       return;
     }
 
+    if (!form.start_date) {
+      toast.error('Please select a start date');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const response = await fetch("/api/major-works/projects", {
+      // Use the updated API endpoint with new schema
+      const response = await fetch("/api/major-works/new", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...form,
-          budget_estimate: form.budget_estimate ? parseFloat(form.budget_estimate) : null
+          title: form.title.trim(),
+          description: form.description.trim() || null,
+          building_id: form.building_id,
+          start_date: form.start_date,
+          estimated_cost: form.estimated_cost ? parseFloat(form.estimated_cost) : null,
+          expected_duration: form.expected_duration ? parseInt(form.expected_duration) : null,
+          project_type: form.project_type,
+          priority: form.priority
         })
       });
 
-      const result = await response.json();
-
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to create project');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create project');
       }
 
-      toast.success('Project created successfully!');
+      toast.success('Project created successfully');
       onCreate();
-    } catch (error: any) {
+      onClose();
+    } catch (error) {
       console.error('Error creating project:', error);
-      toast.error(error.message || 'Failed to create project');
+      toast.error(error instanceof Error ? error.message : 'Failed to create project');
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <div className="fixed inset-0 z-[9999] overflow-y-auto major-works-modal" style={{ position: 'fixed', zIndex: 9999 }}>
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0 major-works-modal-content" style={{ position: 'relative', zIndex: 10000 }}>
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity z-[9999] major-works-modal" onClick={onClose}></div>
-        
-        <div 
-          className="relative z-[10000] inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full max-h-[90vh] overflow-y-auto major-works-modal-content"
-          style={{ 
-            position: 'relative', 
-            zIndex: 10000,
-            isolation: 'isolate',
-            willChange: 'transform'
-          }}
-        >
-          
-          {/* Hero Banner Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-            <div className="px-6 py-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                    <Plus className="h-8 w-8" />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold">New Major Works Project</h2>
-                    <p className="text-blue-100">Create a new major works project for your portfolio</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={onClose}
-                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-                >
-                  <span className="text-2xl">×</span>
-                </button>
-              </div>
-            </div>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900">Create New Major Works Project</h2>
+          <p className="text-sm text-gray-600 mt-1">Add a new Section 20 major works project</p>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Project Title */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Project Title *
+            </label>
+            <input
+              type="text"
+              placeholder="e.g., Roof Replacement Project"
+              value={form.title}
+              onChange={e => setForm({...form, title: e.target.value})}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+            />
           </div>
 
-          {/* Form Content */}
-          <div className="px-6 py-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Project Title *
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g., Roof Replacement"
-                  value={form.title}
-                  onChange={e => setForm({...form, title: e.target.value})}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Building *
-                </label>
-                <select
-                  value={form.building_id}
-                  onChange={e => setForm({...form, building_id: e.target.value})}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">Select Building</option>
-                  {buildings.map(building => (
-                    <option key={building.id} value={building.id}>
-                      {building.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Project Stage
-                </label>
-                <select
-                  value={form.stage}
-                  onChange={e => setForm({...form, stage: e.target.value})}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="planning">Planning</option>
-                  <option value="s20_precons">Section 20 Pre-consultation</option>
-                  <option value="tender">Tender</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="complete">Complete</option>
-                  <option value="on_hold">On Hold</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Budget Estimate (£)
-                </label>
-                <input
-                  type="number"
-                  placeholder="0.00"
-                  value={form.budget_estimate}
-                  onChange={e => setForm({...form, budget_estimate: e.target.value})}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Next Milestone
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g., Contractor Selection"
-                  value={form.next_milestone}
-                  onChange={e => setForm({...form, next_milestone: e.target.value})}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Milestone Date
-                </label>
-                <input
-                  type="date"
-                  value={form.next_milestone_date}
-                  onChange={e => setForm({...form, next_milestone_date: e.target.value})}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Project Notes
-              </label>
-              <textarea
-                placeholder="Additional project details..."
-                value={form.notes}
-                onChange={e => setForm({...form, notes: e.target.value})}
-                rows={3}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-              />
-            </div>
-
-            <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg border border-purple-200">
-              <input
-                type="checkbox"
-                id="s20_required"
-                checked={form.s20_required}
-                onChange={e => setForm({...form, s20_required: e.target.checked})}
-                className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-              />
-              <label htmlFor="s20_required" className="text-sm font-medium text-purple-800">
-                Section 20 consultation required
-              </label>
-            </div>
+          {/* Project Description */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Description
+            </label>
+            <textarea
+              placeholder="Describe the project scope and objectives..."
+              value={form.description}
+              onChange={e => setForm({...form, description: e.target.value})}
+              rows={3}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            />
           </div>
 
-          {/* Action Buttons */}
-          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-end gap-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+          {/* Building Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Building *
+            </label>
+            <select
+              value={form.building_id}
+              onChange={e => setForm({...form, building_id: e.target.value})}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
             >
-              Cancel
-            </button>
-            <button
-              onClick={submit}
-              disabled={submitting}
-              className="inline-flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {submitting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <Plus className="h-4 w-4" />
-                  Create Project
-                </>
-              )}
-            </button>
+              <option value="">Select a building</option>
+              {buildings.map((building) => (
+                <option key={building.id} value={building.id}>
+                  {building.name} {building.address && `- ${building.address}`}
+                </option>
+              ))}
+            </select>
           </div>
+
+          {/* Project Type */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Project Type
+            </label>
+            <select
+              value={form.project_type}
+              onChange={e => setForm({...form, project_type: e.target.value})}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="general">General</option>
+              <option value="roofing">Roofing</option>
+              <option value="electrical">Electrical</option>
+              <option value="plumbing">Plumbing</option>
+              <option value="structural">Structural</option>
+              <option value="cosmetic">Cosmetic</option>
+            </select>
+          </div>
+
+          {/* Priority */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Priority
+            </label>
+            <select
+              value={form.priority}
+              onChange={e => setForm({...form, priority: e.target.value})}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+            </select>
+          </div>
+
+          {/* Start Date */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Start Date *
+            </label>
+            <input
+              type="date"
+              value={form.start_date}
+              onChange={e => setForm({...form, start_date: e.target.value})}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+            />
+          </div>
+
+          {/* Estimated Cost */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Estimated Cost (£)
+            </label>
+            <input
+              type="number"
+              placeholder="0.00"
+              value={form.estimated_cost}
+              onChange={e => setForm({...form, estimated_cost: e.target.value})}
+              step="0.01"
+              min="0"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Expected Duration */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Expected Duration (days)
+            </label>
+            <input
+              type="number"
+              placeholder="30"
+              value={form.expected_duration}
+              onChange={e => setForm({...form, expected_duration: e.target.value})}
+              min="1"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Project Notes */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Project Notes
+            </label>
+            <textarea
+              placeholder="Additional project details..."
+              value={form.notes}
+              onChange={e => setForm({...form, notes: e.target.value})}
+              rows={3}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            />
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={submit}
+            disabled={submitting}
+            className="inline-flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {submitting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Creating...
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4" />
+                Create Project
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>

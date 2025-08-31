@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 
 interface Building {
-  id: number
+  id: string  // Changed from number to string (UUID)
   name: string
   address: string | null
 }
@@ -28,6 +28,22 @@ const STATUS_OPTIONS = [
   { value: 'completed', label: 'Completed', icon: CheckCircle, color: 'bg-gray-100 text-gray-800' }
 ]
 
+const PRIORITY_OPTIONS = [
+  { value: 'low', label: 'Low', color: 'bg-green-100 text-green-800' },
+  { value: 'medium', label: 'Medium', color: 'bg-yellow-100 text-yellow-800' },
+  { value: 'high', label: 'High', color: 'bg-orange-100 text-orange-800' },
+  { value: 'critical', label: 'Critical', color: 'bg-red-100 text-red-800' }
+]
+
+const PROJECT_TYPE_OPTIONS = [
+  { value: 'general', label: 'General', color: 'bg-gray-100 text-gray-800' },
+  { value: 'roofing', label: 'Roofing', color: 'bg-blue-100 text-blue-800' },
+  { value: 'electrical', label: 'Electrical', color: 'bg-yellow-100 text-yellow-800' },
+  { value: 'plumbing', label: 'Plumbing', color: 'bg-green-100 text-green-800' },
+  { value: 'structural', label: 'Structural', color: 'bg-red-100 text-red-800' },
+  { value: 'cosmetic', label: 'Cosmetic', color: 'bg-purple-100 text-purple-800' }
+]
+
 export default function CreateMajorWorksModal({ 
   isOpen, 
   onClose, 
@@ -35,15 +51,17 @@ export default function CreateMajorWorksModal({
 }: CreateMajorWorksModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [buildings, setBuildings] = useState<Building[]>([])
-  const [selectedBuilding, setSelectedBuilding] = useState<number | ''>('')
+  const [selectedBuilding, setSelectedBuilding] = useState<string>('')  // Changed from number to string
   const [selectedStatus, setSelectedStatus] = useState('planning')
+  const [selectedPriority, setSelectedPriority] = useState('medium')
+  const [selectedProjectType, setSelectedProjectType] = useState('general')
 
   // Form fields
   const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
   const [startDate, setStartDate] = useState('')
-  const [estimatesDate, setEstimatesDate] = useState('')
-  const [constructionDate, setConstructionDate] = useState('')
-  const [completionDate, setCompletionDate] = useState('')
+  const [estimatedCost, setEstimatedCost] = useState('')
+  const [expectedDuration, setExpectedDuration] = useState('')
 
   // Fetch buildings on mount
   useEffect(() => {
@@ -87,34 +105,37 @@ export default function CreateMajorWorksModal({
     setIsLoading(true)
 
     try {
-      const { data, error } = await supabase
-        .from('major_works')
-        .insert({
+      // Use the API endpoint instead of direct Supabase call to ensure consistency
+      const response = await fetch('/api/major-works/new', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           title: title.trim(),
+          description: description.trim() || null,
           building_id: selectedBuilding,
           start_date: startDate,
-          estimates_issued: estimatesDate || null,
-          construction_start: constructionDate || null,
-          completion_date: completionDate || null,
-          status: selectedStatus
+          estimated_cost: estimatedCost ? parseFloat(estimatedCost) : null,
+          expected_duration: expectedDuration ? parseInt(expectedDuration) : null,
+          project_type: selectedProjectType,
+          priority: selectedPriority
         })
-        .select(`
-          *,
-          buildings (
-            name,
-            address
-          )
-        `)
-        .single()
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create project')
+      }
 
+      const result = await response.json()
+      
       toast.success('Major works project created successfully')
-      onProjectCreated(data)
+      onProjectCreated(result.project)
       handleClose()
     } catch (error) {
       console.error('Error creating project:', error)
-      toast.error('Failed to create project')
+      toast.error(error instanceof Error ? error.message : 'Failed to create project')
     } finally {
       setIsLoading(false)
     }
@@ -122,19 +143,21 @@ export default function CreateMajorWorksModal({
 
   const handleClose = () => {
     setTitle('')
+    setDescription('')
     setSelectedBuilding('')
     setSelectedStatus('planning')
+    setSelectedPriority('medium')
+    setSelectedProjectType('general')
     setStartDate('')
-    setEstimatesDate('')
-    setConstructionDate('')
-    setCompletionDate('')
+    setEstimatedCost('')
+    setExpectedDuration('')
     onClose()
   }
 
   if (!isOpen) return null
 
   return (
-            <div className="fixed inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all duration-300 ease-in-out">
+    <div className="fixed inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all duration-300 ease-in-out">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -169,6 +192,20 @@ export default function CreateMajorWorksModal({
             />
           </div>
 
+          {/* Project Description */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Description
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Describe the project scope and objectives..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              rows={3}
+            />
+          </div>
+
           {/* Building Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -176,7 +213,7 @@ export default function CreateMajorWorksModal({
             </label>
             <select
               value={selectedBuilding}
-              onChange={(e) => setSelectedBuilding(e.target.value ? Number(e.target.value) : '')}
+              onChange={(e) => setSelectedBuilding(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               required
             >
@@ -189,95 +226,99 @@ export default function CreateMajorWorksModal({
             </select>
           </div>
 
-          {/* Status Selection */}
+          {/* Project Type */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Status
+              Project Type
             </label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              {STATUS_OPTIONS.map((status) => (
+              {PROJECT_TYPE_OPTIONS.map((type) => (
                 <button
-                  key={status.value}
+                  key={type.value}
                   type="button"
-                  onClick={() => setSelectedStatus(status.value)}
-                  className={`p-3 rounded-lg border-2 transition-all ${
-                    selectedStatus === status.value
-                      ? 'border-teal-500 bg-teal-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                  onClick={() => setSelectedProjectType(type.value)}
+                  className={`p-2 rounded-md text-sm font-medium transition-colors ${
+                    selectedProjectType === type.value 
+                      ? type.color 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <status.icon className="h-4 w-4" />
-                    <span className="text-sm font-medium">{status.label}</span>
-                  </div>
+                  {type.label}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Dates Section */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Key Dates
-            </h3>
-
-            {/* Start Date */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Start Date / Notice of Intention Date *
-              </label>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full"
-                required
-              />
-            </div>
-
-            {/* Estimates Date */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Estimates Issued Date (optional)
-              </label>
-              <Input
-                type="date"
-                value={estimatesDate}
-                onChange={(e) => setEstimatesDate(e.target.value)}
-                className="w-full"
-              />
-            </div>
-
-            {/* Construction Start Date */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Construction Start Date (optional)
-              </label>
-              <Input
-                type="date"
-                value={constructionDate}
-                onChange={(e) => setConstructionDate(e.target.value)}
-                className="w-full"
-              />
-            </div>
-
-            {/* Completion Date */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Completion Date (optional)
-              </label>
-              <Input
-                type="date"
-                value={completionDate}
-                onChange={(e) => setCompletionDate(e.target.value)}
-                className="w-full"
-              />
+          {/* Priority */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Priority
+            </label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {PRIORITY_OPTIONS.map((priority) => (
+                <button
+                  key={priority.value}
+                  type="button"
+                  onClick={() => setSelectedPriority(priority.value)}
+                  className={`p-2 rounded-md text-sm font-medium transition-colors ${
+                    selectedPriority === priority.value 
+                      ? priority.color 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {priority.label}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+          {/* Start Date */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Start Date *
+            </label>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full"
+              required
+            />
+          </div>
+
+          {/* Estimated Cost */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Estimated Cost (£)
+            </label>
+            <Input
+              type="number"
+              value={estimatedCost}
+              onChange={(e) => setEstimatedCost(e.target.value)}
+              placeholder="0.00"
+              step="0.01"
+              min="0"
+              className="w-full"
+            />
+          </div>
+
+          {/* Expected Duration */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Expected Duration (days)
+            </label>
+            <Input
+              type="number"
+              value={expectedDuration}
+              onChange={(e) => setExpectedDuration(e.target.value)}
+              placeholder="30"
+              min="1"
+              className="w-full"
+            />
+          </div>
+
+          {/* Submit Button */}
+          <div className="flex justify-end gap-3 pt-4">
             <Button
               type="button"
               variant="outline"
