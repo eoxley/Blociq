@@ -34,12 +34,10 @@ import AssetManagementModal from '@/components/compliance/AssetManagementModal'
 // Types
 interface ComplianceAsset {
   id: string
-  title: string
+  name: string
   category: string
   description: string
   frequency_months: number
-  is_required: boolean
-  is_hrb_related?: boolean
 }
 
 interface BuildingComplianceAsset {
@@ -56,10 +54,10 @@ interface BuildingComplianceAsset {
   created_at: string
   updated_at: string
   compliance_assets: ComplianceAsset | null
-  building_documents: {
+  compliance_documents: {
     id: string
-    file_url: string
-    uploaded_at: string
+    document_url: string
+    created_at: string
   } | null
 }
 
@@ -138,8 +136,8 @@ export default function BuildingCompliancePage() {
         .from('building_compliance_assets')
         .select(`
           *,
-          compliance_assets (id, title, category, description, frequency_months, is_required),
-          building_documents (id, file_url, uploaded_at)
+          compliance_assets (id, name, category, description, frequency_months),
+          compliance_documents (id, document_url, created_at)
         `)
         .eq('building_id', buildingId)
         .order('next_due_date', { ascending: true })
@@ -196,11 +194,10 @@ export default function BuildingCompliancePage() {
       
       // Get HRB-related assets
       const hrbAssets = allComplianceAssets.filter(asset => 
-        asset.is_hrb_related || 
-        asset.title.toLowerCase().includes('fire') ||
-        asset.title.toLowerCase().includes('safety') ||
-        asset.title.toLowerCase().includes('fraew') ||
-        asset.title.toLowerCase().includes('safety case')
+        asset.name.toLowerCase().includes('fire') ||
+        asset.name.toLowerCase().includes('safety') ||
+        asset.name.toLowerCase().includes('fraew') ||
+        asset.name.toLowerCase().includes('safety case')
       )
 
       // Get current applied assets
@@ -287,7 +284,7 @@ export default function BuildingCompliancePage() {
     const matchesCategory = filterCategory === 'all' || item.compliance_assets?.category === filterCategory
     const matchesStatus = filterStatus === 'all' || item.status === filterStatus
     const matchesSearch = searchQuery === '' || 
-      item.compliance_assets?.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.compliance_assets?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.compliance_assets?.description?.toLowerCase().includes(searchQuery.toLowerCase())
     
     return matchesCategory && matchesStatus && matchesSearch
@@ -557,9 +554,9 @@ export default function BuildingCompliancePage() {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           {getStatusIcon(item.status)}
-                          <h3 className="text-lg font-medium text-gray-900">
-                            {item.compliance_assets?.title || 'Unknown Asset'}
-                          </h3>
+                                                  <h3 className="text-lg font-medium text-gray-900">
+                          {item.compliance_assets?.name || 'Unknown Asset'}
+                        </h3>
                           {getStatusBadge(item.status)}
                         </div>
                         
@@ -602,7 +599,7 @@ export default function BuildingCompliancePage() {
                       </div>
                       
                       <div className="flex items-center gap-2 ml-4">
-                        {item.building_documents && (
+                        {item.compliance_documents && (
                           <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
                             <FileText className="h-3 w-3" />
                             Document

@@ -28,11 +28,10 @@ import { BlocIQBadge } from '@/components/ui/blociq-badge'
 // Types
 interface ComplianceAsset {
   id: string
-  title: string
+  name: string
   category: string
   description: string
   frequency_months: number
-  is_required: boolean
 }
 
 interface BuildingComplianceAsset {
@@ -54,10 +53,10 @@ interface BuildingComplianceAsset {
     is_hrb: boolean
   } | null
   compliance_assets: ComplianceAsset | null
-  building_documents: {
+  compliance_documents: {
     id: string
-    file_url: string
-    uploaded_at: string
+    document_url: string
+    created_at: string
   } | null
 }
 
@@ -238,7 +237,7 @@ export default function CompliancePage() {
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
       const buildingName = item.buildings?.name?.toLowerCase() || ''
-      const assetTitle = item.compliance_assets?.title?.toLowerCase() || ''
+      const assetTitle = item.compliance_assets?.name?.toLowerCase() || ''
       const assetDescription = item.compliance_assets?.description?.toLowerCase() || ''
       
       if (!buildingName.includes(query) && !assetTitle.includes(query) && !assetDescription.includes(query)) {
@@ -786,7 +785,7 @@ export default function CompliancePage() {
                         <div className="flex items-center gap-3 mb-2">
                           {getStatusIcon(item.status)}
                           <h3 className="text-lg font-medium text-gray-900">
-                            {item.compliance_assets?.title || 'Unknown Asset'}
+                            {item.compliance_assets?.name || 'Unknown Asset'}
                           </h3>
                           {getStatusBadge(item.status)}
                         </div>
@@ -823,7 +822,7 @@ export default function CompliancePage() {
                       </div>
                       
                       <div className="flex items-center gap-2 ml-4">
-                        {item.building_documents && (
+                        {item.compliance_documents && (
                           <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
                             <FileText className="h-3 w-3" />
                             Document
