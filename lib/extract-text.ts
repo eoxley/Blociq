@@ -1,8 +1,6 @@
 // Enhanced text extraction library with multiple OCR fallbacks
 // Handles PDFs, images, and documents with robust error handling
 
-import { createWorker } from 'tesseract.js';
-
 export interface TextExtractionResult {
   extractedText: string;
   textLength: number;
@@ -62,8 +60,12 @@ export async function extractWithGoogleVision(file: File): Promise<TextExtractio
       });
     } else {
       // Fallback to service account authentication
-      const { GoogleAuth } = require('google-auth-library');
-      const auth = new GoogleAuth({
+      const googleAuthModule = await import('google-auth-library').catch(() => null);
+      if (!googleAuthModule) {
+        throw new Error('google-auth-library not available');
+      }
+      
+      const auth = new googleAuthModule.GoogleAuth({
         scopes: ['https://www.googleapis.com/auth/cloud-vision']
       });
       
@@ -214,8 +216,14 @@ export async function extractWithTesseract(file: File): Promise<TextExtractionRe
   try {
     console.log('📝 Attempting Tesseract.js OCR...');
     
+    // Dynamic import to handle missing dependency gracefully
+    const tesseractModule = await import('tesseract.js').catch(() => null);
+    if (!tesseractModule) {
+      throw new Error('Tesseract.js not available');
+    }
+    
     const startTime = Date.now();
-    const worker = await createWorker('eng');
+    const worker = await tesseractModule.createWorker('eng');
     
     // Convert file to image buffer for Tesseract
     const arrayBuffer = await file.arrayBuffer();
@@ -265,14 +273,17 @@ export async function extractWithPDFJS(file: File): Promise<TextExtractionResult
       throw new Error('PDF.js only works with PDF files');
     }
 
-    // Dynamic import to avoid bundling issues
-    const pdfjsLib = await import('pdfjs-dist');
+    // Dynamic import to handle missing dependency gracefully
+    const pdfjsModule = await import('pdfjs-dist').catch(() => null);
+    if (!pdfjsModule) {
+      throw new Error('PDF.js not available');
+    }
     
     // Set worker path
-    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+    pdfjsModule.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
     
     const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+    const pdf = await pdfjsModule.getDocument(arrayBuffer).promise;
     
     let extractedText = '';
     

@@ -16,8 +16,21 @@ const nextConfig: NextConfig = {
   // experimental: {
   //   optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
   // },
-  // Configure webpack to handle chunk loading better
+  // Configure webpack to handle chunk loading better and OCR dependencies
   webpack: (config, { dev, isServer }) => {
+    // Handle OCR dependencies that might not be available during build
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      path: false,
+      canvas: false,
+    };
+
+    // Make OCR packages external for server-side builds to handle dynamic imports
+    if (isServer) {
+      config.externals = [...(config.externals || []), 'tesseract.js', 'pdfjs-dist', 'google-auth-library'];
+    }
+    
     // Fix for Next.js 15 webpack minification compatibility
     if (!dev && !isServer) {
       try {
