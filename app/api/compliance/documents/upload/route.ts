@@ -347,30 +347,88 @@ async function processDocumentWithAI(document: any, file: File, assetInfo: any):
 }
 
 async function performOCR(file: File): Promise<{ text: string }> {
+  console.log("🔍 Performing enhanced OCR with fallback system...");
+  
+  // Try external OCR server first
   try {
-    console.log("🔍 Performing OCR directly to external server...");
-    
+    console.log("📡 Trying external OCR server...");
     const formData = new FormData();
     formData.append('file', file);
 
-    // Call OCR server directly from server-side (no CORS issues)
     const response = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
       method: 'POST',
       body: formData,
+      headers: {
+        'User-Agent': 'BlocIQ-OCR-Client/1.0'
+      }
     });
 
-    if (!response.ok) {
-      throw new Error(`OCR failed with status ${response.status}`);
+    if (response.ok) {
+      const result = await response.json();
+      console.log("✅ External OCR processing completed");
+      return { text: result.text || '' };
+    } else {
+      console.warn(`⚠️ External OCR failed with status ${response.status}`);
+      throw new Error(`External OCR failed: ${response.status}`);
     }
-
-    const result = await response.json();
-    console.log("✅ OCR processing completed");
-    return { text: result.text || '' };
-
-  } catch (error) {
-    console.error("❌ OCR processing failed:", error);
-    return { text: '' };
+  } catch (externalError) {
+    console.warn("⚠️ External OCR failed, trying OpenAI Vision fallback...", externalError);
   }
+
+  // Fallback to OpenAI Vision API
+  if (process.env.OPENAI_API_KEY && (file.type.startsWith('image/') || file.type === 'application/pdf')) {
+    try {
+      console.log("🤖 Using OpenAI Vision API fallback...");
+      
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = Buffer.from(arrayBuffer).toString('base64');
+      
+      const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: 'Extract all text from this compliance document. Focus on dates, inspector names, certificate numbers, and compliance status. Return only the text content, no explanations.'
+                },
+                {
+                  type: 'image_url',
+                  image_url: {
+                    url: `data:${file.type};base64,${base64}`,
+                    detail: 'high'
+                  }
+                }
+              ]
+            }
+          ],
+          max_tokens: 4000,
+          temperature: 0
+        }),
+      });
+
+      if (openAIResponse.ok) {
+        const result = await openAIResponse.json();
+        const extractedText = result.choices?.[0]?.message?.content || '';
+        console.log("✅ OpenAI Vision OCR completed");
+        return { text: extractedText };
+      } else {
+        throw new Error(`OpenAI Vision API failed: ${openAIResponse.status}`);
+      }
+    } catch (openaiError) {
+      console.error("❌ OpenAI Vision fallback failed:", openaiError);
+    }
+  }
+
+  console.warn("⚠️ All OCR methods failed, returning empty text");
+  return { text: '' };
 }
 
 function extractDataFromOCRText(ocrText: string, assetInfo: any): any {
