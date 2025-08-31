@@ -492,7 +492,7 @@ export default function BuildingTodoList({
                   : 'bg-white/20 hover:bg-white/30'
               }`}
             >
-              Tasks ({todos.length})
+              Tasks
             </button>
             {includeCompliance && (
               <button
@@ -503,7 +503,7 @@ export default function BuildingTodoList({
                     : 'bg-white/20 hover:bg-white/30'
                 }`}
               >
-                Compliance ({complianceItems.length})
+                Compliance
               </button>
             )}
           </div>
