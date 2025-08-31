@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { extractText } from '@/lib/extract-text';
 
 export const runtime = 'nodejs';
+export const maxDuration = 180; // 3 minutes for document upload and OCR
 
 export async function POST(req: NextRequest) {
   try {

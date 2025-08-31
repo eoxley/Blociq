@@ -20,6 +20,42 @@
     },
     "app/api/debug/cleanup-emails/route.ts": {
       "maxDuration": 30
+    },
+    "app/api/ocr-proxy-cors/route.ts": {
+      "maxDuration": 300,
+      "memory": 1024
+    },
+    "app/api/ask-ai/upload/route.ts": {
+      "maxDuration": 180,
+      "memory": 1024
+    },
+    "app/api/upload-and-analyse/route.ts": {
+      "maxDuration": 180,
+      "memory": 1024
+    },
+    "app/api/extract/route.ts": {
+      "maxDuration": 120,
+      "memory": 512
+    },
+    "app/api/upload-doc/route.ts": {
+      "maxDuration": 120,
+      "memory": 512
+    },
+    "app/api/assistant-query/route.ts": {
+      "maxDuration": 90
+    },
+    "app/api/daily-summary/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/list-buildings/route.ts": {
+      "maxDuration": 45
+    },
+    "app/api/generate-summary/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/tools/process-document/route.ts": {
+      "maxDuration": 240,
+      "memory": 1024
     }
   },
   "env": {

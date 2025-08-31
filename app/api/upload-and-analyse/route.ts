@@ -15,6 +15,8 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
+export const maxDuration = 180; // 3 minutes for upload and analysis
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()

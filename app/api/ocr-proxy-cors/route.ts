@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
+export const maxDuration = 300; // 5 minutes for OCR processing
 
 export async function POST(req: NextRequest) {
   console.log('🔧 CORS Proxy: Handling OCR request to external server');
+  
+  // Set a reasonable timeout for the entire request
+  const startTime = Date.now();
+  const REQUEST_TIMEOUT = 270000; // 4.5 minutes (less than Vercel's 5 min limit)
   
   // API Key verification logging
   console.log('🔑 API Key check:', {
@@ -62,42 +67,73 @@ export async function POST(req: NextRequest) {
       console.warn('⚠️ File larger than external OCR limit, will skip external OCR and use OpenAI only');
     }
 
+    // Helper function to retry with exponential backoff
+    const retryWithBackoff = async (fn: () => Promise<any>, maxRetries = 3) => {
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          // Check timeout before each attempt
+          if (Date.now() - startTime > REQUEST_TIMEOUT) {
+            throw new Error('Request timeout exceeded');
+          }
+          
+          return await fn();
+        } catch (error) {
+          if (attempt === maxRetries) throw error;
+          
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000); // Max 10 seconds
+          console.log(`⏰ Retry attempt ${attempt} in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    };
+
     // Try external OCR server first (only if file size is acceptable)
     if (file.size <= MAX_FILE_SIZE) {
       try {
         console.log('📡 CORS Proxy: Trying external OCR server...');
         
-        const ocrResponse = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
-          method: 'POST',
-          body: formData,
-          headers: {
-            'User-Agent': 'BlocIQ-OCR-Client/1.0'
-          },
+        const result = await retryWithBackoff(async () => {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout per attempt
+          
+          try {
+            const ocrResponse = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
+              method: 'POST',
+              body: formData,
+              headers: {
+                'User-Agent': 'BlocIQ-OCR-Client/1.0'
+              },
+              signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+            console.log('📡 CORS Proxy: OCR server response status:', ocrResponse.status);
+
+            if (ocrResponse.ok) {
+              const result = await ocrResponse.json();
+              console.log('✅ CORS Proxy: External OCR processing successful');
+              return result;
+            } else {
+              throw new Error(`External OCR failed: ${ocrResponse.status}`);
+            }
+          } finally {
+            clearTimeout(timeoutId);
+          }
         });
 
-        console.log('📡 CORS Proxy: OCR server response status:', ocrResponse.status);
-
-        if (ocrResponse.ok) {
-          const result = await ocrResponse.json();
-          console.log('✅ CORS Proxy: External OCR processing successful');
-
-          return NextResponse.json({
-            ...result,
-            source: 'external_ocr'
-          }, {
-            status: 200,
-            headers: {
-              'Access-Control-Allow-Origin': '*',
-              'Access-Control-Allow-Methods': 'POST, OPTIONS',
-              'Access-Control-Allow-Headers': 'Content-Type',
-            }
-          });
-        } else {
-          console.warn(`⚠️ CORS Proxy: External OCR failed with status ${ocrResponse.status}`);
-          throw new Error(`External OCR failed: ${ocrResponse.status}`);
-        }
+        return NextResponse.json({
+          ...result,
+          source: 'external_ocr'
+        }, {
+          status: 200,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+          }
+        });
       } catch (externalError) {
-        console.warn('⚠️ CORS Proxy: External OCR failed, trying OpenAI Vision fallback...', externalError);
+        console.warn('⚠️ CORS Proxy: External OCR failed after retries, trying OpenAI Vision fallback...', externalError);
       }
     } else {
       console.log('📏 Skipping external OCR due to file size limit');
@@ -109,6 +145,11 @@ export async function POST(req: NextRequest) {
         console.log('🤖 CORS Proxy: Using OpenAI Vision API fallback...');
         console.log(`📄 File type: ${file.type}, Size: ${file.size} bytes`);
         
+        // Check timeout before expensive operations
+        if (Date.now() - startTime > REQUEST_TIMEOUT) {
+          throw new Error('Request timeout exceeded before OpenAI processing');
+        }
+        
         // Convert file to base64
         const arrayBuffer = await file.arrayBuffer();
         const base64 = Buffer.from(arrayBuffer).toString('base64');
@@ -118,84 +159,94 @@ export async function POST(req: NextRequest) {
           ? 'Extract all text from this PDF document. Focus on any dates, names, addresses, numbers, and important information. Return only the text content, preserving structure when possible.'
           : 'Extract all text from this image/document. Focus on any dates, names, addresses, numbers, and important information. Return only the text content, preserving structure when possible.';
         
-        const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o',
-            messages: [
-              {
-                role: 'user',
-                content: [
+        const result = await retryWithBackoff(async () => {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout for OpenAI
+          
+          try {
+            const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                model: 'gpt-4o',
+                messages: [
                   {
-                    type: 'text',
-                    text: extractionPrompt
-                  },
-                  {
-                    type: 'image_url',
-                    image_url: {
-                      url: `data:${file.type};base64,${base64}`,
-                      detail: 'high'
-                    }
+                    role: 'user',
+                    content: [
+                      {
+                        type: 'text',
+                        text: extractionPrompt
+                      },
+                      {
+                        type: 'image_url',
+                        image_url: {
+                          url: `data:${file.type};base64,${base64}`,
+                          detail: 'high'
+                        }
+                      }
+                    ]
                   }
-                ]
+                ],
+                max_tokens: 4000,
+                temperature: 0
+              }),
+              signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!openAIResponse.ok) {
+              const errorText = await openAIResponse.text();
+              let errorMessage = `OpenAI Vision API failed: ${openAIResponse.status}`;
+              if (openAIResponse.status === 429) {
+                errorMessage += ' - Rate limit exceeded';
+              } else if (openAIResponse.status === 401) {
+                errorMessage += ' - Invalid API key';
+              } else if (openAIResponse.status === 413) {
+                errorMessage += ' - File too large';
               }
-            ],
-            max_tokens: 4000,
-            temperature: 0
-          }),
+              throw new Error(`${errorMessage} - ${errorText}`);
+            }
+            
+            return await openAIResponse.json();
+          } finally {
+            clearTimeout(timeoutId);
+          }
         });
         
-        if (openAIResponse.ok) {
-          const openAIResult = await openAIResponse.json();
-          const extractedText = openAIResult.choices?.[0]?.message?.content || '';
-          
-          console.log(`✅ CORS Proxy: OpenAI Vision API successful - extracted ${extractedText.length} characters`);
-          
-          // Additional validation
-          if (!extractedText || extractedText.length === 0) {
-            console.warn('⚠️ OpenAI returned empty text');
-          }
-          
-          return NextResponse.json({
-            text: extractedText,
-            source: 'openai_vision',
-            success: true,
-            metadata: {
-              fileType: file.type,
-              fileSize: file.size,
-              fileSizeMB: (file.size / (1024 * 1024)).toFixed(2),
-              extractedLength: extractedText.length,
-              model: 'gpt-4o',
-              timestamp: new Date().toISOString()
-            }
-          }, {
-            status: 200,
-            headers: {
-              'Access-Control-Allow-Origin': '*',
-              'Access-Control-Allow-Methods': 'POST, OPTIONS',
-              'Access-Control-Allow-Headers': 'Content-Type',
-            }
-          });
-        } else {
-          const errorText = await openAIResponse.text();
-          console.error(`❌ CORS Proxy: OpenAI Vision failed (${openAIResponse.status}):`, errorText);
-          
-          // More specific error handling for common OpenAI errors
-          let errorMessage = `OpenAI Vision API failed: ${openAIResponse.status}`;
-          if (openAIResponse.status === 429) {
-            errorMessage += ' - Rate limit exceeded';
-          } else if (openAIResponse.status === 401) {
-            errorMessage += ' - Invalid API key';
-          } else if (openAIResponse.status === 413) {
-            errorMessage += ' - File too large';
-          }
-          
-          throw new Error(`${errorMessage} - ${errorText}`);
+        const extractedText = result.choices?.[0]?.message?.content || '';
+        
+        console.log(`✅ CORS Proxy: OpenAI Vision API successful - extracted ${extractedText.length} characters`);
+        
+        // Additional validation
+        if (!extractedText || extractedText.length === 0) {
+          console.warn('⚠️ OpenAI returned empty text');
         }
+        
+        return NextResponse.json({
+          text: extractedText,
+          source: 'openai_vision',
+          success: true,
+          metadata: {
+            fileType: file.type,
+            fileSize: file.size,
+            fileSizeMB: (file.size / (1024 * 1024)).toFixed(2),
+            extractedLength: extractedText.length,
+            model: 'gpt-4o',
+            timestamp: new Date().toISOString(),
+            processingTime: Date.now() - startTime
+          }
+        }, {
+          status: 200,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+          }
+        });
       } catch (openAIError) {
         console.error('❌ CORS Proxy: OpenAI Vision error:', openAIError);
       }

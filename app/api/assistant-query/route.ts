@@ -24,6 +24,8 @@ import { buildSystemPrompt, buildChatPrompt } from '@/lib/ai/prompt';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+export const maxDuration = 90; // 1.5 minutes for AI assistant queries
+
 export async function POST(req: Request) {
   console.log("✅ Enhanced Assistant Query endpoint hit with memory support");
 
