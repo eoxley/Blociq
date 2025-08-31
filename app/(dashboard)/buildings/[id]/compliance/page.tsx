@@ -32,7 +32,6 @@ import {
   Construction
 } from 'lucide-react'
 import { toast } from 'sonner'
-import AssetManagementModal from '@/components/compliance/AssetManagementModal'
 
 // Types
 interface ComplianceAsset {
@@ -104,7 +103,6 @@ export default function BuildingCompliancePage() {
   const [filterCategory, setFilterCategory] = useState<string>('all')
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
-  const [showAssetModal, setShowAssetModal] = useState(false)
   const [updatingAssets, setUpdatingAssets] = useState(false)
 
   useEffect(() => {
@@ -575,20 +573,10 @@ export default function BuildingCompliancePage() {
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                   <button
                     onClick={() => router.push(`/buildings/${buildingId}/compliance/setup`)}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#004AAD] to-[#7209B7] text-white rounded-lg hover:from-[#003A8C] hover:to-[#5A078F] transition-all duration-200 shadow-lg hover:shadow-xl"
+                    className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-[#004AAD] to-[#7209B7] text-white rounded-lg hover:from-[#003A8C] hover:to-[#5A078F] transition-all duration-200 shadow-lg hover:shadow-xl text-lg font-medium"
                   >
-                    <Plus className="h-5 w-5" />
-                    Set Up Compliance
-                  </button>
-                  
-                  <div className="text-sm text-gray-500 self-center">or</div>
-                  
-                  <button
-                    onClick={() => setShowAssetModal(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Quick Add Assets
+                    <Plus className="h-6 w-6" />
+                    Set Up Compliance for {building?.name || 'Building'}
                   </button>
                 </div>
               </div>
@@ -653,8 +641,9 @@ export default function BuildingCompliancePage() {
                         )}
                         
                         <button
-                          onClick={() => setShowAssetModal(true)}
+                          onClick={() => router.push(`/buildings/${buildingId}/compliance/setup`)}
                           className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 text-sm rounded-lg hover:bg-blue-100 transition-colors"
+                          title="Edit compliance asset"
                         >
                           <Settings className="h-4 w-4" />
                           Edit
@@ -668,16 +657,6 @@ export default function BuildingCompliancePage() {
           </div>
         </div>
       </div>
-
-      {/* Asset Management Modal */}
-      {showAssetModal && building && (
-        <AssetManagementModal
-          building={building}
-          isOpen={showAssetModal}
-          onClose={() => setShowAssetModal(false)}
-          onAssetsUpdated={fetchComplianceData}
-        />
-      )}
     </div>
   )
 }
