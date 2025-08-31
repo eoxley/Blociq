@@ -4,6 +4,20 @@ export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
   console.log('🔧 CORS Proxy: Handling OCR request to external server');
+  
+  // API Key verification logging
+  console.log('🔑 API Key check:', {
+    openAI: {
+      exists: !!process.env.OPENAI_API_KEY,
+      length: process.env.OPENAI_API_KEY?.length,
+      firstChars: process.env.OPENAI_API_KEY?.substring(0, 10)
+    },
+    googleVision: {
+      credentialsFile: !!process.env.GOOGLE_APPLICATION_CREDENTIALS,
+      credentialsJson: !!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON,
+      individualVars: !!(process.env.GOOGLE_CLIENT_EMAIL && process.env.GOOGLE_PRIVATE_KEY && process.env.GOOGLE_PROJECT_ID)
+    }
+  });
 
   try {
     // Get the form data from the request
@@ -18,43 +32,75 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
     
-    console.log(`📄 CORS Proxy: Processing file: ${file.name} (${file.size} bytes)`);
+    // Enhanced file info logging
+    console.log('📁 File info:', {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      sizeInMB: (file.size / (1024 * 1024)).toFixed(2)
+    });
+    
+    // File size checks
+    const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB limit for most OCR services
+    const MAX_OPENAI_SIZE = 100 * 1024 * 1024; // 100MB limit for OpenAI
+    
+    if (file.size > MAX_OPENAI_SIZE) {
+      console.error('❌ File too large for all OCR services');
+      return NextResponse.json({
+        success: false,
+        error: 'File too large for OCR processing',
+        metadata: {
+          fileSize: file.size,
+          maxSize: MAX_OPENAI_SIZE,
+          fileSizeMB: (file.size / (1024 * 1024)).toFixed(2),
+          maxSizeMB: (MAX_OPENAI_SIZE / (1024 * 1024)).toFixed(2)
+        }
+      }, { status: 413 }); // Payload Too Large
+    }
+    
+    if (file.size > MAX_FILE_SIZE) {
+      console.warn('⚠️ File larger than external OCR limit, will skip external OCR and use OpenAI only');
+    }
 
-    // Try external OCR server first
-    try {
-      console.log('📡 CORS Proxy: Trying external OCR server...');
-      
-      const ocrResponse = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'User-Agent': 'BlocIQ-OCR-Client/1.0'
-        },
-      });
-
-      console.log('📡 CORS Proxy: OCR server response status:', ocrResponse.status);
-
-      if (ocrResponse.ok) {
-        const result = await ocrResponse.json();
-        console.log('✅ CORS Proxy: External OCR processing successful');
-
-        return NextResponse.json({
-          ...result,
-          source: 'external_ocr'
-        }, {
-          status: 200,
+    // Try external OCR server first (only if file size is acceptable)
+    if (file.size <= MAX_FILE_SIZE) {
+      try {
+        console.log('📡 CORS Proxy: Trying external OCR server...');
+        
+        const ocrResponse = await fetch('https://ocr-server-2-ykmk.onrender.com/upload', {
+          method: 'POST',
+          body: formData,
           headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type',
-          }
+            'User-Agent': 'BlocIQ-OCR-Client/1.0'
+          },
         });
-      } else {
-        console.warn(`⚠️ CORS Proxy: External OCR failed with status ${ocrResponse.status}`);
-        throw new Error(`External OCR failed: ${ocrResponse.status}`);
+
+        console.log('📡 CORS Proxy: OCR server response status:', ocrResponse.status);
+
+        if (ocrResponse.ok) {
+          const result = await ocrResponse.json();
+          console.log('✅ CORS Proxy: External OCR processing successful');
+
+          return NextResponse.json({
+            ...result,
+            source: 'external_ocr'
+          }, {
+            status: 200,
+            headers: {
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'POST, OPTIONS',
+              'Access-Control-Allow-Headers': 'Content-Type',
+            }
+          });
+        } else {
+          console.warn(`⚠️ CORS Proxy: External OCR failed with status ${ocrResponse.status}`);
+          throw new Error(`External OCR failed: ${ocrResponse.status}`);
+        }
+      } catch (externalError) {
+        console.warn('⚠️ CORS Proxy: External OCR failed, trying OpenAI Vision fallback...', externalError);
       }
-    } catch (externalError) {
-      console.warn('⚠️ CORS Proxy: External OCR failed, trying OpenAI Vision fallback...', externalError);
+    } else {
+      console.log('📏 Skipping external OCR due to file size limit');
     }
 
     // Fallback to OpenAI Vision API
@@ -109,6 +155,11 @@ export async function POST(req: NextRequest) {
           
           console.log(`✅ CORS Proxy: OpenAI Vision API successful - extracted ${extractedText.length} characters`);
           
+          // Additional validation
+          if (!extractedText || extractedText.length === 0) {
+            console.warn('⚠️ OpenAI returned empty text');
+          }
+          
           return NextResponse.json({
             text: extractedText,
             source: 'openai_vision',
@@ -116,7 +167,10 @@ export async function POST(req: NextRequest) {
             metadata: {
               fileType: file.type,
               fileSize: file.size,
-              extractedLength: extractedText.length
+              fileSizeMB: (file.size / (1024 * 1024)).toFixed(2),
+              extractedLength: extractedText.length,
+              model: 'gpt-4o',
+              timestamp: new Date().toISOString()
             }
           }, {
             status: 200,
@@ -129,7 +183,18 @@ export async function POST(req: NextRequest) {
         } else {
           const errorText = await openAIResponse.text();
           console.error(`❌ CORS Proxy: OpenAI Vision failed (${openAIResponse.status}):`, errorText);
-          throw new Error(`OpenAI Vision API failed: ${openAIResponse.status} - ${errorText}`);
+          
+          // More specific error handling for common OpenAI errors
+          let errorMessage = `OpenAI Vision API failed: ${openAIResponse.status}`;
+          if (openAIResponse.status === 429) {
+            errorMessage += ' - Rate limit exceeded';
+          } else if (openAIResponse.status === 401) {
+            errorMessage += ' - Invalid API key';
+          } else if (openAIResponse.status === 413) {
+            errorMessage += ' - File too large';
+          }
+          
+          throw new Error(`${errorMessage} - ${errorText}`);
         }
       } catch (openAIError) {
         console.error('❌ CORS Proxy: OpenAI Vision error:', openAIError);

@@ -11,6 +11,23 @@ export function getVisionClient() {
     if (!visionClient) {
       console.log('🔧 Initializing Google Vision client...');
       
+      // API Key verification logging
+      console.log('🔑 Google Vision API Key check:', {
+        credentialsFile: {
+          exists: !!process.env.GOOGLE_APPLICATION_CREDENTIALS,
+          path: process.env.GOOGLE_APPLICATION_CREDENTIALS
+        },
+        credentialsJson: {
+          exists: !!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON,
+          length: process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON?.length
+        },
+        individualVars: {
+          clientEmail: !!process.env.GOOGLE_CLIENT_EMAIL,
+          privateKey: !!process.env.GOOGLE_PRIVATE_KEY,
+          projectId: !!process.env.GOOGLE_PROJECT_ID
+        }
+      });
+      
       // First priority: try to use the credentials file
       if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
         try {
