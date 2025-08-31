@@ -6,7 +6,7 @@ import AskBlocChat from '../../components/outlook-addin/AskBlocChat'
 
 export default function OutlookAddin() {
   const [isOfficeReady, setIsOfficeReady] = useState(false)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(true) // Default to guest mode
   const [authError, setAuthError] = useState<string | null>(null)
   const [showLogin, setShowLogin] = useState(false)
 
@@ -17,8 +17,8 @@ export default function OutlookAddin() {
         console.log('Office.js ready:', info)
         setIsOfficeReady(true)
         
-        // Check authentication status
-        checkAuthStatus()
+        // Skip auth check for now - work in guest mode
+        setIsAuthenticated(true)
       })
     } else {
       // For testing in browser without Office.js

@@ -272,60 +272,71 @@ What would you like me to help with?`,
       }
 
       if (userMessage.files && userMessage.files.length > 0) {
+        // Use FormData for file uploads - match main app exactly
         requestBody = new FormData()
-        requestBody.append('prompt', userMessage.content)
-        requestBody.append('building_id', 'null')
         
-        // NEW: Add email context to FormData
+        // Embed email context in prompt for compatibility
+        let finalPrompt = userMessage.content
         if (currentEmail) {
-          requestBody.append('email_context', JSON.stringify(currentEmail))
+          finalPrompt = `[EMAIL CONTEXT] From: ${currentEmail.senderName} (${currentEmail.sender}) | Subject: ${currentEmail.subject} | Content: ${currentEmail.body.substring(0, 500)}... 
+
+USER QUESTION: ${userMessage.content}`
         }
         
+        requestBody.append('prompt', finalPrompt)
+        requestBody.append('building_id', 'null')
+        
         userMessage.files.forEach((uploadedFile) => {
-          requestBody.append(`file`, uploadedFile.file)
-          requestBody.append(`fileName`, uploadedFile.name)
+          requestBody.append('file', uploadedFile.file)
+          requestBody.append('fileName', uploadedFile.name)
         })
         
+        // Remove Content-Type header for FormData
         delete headers['Content-Type']
       } else {
+        // Embed email context in prompt for compatibility with homepage API
+        let finalPrompt = userMessage.content
+        if (currentEmail) {
+          finalPrompt = `[EMAIL CONTEXT] From: ${currentEmail.senderName} (${currentEmail.sender}) | Subject: ${currentEmail.subject} | Content: ${currentEmail.body.substring(0, 500)}... 
+
+USER QUESTION: ${userMessage.content}`
+        }
+        
         requestBody = JSON.stringify({
-          prompt: userMessage.content,
-          building_id: null,
-          is_public: true,
-          // NEW: Add email context to JSON payload
-          email_context: currentEmail
+          prompt: finalPrompt,
+          building_id: null
         })
       }
 
-      // Use add-in specific endpoint
-      const response = await fetch('/api/addin/ask-ai', {
+      // Use same endpoint as main app for consistency
+      const response = await fetch('/api/ask-ai', {
         method: 'POST',
         headers,
         body: requestBody,
       })
 
-      const data: AIResponse = await response.json()
+      const data = await response.json()
 
-      if (data.success) {
+      if (data.response) {
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: data.result || data.response, // Handle both response formats
+          content: data.response,
           timestamp: new Date()
         }
 
-        setMessages(prev => [...prev, assistantMessage])
-      } else if (response.status === 401) {
-        // Handle authentication error gracefully
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: "I'd be happy to help! Please make sure you're signed in to use the full AI features.",
-          timestamp: new Date()
-        }
         setMessages(prev => [...prev, assistantMessage])
       } else {
+        // Handle any error case
         toast.error('Failed to get AI response')
+        
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: "I'm having trouble processing your request right now. Please try again in a moment.",
+          timestamp: new Date()
+        }
+        setMessages(prev => [...prev, errorMessage])
       }
     } catch (error) {
       console.error('Error asking AI:', error)
@@ -354,9 +365,7 @@ What would you like me to help with?`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          query: searchQuery,
-          // NEW: Include email context in search
-          email_context: currentEmail 
+          query: searchQuery
         }),
       })
 
