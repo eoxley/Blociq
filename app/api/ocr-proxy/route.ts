@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🔄 Processing OCR request with Google Vision');
+    console.log('🔄 Processing OCR request with Google Vision directly');
     
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -19,8 +19,8 @@ export async function POST(request: NextRequest) {
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
       
-      // Use Google Vision OCR directly
-      const { ocrFallback } = await import('@/lib/compliance/docExtract');
+      // Use Google Vision OCR directly on server-side
+      const { ocrFallback } = await import('../../src/lib/compliance/docExtract');
       const ocrText = await ocrFallback(file.name, buffer);
       
       if (ocrText && ocrText.trim().length > 0) {
