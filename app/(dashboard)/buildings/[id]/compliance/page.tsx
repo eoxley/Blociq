@@ -322,26 +322,25 @@ export default function BuildingCompliancePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-6">
-            <div className="flex items-center gap-4">
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3">
               <button
                 onClick={() => router.back()}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-all duration-200"
+                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
               >
                 <ChevronLeft className="h-5 w-5" />
               </button>
-              
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">
-                  {building?.name} - Compliance
+                  {building?.name || 'Building'} Compliance
                 </h1>
                 <p className="text-gray-600">
-                  {building?.address || 'No address'}
+                  Manage compliance assets and track inspection schedules
                 </p>
                 {building?.is_hrb && (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200 mt-2">
                     🏢 High-Risk Building (HRB)
                   </span>
                 )}
@@ -349,35 +348,40 @@ export default function BuildingCompliancePage() {
             </div>
             
             <div className="flex items-center gap-3">
+              {/* Refresh Button */}
               <button
                 onClick={fetchComplianceData}
-                className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all duration-200 hover:scale-110"
-                title="Refresh data"
+                className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Refresh compliance data"
               >
                 <RefreshCw className="h-5 w-5" />
               </button>
               
+              {/* Set Up Compliance Button - Links to Setup Wizard */}
               <button
                 onClick={() => router.push(`/buildings/${buildingId}/compliance/setup`)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#10B981] to-[#3B82F6] text-white rounded-xl hover:from-[#059669] hover:to-[#2563EB] transition-all duration-200"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#004AAD] to-[#7209B7] text-white rounded-lg hover:from-[#003A8C] hover:to-[#5A078F] transition-all duration-200 shadow-lg hover:shadow-xl"
               >
-                <Sparkles className="h-4 w-4" />
-                Setup Wizard
+                <Plus className="h-5 w-5" />
+                Set Up Compliance
               </button>
               
-              <button
-                onClick={() => setShowAssetModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#004AAD] to-[#7209B7] text-white rounded-xl hover:from-[#003A8C] hover:to-[#5A078F] transition-all duration-200"
-              >
-                <Settings className="h-4 w-4" />
-                Manage Assets
-              </button>
+              {/* AI Assistant Button */}
+              <AskBlocIQ
+                buildingId={buildingId}
+                buildingName={building?.name || 'Building'}
+                context="compliance"
+                placeholder="Ask about compliance requirements, inspection schedules, or regulatory updates..."
+                className="inline-flex items-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              />
               
+              {/* HRB Auto-Asset Button */}
               {building?.is_hrb && (
                 <button
                   onClick={autoToggleHRBAssets}
                   disabled={updatingAssets}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all duration-200 disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                  title="Automatically add required HRB compliance assets"
                 >
                   {updatingAssets ? (
                     <RefreshCw className="h-4 w-4 animate-spin" />
@@ -387,14 +391,6 @@ export default function BuildingCompliancePage() {
                   Auto-Add HRB Assets
                 </button>
               )}
-              
-              <AskBlocIQ
-                buildingId={buildingId}
-                buildingName={building?.name || 'Building'}
-                context="compliance"
-                placeholder="Ask about compliance requirements for this building..."
-                className="bg-gradient-to-r from-[#004AAD] to-[#7209B7] hover:from-[#003A8C] hover:to-[#5A078F]"
-              />
             </div>
           </div>
         </div>
@@ -539,11 +535,21 @@ export default function BuildingCompliancePage() {
                   }
                 </p>
                 <button
+                  onClick={() => router.push(`/buildings/${buildingId}/compliance/setup`)}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#004AAD] to-[#7209B7] text-white rounded-lg hover:from-[#003A8C] hover:to-[#5A078F] transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  <Plus className="h-5 w-5" />
+                  Set Up Compliance
+                </button>
+                
+                <div className="text-sm text-gray-500">or</div>
+                
+                <button
                   onClick={() => setShowAssetModal(true)}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                 >
                   <Plus className="h-4 w-4" />
-                  Add Compliance Assets
+                  Quick Add Assets
                 </button>
               </div>
             ) : (
