@@ -50,13 +50,11 @@ export async function GET(req: NextRequest) {
         id,
         subject,
         from_email,
-        body_preview,
+        body,
         received_at,
         unread,
         handled,
         building_id,
-        tag,
-        message_id,
         urgency_level,
         urgency_score,
         mentioned_properties,
@@ -96,15 +94,44 @@ export async function GET(req: NextRequest) {
     }
 
     // Process data for dashboard with enhanced triage integration
-    const dashboard = processDashboardData(emails || [], buildingsMap);
-
-    console.log('✅ Dashboard data processed:', {
-      total: dashboard.total,
-      urgent: dashboard.urgent,
-      categories: Object.keys(dashboard.categories).length,
-      properties: Object.keys(dashboard.propertyBreakdown).length,
-      suggestions: dashboard.smartSuggestions.length
-    });
+    let dashboard;
+    try {
+      dashboard = processDashboardData(emails || [], buildingsMap);
+      console.log('✅ Dashboard data processed:', {
+        total: dashboard.total,
+        urgent: dashboard.urgent,
+        categories: Object.keys(dashboard.categories).length,
+        properties: Object.keys(dashboard.propertyBreakdown).length,
+        suggestions: dashboard.smartSuggestions.length
+      });
+    } catch (processingError) {
+      console.error('❌ Error processing dashboard data:', processingError);
+      // Return a minimal dashboard with safe defaults
+      dashboard = {
+        total: emails?.length || 0,
+        unread: emails?.filter(e => e?.unread).length || 0,
+        handled: emails?.filter(e => e?.handled).length || 0,
+        urgent: emails?.filter(e => ['critical', 'high'].includes(e?.urgency_level || 'low')).length || 0,
+        categories: {},
+        propertyBreakdown: {},
+        recentActivity: [],
+        smartSuggestions: [],
+        urgencyDistribution: {
+          critical: 0,
+          high: 0,
+          medium: 0,
+          low: 0
+        },
+        topProperties: [],
+        aiInsightsSummary: {
+          totalInsights: 0,
+          criticalInsights: 0,
+          followUps: 0,
+          recurringIssues: 0,
+          complianceMatters: 0
+        }
+      };
+    }
 
     return NextResponse.json({
       success: true,
@@ -153,11 +180,15 @@ function processDashboardData(emails: any[], buildingsMap: any) {
   // Group by categories using enhanced AI tags with safe fallbacks
   const categoryGroups: { [key: string]: any[] } = {};
   emails.forEach(email => {
-    const category = email.ai_tag || email.triage_category || email.tag || 'General';
-    if (!categoryGroups[category]) {
-      categoryGroups[category] = [];
+    try {
+      const category = email?.ai_tag || email?.triage_category || 'General';
+      if (!categoryGroups[category]) {
+        categoryGroups[category] = [];
+      }
+      categoryGroups[category].push(email);
+    } catch (error) {
+      console.warn('Error processing email for categories:', error, email?.id);
     }
-    categoryGroups[category].push(email);
   });
 
   // Build enhanced category summary
@@ -170,18 +201,22 @@ function processDashboardData(emails: any[], buildingsMap: any) {
 
     // Extract properties from various sources with safe fallbacks
     categoryEmails.forEach(email => {
-      // From building relationship
-      if (email.building_id && buildingsMap[email.building_id]) {
-        properties.add(buildingsMap[email.building_id].name);
-      }
-      
-      // From mentioned_properties array (with safe array check)
-      if (email.mentioned_properties && Array.isArray(email.mentioned_properties)) {
-        email.mentioned_properties.forEach((prop: string) => {
-          if (prop && typeof prop === 'string') {
-            properties.add(prop);
-          }
-        });
+      try {
+        // From building relationship
+        if (email?.building_id && buildingsMap?.[email.building_id]?.name) {
+          properties.add(buildingsMap[email.building_id].name);
+        }
+        
+        // From mentioned_properties array (with safe array check)
+        if (email?.mentioned_properties && Array.isArray(email.mentioned_properties)) {
+          email.mentioned_properties.forEach((prop: any) => {
+            if (prop && typeof prop === 'string' && prop.trim()) {
+              properties.add(prop.trim());
+            }
+          });
+        }
+      } catch (error) {
+        console.warn('Error extracting properties from email:', error, email?.id);
       }
     });
 
@@ -204,24 +239,28 @@ function processDashboardData(emails: any[], buildingsMap: any) {
   // Enhanced property breakdown using building relationships and mentions
   const propertyGroups: { [key: string]: any[] } = {};
   emails.forEach(email => {
-    let propertyName = 'Unknown Property';
-    
-    // Primary: Use building relationship
-    if (email.building_id && buildingsMap[email.building_id]) {
-      propertyName = buildingsMap[email.building_id].name;
-    }
-    // Secondary: Use first mentioned property (with safe array check)
-    else if (email.mentioned_properties && Array.isArray(email.mentioned_properties) && email.mentioned_properties.length > 0) {
-      const firstProperty = email.mentioned_properties[0];
-      if (firstProperty && typeof firstProperty === 'string') {
-        propertyName = firstProperty;
+    try {
+      let propertyName = 'Unknown Property';
+      
+      // Primary: Use building relationship
+      if (email?.building_id && buildingsMap?.[email.building_id]?.name) {
+        propertyName = buildingsMap[email.building_id].name;
       }
+      // Secondary: Use first mentioned property (with safe array check)
+      else if (email?.mentioned_properties && Array.isArray(email.mentioned_properties) && email.mentioned_properties.length > 0) {
+        const firstProperty = email.mentioned_properties[0];
+        if (firstProperty && typeof firstProperty === 'string' && firstProperty.trim()) {
+          propertyName = firstProperty.trim();
+        }
+      }
+      
+      if (!propertyGroups[propertyName]) {
+        propertyGroups[propertyName] = [];
+      }
+      propertyGroups[propertyName].push(email);
+    } catch (error) {
+      console.warn('Error processing email for property groups:', error, email?.id);
     }
-    
-    if (!propertyGroups[propertyName]) {
-      propertyGroups[propertyName] = [];
-    }
-    propertyGroups[propertyName].push(email);
   });
 
   Object.entries(propertyGroups).forEach(([property, propertyEmails]) => {
@@ -234,11 +273,11 @@ function processDashboardData(emails: any[], buildingsMap: any) {
       count: propertyEmails.length,
       urgent: propertyEmails.filter(e => ['critical', 'high'].includes(e.urgency_level || 'low')).length,
       unread: propertyEmails.filter(e => e.unread).length,
-      categories: [...new Set(propertyEmails.map(e => e.ai_tag || e.triage_category || e.tag || 'General').filter(Boolean))],
+      categories: [...new Set(propertyEmails.map(e => e?.ai_tag || e?.triage_category || 'General').filter(Boolean))],
       avgUrgencyScore: Math.round(avgUrgencyScore * 10) / 10,
       recentActivity: propertyEmails.slice(0, 3).map(e => ({
         subject: e.subject || 'No Subject',
-        category: e.ai_tag || e.triage_category || e.tag || 'General',
+        category: e?.ai_tag || e?.triage_category || 'General',
         received: e.received_at
       }))
     };
@@ -255,73 +294,136 @@ function processDashboardData(emails: any[], buildingsMap: any) {
     .map(([name, data]) => ({ name, ...data }));
 
   // Enhanced recent activity with AI context and safe fallbacks
-  dashboard.recentActivity = emails.slice(0, 15).map(email => ({
-    id: email.id,
-    time: formatTimeAgo(email.received_at),
-    type: getActivityType(email),
-    subject: email.subject || 'No Subject',
-    property: email.building_id && buildingsMap[email.building_id] 
-      ? buildingsMap[email.building_id].name 
-      : (email.mentioned_properties && Array.isArray(email.mentioned_properties) && email.mentioned_properties[0]) || 'Unknown',
-    urgencyLevel: email.urgency_level || 'low',
-    urgencyScore: email.urgency_score || 0,
-    aiTag: email.ai_tag,
-    category: email.triage_category,
-    unread: email.unread,
-    handled: email.handled
-  }));
+  dashboard.recentActivity = emails.slice(0, 15).map(email => {
+    try {
+      let propertyName = 'Unknown';
+      
+      if (email?.building_id && buildingsMap?.[email.building_id]?.name) {
+        propertyName = buildingsMap[email.building_id].name;
+      } else if (email?.mentioned_properties && Array.isArray(email.mentioned_properties) && email.mentioned_properties.length > 0) {
+        const firstProp = email.mentioned_properties[0];
+        if (firstProp && typeof firstProp === 'string' && firstProp.trim()) {
+          propertyName = firstProp.trim();
+        }
+      }
+
+      return {
+        id: email?.id || 'unknown',
+        time: formatTimeAgo(email?.received_at || new Date().toISOString()),
+        type: getActivityType(email),
+        subject: email?.subject || 'No Subject',
+        property: propertyName,
+        urgencyLevel: email?.urgency_level || 'low',
+        urgencyScore: email?.urgency_score || 0,
+        aiTag: email?.ai_tag || null,
+        category: email?.triage_category || null,
+        unread: email?.unread || false,
+        handled: email?.handled || false
+      };
+    } catch (error) {
+      console.warn('Error processing recent activity for email:', error, email?.id);
+      return {
+        id: email?.id || 'error',
+        time: 'Unknown',
+        type: 'general',
+        subject: 'Error processing email',
+        property: 'Unknown',
+        urgencyLevel: 'low',
+        urgencyScore: 0,
+        aiTag: null,
+        category: null,
+        unread: false,
+        handled: false
+      };
+    }
+  });
 
   // Process AI insights summary with safe fallbacks
   emails.forEach(email => {
-    if (email.ai_insights && Array.isArray(email.ai_insights)) {
-      dashboard.aiInsightsSummary.totalInsights += email.ai_insights.length;
-      
-      email.ai_insights.forEach((insight: any) => {
-        if (insight && typeof insight === 'object') {
-          if (insight.priority === 'critical') {
-            dashboard.aiInsightsSummary.criticalInsights++;
+    try {
+      if (email?.ai_insights && Array.isArray(email.ai_insights)) {
+        dashboard.aiInsightsSummary.totalInsights += email.ai_insights.length;
+        
+        email.ai_insights.forEach((insight: any) => {
+          try {
+            if (insight && typeof insight === 'object') {
+              if (insight.priority === 'critical') {
+                dashboard.aiInsightsSummary.criticalInsights++;
+              }
+              if (insight.type === 'follow_up') {
+                dashboard.aiInsightsSummary.followUps++;
+              }
+              if (insight.type === 'recurring') {
+                dashboard.aiInsightsSummary.recurringIssues++;
+              }
+              if (insight.type === 'compliance') {
+                dashboard.aiInsightsSummary.complianceMatters++;
+              }
+            }
+          } catch (insightError) {
+            console.warn('Error processing insight:', insightError);
           }
-          if (insight.type === 'follow_up') {
-            dashboard.aiInsightsSummary.followUps++;
-          }
-          if (insight.type === 'recurring') {
-            dashboard.aiInsightsSummary.recurringIssues++;
-          }
-          if (insight.type === 'compliance') {
-            dashboard.aiInsightsSummary.complianceMatters++;
-          }
-        }
-      });
+        });
+      }
+    } catch (error) {
+      console.warn('Error processing AI insights for email:', error, email?.id);
     }
   });
 
   // Generate enhanced smart suggestions
-  dashboard.smartSuggestions = generateSmartSuggestions(emails, dashboard);
+  try {
+    dashboard.smartSuggestions = generateSmartSuggestions(emails, dashboard);
+  } catch (error) {
+    console.warn('Error generating smart suggestions:', error);
+    dashboard.smartSuggestions = [];
+  }
 
   return dashboard;
 }
 
 function getActivityType(email: any): string {
-  const urgencyLevel = email.urgency_level || 'low';
-  if (urgencyLevel === 'critical') return 'critical';
-  if (urgencyLevel === 'high') return 'urgent';
-  if (email.ai_tag) return email.ai_tag.toLowerCase().replace(/\s+/g, '_');
-  if (email.triage_category) return email.triage_category.toLowerCase().replace(/\s+/g, '_');
-  if (email.tag) return email.tag.toLowerCase().replace(/\s+/g, '_');
-  return 'general';
+  try {
+    const urgencyLevel = email?.urgency_level || 'low';
+    if (urgencyLevel === 'critical') return 'critical';
+    if (urgencyLevel === 'high') return 'urgent';
+    if (email?.ai_tag && typeof email.ai_tag === 'string') {
+      return email.ai_tag.toLowerCase().replace(/\s+/g, '_');
+    }
+    if (email?.triage_category && typeof email.triage_category === 'string') {
+      return email.triage_category.toLowerCase().replace(/\s+/g, '_');
+    }
+    return 'general';
+  } catch (error) {
+    console.warn('Error getting activity type:', error);
+    return 'general';
+  }
 }
 
 function calculateCategoryTrend(categoryEmails: any[]): 'up' | 'down' | 'stable' {
-  // Simple trend calculation based on recent vs older emails
-  const now = Date.now();
-  const oneDayAgo = now - (24 * 60 * 60 * 1000);
-  
-  const recentCount = categoryEmails.filter(e => new Date(e.received_at).getTime() > oneDayAgo).length;
-  const olderCount = categoryEmails.length - recentCount;
-  
-  if (recentCount > olderCount * 1.5) return 'up';
-  if (recentCount < olderCount * 0.5) return 'down';
-  return 'stable';
+  try {
+    if (!categoryEmails || categoryEmails.length === 0) return 'stable';
+    
+    // Simple trend calculation based on recent vs older emails
+    const now = Date.now();
+    const oneDayAgo = now - (24 * 60 * 60 * 1000);
+    
+    const recentCount = categoryEmails.filter(e => {
+      try {
+        return e?.received_at && new Date(e.received_at).getTime() > oneDayAgo;
+      } catch {
+        return false;
+      }
+    }).length;
+    
+    const olderCount = categoryEmails.length - recentCount;
+    
+    if (recentCount > olderCount * 1.5) return 'up';
+    if (recentCount < olderCount * 0.5) return 'down';
+    return 'stable';
+  } catch (error) {
+    console.warn('Error calculating category trend:', error);
+    return 'stable';
+  }
 }
 
 function generateSmartSuggestions(emails: any[], dashboard: any) {
