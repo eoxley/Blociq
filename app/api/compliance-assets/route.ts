@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
       .from('compliance_assets')
       .select('*')
       .order('category', { ascending: true })
-      .order('title', { ascending: true })
+      .order('name', { ascending: true })
 
     if (error) {
       console.error('Error fetching compliance assets:', error)

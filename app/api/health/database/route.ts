@@ -1,63 +1,70 @@
-import { NextResponse } from 'next/server';
-import { getDatabaseHealth, ensureRequiredTables } from '@/lib/database-setup';
+import { NextResponse } from 'next/server'
+import { createClient } from '@/utils/supabase/server'
+import { cookies } from 'next/headers'
 
 export async function GET() {
   try {
-    console.log('🔍 Database health check requested');
-    
-    // Ensure required tables exist
-    const tableSetup = await ensureRequiredTables();
-    console.log('📋 Table setup result:', tableSetup);
-    
-    // Get comprehensive database health
-    const health = await getDatabaseHealth();
-    console.log('🏥 Database health status:', health);
-    
-    return NextResponse.json({
-      success: true,
-      timestamp: new Date().toISOString(),
-      health: health,
-      tableSetup: tableSetup,
-      recommendations: getRecommendations(health, tableSetup)
-    });
-    
-  } catch (error) {
-    console.error('❌ Database health check failed:', error);
-    return NextResponse.json({
-      success: false,
-      timestamp: new Date().toISOString(),
-      error: 'Database health check failed',
-      message: String(error)
-    }, { status: 500 });
-  }
-}
+    const supabase = createClient(cookies())
 
-function getRecommendations(health: any, tableSetup: any): string[] {
-  const recommendations: string[] = [];
-  
-  if (!health.healthy) {
-    recommendations.push('Some required database tables are missing');
+    // Test basic database connectivity
+    const { data: testData, error: testError } = await supabase
+      .from('buildings')
+      .select('id, name')
+      .limit(1)
+
+    if (testError) {
+      console.error('Database connection error:', testError)
+      return NextResponse.json({
+        status: 'error',
+        message: 'Database connection failed',
+        error: testError.message || 'Unknown error',
+        code: testError.code || null,
+        details: testError.details || null,
+        hint: testError.hint || null
+      }, { status: 500 })
+    }
+
+    // Test compliance tables
+    const { data: complianceAssets, error: assetsError } = await supabase
+      .from('compliance_assets')
+      .select('id, name, category')
+      .limit(1)
+
+    const { data: buildingComplianceAssets, error: buildingAssetsError } = await supabase
+      .from('building_compliance_assets')
+      .select('id, building_id, compliance_asset_id')
+      .limit(1)
+
+    return NextResponse.json({
+      status: 'healthy',
+      message: 'Database connection successful',
+      tables: {
+        buildings: {
+          accessible: !testError,
+          recordCount: testData?.length || 0,
+          error: null
+        },
+        compliance_assets: {
+          accessible: !assetsError,
+          recordCount: complianceAssets?.length || 0,
+          error: assetsError?.message || null
+        },
+        building_compliance_assets: {
+          accessible: !buildingAssetsError,
+          recordCount: buildingComplianceAssets?.length || 0,
+          error: buildingAssetsError?.message || null
+        }
+      },
+      timestamp: new Date().toISOString()
+    })
+
+  } catch (error) {
+    console.error('Health check error:', error)
+    return NextResponse.json({
+      status: 'error',
+      message: 'Health check failed',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    }, { status: 500 })
   }
-  
-  if (!tableSetup.communicationsLog) {
-    recommendations.push('communications_log table needs to be created');
-  }
-  
-  if (!tableSetup.buildingComplianceAssets) {
-    recommendations.push('building_compliance_assets table needs to be created');
-  }
-  
-  if (health.tables.buildings && health.tables.buildings.rowCount === 0) {
-    recommendations.push('No buildings found - consider adding your first building');
-  }
-  
-  if (health.tables.users && health.tables.users.rowCount === 0) {
-    recommendations.push('No users found - authentication may not be set up');
-  }
-  
-  if (recommendations.length === 0) {
-    recommendations.push('Database appears to be healthy and properly configured');
-  }
-  
-  return recommendations;
 }
