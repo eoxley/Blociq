@@ -18,6 +18,7 @@ import BlocIQLogo from '@/components/BlocIQLogo'
 import { toast } from 'sonner'
 import DocumentQA from '@/components/DocumentQA'
 import DocumentSummary, { DocumentSummary as DocumentSummaryType } from '@/components/DocumentSummary'
+import LeaseDocumentQA, { extractLeaseMetadata } from '@/components/LeaseDocumentQA'
 import { checkOutlookConnection, fetchOutlookEvents, getOutlookAuthUrl } from '@/lib/outlookUtils'
 import { normalizeEventTimes, formatInZone, getClientZone } from '@/lib/time'
 import { getTimeBasedGreeting } from '@/utils/greeting'
@@ -2204,21 +2205,30 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               
               {/* Q&A View */}
               {currentView === 'qa' && (
-                <DocumentQA
-                  documentText={activeDocument.extractedText}
-                  documentMetadata={{
-                    filename: activeDocument.filename,
-                    documentType: activeDocument.documentType,
-                    textLength: activeDocument.textLength,
-                    property: activeDocument.property,
-                    parties: activeDocument.parties,
-                    premium: activeDocument.premium,
-                    term: activeDocument.term
-                  }}
-                  onQuestionSubmit={(question) => {
-                    console.log('🤔 Q&A Question asked:', question);
-                  }}
-                />
+                <>
+                  {(activeDocument.documentType === 'lease' || activeDocument.documentType === 'lease_agreement') ? (
+                    <LeaseDocumentQA
+                      extractedText={activeDocument.extractedText}
+                      documentMetadata={extractLeaseMetadata(activeDocument.extractedText, activeDocument.filename)}
+                    />
+                  ) : (
+                    <DocumentQA
+                      documentText={activeDocument.extractedText}
+                      documentMetadata={{
+                        filename: activeDocument.filename,
+                        documentType: activeDocument.documentType,
+                        textLength: activeDocument.textLength,
+                        property: activeDocument.property,
+                        parties: activeDocument.parties,
+                        premium: activeDocument.premium,
+                        term: activeDocument.term
+                      }}
+                      onQuestionSubmit={(question) => {
+                        console.log('🤔 Q&A Question asked:', question);
+                      }}
+                    />
+                  )}
+                </>
               )}
             </div>
           </div>
