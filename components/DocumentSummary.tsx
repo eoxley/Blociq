@@ -405,7 +405,7 @@ export default function DocumentSummary({ summary, onStartQA }: DocumentSummaryP
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-center sm:text-left">
-              <h3 className="font-semibold text-gray-900 text-lg mb-1">Ready to analyze this document further?</h3>
+              <h3 className="font-semibold text-gray-900 text-lg mb-1">Ready to summarise this document further?</h3>
               <p className="text-sm text-gray-600">
                 Ask specific questions about repairs, rent, obligations, termination clauses, and more. 
                 Our AI will provide detailed answers with proper legal citations.

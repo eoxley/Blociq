@@ -11,7 +11,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-interface EnhancedAnalysisRequest {
+interface EnhancedSummaryRequest {
   question: string;
   documentText: string;
   documentMetadata?: {
@@ -22,7 +22,7 @@ interface EnhancedAnalysisRequest {
   };
 }
 
-interface LeaseAnalysisResponse {
+interface LeaseSummaryResponse {
   answer: string;
   citations: Array<{
     clause: string;
@@ -47,9 +47,9 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
   
   try {
-    console.log('🔍 Enhanced Document Analysis API: Processing request...');
+    console.log('🔍 Enhanced Document Summary API: Processing request...');
     
-    const { question, documentText, documentMetadata }: EnhancedAnalysisRequest = await request.json();
+    const { question, documentText, documentMetadata }: EnhancedSummaryRequest = await request.json();
     
     if (!question || !documentText) {
       return NextResponse.json({
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
     );
     
     // Step 6: Format the response
-    const response: LeaseAnalysisResponse = {
+    const response: LeaseSummaryResponse = {
       answer: aiAnalysis.answer || "Unable to provide a specific answer based on the available document content.",
       citations: aiAnalysis.citations || [],
       confidence: confidence,

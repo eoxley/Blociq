@@ -189,7 +189,7 @@ const DocumentQA: React.FC<DocumentQAProps> = ({
         <CardHeader>
           <CardTitle className="flex items-center space-x-3">
             <FileText className="h-6 w-6 text-blue-600" />
-            <span>Document Analysis</span>
+            <span>Document Summary</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -399,10 +399,10 @@ const DocumentQA: React.FC<DocumentQAProps> = ({
           <CardContent className="pt-6">
             <div className="text-center space-y-3">
               <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto" />
-              <h3 className="text-lg font-medium text-gray-900">Ready to Analyze</h3>
+              <h3 className="text-lg font-medium text-gray-900">Ready to Summarise</h3>
               <p className="text-gray-600 max-w-2xl mx-auto">
                 Ask any question about this lease document. I can help you understand repairs and maintenance, 
-                rent payments, alteration rights, tenant responsibilities, and more. Use the common questions 
+                rent payments, alteration rights, leaseholder responsibilities, and more. Use the common questions 
                 above or type your own specific question.
               </p>
             </div>

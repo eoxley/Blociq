@@ -61,7 +61,7 @@ export default function LeaseDocumentQA({ extractedText, documentMetadata }: Lea
       category: "Repairs & Maintenance",
       questions: [
         "Who is responsible for window repairs and maintenance?",
-        "What are the tenant's repair obligations?",
+        "What are the leaseholder's repair obligations?",
         "Who maintains the common parts?",
         "What happens if there's damage to the building?"
       ]
@@ -71,14 +71,14 @@ export default function LeaseDocumentQA({ extractedText, documentMetadata }: Lea
       questions: [
         "What is the annual rent and when is it due?",
         "How is the service charge calculated?",
-        "What is the tenant's proportion of service costs?",
+        "What is the leaseholder's proportion of service costs?",
         "When are rent reviews and how do they work?"
       ]
     },
     {
       category: "Alterations & Use",
       questions: [
-        "Can the tenant make alterations to the flat?",
+        "Can the leaseholder make alterations to the flat?",
         "What consent is needed for internal changes?",
         "What is the property's permitted use?",
         "Are there restrictions on business use?"
@@ -87,8 +87,8 @@ export default function LeaseDocumentQA({ extractedText, documentMetadata }: Lea
     {
       category: "Rights & Restrictions",
       questions: [
-        "What rights does the tenant have over common parts?",
-        "Can the tenant use the bicycle storage area?",
+        "What rights does the leaseholder have over common parts?",
+        "Can the leaseholder use the bicycle storage area?",
         "Are pets allowed in the property?",
         "What are the noise restrictions?"
       ]
@@ -169,7 +169,7 @@ export default function LeaseDocumentQA({ extractedText, documentMetadata }: Lea
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-xl">
             <Building2 className="h-6 w-6 text-blue-600" />
-            Enhanced Lease Analysis: {documentMetadata.property || 'Property Document'}
+            Enhanced Lease Summary: {documentMetadata.property || 'Property Document'}
           </CardTitle>
           {(documentMetadata.lessor || documentMetadata.lessee || documentMetadata.term || documentMetadata.premium) && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm mt-4">
@@ -274,7 +274,7 @@ export default function LeaseDocumentQA({ extractedText, documentMetadata }: Lea
       {/* Q&A History */}
       {qaHistory.length > 0 && (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900">Lease Analysis Results</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Lease Summary Results</h3>
           {qaHistory.map((qa, index) => (
             <Card key={index} className="border-l-4 border-l-green-500 shadow-sm">
               <CardHeader className="pb-3">
@@ -300,7 +300,7 @@ export default function LeaseDocumentQA({ extractedText, documentMetadata }: Lea
                   <div>
                     <h4 className="font-semibold text-sm mb-3 flex items-center gap-2 text-green-700">
                       <Scale className="h-4 w-4" />
-                      Legal Analysis:
+                      Legal Summary:
                     </h4>
                     <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
                       <p className="text-green-900 leading-relaxed whitespace-pre-wrap text-sm">{qa.answer}</p>
@@ -364,13 +364,13 @@ export default function LeaseDocumentQA({ extractedText, documentMetadata }: Lea
         <Card className="border-dashed border-2 border-gray-300">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <Building2 className="h-20 w-20 text-gray-400 mb-6" />
-            <h3 className="font-semibold text-gray-900 mb-2 text-lg">Enhanced Lease Document Analysis Ready</h3>
+            <h3 className="font-semibold text-gray-900 mb-2 text-lg">Enhanced Lease Document Summary Ready</h3>
             <p className="text-gray-600 text-sm mb-6 max-w-md">
-              This specialized system analyzes your lease document using the actual text, UK leasehold law, and 
+              This specialized system summarises your lease document using the actual text, UK leasehold law, and 
               provides practical implications for block management. Get detailed legal analysis with exact clause citations.
             </p>
             <div className="text-xs text-gray-500 bg-gray-50 p-4 rounded-lg max-w-2xl">
-              <div className="font-medium mb-2">Enhanced Analysis Features:</div>
+              <div className="font-medium mb-2">Enhanced Summary Features:</div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-left">
                 <div>• Answers based only on lease text</div>
                 <div>• Exact clause and schedule citations</div>
