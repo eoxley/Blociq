@@ -2,51 +2,29 @@
 
 import { useEffect, useState } from 'react'
 import { Wand2 } from 'lucide-react'
+import AskBlocChat from '../../components/outlook-addin/AskBlocChat'
+import GenerateReplyModal from '../../components/outlook-addin/GenerateReplyModal'
+import BlocIQLogo from '../../components/BlocIQLogo'
 
-// Minimal BlocIQ Logo component
-function BlocIQLogo({ className = '', size = 24 }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-    >
-      <path
-        d="M3 12L12 3L21 12V20C21 20.5523 20.5523 21 20 21H4C3.44772 21 3 20.5523 3 20V12Z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-      <rect
-        x="9"
-        y="15"
-        width="6"
-        height="6"
-        stroke="currentColor"
-        strokeWidth="2"
-        fill="none"
-      />
-      <circle cx="19" cy="2" r="2.5" fill="currentColor" />
-      <rect x="18" y="6" width="2" height="2" stroke="currentColor" strokeWidth="1" fill="none" />
-    </svg>
-  )
-}
-
-export default function MinimalOutlookAddin() {
+export default function OutlookAddin() {
   const [isOfficeReady, setIsOfficeReady] = useState(false)
+  // Authentication removed - add-in works without authentication
+  const isAuthenticated = true
   const [showReplyModal, setShowReplyModal] = useState(false)
 
   useEffect(() => {
     // Initialize Office.js
-    if (typeof window !== 'undefined' && typeof (window as any).Office !== 'undefined') {
-      (window as any).Office.onReady((info: any) => {
+    if (typeof Office !== 'undefined') {
+      Office.onReady((info) => {
         console.log('Office.js ready:', info)
         setIsOfficeReady(true)
+        
+        // Auto-detect if this is a reply context
+        if (window.location.href.includes('reply') || window.location.href.includes('compose')) {
+          setShowReplyModal(true)
+        }
+        
+        // No authentication required
       })
     } else {
       // For testing in browser without Office.js
@@ -55,13 +33,7 @@ export default function MinimalOutlookAddin() {
     }
   }, [])
 
-  const handleGenerateReply = () => {
-    alert('AI Reply Generation - Feature Coming Soon!')
-  }
-
-  const handleAskQuestion = () => {
-    alert('AI Chat - Feature Coming Soon!')
-  }
+  // Authentication functions removed - no longer needed
 
   if (!isOfficeReady) {
     return (
@@ -75,8 +47,10 @@ export default function MinimalOutlookAddin() {
     )
   }
 
+  // Main add-in interface - works with or without authentication
   return (
     <div className="h-screen bg-gradient-to-br from-[#f8fafc] via-white to-[#f1f5f9] flex flex-col">
+      {/* Deployment test - force rebuild */}
       {/* Enhanced Header with Master Branding */}
       <div className="flex-shrink-0 bg-gradient-to-r from-[#6A00F5] via-[#7A2BE2] to-[#8A2BE2] text-white p-4 relative overflow-hidden">
         {/* Background Pattern */}
@@ -113,7 +87,7 @@ export default function MinimalOutlookAddin() {
       {/* Enhanced Quick Actions */}
       <div className="flex-shrink-0 p-6 bg-white border-b border-gray-100">
         <button 
-          onClick={handleGenerateReply}
+          onClick={() => setShowReplyModal(true)}
           className="w-full bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2] hover:from-[#5A00E5] hover:to-[#7A1BD2] text-white py-4 px-6 rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 font-semibold text-sm shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 border border-white/20 backdrop-blur-sm"
         >
           <div className="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center">
@@ -130,29 +104,11 @@ export default function MinimalOutlookAddin() {
         </div>
       </div>
 
-      {/* Chat Interface */}
-      <div className="flex-1 overflow-hidden bg-gradient-to-b from-white via-[#fafbfc] to-white p-6">
-        <div className="h-full bg-white rounded-3xl shadow-lg border border-gray-100 p-6 flex flex-col">
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                <BlocIQLogo size={32} className="text-white" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">BlocIQ AI Assistant</h3>
-              <p className="text-gray-600 text-sm mb-4">
-                Your property management AI assistant is ready to help with lease analysis, compliance tracking, and more.
-              </p>
-              <button 
-                onClick={handleAskQuestion}
-                className="px-6 py-3 bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2] text-white rounded-xl font-semibold text-sm shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300"
-              >
-                Start Conversation
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Enhanced Chat Interface */}
+      <div className="flex-1 overflow-hidden bg-gradient-to-b from-white via-[#fafbfc] to-white">
+        <AskBlocChat />
       </div>
-
+        
       {/* Enhanced Footer */}
       <div className="flex-shrink-0 px-6 py-4 bg-gradient-to-r from-gray-50 via-white to-gray-50 border-t border-gray-100">
         <div className="flex items-center justify-center gap-3">
@@ -165,6 +121,13 @@ export default function MinimalOutlookAddin() {
           <div className="w-1 h-1 bg-[#6A00F5] rounded-full animate-pulse"></div>
         </div>
       </div>
+
+        {/* Generate Reply Modal */}
+        <GenerateReplyModal 
+          isOpen={showReplyModal}
+          onClose={() => setShowReplyModal(false)}
+          autoTrigger={window.location.href.includes('reply') || window.location.href.includes('compose')}
+        />
     </div>
   )
 }

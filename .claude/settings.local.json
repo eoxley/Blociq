@@ -28,7 +28,8 @@
       "Bash(open http://localhost:3001/inbox-overview)",
       "WebFetch(domain:vercel.com)",
       "Bash(git checkout:*)",
-      "Bash(npm run deploy:vercel:*)"
+      "Bash(npm run deploy:vercel:*)",
+      "WebFetch(domain:blociq-h3xv-qp7exu5um-eleanoroxley-9774s-projects.vercel.app)"
     ],
     "deny": [],
     "ask": []
