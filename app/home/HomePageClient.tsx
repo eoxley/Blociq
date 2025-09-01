@@ -237,12 +237,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
           
           // Set the summary and switch to summary view
           setDocumentSummary(summary);
-          setActiveDocument(processedDoc);
           setCurrentView('summary');
           
-          toast.success(`Document summary generated for ${processedDoc.filename}`, {
-            description: `Analysis confidence: ${Math.round(summary.confidence * 100)}%`
-          });
+          return summary; // Return summary for further processing
         } else {
           throw new Error(result.error || 'Failed to generate summary');
         }
@@ -254,12 +251,13 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       console.error('❌ Failed to generate document summary:', error);
       
       // Fallback to direct Q&A if summary fails
-      setActiveDocument(processedDoc);
       setCurrentView('qa');
       
       toast.error('Summary generation failed', {
         description: 'Proceeding directly to Q&A system'
       });
+      
+      throw error; // Re-throw for caller to handle
     }
   };
 
@@ -696,9 +694,6 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               
               setProcessedDocuments(prev => [processedDoc, ...prev]);
               console.log('📄 Added document to Q&A system:', processedDoc.filename);
-              
-              // Generate document summary for enhanced analysis
-              await generateDocumentSummary(processedDoc);
             } else {
               console.log(`⚠️ File processing failed - insufficient text: ${uploadedFile.name}`)
               setUploadStatus(`⚠️ ${uploadedFile.name} - No meaningful text extracted`)
@@ -2157,16 +2152,16 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                   className="bg-white rounded-lg shadow-md border hover:shadow-lg transition-all duration-200 cursor-pointer"
                   onClick={async () => {
                     setActiveDocument(doc);
+                    setShowDocumentQA(true);
                     
-                    // Try to generate/retrieve summary first, fallback to Q&A if it fails
+                    // Try to generate summary first, fallback to Q&A if it fails
                     try {
                       await generateDocumentSummary(doc);
+                      // generateDocumentSummary now sets the view to 'summary' automatically
                     } catch (error) {
                       // If summary generation fails, go directly to Q&A
                       setCurrentView('qa');
                     }
-                    
-                    setShowDocumentQA(true);
                   }}
                 >
                   <div className="p-4">
