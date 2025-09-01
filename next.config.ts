@@ -12,6 +12,12 @@ const nextConfig: NextConfig = {
     // your project has TypeScript errors.
     ignoreBuildErrors: true,
   },
+  
+  // Completely disable source maps in all environments
+  productionBrowserSourceMaps: false,
+  generateBuildId: async () => {
+    return 'build-' + Date.now()
+  },
   // Temporarily disabled to fix Next.js 15.4.2 webpack minification bug
   // experimental: {
   //   optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
@@ -116,19 +122,18 @@ const nextConfig: NextConfig = {
       ignored: /node_modules/,
     };
     
-    // Handle potential webpack compatibility issues - disable source maps in production
-    if (!dev) {
-      config.devtool = false;
-      config.optimization = {
-        ...config.optimization,
-        splitChunks: {
-          ...config.optimization.splitChunks,
-          hidePathInfo: true,
-        },
-      };
-    } else {
-      config.devtool = 'eval-source-map';
-    }
+    // Completely disable source maps and source map references
+    config.devtool = false;
+    config.optimization = {
+      ...config.optimization,
+      removeAvailableModules: false,
+      removeEmptyChunks: false,
+      splitChunks: {
+        ...config.optimization.splitChunks,
+        hidePathInfo: true,
+        filename: '[name].[contenthash].js',
+      }
+    };
     
     // Handle potential webpack compatibility issues
     config.mode = dev ? 'development' : 'production';
@@ -240,8 +245,10 @@ const nextConfig: NextConfig = {
   // Add output configuration for better deployment
   output: 'standalone',
   
-  // Disable source maps in production to prevent 404 errors
-  productionBrowserSourceMaps: false,
+  // Enhanced experimental features
+  experimental: {
+    serverComponentsExternalPackages: ['tesseract.js'],
+  },
 };
 
 export default nextConfig;

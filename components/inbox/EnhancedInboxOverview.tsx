@@ -125,6 +125,8 @@ const EnhancedInboxOverview: React.FC = () => {
         throw new Error('Please log in to view the inbox dashboard');
       }
 
+      console.log('🚀 Making dashboard API call...', `/api/inbox/dashboard?timeRange=${timeRange}`);
+      
       const response = await fetch(`/api/inbox/dashboard?timeRange=${timeRange}`, {
         method: 'GET',
         credentials: 'include', // This ensures cookies are sent
@@ -133,12 +135,15 @@ const EnhancedInboxOverview: React.FC = () => {
         }
       });
       
+      console.log('📊 Dashboard API response status:', response.status, response.statusText);
+      
       if (!response.ok) {
         if (response.status === 401) {
           throw new Error('Authentication required - please log in again');
         }
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Failed to fetch dashboard data: ${response.status}`);
+        console.error('❌ Dashboard API error response:', errorData);
+        throw new Error(errorData.message || errorData.details || `Failed to fetch dashboard data: ${response.status}`);
       }
 
       const result = await response.json();
