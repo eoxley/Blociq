@@ -47,6 +47,8 @@ export async function GET(req: NextRequest) {
     console.log(`📅 Fetching emails from ${startDate.toISOString()} to ${now.toISOString()}`);
 
     // Query the incoming_emails table with safe column selection
+    // Note: Some advanced AI columns may not exist in all database instances
+    console.log('🔍 Attempting to query incoming_emails table...');
     const { data: emails, error: emailsError } = await supabase
       .from('incoming_emails')
       .select(`
@@ -57,28 +59,100 @@ export async function GET(req: NextRequest) {
         received_at,
         is_read,
         handled,
-        building_id,
-        urgency_level,
-        urgency_score,
-        mentioned_properties,
-        ai_insights,
-        suggested_actions,
-        ai_tag,
-        triage_category
+        building_id
       `)
       .gte('received_at', startDate.toISOString())
       .order('received_at', { ascending: false })
       .limit(1000); // Add reasonable limit to prevent memory issues
 
+    console.log('📊 Basic email query result:', { 
+      emailCount: emails?.length || 0, 
+      hasError: !!emailsError,
+      errorDetails: emailsError?.message
+    });
+
+    // Try to get enhanced AI fields if they exist (graceful fallback)
+    let enhancedEmails = emails;
+    if (emails && emails.length > 0) {
+      try {
+        const { data: enhancedData } = await supabase
+          .from('incoming_emails')
+          .select(`
+            id,
+            urgency_level,
+            urgency_score,
+            mentioned_properties,
+            ai_insights,
+            suggested_actions,
+            ai_tag,
+            triage_category
+          `)
+          .gte('received_at', startDate.toISOString())
+          .limit(1000);
+
+        // Merge enhanced data with basic email data
+        if (enhancedData) {
+          const enhancedMap = new Map(enhancedData.map(e => [e.id, e]));
+          enhancedEmails = emails.map(email => ({
+            ...email,
+            urgency_level: enhancedMap.get(email.id)?.urgency_level || 'low',
+            urgency_score: enhancedMap.get(email.id)?.urgency_score || 0,
+            mentioned_properties: enhancedMap.get(email.id)?.mentioned_properties || [],
+            ai_insights: enhancedMap.get(email.id)?.ai_insights || [],
+            suggested_actions: enhancedMap.get(email.id)?.suggested_actions || [],
+            ai_tag: enhancedMap.get(email.id)?.ai_tag || 'General',
+            triage_category: enhancedMap.get(email.id)?.triage_category || 'General'
+          }));
+        }
+      } catch (enhancedError) {
+        console.warn('⚠️ Enhanced AI fields not available, using basic email data:', enhancedError);
+        // Continue with basic email data, adding default values for missing fields
+        enhancedEmails = emails.map(email => ({
+          ...email,
+          urgency_level: 'low',
+          urgency_score: 0,
+          mentioned_properties: [],
+          ai_insights: [],
+          suggested_actions: [],
+          ai_tag: 'General',
+          triage_category: 'General'
+        }));
+      }
+    }
+
     if (emailsError) {
       console.error('❌ Error fetching emails:', emailsError);
+      
+      // Handle specific database errors gracefully
+      if (emailsError.message?.includes('relation') && emailsError.message?.includes('does not exist')) {
+        // Table doesn't exist - return empty dashboard
+        return NextResponse.json({
+          success: true,
+          data: createEmptyDashboard(),
+          timeRange,
+          message: 'No email data available - inbox table not found',
+          generatedAt: new Date().toISOString()
+        });
+      }
+      
+      if (emailsError.message?.includes('permission') || emailsError.message?.includes('policy')) {
+        // Permission error
+        return NextResponse.json({
+          error: 'Access denied',
+          message: 'You do not have permission to access email data. Please contact your administrator.',
+          details: emailsError.message,
+          timestamp: new Date().toISOString()
+        }, { status: 403 });
+      }
+      
+      // For other errors, throw to be caught by main catch block
       throw emailsError;
     }
 
-    console.log(`✅ Fetched ${emails?.length || 0} emails for dashboard`);
+    console.log(`✅ Fetched ${enhancedEmails?.length || 0} emails for dashboard`);
 
     // Get building information for the emails
-    const buildingIds = [...new Set(emails?.map(e => e.building_id).filter(Boolean) || [])];
+    const buildingIds = [...new Set(enhancedEmails?.map(e => e.building_id).filter(Boolean) || [])];
     let buildingsMap = {};
     
     if (buildingIds.length > 0) {
@@ -100,7 +174,7 @@ export async function GET(req: NextRequest) {
     // Process data for dashboard with enhanced triage integration
     let dashboard;
     try {
-      dashboard = processDashboardData(emails || [], buildingsMap);
+      dashboard = processDashboardData(enhancedEmails || [], buildingsMap);
       console.log('✅ Dashboard data processed:', {
         total: dashboard.total,
         urgent: dashboard.urgent,
@@ -112,10 +186,10 @@ export async function GET(req: NextRequest) {
       console.error('❌ Error processing dashboard data:', processingError);
       // Return a minimal dashboard with safe defaults
       dashboard = {
-        total: emails?.length || 0,
-        unread: emails?.filter(e => e?.is_read === false).length || 0,
-        handled: emails?.filter(e => e?.handled).length || 0,
-        urgent: emails?.filter(e => ['critical', 'high'].includes(e?.urgency_level || 'low')).length || 0,
+        total: enhancedEmails?.length || 0,
+        unread: enhancedEmails?.filter(e => e?.is_read === false).length || 0,
+        handled: enhancedEmails?.filter(e => e?.handled).length || 0,
+        urgent: enhancedEmails?.filter(e => ['critical', 'high'].includes(e?.urgency_level || 'low')).length || 0,
         categories: {},
         propertyBreakdown: {},
         recentActivity: [],
@@ -552,6 +626,33 @@ function generateSmartSuggestions(emails: any[], dashboard: any) {
   }
 
   return suggestions.slice(0, 6); // Limit to top 6 suggestions
+}
+
+function createEmptyDashboard() {
+  return {
+    total: 0,
+    unread: 0,
+    handled: 0,
+    urgent: 0,
+    categories: {},
+    propertyBreakdown: {},
+    recentActivity: [],
+    smartSuggestions: [],
+    urgencyDistribution: {
+      critical: 0,
+      high: 0,
+      medium: 0,
+      low: 0
+    },
+    topProperties: [],
+    aiInsightsSummary: {
+      totalInsights: 0,
+      criticalInsights: 0,
+      followUps: 0,
+      recurringIssues: 0,
+      complianceMatters: 0
+    }
+  };
 }
 
 function formatTimeAgo(dateTime: string): string {

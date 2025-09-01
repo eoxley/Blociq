@@ -117,7 +117,18 @@ const nextConfig: NextConfig = {
     };
     
     // Handle potential webpack compatibility issues - disable source maps in production
-    config.devtool = dev ? 'eval-source-map' : false;
+    if (!dev) {
+      config.devtool = false;
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          ...config.optimization.splitChunks,
+          hidePathInfo: true,
+        },
+      };
+    } else {
+      config.devtool = 'eval-source-map';
+    }
     
     // Handle potential webpack compatibility issues
     config.mode = dev ? 'development' : 'production';
