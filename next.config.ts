@@ -123,10 +123,8 @@ const nextConfig: NextConfig = {
       ignored: /node_modules/,
     };
     
-    // Only disable source maps - don't break optimization
-    if (!dev) {
-      config.devtool = false;
-    }
+    // Completely disable source maps in all environments
+    config.devtool = false;
     
     // Handle potential webpack compatibility issues
     config.mode = dev ? 'development' : 'production';
