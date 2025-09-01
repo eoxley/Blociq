@@ -20,15 +20,15 @@
   <Description DefaultValue="AI-powered property management assistant for Outlook. Get instant help with emails, compliance, and property queries."/>
 
   <!-- Icon for your add-in. Used on installation screens and the add-ins dialog. -->
-  <IconUrl DefaultValue="https://blociq-h3xv-kv2vni6q1-eleanoroxley-9774s-projects.vercel.app/outlook-addin/icon-32.png"/>
-  <HighResolutionIconUrl DefaultValue="https://blociq-h3xv-kv2vni6q1-eleanoroxley-9774s-projects.vercel.app/outlook-addin/icon-80.png"/>
+  <IconUrl DefaultValue="https://blociq-h3xv-ceioob7bl-eleanoroxley-9774s-projects.vercel.app/outlook-addin/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://blociq-h3xv-ceioob7bl-eleanoroxley-9774s-projects.vercel.app/outlook-addin/icon-80.png"/>
 
   <!--If you plan to submit this add-in to the Office Store, uncomment the SupportUrl element below-->
   <SupportUrl DefaultValue="https://blociq-frontend.vercel.app/support" />
 
   <!-- Domains that will be allowed when navigating. For example, if you use ShowTaskpane and then have an href link, navigation will only be allowed if the domain is on this list. -->
   <AppDomains>
-    <AppDomain>https://blociq-h3xv-kv2vni6q1-eleanoroxley-9774s-projects.vercel.app</AppDomain>
+    <AppDomain>https://blociq-h3xv-ceioob7bl-eleanoroxley-9774s-projects.vercel.app</AppDomain>
   </AppDomains>
   <!--End Basic Settings. -->
 
@@ -44,7 +44,7 @@
   <FormSettings>
     <Form xsi:type="ItemRead">
       <DesktopSettings>
-        <SourceLocation DefaultValue="https://blociq-h3xv-kv2vni6q1-eleanoroxley-9774s-projects.vercel.app/outlook-addin"/>
+        <SourceLocation DefaultValue="https://blociq-h3xv-ceioob7bl-eleanoroxley-9774s-projects.vercel.app/outlook-addin"/>
         <RequestedHeight>450</RequestedHeight>
       </DesktopSettings>
     </Form>
@@ -122,12 +122,12 @@
 
       <Resources>
         <bt:Images>
-          <bt:Image id="Icon.16x16" DefaultValue="https://blociq-h3xv-kv2vni6q1-eleanoroxley-9774s-projects.vercel.app/outlook-addin/icon-16.png"/>
-          <bt:Image id="Icon.32x32" DefaultValue="https://blociq-h3xv-kv2vni6q1-eleanoroxley-9774s-projects.vercel.app/outlook-addin/icon-32.png"/>
-          <bt:Image id="Icon.80x80" DefaultValue="https://blociq-h3xv-kv2vni6q1-eleanoroxley-9774s-projects.vercel.app/outlook-addin/icon-80.png"/>
+          <bt:Image id="Icon.16x16" DefaultValue="https://blociq-h3xv-ceioob7bl-eleanoroxley-9774s-projects.vercel.app/outlook-addin/icon-16.png"/>
+          <bt:Image id="Icon.32x32" DefaultValue="https://blociq-h3xv-ceioob7bl-eleanoroxley-9774s-projects.vercel.app/outlook-addin/icon-32.png"/>
+          <bt:Image id="Icon.80x80" DefaultValue="https://blociq-h3xv-ceioob7bl-eleanoroxley-9774s-projects.vercel.app/outlook-addin/icon-80.png"/>
         </bt:Images>
         <bt:Urls>
-          <bt:Url id="Taskpane.Url" DefaultValue="https://blociq-h3xv-kv2vni6q1-eleanoroxley-9774s-projects.vercel.app/outlook-addin" />
+          <bt:Url id="Taskpane.Url" DefaultValue="https://blociq-h3xv-ceioob7bl-eleanoroxley-9774s-projects.vercel.app/outlook-addin" />
         </bt:Urls>
         <bt:ShortStrings>
           <bt:String id="GroupLabel" DefaultValue="BlocIQ AI"/>
