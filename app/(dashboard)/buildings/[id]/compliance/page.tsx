@@ -665,7 +665,7 @@ export default function BuildingCompliancePage() {
       {editingAsset && (
         <EnhancedEditAssetModal
           buildingId={buildingId}
-          assetId={editingAsset.id}
+          assetId={editingAsset.compliance_asset_id}
           asset={editingAsset}
           isOpen={!!editingAsset}
           onClose={() => setEditingAsset(null)}
