@@ -65,7 +65,8 @@ export async function GET(req: NextRequest) {
         triage_category
       `)
       .gte('received_at', startDate.toISOString())
-      .order('received_at', { ascending: false });
+      .order('received_at', { ascending: false })
+      .limit(1000); // Add reasonable limit to prevent memory issues
 
     if (emailsError) {
       console.error('❌ Error fetching emails:', emailsError);
@@ -143,30 +144,53 @@ export async function GET(req: NextRequest) {
 
   } catch (error) {
     console.error('❌ Dashboard API error:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack available');
+    
+    // Provide more specific error information for debugging
+    let errorMessage = 'An unexpected error occurred. Please try again.';
+    let errorDetails = 'Unknown error';
+    
+    if (error instanceof Error) {
+      errorDetails = error.message;
+      
+      // Check for specific error types
+      if (error.message.includes('column') || error.message.includes('table')) {
+        errorMessage = 'Database schema error - please contact support.';
+      } else if (error.message.includes('timeout') || error.message.includes('ETIMEDOUT')) {
+        errorMessage = 'Database connection timeout - please try again.';
+      } else if (error.message.includes('permission') || error.message.includes('auth')) {
+        errorMessage = 'Database permissions error - please log in again.';
+      }
+    }
     
     return NextResponse.json({
       error: 'Failed to fetch dashboard data',
-      message: 'An unexpected error occurred. Please try again.',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      message: errorMessage,
+      details: errorDetails,
+      timestamp: new Date().toISOString()
     }, { status: 500 });
   }
 }
 
 function processDashboardData(emails: any[], buildingsMap: any) {
+  // Ensure inputs are safe arrays/objects
+  const safeEmails = Array.isArray(emails) ? emails.filter(e => e && typeof e === 'object') : [];
+  const safeBuildingsMap = buildingsMap && typeof buildingsMap === 'object' ? buildingsMap : {};
+  
   const dashboard = {
-    total: emails.length,
-    unread: emails.filter(e => e.unread).length,
-    handled: emails.filter(e => e.handled).length,
-    urgent: emails.filter(e => ['critical', 'high'].includes(e.urgency_level || 'low')).length,
+    total: safeEmails.length,
+    unread: safeEmails.filter(e => e && e.unread === true).length,
+    handled: safeEmails.filter(e => e && e.handled === true).length,
+    urgent: safeEmails.filter(e => e && ['critical', 'high'].includes(e.urgency_level || 'low')).length,
     categories: {} as any,
     propertyBreakdown: {} as any,
     recentActivity: [] as any[],
     smartSuggestions: [] as any[],
     urgencyDistribution: {
-      critical: emails.filter(e => (e.urgency_level || 'low') === 'critical').length,
-      high: emails.filter(e => (e.urgency_level || 'low') === 'high').length,
-      medium: emails.filter(e => (e.urgency_level || 'low') === 'medium').length,
-      low: emails.filter(e => (e.urgency_level || 'low') === 'low').length
+      critical: safeEmails.filter(e => (e.urgency_level || 'low') === 'critical').length,
+      high: safeEmails.filter(e => (e.urgency_level || 'low') === 'high').length,
+      medium: safeEmails.filter(e => (e.urgency_level || 'low') === 'medium').length,
+      low: safeEmails.filter(e => (e.urgency_level || 'low') === 'low').length
     },
     topProperties: [] as any[],
     aiInsightsSummary: {
@@ -180,7 +204,7 @@ function processDashboardData(emails: any[], buildingsMap: any) {
 
   // Group by categories using enhanced AI tags with safe fallbacks
   const categoryGroups: { [key: string]: any[] } = {};
-  emails.forEach(email => {
+  safeEmails.forEach(email => {
     try {
       const category = email?.ai_tag || email?.triage_category || 'General';
       if (!categoryGroups[category]) {
@@ -204,8 +228,8 @@ function processDashboardData(emails: any[], buildingsMap: any) {
     categoryEmails.forEach(email => {
       try {
         // From building relationship
-        if (email?.building_id && buildingsMap?.[email.building_id]?.name) {
-          properties.add(buildingsMap[email.building_id].name);
+        if (email?.building_id && safeBuildingsMap?.[email.building_id]?.name) {
+          properties.add(safeBuildingsMap[email.building_id].name);
         }
         
         // From mentioned_properties array (with safe array check)
@@ -239,13 +263,13 @@ function processDashboardData(emails: any[], buildingsMap: any) {
 
   // Enhanced property breakdown using building relationships and mentions
   const propertyGroups: { [key: string]: any[] } = {};
-  emails.forEach(email => {
+  safeEmails.forEach(email => {
     try {
       let propertyName = 'Unknown Property';
       
       // Primary: Use building relationship
-      if (email?.building_id && buildingsMap?.[email.building_id]?.name) {
-        propertyName = buildingsMap[email.building_id].name;
+      if (email?.building_id && safeBuildingsMap?.[email.building_id]?.name) {
+        propertyName = safeBuildingsMap[email.building_id].name;
       }
       // Secondary: Use first mentioned property (with safe array check)
       else if (email?.mentioned_properties && Array.isArray(email.mentioned_properties) && email.mentioned_properties.length > 0) {
@@ -295,12 +319,12 @@ function processDashboardData(emails: any[], buildingsMap: any) {
     .map(([name, data]) => ({ name, ...data }));
 
   // Enhanced recent activity with AI context and safe fallbacks
-  dashboard.recentActivity = emails.slice(0, 15).map(email => {
+  dashboard.recentActivity = safeEmails.slice(0, 15).map(email => {
     try {
       let propertyName = 'Unknown';
       
-      if (email?.building_id && buildingsMap?.[email.building_id]?.name) {
-        propertyName = buildingsMap[email.building_id].name;
+      if (email?.building_id && safeBuildingsMap?.[email.building_id]?.name) {
+        propertyName = safeBuildingsMap[email.building_id].name;
       } else if (email?.mentioned_properties && Array.isArray(email.mentioned_properties) && email.mentioned_properties.length > 0) {
         const firstProp = email.mentioned_properties[0];
         if (firstProp && typeof firstProp === 'string' && firstProp.trim()) {
@@ -340,7 +364,7 @@ function processDashboardData(emails: any[], buildingsMap: any) {
   });
 
   // Process AI insights summary with safe fallbacks
-  emails.forEach(email => {
+  safeEmails.forEach(email => {
     try {
       if (email?.ai_insights && Array.isArray(email.ai_insights)) {
         dashboard.aiInsightsSummary.totalInsights += email.ai_insights.length;
@@ -373,7 +397,7 @@ function processDashboardData(emails: any[], buildingsMap: any) {
 
   // Generate enhanced smart suggestions
   try {
-    dashboard.smartSuggestions = generateSmartSuggestions(emails, dashboard);
+    dashboard.smartSuggestions = generateSmartSuggestions(safeEmails, dashboard);
   } catch (error) {
     console.warn('Error generating smart suggestions:', error);
     dashboard.smartSuggestions = [];
