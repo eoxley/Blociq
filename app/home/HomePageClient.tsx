@@ -207,6 +207,21 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     return { property, parties, premium, term };
   };
 
+  // Handle opening document analysis modal
+  const handleOpenDocumentAnalysis = async (doc: any) => {
+    setActiveDocument(doc);
+    setShowDocumentQA(true);
+    
+    // Try to generate summary first, fallback to Q&A if it fails
+    try {
+      await generateDocumentSummary(doc);
+      // generateDocumentSummary sets currentView to 'summary' automatically
+    } catch (error) {
+      // If summary generation fails, go directly to Q&A
+      setCurrentView('qa');
+    }
+  };
+
   // Generate document summary using AI analysis
   const generateDocumentSummary = async (processedDoc: any) => {
     try {
@@ -2113,25 +2128,21 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 <div
                   key={doc.id}
                   className="bg-white rounded-lg shadow-md border hover:shadow-lg transition-all duration-200 cursor-pointer"
-                  onClick={async () => {
-                    setActiveDocument(doc);
-                    setShowDocumentQA(true);
-                    
-                    // Try to generate summary first, fallback to Q&A if it fails
-                    try {
-                      await generateDocumentSummary(doc);
-                      // generateDocumentSummary now sets the view to 'summary' automatically
-                    } catch (error) {
-                      // If summary generation fails, go directly to Q&A
-                      setCurrentView('qa');
-                    }
-                  }}
+                  onClick={() => handleOpenDocumentAnalysis(doc)}
                 >
                   <div className="p-4">
                     <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center space-x-2">
-                        <FileText className="h-5 w-5 text-blue-600" />
-                        <h3 className="font-medium text-gray-900 truncate">{doc.filename}</h3>
+                      <div className="flex items-center space-x-2 flex-1">
+                        <FileText className={`h-5 w-5 ${(doc.documentType === 'lease' || doc.documentType === 'lease_agreement') ? 'text-blue-600' : 'text-gray-600'}`} />
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-gray-900 truncate">{doc.filename}</h3>
+                          {(doc.documentType === 'lease' || doc.documentType === 'lease_agreement') && (
+                            <div className="flex items-center space-x-1 mt-1">
+                              <Scale className="h-3 w-3 text-blue-600" />
+                              <span className="text-xs text-blue-600 font-medium">Enhanced Lease Analysis Available</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <span className={`px-2 py-1 text-xs rounded-full ${
                         doc.ocrSource === 'openai_vision' ? 'bg-green-100 text-green-800' :
@@ -2161,9 +2172,32 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                     </div>
                     
                     <div className="mt-3 pt-3 border-t">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-500">Click to analyze</span>
-                        <ArrowRight className="h-4 w-4 text-blue-600" />
+                      <div className="space-y-2">
+                        {/* Enhanced Analysis Button for Lease Documents */}
+                        {(doc.documentType === 'lease' || doc.documentType === 'lease_agreement') ? (
+                          <button 
+                            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2 px-4 rounded-md text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 flex items-center justify-center space-x-2 shadow-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenDocumentAnalysis(doc);
+                            }}
+                          >
+                            <Brain className="h-4 w-4" />
+                            <span>View detailed analysis and ask questions about this lease document</span>
+                          </button>
+                        ) : (
+                          <button 
+                            className="w-full bg-gradient-to-r from-gray-600 to-gray-700 text-white py-2 px-4 rounded-md text-sm font-medium hover:from-gray-700 hover:to-gray-800 transition-all duration-200 flex items-center justify-center space-x-2 shadow-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenDocumentAnalysis(doc);
+                            }}
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                            <span>Analyze document and ask questions</span>
+                            <ArrowRight className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
