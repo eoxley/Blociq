@@ -6,7 +6,8 @@ export async function GET(req: NextRequest) {
   try {
     console.log('📊 Fetching inbox dashboard data...');
     
-    const supabase = createRouteHandlerClient({ cookies });
+    const cookieStore = await cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
     
     // Check authentication
     const { data: { session }, error: authError } = await supabase.auth.getSession();
