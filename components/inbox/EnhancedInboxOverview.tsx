@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -111,6 +111,7 @@ const EnhancedInboxOverview: React.FC = () => {
   const [timeRange, setTimeRange] = useState('week');
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
+  const supabase = createClientComponentClient();
 
   const fetchDashboardData = async (showLoader = true) => {
     try {
@@ -119,11 +120,20 @@ const EnhancedInboxOverview: React.FC = () => {
       setError(null);
 
       // Check if user is authenticated before making the request
+      console.log('🔐 Checking authentication...');
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (sessionError || !session) {
+      if (sessionError) {
+        console.error('❌ Session error:', sessionError);
+        throw new Error('Authentication error - please log in again');
+      }
+      
+      if (!session) {
+        console.warn('⚠️ No session found');
         throw new Error('Please log in to view the inbox dashboard');
       }
+      
+      console.log('✅ User authenticated:', session.user.id);
 
       console.log('🚀 Making dashboard API call...', `/api/inbox/dashboard?timeRange=${timeRange}`);
       

@@ -122,18 +122,10 @@ const nextConfig: NextConfig = {
       ignored: /node_modules/,
     };
     
-    // Completely disable source maps and source map references
-    config.devtool = false;
-    config.optimization = {
-      ...config.optimization,
-      removeAvailableModules: false,
-      removeEmptyChunks: false,
-      splitChunks: {
-        ...config.optimization.splitChunks,
-        hidePathInfo: true,
-        filename: '[name].[contenthash].js',
-      }
-    };
+    // Only disable source maps - don't break optimization
+    if (!dev) {
+      config.devtool = false;
+    }
     
     // Handle potential webpack compatibility issues
     config.mode = dev ? 'development' : 'production';
