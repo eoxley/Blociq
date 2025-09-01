@@ -1,58 +1,254 @@
 // app/api/ask-ai/query/route.ts - Document Q&A System
 import { NextRequest, NextResponse } from 'next/server';
+import OpenAI from 'openai';
 
 export const runtime = 'nodejs';
+export const maxDuration = 60; // 1 minute for document Q&A
+
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+export interface QAResponse {
+  question: string;
+  answer: string;
+  confidence: number;
+  citations: string[];
+  relevantSections: string[];
+  category: string;
+  metadata?: {
+    processingTime: number;
+    modelUsed: string;
+    documentLength: number;
+  };
+}
+
+// Classify the type of question being asked
+function classifyQuestion(question: string): string {
+  const questionLower = question.toLowerCase();
+  
+  const categories = {
+    'repairs_maintenance': ['repair', 'maintain', 'fix', 'broken', 'damage', 'upkeep', 'service', 'replacement', 'window'],
+    'rent_payments': ['rent', 'payment', 'pay', 'due', 'cost', 'fee', 'charge', 'amount', 'price'],
+    'alterations': ['alter', 'change', 'modify', 'renovate', 'improve', 'decoration', 'install', 'remove'],
+    'responsibilities': ['responsible', 'obligation', 'duty', 'liable', 'requirement', 'must', 'shall'],
+    'termination': ['terminate', 'end', 'expire', 'notice', 'break', 'quit', 'leave', 'exit'],
+    'pets_restrictions': ['pet', 'animal', 'dog', 'cat', 'allowed', 'permit', 'restriction'],
+    'utilities': ['utility', 'electric', 'gas', 'water', 'heating', 'council tax', 'bills'],
+    'insurance': ['insurance', 'cover', 'policy', 'claim', 'protection', 'indemnity'],
+    'access': ['access', 'entry', 'visit', 'inspect', 'landlord entry', 'viewing'],
+    'general': ['what', 'when', 'where', 'who', 'why', 'how', 'explain', 'tell me']
+  };
+
+  let bestMatch = 'general';
+  let bestScore = 0;
+
+  for (const [category, keywords] of Object.entries(categories)) {
+    let score = 0;
+    for (const keyword of keywords) {
+      if (questionLower.includes(keyword)) {
+        score += 1;
+      }
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = category;
+    }
+  }
+
+  return bestMatch;
+}
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  
   try {
+    console.log('📝 Document Q&A API: Processing question...');
+    
     const { question, documentText, documentMetadata } = await request.json();
     
-    console.log('🤖 Processing question:', question);
-    console.log('📊 Document text length:', documentText?.length || 0);
-    
     if (!question || question.trim().length === 0) {
-      return NextResponse.json({ 
-        error: 'Question is required' 
+      return NextResponse.json({
+        success: false,
+        error: 'Question is required'
       }, { status: 400 });
     }
     
     if (!documentText || documentText.length === 0) {
-      return NextResponse.json({ 
-        error: 'No document text available for analysis' 
+      return NextResponse.json({
+        success: false,
+        error: 'No document text available for analysis'
       }, { status: 400 });
     }
+
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json({
+        success: false,
+        error: 'OpenAI API key not configured'
+      }, { status: 500 });
+    }
     
-    // Create contextual prompt for AI
-    const prompt = createDocumentAnalysisPrompt(question, documentText, documentMetadata);
+    console.log(`🔍 Question: "${question}"`);
+    console.log(`📄 Document length: ${documentText.length} characters`);
     
-    // Call your AI service (OpenAI, Anthropic, etc.)
-    const aiResponse = await queryAI(prompt);
+    // Step 1: Classify the question
+    const category = classifyQuestion(question);
+    console.log(`🏷️ Question category: ${category}`);
     
-    // Extract relevant sections for citation
+    // Step 2: Extract relevant sections
     const relevantSections = findRelevantSections(question, documentText);
+    console.log(`📋 Found ${relevantSections.length} relevant sections`);
+    
+    // Step 3: Generate AI response using OpenAI
+    const { answer, citations } = await generateAIResponse(question, documentText, relevantSections, category);
+    console.log(`🤖 Generated answer: ${answer.substring(0, 100)}...`);
+    console.log(`📚 Found ${citations.length} citations`);
+    
+    // Step 4: Calculate confidence
+    const confidence = calculateConfidence(documentText, question, relevantSections, citations);
+    console.log(`🎯 Confidence score: ${confidence}`);
+    
+    const processingTime = Date.now() - startTime;
+    
+    // Return structured response
+    const response: QAResponse = {
+      question,
+      answer,
+      confidence,
+      citations,
+      relevantSections: relevantSections.map(s => s.text || s.context),
+      category,
+      metadata: {
+        processingTime,
+        modelUsed: 'gpt-4o',
+        documentLength: documentText.length
+      }
+    };
+    
+    console.log(`✅ Document Q&A completed in ${processingTime}ms`);
     
     return NextResponse.json({
       success: true,
-      question,
-      answer: aiResponse,
-      relevantSections,
-      confidence: calculateConfidence(aiResponse, relevantSections),
-      documentType: documentMetadata?.documentType || 'unknown',
-      metadata: {
-        documentLength: documentText.length,
-        sectionsFound: relevantSections.length,
-        timestamp: new Date().toISOString()
-      }
+      data: response
     });
     
   } catch (error) {
     console.error('❌ Document Q&A error:', error);
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
-      question: (await request.json().catch(() => ({})))?.question || 'Unknown question'
+      details: 'Failed to process document question'
     }, { status: 500 });
   }
+}
+
+// Generate AI response using OpenAI
+async function generateAIResponse(
+  question: string, 
+  documentText: string, 
+  relevantSections: any[], 
+  category: string
+): Promise<{ answer: string; citations: string[] }> {
+  
+  const systemPrompt = `You are a legal assistant specializing in lease agreement analysis. You provide clear, accurate information about lease terms and tenant/landlord rights and responsibilities.
+
+IMPORTANT INSTRUCTIONS:
+1. Answer questions about lease agreements based ONLY on the provided document text
+2. Be specific and cite exact clauses, schedules, or paragraphs when possible
+3. If information is not clear in the document, say so explicitly
+4. Provide practical, actionable answers in plain English
+5. Include relevant legal context but keep explanations accessible
+6. Extract and list specific citations (clause numbers, schedule references, etc.)
+
+Document Category: ${category.replace('_', ' ').toUpperCase()}
+Question Type: This is a ${category.replace('_', ' ')} related question.`;
+
+  const userPrompt = `Please analyze this lease document and answer the following question:
+
+QUESTION: "${question}"
+
+FULL DOCUMENT TEXT:
+${documentText}
+
+MOST RELEVANT SECTIONS:
+${relevantSections.map((section, i) => `${i + 1}. ${section.context || section.text || section}`).join('\n\n')}
+
+Please provide:
+1. A clear, direct answer to the question
+2. Specific citations to clauses, schedules, or paragraphs that support your answer
+3. Any important caveats or additional context
+4. If the answer cannot be determined from the document, state this clearly
+
+Format your response as JSON with these fields:
+{
+  "answer": "Your detailed answer here",
+  "citations": ["Clause 1.2", "Schedule 3 paragraph 5", "etc"]
+}`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      max_tokens: 1000,
+      temperature: 0.1, // Low temperature for factual accuracy
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error('No response from OpenAI');
+    }
+
+    // Try to parse JSON response
+    try {
+      const parsed = JSON.parse(content);
+      return {
+        answer: parsed.answer || 'Unable to generate answer',
+        citations: Array.isArray(parsed.citations) ? parsed.citations : []
+      };
+    } catch {
+      // Fallback if JSON parsing fails
+      return {
+        answer: content,
+        citations: extractCitationsFromText(content)
+      };
+    }
+
+  } catch (error) {
+    console.error('OpenAI API error:', error);
+    throw new Error('Failed to generate AI response');
+  }
+}
+
+// Extract citations from text using regex patterns
+function extractCitationsFromText(text: string): string[] {
+  const citations: string[] = [];
+  
+  // Common citation patterns in lease documents
+  const patterns = [
+    /clause\s+\d+(?:\.\d+)*/gi,
+    /paragraph\s+\d+(?:\.\d+)*/gi,
+    /schedule\s+\d+(?:\s+paragraph\s+\d+)?/gi,
+    /section\s+\d+(?:\.\d+)*/gi,
+    /part\s+\d+(?:\.\d+)*/gi,
+    /\b\d+\.\d+(?:\.\d+)*\b/g // Numeric references like 8.1, 12.3.4
+  ];
+
+  for (const pattern of patterns) {
+    const matches = text.match(pattern);
+    if (matches) {
+      citations.push(...matches);
+    }
+  }
+
+  // Remove duplicates and clean up
+  return [...new Set(citations)]
+    .map(citation => citation.trim())
+    .filter(citation => citation.length > 0)
+    .slice(0, 5); // Limit to 5 citations
 }
 
 function createDocumentAnalysisPrompt(question: string, documentText: string, metadata: any): string {
@@ -284,39 +480,38 @@ function findRelevantSections(question: string, documentText: string): Array<{se
   return sections;
 }
 
-function calculateConfidence(answer: string, sections: Array<any>): number {
-  // Enhanced confidence calculation based on:
-  // - Number of relevant sections found
-  // - Length of answer
-  // - Presence of specific citations
-  // - Legal terminology usage
+// Calculate confidence score based on document evidence
+function calculateConfidence(
+  documentText: string,
+  question: string,
+  relevantSections: any[],
+  citations: string[]
+): number {
+  let confidence = 0.5; // Base confidence
   
-  let confidence = 0.4; // Base confidence
+  // Boost confidence based on relevant sections found
+  if (relevantSections.length >= 3) confidence += 0.2;
+  else if (relevantSections.length >= 1) confidence += 0.1;
   
-  // Section-based confidence
-  if (sections.length > 0) confidence += 0.15;
-  if (sections.length > 2) confidence += 0.10;
-  if (sections.length > 3) confidence += 0.05;
+  // Boost confidence based on citations found
+  if (citations.length >= 2) confidence += 0.2;
+  else if (citations.length >= 1) confidence += 0.1;
   
-  // Citation-based confidence
-  if (answer.includes('Schedule') || answer.includes('Clause')) confidence += 0.10;
-  if (answer.includes('paragraph') || answer.includes('section')) confidence += 0.05;
-  if (answer.match(/\d+\.\d+/) || answer.match(/\(\d+\)/)) confidence += 0.05; // Numbered references
+  // Check if question words appear in document
+  const questionWords = question.toLowerCase().split(' ').filter(word => word.length > 3);
+  const documentLower = documentText.toLowerCase();
+  let wordMatches = 0;
   
-  // Content quality indicators
-  if (answer.length > 100) confidence += 0.05;
-  if (answer.length > 300) confidence += 0.05;
+  for (const word of questionWords) {
+    if (documentLower.includes(word)) {
+      wordMatches++;
+    }
+  }
   
-  // Legal document indicators
-  const legalTerms = ['covenant', 'demise', 'landlord', 'tenant', 'lessee', 'lessor'];
-  const legalTermCount = legalTerms.filter(term => answer.toLowerCase().includes(term)).length;
-  confidence += Math.min(legalTermCount * 0.02, 0.10);
+  if (wordMatches >= questionWords.length * 0.7) confidence += 0.1;
   
-  // Specific answer indicators
-  if (answer.includes('£') || answer.includes('pounds')) confidence += 0.05; // Financial details
-  if (answer.includes('years') || answer.includes('months')) confidence += 0.03; // Time periods
-  
-  return Math.min(confidence, 1.0);
+  // Ensure confidence is between 0 and 1
+  return Math.min(Math.max(confidence, 0.1), 0.95);
 }
 
 // GET endpoint for testing

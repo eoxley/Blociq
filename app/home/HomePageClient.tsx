@@ -16,6 +16,7 @@ import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui
 import { BlocIQBadge } from '@/components/ui/blociq-badge'
 import BlocIQLogo from '@/components/BlocIQLogo'
 import { toast } from 'sonner'
+import DocumentQA from '@/components/DocumentQA'
 import { checkOutlookConnection, fetchOutlookEvents, getOutlookAuthUrl } from '@/lib/outlookUtils'
 import { normalizeEventTimes, formatInZone, getClientZone } from '@/lib/time'
 import { getTimeBasedGreeting } from '@/utils/greeting'
@@ -126,6 +127,81 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   const [uploadedFiles, setUploadedFiles] = useState<Array<{file: File, id: string, name: string, size: number, type: string}>>([])
   const [isDragOver, setIsDragOver] = useState(false)
   const [showCommunicationModal, setShowCommunicationModal] = useState(false)
+  
+  // Document Q&A state
+  const [processedDocuments, setProcessedDocuments] = useState<Array<{
+    id: string;
+    filename: string;
+    documentType: string;
+    textLength: number;
+    extractedText: string;
+    property?: string;
+    parties?: string[];
+    premium?: string;
+    term?: string;
+    ocrSource: string;
+    timestamp: Date;
+  }>>([])
+  const [showDocumentQA, setShowDocumentQA] = useState(false)
+  const [activeDocument, setActiveDocument] = useState<any>(null)
+
+  // Helper function to extract property info from document text
+  const extractPropertyInfo = (text: string) => {
+    let property = '';
+    let parties: string[] = [];
+    let premium = '';
+    let term = '';
+
+    // Extract property address
+    const propertyPatterns = [
+      /(?:Property|Premises|Flat|Unit|Building):\s*([^\n]+)/i,
+      /(?:situated at|located at|address|known as)[\s:]*([^\n]+(?:Road|Street|Lane|Avenue|Place|Court|Drive|Close|Way|Gardens)[^\n]*)/i,
+      /([A-Za-z0-9\s,]+(?:Road|Street|Lane|Avenue|Place|Court|Drive|Close|Way|Gardens)[^,\n]*)/i
+    ];
+    
+    for (const pattern of propertyPatterns) {
+      const match = text.match(pattern);
+      if (match && match[1]) {
+        property = match[1].trim();
+        break;
+      }
+    }
+
+    // Extract parties (lessor/lessee, landlord/tenant)
+    const partyPatterns = [
+      /(?:Lessor|Landlord):\s*([^\n]+)/gi,
+      /(?:Lessee|Tenant):\s*([^\n]+)/gi,
+      /PARTIES:\s*((?:[^\n]+\n?)+?)(?=\n\n|\nFINANCIAL|$)/gi
+    ];
+    
+    partyPatterns.forEach(pattern => {
+      const matches = text.match(pattern);
+      if (matches) {
+        matches.forEach(match => {
+          const party = match.replace(/(?:Lessor|Lessee|Landlord|Tenant|PARTIES):\s*/gi, '').trim();
+          if (party && !parties.includes(party)) {
+            parties.push(party);
+          }
+        });
+      }
+    });
+
+    // Extract premium
+    const premiumPattern = /(?:Premium|Purchase Price):\s*(£[^\n]+)/i;
+    const premiumMatch = text.match(premiumPattern);
+    if (premiumMatch) {
+      premium = premiumMatch[1].trim();
+    }
+
+    // Extract term
+    const termPattern = /(?:Term|Duration|Period):\s*([^\n]+(?:years?|months?)[^\n]*)/i;
+    const termMatch = text.match(termPattern);
+    if (termMatch) {
+      term = termMatch[1].trim();
+    }
+
+    return { property, parties, premium, term };
+  };
 
   const [communicationModalData, setCommunicationModalData] = useState<{
     aiContent: string
@@ -539,6 +615,27 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               const source = uploadData.ocrSource || 'OCR'
               console.log(`✅ File processed successfully via ${source}: ${uploadedFile.name} - ${uploadData.textLength} characters extracted`)
               setUploadStatus(`✅ ${uploadedFile.name} processed via ${source} - ${uploadData.textLength} characters extracted`)
+              
+              // Extract document metadata for Q&A system
+              const extractedInfo = extractPropertyInfo(uploadData.extractedText || '');
+              
+              // Add to processed documents for Q&A
+              const processedDoc = {
+                id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                filename: uploadedFile.name,
+                documentType: uploadData.documentType || 'lease_agreement',
+                textLength: uploadData.textLength,
+                extractedText: uploadData.extractedText || '',
+                property: extractedInfo.property,
+                parties: extractedInfo.parties,
+                premium: extractedInfo.premium,
+                term: extractedInfo.term,
+                ocrSource: source,
+                timestamp: new Date()
+              };
+              
+              setProcessedDocuments(prev => [processedDoc, ...prev]);
+              console.log('📄 Added document to Q&A system:', processedDoc.filename);
             } else {
               console.log(`⚠️ File processing failed - insufficient text: ${uploadedFile.name}`)
               setUploadStatus(`⚠️ ${uploadedFile.name} - No meaningful text extracted`)
@@ -1980,7 +2077,111 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
 
         </div>
+        
+        {/* Document Q&A Section */}
+        {processedDocuments.length > 0 && (
+          <div className="space-y-6">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">📋 Document Analysis & Q&A</h2>
+              <p className="text-gray-600 mb-6">Ask questions about your uploaded lease documents</p>
+            </div>
+            
+            {/* Processed Documents List */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              {processedDocuments.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="bg-white rounded-lg shadow-md border hover:shadow-lg transition-all duration-200 cursor-pointer"
+                  onClick={() => {
+                    setActiveDocument(doc);
+                    setShowDocumentQA(true);
+                  }}
+                >
+                  <div className="p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center space-x-2">
+                        <FileText className="h-5 w-5 text-blue-600" />
+                        <h3 className="font-medium text-gray-900 truncate">{doc.filename}</h3>
+                      </div>
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        doc.ocrSource === 'openai_vision' ? 'bg-green-100 text-green-800' :
+                        doc.ocrSource === 'google_vision' ? 'bg-blue-100 text-blue-800' :
+                        doc.ocrSource === 'test_mode' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {doc.ocrSource}
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-2 text-sm text-gray-600">
+                      {doc.property && (
+                        <div className="flex items-center space-x-1">
+                          <Building className="h-4 w-4" />
+                          <span className="truncate">{doc.property}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center space-x-1">
+                        <Hash className="h-4 w-4" />
+                        <span>{doc.textLength.toLocaleString()} characters</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <Clock className="h-4 w-4" />
+                        <span>{doc.timestamp.toLocaleString()}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-3 pt-3 border-t">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">Click to analyze</span>
+                        <ArrowRight className="h-4 w-4 text-blue-600" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Document Q&A Modal */}
+      {showDocumentQA && activeDocument && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-xl font-bold text-gray-900">
+                Document Q&A: {activeDocument.filename}
+              </h2>
+              <button
+                onClick={() => {
+                  setShowDocumentQA(false);
+                  setActiveDocument(null);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+              <DocumentQA
+                documentText={activeDocument.extractedText}
+                documentMetadata={{
+                  filename: activeDocument.filename,
+                  documentType: activeDocument.documentType,
+                  textLength: activeDocument.textLength,
+                  property: activeDocument.property,
+                  parties: activeDocument.parties,
+                  premium: activeDocument.premium,
+                  term: activeDocument.term
+                }}
+                onQuestionSubmit={(question) => {
+                  console.log('🤔 Q&A Question asked:', question);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Communication Modal */}
       {showCommunicationModal && communicationModalData && (
