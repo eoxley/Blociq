@@ -236,10 +236,8 @@ const nextConfig: NextConfig = {
   // Add output configuration for better deployment
   output: 'standalone',
   
-  // Enhanced experimental features
-  experimental: {
-    serverComponentsExternalPackages: ['tesseract.js'],
-  },
+  // Enhanced external packages (updated for Next.js 15+)
+  serverExternalPackages: ['tesseract.js', 'pdf-parse', 'mammoth'],
 };
 
 export default nextConfig;
