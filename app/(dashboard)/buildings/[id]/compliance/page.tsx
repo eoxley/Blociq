@@ -33,6 +33,7 @@ import {
   Construction
 } from 'lucide-react'
 import { toast } from 'sonner'
+import EnhancedEditAssetModal from '@/components/compliance/EnhancedEditAssetModal'
 
 // Types
 interface ComplianceAsset {
@@ -105,6 +106,7 @@ export default function BuildingCompliancePage() {
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [updatingAssets, setUpdatingAssets] = useState(false)
+  const [editingAsset, setEditingAsset] = useState<BuildingComplianceAsset | null>(null)
 
   useEffect(() => {
     if (buildingId) {
@@ -642,8 +644,8 @@ export default function BuildingCompliancePage() {
                         )}
                         
                         <button
-                          onClick={() => router.push(`/buildings/${buildingId}/compliance/setup`)}
-                          className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 text-sm rounded-lg hover:bg-blue-100 transition-colors"
+                          onClick={() => setEditingAsset(item)}
+                          className="inline-flex items-center gap-2 px-3 py-2 bg-green-50 text-green-700 text-sm rounded-lg hover:bg-green-100 transition-colors"
                           title="Edit compliance asset"
                         >
                           <Settings className="h-4 w-4" />
@@ -658,6 +660,23 @@ export default function BuildingCompliancePage() {
           </div>
         </div>
       </div>
+
+      {/* Edit Asset Modal */}
+      {editingAsset && (
+        <EnhancedEditAssetModal
+          buildingId={buildingId}
+          assetId={editingAsset.id}
+          asset={editingAsset}
+          isOpen={!!editingAsset}
+          onClose={() => setEditingAsset(null)}
+          onSave={(updatedAsset) => {
+            // Refresh compliance data after saving
+            fetchComplianceData()
+            setEditingAsset(null)
+            toast.success('Compliance asset updated successfully')
+          }}
+        />
+      )}
     </div>
   )
 }

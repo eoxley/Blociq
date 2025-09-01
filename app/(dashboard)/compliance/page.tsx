@@ -125,9 +125,28 @@ export default function CompliancePage() {
       }
 
       const detailedData = await response.json()
+      console.log('🔍 Detailed API response:', detailedData)
+      
       if (detailedData.success && detailedData.data) {
         console.log('✅ Detailed compliance data fetched:', detailedData.data.length, 'assets')
         setComplianceData(detailedData.data)
+      } else if (detailedData.debug && detailedData.assets) {
+        console.log('🔧 Debug mode - processing assets without authentication')
+        // Transform debug assets into proper format for display
+        const debugAssets = detailedData.assets.map(asset => ({
+          ...asset,
+          compliance_assets: {
+            name: 'Debug Asset',
+            category: 'safety',
+            description: 'Asset from debug mode'
+          },
+          buildings: {
+            id: asset.building_id,
+            name: detailedData.buildings.find(b => b.id === asset.building_id)?.name || 'Unknown Building'
+          }
+        }))
+        setComplianceData(debugAssets)
+        console.log('🔧 Set debug compliance data:', debugAssets.length, 'assets')
       }
     } catch (err) {
       console.warn('Could not fetch detailed compliance data:', err)
