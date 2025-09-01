@@ -332,6 +332,7 @@ export async function extractWithPDFJS(file: File): Promise<TextExtractionResult
 // Main extraction function with fallback chain
 export async function extractText(file: File): Promise<TextExtractionResult> {
   console.log('🔄 Starting text extraction for:', file.name);
+  console.log(`📊 File details: ${(file.size / (1024 * 1024)).toFixed(2)} MB, type: ${file.type}`);
   
   const methods = [
     { name: 'PDF.js', fn: extractWithPDFJS, condition: () => file.type === 'application/pdf' },
@@ -343,7 +344,24 @@ export async function extractText(file: File): Promise<TextExtractionResult> {
   for (const method of methods) {
     if (method.condition()) {
       console.log(`🔍 Trying ${method.name}...`);
-      const result = await method.fn(file);
+      
+      // Add timeout to each method to prevent hanging
+      const methodPromise = method.fn(file);
+      const timeoutPromise = new Promise<TextExtractionResult>((_, reject) => {
+        setTimeout(() => reject(new Error(`${method.name} timeout after 60 seconds`)), 60000);
+      });
+      
+      const result = await Promise.race([methodPromise, timeoutPromise]).catch(error => {
+        console.error(`⏰ ${method.name} timed out or failed:`, error);
+        return {
+          extractedText: '',
+          textLength: 0,
+          source: 'failed' as const,
+          metadata: {
+            errorDetails: `${method.name} timed out: ${error instanceof Error ? error.message : 'Unknown timeout error'}`
+          }
+        };
+      });
       
       if (result.source !== 'failed' && result.textLength > 0) {
         console.log(`✅ ${method.name} succeeded with ${result.textLength} characters`);

@@ -25,7 +25,9 @@
       "Bash(npm install)",
       "WebFetch(domain:blociq-frontend.vercel.app)",
       "Bash(open http://localhost:3001/home)",
-      "Bash(open http://localhost:3001/inbox-overview)"
+      "Bash(open http://localhost:3001/inbox-overview)",
+      "WebFetch(domain:vercel.com)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

@@ -886,11 +886,17 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
       const formData = new FormData();
       formData.append('file', file);
       
-      // Call the enhanced Ask AI upload endpoint
+      // Call the enhanced Ask AI upload endpoint with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
+      
       const response = await fetch('/api/ask-ai/upload', {
         method: 'POST',
         body: formData,
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -925,7 +931,28 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         metadata: result.metadata || {}
       }
     } catch (ocrError) {
+      clearTimeout(timeoutId); // Clean up timeout if error occurs
       console.error('❌ OCR processing failed:', ocrError);
+      
+      // Check if it's a timeout/abort error
+      if (ocrError instanceof Error && ocrError.name === 'AbortError') {
+        console.error('⏰ OCR request timed out after 5 minutes');
+        return {
+          success: false,
+          documentType: 'document',
+          summary: 'OCR processing timed out',
+          analysis: 'The document processing took too long and was cancelled. This may be due to a large file size or server issues.',
+          filename: file.name,
+          textLength: 0,
+          extractedText: '',
+          ocrSource: 'timeout',
+          metadata: {
+            error: 'Request timed out after 5 minutes',
+            fileSize: file.size,
+            fileName: file.name
+          }
+        };
+      }
       
       // Return a fallback response instead of throwing
       return {
