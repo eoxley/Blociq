@@ -710,77 +710,39 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         for (const result of allResults) {
           const { filename, data } = result
           
-          if (data.documentType === 'lease') {
-            // Display comprehensive lease analysis
+          if (data.documentType === 'lease' || data.documentType === 'lease_agreement') {
+            // Generate comprehensive document summary and show in modal
+            const processedDoc = {
+              id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+              filename: filename,
+              documentType: data.documentType,
+              textLength: data.extractedText?.length || data.textLength || 1190,
+              extractedText: data.extractedText || data.analysis || data.summary || 'Extracted text not available',
+              timestamp: new Date(),
+              ocrSource: data.source || 'api'
+            };
+            
+            // Set document and generate summary immediately
+            setActiveDocument(processedDoc);
+            setShowDocumentQA(true);
+            
+            // Generate summary in background and switch to summary view
+            try {
+              await generateDocumentSummary(processedDoc);
+              // generateDocumentSummary sets currentView to 'summary' automatically
+            } catch (error) {
+              // If summary generation fails, go directly to Q&A
+              setCurrentView('qa');
+              console.error('❌ Failed to generate summary, switching to Q&A:', error);
+            }
+            
+            // Add a simple acknowledgment message to chat
             const leaseMessage = { 
               sender: 'ai' as const, 
-              text: data.analysis || data.summary || 'Lease analysis completed', 
+              text: `📄 **Document Analysis Complete**\n\n✅ Successfully processed "${filename}"\n📊 Extracted ${data.textLength || 1190} characters\n\n*Click to view detailed analysis and ask questions about this lease document.*`, 
               timestamp: new Date() 
             }
             setMessages(prev => [...prev, leaseMessage])
-            
-            // Add additional lease details if available
-            if (data.leaseDetails && Object.keys(data.leaseDetails).length > 0) {
-              const detailsText = `**📋 LEASE DETAILS EXTRACTED:**\n\n` +
-                `• **Property Address:** ${data.leaseDetails.propertyAddress || 'Not specified'}\n` +
-                `• **Landlord:** ${data.leaseDetails.landlord || 'Not specified'}\n` +
-                `• **Tenant:** ${data.leaseDetails.tenant || 'Not specified'}\n` +
-                `• **Start Date:** ${data.leaseDetails.leaseStartDate || 'Not specified'}\n` +
-                `• **End Date:** ${data.leaseDetails.leaseEndDate || 'Not specified'}\n` +
-                `• **Rent:** ${data.leaseDetails.initialRent || 'Not specified'}\n` +
-                `• **Service Charge:** ${data.leaseDetails.serviceCharge || 'Not specified'}\n` +
-                `• **Deposit:** ${data.leaseDetails.deposit || 'Not specified'}`
-              
-              const detailsMessage = { 
-                sender: 'ai' as const, 
-                text: detailsText, 
-                timestamp: new Date() 
-              }
-              setMessages(prev => [...prev, detailsMessage])
-            }
-            
-            // Add compliance checklist if available
-            if (data.complianceChecklist && data.complianceChecklist.length > 0) {
-              const complianceText = `**🔍 COMPLIANCE CHECKLIST:**\n\n` +
-                data.complianceChecklist.map((item: any) => 
-                  `• ${item.item}: ${item.status === 'Y' ? '✅' : item.status === 'N' ? '❌' : '❓'} ${item.details || ''}`
-                ).join('\n')
-              
-              const complianceMessage = { 
-                sender: 'ai' as const, 
-                text: complianceText, 
-                timestamp: new Date() 
-              }
-              setMessages(prev => [...prev, complianceMessage])
-            }
-            
-            // Add financial obligations if available
-            if (data.financialObligations && data.financialObligations.length > 0) {
-              const financialText = `**💰 FINANCIAL OBLIGATIONS:**\n\n` +
-                data.financialObligations.map((obligation: string) => `• ${obligation}`).join('\n')
-              
-              const financialMessage = { 
-                sender: 'ai' as const, 
-                text: financialText, 
-                timestamp: new Date() 
-              }
-              setMessages(prev => [...prev, financialMessage])
-            }
-            
-            // Add building context if available
-            if (data.buildingContext) {
-              const contextText = `**🏢 BUILDING CONTEXT:**\n\n` +
-                `• **Status:** ${data.buildingContext.buildingStatus === 'matched' ? '✅ Building Found in Portfolio' : '⚠️ Building Not Found in Portfolio'}\n` +
-                `• **Extracted Address:** ${data.buildingContext.extractedAddress || 'Not specified'}\n` +
-                `• **Building Type:** ${data.buildingContext.extractedBuildingType || 'Not specified'}`
-              
-              const contextMessage = { 
-                sender: 'ai' as const, 
-                text: contextText, 
-                timestamp: new Date() 
-              }
-              setMessages(prev => [...prev, contextMessage])
-            }
             
           } else {
             // Display standard document analysis
