@@ -197,6 +197,19 @@ const EnhancedInboxOverview: React.FC = () => {
     router.push('/emails?unread=true');
   };
 
+  const testDatabaseConnection = async () => {
+    try {
+      console.log('🧪 Testing database connection...');
+      const response = await fetch('/api/inbox/test');
+      const result = await response.json();
+      console.log('🧪 Test result:', result);
+      alert(`Database test: ${result.success ? 'SUCCESS' : 'FAILED'}\nDetails: ${JSON.stringify(result, null, 2)}`);
+    } catch (error) {
+      console.error('🧪 Test failed:', error);
+      alert(`Database test failed: ${error}`);
+    }
+  };
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'critical': return 'text-red-600 bg-red-50 border-red-200';
@@ -257,9 +270,14 @@ const EnhancedInboxOverview: React.FC = () => {
                   <h2 className="text-lg font-semibold">Error Loading Dashboard</h2>
                 </div>
                 <p className="text-red-700 mb-4">{error}</p>
-                <Button onClick={() => fetchDashboardData()} variant="outline">
-                  Try Again
-                </Button>
+                <div className="flex gap-2">
+                  <Button onClick={() => fetchDashboardData()} variant="outline">
+                    Try Again
+                  </Button>
+                  <Button onClick={testDatabaseConnection} variant="secondary">
+                    Test Database
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>

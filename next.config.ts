@@ -18,6 +18,7 @@ const nextConfig: NextConfig = {
   generateBuildId: async () => {
     return 'build-' + Date.now()
   },
+  
   // Temporarily disabled to fix Next.js 15.4.2 webpack minification bug
   // experimental: {
   //   optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
