@@ -3,7 +3,7 @@
 // Home page client component - Major works dashboard removed for cleaner interface
 import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2, ExternalLink, RefreshCw, MessageCircle, Sparkles, Upload, FileText, Send, Bot, ArrowRight, HelpCircle, Brain, X as XIcon, ChevronDown, ChevronUp, Minimize2, Move, CornerDownRight, MapPin, User, Hash, Scale } from 'lucide-react'
+import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2, ExternalLink, RefreshCw, MessageCircle, MessageSquare, Sparkles, Upload, FileText, Send, Bot, ArrowRight, HelpCircle, Brain, X as XIcon, ChevronDown, ChevronUp, Minimize2, Move, CornerDownRight, MapPin, User, Hash, Scale } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 
 
@@ -1014,14 +1014,14 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     // Step 3: Process the uploaded file via OCR API
     console.log('🔄 Processing file with OCR API:', file.name);
     
+    // Set up timeout and controller outside try block for proper cleanup
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
+    
     try {
       // Convert file to FormData for OCR API
       const formData = new FormData();
       formData.append('file', file);
-      
-      // Call the enhanced Ask AI upload endpoint with timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
       
       const response = await fetch('/api/ask-ai/upload', {
         method: 'POST',
@@ -2210,23 +2210,52 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
 
       {/* Document Analysis Modal */}
       {showDocumentQA && activeDocument && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-xl font-bold text-gray-900">
-                {currentView === 'summary' ? 'Document Summary' : 'Document Q&A'}: {activeDocument.filename}
-              </h2>
-              <button
-                onClick={() => {
-                  setShowDocumentQA(false);
-                  setActiveDocument(null);
-                  setDocumentSummary(null);
-                  setCurrentView('upload');
-                }}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="h-5 w-5 text-gray-500" />
-              </button>
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden border border-white/20">
+            <div className="p-6 border-b border-gray-200/50 bg-white/50 backdrop-blur-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-900">
+                  {activeDocument.filename}
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowDocumentQA(false);
+                    setActiveDocument(null);
+                    setDocumentSummary(null);
+                    setCurrentView('upload');
+                  }}
+                  className="p-2 hover:bg-white/80 bg-white/50 rounded-full transition-all duration-200 backdrop-blur-sm border border-gray-200/50"
+                >
+                  <X className="h-5 w-5 text-gray-500" />
+                </button>
+              </div>
+              
+              {/* Navigation Tabs */}
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setCurrentView('summary')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                    currentView === 'summary'
+                      ? 'bg-blue-600 text-white shadow-lg'
+                      : 'bg-white/70 text-gray-600 hover:bg-white/90 backdrop-blur-sm border border-gray-200/50'
+                  }`}
+                  disabled={!documentSummary}
+                >
+                  <FileText className="h-4 w-4 mr-2 inline" />
+                  Summary
+                </button>
+                <button
+                  onClick={() => setCurrentView('qa')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                    currentView === 'qa'
+                      ? 'bg-blue-600 text-white shadow-lg'
+                      : 'bg-white/70 text-gray-600 hover:bg-white/90 backdrop-blur-sm border border-gray-200/50'
+                  }`}
+                >
+                  <MessageSquare className="h-4 w-4 mr-2 inline" />
+                  Q&A
+                </button>
+              </div>
             </div>
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
               {/* Document Summary View */}

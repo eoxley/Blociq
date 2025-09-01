@@ -19,6 +19,7 @@ import {
   Clock,
   Info
 } from 'lucide-react';
+import { DocumentAnalysisErrorBoundary } from './DocumentAnalysisErrorBoundary';
 
 interface LeaseQAResponse {
   question: string;
@@ -102,7 +103,7 @@ export default function LeaseDocumentQA({ extractedText, documentMetadata }: Lea
     setError(null);
 
     try {
-      const response = await fetch('/api/ask-ai/lease-query', {
+      const response = await fetch('/api/enhanced-document-analysis', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -161,7 +162,8 @@ export default function LeaseDocumentQA({ extractedText, documentMetadata }: Lea
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6">
+    <DocumentAnalysisErrorBoundary>
+      <div className="max-w-6xl mx-auto p-6 space-y-6">
       {/* Lease Document Header */}
       <Card className="border-l-4 border-l-blue-600 bg-gradient-to-r from-blue-50 to-indigo-50">
         <CardHeader>
@@ -381,7 +383,8 @@ export default function LeaseDocumentQA({ extractedText, documentMetadata }: Lea
           </CardContent>
         </Card>
       )}
-    </div>
+      </div>
+    </DocumentAnalysisErrorBoundary>
   );
 }
 
