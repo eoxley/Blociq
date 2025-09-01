@@ -17,9 +17,13 @@ import {
   Scale,
   Building2,
   Clock,
-  Info
+  Info,
+  List,
+  Hash
 } from 'lucide-react';
 import { DocumentAnalysisErrorBoundary } from './DocumentAnalysisErrorBoundary';
+import { LeaseClauseIndex } from './LeaseClauseIndex';
+import { LeaseClause } from '@/lib/document-analysis/lease-clause-indexer';
 
 interface LeaseQAResponse {
   question: string;
@@ -54,6 +58,8 @@ export default function LeaseDocumentQA({ extractedText, documentMetadata }: Lea
   const [isLoading, setIsLoading] = useState(false);
   const [qaHistory, setQaHistory] = useState<LeaseQAResponse[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'questions' | 'index'>('questions');
+  const [selectedClause, setSelectedClause] = useState<LeaseClause | null>(null);
 
   // Lease-specific common questions
   const commonLeaseQuestions = [
@@ -161,6 +167,15 @@ export default function LeaseDocumentQA({ extractedText, documentMetadata }: Lea
     return category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
+  const handleClauseSelect = (clause: LeaseClause) => {
+    setSelectedClause(clause);
+    // Automatically generate a question about the selected clause
+    const generatedQuestion = `Can you explain ${clause.title}? (Clause ${clause.number})`;
+    handleSubmitQuestion(generatedQuestion);
+    // Switch back to questions tab to show the result
+    setActiveTab('questions');
+  };
+
   return (
     <DocumentAnalysisErrorBoundary>
       <div className="max-w-6xl mx-auto p-6 space-y-6">
@@ -202,6 +217,35 @@ export default function LeaseDocumentQA({ extractedText, documentMetadata }: Lea
         </CardHeader>
       </Card>
 
+      {/* Navigation Tabs */}
+      <div className="flex border-b border-gray-200 bg-white rounded-lg p-1 shadow-sm">
+        <button
+          onClick={() => setActiveTab('questions')}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-md font-medium text-sm transition-colors ${
+            activeTab === 'questions'
+              ? 'bg-blue-600 text-white shadow-sm'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+          }`}
+        >
+          <MessageSquare className="h-4 w-4" />
+          Ask Questions
+        </button>
+        <button
+          onClick={() => setActiveTab('index')}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-md font-medium text-sm transition-colors ${
+            activeTab === 'index'
+              ? 'bg-blue-600 text-white shadow-sm'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+          }`}
+        >
+          <List className="h-4 w-4" />
+          Clause Index
+        </button>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'questions' && (
+        <>
       {/* Question Input */}
       <Card className="border border-gray-200 shadow-sm">
         <CardHeader>
@@ -382,6 +426,16 @@ export default function LeaseDocumentQA({ extractedText, documentMetadata }: Lea
             </div>
           </CardContent>
         </Card>
+      )}
+        </>
+      )}
+
+      {/* Clause Index Tab Content */}
+      {activeTab === 'index' && (
+        <LeaseClauseIndex 
+          documentText={extractedText}
+          onClauseSelect={handleClauseSelect}
+        />
       )}
       </div>
     </DocumentAnalysisErrorBoundary>
