@@ -341,16 +341,16 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
             console.log('🔄 Processing file:', uploadedFile.name, 'Type:', uploadedFile.file.type);
             
             if (isPublic) {
-              // Public mode: Use Google Vision OCR via API endpoint
-              console.log('🔒 Public mode: Using Google Vision OCR service via API');
+              // Public mode: Use the same robust OCR system as the home page
+              console.log('🔒 Public mode: Using enhanced OCR system');
               
               try {
-                // Convert file to FormData for OCR API
+                // Convert file to FormData for the enhanced OCR API
                 const formData = new FormData();
                 formData.append('file', uploadedFile.file);
                 
-                // Call OCR server via CORS proxy to avoid CORS issues
-                const ocrResponse = await fetch('/api/ocr-proxy-cors', {
+                // Use the same endpoint as the home page that has proper fallbacks
+                const ocrResponse = await fetch('/api/ask-ai/upload', {
                   method: 'POST',
                   body: formData,
                 });
@@ -360,16 +360,18 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
                 }
 
                 const ocrResult = await ocrResponse.json();
-                console.log('✅ Google Vision OCR successful via API');
+                console.log('✅ Enhanced OCR processing successful via API');
                 
                 // Create basic document analysis result for public mode
                 const documentAnalysis: DocumentAnalysis = {
                   filename: uploadedFile.name,
-                  summary: ocrResult.text ? `Document processed via Google Vision OCR. Extracted ${ocrResult.text.length} characters.` : 'Document processed via Google Vision OCR.',
+                  summary: ocrResult.success ? 
+                    `Document processed via ${ocrResult.ocrSource}. Extracted ${ocrResult.textLength} characters.` : 
+                    'Document processed with fallback content.',
                   suggestedActions: [],
-                  extractionMethod: 'google_vision_ocr',
-                  extractedText: ocrResult.text || '',
-                  documentType: 'other'
+                  extractionMethod: ocrResult.ocrSource || 'enhanced_ocr',
+                  extractedText: ocrResult.extractedText || '',
+                  documentType: ocrResult.documentType || 'other'
                 };
                 
                 uploadedFileResults.push(documentAnalysis);
@@ -378,13 +380,13 @@ export function useAskBlocIQ({ buildingId, buildingName, selectedMessage, isPubl
                 if (!finalPrompt) {
                   finalPrompt = `Please analyze the uploaded document: ${uploadedFile.name}`;
                 }
-                finalPrompt += `\n\nDocument: ${uploadedFile.name}\nOCR Text: ${ocrResult.text ? ocrResult.text.substring(0, 500) + '...' : 'No text extracted'}\n\nPlease provide insights based on the OCR content.`;
+                finalPrompt += `\n\nDocument: ${uploadedFile.name}\nOCR Text: ${ocrResult.extractedText ? ocrResult.extractedText.substring(0, 500) + '...' : 'No text extracted'}\n\nPlease provide insights based on the OCR content.`;
                 
                 // Add document analysis to messages for display
                 const analysisMessage: Message = {
                   id: Date.now().toString(),
                   role: 'assistant',
-                  content: `📄 **${uploadedFile.name}** processed via Google Vision OCR!\n\n**Extraction Method:** Google Vision OCR\n**Text Length:** ${ocrResult.text ? ocrResult.text.length : 0} characters`,
+                  content: `📄 **${uploadedFile.name}** processed via ${ocrResult.ocrSource || 'Enhanced OCR'}!\n\n**Extraction Method:** ${ocrResult.ocrSource}\n**Text Length:** ${ocrResult.textLength || 0} characters\n**Analysis:** ${ocrResult.analysis || 'Document processed successfully'}`,
                   timestamp: new Date(),
                   documentAnalysis: [documentAnalysis]
                 };
