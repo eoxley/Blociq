@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Wand2, Send, Copy, Loader2, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react'
+import { Wand2, Send, Copy, Loader2, CheckCircle, AlertCircle, RefreshCw, Mail } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface EmailContext {
@@ -183,41 +183,61 @@ Format as a complete email ready to send.`
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <Wand2 className="w-6 h-6 text-blue-600" />
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden border border-gray-100">
+        {/* Enhanced Header */}
+        <div className="flex items-center justify-between p-6 bg-gradient-to-r from-[#6A00F5] via-[#7A2BE2] to-[#8A2BE2] text-white relative overflow-hidden">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-2 right-4 w-12 h-12 bg-white rounded-full blur-xl animate-pulse"></div>
+            <div className="absolute bottom-2 left-4 w-8 h-8 bg-white rounded-full blur-lg animate-pulse" style={{animationDelay: '1s'}}></div>
+          </div>
+          
+          <div className="relative z-10 flex items-center gap-4">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg border border-white/30">
+              <Wand2 className="w-6 h-6 text-white" />
+            </div>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">AI Reply Assistant</h2>
-              <p className="text-sm text-gray-600">Generate contextual email response</p>
+              <h2 className="text-xl font-bold bg-gradient-to-r from-white via-white/95 to-white/90 bg-clip-text text-transparent">
+                AI Reply Assistant
+              </h2>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-teal-300 rounded-full animate-pulse shadow-lg"></div>
+                <p className="text-white/90 text-sm font-medium">Generate contextual email response</p>
+              </div>
             </div>
           </div>
           <button 
             onClick={onClose} 
-            className="text-gray-400 hover:text-gray-600 text-2xl p-1 rounded-lg hover:bg-gray-100"
+            className="relative z-10 text-white/80 hover:text-white hover:bg-white/20 text-2xl p-2 rounded-xl backdrop-blur-sm transition-all duration-200 hover:scale-110"
           >
             ×
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-          {/* Email Context */}
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)] bg-gradient-to-b from-white via-[#fafbfc] to-white">
+          {/* Enhanced Email Context */}
           {currentEmail && (
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-              <h3 className="font-medium text-gray-900 mb-2">Replying to:</h3>
-              <p className="text-sm text-gray-700"><strong>From:</strong> {currentEmail.senderName} ({currentEmail.sender})</p>
-              <p className="text-sm text-gray-700"><strong>Subject:</strong> {currentEmail.subject}</p>
-              <div className="mt-2 text-sm text-gray-600 max-h-24 overflow-y-auto">
-                {currentEmail.body.substring(0, 300)}...
+            <div className="mb-6 p-5 bg-gradient-to-r from-blue-50 via-purple-50 to-blue-50 rounded-2xl border border-[#6A00F5]/20 shadow-sm">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-6 h-6 bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2] rounded-lg flex items-center justify-center">
+                  <Mail className="w-4 h-4 text-white" />
+                </div>
+                <h3 className="font-bold text-gray-900">Replying to:</h3>
+              </div>
+              <div className="space-y-2 text-sm">
+                <p className="text-gray-700"><strong className="text-gray-900">From:</strong> {currentEmail.senderName} ({currentEmail.sender})</p>
+                <p className="text-gray-700"><strong className="text-gray-900">Subject:</strong> {currentEmail.subject}</p>
+                <div className="mt-3 p-3 bg-white rounded-xl border border-gray-100 text-gray-600 max-h-24 overflow-y-auto">
+                  {currentEmail.body.substring(0, 300)}...
+                </div>
               </div>
             </div>
           )}
 
-          {/* Reply Style */}
+          {/* Enhanced Reply Style */}
           <div className="mb-6">
-            <h3 className="font-medium text-gray-900 mb-3">Reply Style</h3>
+            <h3 className="font-bold text-gray-900 mb-4">Reply Style</h3>
             <div className="grid grid-cols-3 gap-3">
               {[
                 { value: 'professional', label: 'Professional', desc: 'Formal business tone' },
@@ -227,48 +247,54 @@ Format as a complete email ready to send.`
                 <button
                   key={option.value}
                   onClick={() => setReplyStyle(option.value)}
-                  className={`p-3 border rounded-lg text-left transition-colors ${
+                  className={`p-4 border-2 rounded-2xl text-left transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${
                     replyStyle === option.value 
-                      ? 'border-blue-500 bg-blue-50 text-blue-900' 
-                      : 'border-gray-200 hover:bg-gray-50'
+                      ? 'border-[#6A00F5] bg-gradient-to-br from-[#6A00F5]/10 via-[#7A2BE2]/10 to-[#8A2BE2]/10 text-[#6A00F5] shadow-lg' 
+                      : 'border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50'
                   }`}
                 >
-                  <div className="font-medium text-sm">{option.label}</div>
+                  <div className="font-bold text-sm mb-1">{option.label}</div>
                   <div className="text-xs text-gray-600">{option.desc}</div>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Custom Instructions */}
+          {/* Enhanced Custom Instructions */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-bold text-gray-900 mb-3">
               Custom Instructions (Optional)
             </label>
             <textarea
               value={customInstructions}
               onChange={(e) => setCustomInstructions(e.target.value)}
               placeholder="e.g., 'Schedule a viewing', 'Include maintenance policy', 'Escalate to urgent'..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6A00F5]/50 focus:border-[#6A00F5] bg-white shadow-sm transition-all duration-200 hover:border-gray-300"
               rows={3}
             />
           </div>
 
-          {/* Generate Button */}
+          {/* Enhanced Generate Button */}
           <button
             onClick={() => generateReply()}
             disabled={isGenerating || !currentEmail}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mb-6"
+            className="w-full bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2] hover:from-[#5A00E5] hover:to-[#7A1BD2] text-white py-4 px-6 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-3 mb-6 transition-all duration-300 border border-white/20 backdrop-blur-sm"
           >
             {isGenerating ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <div className="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                </div>
                 Generating Reply...
+                <div className="w-2 h-2 bg-teal-300 rounded-full animate-pulse"></div>
               </>
             ) : (
               <>
-                <Wand2 className="w-4 h-4" />
-                Generate Reply
+                <div className="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center">
+                  <Wand2 className="w-4 h-4" />
+                </div>
+                Generate AI Reply
+                <div className="w-2 h-2 bg-teal-300 rounded-full animate-pulse"></div>
               </>
             )}
           </button>

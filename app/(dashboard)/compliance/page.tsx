@@ -19,10 +19,12 @@ import {
   FileText,
   TrendingUp,
   Users,
-  Sparkles
+  Sparkles,
+  Settings
 } from 'lucide-react'
 
 import { BlocIQButton } from '@/components/ui/blociq-button'
+import EnhancedEditAssetModal from '@/components/compliance/EnhancedEditAssetModal'
 import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
 import { BlocIQBadge } from '@/components/ui/blociq-badge'
 
@@ -103,12 +105,35 @@ export default function CompliancePage() {
   const [filterCategory, setFilterCategory] = useState<string>('all')
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [editingAsset, setEditingAsset] = useState<BuildingComplianceAsset | null>(null)
 
 
 
   useEffect(() => {
     fetchComplianceData()
   }, [])
+
+  const fetchDetailedComplianceData = async () => {
+    try {
+      console.log('🔍 Fetching detailed compliance data for all buildings...')
+      
+      // Get all building compliance assets with full details
+      const response = await fetch('/api/portfolio/compliance/detailed')
+      if (!response.ok) {
+        console.warn('Detailed API not available, skipping asset details')
+        return
+      }
+
+      const detailedData = await response.json()
+      if (detailedData.success && detailedData.data) {
+        console.log('✅ Detailed compliance data fetched:', detailedData.data.length, 'assets')
+        setComplianceData(detailedData.data)
+      }
+    } catch (err) {
+      console.warn('Could not fetch detailed compliance data:', err)
+      // Don't throw error - continue with overview data only
+    }
+  }
 
   const fetchComplianceData = async () => {
     try {
@@ -164,8 +189,8 @@ export default function CompliancePage() {
         compliance_percentage: apiSummary.totalAssets > 0 ? Math.round((apiSummary.compliantAssets / apiSummary.totalAssets) * 100) : 0
       })
 
-      // For now, set empty compliance data since we're using the overview API
-      setComplianceData([])
+      // Fetch detailed compliance data for all buildings
+      await fetchDetailedComplianceData()
 
     } catch (err) {
       console.error('❌ Error fetching compliance data:', err)
@@ -815,13 +840,24 @@ export default function CompliancePage() {
                           </span>
                         )}
                         
-                        <button
-                          onClick={() => router.push(`/buildings/${item.building_id}/compliance`)}
-                          className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 text-sm rounded-lg hover:bg-blue-100 transition-colors"
-                        >
-                          <Shield className="h-4 w-4" />
-                          Manage
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setEditingAsset(item)}
+                            className="inline-flex items-center gap-2 px-3 py-2 bg-green-50 text-green-700 text-sm rounded-lg hover:bg-green-100 transition-colors"
+                            title="Edit compliance asset"
+                          >
+                            <Settings className="h-4 w-4" />
+                            Edit
+                          </button>
+                          
+                          <button
+                            onClick={() => router.push(`/buildings/${item.building_id}/compliance`)}
+                            className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 text-sm rounded-lg hover:bg-blue-100 transition-colors"
+                          >
+                            <Shield className="h-4 w-4" />
+                            View Building
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -852,6 +888,17 @@ export default function CompliancePage() {
 
 
       </div>
+
+      {/* Edit Asset Modal */}
+      {editingAsset && (
+        <EnhancedEditAssetModal
+          buildingId={editingAsset.building_id}
+          assetId={editingAsset.compliance_asset_id}
+          asset={editingAsset}
+          isOpen={!!editingAsset}
+          onClose={() => setEditingAsset(null)}
+        />
+      )}
     </div>
   )
 }

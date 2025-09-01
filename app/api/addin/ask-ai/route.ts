@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     
     const supabase = createClient(cookies());
     
-    // Check authentication (optional for add-in)
+    // Authentication is optional for add-in - works without login
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     // Parse request body (handle both FormData and JSON)

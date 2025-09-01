@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react'
 import { Wand2 } from 'lucide-react'
 import AskBlocChat from '../../components/outlook-addin/AskBlocChat'
 import GenerateReplyModal from '../../components/outlook-addin/GenerateReplyModal'
+import BlocIQLogo from '../../components/BlocIQLogo'
 
 export default function OutlookAddin() {
   const [isOfficeReady, setIsOfficeReady] = useState(false)
-  const [isAuthenticated, setIsAuthenticated] = useState(true) // Default to guest mode
-  const [authError, setAuthError] = useState<string | null>(null)
-  const [showLogin, setShowLogin] = useState(false)
+  // Authentication removed - add-in works without authentication
+  const isAuthenticated = true
   const [showReplyModal, setShowReplyModal] = useState(false)
 
   useEffect(() => {
@@ -24,74 +24,16 @@ export default function OutlookAddin() {
           setShowReplyModal(true)
         }
         
-        // Skip auth check for now - work in guest mode
-        setIsAuthenticated(true)
+        // No authentication required
       })
     } else {
       // For testing in browser without Office.js
       console.log('Office.js not available - running in development mode')
       setIsOfficeReady(true)
-      setIsAuthenticated(true)
     }
   }, [])
 
-  const checkAuthStatus = async () => {
-    try {
-      const response = await fetch('/api/addin/auth', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ action: 'verify' }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        if (data.success && data.user) {
-          setIsAuthenticated(true)
-          console.log('User authenticated:', data.user.email)
-        } else {
-          setIsAuthenticated(false)
-        }
-      } else {
-        setIsAuthenticated(false)
-      }
-    } catch (error) {
-      console.error('Auth check failed:', error)
-      setIsAuthenticated(false)
-    }
-  }
-
-  const handleLogin = async (email: string, password: string) => {
-    try {
-      setAuthError(null)
-      
-      const response = await fetch('/api/addin/auth', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'login',
-          email,
-          password,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        setIsAuthenticated(true)
-        setShowLogin(false)
-        console.log('Login successful')
-      } else {
-        setAuthError(data.error || 'Login failed')
-      }
-    } catch (error) {
-      console.error('Login error:', error)
-      setAuthError('Connection failed. Please try again.')
-    }
-  }
+  // Authentication functions removed - no longer needed
 
   if (!isOfficeReady) {
     return (
@@ -107,141 +49,77 @@ export default function OutlookAddin() {
 
   // Main add-in interface - works with or without authentication
   return (
-    <div className="h-screen bg-white flex flex-col">
-      {/* Header */}
-      <div className="flex-shrink-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-                <span className="text-blue-600 font-bold text-sm">BQ</span>
-              </div>
-              <div>
-                <h1 className="font-semibold text-sm">BlocIQ AI Assistant</h1>
-                <p className="text-blue-100 text-xs">
-                  {isAuthenticated ? 'Authenticated' : 'Guest Mode'} • Property Management AI
-                </p>
-              </div>
-            </div>
-            
-            {!isAuthenticated && (
-              <button
-                onClick={() => setShowLogin(true)}
-                className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-xs transition-colors"
-              >
-                Sign In
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Login Modal */}
-        {showLogin && (
-          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 m-4 w-full max-w-sm">
-              <h2 className="text-lg font-semibold mb-4">Sign in to BlocIQ</h2>
-              
-              <form onSubmit={(e) => {
-                e.preventDefault()
-                const formData = new FormData(e.currentTarget)
-                handleLogin(
-                  formData.get('email') as string,
-                  formData.get('password') as string
-                )
-              }}>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      name="email"
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="your@email.com"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Password
-                    </label>
-                    <input
-                      type="password"
-                      name="password"
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="••••••••"
-                    />
-                  </div>
-
-                  {authError && (
-                    <div className="text-red-600 text-sm bg-red-50 p-2 rounded">
-                      {authError}
-                    </div>
-                  )}
-                  
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowLogin(false)
-                        setAuthError(null)
-                      }}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                    >
-                      Sign In
-                    </button>
-                  </div>
-                </div>
-              </form>
-              
-              <div className="mt-4 text-center">
-                <p className="text-xs text-gray-600">
-                  Continue without signing in for limited features
-                </p>
-                <button
-                  onClick={() => {
-                    setShowLogin(false)
-                    setAuthError(null)
-                  }}
-                  className="text-blue-600 text-xs hover:underline mt-1"
-                >
-                  Use Guest Mode
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Quick Actions Header */}
-        <div className="flex-shrink-0 p-4 border-b bg-gray-50">
-          <button 
-            onClick={() => setShowReplyModal(true)}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 transition-colors"
-          >
-            <Wand2 className="w-4 h-4" />
-            Generate AI Reply
-          </button>
-        </div>
-
-        {/* Main Chat Interface */}
-        <div className="flex-1 overflow-hidden">
-          <AskBlocChat />
+    <div className="h-screen bg-gradient-to-br from-[#f8fafc] via-white to-[#f1f5f9] flex flex-col">
+      {/* Enhanced Header with Master Branding */}
+      <div className="flex-shrink-0 bg-gradient-to-r from-[#6A00F5] via-[#7A2BE2] to-[#8A2BE2] text-white p-4 relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-2 right-4 w-16 h-16 bg-white rounded-full blur-2xl animate-pulse"></div>
+          <div className="absolute bottom-2 left-4 w-12 h-12 bg-white rounded-full blur-xl animate-pulse" style={{animationDelay: '1s'}}></div>
         </div>
         
-        {/* Footer */}
-        <div className="flex-shrink-0 px-3 py-2 bg-gray-50 border-t text-center">
-          <p className="text-xs text-gray-500">
-            Powered by BlocIQ • AI-driven property management
+        <div className="relative z-10 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-xl border border-white/30">
+              <BlocIQLogo size={24} className="text-white" />
+            </div>
+            <div>
+              <h1 className="font-bold text-lg bg-gradient-to-r from-white via-white/95 to-white/90 bg-clip-text text-transparent">
+                BlocIQ AI Assistant
+              </h1>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-teal-300 rounded-full animate-pulse shadow-lg"></div>
+                <p className="text-white/90 text-xs font-medium">
+                  Property Management AI • Ready to Help
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-emerald-400 rounded-full animate-pulse shadow-lg"></div>
+            <span className="text-xs text-white/80 font-medium">Online</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Enhanced Quick Actions */}
+      <div className="flex-shrink-0 p-6 bg-white border-b border-gray-100">
+        <button 
+          onClick={() => setShowReplyModal(true)}
+          className="w-full bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2] hover:from-[#5A00E5] hover:to-[#7A1BD2] text-white py-4 px-6 rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 font-semibold text-sm shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 border border-white/20 backdrop-blur-sm"
+        >
+          <div className="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center">
+            <Wand2 className="w-4 h-4" />
+          </div>
+          Generate AI Email Reply
+          <div className="w-2 h-2 bg-teal-300 rounded-full animate-pulse"></div>
+        </button>
+        
+        <div className="mt-4 text-center">
+          <p className="text-xs text-gray-500 font-medium">
+            Or ask me anything about property management below ↓
           </p>
         </div>
+      </div>
+
+      {/* Enhanced Chat Interface */}
+      <div className="flex-1 overflow-hidden bg-gradient-to-b from-white via-[#fafbfc] to-white">
+        <AskBlocChat />
+      </div>
+        
+      {/* Enhanced Footer */}
+      <div className="flex-shrink-0 px-6 py-4 bg-gradient-to-r from-gray-50 via-white to-gray-50 border-t border-gray-100">
+        <div className="flex items-center justify-center gap-3">
+          <div className="w-6 h-6 bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2] rounded-lg flex items-center justify-center">
+            <BlocIQLogo size={12} className="text-white" />
+          </div>
+          <p className="text-xs text-gray-600 font-medium">
+            Powered by <span className="bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2] bg-clip-text text-transparent font-bold">BlocIQ</span> • AI-driven property management
+          </p>
+          <div className="w-1 h-1 bg-[#6A00F5] rounded-full animate-pulse"></div>
+        </div>
+      </div>
 
         {/* Generate Reply Modal */}
         <GenerateReplyModal 

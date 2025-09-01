@@ -5,6 +5,7 @@ import { Send, Loader2, Sparkles, MessageCircle, Upload, FileText, X, Plus, Sear
 import { BlocIQButton } from '@/components/ui/blociq-button'
 import { BlocIQCard, BlocIQCardContent, BlocIQCardHeader } from '@/components/ui/blociq-card'
 import { BlocIQBadge } from '@/components/ui/blociq-badge'
+import BlocIQLogo from '@/components/BlocIQLogo'
 import { toast } from 'sonner'
 
 type Message = {
@@ -478,12 +479,12 @@ USER QUESTION: ${originalPrompt}`
             className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             {message.role === 'assistant' && (
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0 mt-1">
-                <Sparkles className="w-4 h-4 text-white" />
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#6A00F5] via-[#7A2BE2] to-[#8A2BE2] flex items-center justify-center flex-shrink-0 mt-1 shadow-lg border border-white/20 backdrop-blur-sm">
+                <BlocIQLogo size={18} className="text-white drop-shadow-sm" />
               </div>
             )}
             
-            <div className={`max-w-[85%] ${message.role === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900'} rounded-2xl px-4 py-3 relative group`}>
+            <div className={`max-w-[85%] ${message.role === 'user' ? 'bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2] text-white shadow-lg border border-white/20' : 'bg-white text-gray-900 shadow-md border border-gray-100'} rounded-2xl px-5 py-4 relative group backdrop-blur-sm`}>
               {/* Files display for user messages */}
               {message.files && message.files.length > 0 && (
                 <div className="mb-3 space-y-2">
@@ -545,29 +546,39 @@ USER QUESTION: ${originalPrompt}`
 
       {/* Input area (copied exactly from homepage) */}
       <div 
-        className={`flex-shrink-0 border-t bg-white transition-colors duration-200 ${isDragOver ? 'bg-blue-50 border-blue-300' : 'border-gray-200'}`}
+        className={`flex-shrink-0 border-t bg-gradient-to-r from-white via-[#fafbfc] to-white transition-colors duration-200 ${isDragOver ? 'bg-gradient-to-r from-blue-50 via-purple-50 to-blue-50 border-[#6A00F5]/30' : 'border-gray-100'}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        <div className="p-4">
+        <div className="p-6">
           {/* File upload area */}
           {uploadedFiles.length > 0 && (
-            <div className="mb-3 space-y-2">
+            <div className="mb-4 space-y-3 p-4 bg-gradient-to-r from-blue-50 via-purple-50 to-blue-50 rounded-2xl border border-[#6A00F5]/20 shadow-sm">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-5 h-5 bg-gradient-to-r from-[#6A00F5] to-[#8A2BE2] rounded-lg flex items-center justify-center">
+                  <Upload className="w-3 h-3 text-white" />
+                </div>
+                <div className="text-sm text-gray-700 font-semibold">Files ready to analyze:</div>
+              </div>
               {uploadedFiles.map((file) => (
-                <div key={file.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                  <FileText className="w-4 h-4 text-blue-500" />
-                  <span className="text-sm font-medium truncate flex-1">
-                    {file.name}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    {formatFileSize(file.size)}
-                  </span>
+                <div key={file.id} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-100 shadow-sm">
+                  <div className="w-8 h-8 bg-gradient-to-br from-[#6A00F5] to-[#8A2BE2] rounded-lg flex items-center justify-center">
+                    <FileText className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <span className="text-sm font-medium text-gray-700 truncate block">
+                      {file.name}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {formatFileSize(file.size)}
+                    </span>
+                  </div>
                   <button
                     onClick={() => removeFile(file.id)}
-                    className="text-gray-400 hover:text-red-500 p-1"
+                    className="text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition-colors"
                   >
-                    <X className="w-3 h-3" />
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
               ))}
@@ -583,7 +594,7 @@ USER QUESTION: ${originalPrompt}`
                   onChange={(e) => setPrompt(e.target.value)}
                   onKeyDown={handleKeyPress}
                   placeholder={currentEmail ? `Ask me about this email or anything else...` : `Ask me anything about your property management...`}
-                  className="w-full resize-none rounded-2xl border border-gray-300 px-4 py-3 pr-20 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500 min-h-[50px] max-h-[200px]"
+                  className="w-full resize-none rounded-2xl border-2 border-gray-200 px-5 py-4 pr-20 focus:outline-none focus:ring-2 focus:ring-[#6A00F5]/50 focus:border-[#6A00F5] text-gray-900 placeholder-gray-500 min-h-[56px] max-h-[200px] bg-white shadow-sm transition-all duration-200 hover:border-gray-300"
                   style={{ scrollbarWidth: 'thin' }}
                   disabled={isLoading}
                   rows={1}
@@ -602,7 +613,7 @@ USER QUESTION: ${originalPrompt}`
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="p-2 text-gray-400 hover:text-[#6A00F5] hover:bg-gradient-to-r hover:from-[#6A00F5]/10 hover:to-[#8A2BE2]/10 rounded-xl transition-all duration-200 hover:scale-110"
                     title="Upload files"
                     disabled={isLoading || uploadedFiles.length >= maxFiles}
                   >
