@@ -3,7 +3,7 @@
 // Home page client component - Major works dashboard removed for cleaner interface
 import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2, ExternalLink, RefreshCw, MessageCircle, Sparkles, Upload, FileText, Send, Bot, ArrowRight, HelpCircle, Brain, X as XIcon, ChevronDown, ChevronUp, Minimize2, Move, CornerDownRight, MapPin, User, Hash } from 'lucide-react'
+import { Calendar, Plus, X, Building, Clock, AlertCircle, CheckCircle, Loader2, ExternalLink, RefreshCw, MessageCircle, Sparkles, Upload, FileText, Send, Bot, ArrowRight, HelpCircle, Brain, X as XIcon, ChevronDown, ChevronUp, Minimize2, Move, CornerDownRight, MapPin, User, Hash, Scale } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 
 
