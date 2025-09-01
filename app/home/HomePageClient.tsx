@@ -17,6 +17,7 @@ import { BlocIQBadge } from '@/components/ui/blociq-badge'
 import BlocIQLogo from '@/components/BlocIQLogo'
 import { toast } from 'sonner'
 import DocumentQA from '@/components/DocumentQA'
+import DocumentSummary, { DocumentSummary as DocumentSummaryType } from '@/components/DocumentSummary'
 import { checkOutlookConnection, fetchOutlookEvents, getOutlookAuthUrl } from '@/lib/outlookUtils'
 import { normalizeEventTimes, formatInZone, getClientZone } from '@/lib/time'
 import { getTimeBasedGreeting } from '@/utils/greeting'
@@ -144,6 +145,8 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
   }>>([])
   const [showDocumentQA, setShowDocumentQA] = useState(false)
   const [activeDocument, setActiveDocument] = useState<any>(null)
+  const [currentView, setCurrentView] = useState<'upload' | 'summary' | 'qa'>('upload')
+  const [documentSummary, setDocumentSummary] = useState<DocumentSummaryType | null>(null)
 
   // Helper function to extract property info from document text
   const extractPropertyInfo = (text: string) => {
@@ -201,6 +204,63 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
     }
 
     return { property, parties, premium, term };
+  };
+
+  // Generate document summary using AI analysis
+  const generateDocumentSummary = async (processedDoc: any) => {
+    try {
+      console.log('📋 Generating document summary for:', processedDoc.filename);
+      
+      const summaryResponse = await fetch('/api/analyze-document', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          extractedText: processedDoc.extractedText,
+          filename: processedDoc.filename,
+          documentType: processedDoc.documentType,
+          metadata: {
+            fileSize: processedDoc.extractedText.length,
+            timestamp: processedDoc.timestamp.toISOString(),
+            ocrSource: processedDoc.ocrSource
+          }
+        }),
+      });
+
+      if (summaryResponse.ok) {
+        const result = await summaryResponse.json();
+        
+        if (result.success && result.data) {
+          const summary = result.data;
+          console.log('✅ Document summary generated with confidence:', summary.confidence);
+          
+          // Set the summary and switch to summary view
+          setDocumentSummary(summary);
+          setActiveDocument(processedDoc);
+          setCurrentView('summary');
+          
+          toast.success(`Document summary generated for ${processedDoc.filename}`, {
+            description: `Analysis confidence: ${Math.round(summary.confidence * 100)}%`
+          });
+        } else {
+          throw new Error(result.error || 'Failed to generate summary');
+        }
+      } else {
+        const errorData = await summaryResponse.json().catch(() => ({}));
+        throw new Error(errorData.error || `API request failed: ${summaryResponse.status}`);
+      }
+    } catch (error) {
+      console.error('❌ Failed to generate document summary:', error);
+      
+      // Fallback to direct Q&A if summary fails
+      setActiveDocument(processedDoc);
+      setCurrentView('qa');
+      
+      toast.error('Summary generation failed', {
+        description: 'Proceeding directly to Q&A system'
+      });
+    }
   };
 
   const [communicationModalData, setCommunicationModalData] = useState<{
@@ -636,6 +696,9 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               
               setProcessedDocuments(prev => [processedDoc, ...prev]);
               console.log('📄 Added document to Q&A system:', processedDoc.filename);
+              
+              // Generate document summary for enhanced analysis
+              await generateDocumentSummary(processedDoc);
             } else {
               console.log(`⚠️ File processing failed - insufficient text: ${uploadedFile.name}`)
               setUploadStatus(`⚠️ ${uploadedFile.name} - No meaningful text extracted`)
@@ -2092,8 +2155,17 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
                 <div
                   key={doc.id}
                   className="bg-white rounded-lg shadow-md border hover:shadow-lg transition-all duration-200 cursor-pointer"
-                  onClick={() => {
+                  onClick={async () => {
                     setActiveDocument(doc);
+                    
+                    // Try to generate/retrieve summary first, fallback to Q&A if it fails
+                    try {
+                      await generateDocumentSummary(doc);
+                    } catch (error) {
+                      // If summary generation fails, go directly to Q&A
+                      setCurrentView('qa');
+                    }
+                    
                     setShowDocumentQA(true);
                   }}
                 >
@@ -2144,18 +2216,20 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
         )}
       </div>
 
-      {/* Document Q&A Modal */}
+      {/* Document Analysis Modal */}
       {showDocumentQA && activeDocument && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b">
               <h2 className="text-xl font-bold text-gray-900">
-                Document Q&A: {activeDocument.filename}
+                {currentView === 'summary' ? 'Document Summary' : 'Document Q&A'}: {activeDocument.filename}
               </h2>
               <button
                 onClick={() => {
                   setShowDocumentQA(false);
                   setActiveDocument(null);
+                  setDocumentSummary(null);
+                  setCurrentView('upload');
                 }}
                 className="p-2 hover:bg-gray-100 rounded-full transition-colors"
               >
@@ -2163,21 +2237,32 @@ export default function HomePageClient({ userData }: HomePageClientProps) {
               </button>
             </div>
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
-              <DocumentQA
-                documentText={activeDocument.extractedText}
-                documentMetadata={{
-                  filename: activeDocument.filename,
-                  documentType: activeDocument.documentType,
-                  textLength: activeDocument.textLength,
-                  property: activeDocument.property,
-                  parties: activeDocument.parties,
-                  premium: activeDocument.premium,
-                  term: activeDocument.term
-                }}
-                onQuestionSubmit={(question) => {
-                  console.log('🤔 Q&A Question asked:', question);
-                }}
-              />
+              {/* Document Summary View */}
+              {currentView === 'summary' && documentSummary && (
+                <DocumentSummary 
+                  summary={documentSummary}
+                  onStartQA={() => setCurrentView('qa')}
+                />
+              )}
+              
+              {/* Q&A View */}
+              {currentView === 'qa' && (
+                <DocumentQA
+                  documentText={activeDocument.extractedText}
+                  documentMetadata={{
+                    filename: activeDocument.filename,
+                    documentType: activeDocument.documentType,
+                    textLength: activeDocument.textLength,
+                    property: activeDocument.property,
+                    parties: activeDocument.parties,
+                    premium: activeDocument.premium,
+                    term: activeDocument.term
+                  }}
+                  onQuestionSubmit={(question) => {
+                    console.log('🤔 Q&A Question asked:', question);
+                  }}
+                />
+              )}
             </div>
           </div>
         </div>
