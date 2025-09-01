@@ -6,12 +6,12 @@ export async function GET(req: NextRequest) {
   try {
     console.log('🧪 Testing database connection...');
     
-    const cookieStore = await cookies();
+    const cookieStore = cookies();
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
     
     // Check authentication
-    const { data: { session }, error: authError } = await supabase.auth.getSession();
-    if (authError || !session) {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
       return NextResponse.json({ 
         error: 'Authentication required',
         message: 'Please log into your BlocIQ account.',
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
       }, { status: 401 });
     }
 
-    console.log('✅ User authenticated:', session.user.id);
+    console.log('✅ User authenticated:', user.id);
 
     // Test table access - try the simplest possible query first
     const { data: testData, error: testError } = await supabase

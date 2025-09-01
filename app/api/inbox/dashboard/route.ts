@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
+import { makeGraphRequest } from '@/lib/outlookAuth';
 
 export const maxDuration = 60; // 1 minute timeout for dashboard queries
 
@@ -8,12 +9,12 @@ export async function GET(req: NextRequest) {
   try {
     console.log('📊 Fetching inbox dashboard data...');
     
-    const cookieStore = await cookies();
+    const cookieStore = cookies();
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
     
     // Check authentication
-    const { data: { session }, error: authError } = await supabase.auth.getSession();
-    if (authError || !session) {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
       console.log('❌ Authentication failed for dashboard request');
       return NextResponse.json({ 
         error: 'Authentication required',
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
       }, { status: 401 });
     }
 
-    console.log('✅ User authenticated:', session.user.id);
+    console.log('✅ User authenticated:', user.id);
 
     // Get query parameters
     const { searchParams } = new URL(req.url);
@@ -46,103 +47,92 @@ export async function GET(req: NextRequest) {
 
     console.log(`📅 Fetching emails from ${startDate.toISOString()} to ${now.toISOString()}`);
 
-    // Query the incoming_emails table with safe column selection
-    // Note: Some advanced AI columns may not exist in all database instances
-    console.log('🔍 Attempting to query incoming_emails table...');
-    const { data: emails, error: emailsError } = await supabase
-      .from('incoming_emails')
-      .select(`
-        id,
-        subject,
-        from_email,
-        body,
-        received_at,
-        is_read,
-        handled,
-        building_id
-      `)
-      .gte('received_at', startDate.toISOString())
-      .order('received_at', { ascending: false })
-      .limit(1000); // Add reasonable limit to prevent memory issues
-
-    console.log('📊 Basic email query result:', { 
-      emailCount: emails?.length || 0, 
-      hasError: !!emailsError,
-      errorDetails: emailsError?.message
-    });
-
-    // Try to get enhanced AI fields if they exist (graceful fallback)
-    let enhancedEmails = emails;
-    if (emails && emails.length > 0) {
-      try {
-        const { data: enhancedData } = await supabase
-          .from('incoming_emails')
-          .select(`
-            id,
-            urgency_level,
-            urgency_score,
-            mentioned_properties,
-            ai_insights,
-            suggested_actions,
-            ai_tag,
-            triage_category
-          `)
-          .gte('received_at', startDate.toISOString())
-          .limit(1000);
-
-        // Merge enhanced data with basic email data
-        if (enhancedData) {
-          const enhancedMap = new Map(enhancedData.map(e => [e.id, e]));
-          enhancedEmails = emails.map(email => ({
-            ...email,
-            urgency_level: enhancedMap.get(email.id)?.urgency_level || 'low',
-            urgency_score: enhancedMap.get(email.id)?.urgency_score || 0,
-            mentioned_properties: enhancedMap.get(email.id)?.mentioned_properties || [],
-            ai_insights: enhancedMap.get(email.id)?.ai_insights || [],
-            suggested_actions: enhancedMap.get(email.id)?.suggested_actions || [],
-            ai_tag: enhancedMap.get(email.id)?.ai_tag || 'General',
-            triage_category: enhancedMap.get(email.id)?.triage_category || 'General'
-          }));
-        }
-      } catch (enhancedError) {
-        console.warn('⚠️ Enhanced AI fields not available, using basic email data:', enhancedError);
-        // Continue with basic email data, adding default values for missing fields
-        enhancedEmails = emails.map(email => ({
-          ...email,
-          urgency_level: 'low',
-          urgency_score: 0,
-          mentioned_properties: [],
-          ai_insights: [],
-          suggested_actions: [],
-          ai_tag: 'General',
-          triage_category: 'General'
-        }));
+    // Fetch emails directly from Outlook via Graph API
+    console.log('🔍 Attempting to query Outlook via Microsoft Graph API...');
+    
+    let emails = [];
+    let emailsError = null;
+    
+    try {
+      // Fetch emails directly from the inbox using the well-known name
+      console.log(`📥 Fetching messages from Inbox`);
+      
+      const messagesResponse = await makeGraphRequest(
+        `/me/mailFolders/inbox/messages?$select=id,subject,from,bodyPreview,receivedDateTime,isRead,importance&$orderby=receivedDateTime desc&$top=100`
+      );
+      
+      if (!messagesResponse.ok) {
+        console.error('❌ Error fetching messages: Status', messagesResponse.status);
+        throw new Error(`Failed to fetch messages: ${messagesResponse.status}`);
       }
+
+      const messagesData = await messagesResponse.json();
+      
+      // Transform Outlook messages to match expected format
+      const outlookEmails = messagesData.value?.map((msg: any) => ({
+        id: msg.id,
+        subject: msg.subject || 'No Subject',
+        from_email: msg.from?.emailAddress?.address || '',
+        from_name: msg.from?.emailAddress?.name || '',
+        body: msg.bodyPreview || '',
+        received_at: msg.receivedDateTime,
+        is_read: msg.isRead || false,
+        building_id: null, // Not available from Outlook
+        urgency_level: msg.importance === 'high' ? 'high' : 'low',
+        urgency_score: msg.importance === 'high' ? 8 : 2,
+        mentioned_properties: [],
+        ai_insights: [],
+        suggested_actions: [],
+        ai_tag: 'General',
+        triage_category: 'General'
+      })) || [];
+
+      // Filter emails by time range
+      emails = outlookEmails.filter((email: any) => {
+        const receivedDate = new Date(email.received_at);
+        return receivedDate >= startDate && receivedDate <= now;
+      });
+
+      console.log('📊 Live Outlook query result:', { 
+        totalFetched: outlookEmails.length,
+        emailCount: emails.length, 
+        hasError: false,
+        timeFiltered: `${outlookEmails.length} -> ${emails.length}`
+      });
+
+    } catch (error) {
+      console.error('❌ Error fetching from Outlook:', error);
+      emailsError = error;
+      emails = [];
     }
+
+    // Use the emails directly from Outlook (they already have AI fields populated)
+    let enhancedEmails = emails;
 
     if (emailsError) {
       console.error('❌ Error fetching emails:', emailsError);
       
-      // Handle specific database errors gracefully
-      if (emailsError.message?.includes('relation') && emailsError.message?.includes('does not exist')) {
-        // Table doesn't exist - return empty dashboard
+      // Handle specific Outlook connection errors gracefully
+      if (emailsError.message?.includes('401') || emailsError.message?.includes('403')) {
+        // Authentication error - Outlook not connected or expired
         return NextResponse.json({
           success: true,
           data: createEmptyDashboard(),
           timeRange,
-          message: 'No email data available - inbox table not found',
+          message: 'Please connect your Outlook account to view email data',
+          outlookConnectionRequired: true,
           generatedAt: new Date().toISOString()
         });
       }
       
-      if (emailsError.message?.includes('permission') || emailsError.message?.includes('policy')) {
-        // Permission error
+      if (emailsError.message?.includes('Failed to fetch folders') || emailsError.message?.includes('Failed to fetch messages')) {
+        // Outlook API error
         return NextResponse.json({
-          error: 'Access denied',
-          message: 'You do not have permission to access email data. Please contact your administrator.',
+          error: 'Outlook connection error',
+          message: 'Unable to fetch emails from Outlook. Please try reconnecting your account.',
           details: emailsError.message,
           timestamp: new Date().toISOString()
-        }, { status: 403 });
+        }, { status: 503 });
       }
       
       // For other errors, throw to be caught by main catch block
@@ -151,25 +141,8 @@ export async function GET(req: NextRequest) {
 
     console.log(`✅ Fetched ${enhancedEmails?.length || 0} emails for dashboard`);
 
-    // Get building information for the emails
-    const buildingIds = [...new Set(enhancedEmails?.map(e => e.building_id).filter(Boolean) || [])];
-    let buildingsMap = {};
-    
-    if (buildingIds.length > 0) {
-      const { data: buildings, error: buildingsError } = await supabase
-        .from('buildings')
-        .select('id, name, address')
-        .in('id', buildingIds);
-      
-      if (buildingsError) {
-        console.error('❌ Error fetching buildings:', buildingsError);
-      } else {
-        buildingsMap = buildings?.reduce((acc, building) => {
-          acc[building.id] = building;
-          return acc;
-        }, {}) || {};
-      }
-    }
+    // No building mapping needed for live Outlook emails
+    const buildingsMap = {};
 
     // Process data for dashboard with enhanced triage integration
     let dashboard;
@@ -188,7 +161,7 @@ export async function GET(req: NextRequest) {
       dashboard = {
         total: enhancedEmails?.length || 0,
         unread: enhancedEmails?.filter(e => e?.is_read === false).length || 0,
-        handled: enhancedEmails?.filter(e => e?.handled).length || 0,
+        handled: 0, // handled field not available in current schema
         urgent: enhancedEmails?.filter(e => ['critical', 'high'].includes(e?.urgency_level || 'low')).length || 0,
         categories: {},
         propertyBreakdown: {},
@@ -256,7 +229,7 @@ function processDashboardData(emails: any[], buildingsMap: any) {
   const dashboard = {
     total: safeEmails.length,
     unread: safeEmails.filter(e => e && e.is_read === false).length,
-    handled: safeEmails.filter(e => e && e.handled === true).length,
+    handled: 0, // handled field not available in current schema
     urgent: safeEmails.filter(e => e && ['critical', 'high'].includes(e.urgency_level || 'low')).length,
     categories: {} as any,
     propertyBreakdown: {} as any,
@@ -325,7 +298,7 @@ function processDashboardData(emails: any[], buildingsMap: any) {
       count: categoryEmails.length,
       urgent: categoryEmails.filter(e => ['critical', 'high'].includes(e.urgency_level || 'low')).length,
       unread: categoryEmails.filter(e => e.is_read === false).length,
-      handled: categoryEmails.filter(e => e.handled).length,
+      handled: 0, // handled field not available in current schema
       avgUrgencyScore: Math.round(avgUrgencyScore * 10) / 10,
       properties: Array.from(properties).slice(0, 5), // Show top 5
       samples: categoryEmails.slice(0, 3).map(e => ({
@@ -419,7 +392,7 @@ function processDashboardData(emails: any[], buildingsMap: any) {
         aiTag: email?.ai_tag || null,
         category: email?.triage_category || null,
         unread: email?.is_read === false,
-        handled: email?.handled || false
+        handled: false // handled field not available in current schema
       };
     } catch (error) {
       console.warn('Error processing recent activity for email:', error, email?.id);
@@ -573,7 +546,6 @@ function generateSmartSuggestions(emails: any[], dashboard: any) {
   // Follow-up needed suggestion with enhanced logic
   const unreadOldCount = emails.filter(e => 
     e.is_read === false && 
-    !e.handled &&
     new Date(e.received_at) < new Date(Date.now() - 24 * 60 * 60 * 1000)
   ).length;
 
