@@ -50,6 +50,7 @@ export default function OutlookAddin() {
   // Main add-in interface - works with or without authentication
   return (
     <div className="h-screen bg-gradient-to-br from-[#f8fafc] via-white to-[#f1f5f9] flex flex-col">
+      {/* Deployment test - force rebuild */}
       {/* Enhanced Header with Master Branding */}
       <div className="flex-shrink-0 bg-gradient-to-r from-[#6A00F5] via-[#7A2BE2] to-[#8A2BE2] text-white p-4 relative overflow-hidden">
         {/* Background Pattern */}
