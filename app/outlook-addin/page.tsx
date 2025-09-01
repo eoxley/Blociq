@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Head from 'next/head'
 import { Wand2 } from 'lucide-react'
 import AskBlocChat from '../../components/outlook-addin/AskBlocChat'
 import GenerateReplyModal from '../../components/outlook-addin/GenerateReplyModal'
@@ -108,16 +107,9 @@ export default function OutlookAddin() {
 
   // Main add-in interface - works with or without authentication
   return (
-    <>
-      <Head>
-        <title>BlocIQ - Outlook Add-in</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
-      </Head>
-      
-      <div className="h-screen bg-white flex flex-col">
-        {/* Header */}
-        <div className="flex-shrink-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-3">
+    <div className="h-screen bg-white flex flex-col">
+      {/* Header */}
+      <div className="flex-shrink-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
@@ -257,7 +249,6 @@ export default function OutlookAddin() {
           onClose={() => setShowReplyModal(false)}
           autoTrigger={window.location.href.includes('reply') || window.location.href.includes('compose')}
         />
-      </div>
-    </>
+    </div>
   )
 }

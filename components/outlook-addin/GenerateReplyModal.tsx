@@ -35,7 +35,7 @@ const GenerateReplyModal: React.FC<GenerateReplyModalProps> = ({ isOpen, onClose
 
   const getCurrentEmailAndGenerate = async () => {
     try {
-      if (typeof Office !== 'undefined' && Office.context?.mailbox?.item) {
+      if (typeof Office !== 'undefined' && Office.context && Office.context.mailbox && Office.context.mailbox.item) {
         const item = Office.context.mailbox.item
         
         item.body.getAsync(Office.CoercionType.Text, (result) => {
@@ -150,7 +150,7 @@ Format as a complete email ready to send.`
     }
 
     try {
-      if (typeof Office !== 'undefined' && Office.context?.mailbox?.item) {
+      if (typeof Office !== 'undefined' && Office.context && Office.context.mailbox && Office.context.mailbox.item) {
         // Create reply draft in Outlook
         Office.context.mailbox.item.displayReplyForm({
           htmlBody: generatedReply.replace(/\n/g, '<br>'),

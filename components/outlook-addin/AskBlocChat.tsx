@@ -74,16 +74,41 @@ export default function AskBlocChat() {
 
   // Initialize Office.js and get email context
   useEffect(() => {
-    if (typeof Office !== 'undefined') {
-      Office.onReady((info) => {
-        console.log('Office.js ready:', info)
-        setIsOfficeReady(true)
-        getCurrentEmailContext()
-      })
+    // Wait for Office to be available
+    const initializeOffice = () => {
+      if (typeof Office !== 'undefined' && Office.onReady) {
+        Office.onReady((info) => {
+          console.log('Office.js ready:', info)
+          setIsOfficeReady(true)
+          getCurrentEmailContext()
+        })
+      } else {
+        // Retry after a short delay if Office.js is still loading
+        setTimeout(() => {
+          if (typeof Office !== 'undefined' && Office.onReady) {
+            Office.onReady((info) => {
+              console.log('Office.js ready (delayed):', info)
+              setIsOfficeReady(true)
+              getCurrentEmailContext()
+            })
+          } else {
+            // For testing outside Outlook or if Office.js fails to load
+            console.log('Office.js not available - running in development mode')
+            setIsOfficeReady(true)
+          }
+        }, 2000)
+      }
+    }
+
+    // Try to initialize immediately, or wait for DOM to be ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initializeOffice)
     } else {
-      // For testing outside Outlook
-      setIsOfficeReady(true)
-      console.log('Office.js not available - running in development mode')
+      initializeOffice()
+    }
+
+    return () => {
+      document.removeEventListener('DOMContentLoaded', initializeOffice)
     }
   }, [])
 
