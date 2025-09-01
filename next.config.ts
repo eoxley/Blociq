@@ -116,7 +116,7 @@ const nextConfig: NextConfig = {
       ignored: /node_modules/,
     };
     
-    // Handle potential webpack compatibility issues
+    // Handle potential webpack compatibility issues - disable source maps in production
     config.devtool = dev ? 'eval-source-map' : false;
     
     // Handle potential webpack compatibility issues
@@ -228,6 +228,9 @@ const nextConfig: NextConfig = {
   },
   // Add output configuration for better deployment
   output: 'standalone',
+  
+  // Disable source maps in production to prevent 404 errors
+  productionBrowserSourceMaps: false,
 };
 
 export default nextConfig;

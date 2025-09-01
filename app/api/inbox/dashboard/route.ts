@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 
+export const maxDuration = 60; // 1 minute timeout for dashboard queries
+
 export async function GET(req: NextRequest) {
   try {
     console.log('📊 Fetching inbox dashboard data...');
@@ -53,7 +55,7 @@ export async function GET(req: NextRequest) {
         from_email,
         body,
         received_at,
-        unread,
+        is_read,
         handled,
         building_id,
         urgency_level,
@@ -111,7 +113,7 @@ export async function GET(req: NextRequest) {
       // Return a minimal dashboard with safe defaults
       dashboard = {
         total: emails?.length || 0,
-        unread: emails?.filter(e => e?.unread).length || 0,
+        unread: emails?.filter(e => e?.is_read === false).length || 0,
         handled: emails?.filter(e => e?.handled).length || 0,
         urgent: emails?.filter(e => ['critical', 'high'].includes(e?.urgency_level || 'low')).length || 0,
         categories: {},
@@ -179,7 +181,7 @@ function processDashboardData(emails: any[], buildingsMap: any) {
   
   const dashboard = {
     total: safeEmails.length,
-    unread: safeEmails.filter(e => e && e.unread === true).length,
+    unread: safeEmails.filter(e => e && e.is_read === false).length,
     handled: safeEmails.filter(e => e && e.handled === true).length,
     urgent: safeEmails.filter(e => e && ['critical', 'high'].includes(e.urgency_level || 'low')).length,
     categories: {} as any,
@@ -248,7 +250,7 @@ function processDashboardData(emails: any[], buildingsMap: any) {
     dashboard.categories[category] = {
       count: categoryEmails.length,
       urgent: categoryEmails.filter(e => ['critical', 'high'].includes(e.urgency_level || 'low')).length,
-      unread: categoryEmails.filter(e => e.unread).length,
+      unread: categoryEmails.filter(e => e.is_read === false).length,
       handled: categoryEmails.filter(e => e.handled).length,
       avgUrgencyScore: Math.round(avgUrgencyScore * 10) / 10,
       properties: Array.from(properties).slice(0, 5), // Show top 5
@@ -297,7 +299,7 @@ function processDashboardData(emails: any[], buildingsMap: any) {
     dashboard.propertyBreakdown[property] = {
       count: propertyEmails.length,
       urgent: propertyEmails.filter(e => ['critical', 'high'].includes(e.urgency_level || 'low')).length,
-      unread: propertyEmails.filter(e => e.unread).length,
+      unread: propertyEmails.filter(e => e.is_read === false).length,
       categories: [...new Set(propertyEmails.map(e => e?.ai_tag || e?.triage_category || 'General').filter(Boolean))],
       avgUrgencyScore: Math.round(avgUrgencyScore * 10) / 10,
       recentActivity: propertyEmails.slice(0, 3).map(e => ({
@@ -342,7 +344,7 @@ function processDashboardData(emails: any[], buildingsMap: any) {
         urgencyScore: email?.urgency_score || 0,
         aiTag: email?.ai_tag || null,
         category: email?.triage_category || null,
-        unread: email?.unread || false,
+        unread: email?.is_read === false,
         handled: email?.handled || false
       };
     } catch (error) {
@@ -496,7 +498,7 @@ function generateSmartSuggestions(emails: any[], dashboard: any) {
 
   // Follow-up needed suggestion with enhanced logic
   const unreadOldCount = emails.filter(e => 
-    e.unread && 
+    e.is_read === false && 
     !e.handled &&
     new Date(e.received_at) < new Date(Date.now() - 24 * 60 * 60 * 1000)
   ).length;
