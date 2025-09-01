@@ -306,108 +306,141 @@ const EnhancedInboxOverview: React.FC = () => {
   return (
     <>
       <MobilePageNavigation title="Smart Inbox" backTo="/home" backLabel="Home" />
-      <div className="min-h-screen bg-gray-50 p-4 lg:p-6 pt-20 lg:pt-6">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                  <Brain className="h-8 w-8 text-blue-600" />
-                  Smart Inbox Dashboard
-                </h1>
-                <p className="text-gray-600 mt-1">AI-powered insights for your property communications</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+        {/* Hero Banner */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 pt-20 lg:pt-0">
+          <div className="absolute inset-0 bg-black/10"></div>
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.05"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20"></div>
+          
+          <div className="relative max-w-7xl mx-auto px-4 lg:px-6 py-16 lg:py-24">
+            <div className="text-center">
+              <div className="flex justify-center mb-6">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-white/20 rounded-full blur-xl"></div>
+                  <div className="relative bg-white/10 backdrop-blur-sm rounded-full p-4 border border-white/20">
+                    <Brain className="h-12 w-12 lg:h-16 lg:w-16 text-white" />
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-4">
+              
+              <h1 className="text-4xl lg:text-6xl font-bold text-white mb-4 leading-tight">
+                Smart Inbox
+                <span className="block text-2xl lg:text-4xl font-light mt-2 text-blue-100">
+                  AI-Powered Dashboard
+                </span>
+              </h1>
+              
+              <p className="text-lg lg:text-xl text-blue-100 mb-8 max-w-2xl mx-auto leading-relaxed">
+                Transform your property communications with intelligent insights, automated triage, and smart suggestions
+              </p>
+              
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
                 <Button 
                   onClick={() => fetchDashboardData(false)}
-                  variant="outline"
-                  size="sm"
+                  variant="secondary"
+                  size="lg"
                   disabled={refreshing}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 bg-white/90 text-gray-900 hover:bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
                 >
-                  <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-                  Refresh
+                  <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} />
+                  {refreshing ? 'Refreshing...' : 'Refresh Data'}
                 </Button>
-                <select 
-                  value={timeRange} 
-                  onChange={(e) => setTimeRange(e.target.value)}
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
-                >
-                  <option value="today">Today</option>
-                  <option value="week">This Week</option>
-                  <option value="month">This Month</option>
-                </select>
+                
+                <div className="relative">
+                  <select 
+                    value={timeRange} 
+                    onChange={(e) => setTimeRange(e.target.value)}
+                    className="appearance-none bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-transparent text-sm lg:text-base min-w-[140px]"
+                  >
+                    <option value="today" className="text-gray-900">Today</option>
+                    <option value="week" className="text-gray-900">This Week</option>
+                    <option value="month" className="text-gray-900">This Month</option>
+                  </select>
+                  <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/70 pointer-events-none" />
+                </div>
+              </div>
+              
+              {/* Quick Stats in Hero */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 max-w-4xl mx-auto">
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 lg:p-6 border border-white/20">
+                  <div className="text-2xl lg:text-3xl font-bold text-white mb-1">{dashboardData.total}</div>
+                  <div className="text-sm lg:text-base text-blue-100">Total Emails</div>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 lg:p-6 border border-white/20">
+                  <div className="text-2xl lg:text-3xl font-bold text-yellow-300 mb-1">{dashboardData.unread}</div>
+                  <div className="text-sm lg:text-base text-blue-100">Unread</div>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 lg:p-6 border border-white/20">
+                  <div className="text-2xl lg:text-3xl font-bold text-red-300 mb-1">{dashboardData.urgent}</div>
+                  <div className="text-sm lg:text-base text-blue-100">Urgent</div>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 lg:p-6 border border-white/20">
+                  <div className="text-2xl lg:text-3xl font-bold text-green-300 mb-1">{dashboardData.handled}</div>
+                  <div className="text-sm lg:text-base text-blue-100">Handled</div>
+                </div>
               </div>
             </div>
           </div>
+          
+          {/* Wave decoration */}
+          <div className="absolute bottom-0 left-0 right-0">
+            <svg className="w-full h-16 lg:h-24 text-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 fill-current" viewBox="0 0 1200 120" preserveAspectRatio="none">
+              <path d="M0,60 C150,120 350,0 600,60 C850,120 1050,0 1200,60 L1200,120 L0,120 Z" className="fill-slate-50"></path>
+            </svg>
+          </div>
+        </div>
 
-          {/* Key Metrics */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-6 mb-8">
-            <Card>
-              <CardContent className="p-4 lg:p-6">
+        <div className="max-w-7xl mx-auto px-4 lg:px-6 py-8 lg:py-12">
+
+          {/* Additional Metrics */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600">Total Emails</p>
-                    <p className="text-2xl lg:text-3xl font-bold text-gray-900">{dashboardData.total}</p>
-                  </div>
-                  <Mail className="w-6 h-6 lg:w-8 lg:h-8 text-blue-600" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card 
-              className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={handleUnreadClick}
-            >
-              <CardContent className="p-4 lg:p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600">Unread</p>
-                    <p className="text-2xl lg:text-3xl font-bold text-yellow-600">{dashboardData.unread}</p>
-                  </div>
-                  <Eye className="w-6 h-6 lg:w-8 lg:h-8 text-yellow-600" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card 
-              className="cursor-pointer hover:shadow-md transition-shadow border-red-200"
-              onClick={handleUrgentClick}
-            >
-              <CardContent className="p-4 lg:p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-red-600">Urgent</p>
-                    <p className="text-2xl lg:text-3xl font-bold text-red-600">{dashboardData.urgent}</p>
-                  </div>
-                  <AlertTriangle className="w-6 h-6 lg:w-8 lg:h-8 text-red-600" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4 lg:p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600">Handled</p>
-                    <p className="text-2xl lg:text-3xl font-bold text-green-600">{dashboardData.handled}</p>
-                  </div>
-                  <CheckCircle className="w-6 h-6 lg:w-8 lg:h-8 text-green-600" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4 lg:p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600">Properties</p>
-                    <p className="text-2xl lg:text-3xl font-bold text-purple-600">
+                    <p className="text-sm font-medium text-gray-600">Properties Managed</p>
+                    <p className="text-3xl font-bold text-purple-600 mt-2">
                       {Object.keys(dashboardData.propertyBreakdown || {}).length}
                     </p>
+                    <p className="text-xs text-gray-500 mt-1">Active properties with communications</p>
                   </div>
-                  <Building2 className="w-6 h-6 lg:w-8 lg:h-8 text-purple-600" />
+                  <div className="bg-purple-100 rounded-full p-3">
+                    <Building2 className="w-8 h-8 text-purple-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer" onClick={handleUnreadClick}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Response Rate</p>
+                    <p className="text-3xl font-bold text-green-600 mt-2">
+                      {dashboardData.total > 0 ? Math.round((dashboardData.handled / dashboardData.total) * 100) : 0}%
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">Emails successfully handled</p>
+                  </div>
+                  <div className="bg-green-100 rounded-full p-3">
+                    <CheckCircle className="w-8 h-8 text-green-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">AI Insights</p>
+                    <p className="text-3xl font-bold text-blue-600 mt-2">
+                      {dashboardData.aiInsightsSummary?.totalInsights || 0}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">Smart recommendations generated</p>
+                  </div>
+                  <div className="bg-blue-100 rounded-full p-3">
+                    <Brain className="w-8 h-8 text-blue-600" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -415,32 +448,37 @@ const EnhancedInboxOverview: React.FC = () => {
 
           {/* Smart Suggestions */}
           {dashboardData.smartSuggestions?.length > 0 && (
-            <Card className="mb-8">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-yellow-500" />
+            <Card className="mb-8 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-3 text-xl">
+                  <div className="bg-yellow-100 rounded-full p-2">
+                    <Sparkles className="h-6 w-6 text-yellow-600" />
+                  </div>
                   Smart Suggestions
-                  <Badge variant="secondary">{dashboardData.smartSuggestions.length}</Badge>
+                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-200">
+                    {dashboardData.smartSuggestions.length}
+                  </Badge>
                 </CardTitle>
+                <p className="text-gray-600 text-sm mt-2">AI-powered recommendations to optimize your inbox management</p>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {dashboardData.smartSuggestions.map((suggestion, idx) => (
                     <div 
                       key={idx} 
-                      className={`border rounded-lg p-4 ${getPriorityColor(suggestion.priority)}`}
+                      className={`rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-300 ${getPriorityColor(suggestion.priority)} border-0`}
                     >
-                      <div className="flex items-start gap-3 mb-3">
-                        <span className="text-2xl">{suggestion.icon}</span>
-                        <div>
-                          <h3 className="font-medium mb-1">{suggestion.title}</h3>
-                          <p className="text-sm opacity-90">{suggestion.message}</p>
+                      <div className="flex items-start gap-4 mb-4">
+                        <div className="text-3xl">{suggestion.icon}</div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold mb-2 text-lg">{suggestion.title}</h3>
+                          <p className="text-sm opacity-90 leading-relaxed">{suggestion.message}</p>
                         </div>
                       </div>
                       <Button 
                         size="sm" 
                         variant="ghost" 
-                        className="w-full justify-between text-left"
+                        className="w-full justify-between text-left hover:bg-white/50 transition-colors"
                       >
                         {suggestion.action}
                         <ArrowRight className="h-4 w-4" />
@@ -454,12 +492,15 @@ const EnhancedInboxOverview: React.FC = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Email Categories */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5 text-blue-600" />
+            <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-3 text-xl">
+                  <div className="bg-blue-100 rounded-full p-2">
+                    <Target className="h-6 w-6 text-blue-600" />
+                  </div>
                   Email Categories
                 </CardTitle>
+                <p className="text-gray-600 text-sm mt-2">Distribution of emails by category with trends</p>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -469,22 +510,24 @@ const EnhancedInboxOverview: React.FC = () => {
                     .map(([category, data]) => (
                     <div 
                       key={category} 
-                      className="border rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
+                      className="bg-white/50 rounded-xl p-5 cursor-pointer hover:shadow-lg transition-all duration-300 border border-gray-100/50"
                       onClick={() => handleCategoryClick(category)}
                     >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">{getCategoryIcon(category)}</span>
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-4">
+                          <div className="text-2xl bg-gray-50 rounded-lg p-2">
+                            {getCategoryIcon(category)}
+                          </div>
                           <div>
-                            <h3 className="font-semibold text-gray-900 capitalize flex items-center gap-2">
+                            <h3 className="font-semibold text-gray-900 capitalize flex items-center gap-2 text-lg">
                               {category.replace('_', ' ')}
-                              <span className="text-sm">{getTrendIcon(data.trend)}</span>
+                              <span className="text-base">{getTrendIcon(data.trend)}</span>
                             </h3>
-                            <div className="flex items-center gap-4 text-sm text-gray-600">
-                              <span>{data.count} emails</span>
+                            <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                              <span className="font-medium">{data.count} emails</span>
                               <span>{data.unread} unread</span>
                               {data.avgUrgencyScore > 0 && (
-                                <span className="text-orange-600">
+                                <span className="text-orange-600 font-medium">
                                   Score: {data.avgUrgencyScore}
                                 </span>
                               )}
@@ -492,23 +535,23 @@ const EnhancedInboxOverview: React.FC = () => {
                           </div>
                         </div>
                         {data.urgent > 0 && (
-                          <Badge variant="destructive" className="text-xs">
+                          <Badge variant="destructive" className="text-xs font-medium">
                             {data.urgent} urgent
                           </Badge>
                         )}
                       </div>
                       
                       {data.properties.length > 0 && (
-                        <div className="mb-3">
-                          <p className="text-xs text-gray-500 mb-1">Properties affected:</p>
-                          <div className="flex flex-wrap gap-1">
+                        <div className="mb-4">
+                          <p className="text-xs text-gray-500 mb-2 font-medium">Properties affected:</p>
+                          <div className="flex flex-wrap gap-2">
                             {data.properties.slice(0, 3).map((property, idx) => (
-                              <Badge key={idx} variant="outline" className="text-xs">
+                              <Badge key={idx} variant="outline" className="text-xs bg-white/70">
                                 {property}
                               </Badge>
                             ))}
                             {data.properties.length > 3 && (
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className="text-xs bg-white/70">
                                 +{data.properties.length - 3} more
                               </Badge>
                             )}
@@ -519,7 +562,7 @@ const EnhancedInboxOverview: React.FC = () => {
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="w-full justify-between"
+                        className="w-full justify-between bg-white/70 hover:bg-white border-gray-200"
                       >
                         View {category.replace('_', ' ')} emails
                         <ArrowRight className="h-4 w-4" />
@@ -531,46 +574,51 @@ const EnhancedInboxOverview: React.FC = () => {
             </Card>
 
             {/* Property Breakdown */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-purple-600" />
+            <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-3 text-xl">
+                  <div className="bg-purple-100 rounded-full p-2">
+                    <Building2 className="h-6 w-6 text-purple-600" />
+                  </div>
                   Top Properties
                 </CardTitle>
+                <p className="text-gray-600 text-sm mt-2">Properties with the most communication activity</p>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {dashboardData.topProperties.slice(0, 6).map((property) => (
                     <div 
                       key={property.name}
-                      className="border rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
+                      className="bg-white/50 rounded-xl p-5 cursor-pointer hover:shadow-lg transition-all duration-300 border border-gray-100/50"
                       onClick={() => handlePropertyClick(property.name)}
                     >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-3">
-                          <Building2 className="w-5 h-5 text-gray-600" />
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-4">
+                          <div className="bg-purple-50 rounded-lg p-2">
+                            <Building2 className="w-6 h-6 text-purple-600" />
+                          </div>
                           <div>
-                            <h3 className="font-medium text-gray-900">{property.name}</h3>
-                            <p className="text-sm text-gray-600">
-                              {property.count} emails • {property.unread} unread
+                            <h3 className="font-semibold text-gray-900 text-lg">{property.name}</h3>
+                            <p className="text-sm text-gray-600 mt-1">
+                              <span className="font-medium">{property.count} emails</span> • {property.unread} unread
                             </p>
                           </div>
                         </div>
                         {property.urgent > 0 && (
-                          <Badge variant="destructive" className="text-xs">
+                          <Badge variant="destructive" className="text-xs font-medium">
                             {property.urgent} urgent
                           </Badge>
                         )}
                       </div>
                       
-                      <div className="flex flex-wrap gap-1 mb-3">
+                      <div className="flex flex-wrap gap-2 mb-4">
                         {property.categories.slice(0, 3).map((category, idx) => (
-                          <Badge key={idx} variant="secondary" className="text-xs">
+                          <Badge key={idx} variant="secondary" className="text-xs bg-gray-100">
                             {category}
                           </Badge>
                         ))}
                         {property.categories.length > 3 && (
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge variant="secondary" className="text-xs bg-gray-100">
                             +{property.categories.length - 3}
                           </Badge>
                         )}
@@ -579,7 +627,7 @@ const EnhancedInboxOverview: React.FC = () => {
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="w-full justify-between"
+                        className="w-full justify-between bg-white/70 hover:bg-white border-gray-200"
                       >
                         View property emails
                         <ArrowRight className="h-4 w-4" />
@@ -592,36 +640,39 @@ const EnhancedInboxOverview: React.FC = () => {
           </div>
 
           {/* Recent Activity */}
-          <Card className="mt-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5 text-green-600" />
+          <Card className="mt-8 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-3 text-xl">
+                <div className="bg-green-100 rounded-full p-2">
+                  <Activity className="h-6 w-6 text-green-600" />
+                </div>
                 Recent Activity
               </CardTitle>
+              <p className="text-gray-600 text-sm mt-2">Latest email communications and status updates</p>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 {dashboardData.recentActivity.slice(0, 10).map((activity) => (
-                  <div key={activity.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-2 h-2 rounded-full ${
+                  <div key={activity.id} className="flex items-center justify-between p-4 bg-white/50 rounded-xl border border-gray-100/50 hover:shadow-md transition-all duration-300">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-3 h-3 rounded-full shadow-sm ${
                         activity.urgencyLevel === 'critical' ? 'bg-red-500' :
                         activity.urgencyLevel === 'high' ? 'bg-orange-500' :
                         activity.urgencyLevel === 'medium' ? 'bg-yellow-500' :
                         'bg-gray-400'
                       }`} />
-                      <div>
-                        <p className="font-medium text-gray-900 text-sm">
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900 text-sm leading-relaxed">
                           {activity.subject.substring(0, 50)}...
                         </p>
-                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                          <span>{activity.property}</span>
+                        <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                          <span className="font-medium">{activity.property}</span>
                           <span>•</span>
                           <span>{activity.time}</span>
                           {activity.aiTag && (
                             <>
                               <span>•</span>
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className="text-xs bg-white/70">
                                 {activity.aiTag}
                               </Badge>
                             </>
@@ -631,7 +682,7 @@ const EnhancedInboxOverview: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       {!activity.handled && (
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-xs bg-white/70 font-medium">
                           {activity.unread ? 'Unread' : 'To handle'}
                         </Badge>
                       )}
@@ -644,72 +695,84 @@ const EnhancedInboxOverview: React.FC = () => {
 
           {/* AI Insights Summary */}
           {dashboardData.aiInsightsSummary.totalInsights > 0 && (
-            <Card className="mt-8">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Brain className="h-5 w-5 text-purple-600" />
+            <Card className="mt-8 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-3 text-xl">
+                  <div className="bg-purple-100 rounded-full p-2">
+                    <Brain className="h-6 w-6 text-purple-600" />
+                  </div>
                   AI Insights Summary
                 </CardTitle>
+                <p className="text-gray-600 text-sm mt-2">AI-generated insights and analysis of your email communications</p>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-purple-600">
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-6">
+                  <div className="text-center bg-white/50 rounded-xl p-4 border border-gray-100/50">
+                    <p className="text-3xl font-bold text-purple-600 mb-2">
                       {dashboardData.aiInsightsSummary.totalInsights}
                     </p>
-                    <p className="text-sm text-gray-600">Total Insights</p>
+                    <p className="text-sm text-gray-600 font-medium">Total Insights</p>
                   </div>
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-red-600">
+                  <div className="text-center bg-white/50 rounded-xl p-4 border border-gray-100/50">
+                    <p className="text-3xl font-bold text-red-600 mb-2">
                       {dashboardData.aiInsightsSummary.criticalInsights}
                     </p>
-                    <p className="text-sm text-gray-600">Critical</p>
+                    <p className="text-sm text-gray-600 font-medium">Critical</p>
                   </div>
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-orange-600">
+                  <div className="text-center bg-white/50 rounded-xl p-4 border border-gray-100/50">
+                    <p className="text-3xl font-bold text-orange-600 mb-2">
                       {dashboardData.aiInsightsSummary.followUps}
                     </p>
-                    <p className="text-sm text-gray-600">Follow-ups</p>
+                    <p className="text-sm text-gray-600 font-medium">Follow-ups</p>
                   </div>
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-yellow-600">
+                  <div className="text-center bg-white/50 rounded-xl p-4 border border-gray-100/50">
+                    <p className="text-3xl font-bold text-yellow-600 mb-2">
                       {dashboardData.aiInsightsSummary.recurringIssues}
                     </p>
-                    <p className="text-sm text-gray-600">Recurring</p>
+                    <p className="text-sm text-gray-600 font-medium">Recurring</p>
                   </div>
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-blue-600">
+                  <div className="text-center bg-white/50 rounded-xl p-4 border border-gray-100/50">
+                    <p className="text-3xl font-bold text-blue-600 mb-2">
                       {dashboardData.aiInsightsSummary.complianceMatters}
                     </p>
-                    <p className="text-sm text-gray-600">Compliance</p>
+                    <p className="text-sm text-gray-600 font-medium">Compliance</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Footer */}
-          <div className="text-center py-8">
-            <p className="text-sm text-gray-500 mb-4">
-              Dashboard shows data for the selected time period
-            </p>
-            <div className="flex justify-center gap-4">
-              <Button 
-                variant="outline" 
-                onClick={() => router.push('/emails')}
-                className="flex items-center gap-2"
-              >
-                <Mail className="h-4 w-4" />
-                View All Emails
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => router.push('/communications')}
-                className="flex items-center gap-2"
-              >
-                <FileText className="h-4 w-4" />
-                Communications
-              </Button>
+          {/* Enhanced Footer */}
+          <div className="mt-12 bg-white/40 backdrop-blur-sm rounded-2xl p-8 border border-white/50">
+            <div className="text-center">
+              <div className="flex justify-center mb-4">
+                <div className="bg-blue-100 rounded-full p-3">
+                  <Mail className="h-6 w-6 text-blue-600" />
+                </div>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Ready to dive deeper?</h3>
+              <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
+                Dashboard shows data for the selected time period. Explore your emails and communications in detail.
+              </p>
+              <div className="flex flex-col sm:flex-row justify-center gap-4">
+                <Button 
+                  onClick={() => router.push('/emails')}
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                  size="lg"
+                >
+                  <Mail className="h-5 w-5" />
+                  View All Emails
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => router.push('/communications')}
+                  className="flex items-center gap-2 bg-white/70 hover:bg-white border-gray-200 shadow-md hover:shadow-lg transition-all duration-300"
+                  size="lg"
+                >
+                  <FileText className="h-5 w-5" />
+                  Communications Hub
+                </Button>
+              </div>
             </div>
           </div>
         </div>
