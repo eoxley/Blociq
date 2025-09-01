@@ -29,7 +29,9 @@
       "WebFetch(domain:vercel.com)",
       "Bash(git checkout:*)",
       "Bash(npm run deploy:vercel:*)",
-      "WebFetch(domain:blociq-h3xv-qp7exu5um-eleanoroxley-9774s-projects.vercel.app)"
+      "WebFetch(domain:blociq-h3xv-qp7exu5um-eleanoroxley-9774s-projects.vercel.app)",
+      "WebFetch(domain:blociq-h3xv-ojbtgk0dn-eleanoroxley-9774s-projects.vercel.app)",
+      "WebFetch(domain:blociq-h3xv-pghvztybm-eleanoroxley-9774s-projects.vercel.app)"
     ],
     "deny": [],
     "ask": []
