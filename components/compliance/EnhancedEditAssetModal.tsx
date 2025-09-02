@@ -147,7 +147,7 @@ const EnhancedEditAssetModal: React.FC<EnhancedEditAssetModalProps> = ({
       setAvailableAssets(data || [])
     } catch (error) {
       console.error('Error fetching available assets:', error)
-      toast.error('Failed to load available assets')
+      // Removed toast notification to avoid user confusion
     }
   }
 
@@ -200,7 +200,7 @@ const EnhancedEditAssetModal: React.FC<EnhancedEditAssetModalProps> = ({
       
     } catch (error) {
       console.error('Error fetching asset data:', error)
-      toast.error('Failed to load asset data')
+      // Removed toast notification - handled gracefully in UI
     } finally {
       setLoading(false)
     }
@@ -332,8 +332,8 @@ const EnhancedEditAssetModal: React.FC<EnhancedEditAssetModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-white/20">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-blue-50 to-purple-50">
           <div className="flex items-center gap-3">
