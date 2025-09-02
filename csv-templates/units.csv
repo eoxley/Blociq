@@ -1,0 +1,4 @@
+id,agency_id,building_id,unit_number,unit_type,floor,bedrooms,bathrooms,sqft,sqm,balcony,parking_spaces,apportionment_percent,lease_start_date,lease_end_date,ground_rent_pa,service_charge_pa,is_let,tenant_name,tenant_email,tenant_phone,type
+22222222-3333-4444-5555-666666666666,01234567-89ab-cdef-0123-456789abcdef,11111111-2222-3333-4444-555555555555,Flat 1,flat,Ground Floor,2,1,750,69.68,false,1,8.50,1990-06-25,2089-06-24,350.00,2890.00,true,John Smith,john.smith@email.com,07700 123456,
+33333333-4444-5555-6666-777777777777,01234567-89ab-cdef-0123-456789abcdef,11111111-2222-3333-4444-555555555555,Flat 2,flat,First Floor,1,1,550,51.10,true,0,6.25,1990-06-25,2089-06-24,350.00,2145.00,true,Emma Johnson,emma.j@gmail.com,07700 234567,
+44444444-5555-6666-7777-888888888888,01234567-89ab-cdef-0123-456789abcdef,11111111-2222-3333-4444-555555555555,Flat 3,flat,First Floor,2,2,850,78.97,true,0,9.75,1990-06-25,2089-06-24,350.00,3250.00,false,,,

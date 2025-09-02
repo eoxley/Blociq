@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import MobileNavigation from '@/components/MobileNavigation'
 import { NavigationProvider } from '@/components/NavigationContext'
+import { AgencyProvider } from '@/hooks/useAgency'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
@@ -24,7 +25,8 @@ export default async function DashboardLayout({
 
   return (
     <NavigationProvider>
-      <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      <AgencyProvider>
+        <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 via-white to-gray-50">
         <div className="flex flex-1 overflow-hidden">
           {/* Desktop Sidebar */}
           <div className="hidden lg:block">
@@ -54,6 +56,7 @@ export default async function DashboardLayout({
           </main>
         </div>
       </div>
+      </AgencyProvider>
     </NavigationProvider>
   )
 } 

@@ -39,6 +39,12 @@ CRON_SECRET=your_cron_secret_key_for_vercel_cron_jobs
 NEXT_PUBLIC_SITE_URL=https://your-domain.com
 ```
 
+#### Multi-Agency Configuration
+```bash
+# Default agency slug for auto-selection (optional)
+NEXT_PUBLIC_DEFAULT_AGENCY_SLUG=mih
+```
+
 #### OCR Configuration (Optional - for document text extraction)
 
 **Option 1: Google Vision API (Recommended - supports PDFs and images)**

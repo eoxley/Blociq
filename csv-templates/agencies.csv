@@ -1,0 +1,2 @@
+id,name,slug,status,domain,logo_url,contact_name,contact_email,contact_phone,address,postcode,company_number,vat_number,onboarding_status,notes
+01234567-89ab-cdef-0123-456789abcdef,MIH Property Management,mih,active,mihproperty.co.uk,,Sarah Johnson,sarah@mihproperty.co.uk,020 7123 4567,"MIH House, 123 Property Lane, London",SW1A 1AA,12345678,GB123456789,completed,"Established property management company specialising in residential leasehold properties"

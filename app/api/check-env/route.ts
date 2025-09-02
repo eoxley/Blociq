@@ -22,7 +22,8 @@ export async function GET() {
       'GOOGLE_CLOUD_PROJECT_ID',
       'OUTLOOK_SCOPE',
       'OUTLOOK_SYNC_USER',
-      'JWT_SECRET'
+      'JWT_SECRET',
+      'NEXT_PUBLIC_DEFAULT_AGENCY_SLUG'
     ];
 
     const allEnvVars = [...requiredEnvVars, ...optionalEnvVars];

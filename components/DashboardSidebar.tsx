@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Bell, Settings, User, HelpCircle, ExternalLink, LogOut } from 'lucide-react';
 import BlocIQLogo from './BlocIQLogo';
 import { BlocIQBadge } from '@/components/ui/blociq-badge';
+import AgencySwitcher from './AgencySwitcher';
 
 const navItems = [
   { label: "Home", icon: "🏠", href: "/home", comingSoon: false, description: "Dashboard overview", aiPowered: false },
@@ -55,6 +56,14 @@ export default function DashboardSidebar() {
             <p className="text-sm text-text-secondary font-medium">Property Intelligence Platform</p>
           </div>
         </Link>
+        
+        {/* Agency Switcher */}
+        <div className="mt-4 p-3 bg-gray-50/50 rounded-xl border border-gray-100">
+          <div className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">
+            Current Agency
+          </div>
+          <AgencySwitcher className="w-full" showLabel={true} />
+        </div>
       </div>
 
       {/* Enhanced Navigation */}
