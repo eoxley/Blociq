@@ -459,7 +459,7 @@ export default function ComplianceSetupWizard({
           <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
           <h3 className="text-2xl font-bold text-gray-900 mb-2">Review Your Selection</h3>
           <p className="text-gray-600">
-            You've selected <strong>{selectedAssets.size}</strong> compliance assets for {building.name}
+            You&apos;ve selected <strong>{selectedAssets.size}</strong> compliance assets for {building.name}
           </p>
         </div>
 
@@ -525,7 +525,7 @@ export default function ComplianceSetupWizard({
             <AlertTriangle className="h-8 w-8 text-amber-600 mx-auto mb-2" />
             <h4 className="font-semibold text-amber-800 mb-1">No Assets Selected</h4>
             <p className="text-amber-700 text-sm">
-              You haven't selected any compliance assets. Go back to select assets to track.
+              You haven&apos;t selected any compliance assets. Go back to select assets to track.
             </p>
           </div>
         )}

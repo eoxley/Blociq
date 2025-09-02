@@ -13,10 +13,25 @@ export default function AgencySwitcher({
   className = "", 
   showLabel = true 
 }: AgencySwitcherProps) {
-  const { switchToAgency } = useAgency()
-  const { agency, agencies, loading } = useCurrentAgency()
   const [isOpen, setIsOpen] = useState(false)
   const [switching, setSwitching] = useState(false)
+  
+  // Gracefully handle missing AgencyProvider context
+  let switchToAgency, agency, agencies, loading
+  try {
+    const agencyContext = useAgency()
+    const currentAgencyContext = useCurrentAgency()
+    switchToAgency = agencyContext.switchToAgency
+    agency = currentAgencyContext.agency
+    agencies = currentAgencyContext.agencies
+    loading = currentAgencyContext.loading
+  } catch (error) {
+    // If not within AgencyProvider, render nothing or fallback
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('AgencySwitcher used outside AgencyProvider context')
+    }
+    return null
+  }
 
   if (loading) {
     return (

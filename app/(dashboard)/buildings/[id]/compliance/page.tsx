@@ -415,7 +415,7 @@ export default function BuildingCompliancePage() {
               Compliance Overview for {building?.name}
             </h2>
             <p className="text-gray-600">
-              Track your building's compliance status and manage inspection schedules
+              Track your building&apos;s compliance status and manage inspection schedules
             </p>
           </div>
 

@@ -462,7 +462,7 @@ ${profile?.email || '[Email]'}
                 />
                 <div className="text-xs text-gray-500 space-y-1">
                   <p>You can use basic HTML tags for formatting:</p>
-                  <p>• <code>&lt;b&gt;bold&lt;/b&gt;</code> • <code>&lt;i&gt;italic&lt;/i&gt;</code> • <code>&lt;a href="..."&gt;link&lt;/a&gt;</code></p>
+                  <p>• <code>&lt;b&gt;bold&lt;/b&gt;</code> • <code>&lt;i&gt;italic&lt;/i&gt;</code> • <code>&lt;a href=&quot;...&quot;&gt;link&lt;/a&gt;</code></p>
                   <p>• Your signature image will be automatically included if uploaded</p>
                   <p>• This template will be used for custom email signatures</p>
                 </div>

@@ -369,7 +369,7 @@ export default function DocumentAssistantClient({ buildings, recentDocuments }: 
                   onClick={() => setQuestion(prompt)}
                   className="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors text-sm text-gray-700"
                 >
-                  "{prompt}"
+                  &quot;{prompt}&quot;
                 </button>
               ))}
             </div>
@@ -387,7 +387,7 @@ export default function DocumentAssistantClient({ buildings, recentDocuments }: 
                   onClick={() => setQuestion(prompt)}
                   className="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors text-sm text-gray-700"
                 >
-                  "{prompt}"
+                  &quot;{prompt}&quot;
                 </button>
               ))}
             </div>

@@ -298,7 +298,7 @@ export default function CleanupPage() {
                 <div className="flex items-start space-x-2">
                   <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
                   <div>
-                    <strong>Buildings:</strong> All buildings with names containing "test", "demo", or "example"
+                    <strong>Buildings:</strong> All buildings with names containing &quot;test&quot;, &quot;demo&quot;, or &quot;example&quot;
                   </div>
                 </div>
                 <div className="flex items-start space-x-2">
@@ -310,19 +310,19 @@ export default function CleanupPage() {
                 <div className="flex items-start space-x-2">
                   <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
                   <div>
-                    <strong>Emails:</strong> All emails with subjects containing "test" or sent to example.com addresses
+                    <strong>Emails:</strong> All emails with subjects containing &quot;test&quot; or sent to example.com addresses
                   </div>
                 </div>
                 <div className="flex items-start space-x-2">
                   <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
                   <div>
-                    <strong>Documents:</strong> All compliance and building documents with "test" in the filename
+                    <strong>Documents:</strong> All compliance and building documents with &quot;test&quot; in the filename
                   </div>
                 </div>
                 <div className="flex items-start space-x-2">
                   <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
                   <div>
-                    <strong>Todos & Events:</strong> All building todos and property events with "test" in the title
+                    <strong>Todos &amp; Events:</strong> All building todos and property events with &quot;test&quot; in the title
                   </div>
                 </div>
               </div>
