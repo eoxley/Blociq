@@ -246,7 +246,7 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
         <div className="flex-1 flex flex-col">
           {!hasSubmittedEmail ? (
             /* Email Capture Form - Enhanced Layout for Larger Modal */
-            <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 hover:scrollbar-thumb-gray-500 scrollbar-track-gray-100 relative scroll-smooth">
+            <div className="flex-1 overflow-y-auto scrollbar-visible scrollbar-thumb-blue-400 hover:scrollbar-thumb-blue-500 scrollbar-track-gray-100 relative scroll-smooth">
               {/* Scroll indicator */}
               <div className="absolute top-2 right-4 z-10 bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-medium shadow-sm animate-pulse">
                 Scroll for more info ↕️
@@ -336,7 +336,7 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
             /* Enhanced Chat Interface with Better Scrolling */
             <>
               {/* Chat Messages Area with Enhanced Scrolling and Scroll Indicator */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400 scrollbar-track-gray-100 scrollbar-corner-gray-100 relative">
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-visible scrollbar-thumb-blue-400 hover:scrollbar-thumb-blue-500 scrollbar-track-gray-100 scrollbar-corner-gray-100 relative">
                 {/* Scroll indicator when messages overflow */}
                 {messages.length > 3 && (
                   <div className="absolute top-2 right-4 z-10 bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-medium shadow-sm animate-pulse">
@@ -423,52 +423,54 @@ export default function PublicAskBlocIQ({ isOpen, onClose }: PublicAskBlocIQProp
       
       {/* Enhanced Custom Scrollbar Styles */}
       <style jsx>{`
-        .scrollbar-thin {
-          scrollbar-width: thin;
-          scrollbar-color: #d1d5db #f3f4f6;
+        .scrollbar-visible {
+          scrollbar-width: auto;
+          scrollbar-color: #60a5fa #f3f4f6;
         }
         
-        .scrollbar-thin::-webkit-scrollbar {
-          width: 12px;
+        .scrollbar-visible::-webkit-scrollbar {
+          width: 16px;
         }
         
-        .scrollbar-thin::-webkit-scrollbar-track {
+        .scrollbar-visible::-webkit-scrollbar-track {
           background: #f3f4f6;
-          border-radius: 6px;
-          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          border: 2px solid #e5e7eb;
+          margin: 4px;
         }
         
-        .scrollbar-thin::-webkit-scrollbar-thumb {
-          background: #9ca3af;
-          border-radius: 6px;
-          border: 1px solid #6b7280;
+        .scrollbar-visible::-webkit-scrollbar-thumb {
+          background: linear-gradient(180deg, #60a5fa 0%, #3b82f6 100%);
+          border-radius: 8px;
+          border: 2px solid #f3f4f6;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
         }
         
-        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-          background: #6b7280;
-          border-color: #374151;
+        .scrollbar-visible::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+          border-color: #e5e7eb;
         }
         
-        .scrollbar-thin::-webkit-scrollbar-thumb:active {
-          background: #4b5563;
+        .scrollbar-visible::-webkit-scrollbar-thumb:active {
+          background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
         }
         
-        .scrollbar-thin::-webkit-scrollbar-corner {
+        .scrollbar-visible::-webkit-scrollbar-corner {
           background: #f3f4f6;
         }
         
         /* Smooth scrolling */
-        .scrollbar-thin {
+        .scrollbar-visible {
           scroll-behavior: smooth;
         }
         
         /* Focus styles for accessibility */
-        .scrollbar-thin:focus-within {
-          scrollbar-color: #3b82f6 #f3f4f6;
+        .scrollbar-visible:focus-within {
+          scrollbar-color: #2563eb #f3f4f6;
         }
         
-        .scrollbar-thin:focus-within::-webkit-scrollbar-thumb {
-          background: #3b82f6;
+        .scrollbar-visible:focus-within::-webkit-scrollbar-thumb {
+          background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
         }
         
         /* Ensure text fits and wraps properly */
