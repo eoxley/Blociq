@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ArrowLeft, Send, Building2, Users, Mail, User, Building } from 'lucide-react';
+import { ArrowLeft, Send, Building2, Users, Mail, User, Building, Brain } from 'lucide-react';
 import Link from 'next/link';
 import BlocIQLogo from '@/components/BlocIQLogo';
-import LayoutWithSidebar from '@/components/LayoutWithSidebar';
 
 export default function EnquiryPage() {
   const [formData, setFormData] = useState({
@@ -57,94 +56,129 @@ This enquiry was submitted through the BlocIQ landing page.
 
   if (isSubmitted) {
     return (
-      <LayoutWithSidebar>
+      <div className="min-h-screen bg-gradient-to-br from-[#f8fafc] via-white to-[#f1f5f9]">
+        {/* Header with BlocIQ Logo */}
+        <div className="bg-gradient-to-r from-pink-500 via-teal-500 via-purple-500 to-blue-500 text-white p-6">
+          <div className="flex items-center justify-center">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-xl border border-white/30 mr-4">
+              <BlocIQLogo size={24} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold">BlocIQ</h1>
+              <p className="text-white/90 text-sm">Property Management Platform</p>
+            </div>
+          </div>
+        </div>
+
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="text-center">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Send className="h-10 w-10 text-green-600" />
+            <div className="w-20 h-20 bg-gradient-to-r from-pink-500 via-teal-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl">
+              <Send className="h-10 w-10 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-500 via-teal-500 to-blue-500 bg-clip-text text-transparent mb-6">
               Thank You for Your Interest!
             </h1>
-            <p className="text-lg text-gray-600 mb-8">
+            <p className="text-xl text-gray-700 mb-8 leading-relaxed">
               Your enquiry has been prepared. Your email client should open with a pre-filled message to Eleanor. 
-              If it doesn't open automatically, please email eleanor.oxley@blociq.co.uk directly.
+              If it doesn't open automatically, please email <span className="font-medium text-teal-600">eleanor.oxley@blociq.co.uk</span> directly.
             </p>
             <Link 
               href="/"
-              className="inline-flex items-center gap-2 bg-teal-600 text-white px-6 py-3 rounded-lg hover:bg-teal-700 transition-colors"
+              className="inline-flex items-center gap-3 bg-gradient-to-r from-pink-500 via-teal-500 to-blue-500 hover:from-pink-600 hover:via-teal-600 hover:to-blue-600 text-white px-8 py-4 rounded-2xl transition-all duration-300 font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-5 w-5" />
               Back to Homepage
             </Link>
           </div>
         </div>
-      </LayoutWithSidebar>
+      </div>
     );
   }
 
   return (
-    <LayoutWithSidebar>
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12">
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-              <Building2 className="h-8 w-8 text-white" />
+    <div className="min-h-screen bg-gradient-to-br from-[#f8fafc] via-white to-[#f1f5f9]">
+      {/* Header with BlocIQ Logo */}
+      <div className="bg-gradient-to-r from-pink-500 via-teal-500 via-purple-500 to-blue-500 text-white p-6">
+        <div className="flex items-center justify-center">
+          <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-xl border border-white/30 mr-4">
+            <BlocIQLogo size={24} className="text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold">BlocIQ</h1>
+            <p className="text-white/90 text-sm">Property Management Platform</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-8 md:p-12">
+          <div className="text-center mb-10">
+            <div className="w-20 h-20 bg-gradient-to-r from-pink-500 via-teal-500 to-blue-500 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl">
+              <Brain className="h-10 w-10 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">
-              Get Started with BlocIQ
+            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-pink-500 via-teal-500 to-blue-500 bg-clip-text text-transparent mb-6">
+              Book Your Demo
             </h1>
-            <p className="text-lg text-gray-600">
-              Tell us about your property management needs and we'll get back to you within 24 hours.
+            <p className="text-xl text-gray-700 leading-relaxed max-w-2xl mx-auto">
+              Discover how BlocIQ's AI-powered platform transforms property management. 
+              Tell us about your needs and we'll show you exactly how we can help.
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Name */}
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-teal-600" />
-                  Full Name *
-                </div>
-              </label>
-              <input
-                type="text"
-                id="name"
-                name="name"
-                required
-                value={formData.name}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-colors"
-                placeholder="Enter your full name"
-              />
-            </div>
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Name */}
+              <div>
+                <label htmlFor="name" className="block text-sm font-semibold text-gray-800 mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-gradient-to-r from-pink-500 to-teal-500 rounded-lg flex items-center justify-center">
+                      <User className="h-4 w-4 text-white" />
+                    </div>
+                    Full Name *
+                  </div>
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  required
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  className="w-full px-5 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-lg shadow-sm hover:shadow-md"
+                  placeholder="Enter your full name"
+                />
+              </div>
 
-            {/* Email */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-teal-600" />
-                  Email Address *
-                </div>
-              </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                required
-                value={formData.email}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-colors"
-                placeholder="Enter your email address"
-              />
+              {/* Email */}
+              <div>
+                <label htmlFor="email" className="block text-sm font-semibold text-gray-800 mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-gradient-to-r from-teal-500 to-blue-500 rounded-lg flex items-center justify-center">
+                      <Mail className="h-4 w-4 text-white" />
+                    </div>
+                    Email Address *
+                  </div>
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  required
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className="w-full px-5 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-lg shadow-sm hover:shadow-md"
+                  placeholder="Enter your email address"
+                />
+              </div>
             </div>
 
             {/* Company */}
             <div>
-              <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="company" className="block text-sm font-semibold text-gray-800 mb-3">
                 <div className="flex items-center gap-2">
-                  <Building className="h-4 w-4 text-teal-600" />
+                  <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+                    <Building className="h-4 w-4 text-white" />
+                  </div>
                   Company Name *
                 </div>
               </label>
@@ -155,79 +189,102 @@ This enquiry was submitted through the BlocIQ landing page.
                 required
                 value={formData.company}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-colors"
+                className="w-full px-5 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-lg shadow-sm hover:shadow-md"
                 placeholder="Enter your company name"
               />
             </div>
 
-            {/* Blocks Under Management */}
-            <div>
-              <label htmlFor="blocksUnderManagement" className="block text-sm font-medium text-gray-700 mb-2">
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-teal-600" />
-                  Blocks Under Management *
-                </div>
-              </label>
-              <input
-                type="text"
-                id="blocksUnderManagement"
-                name="blocksUnderManagement"
-                required
-                value={formData.blocksUnderManagement}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-colors"
-                placeholder="e.g., 15 blocks, 500+ units"
-              />
-            </div>
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Blocks Under Management */}
+              <div>
+                <label htmlFor="blocksUnderManagement" className="block text-sm font-semibold text-gray-800 mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+                      <Building2 className="h-4 w-4 text-white" />
+                    </div>
+                    Blocks Under Management *
+                  </div>
+                </label>
+                <input
+                  type="text"
+                  id="blocksUnderManagement"
+                  name="blocksUnderManagement"
+                  required
+                  value={formData.blocksUnderManagement}
+                  onChange={handleInputChange}
+                  className="w-full px-5 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-lg shadow-sm hover:shadow-md"
+                  placeholder="e.g., 15 blocks, 500+ units"
+                />
+              </div>
 
-            {/* Staff Numbers */}
-            <div>
-              <label htmlFor="staffNumbers" className="block text-sm font-medium text-gray-700 mb-2">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-teal-600" />
-                  Staff Numbers *
-                </div>
-              </label>
-              <input
-                type="text"
-                id="staffNumbers"
-                name="staffNumbers"
-                required
-                value={formData.staffNumbers}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-colors"
-                placeholder="e.g., 5 property managers, 2 admin staff"
-              />
+              {/* Staff Numbers */}
+              <div>
+                <label htmlFor="staffNumbers" className="block text-sm font-semibold text-gray-800 mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-gradient-to-r from-teal-500 to-pink-500 rounded-lg flex items-center justify-center">
+                      <Users className="h-4 w-4 text-white" />
+                    </div>
+                    Staff Numbers *
+                  </div>
+                </label>
+                <input
+                  type="text"
+                  id="staffNumbers"
+                  name="staffNumbers"
+                  required
+                  value={formData.staffNumbers}
+                  onChange={handleInputChange}
+                  className="w-full px-5 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-lg shadow-sm hover:shadow-md"
+                  placeholder="e.g., 5 property managers, 2 admin staff"
+                />
+              </div>
             </div>
 
             {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full bg-gradient-to-r from-teal-600 to-teal-700 text-white py-4 px-6 rounded-lg font-semibold hover:from-teal-700 hover:to-teal-800 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-            >
-              {isSubmitting ? (
-                <div className="flex items-center justify-center gap-2">
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Sending Enquiry...
-                </div>
-              ) : (
-                <div className="flex items-center justify-center gap-2">
-                  <Send className="h-5 w-5" />
-                  Send Enquiry
-                </div>
-              )}
-            </button>
+            <div className="pt-6">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full bg-gradient-to-r from-pink-500 via-teal-500 to-blue-500 hover:from-pink-600 hover:via-teal-600 hover:to-blue-600 text-white py-5 px-8 rounded-2xl font-bold text-xl transition-all duration-300 transform hover:scale-[1.02] hover:-translate-y-1 shadow-2xl hover:shadow-3xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              >
+                {isSubmitting ? (
+                  <div className="flex items-center justify-center gap-3">
+                    <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Sending Your Demo Request...
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center gap-3">
+                    <Send className="h-6 w-6" />
+                    Book My Demo Now
+                  </div>
+                )}
+              </button>
+            </div>
           </form>
 
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <p className="text-sm text-gray-500 text-center">
-              By submitting this form, you agree to be contacted by BlocIQ regarding your enquiry. 
-              We respect your privacy and will only use your information to respond to your request.
-            </p>
+          <div className="mt-10 pt-8 border-t border-gradient-to-r from-pink-500 via-teal-500 to-blue-500 border-opacity-20">
+            <div className="text-center space-y-4">
+              <p className="text-gray-600 leading-relaxed">
+                By submitting this form, you agree to be contacted by BlocIQ regarding your demo request.
+              </p>
+              <p className="text-sm text-gray-500">
+                🔒 We respect your privacy and will only use your information to schedule your personalized demo.
+              </p>
+            </div>
           </div>
         </div>
+        
+        {/* Footer */}
+        <div className="text-center py-8">
+          <Link 
+            href="/"
+            className="inline-flex items-center gap-2 text-teal-600 hover:text-teal-700 transition-colors font-medium"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Homepage
+          </Link>
+        </div>
       </div>
-    </LayoutWithSidebar>
+    </div>
   );
 } 
