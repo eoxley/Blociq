@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { createClient } from '@supabase/supabase-js';
 
 export async function GET(req: NextRequest) {
   try {
@@ -62,5 +63,53 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error('[Outlook OAuth] Error in Outlook OAuth initiation:', error);
     return NextResponse.json({ error: 'Failed to initiate Outlook connection' }, { status: 500 });
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    console.log('[Outlook Add-in Auth] Starting login...');
+    
+    const { email, password } = await req.json();
+    
+    if (!email || !password) {
+      return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
+    }
+
+    // Initialize Supabase client
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Attempt to sign in with Supabase Auth
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      console.error('[Outlook Add-in Auth] Login error:', error.message);
+      return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
+    }
+
+    if (data.user && data.session) {
+      console.log('[Outlook Add-in Auth] Login successful for:', email);
+      
+      // Return the session token for the add-in to use
+      return NextResponse.json({
+        success: true,
+        token: data.session.access_token,
+        user: {
+          email: data.user.email,
+          id: data.user.id
+        }
+      });
+    }
+
+    return NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
+
+  } catch (error) {
+    console.error('[Outlook Add-in Auth] Error:', error);
+    return NextResponse.json({ error: 'Login failed. Please try again.' }, { status: 500 });
   }
 } 
