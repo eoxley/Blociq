@@ -132,7 +132,9 @@ export default function MinimalOutlookAddin() {
             'Authorization': `Bearer ${JSON.parse(localStorage.getItem('blociq-addin-auth') || '{}').token}`
           },
           body: JSON.stringify({
-            emailContent: currentEmail
+            originalEmail: currentEmail,
+            replyType: 'helpful',
+            tone: 'Professional'
           }),
         })
 
@@ -172,7 +174,7 @@ export default function MinimalOutlookAddin() {
           'Authorization': `Bearer ${JSON.parse(localStorage.getItem('blociq-addin-auth') || '{}').token}`
         },
         body: JSON.stringify({
-          message: newMessage,
+          prompt: newMessage,
           context: 'outlook-addin'
         }),
       })
