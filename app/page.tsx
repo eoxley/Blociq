@@ -3,7 +3,7 @@
 import React, { useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, Brain, FileText, Calendar, Shield, Zap, Building2, Users, Home, CheckCircle, Star, MessageSquare, Settings, BarChart3, Mail, Lock, Eye, Heart } from 'lucide-react';
+import { ArrowRight, Brain, FileText, Calendar, Shield, Zap, Building2, Users, Home, CheckCircle, Star, MessageSquare, Settings, BarChart3, Mail, Lock, Eye, Heart, Play } from 'lucide-react';
 import BlocIQLogo from '@/components/BlocIQLogo';
 
 export default function LandingPage() {
@@ -83,6 +83,37 @@ export default function LandingPage() {
                 Explore Features
                 <ArrowRight className="h-5 w-5" />
               </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Demo Video Section */}
+      <section className="py-20 bg-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <Play className="h-10 w-10 text-white" />
+            </div>
+            <h2 className="text-4xl font-bold text-gray-900 mb-6">
+              See BlocIQ in Action
+            </h2>
+            <p className="text-xl text-gray-600 leading-relaxed max-w-3xl mx-auto">
+              Watch how BlocIQ transforms property management with AI-powered workflows, 
+              compliance tracking, and intelligent document processing.
+            </p>
+          </div>
+
+          <div className="bg-gradient-to-br from-gray-900 to-black rounded-2xl p-8 shadow-2xl">
+            <div className="aspect-video bg-gray-800 rounded-xl overflow-hidden relative">
+              <video
+                className="w-full h-full object-cover"
+                controls
+                preload="metadata"
+              >
+                <source src="/demo-video.mp4" type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
             </div>
           </div>
         </div>
