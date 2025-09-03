@@ -98,14 +98,14 @@ export async function POST(request: NextRequest) {
     const { getOrExtractText } = await import('@/lib/ocr/extraction-cache');
     
     const fileCharacteristics = await analyzeFileCharacteristics(file);
-    const fileHash = generateFileHash(fileBuffer);
+    const generatedFileHash = generateFileHash(fileBuffer);
     
     console.log("📋 File characteristics:", {
       hasTextLayer: fileCharacteristics.hasTextLayer,
       quality: fileCharacteristics.quality,
       estimatedPages: fileCharacteristics.estimatedPages,
       documentType: fileCharacteristics.documentType,
-      fileHash: fileHash.substring(0, 8) + '...'
+      fileHash: generatedFileHash.substring(0, 8) + '...'
     });
 
     // 3. Extract text with intelligent method selection and caching
@@ -210,7 +210,7 @@ export async function POST(request: NextRequest) {
           recommendations: extractionQuality.recommendations,
           from_cache: extractionResult.fromCache
         },
-        file_hash: fileHash,
+        file_hash: generatedFileHash,
         processing_duration: extractionResult.stats?.processing_time || 0,
         quality_score: extractionQuality.score,
         extracted_at: new Date().toISOString()
@@ -257,7 +257,7 @@ export async function POST(request: NextRequest) {
       success: true,
       type: 'lease_analysis',
       processingId: processingId,
-      fileHash: fileHash,
+      fileHash: fileHash || generatedFileHash,
       processedAt: new Date().toISOString(),
       cached: extractionResult.fromCache || false,
       
