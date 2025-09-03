@@ -18,15 +18,35 @@ const openai = new OpenAI({
 export const maxDuration = 180; // 3 minutes for upload and analysis
 
 export async function POST(request: NextRequest) {
+  // Add cache-busting headers
+  const headers = {
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0',
+    'Content-Type': 'application/json'
+  };
+
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File
     const buildingId = formData.get('buildingId') as string
+    const processingId = formData.get('processingId') as string
+    const fileHash = formData.get('fileHash') as string
+    const forceReprocess = formData.get('forceReprocess') === 'true'
+    const timestamp = formData.get('timestamp') as string
+
+    console.log("🔄 Processing document with cache-busting:", {
+      fileName: file?.name,
+      processingId,
+      fileHash: fileHash?.substring(0, 8) + '...',
+      forceReprocess,
+      timestamp
+    });
 
     if (!file) {
       return NextResponse.json(
         { error: 'File is required' },
-        { status: 400 }
+        { status: 400, headers }
       )
     }
 
@@ -135,7 +155,16 @@ export async function POST(request: NextRequest) {
       console.warn("⚠️ Poor extraction quality detected - proceeding with caution");
     }
 
-    // 4. Generate AI analysis with enhanced prompt and validation context
+    // 4. Parse lease document into structured format
+    console.log("📋 Parsing lease document with LeaseDocumentParser...");
+    const { LeaseDocumentParser } = await import('@/lib/lease-document-parser');
+    const parser = new LeaseDocumentParser(extractedText, file.name, extractionQuality.score);
+    const leaseAnalysis = parser.parse();
+    const parsingStats = parser.getParsingStats();
+    
+    console.log("📊 Lease parsing statistics:", parsingStats);
+
+    // 5. Generate AI analysis with enhanced prompt and validation context (fallback)
     const aiAnalysis = await analyseDocument(extractedText, file.name, buildingId, extractionQuality)
 
     // 4. Create document record first to get proper ID
@@ -226,6 +255,19 @@ export async function POST(request: NextRequest) {
     // 6. Return analysis results for user confirmation
     return NextResponse.json({
       success: true,
+      type: 'lease_analysis',
+      processingId: processingId,
+      fileHash: fileHash,
+      processedAt: new Date().toISOString(),
+      cached: extractionResult.fromCache || false,
+      
+      // Structured lease analysis (primary response)
+      leaseAnalysis: leaseAnalysis,
+      
+      // Parsing statistics
+      parsingStats: parsingStats,
+      
+      // AI analysis (fallback/additional context)
       ai: {
         ...aiAnalysis,
         originalFileName: file.name,
@@ -234,14 +276,27 @@ export async function POST(request: NextRequest) {
         extractedText: extractedText.substring(0, 1000) + '...', // First 1000 chars for preview
         fullTextLength: extractedText.length, // Show full extraction stats
         file_url: publicUrl // Include the uploaded file URL
+      },
+      
+      // Quality metrics
+      extractionQuality: {
+        score: extractionQuality.score,
+        level: extractionQuality.quality_level,
+        completionRate: extractionQuality.completion_rate,
+        warnings: extractionQuality.warnings
       }
-    })
+    }, { headers })
 
   } catch (error) {
     console.error('❌ Error processing document:', error)
+    const formData = await request.formData().catch(() => new FormData());
     return NextResponse.json(
-      { error: 'Failed to process document. Please try again.' },
-      { status: 500 }
+      { 
+        error: 'Failed to process document. Please try again.',
+        processingId: formData.get('processingId') as string,
+        timestamp: new Date().toISOString()
+      },
+      { status: 500, headers }
     )
   }
 }
