@@ -4,7 +4,7 @@
  * 🔐 Microsoft OAuth Configuration Setup
  * 
  * This script helps configure Microsoft OAuth for BlocIQ
- * Fix for: "Microsoft OAuth invalid client secret error for app f8033f58-1b3b-40a7-8f0c-86678499cc74"
+ * Fix for: "Microsoft OAuth invalid client secret error for app 4ab4eae8-71e3-462b-ab41-a754b48d8839"
  */
 
 console.log('🔐 Microsoft OAuth Configuration Setup for BlocIQ');
@@ -12,7 +12,7 @@ console.log('==================================================');
 console.log('');
 
 console.log('❌ CURRENT ISSUE: Microsoft OAuth invalid client secret error');
-console.log('🎯 APP ID: f8033f58-1b3b-40a7-8f0c-86678499cc74');
+console.log('🎯 APP ID: 4ab4eae8-71e3-462b-ab41-a754b48d8839');
 console.log('');
 
 console.log('🔧 SOLUTION STEPS:');
@@ -20,7 +20,7 @@ console.log('');
 
 console.log('1️⃣ VERIFY MICROSOFT AZURE APP REGISTRATION:');
 console.log('   • Go to: https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade');
-console.log('   • Find app: f8033f58-1b3b-40a7-8f0c-86678499cc74');
+console.log('   • Find app: 4ab4eae8-71e3-462b-ab41-a754b48d8839');
 console.log('   • Check if app exists and you have access');
 console.log('');
 
@@ -36,7 +36,7 @@ console.log('3️⃣ UPDATE VERCEL ENVIRONMENT VARIABLES:');
 console.log('   Run these commands with your actual values:');
 console.log('');
 console.log('   vercel env add OUTLOOK_CLIENT_ID');
-console.log('   → Enter: f8033f58-1b3b-40a7-8f0c-86678499cc74');
+console.log('   → Enter: 4ab4eae8-71e3-462b-ab41-a754b48d8839');
 console.log('');
 console.log('   vercel env add OUTLOOK_CLIENT_SECRET');
 console.log('   → Enter: [your_new_client_secret_from_step_2]');
@@ -48,7 +48,7 @@ console.log('   vercel env add OUTLOOK_REDIRECT_URI');
 console.log('   → Enter: https://www.blociq.co.uk/auth/callback');
 console.log('');
 console.log('   vercel env add NEXT_PUBLIC_MICROSOFT_CLIENT_ID');
-console.log('   → Enter: f8033f58-1b3b-40a7-8f0c-86678499cc74');
+console.log('   → Enter: 4ab4eae8-71e3-462b-ab41-a754b48d8839');
 console.log('');
 console.log('   vercel env add NEXT_PUBLIC_MICROSOFT_REDIRECT_URI');
 console.log('   → Enter: https://www.blociq.co.uk/auth/callback');

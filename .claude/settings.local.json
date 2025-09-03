@@ -36,7 +36,9 @@
       "WebFetch(domain:blociq.co.uk)",
       "Bash(npm install:*)",
       "Bash(git reset:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "WebFetch(domain:blociq-h3xv-c4tet96ls-eleanoroxley-9774s-projects.vercel.app)",
+      "Bash(echo \"# Update both secrets with the new value from Azure:\nvercel env rm MICROSOFT_CLIENT_SECRET\nvercel env rm OUTLOOK_CLIENT_SECRET\nvercel env add MICROSOFT_CLIENT_SECRET\nvercel env add OUTLOOK_CLIENT_SECRET\")"
     ],
     "deny": [],
     "ask": []
