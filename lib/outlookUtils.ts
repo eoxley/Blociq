@@ -95,11 +95,11 @@ export async function refreshOutlookToken(): Promise<boolean> {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: new URLSearchParams({
-        client_id: process.env.OUTLOOK_CLIENT_ID!,
-        client_secret: process.env.OUTLOOK_CLIENT_SECRET!,
+        client_id: process.env.MICROSOFT_CLIENT_ID!,
+        client_secret: process.env.MICROSOFT_CLIENT_SECRET!,
         grant_type: 'refresh_token',
         refresh_token: tokens.refresh_token,
-        redirect_uri: process.env.OUTLOOK_REDIRECT_URI!,
+        redirect_uri: process.env.MICROSOFT_REDIRECT_URI!,
       }),
     });
 

@@ -44,10 +44,10 @@ export async function GET(req: NextRequest) {
 
     // Check environment variables
     const envStatus = {
-      OUTLOOK_CLIENT_ID: !!process.env.OUTLOOK_CLIENT_ID,
-      OUTLOOK_CLIENT_SECRET: !!process.env.OUTLOOK_CLIENT_SECRET,
-      OUTLOOK_REDIRECT_URI: !!process.env.OUTLOOK_REDIRECT_URI,
-      OUTLOOK_TENANT_ID: process.env.OUTLOOK_TENANT_ID || 'common'
+      MICROSOFT_CLIENT_ID: !!process.env.MICROSOFT_CLIENT_ID,
+      MICROSOFT_CLIENT_SECRET: !!process.env.MICROSOFT_CLIENT_SECRET,
+      MICROSOFT_REDIRECT_URI: !!process.env.MICROSOFT_REDIRECT_URI,
+      AZURE_TENANT_ID: process.env.AZURE_TENANT_ID || 'common'
     };
 
     return NextResponse.json({

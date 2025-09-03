@@ -37,13 +37,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate Microsoft OAuth URL
-    const clientId = process.env.OUTLOOK_CLIENT_ID;
-    const redirectUri = process.env.OUTLOOK_REDIRECT_URI;
+    const clientId = process.env.MICROSOFT_CLIENT_ID;
+    const redirectUri = process.env.MICROSOFT_REDIRECT_URI;
     
     if (!clientId || !redirectUri) {
       return NextResponse.json({
         error: 'Outlook integration not configured',
-        message: 'Please configure OUTLOOK_CLIENT_ID and OUTLOOK_REDIRECT_URI environment variables'
+        message: 'Please configure MICROSOFT_CLIENT_ID and MICROSOFT_REDIRECT_URI environment variables'
       }, { status: 500 });
     }
 

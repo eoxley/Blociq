@@ -2,7 +2,7 @@
 
 export default function ConnectOutlookPage() {
   const connectOutlook = () => {
-    const clientId = process.env.NEXT_PUBLIC_OUTLOOK_CLIENT_ID!;
+    const clientId = process.env.NEXT_PUBLIC_MICROSOFT_CLIENT_ID!;
     const redirectUri = process.env.NEXT_PUBLIC_MICROSOFT_REDIRECT_URI!;
     const scopes = encodeURIComponent('https://graph.microsoft.com/Mail.Read offline_access openid');
 

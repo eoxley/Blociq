@@ -6,17 +6,17 @@ export async function getAccessTokenFromCode(code: string): Promise<{
   refresh_token: string;
   expires_in: number;
 }> {
-  const tenantId = process.env.OUTLOOK_TENANT_ID || 'common';
+  const tenantId = process.env.AZURE_TENANT_ID || 'common';
   const tokenResponse = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: new URLSearchParams({
-      client_id: process.env.OUTLOOK_CLIENT_ID!,
-      client_secret: process.env.OUTLOOK_CLIENT_SECRET!,
+      client_id: process.env.MICROSOFT_CLIENT_ID!,
+      client_secret: process.env.MICROSOFT_CLIENT_SECRET!,
       code: code,
-      redirect_uri: process.env.OUTLOOK_REDIRECT_URI!,
+      redirect_uri: process.env.MICROSOFT_REDIRECT_URI!,
       grant_type: 'authorization_code'
     }),
   });
@@ -46,8 +46,8 @@ export async function getAccessTokenFromCode(code: string): Promise<{
  */
 export async function exchangeCodeForTokens(code: string) {
   const params = new URLSearchParams();
-  params.append('client_id', process.env.OUTLOOK_CLIENT_ID!);
-  params.append('client_secret', process.env.OUTLOOK_CLIENT_SECRET!);
+  params.append('client_id', process.env.MICROSOFT_CLIENT_ID!);
+  params.append('client_secret', process.env.MICROSOFT_CLIENT_SECRET!);
   params.append('grant_type', 'authorization_code');
   params.append('code', code);
   params.append('redirect_uri', process.env.NEXT_PUBLIC_MICROSOFT_REDIRECT_URI!);
