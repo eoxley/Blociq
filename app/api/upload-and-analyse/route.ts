@@ -72,8 +72,41 @@ export async function POST(request: NextRequest) {
 
     console.log("✅ File uploaded:", publicUrl)
 
-    // 2. Extract text from PDF using OpenAI (primary) or fallback OCR
-    const extractedText = await extractTextFromPDF(file)
+    // 2. Analyze file characteristics for optimal OCR selection
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
+    const { analyzeFileCharacteristics, selectOptimalOCRMethods, generateFileHash } = await import('@/lib/ocr/intelligent-selection');
+    const { getOrExtractText } = await import('@/lib/ocr/extraction-cache');
+    
+    const fileCharacteristics = await analyzeFileCharacteristics(file);
+    const fileHash = generateFileHash(fileBuffer);
+    
+    console.log("📋 File characteristics:", {
+      hasTextLayer: fileCharacteristics.hasTextLayer,
+      quality: fileCharacteristics.quality,
+      estimatedPages: fileCharacteristics.estimatedPages,
+      documentType: fileCharacteristics.documentType,
+      fileHash: fileHash.substring(0, 8) + '...'
+    });
+
+    // 3. Extract text with intelligent method selection and caching
+    const extractionResult = await getOrExtractText(fileBuffer, async () => {
+      const startTime = Date.now();
+      const text = await extractTextFromPDFIntelligent(file, fileCharacteristics);
+      const processingTime = Date.now() - startTime;
+      
+      const { calculateExtractionQuality, generateExtractionStats } = await import('@/lib/ocr/intelligent-selection');
+      const quality = calculateExtractionQuality(text, file, fileCharacteristics);
+      const stats = generateExtractionStats(text, processingTime, 'intelligent_selection', fileCharacteristics);
+      
+      return {
+        text,
+        method: 'intelligent_selection',
+        stats,
+        quality: quality.score
+      };
+    });
+
+    const extractedText = extractionResult.text;
     
     if (!extractedText || extractedText.trim().length === 0) {
       return NextResponse.json(
@@ -82,37 +115,124 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log("✅ Text extracted, length:", extractedText.length)
+    console.log(`✅ Text extracted (${extractionResult.fromCache ? 'from cache' : 'fresh'}):`, {
+      length: extractedText.length,
+      method: extractionResult.method,
+      quality: extractionResult.quality
+    });
 
-    // 3. Generate AI analysis with enhanced prompt
-    const aiAnalysis = await analyseDocument(extractedText, file.name, buildingId)
+    // 4. Validate extraction quality
+    const { calculateExtractionQuality } = await import('@/lib/ocr/intelligent-selection');
+    const extractionQuality = calculateExtractionQuality(extractedText, file, fileCharacteristics);
+    console.log("📊 Extraction quality assessment:", {
+      level: extractionQuality.quality_level,
+      score: extractionQuality.score,
+      completionRate: extractionQuality.completion_rate,
+      warnings: extractionQuality.warnings.length
+    });
+    
+    if (extractionQuality.score < 0.3) {
+      console.warn("⚠️ Poor extraction quality detected - proceeding with caution");
+    }
 
-    // 4. Store extracted text temporarily (will be linked when confirmed)
+    // 4. Generate AI analysis with enhanced prompt and validation context
+    const aiAnalysis = await analyseDocument(extractedText, file.name, buildingId, extractionQuality)
+
+    // 4. Create document record first to get proper ID
+    let documentId: string | null = null;
     try {
+      console.log("💾 Creating document record for:", file.name);
+      
+      const { data: documentData, error: docError } = await supabase
+        .from('building_documents')
+        .insert({
+          file_name: file.name,
+          file_url: publicUrl,
+          building_id: buildingId ? parseInt(buildingId) : null,
+          type: 'Lease Document', // Default classification
+          file_size: file.size,
+          created_by: user.id
+        })
+        .select('id')
+        .single();
+
+      if (docError) {
+        console.error('❌ Failed to create document record:', docError);
+        // Continue without document linking
+      } else {
+        documentId = documentData.id;
+        console.log("✅ Document record created with ID:", documentId);
+      }
+    } catch (docCreateError) {
+      console.error('❌ Error creating document record:', docCreateError);
+    }
+
+    // 6. Store enhanced analysis with versioning and statistics
+    try {
+      const analysisData: any = {
+        extracted_text: extractedText,
+        summary: aiAnalysis.summary,
+        analysis_version: 1,
+        ocr_method: extractionResult.method,
+        extraction_stats: extractionResult.stats,
+        validation_flags: {
+          quality_level: extractionQuality.quality_level,
+          warnings: extractionQuality.warnings,
+          recommendations: extractionQuality.recommendations,
+          from_cache: extractionResult.fromCache
+        },
+        file_hash: fileHash,
+        processing_duration: extractionResult.stats?.processing_time || 0,
+        quality_score: extractionQuality.score,
+        extracted_at: new Date().toISOString()
+      };
+      
+      // Link to document if we have an ID
+      if (documentId) {
+        analysisData.document_id = documentId;
+      }
+      
       const { error: analysisError } = await supabase
         .from('document_analysis')
-        .insert({
-          extracted_text: extractedText,
-          summary: aiAnalysis.summary
-        });
+        .insert(analysisData);
 
       if (analysisError) {
         console.error('⚠️ Failed to store document analysis:', analysisError);
         // Don't fail the request if this fails
+      } else {
+        console.log("✅ Enhanced document analysis stored", documentId ? "with document link" : "without document link");
       }
+      
+      // Store validation results separately
+      if (documentId) {
+        await supabase
+          .from('validation_results')
+          .insert({
+            document_id: documentId,
+            property_address_match: aiAnalysis.document_validation?.filename_match || false,
+            filename_content_consistency: aiAnalysis.document_validation?.filename_match || false,
+            critical_fields_found: aiAnalysis.key_entities || [],
+            suspicious_patterns: extractionQuality.warnings,
+            confidence_level: extractionQuality.score,
+            validation_warnings: extractionQuality.warnings
+          });
+      }
+      
     } catch (error) {
-      console.error('⚠️ Error storing document analysis:', error);
+      console.error('⚠️ Error storing enhanced analysis:', error);
       // Don't fail the request if this fails
     }
 
-    // 5. Return analysis results for user confirmation (DO NOT save yet)
+    // 6. Return analysis results for user confirmation
     return NextResponse.json({
       success: true,
       ai: {
         ...aiAnalysis,
         originalFileName: file.name,
         buildingId: buildingId,
+        documentId: documentId, // Include document ID for tracking
         extractedText: extractedText.substring(0, 1000) + '...', // First 1000 chars for preview
+        fullTextLength: extractedText.length, // Show full extraction stats
         file_url: publicUrl // Include the uploaded file URL
       }
     })
@@ -126,58 +246,254 @@ export async function POST(request: NextRequest) {
   }
 }
 
+async function extractTextFromPDFIntelligent(file: File, characteristics: any): Promise<string> {
+  const { selectOptimalOCRMethods } = await import('@/lib/ocr/intelligent-selection');
+  const methods = selectOptimalOCRMethods(characteristics);
+  
+  console.log(`🎯 Selected OCR methods:`, methods.map(m => `${m.name} (${m.suitability})`));
+  
+  // Try methods in order of suitability
+  for (const method of methods) {
+    try {
+      console.log(`🔍 Trying method: ${method.name}`);
+      const startTime = Date.now();
+      
+      let text = '';
+      switch (method.name) {
+        case 'pdf_text_layer':
+          text = await extractTextFromPDF_TextLayer(file);
+          break;
+        case 'openai_extraction':
+          text = await extractTextFromPDF_OpenAI(file);
+          break;
+        case 'google_vision_ocr':
+          text = await extractTextFromPDF_GoogleVision(file);
+          break;
+        case 'enhanced_google_vision':
+          text = await extractTextFromPDF_EnhancedVision(file);
+          break;
+        default:
+          continue;
+      }
+      
+      const duration = Date.now() - startTime;
+      
+      if (text && text.trim().length > 50) {
+        console.log(`✅ Success with ${method.name}: ${text.length} chars in ${duration}ms`);
+        return text;
+      } else {
+        console.log(`⚠️ Poor result from ${method.name}: ${text.length} chars`);
+      }
+      
+    } catch (error) {
+      console.log(`❌ ${method.name} failed:`, error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
+  
+  throw new Error('All OCR methods failed - document may be corrupted or heavily encrypted');
+}
+
+async function extractTextFromPDF_TextLayer(file: File): Promise<string> {
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const { extractPdfText } = await import('@/lib/pdf-parse-wrapper');
+  return await extractPdfText(buffer);
+}
+
+async function extractTextFromPDF_OpenAI(file: File): Promise<string> {
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  
+  const response = await openai.files.create({
+    file: new Blob([buffer], { type: 'application/pdf' }),
+    purpose: 'assistants',
+  });
+
+  const content = await openai.files.content(response.id);
+  const text = await content.text();
+  
+  // Clean up
+  await openai.files.delete(response.id);
+  
+  return text;
+}
+
+async function extractTextFromPDF_GoogleVision(file: File): Promise<string> {
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const { ocrFallback } = await import('@/lib/compliance/docExtract');
+  return await ocrFallback(file.name, buffer);
+}
+
+async function extractTextFromPDF_EnhancedVision(file: File): Promise<string> {
+  const { extractWithGoogleVision } = await import('@/lib/extract-text');
+  const result = await extractWithGoogleVision(file);
+  return result.extractedText;
+}
+
+// Legacy function for backward compatibility
 async function extractTextFromPDF(file: File): Promise<string> {
+  console.log(`📄 Starting text extraction for: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+  
   try {
     // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
-    // Use OpenAI's text extraction for PDFs (primary method)
-    const response = await openai.files.create({
-      file: new Blob([buffer], { type: 'application/pdf' }),
-      purpose: 'assistants',
-    })
-
-    const content = await openai.files.content(response.id)
-    const text = await content.text()
-
-    // Clean up the file
-    await openai.files.delete(response.id)
-
-    return text
-  } catch (error) {
-    console.error('❌ Error extracting text from PDF:', error)
-    
-    // Fallback: Try OCR if OpenAI fails
+    // Try PDF text layer extraction first (fastest)
+    console.log("🔍 Method 1: Trying PDF text layer extraction...");
     try {
-      console.log("🔄 Trying Google Vision OCR fallback...")
+      const { extractPdfText } = await import('@/lib/pdf-parse-wrapper');
+      const pdfText = await extractPdfText(buffer);
       
-      // Convert file to buffer for Google Vision OCR
-      const arrayBuffer = await file.arrayBuffer()
-      const buffer = Buffer.from(arrayBuffer)
-      
-      // Use Google Vision OCR directly
+      if (pdfText && pdfText.trim().length > 100) {
+        console.log(`✅ PDF text layer successful: ${pdfText.length} characters`);
+        return pdfText;
+      } else {
+        console.log(`⚠️ PDF text layer yielded poor results: ${pdfText.length} characters`);
+      }
+    } catch (pdfError) {
+      console.log("❌ PDF text layer extraction failed:", pdfError instanceof Error ? pdfError.message : 'Unknown error');
+    }
+
+    // Try OpenAI's text extraction (secondary method)
+    console.log("🔍 Method 2: Trying OpenAI file extraction...");
+    try {
+      const response = await openai.files.create({
+        file: new Blob([buffer], { type: 'application/pdf' }),
+        purpose: 'assistants',
+      })
+
+      const content = await openai.files.content(response.id)
+      const text = await content.text()
+
+      // Clean up the file
+      await openai.files.delete(response.id)
+
+      if (text && text.trim().length > 50) {
+        console.log(`✅ OpenAI extraction successful: ${text.length} characters`);
+        return text;
+      } else {
+        console.log(`⚠️ OpenAI extraction yielded poor results: ${text.length} characters`);
+      }
+    } catch (openaiError) {
+      console.log("❌ OpenAI extraction failed:", openaiError instanceof Error ? openaiError.message : 'Unknown error');
+    }
+    
+    // Fallback: Try Google Vision OCR (most thorough for scanned docs)
+    console.log("🔍 Method 3: Trying Google Vision OCR fallback...");
+    try {
       const { ocrFallback } = await import('@/lib/compliance/docExtract');
       const ocrText = await ocrFallback(file.name, buffer);
       
       if (ocrText && ocrText.trim().length > 0) {
-        console.log('✅ Google Vision OCR successful, extracted text length:', ocrText.length);
+        console.log(`✅ Google Vision OCR successful: ${ocrText.length} characters`);
         return ocrText;
+      } else {
+        console.log(`⚠️ Google Vision OCR yielded no results`);
       }
     } catch (ocrError) {
-      console.error('❌ Google Vision OCR fallback also failed:', ocrError)
+      console.error('❌ Google Vision OCR fallback failed:', ocrError instanceof Error ? ocrError.message : 'Unknown error');
     }
     
-    throw new Error('Failed to extract text from PDF')
+    // Final fallback: Try enhanced extraction
+    console.log("🔍 Method 4: Trying enhanced extraction library...");
+    try {
+      const { extractWithGoogleVision } = await import('@/lib/extract-text');
+      const result = await extractWithGoogleVision(file);
+      
+      if (result.extractedText && result.extractedText.trim().length > 0) {
+        console.log(`✅ Enhanced extraction successful: ${result.extractedText.length} characters (${result.source})`);
+        return result.extractedText;
+      }
+    } catch (enhancedError) {
+      console.error('❌ Enhanced extraction failed:', enhancedError instanceof Error ? enhancedError.message : 'Unknown error');
+    }
+    
+    throw new Error('All text extraction methods failed - document may be corrupted or heavily encrypted')
+  } catch (error) {
+    console.error('❌ Critical error in text extraction pipeline:', error)
+    throw error
   }
 }
 
-async function analyseDocument(text: string, fileName: string, buildingId?: string) {
+interface ExtractionQuality {
+  score: number; // 0-1, where 1 is perfect
+  wordCount: number;
+  hasStructuredContent: boolean;
+  hasPropertyNames: boolean;
+  confidence: 'high' | 'medium' | 'low';
+  warnings: string[];
+}
+
+function validateExtractionQuality(text: string, file: File): ExtractionQuality {
+  const wordCount = text.trim().split(/\s+/).length;
+  const charCount = text.trim().length;
+  
+  // Calculate expected content based on file size
+  const fileSizeMB = file.size / (1024 * 1024);
+  const expectedWordsPerMB = 500; // Rough estimate for PDF
+  const expectedWords = fileSizeMB * expectedWordsPerMB;
+  
+  // Quality indicators
+  const hasStructuredContent = /\b(lease|tenancy|agreement|property|building|flat|apartment|unit)\b/i.test(text);
+  const hasPropertyNames = /\b(close|road|street|avenue|gardens|court|house|tower|block)\b/i.test(text);
+  const hasDates = /\b(20\d{2}|19\d{2})\b/.test(text);
+  const hasNumbers = /\b\d+\b/.test(text);
+  
+  // Calculate score
+  let score = 0;
+  
+  // Word count score (0-0.4)
+  if (wordCount > expectedWords * 0.5) score += 0.4;
+  else if (wordCount > expectedWords * 0.2) score += 0.2;
+  else if (wordCount > 50) score += 0.1;
+  
+  // Content quality score (0-0.6)
+  if (hasStructuredContent) score += 0.2;
+  if (hasPropertyNames) score += 0.2;
+  if (hasDates) score += 0.1;
+  if (hasNumbers) score += 0.1;
+  
+  const warnings: string[] = [];
+  
+  if (charCount < 1000) warnings.push('Very low character count - document may be scanned or corrupted');
+  if (wordCount < 100) warnings.push('Very low word count - extraction may have failed');
+  if (!hasStructuredContent) warnings.push('No lease/property terminology detected');
+  if (!hasPropertyNames) warnings.push('No property location indicators found');
+  
+  let confidence: 'high' | 'medium' | 'low' = 'low';
+  if (score > 0.7) confidence = 'high';
+  else if (score > 0.4) confidence = 'medium';
+  
+  return {
+    score,
+    wordCount,
+    hasStructuredContent,
+    hasPropertyNames,
+    confidence,
+    warnings
+  };
+}
+
+async function analyseDocument(text: string, fileName: string, buildingId?: string, quality?: ExtractionQuality) {
+  // Add quality context to the prompt
+  const qualityContext = quality ? `
+EXTRACTION QUALITY ASSESSMENT:
+- Confidence: ${quality.confidence}
+- Word count: ${quality.wordCount}
+- Quality score: ${(quality.score * 100).toFixed(1)}%
+- Warnings: ${quality.warnings.join('; ') || 'None'}
+` : '';
+
   const prompt = `
 You are analysing a document for a UK leasehold block management platform called BlocIQ using British English.
 
 Document: ${fileName}
+${qualityContext}
 Content: ${text.substring(0, 4000)}
+
+IMPORTANT: This document should be "${fileName}". If the content doesn't match the filename or seems to be from a different property, note this in your analysis.
 
 Please analyse this document and provide the following information in JSON format using British English:
 
@@ -198,8 +514,14 @@ Please analyse this document and provide the following information in JSON forma
 15. lease_start_date: If this is a lease document, extract the lease start date (YYYY-MM-DD format or null)
 16. lease_end_date: If this is a lease document, extract the lease end date (YYYY-MM-DD format or null)
 17. apportionment: If this is a lease document, extract the service charge apportionment percentage (or null)
+18. document_validation: Object with validation results:
+    - filename_match: boolean - does content match the filename?
+    - property_mentioned: string - property name/address mentioned in document (or null)
+    - content_quality: "high" | "medium" | "low" - based on text extraction quality
+    - potential_issues: array of strings - any concerns about document authenticity or extraction
 
 Focus on UK leasehold terminology and compliance requirements. If dates are mentioned, extract them carefully.
+Pay special attention to property names and addresses to ensure document routing accuracy.
 Return only valid JSON.
 `
 
@@ -245,7 +567,13 @@ Return only valid JSON.
       leaseholder_name: analysis.leaseholder_name || null,
       lease_start_date: analysis.lease_start_date || null,
       lease_end_date: analysis.lease_end_date || null,
-      apportionment: analysis.apportionment || null
+      apportionment: analysis.apportionment || null,
+      document_validation: analysis.document_validation || {
+        filename_match: false,
+        property_mentioned: null,
+        content_quality: quality?.confidence || 'low',
+        potential_issues: quality?.warnings || []
+      }
     }
 
   } catch (error) {
