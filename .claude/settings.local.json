@@ -35,7 +35,8 @@
       "WebFetch(domain:blociq-h3xv-cilukzqo0-eleanoroxley-9774s-projects.vercel.app)",
       "WebFetch(domain:blociq.co.uk)",
       "Bash(npm install:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(npm run:*)"
     ],
     "deny": [],
     "ask": []
