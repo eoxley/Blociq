@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { processFileWithOCR } from '@/lib/simple-ocr';
+import { LeaseDocumentParser, isLeaseDocument } from '@/lib/lease/LeaseDocumentParser';
 
 interface Message {
   id: string;
@@ -10,6 +11,8 @@ interface Message {
   ocrStatus?: 'processing' | 'completed' | 'failed';
   ocrText?: string;
   isProcessingOCR?: boolean;
+  type?: 'text' | 'lease_analysis';
+  leaseData?: any;
 }
 
 interface MemoryContext {
@@ -86,6 +89,40 @@ export function useAIConversation(): UseAIConversationReturn {
         
         // Add OCR text to the message
         const ocrText = ocrResults.map(r => r.text).join('\n\n');
+        
+        // Check if any file is a lease document
+        const leaseFiles = files.filter((file, index) => 
+          isLeaseDocument(file.name, ocrResults[index]?.text || '')
+        );
+        
+        if (leaseFiles.length > 0) {
+          // Process as lease document
+          const leaseFile = leaseFiles[0]; // Use first lease file
+          const leaseOcrResult = ocrResults[files.indexOf(leaseFile)];
+          const parser = new LeaseDocumentParser(leaseOcrResult.text, leaseFile.name);
+          const leaseAnalysis = parser.parse();
+          
+          // Create lease analysis message
+          const leaseMessage: Message = {
+            id: (Date.now() + 2).toString(),
+            role: 'assistant',
+            content: 'I\'ve analyzed your lease document and extracted key information.',
+            timestamp: new Date(),
+            type: 'lease_analysis',
+            leaseData: leaseAnalysis
+          };
+          
+          // Update user message and add lease analysis
+          userMessage.ocrText = ocrText;
+          userMessage.ocrStatus = 'completed';
+          setMessages(prev => prev.map(msg => 
+            msg.id === userMessage.id ? userMessage : msg
+          ).concat([leaseMessage]));
+          
+          setIsProcessingOCR(false);
+          return; // Skip regular AI processing for lease documents
+        }
+        
         const enhancedMessage = `${content.trim()}\n\nExtracted from uploaded documents:\n${ocrText}`;
         
         // Update user message with OCR text

@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { useAIConversation } from '@/hooks/useAIConversation';
 
 import { AskResultCard } from '@/components/ask/AskResultCard';
+import { LeaseAnalysisResponse } from '@/components/lease/LeaseAnalysisResponse';
 
 interface UserData {
   name: string;
@@ -94,6 +95,10 @@ export default function AIAssistantClient({ userData }: AIAssistantClientProps) 
   const handleUploadResult = (result: any) => {
     setUploadResult(result);
     toast.success('Document analyzed successfully!');
+  };
+
+  const handleStartQA = () => {
+    setInputValue("I'd like to ask questions about this lease document.");
   };
 
   const removeFile = (index: number) => {
@@ -194,13 +199,26 @@ export default function AIAssistantClient({ userData }: AIAssistantClientProps) 
                   className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                    className={`${
+                      message.type === 'lease_analysis' 
+                        ? 'max-w-2xl' 
+                        : 'max-w-xs lg:max-w-md px-4 py-2 rounded-lg'
+                    } ${
                       message.role === 'user'
                         ? 'bg-blue-600 text-white'
+                        : message.type === 'lease_analysis'
+                        ? ''
                         : 'bg-gray-100 text-gray-900'
                     }`}
                   >
-                    <p className="text-sm">{message.content}</p>
+                    {message.type === 'lease_analysis' ? (
+                      <LeaseAnalysisResponse 
+                        leaseData={message.leaseData} 
+                        onStartQA={handleStartQA}
+                      />
+                    ) : (
+                      <p className="text-sm">{message.content}</p>
+                    )}
                     
                     {/* Show OCR status and file information for user messages */}
                     {message.role === 'user' && message.files && message.files.length > 0 && (
@@ -247,11 +265,13 @@ export default function AIAssistantClient({ userData }: AIAssistantClientProps) 
                       </div>
                     )}
                     
-                    <p className={`text-xs mt-1 ${
-                      message.role === 'user' ? 'text-blue-100' : 'text-gray-500'
-                    }`}>
-                      {message.timestamp.toLocaleTimeString()}
-                    </p>
+                    {message.type !== 'lease_analysis' && (
+                      <p className={`text-xs mt-1 ${
+                        message.role === 'user' ? 'text-blue-100' : 'text-gray-500'
+                      }`}>
+                        {message.timestamp.toLocaleTimeString()}
+                      </p>
+                    )}
                   </div>
                 </div>
               ))
