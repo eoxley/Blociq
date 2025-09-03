@@ -5,7 +5,7 @@ export interface Agency {
   id: string
   name: string
   slug: string
-  status: string
+  status?: string
   domain?: string
   logo_url?: string
   created_at: string
@@ -48,9 +48,6 @@ export async function getUserAgencies(userId: string): Promise<AgencyMember[]> {
         id,
         name,
         slug,
-        status,
-        domain,
-        logo_url,
         created_at,
         updated_at
       )

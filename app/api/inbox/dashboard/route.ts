@@ -47,6 +47,24 @@ export async function GET(req: NextRequest) {
 
     console.log(`📅 Fetching emails from ${startDate.toISOString()} to ${now.toISOString()}`);
 
+    // Check agency membership first
+    const { data: agencyMember, error: agencyError } = await supabase
+      .from('agency_members')
+      .select('agency_id, role')
+      .eq('user_id', user.id)
+      .single();
+    
+    if (agencyError) {
+      console.error('❌ Agency query error:', agencyError);
+      return NextResponse.json({
+        error: 'User not linked to agency',
+        fallback: { emails: [], calendar: [], stats: { total: 0, unread: 0 } },
+        needsSetup: true
+      }, { status: 200 });
+    }
+
+    console.log('✅ User is member of agency:', agencyMember.agency_id);
+
     // Fetch emails directly from Outlook via Graph API
     console.log('🔍 Attempting to query Outlook via Microsoft Graph API...');
     
@@ -103,6 +121,21 @@ export async function GET(req: NextRequest) {
     } catch (error) {
       console.error('❌ Error fetching from Outlook:', error);
       emailsError = error;
+      
+      // Check if it's a "No Outlook connection" error
+      if (error instanceof Error && error.message.includes('No Outlook connection found')) {
+        console.log('📝 No Outlook connection found - user needs to connect');
+        return NextResponse.json({
+          success: true,
+          data: createEmptyDashboard(),
+          timeRange,
+          message: 'Please connect your Outlook account to view email data',
+          needsConnect: true,
+          outlookConnectionRequired: true,
+          generatedAt: new Date().toISOString()
+        });
+      }
+      
       emails = [];
     }
 
