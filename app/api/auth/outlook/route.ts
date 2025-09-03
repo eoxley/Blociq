@@ -7,9 +7,9 @@ export async function GET(req: NextRequest) {
     console.log('[Outlook OAuth] Starting OAuth initiation...');
     
     // Microsoft OAuth 2.0 configuration
-    const clientId = process.env.OUTLOOK_CLIENT_ID;
-    const redirectUri = process.env.OUTLOOK_REDIRECT_URI;
-    const scope = 'Calendars.ReadWrite offline_access';
+    const clientId = process.env.MICROSOFT_CLIENT_ID;
+    const redirectUri = process.env.MICROSOFT_REDIRECT_URI;
+    const scope = 'openid profile email offline_access Mail.Read Mail.Send Calendars.Read Calendars.ReadWrite';
     
     console.log('[Outlook OAuth] Environment check:', {
       clientId: !!clientId,
@@ -18,13 +18,13 @@ export async function GET(req: NextRequest) {
     });
     
     if (!clientId) {
-      console.error('[Outlook OAuth] OUTLOOK_CLIENT_ID not configured');
-      return NextResponse.json({ error: 'Outlook integration not configured' }, { status: 500 });
+      console.error('[Outlook OAuth] MICROSOFT_CLIENT_ID not configured');
+      return NextResponse.json({ error: 'Microsoft integration not configured' }, { status: 500 });
     }
 
     if (!redirectUri) {
-      console.error('[Outlook OAuth] OUTLOOK_REDIRECT_URI not configured');
-      return NextResponse.json({ error: 'Outlook redirect URI not configured' }, { status: 500 });
+      console.error('[Outlook OAuth] MICROSOFT_REDIRECT_URI not configured');
+      return NextResponse.json({ error: 'Microsoft redirect URI not configured' }, { status: 500 });
     }
 
     // Generate state parameter for security
@@ -42,7 +42,9 @@ export async function GET(req: NextRequest) {
     console.log('[Outlook OAuth] State cookie set');
 
     // Build the Microsoft OAuth URL
-    const authUrl = new URL('https://login.microsoftonline.com/common/oauth2/v2.0/authorize');
+    const tenantId = process.env.AZURE_TENANT_ID || 'common';
+    const baseAuthUrl = process.env.MICROSOFT_AUTH_URL || `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize`;
+    const authUrl = new URL(baseAuthUrl);
     authUrl.searchParams.set('client_id', clientId);
     authUrl.searchParams.set('response_type', 'code');
     authUrl.searchParams.set('redirect_uri', redirectUri);

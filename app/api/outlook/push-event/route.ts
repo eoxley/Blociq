@@ -4,9 +4,9 @@ import { cookies } from 'next/headers';
 
 // Helper to refresh Outlook access token
 async function refreshOutlookToken(tokens: any) {
-  const clientId = process.env.OUTLOOK_CLIENT_ID || process.env.NEXT_PUBLIC_MICROSOFT_CLIENT_ID;
-  const clientSecret = process.env.OUTLOOK_CLIENT_SECRET;
-  const redirectUri = process.env.OUTLOOK_REDIRECT_URI || process.env.NEXT_PUBLIC_MICROSOFT_REDIRECT_URI;
+  const clientId = process.env.MICROSOFT_CLIENT_ID;
+  const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
+  const redirectUri = process.env.MICROSOFT_REDIRECT_URI;
 
   if (!clientId || !clientSecret || !redirectUri) {
     throw new Error('Microsoft OAuth configuration missing');
@@ -21,7 +21,9 @@ async function refreshOutlookToken(tokens: any) {
     redirect_uri: redirectUri,
   });
 
-  const response = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+  const tenantId = process.env.AZURE_TENANT_ID || 'common';
+  const tokenUrl = process.env.MICROSOFT_TOKEN_URL || `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
+  const response = await fetch(tokenUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: params.toString(),
@@ -104,7 +106,8 @@ export async function POST(req: NextRequest) {
     };
 
     // POST to Microsoft Graph
-    const response = await fetch('https://graph.microsoft.com/v1.0/me/events', {
+    const graphBaseUrl = process.env.GRAPH_BASE_URL || 'https://graph.microsoft.com/v1.0';
+    const response = await fetch(`${graphBaseUrl}/me/events`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${tokens.access_token}`,

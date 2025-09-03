@@ -49,18 +49,19 @@ export async function GET() {
         console.log(`🔄 Token expired for ${tokenRow.user_email}, refreshing...`);
         
         try {
-          const tenantId = process.env.OUTLOOK_TENANT_ID || 'common';
-          const refreshResponse = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
+          const tenantId = process.env.AZURE_TENANT_ID || 'common';
+          const tokenUrl = process.env.MICROSOFT_TOKEN_URL || `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
+          const refreshResponse = await fetch(tokenUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/x-www-form-urlencoded',
             },
             body: new URLSearchParams({
-              client_id: process.env.OUTLOOK_CLIENT_ID!,
-              client_secret: process.env.OUTLOOK_CLIENT_SECRET!,
+              client_id: process.env.MICROSOFT_CLIENT_ID!,
+              client_secret: process.env.MICROSOFT_CLIENT_SECRET!,
               grant_type: 'refresh_token',
               refresh_token: tokenRow.refresh_token,
-              redirect_uri: process.env.OUTLOOK_REDIRECT_URI!,
+              redirect_uri: process.env.MICROSOFT_REDIRECT_URI!,
             }),
           });
 
@@ -90,7 +91,8 @@ export async function GET() {
       }
 
       // Fetch recent emails (last 30 days) - use a safer approach without date filtering
-      let url = `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=50&$orderby=receivedDateTime desc&$select=id,subject,bodyPreview,body,from,receivedDateTime,isRead,flag,importance,categories,hasAttachments,internetMessageId`;
+      const graphBaseUrl = process.env.GRAPH_BASE_URL || 'https://graph.microsoft.com/v1.0';
+      let url = `${graphBaseUrl}/me/mailFolders/inbox/messages?$top=50&$orderby=receivedDateTime desc&$select=id,subject,bodyPreview,body,from,receivedDateTime,isRead,flag,importance,categories,hasAttachments,internetMessageId`;
       let userSynced = 0;
 
       while (url) {

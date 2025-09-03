@@ -7,12 +7,14 @@ async function refreshOutlookToken(supabase: any, userId: string, refreshToken: 
     const params = new URLSearchParams({
       grant_type: 'refresh_token',
       refresh_token: refreshToken,
-      client_id: process.env.OUTLOOK_CLIENT_ID!,
-      client_secret: process.env.OUTLOOK_CLIENT_SECRET!,
-      redirect_uri: process.env.OUTLOOK_REDIRECT_URI!
+      client_id: process.env.MICROSOFT_CLIENT_ID!,
+      client_secret: process.env.MICROSOFT_CLIENT_SECRET!,
+      redirect_uri: process.env.MICROSOFT_REDIRECT_URI!
     });
 
-    const response = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+    const tenantId = process.env.AZURE_TENANT_ID || 'common';
+    const tokenUrl = process.env.MICROSOFT_TOKEN_URL || `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
+    const response = await fetch(tokenUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -108,8 +110,9 @@ export async function GET(req: NextRequest) {
     }
 
     // Fetch upcoming events from Microsoft Graph API
+    const graphBaseUrl = process.env.GRAPH_BASE_URL || 'https://graph.microsoft.com/v1.0';
     const response = await fetch(
-      'https://graph.microsoft.com/v1.0/me/calendar/events?$orderby=start/dateTime&$top=10&$select=id,subject,body,location,start,end,isAllDay,organizer,attendees,importance,showAs,categories,webLink,onlineMeeting,createdDateTime,lastModifiedDateTime',
+      `${graphBaseUrl}/me/calendar/events?$orderby=start/dateTime&$top=10&$select=id,subject,body,location,start,end,isAllDay,organizer,attendees,importance,showAs,categories,webLink,onlineMeeting,createdDateTime,lastModifiedDateTime`,
       {
         headers: {
           'Authorization': `Bearer ${accessToken}`,

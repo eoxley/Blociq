@@ -60,15 +60,17 @@ export async function getOutlookClient() {
  * Refresh an expired Outlook access token
  */
 async function refreshOutlookToken(tokens: OutlookTokens): Promise<OutlookTokens> {
-  const clientId = process.env.OUTLOOK_CLIENT_ID || process.env.MICROSOFT_CLIENT_ID;
-  const clientSecret = process.env.OUTLOOK_CLIENT_SECRET || process.env.MICROSOFT_CLIENT_SECRET;
-  const redirectUri = process.env.OUTLOOK_REDIRECT_URI || process.env.MICROSOFT_REDIRECT_URI;
+  const clientId = process.env.MICROSOFT_CLIENT_ID;
+  const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
+  const redirectUri = process.env.MICROSOFT_REDIRECT_URI;
 
   if (!clientId || !clientSecret || !redirectUri) {
     throw new Error('Microsoft OAuth configuration missing');
   }
 
-  const response = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+  const tenantId = process.env.AZURE_TENANT_ID || 'common';
+  const tokenUrl = process.env.MICROSOFT_TOKEN_URL || `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
+  const response = await fetch(tokenUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',

@@ -112,15 +112,16 @@ export async function GET(request: NextRequest) {
 }
 
 async function exchangeCodeForTokens(code: string): Promise<MicrosoftTokenResponse> {
-  const clientId = process.env.OUTLOOK_CLIENT_ID;
-  const clientSecret = process.env.OUTLOOK_CLIENT_SECRET;
-  const redirectUri = "https://www.blociq.co.uk/auth/callback";
+  const clientId = process.env.MICROSOFT_CLIENT_ID;
+  const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
+  const redirectUri = process.env.MICROSOFT_REDIRECT_URI || "https://www.blociq.co.uk/auth/callback";
 
   if (!clientId || !clientSecret) {
     throw new Error('Microsoft OAuth credentials not configured');
   }
 
-  const tokenUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
+  const tenantId = process.env.AZURE_TENANT_ID || 'common';
+  const tokenUrl = process.env.MICROSOFT_TOKEN_URL || `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
   const response = await fetch(tokenUrl, {
     method: 'POST',
     headers: {
@@ -145,7 +146,8 @@ async function exchangeCodeForTokens(code: string): Promise<MicrosoftTokenRespon
 }
 
 async function getUserInfo(accessToken: string): Promise<{ id: string; email: string; name: string }> {
-  const response = await fetch('https://graph.microsoft.com/v1.0/me', {
+  const graphBaseUrl = process.env.GRAPH_BASE_URL || 'https://graph.microsoft.com/v1.0';
+  const response = await fetch(`${graphBaseUrl}/me`, {
     headers: {
       'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
