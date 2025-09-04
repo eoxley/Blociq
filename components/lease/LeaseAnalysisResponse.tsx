@@ -149,9 +149,9 @@ export const LeaseAnalysisResponse: React.FC<LeaseAnalysisResponseProps> = ({
       <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="text-white">
-            <p className="font-medium text-sm">Ready to summarise this document further?</p>
+            <p className="font-medium text-sm">Document analysis complete</p>
             <p className="text-xs text-blue-100">
-              Ask specific questions about repairs, rent, obligations, termination clauses, and more.
+              Ask me specific questions about this lease in the chat below - repairs, rent, obligations, termination clauses, and more.
             </p>
           </div>
           <div className="flex gap-2">
@@ -161,14 +161,6 @@ export const LeaseAnalysisResponse: React.FC<LeaseAnalysisResponseProps> = ({
                 className="bg-white/20 text-white px-3 py-2 rounded text-sm hover:bg-white/30 transition-colors"
               >
                 {showFullAnalysis ? 'Hide' : 'Show'} Details
-              </button>
-            )}
-            {onStartQA && (
-              <button
-                onClick={onStartQA}
-                className="bg-white text-blue-600 px-4 py-2 rounded text-sm font-medium hover:bg-blue-50 transition-colors"
-              >
-                Start Q&A Session
               </button>
             )}
           </div>

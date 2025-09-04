@@ -374,54 +374,17 @@ export async function extractText(file: File): Promise<TextExtractionResult> {
     }
   }
 
-  // Final fallback - return test content for development
-  console.log('🧪 All OCR methods failed, returning test content');
-  const testContent = `
-LEASE AGREEMENT - TEST EXTRACTION
-
-Property: Flat 5, 260 Holloway Road, London N7 8PE
-
-PARTIES:
-Lessor: Kensington & Edinburgh Estates Ltd
-Lessee: Robert Jonathan Phipps
-
-FINANCIAL DETAILS:
-Premium: £636,000
-Term: 125 years (2015-2140)
-Initial Rent: £450 per annum
-
-DOCUMENT DETAILS:
-- File: ${file.name}
-- Size: ${(file.size / (1024 * 1024)).toFixed(2)} MB
-- Type: ${file.type}
-- Processed: ${new Date().toLocaleString()}
-
-NOTE: This is test content generated because OCR extraction failed.
-In production, this would contain the actual extracted text from your PDF document.
-
-LEGAL CLAUSES:
-1. The property is let on the terms and conditions contained herein
-2. The lessee shall pay the rent and service charges as specified
-3. The lease is subject to the covenants and conditions contained in the schedule
-4. All parties agree to be bound by the terms of this agreement
-
-ADDITIONAL INFORMATION:
-- Ground Rent: £450 per annum
-- Service Charges: As per management company requirements
-- Insurance: Lessee responsible for contents insurance
-- Alterations: Subject to lessor consent
-- Assignment: Permitted with lessor consent
-
-This test extraction demonstrates the expected format and content structure.
-  `.trim();
-
+  // All OCR methods failed - return detailed error information
+  console.log('❌ All OCR methods failed, no text could be extracted');
+  
   return {
-    extractedText: testContent,
-    textLength: testContent.length,
-    source: 'test_mode',
+    extractedText: '',
+    textLength: 0,
+    source: 'failed',
     metadata: {
-      errorDetails: 'All OCR methods failed, using test content',
-      fileType: file.type
+      errorDetails: 'All OCR methods failed. Check API keys: OpenAI, Google Vision, or ensure PDF contains extractable text',
+      fileType: file.type,
+      attemptedMethods: methods.map(m => m.name).join(', ')
     }
   };
 }

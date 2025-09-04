@@ -716,10 +716,6 @@ export default function AskBlocIQ({
                     {message.type === 'lease_analysis' ? (
                       <LeaseAnalysisResponse 
                         leaseData={message.leaseData} 
-                        onStartQA={() => {
-                          setQuestion('Tell me more about the lease obligations');
-                          inputRef.current?.focus();
-                        }}
                       />
                     ) : (
                       <div className={`relative inline-block px-5 py-3 rounded-2xl ${

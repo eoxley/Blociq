@@ -74,10 +74,11 @@ export async function POST(req: NextRequest) {
       }`;
       
       summary = `Document processed: ${textLength} characters extracted via ${source}. Ready for AI analysis and questioning.`;
-    } else if (success && source === 'test_mode') {
-      analysis = `Generated test content for ${file.name} (${textLength} characters). This is sample content since OCR extraction failed. The actual document would need proper OCR configuration to extract real text.`;
+    } else if (source === 'test_mode') {
+      // Test mode should no longer be used
+      analysis = `OCR extraction failed for ${file.name}. All available OCR methods (OpenAI Vision, Google Vision, PDF.js, Tesseract) were attempted but could not extract text from this document.`;
       
-      summary = `Test mode: ${textLength} characters of sample content generated. OCR services need configuration for real text extraction.`;
+      summary = `Document processing failed. All OCR methods failed to extract text from this document.`;
     } else {
       analysis = `Unable to extract text from ${file.name}. ${extractionMetadata?.errorDetails || 'The file may be corrupted, encrypted, or in an unsupported format.'} All OCR methods failed.`;
       
