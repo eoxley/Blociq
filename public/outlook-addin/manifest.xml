@@ -7,11 +7,11 @@
   xsi:type="MailApp">
 
   <Id>85e47bf9-847d-4fa6-ab0b-7d73531345db</Id>
-  <Version>1.0.0.8</Version>
+  <Version>1.0.1.0</Version>
   <ProviderName>BlocIQ</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="BlocIQ AI Assistant"/>
-  <Description DefaultValue="AI-powered email assistant for property management. Helps with compliance, tenant communication, and building management tasks directly within Outlook."/>
+  <Description DefaultValue="AI assistant with sidebar chat and email reply generation"/>
 
   <IconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-32.png"/>
   <HighResolutionIconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-80.png"/>
@@ -60,8 +60,6 @@
       <Hosts>
         <Host xsi:type="MailHost">
           <DesktopFormFactor>
-            <FunctionFile resid="functionFileUrl"/>
-
             <ExtensionPoint xsi:type="MessageReadCommandSurface">
               <OfficeTab id="TabDefault">
                 <Group id="msgReadGroup">
@@ -83,38 +81,6 @@
                     </Action>
                   </Control>
 
-                  <Control xsi:type="Button" id="ActionButton">
-                    <Label resid="aiReplyButtonLabel"/>
-                    <Supertip>
-                      <Title resid="aiReplySuperTipTitle"/>
-                      <Description resid="aiReplySuperTipDescription"/>
-                    </Supertip>
-                    <Icon>
-                      <bt:Image size="16" resid="icon16"/>
-                      <bt:Image size="32" resid="icon32"/>
-                      <bt:Image size="80" resid="icon80"/>
-                    </Icon>
-                    <Action xsi:type="ExecuteFunction">
-                      <FunctionName>generateAIReply</FunctionName>
-                    </Action>
-                  </Control>
-
-                  <Control xsi:type="Button" id="InboxTriageButton">
-                    <Label resid="inboxTriageButtonLabel"/>
-                    <Supertip>
-                      <Title resid="inboxTriageSuperTipTitle"/>
-                      <Description resid="inboxTriageSuperTipDescription"/>
-                    </Supertip>
-                    <Icon>
-                      <bt:Image size="16" resid="icon16"/>
-                      <bt:Image size="32" resid="icon32"/>
-                      <bt:Image size="80" resid="icon80"/>
-                    </Icon>
-                    <Action xsi:type="ExecuteFunction">
-                      <FunctionName>showInboxTriage</FunctionName>
-                    </Action>
-                  </Control>
-
                 </Group>
               </OfficeTab>
             </ExtensionPoint>
@@ -131,23 +97,16 @@
 
         <bt:Urls>
           <bt:Url id="taskpaneUrl" DefaultValue="https://www.blociq.co.uk/outlook-addin/taskpane.html"/>
-          <bt:Url id="functionFileUrl" DefaultValue="https://www.blociq.co.uk/outlook-addin/functions.html"/>
         </bt:Urls>
 
         <bt:ShortStrings>
           <bt:String id="groupLabel" DefaultValue="BlocIQ Assistant"/>
           <bt:String id="paneButtonLabel" DefaultValue="Open Assistant"/>
           <bt:String id="paneSuperTipTitle" DefaultValue="BlocIQ Assistant"/>
-          <bt:String id="aiReplyButtonLabel" DefaultValue="AI Reply"/>
-          <bt:String id="aiReplySuperTipTitle" DefaultValue="Generate AI Reply"/>
-          <bt:String id="inboxTriageButtonLabel" DefaultValue="Inbox Triage"/>
-          <bt:String id="inboxTriageSuperTipTitle" DefaultValue="AI Inbox Triage"/>
         </bt:ShortStrings>
 
         <bt:LongStrings>
-          <bt:String id="paneSuperTipDescription" DefaultValue="Open BlocIQ Assistant to work with this email."/>
-          <bt:String id="aiReplySuperTipDescription" DefaultValue="Generate an AI-powered reply to this email."/>
-          <bt:String id="inboxTriageSuperTipDescription" DefaultValue="Use AI to triage and respond to multiple emails."/>
+          <bt:String id="paneSuperTipDescription" DefaultValue="Open BlocIQ Assistant with chat and draft reply functionality."/>
         </bt:LongStrings>
       </Resources>
     </VersionOverrides>
