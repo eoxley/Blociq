@@ -140,7 +140,6 @@ export default function AskBlocIQ({
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // File handling
   const acceptedFileTypes = [
@@ -608,7 +607,10 @@ export default function AskBlocIQ({
   const buildingContext = getBuildingContext();
 
   return (
-    <div style={{fontFamily: 'Inter, system-ui, sans-serif'}} className={`h-full flex flex-col bg-white ${className}`}>
+    <div 
+      style={{fontFamily: 'Inter, system-ui, sans-serif'}} 
+      className={`h-full flex flex-col bg-white ${className}`}
+    >
       
       {/* Header */}
       <div className="border-b p-6">
@@ -757,35 +759,33 @@ export default function AskBlocIQ({
                       </div>
                     )}
 
-                      {/* File attachments */}
-                      {message.files && message.files.length > 0 && (
-                        <div className="mt-3 space-y-2">
-                          <p className="text-xs font-medium">📎 Analyzed Documents:</p>
-                          {message.files.map(file => (
-                            <div key={file.id} className={`flex items-center gap-2 p-2 rounded-lg ${
-                              isUser ? 'bg-white bg-opacity-20' : 'bg-white border'
-                            }`}>
-                              <FileText className="w-4 h-4" />
-                              <span className="text-xs font-medium">{file.name}</span>
-                              <CheckCircle className="w-4 h-4 text-green-500 ml-auto" />
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Major Works Badge */}
-                      {isAI && usedMajorWorksData && (
-                        <div className="mt-3 flex items-center gap-2">
-                          <div className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium border border-blue-200">
-                            <Building2 className="w-3 h-3" />
-                            <span>Live major works data used</span>
+                    {/* File attachments */}
+                    {message.files && message.files.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        <p className="text-xs font-medium">📎 Analyzed Documents:</p>
+                        {message.files.map(file => (
+                          <div key={file.id} className={`flex items-center gap-2 p-2 rounded-lg ${
+                            isUser ? 'bg-white bg-opacity-20' : 'bg-white border'
+                          }`}>
+                            <FileText className="w-4 h-4" />
+                            <span className="text-xs font-medium">{file.name}</span>
+                            <CheckCircle className="w-4 h-4 text-green-500 ml-auto" />
                           </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Major Works Badge */}
+                    {isAI && usedMajorWorksData && (
+                      <div className="mt-3 flex items-center gap-2">
+                        <div className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium border border-blue-200">
+                          <Building2 className="w-3 h-3" />
+                          <span>Live major works data used</span>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
 
                     {/* Action Buttons */}
-
 
                     {/* Timestamp */}
                     <div className={`mt-2 text-xs text-gray-500 ${isUser ? 'text-right' : 'text-left'}`}>
@@ -885,7 +885,7 @@ export default function AskBlocIQ({
             {/* Text Input - Centered and aligned with chat content */}
             <div className="flex-1 relative">
               <textarea
-                ref={textareaRef}
+                ref={inputRef}
                 value={question}
                 onChange={handleInputChange}
                 onKeyDown={(e) => {
@@ -945,76 +945,74 @@ export default function AskBlocIQ({
         </div>
       </div>
 
-      {/* Simple OCR Test Section */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm mx-4 mb-4">
-        <div className="flex items-start gap-3">
-          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-            <span className="text-white text-sm">🔍</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm text-gray-500 mb-2">Quick OCR Test</div>
-            <div className="text-sm text-gray-600 mb-3">
-              Test document text extraction. Upload a PDF to see the raw extracted text.
-            </div>
-            
-          </div>
-        </div>
-      </div>
-
-      {/* Document Search Results */}
-        {isDocumentSearch && documentResults.length > 0 && (
+        {/* Simple OCR Test Section */}
         <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm mx-4 mb-4">
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-sm">📄</span>
+            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-sm">🔍</span>
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-sm text-gray-500 mb-2">Document Search Results</div>
-              <div className="space-y-3">
-                {documentResults.map((doc, index) => (
-                  <div key={doc.id} className="bg-gray-50 p-3 rounded-md border border-gray-100">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900 mb-1">{doc.title}</h4>
-                        {doc.summary && (
-                          <p className="text-sm text-gray-600 mb-2">{doc.summary}</p>
-                        )}
-                        <div className="flex items-center gap-4 text-sm text-gray-500">
-                          <span>📅 {new Date(doc.uploaded_at).toLocaleDateString('en-GB')}</span>
-                          {doc.expiry_date && (
-                            <span>⏰ Expires: {new Date(doc.expiry_date).toLocaleDateString('en-GB')}</span>
-                          )}
-                        </div>
-                      </div>
-                      <a
-                        href={doc.doc_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="ml-3 px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors flex items-center gap-1"
-                      >
-                        📎 View
-                      </a>
-                    </div>
-                  </div>
-                ))}
+              <div className="text-sm text-gray-500 mb-2">Quick OCR Test</div>
+              <div className="text-sm text-gray-600 mb-3">
+                Test document text extraction. Upload a PDF to see the raw extracted text.
               </div>
-              {buildingId && (
-                <div className="mt-3 pt-3 border-t border-gray-200">
-                  <a
-                    href="/compliance"
-                    className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1"
-                  >
-                    🔗 View All in Compliance Overview
-                  </a>
-                </div>
-              )}
+              
             </div>
           </div>
         </div>
-      )}
 
+        {/* Document Search Results */}
+        {isDocumentSearch && documentResults.length > 0 && (
+          <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm mx-4 mb-4">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-sm">📄</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm text-gray-500 mb-2">Document Search Results</div>
+                <div className="space-y-3">
+                  {documentResults.map((doc, index) => (
+                    <div key={doc.id} className="bg-gray-50 p-3 rounded-md border border-gray-100">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-gray-900 mb-1">{doc.title}</h4>
+                          {doc.summary && (
+                            <p className="text-sm text-gray-600 mb-2">{doc.summary}</p>
+                          )}
+                          <div className="flex items-center gap-4 text-sm text-gray-500">
+                            <span>📅 {new Date(doc.uploaded_at).toLocaleDateString('en-GB')}</span>
+                            {doc.expiry_date && (
+                              <span>⏰ Expires: {new Date(doc.expiry_date).toLocaleDateString('en-GB')}</span>
+                            )}
+                          </div>
+                        </div>
+                        <a
+                          href={doc.doc_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-3 px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors flex items-center gap-1"
+                        >
+                          📎 View
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {buildingId && (
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <a
+                      href="/compliance"
+                      className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1"
+                    >
+                      🔗 View All in Compliance Overview
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
-
-    </div>
+      </div>
   );
 } 
