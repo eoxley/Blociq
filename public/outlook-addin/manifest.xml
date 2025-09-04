@@ -58,18 +58,6 @@
 
   <Permissions>ReadWriteMailbox</Permissions>
 
-  <!-- WebApplicationInfo for Azure AD Authentication -->
-  <WebApplicationInfo>
-    <Id>85e47bf9-847d-4fa6-ab0b-7d73531345db</Id>
-    <Resource>api://blociq.co.uk/85e47bf9-847d-4fa6-ab0b-7d73531345db</Resource>
-    <Scopes>
-      <Scope>https://graph.microsoft.com/Mail.Read</Scope>
-      <Scope>https://graph.microsoft.com/Mail.ReadWrite</Scope>
-      <Scope>https://graph.microsoft.com/Mail.Send</Scope>
-      <Scope>https://graph.microsoft.com/User.Read</Scope>
-    </Scopes>
-  </WebApplicationInfo>
-
   <Rule xsi:type="RuleCollection" Mode="Or">
     <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read" />
   </Rule>
@@ -83,6 +71,18 @@
           <bt:Set Name="Mailbox" />
         </bt:Sets>
       </Requirements>
+
+      <!-- WebApplicationInfo for Azure AD Authentication -->
+      <WebApplicationInfo>
+        <Id>85e47bf9-847d-4fa6-ab0b-7d73531345db</Id>
+        <Resource>api://blociq.co.uk/85e47bf9-847d-4fa6-ab0b-7d73531345db</Resource>
+        <Scopes>
+          <Scope>https://graph.microsoft.com/Mail.Read</Scope>
+          <Scope>https://graph.microsoft.com/Mail.ReadWrite</Scope>
+          <Scope>https://graph.microsoft.com/Mail.Send</Scope>
+          <Scope>https://graph.microsoft.com/User.Read</Scope>
+        </Scopes>
+      </WebApplicationInfo>
 
       <Hosts>
         <Host xsi:type="MailHost">
