@@ -168,20 +168,40 @@
     </div>
 
     <script>
-        let currentEmail = null;
+        var currentEmail = null;
         
-        // Initialize when Office is ready
-        Office.onReady((info) => {
-            console.log('BlocIQ Add-in initialized');
-            console.log('Host:', info.host);
-            console.log('Platform:', info.platform);
-            
-            if (info.host === Office.HostType.Outlook) {
-                initializeAddin();
-            } else {
-                showStatus('This add-in works only in Outlook', 'error');
+        // Check if Office.js is available before using it
+        function checkOfficeAvailability() {
+            if (typeof window.Office === 'undefined') {
+                showStatus('Office.js not available. Please ensure you are running in Outlook.', 'error');
+                return false;
             }
-        });
+            return true;
+        }
+        
+        // Initialize when Office is ready - with fallback
+        function initializeOffice() {
+            if (!checkOfficeAvailability()) {
+                return;
+            }
+            
+            try {
+                Office.onReady(function(info) {
+                    console.log('BlocIQ Add-in initialized');
+                    console.log('Host:', info.host);
+                    console.log('Platform:', info.platform);
+                    
+                    if (info.host === Office.HostType.Outlook) {
+                        initializeAddin();
+                    } else {
+                        showStatus('This add-in works only in Outlook', 'error');
+                    }
+                });
+            } catch (error) {
+                console.error('Error initializing Office:', error);
+                showStatus('Failed to initialize Office.js: ' + error.message, 'error');
+            }
+        }
         
         function initializeAddin() {
             console.log('Initializing BlocIQ add-in...');
@@ -198,7 +218,11 @@
         
         function getCurrentEmailContext() {
             try {
-                const item = Office.context.mailbox.item;
+                if (!checkOfficeAvailability()) {
+                    return;
+                }
+                
+                var item = Office.context.mailbox.item;
                 
                 if (item) {
                     currentEmail = {
@@ -222,20 +246,19 @@
         }
         
         function updateEmailDisplay() {
-            const emailDetails = document.getElementById('emailDetails');
+            var emailDetails = document.getElementById('emailDetails');
             
             if (currentEmail) {
-                emailDetails.innerHTML = `
-                    <strong>Subject:</strong> ${currentEmail.subject}<br>
-                    <strong>From:</strong> ${currentEmail.from}<br>
-                    <strong>Type:</strong> ${currentEmail.itemType}<br>
-                    <strong>Date:</strong> ${currentEmail.dateTimeCreated}
-                `;
+                emailDetails.innerHTML = 
+                    '<strong>Subject:</strong> ' + currentEmail.subject + '<br>' +
+                    '<strong>From:</strong> ' + currentEmail.from + '<br>' +
+                    '<strong>Type:</strong> ' + currentEmail.itemType + '<br>' +
+                    '<strong>Date:</strong> ' + currentEmail.dateTimeCreated;
             }
         }
         
         function showEmailInfo() {
-            const btn = document.getElementById('infoBtn');
+            var btn = document.getElementById('infoBtn');
             btn.disabled = true;
             btn.innerHTML = '<span class="loading"></span> Loading...';
             
@@ -260,14 +283,20 @@
         }
         
         function testOfficeAPI() {
-            const btn = document.getElementById('testBtn');
+            var btn = document.getElementById('testBtn');
             btn.disabled = true;
             btn.innerHTML = '<span class="loading"></span> Testing...';
             
             try {
+                if (!checkOfficeAvailability()) {
+                    btn.disabled = false;
+                    btn.innerHTML = '🔧 Test Office Connection';
+                    return;
+                }
+                
                 // Test basic Office.js functionality
-                const context = Office.context;
-                const info = {
+                var context = Office.context;
+                var info = {
                     host: context.host,
                     platform: context.platform,
                     version: context.version,
@@ -286,17 +315,18 @@
             }
         }
         
-        function showStatus(message, type = 'info') {
-            const statusDiv = document.getElementById('status');
+        function showStatus(message, type) {
+            type = type || 'info';
+            var statusDiv = document.getElementById('status');
             statusDiv.textContent = message;
-            statusDiv.className = `status ${type}`;
+            statusDiv.className = 'status ' + type;
             statusDiv.style.display = 'block';
             
-            console.log(`Status (${type}):`, message);
+            console.log('Status (' + type + '):', message);
             
             // Auto-hide success and info messages
             if (type === 'success' || type === 'info') {
-                setTimeout(() => {
+                setTimeout(function() {
                     statusDiv.style.display = 'none';
                 }, type === 'success' ? 4000 : 3000);
             }
@@ -309,13 +339,25 @@
             return false;
         };
         
-        // Unhandled promise rejection handler
-        window.addEventListener('unhandledrejection', function(event) {
-            console.error('Unhandled promise rejection:', event.reason);
-            showStatus('Promise error: ' + event.reason, 'error');
-        });
+        // Unhandled promise rejection handler - use try/catch for IE compatibility
+        try {
+            window.addEventListener('unhandledrejection', function(event) {
+                console.error('Unhandled promise rejection:', event.reason);
+                showStatus('Promise error: ' + event.reason, 'error');
+            });
+        } catch (error) {
+            // Promise rejection handler not supported in older browsers
+            console.log('Promise rejection handler not supported');
+        }
         
         console.log('BlocIQ taskpane script loaded successfully');
+        
+        // Initialize when page loads
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeOffice);
+        } else {
+            initializeOffice();
+        }
     </script>
 </body>
 </html>
