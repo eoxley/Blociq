@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Generate by Ask BlocIQ</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #F8FAFC;
+      color: #333333;
+      padding: 20px;
+    }
+
+    .modal-container {
+      background: white;
+      border-radius: 16px;
+      max-width: 800px;
+      margin: 0 auto;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+
+    .modal-header {
+      background: linear-gradient(135deg, #008C8F, #7645ED);
+      color: white;
+      padding: 20px 24px;
+      text-align: center;
+      position: relative;
+    }
+
+    .modal-header h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .modal-header p {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .close-button {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: none;
+      border: none;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: background 0.2s ease;
+    }
+
+    .close-button:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .modal-body {
+      padding: 24px;
+    }
+
+    .email-context {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .context-header {
+      font-weight: 600;
+      color: #333333;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .context-item {
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+
+    .context-label {
+      font-weight: 600;
+      color: #64748B;
+      margin-right: 8px;
+    }
+
+    .context-value {
+      color: #333333;
+    }
+
+    .reply-options {
+      margin-bottom: 24px;
+    }
+
+    .options-label {
+      font-weight: 600;
+      color: #333333;
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+
+    .reply-type-buttons {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .reply-type-button {
+      padding: 10px 16px;
+      border: 2px solid #E2E8F0;
+      border-radius: 8px;
+      background: white;
+      color: #4a5568;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .reply-type-button:hover {
+      border-color: #008C8F;
+      background: #F0FDFA;
+    }
+
+    .reply-type-button.active {
+      border-color: #008C8F;
+      background: linear-gradient(135deg, #008C8F, #7645ED);
+      color: white;
+    }
+
+    .tone-selector {
+      margin-bottom: 16px;
+    }
+
+    .tone-buttons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tone-button {
+      padding: 6px 12px;
+      border: 1px solid #E2E8F0;
+      border-radius: 16px;
+      background: white;
+      color: #4a5568;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .tone-button:hover {
+      border-color: #008C8F;
+      background: #F0FDFA;
+    }
+
+    .tone-button.active {
+      border-color: #008C8F;
+      background: #008C8F;
+      color: white;
+    }
+
+    .custom-instructions {
+      margin-bottom: 20px;
+    }
+
+    .instruction-input {
+      width: 100%;
+      min-height: 60px;
+      padding: 12px;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .instruction-input:focus {
+      border-color: #008C8F;
+      box-shadow: 0 0 0 3px rgba(0, 140, 143, 0.1);
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-bottom: 20px;
+    }
+
+    .action-button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .action-button.secondary {
+      background: #F8FAFC;
+      color: #4a5568;
+      border: 1px solid #E2E8F0;
+    }
+
+    .action-button.secondary:hover {
+      background: #EDF2F7;
+      border-color: #CBD5E0;
+    }
+
+    .action-button.primary {
+      background: linear-gradient(135deg, #008C8F, #7645ED);
+      color: white;
+    }
+
+    .action-button.primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 140, 143, 0.3);
+    }
+
+    .action-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .generated-reply {
+      background: white;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .generated-reply.visible {
+      display: block;
+    }
+
+    .reply-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .reply-title {
+      font-weight: 600;
+      color: #333333;
+      font-size: 16px;
+    }
+
+    .reply-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .reply-action-button {
+      padding: 6px 12px;
+      border: 1px solid #E2E8F0;
+      border-radius: 6px;
+      background: white;
+      color: #4a5568;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .reply-action-button:hover {
+      border-color: #008C8F;
+      background: #F0FDFA;
+    }
+
+    .reply-content {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 16px;
+      font-size: 14px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .status-message {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .status-message.success {
+      background: #f0fff4;
+      color: #38a169;
+      border: 1px solid #c6f6d5;
+    }
+
+    .status-message.error {
+      background: #fed7d7;
+      color: #c53030;
+      border: 1px solid #feb2b2;
+    }
+
+    .status-message.info {
+      background: #ebf8ff;
+      color: #3182ce;
+      border: 1px solid #bee3f8;
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(0, 140, 143, 0.3);
+      border-radius: 50%;
+      border-top-color: #008C8F;
+      animation: spin 1s linear infinite;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 4px;
+      background: #E2E8F0;
+      border-radius: 2px;
+      overflow: hidden;
+      margin: 12px 0;
+      display: none;
+    }
+
+    .progress-bar.visible {
+      display: block;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(135deg, #008C8F, #7645ED);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+  <div class="modal-container">
+    <div class="modal-header">
+      <button class="close-button" onclick="closeModal()">&times;</button>
+      <h2>Generate by Ask BlocIQ</h2>
+      <p>AI-powered email response generation</p>
+    </div>
+
+    <div class="modal-body">
+      <div class="status-message" id="statusMessage"></div>
+
+      <div class="email-context" id="emailContext">
+        <div class="context-header">
+          📧 Email Context
+        </div>
+        <div class="context-item">
+          <span class="context-label">Subject:</span>
+          <span class="context-value" id="emailSubject">Loading...</span>
+        </div>
+        <div class="context-item">
+          <span class="context-label">From:</span>
+          <span class="context-value" id="emailFrom">Loading...</span>
+        </div>
+        <div class="context-item">
+          <span class="context-label">To:</span>
+          <span class="context-value" id="emailTo">Loading...</span>
+        </div>
+      </div>
+
+      <div class="reply-options">
+        <div class="options-label">Reply Type</div>
+        <div class="reply-type-buttons">
+          <button class="reply-type-button active" data-type="reply" onclick="selectReplyType('reply')">
+            📧 Reply
+          </button>
+          <button class="reply-type-button" data-type="replyAll" onclick="selectReplyType('replyAll')">
+            📬 Reply All
+          </button>
+          <button class="reply-type-button" data-type="forward" onclick="selectReplyType('forward')">
+            📤 Forward
+          </button>
+        </div>
+
+        <div class="tone-selector">
+          <div class="options-label">Tone</div>
+          <div class="tone-buttons">
+            <button class="tone-button active" data-tone="professional" onclick="selectTone('professional')">Professional</button>
+            <button class="tone-button" data-tone="friendly" onclick="selectTone('friendly')">Friendly</button>
+            <button class="tone-button" data-tone="formal" onclick="selectTone('formal')">Formal</button>
+            <button class="tone-button" data-tone="urgent" onclick="selectTone('urgent')">Urgent</button>
+          </div>
+        </div>
+
+        <div class="custom-instructions">
+          <div class="options-label">Additional Instructions (Optional)</div>
+          <textarea 
+            class="instruction-input" 
+            id="customInstructions" 
+            placeholder="Add any specific instructions for the AI response (e.g., mention specific building details, request documents, etc.)"
+          ></textarea>
+        </div>
+      </div>
+
+      <div class="action-buttons">
+        <button class="action-button secondary" onclick="closeModal()">
+          Cancel
+        </button>
+        <button class="action-button primary" id="generateButton" onclick="generateReply()">
+          <span class="loading-spinner" id="loadingSpinner" style="display: none;"></span>
+          Generate Reply
+        </button>
+      </div>
+
+      <div class="progress-bar" id="progressBar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+
+      <div class="generated-reply" id="generatedReply">
+        <div class="reply-header">
+          <div class="reply-title">Generated Reply</div>
+          <div class="reply-actions">
+            <button class="reply-action-button" onclick="regenerateReply()">🔄 Regenerate</button>
+            <button class="reply-action-button" onclick="copyReply()">📋 Copy</button>
+          </div>
+        </div>
+        <div class="reply-content" id="replyContent"></div>
+        
+        <div class="action-buttons" style="margin-top: 16px;">
+          <button class="action-button secondary" onclick="editReply()">
+            ✏️ Edit Reply
+          </button>
+          <button class="action-button primary" onclick="insertReply()">
+            ✨ Insert into Email
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentEmailContext = null;
+    let currentReplyType = 'reply';
+    let currentTone = 'professional';
+    let generatedContent = '';
+    let isGenerating = false;
+
+    // Initialize when Office is ready
+    Office.onReady(() => {
+      console.log('AI Reply Modal initialized');
+      loadEmailContext();
+    });
+
+    // Load current email context
+    async function loadEmailContext() {
+      try {
+        showStatus('Loading email context...', 'info');
+        
+        // Get email context from parent window or Office context
+        const emailContext = await getCurrentEmailContext();
+        
+        if (emailContext) {
+          currentEmailContext = emailContext;
+          displayEmailContext(emailContext);
+          showStatus('Email context loaded successfully', 'success');
+          
+          // Auto-detect reply type
+          const detectedType = determineReplyType(emailContext);
+          selectReplyType(detectedType);
+        } else {
+          throw new Error('No email context available');
+        }
+        
+      } catch (error) {
+        console.error('Error loading email context:', error);
+        showStatus('Error loading email context', 'error');
+      }
+    }
+
+    // Get current email context
+    async function getCurrentEmailContext() {
+      return new Promise((resolve, reject) => {
+        if (window.parent && window.parent.Office) {
+          // Try to get context from parent Office context
+          const item = window.parent.Office.context.mailbox.item;
+          if (!item) {
+            reject(new Error('No email item available'));
+            return;
+          }
+
+          Promise.all([
+            getItemProperty(item.subject),
+            getItemProperty(item.body),
+            getItemProperty(item.from),
+            getItemProperty(item.to)
+          ]).then(([subject, body, from, to]) => {
+            resolve({
+              subject: subject || 'No subject',
+              body: body || 'No content',
+              from: from || 'Unknown',
+              to: to || 'Unknown',
+              itemId: item.itemId
+            });
+          }).catch(reject);
+        } else {
+          // Fallback: try to get from URL parameters or local context
+          const urlParams = new URLSearchParams(window.location.search);
+          const contextData = {
+            subject: urlParams.get('subject') || 'Sample Email Subject',
+            body: urlParams.get('body') || 'This is a sample email body for testing the AI reply generation.',
+            from: urlParams.get('from') || 'sender@example.com',
+            to: urlParams.get('to') || 'recipient@example.com',
+            itemId: urlParams.get('itemId') || 'sample-id'
+          };
+          
+          resolve(contextData);
+        }
+      });
+    }
+
+    // Get item property safely
+    function getItemProperty(property) {
+      return new Promise((resolve) => {
+        if (!property) {
+          resolve(null);
+          return;
+        }
+
+        if (typeof property === 'string') {
+          resolve(property);
+          return;
+        }
+
+        if (property.getAsync) {
+          property.getAsync((result) => {
+            if (result.status === Office.AsyncResultStatus.Succeeded) {
+              resolve(result.value);
+            } else {
+              resolve(null);
+            }
+          });
+        } else {
+          resolve(property);
+        }
+      });
+    }
+
+    // Display email context
+    function displayEmailContext(context) {
+      document.getElementById('emailSubject').textContent = context.subject;
+      document.getElementById('emailFrom').textContent = context.from;
+      document.getElementById('emailTo').textContent = context.to;
+    }
+
+    // Determine reply type based on context
+    function determineReplyType(emailContext) {
+      if (!emailContext) return 'reply';
+      
+      const subject = emailContext.subject?.toLowerCase() || '';
+      
+      if (subject.startsWith('fw:') || subject.startsWith('fwd:')) {
+        return 'forward';
+      } else if (subject.startsWith('re:')) {
+        return 'reply';
+      } else {
+        // Default to reply for new compositions
+        return 'reply';
+      }
+    }
+
+    // Select reply type
+    function selectReplyType(type) {
+      currentReplyType = type;
+      
+      // Update button states
+      document.querySelectorAll('.reply-type-button').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.querySelector(`[data-type="${type}"]`).classList.add('active');
+    }
+
+    // Select tone
+    function selectTone(tone) {
+      currentTone = tone;
+      
+      // Update button states
+      document.querySelectorAll('.tone-button').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.querySelector(`[data-tone="${tone}"]`).classList.add('active');
+    }
+
+    // Generate AI reply
+    async function generateReply() {
+      if (isGenerating || !currentEmailContext) return;
+      
+      try {
+        isGenerating = true;
+        updateGenerateButton(true);
+        showProgress();
+        showStatus('Generating AI reply...', 'info');
+        
+        const customInstructions = document.getElementById('customInstructions').value.trim();
+        
+        // Prepare request data
+        const requestData = {
+          emailContext: currentEmailContext,
+          replyType: currentReplyType,
+          tone: currentTone,
+          customInstructions: customInstructions,
+          contextType: 'email_reply',
+          is_outlook_addin: true,
+          includeIndustryKnowledge: true
+        };
+        
+        // Call BlocIQ AI API
+        const response = await fetch('https://www.blociq.co.uk/api/ai/generate-email-reply', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestData),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        generatedContent = data.response || data.reply || 'No response generated';
+        
+        // Display the generated reply
+        displayGeneratedReply(generatedContent);
+        showStatus('Reply generated successfully!', 'success');
+        
+      } catch (error) {
+        console.error('Error generating reply:', error);
+        
+        // Fallback to mock response for testing
+        generatedContent = generateMockReply();
+        displayGeneratedReply(generatedContent);
+        showStatus('Using fallback response (API unavailable)', 'info');
+        
+      } finally {
+        isGenerating = false;
+        updateGenerateButton(false);
+        hideProgress();
+      }
+    }
+
+    // Generate mock reply for testing
+    function generateMockReply() {
+      const mockReplies = {
+        reply: `Dear ${currentEmailContext?.from || 'Sender'},
+
+Thank you for your email regarding "${currentEmailContext?.subject || 'your inquiry'}".
+
+I understand your concern and will address this matter promptly. Please allow 2-3 business days for a full response.
+
+If you have any urgent concerns, please don't hesitate to contact me directly.
+
+Best regards,
+Property Management Team`,
+        
+        replyAll: `Dear All,
+
+Thank you for your email regarding "${currentEmailContext?.subject || 'this matter'}".
+
+I've noted the points raised and will coordinate with the relevant team members to provide a comprehensive response.
+
+Please allow 3-5 business days for us to gather all necessary information and respond accordingly.
+
+Best regards,
+Property Management Team`,
+        
+        forward: `Dear Team,
+
+I'm forwarding this email for your attention and action:
+
+Subject: ${currentEmailContext?.subject || 'Forwarded Email'}
+From: ${currentEmailContext?.from || 'Unknown Sender'}
+
+Please review and let me know how you'd like to proceed.
+
+Best regards,
+Property Management Team`
+      };
+      
+      return mockReplies[currentReplyType] || mockReplies.reply;
+    }
+
+    // Display generated reply
+    function displayGeneratedReply(content) {
+      document.getElementById('replyContent').textContent = content;
+      document.getElementById('generatedReply').classList.add('visible');
+    }
+
+    // Regenerate reply
+    function regenerateReply() {
+      if (isGenerating) return;
+      
+      // Clear previous content
+      document.getElementById('generatedReply').classList.remove('visible');
+      generatedContent = '';
+      
+      // Generate new reply
+      generateReply();
+    }
+
+    // Copy reply to clipboard
+    function copyReply() {
+      if (!generatedContent) return;
+      
+      try {
+        navigator.clipboard.writeText(generatedContent).then(() => {
+          showStatus('Reply copied to clipboard!', 'success');
+        });
+      } catch (error) {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = generatedContent;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showStatus('Reply copied to clipboard!', 'success');
+      }
+    }
+
+    // Edit reply
+    function editReply() {
+      if (!generatedContent) return;
+      
+      // Convert content to editable textarea
+      const replyContent = document.getElementById('replyContent');
+      const currentContent = replyContent.textContent;
+      
+      replyContent.innerHTML = `<textarea 
+        style="width: 100%; min-height: 200px; padding: 8px; border: 1px solid #E2E8F0; border-radius: 4px; font-family: inherit; font-size: 14px; resize: vertical;"
+        onblur="saveEditedReply(this.value)"
+      >${currentContent}</textarea>`;
+      
+      replyContent.querySelector('textarea').focus();
+    }
+
+    // Save edited reply
+    function saveEditedReply(newContent) {
+      generatedContent = newContent;
+      document.getElementById('replyContent').textContent = newContent;
+      showStatus('Reply updated!', 'success');
+    }
+
+    // Insert reply into email
+    function insertReply() {
+      if (!generatedContent) return;
+      
+      try {
+        // Send message to parent to insert the reply
+        if (window.parent && window.parent.Office) {
+          window.parent.Office.context.ui.messageParent(JSON.stringify({
+            action: 'insertReply',
+            content: generatedContent,
+            replyType: currentReplyType
+          }));
+        } else {
+          showStatus('Reply ready to insert!', 'success');
+        }
+      } catch (error) {
+        console.error('Error inserting reply:', error);
+        showStatus('Error inserting reply', 'error');
+      }
+    }
+
+    // Update generate button state
+    function updateGenerateButton(loading) {
+      const button = document.getElementById('generateButton');
+      const spinner = document.getElementById('loadingSpinner');
+      
+      if (loading) {
+        button.disabled = true;
+        spinner.style.display = 'inline-block';
+        button.textContent = 'Generating...';
+      } else {
+        button.disabled = false;
+        spinner.style.display = 'none';
+        button.textContent = 'Generate Reply';
+      }
+    }
+
+    // Show progress
+    function showProgress() {
+      document.getElementById('progressBar').classList.add('visible');
+      updateProgress(0);
+      
+      // Simulate progress
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += Math.random() * 15;
+        if (progress >= 90) {
+          progress = 90;
+          clearInterval(interval);
+        }
+        updateProgress(progress);
+      }, 200);
+    }
+
+    // Hide progress
+    function hideProgress() {
+      updateProgress(100);
+      setTimeout(() => {
+        document.getElementById('progressBar').classList.remove('visible');
+      }, 500);
+    }
+
+    // Update progress bar
+    function updateProgress(percentage) {
+      document.getElementById('progressFill').style.width = `${percentage}%`;
+    }
+
+    // Show status message
+    function showStatus(message, type) {
+      const statusMessage = document.getElementById('statusMessage');
+      statusMessage.textContent = message;
+      statusMessage.className = `status-message ${type}`;
+      statusMessage.style.display = 'block';
+      
+      // Auto-hide after 5 seconds
+      setTimeout(() => {
+        statusMessage.style.display = 'none';
+      }, 5000);
+    }
+
+    // Close modal
+    function closeModal() {
+      try {
+        // Send message to parent to close dialog
+        if (window.parent && window.parent.Office) {
+          window.parent.Office.context.ui.messageParent(JSON.stringify({
+            action: 'close'
+          }));
+        } else {
+          window.close();
+        }
+      } catch (error) {
+        console.error('Error closing modal:', error);
+        window.close();
+      }
+    }
+
+    // Handle keyboard shortcuts
+    document.addEventListener('keydown', (event) => {
+      if (event.ctrlKey || event.metaKey) {
+        switch (event.key) {
+          case 'Enter':
+            event.preventDefault();
+            generateReply();
+            break;
+          case 'Escape':
+            event.preventDefault();
+            closeModal();
+            break;
+        }
+      }
+    });
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('AI Reply Modal DOM loaded');
+    });
+  </script>
+</body>
+</html>

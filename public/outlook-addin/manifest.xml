@@ -13,15 +13,14 @@
   <DisplayName DefaultValue="BlocIQ AI Assistant"/>
   <Description DefaultValue="AI-powered email assistant for property management."/>
 
-  <!-- Simple icons that definitely exist -->
-  <IconUrl DefaultValue="https://via.placeholder.com/32x32/0078d4/ffffff?text=AI"/>
-  <HighResolutionIconUrl DefaultValue="https://via.placeholder.com/80x80/0078d4/ffffff?text=AI"/>
+  <IconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-80.png"/>
 
   <SupportUrl DefaultValue="https://blociq.co.uk"/>
 
   <AppDomains>
     <AppDomain>https://blociq.co.uk</AppDomain>
-    <AppDomain>https://blociq-h3xv-d4i6e9x2q-eleanoroxley-9774s-projects.vercel.app</AppDomain>
+    <AppDomain>https://www.blociq.co.uk</AppDomain>
   </AppDomains>
 
   <Hosts>
@@ -37,7 +36,7 @@
   <FormSettings>
     <Form xsi:type="ItemRead">
       <DesktopSettings>
-        <SourceLocation DefaultValue="https://blociq-h3xv-d4i6e9x2q-eleanoroxley-9774s-projects.vercel.app/public/addin/taskpane.html"/>
+        <SourceLocation DefaultValue="https://www.blociq.co.uk/outlook-addin/taskpane.html"/>
         <RequestedHeight>450</RequestedHeight>
       </DesktopSettings>
     </Form>
@@ -49,4 +48,109 @@
     <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read"/>
   </Rule>
 
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
+
+      <Requirements>
+        <bt:Sets DefaultMinVersion="1.3">
+          <bt:Set Name="Mailbox"/>
+        </bt:Sets>
+      </Requirements>
+
+      <Hosts>
+        <Host xsi:type="MailHost">
+          <DesktopFormFactor>
+            <FunctionFile resid="functionFileUrl"/>
+
+            <ExtensionPoint xsi:type="MessageReadCommandSurface">
+              <OfficeTab id="TabDefault">
+                <Group id="msgReadGroup">
+                  <Label resid="groupLabel"/>
+
+                  <Control xsi:type="Button" id="msgReadOpenPaneButton">
+                    <Label resid="paneButtonLabel"/>
+                    <Supertip>
+                      <Title resid="paneSuperTipTitle"/>
+                      <Description resid="paneSuperTipDescription"/>
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="icon16"/>
+                      <bt:Image size="32" resid="icon32"/>
+                      <bt:Image size="80" resid="icon80"/>
+                    </Icon>
+                    <Action xsi:type="ShowTaskpane">
+                      <TaskpaneId>ButtonId1</TaskpaneId>
+                      <SourceLocation resid="taskpaneUrl"/>
+                    </Action>
+                  </Control>
+
+                  <Control xsi:type="Button" id="ActionButton">
+                    <Label resid="aiReplyButtonLabel"/>
+                    <Supertip>
+                      <Title resid="aiReplySuperTipTitle"/>
+                      <Description resid="aiReplySuperTipDescription"/>
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="icon16"/>
+                      <bt:Image size="32" resid="icon32"/>
+                      <bt:Image size="80" resid="icon80"/>
+                    </Icon>
+                    <Action xsi:type="ExecuteFunction">
+                      <FunctionName>generateAIReply</FunctionName>
+                    </Action>
+                  </Control>
+
+                  <Control xsi:type="Button" id="InboxTriageButton">
+                    <Label resid="inboxTriageButtonLabel"/>
+                    <Supertip>
+                      <Title resid="inboxTriageSuperTipTitle"/>
+                      <Description resid="inboxTriageSuperTipDescription"/>
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="icon16"/>
+                      <bt:Image size="32" resid="icon32"/>
+                      <bt:Image size="80" resid="icon80"/>
+                    </Icon>
+                    <Action xsi:type="ExecuteFunction">
+                      <FunctionName>showInboxTriage</FunctionName>
+                    </Action>
+                  </Control>
+
+                </Group>
+              </OfficeTab>
+            </ExtensionPoint>
+          </DesktopFormFactor>
+        </Host>
+      </Hosts>
+
+      <Resources>
+        <bt:Images>
+          <bt:Image id="icon16" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-16.png"/>
+          <bt:Image id="icon32" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-32.png"/>
+          <bt:Image id="icon80" DefaultValue="https://www.blociq.co.uk/outlook-addin/icon-80.png"/>
+        </bt:Images>
+
+        <bt:Urls>
+          <bt:Url id="taskpaneUrl" DefaultValue="https://www.blociq.co.uk/outlook-addin/taskpane.html"/>
+          <bt:Url id="functionFileUrl" DefaultValue="https://www.blociq.co.uk/outlook-addin/functions.html"/>
+        </bt:Urls>
+
+        <bt:ShortStrings>
+          <bt:String id="groupLabel" DefaultValue="BlocIQ Assistant"/>
+          <bt:String id="paneButtonLabel" DefaultValue="Open Assistant"/>
+          <bt:String id="paneSuperTipTitle" DefaultValue="BlocIQ Assistant"/>
+          <bt:String id="aiReplyButtonLabel" DefaultValue="AI Reply"/>
+          <bt:String id="aiReplySuperTipTitle" DefaultValue="Generate AI Reply"/>
+          <bt:String id="inboxTriageButtonLabel" DefaultValue="Inbox Triage"/>
+          <bt:String id="inboxTriageSuperTipTitle" DefaultValue="AI Inbox Triage"/>
+        </bt:ShortStrings>
+
+        <bt:LongStrings>
+          <bt:String id="paneSuperTipDescription" DefaultValue="Open BlocIQ Assistant to work with this email."/>
+          <bt:String id="aiReplySuperTipDescription" DefaultValue="Generate an AI-powered reply to this email."/>
+          <bt:String id="inboxTriageSuperTipDescription" DefaultValue="Use AI to triage and respond to multiple emails."/>
+        </bt:LongStrings>
+      </Resources>
+    </VersionOverrides>
+  </VersionOverrides>
 </OfficeApp>
