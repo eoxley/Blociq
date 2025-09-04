@@ -14,6 +14,7 @@ Office.onReady(() => {
   console.log('BlocIQ Assistant loaded successfully');
   setupEventListeners();
   setupEmailCapture(); // Add email capture functionality
+  checkAuthenticationStatus(); // Check if user is authenticated
   
   // Register function commands for the add-in
   if (Office.context.document) {
@@ -256,8 +257,8 @@ async function callAskBlocIQ(prompt, emailContext) {
       console.error('API error response:', errorData);
       
       // Handle specific error cases
-      if (errorData.action === 'login_required') {
-        return `🔐 ${errorData.message}\n\nPlease ensure you are logged into your BlocIQ account in your browser.`;
+      if (errorData.code === 'login_required') {
+        return `🔐 ${errorData.message}\n\nNote: You're currently using BlocIQ AI in limited mode. For full database access and enhanced features, please sign in to your BlocIQ account.`;
       }
       
       throw new Error(`API error: ${response.status} - ${errorData.message || errorData.error || 'Unknown error'}`);
@@ -413,7 +414,13 @@ function addMessage(content, type, isTyping = false) {
   
   const avatar = document.createElement('div');
   avatar.className = 'message-avatar';
-  avatar.textContent = type === 'user' ? 'U' : 'AI';
+  
+  if (type === 'system') {
+    avatar.textContent = '🔔';
+    avatar.style.background = 'linear-gradient(135deg, #14b8a6 0%, #3b82f6 100%)';
+  } else {
+    avatar.textContent = type === 'user' ? 'U' : 'AI';
+  }
   
   const messageContent = document.createElement('div');
   messageContent.className = 'message-content';
@@ -439,6 +446,35 @@ function removeMessage(messageElement) {
 function adjustTextareaHeight() {
   inputField.style.height = 'auto';
   inputField.style.height = Math.min(inputField.scrollHeight, 120) + 'px';
+}
+
+// Check authentication status
+async function checkAuthenticationStatus() {
+  try {
+    console.log('🔍 Checking authentication status...');
+    
+    const response = await fetch('https://www.blociq.co.uk/api/auth/check', {
+      method: 'GET',
+      credentials: 'include'
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data.authenticated) {
+        console.log('✅ User is authenticated');
+        addMessage('✅ Connected to BlocIQ with full database access', 'system');
+      } else {
+        console.log('⚠️ User not authenticated');
+        addMessage('⚠️ Using BlocIQ AI in limited mode. Sign in to your BlocIQ account for enhanced features.', 'system');
+      }
+    } else {
+      console.log('⚠️ Authentication check failed, assuming limited mode');
+      addMessage('🤖 BlocIQ AI Assistant ready! Ask me anything about property management.', 'system');
+    }
+  } catch (error) {
+    console.log('⚠️ Authentication check error, using limited mode:', error);
+    addMessage('🤖 BlocIQ AI Assistant ready! Ask me anything about property management.', 'system');
+  }
 }
 
 // Export functions for potential external use

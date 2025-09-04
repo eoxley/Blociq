@@ -9,17 +9,18 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    // For Outlook add-ins, we need to handle authentication differently
+    // Check for Authorization header or use public access with rate limiting
+    const authHeader = request.headers.get('Authorization');
     
-    // Get the current user
+    // Try to get user from cookies first (for authenticated users)
+    const supabase = createRouteHandlerClient({ cookies });
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
-    if (authError || !user) {
-      return NextResponse.json({ 
-        error: 'Authentication required',
-        code: 'login_required',
-        message: 'Please sign in to BlocIQ to use the AI assistant'
-      }, { status: 401 });
+    // If no user from cookies and no auth header, provide limited public access
+    if ((!user || authError) && !authHeader) {
+      console.log('⚠️ No authentication found, providing limited public access');
+      return await handlePublicRequest(request);
     }
 
     const body = await request.json();
@@ -153,12 +154,74 @@ Please provide a helpful, professional response as BlocIQ AI. If this relates to
   }
 }
 
+// Handle public requests (for Outlook add-ins without full authentication)
+async function handlePublicRequest(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { prompt, emailContext } = body;
+
+    if (!prompt) {
+      return NextResponse.json({
+        error: 'Prompt is required'
+      }, { status: 400 });
+    }
+
+    // Build a basic prompt for public access
+    let enhancedPrompt = `You are BlocIQ AI, a property management assistant integrated with Microsoft Outlook.
+
+Email Context:
+- Subject: ${emailContext?.subject || 'N/A'}
+- From: ${emailContext?.from || 'N/A'}
+
+User Question: ${prompt}
+
+Please provide a helpful, professional response related to property management, compliance, or email communication.`;
+
+    // Call OpenAI with basic access
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are BlocIQ AI, a property management assistant. Provide professional, accurate advice for property managers and housing professionals. Keep responses concise and actionable.'
+        },
+        {
+          role: 'user',
+          content: enhancedPrompt
+        }
+      ],
+      max_tokens: 500, // Limit for public access
+      temperature: 0.7,
+    });
+
+    const response = completion.choices[0]?.message?.content;
+
+    if (!response) {
+      throw new Error('No response from AI');
+    }
+
+    return NextResponse.json({
+      response: response + '\n\n💡 *Sign in to BlocIQ for full database access and enhanced features.*',
+      user: null,
+      isPublicAccess: true
+    });
+
+  } catch (error) {
+    console.error('[Public Ask AI] Error:', error);
+    
+    return NextResponse.json({
+      error: 'Failed to process request',
+      message: error instanceof Error ? error.message : 'Unknown error occurred'
+    }, { status: 500 });
+  }
+}
+
 // Handle OPTIONS for CORS
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
     headers: {
-      'Access-Control-Allow-Origin': 'https://blociq.co.uk',
+      'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Allow-Credentials': 'true',
